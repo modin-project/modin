@@ -25,14 +25,14 @@ if [[ "$PYTHON" == "2.7" ]] && [[ "$platform" == "linux" ]]; then
   pip install -q pandas==0.22 feather-format lxml openpyxl xlrd
   # Install ray from its latest wheels
   pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp27-cp27mu-manylinux1_x86_64.whl
-elif [[ "$PYTHON" == "3.5" ]] && [[ "$platform" == "linux" ]]; then
+elif [[ "$PYTHON" == "3.6" ]] && [[ "$platform" == "linux" ]]; then
   # Install miniconda.
   wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
   pip install -q pandas==0.22 feather-format lxml openpyxl xlrd
   # Install ray from its latest wheels
-  pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp35-cp35m-manylinux1_x86_64.whl
+  pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp36-cp36m-manylinux1_x86_64.whl
 elif [[ "$PYTHON" == "2.7" ]] && [[ "$platform" == "macosx" ]]; then
   # Install miniconda.
   wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O miniconda.sh -nv
@@ -41,14 +41,14 @@ elif [[ "$PYTHON" == "2.7" ]] && [[ "$platform" == "macosx" ]]; then
   pip install -q pandas==0.22 feather-format lxml openpyxl xlrd
   # Install ray from its latest wheels
   pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp27-cp27m-macosx_10_6_intel.whl
-elif [[ "$PYTHON" == "3.5" ]] && [[ "$platform" == "macosx" ]]; then
+elif [[ "$PYTHON" == "3.6" ]] && [[ "$platform" == "macosx" ]]; then
   # Install miniconda.
   wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh -nv
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
   pip install -q pandas==0.22 feather-format lxml openpyxl xlrd
   # Install ray from its latest wheels
-  pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp35-cp35m-macosx_10_6_intel.whl
+  pip install -q -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.4.0-cp36-cp36m-macosx_10_6_intel.whl
 elif [[ "$LINT" == "1" ]]; then
   # Install miniconda.
   wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
