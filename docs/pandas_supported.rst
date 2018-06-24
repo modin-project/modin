@@ -750,7 +750,7 @@ Make sure you tell us your primary use-case so we can make it happen faster!
 * PeriodIndex
 * Categorical
 
-.. _`GitHub repository`: https://github.com/ray-project/ray/issues
+.. _`GitHub repository`: https://github.com/modin-project/modin/issues
 .. _`mailing list`: https://groups.google.com/forum/#!forum/modin-dev
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html#building-modin-from-source
-.. _`open an issue`: https://github.com/ray-project/ray/issues
+.. _`open an issue`: https://github.com/modin-project/modin/issues
