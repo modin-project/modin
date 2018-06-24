@@ -2,13 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import ray
 import pandas
-import numpy as np
-
 from pandas import compat
 from pandas.core.dtypes.common import is_list_like
+
 from itertools import cycle
+import ray
+import numpy as np
 
 from .dataframe import DataFrame
 from .utils import _deploy_func

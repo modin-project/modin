@@ -3,7 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
+
 import numpy as np
+
 from .dataframe import DataFrame
 from .utils import _reindex_helper
 

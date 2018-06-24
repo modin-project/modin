@@ -1,3 +1,21 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import pandas
+from pandas.api.types import (is_scalar, is_list_like, is_bool)
+from pandas.core.dtypes.common import is_integer
+from pandas.core.indexing import IndexingError
+
+import numpy as np
+import ray
+from warnings import warn
+
+from .utils import (_blocks_to_col, _get_nan_block_id, extractor,
+                    _mask_block_partitions, writer)
+from .index_metadata import _IndexMetadata
+from .dataframe import DataFrame
+
 """Indexing Helper Class works as follows:
 
 _Location_Indexer_Base provide methods framework for __getitem__
@@ -13,19 +31,6 @@ _LocIndexer and _iLocIndexer is responsible for indexer specific logic and
 An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
-import pandas
-import numpy as np
-import ray
-from warnings import warn
-
-from pandas.api.types import (is_scalar, is_list_like, is_bool)
-from pandas.core.dtypes.common import is_integer
-from pandas.core.indexing import IndexingError
-
-from .utils import (_blocks_to_col, _get_nan_block_id, extractor,
-                    _mask_block_partitions, writer)
-from .index_metadata import _IndexMetadata
-from .dataframe import DataFrame
 
 
 def is_slice(x): return isinstance(x, slice)

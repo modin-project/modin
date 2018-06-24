@@ -2,8 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
 import pandas
+
+import collections
 import numpy as np
 import ray
 
@@ -371,15 +372,15 @@ def _create_block_partitions(partitions, axis=0, length=None):
     # Sometimes we only get a single column or row, which is
     # problematic for building blocks from the partitions, so we
     # add whatever dimension we're missing from the input.
-    return fix_blocks_dimensions(blocks, axis)
+    return _fix_blocks_dimensions(blocks, axis)
 
 
 @ray.remote
 def create_blocks(df, npartitions, axis):
-    return create_blocks_helper(df, npartitions, axis)
+    return _create_blocks_helper(df, npartitions, axis)
 
 
-def create_blocks_helper(df, npartitions, axis):
+def _create_blocks_helper(df, npartitions, axis):
     # Single partition dataframes don't need to be repartitioned
     if npartitions == 1:
         return df
@@ -479,7 +480,7 @@ def _reindex_helper(old_index, new_index, axis, npartitions, *df):
         df.columns = old_index
 
     df = df.reindex(new_index, copy=False, axis=axis ^ 1)
-    return create_blocks_helper(df, npartitions, axis)
+    return _create_blocks_helper(df, npartitions, axis)
 
 
 @ray.remote
@@ -511,7 +512,7 @@ def _co_op_helper(func, left_columns, right_columns, left_df_len, left_idx,
 
     new_rows = func(left, right)
 
-    new_blocks = create_blocks_helper(new_rows, left_df_len, 0)
+    new_blocks = _create_blocks_helper(new_rows, left_df_len, 0)
 
     if left_idx is not None:
         new_blocks.append(new_rows.index)
@@ -563,7 +564,7 @@ def _concat_index(*index_parts):
     return index_parts[0].append(index_parts[1:])
 
 
-def fix_blocks_dimensions(blocks, axis):
+def _fix_blocks_dimensions(blocks, axis):
     """Checks that blocks is 2D, and adds a dimension if not.
     """
     if blocks.ndim < 2:

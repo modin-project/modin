@@ -2,16 +2,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pandas
+from pandas.io.common import _infer_compression
+
 from itertools import chain
 from io import BytesIO
 import os
+from pyarrow.parquet import ParquetFile
 import re
 import warnings
-import pandas
-
-from pyarrow.parquet import ParquetFile
-from pandas.io.common import _infer_compression  # don't depend on internal API
-
 
 from .dataframe import ray, DataFrame
 from . import get_npartitions

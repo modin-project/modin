@@ -3,11 +3,11 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-import numpy as np
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
 
+import numpy as np
 import ray
 
 from .utils import _inherit_docstrings, _reindex_helper
