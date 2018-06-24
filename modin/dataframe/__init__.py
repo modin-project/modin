@@ -12,14 +12,6 @@ from pandas import (eval, unique, value_counts, cut, to_numeric, factorize,
                     set_option, NaT, PeriodIndex, Categorical)
 import threading
 
-pandas_version = pandas.__version__
-pandas_major = int(pandas_version.split(".")[0])
-pandas_minor = int(pandas_version.split(".")[1])
-
-if pandas_major == 0 and pandas_minor != 22:
-    raise Exception("In order to use Pandas on Ray, your pandas version must "
-                    "be 0.22. You can run 'pip install pandas==0.22'")
-
 DEFAULT_NPARTITIONS = 8
 
 
@@ -55,6 +47,6 @@ __all__ = [
 try:
     if threading.current_thread().name == "MainThread":
         import ray
-        ray.init()
+        ray.init(plasma_directory="/tmp")
 except AssertionError:
     pass
