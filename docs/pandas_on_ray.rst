@@ -13,7 +13,7 @@ to use Pandas on Ray just like you would Pandas.
 .. code-block:: python
 
   # import pandas as pd
-  import ray.dataframe as pd
+  import modin.dataframe as pd
 
 Currently, we have part of the Pandas API implemented and are working toward
 full functional parity with Pandas.
@@ -29,7 +29,7 @@ output:
 
 .. code-block:: text
 
-  >>> import ray.dataframe as pd
+  >>> import modin.dataframe as pd
 
   Waiting for redis server at 127.0.0.1:14618 to respond...
   Waiting for redis server at 127.0.0.1:31410 to respond...
@@ -39,7 +39,7 @@ output:
   View the web UI at http://localhost:8889/notebooks/ray_ui36796.ipynb?token=ac25867d62c4ae87941bc5a0ecd5f517dbf80bd8e9b04218
   ======================================================================
 
-Once you have executed  ``import ray.dataframe as pd``, you're ready to begin
+Once you have executed  ``import modin.dataframe as pd``, you're ready to begin
 running your pandas pipeline as you were before.
 
 APIs Supported
@@ -50,7 +50,7 @@ following:
 
 .. code-block:: text
 
-  NotImplementedError: To contribute to Pandas on Ray, please visit github.com/ray-project/ray.
+  NotImplementedError: To contribute to Pandas on Ray, please visit github.com/modin-project/modin.
 
 We have compiled a list of currently supported methods `here`_.
 
@@ -69,8 +69,8 @@ Examples
 You can find an example on our recent `blog post`_ or on the
 `Jupyter Notebook`_ that we used to create the blog post.
 
-.. _`installation page`: http://ray.readthedocs.io/en/latest/installation.html
-.. _`here`: http://ray.readthedocs.io/en/latest/pandas_supported.html
-.. _`open an issue`: http://github.com/ray-project/ray/issues
+.. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
+.. _`here`: http://modin.readthedocs.io/en/latest/pandas_supported.html
+.. _`open an issue`: http://github.com/modin-project/modin/issues
 .. _`blog post`: http://rise.cs.berkeley.edu/blog/pandas-on-ray
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb

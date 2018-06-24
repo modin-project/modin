@@ -4,8 +4,8 @@ Pandas on Ray Supported Methods
 For your convenience, we have compiled a list of currently implemented APIs and
 methods available in **Pandas on Ray**. This documentation is updated as new
 methods and APIs are merged into the master branch, and not necessarily correct
-as of the most recent release. In order to install the latest wheels, follow
-the directions found here_
+as of the most recent release. In order to install the latest Modin, follow
+the directions found on the `installation page`_.
 
 Questions on implementation details
 -----------------------------------
@@ -716,7 +716,7 @@ this.
 List of Other Supported Operations Available on Import
 ------------------------------------------------------
 
-If you ``import ray.dataframe as pd`` the following operations are available
+If you ``import modin.dataframe as pd`` the following operations are available
 from ``pd.<op>``, e.g. ``pd.concat``. If you do not see an operation that
 **pandas** enables and would like to request it, feel free to `open an issue`_.
 Make sure you tell us your primary use-case so we can make it happen faster!
@@ -751,6 +751,6 @@ Make sure you tell us your primary use-case so we can make it happen faster!
 * Categorical
 
 .. _`GitHub repository`: https://github.com/ray-project/ray/issues
-.. _`mailing list`: https://groups.google.com/forum/#!forum/ray-dev
-.. _here: http://ray.readthedocs.io/en/latest/installation.html#trying-the-latest-version-of-ray
+.. _`mailing list`: https://groups.google.com/forum/#!forum/modin-dev
+.. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html#building-modin-from-source
 .. _`open an issue`: https://github.com/ray-project/ray/issues

@@ -14,10 +14,19 @@ Modin can be installed with pip.
 
   pip install modin
 
+Dependencies
+------------
+
 Currently, Modin depends on pandas version 0.22. The API of pandas has a
 tendency to change some with each release, so we pin our current version to the
 most recent version to take advantage of the newest additions. This also
 typically means better performance and more correct code.
+
+Modin also depends on Ray_. Ray is a task-parallel execution framework for
+parallelizing new and existing applications with minor code changes. Currently,
+we depend on the most recent Ray code, some of which has not yet been released.
+As a part of our build process, we will also install the latest Ray from their
+published nightly wheels.
 
 Building Modin from Source
 --------------------------
@@ -36,3 +45,4 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
   pip install -e .
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
+.. _Ray: http://ray.readthedocs.io
