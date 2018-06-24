@@ -11,4 +11,5 @@ setup(
     description="Modin: Pandas on Ray - Make your pandas code run faster with "
                 "a single line of code change.",
     packages=find_packages(),
-    url="https://github.com/modin-project/modin")
+    url="https://github.com/modin-project/modin",
+    install_requires=["pandas==0.22"])
