@@ -3,49 +3,48 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-import functools
 from pandas.api.types import is_scalar
-from pandas.util._validators import validate_bool_kwarg
-from pandas.core.index import _ensure_index_from_sequences
-from pandas._libs import lib
-from pandas.core.dtypes.cast import maybe_upcast_putmask
-from pandas import compat
 from pandas.compat import lzip, to_str, string_types, cPickle as pkl
 import pandas.core.common as com
+from pandas.core.dtypes.cast import maybe_upcast_putmask
 from pandas.core.dtypes.common import (
+    _get_dtype_from_object,
     is_bool_dtype,
     is_list_like,
     is_numeric_dtype,
-    is_timedelta64_dtype,
-    _get_dtype_from_object)
+    is_timedelta64_dtype)
+from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import MergeError
+from pandas.util._validators import validate_bool_kwarg
+from pandas._libs import lib
 
-import warnings
+import itertools
+import io
+import functools
 import numpy as np
 from numpy.testing import assert_equal
 import ray
-import itertools
-import io
-import sys
 import re
+import sys
+import warnings
 
 from .utils import (
-    _deploy_func,
-    _map_partitions,
-    _partition_pandas_dataframe,
     to_pandas,
-    create_blocks_helper,
     _blocks_to_col,
     _blocks_to_row,
-    _create_block_partitions,
-    _inherit_docstrings,
-    _reindex_helper,
-    _co_op_helper,
-    _match_partitioning,
+    _compile_remote_dtypes,
     _concat_index,
-    fix_blocks_dimensions,
-    _compile_remote_dtypes)
+    _co_op_helper,
+    _create_block_partitions,
+    _create_blocks_helper,
+    _deploy_func,
+    _fix_blocks_dimensions,
+    _inherit_docstrings,
+    _map_partitions,
+    _match_partitioning,
+    _partition_pandas_dataframe,
+    _reindex_helper)
 from . import get_npartitions
 from .index_metadata import _IndexMetadata
 from .iterator import PartitionIterator
@@ -126,7 +125,7 @@ class DataFrame(object):
                 # put in numpy array here to make accesses easier since it's 2D
                 self._block_partitions = np.array(block_partitions)
                 self._block_partitions = \
-                    fix_blocks_dimensions(self._block_partitions, axis)
+                    _fix_blocks_dimensions(self._block_partitions, axis)
 
             else:
                 if row_partitions is not None:
@@ -658,7 +657,7 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
         if callable(by):
             by = by(self.index)
-        elif isinstance(by, compat.string_types):
+        elif isinstance(by, string_types):
             by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
             if isinstance(by, pandas.Series):
@@ -955,7 +954,7 @@ class DataFrame(object):
             _axis = getattr(self, 'axis', 0)
         kwargs.pop('_level', None)
 
-        if isinstance(arg, compat.string_types):
+        if isinstance(arg, string_types):
             return self._string_function(arg, *args, **kwargs)
 
         # Dictionaries have complex behavior because they can be renamed here.
@@ -972,7 +971,7 @@ class DataFrame(object):
             raise ValueError("type {} is not callable".format(type(arg)))
 
     def _string_function(self, func, *args, **kwargs):
-        assert isinstance(func, compat.string_types)
+        assert isinstance(func, string_types)
 
         f = getattr(self, func, None)
 
@@ -1187,7 +1186,7 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
 
-        if isinstance(func, compat.string_types):
+        if isinstance(func, string_types):
             if axis == 1:
                 kwds['axis'] = axis
             return getattr(self, func)(*args, **kwds)
@@ -1231,7 +1230,7 @@ class DataFrame(object):
                                        self._col_partitions)
 
             # resolve function names for the DataFrame index
-            new_index = [f_name if isinstance(f_name, compat.string_types)
+            new_index = [f_name if isinstance(f_name, string_types)
                          else f_name.__name__ for f_name in func]
             return DataFrame(col_partitions=new_cols,
                              columns=self.columns,
@@ -5396,7 +5395,7 @@ def reindex_helper(old_index, new_index, axis, npartitions, method, fill_value,
     df = df.reindex(new_index, copy=False, axis=axis ^ 1,
                     method=method, fill_value=fill_value,
                     limit=limit, tolerance=tolerance)
-    return create_blocks_helper(df, npartitions, axis)
+    return _create_blocks_helper(df, npartitions, axis)
 
 
 @ray.remote

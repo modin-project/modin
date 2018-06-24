@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import pandas
 # TODO: In the future `set_option` or similar needs to run on every node
 # in order to keep all pandas instances across nodes consistent
 from pandas import (eval, unique, value_counts, cut, to_numeric, factorize,
@@ -26,13 +25,13 @@ def get_npartitions():
 
 # We import these file after above two function
 # because they depend on npartitions.
+from .concat import concat  # noqa: 402
 from .dataframe import DataFrame  # noqa: 402
+from .datetimes import to_datetime  # noqa: 402
 from .io import (read_csv, read_parquet, read_json, read_html,  # noqa: 402
                  read_clipboard, read_excel, read_hdf, read_feather,  # noqa: 402
                  read_msgpack, read_stata, read_sas, read_pickle,  # noqa: 402
                  read_sql)  # noqa: 402
-from .concat import concat  # noqa: 402
-from .datetimes import to_datetime  # noqa: 402
 from .reshape import get_dummies  # noqa: 402
 
 __all__ = [
