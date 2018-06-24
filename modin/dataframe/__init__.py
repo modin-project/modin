@@ -46,6 +46,6 @@ __all__ = [
 try:
     if threading.current_thread().name == "MainThread":
         import ray
-        ray.init(plasma_directory="/tmp")
+        ray.init()
 except AssertionError:
     pass
