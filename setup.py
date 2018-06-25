@@ -6,7 +6,14 @@ from setuptools import setup, find_packages
 import setuptools.command.build_ext as _build_ext
 import sys
 import platform
-from pip._internal import main  # https://github.com/pypa/pip/issues/5240
+import pip
+
+pip_major = int(pip.__version__.split(".")[0])
+if pip_major < 10:
+    # https://github.com/pypa/pip/issues/5240
+    from pip import main
+else:
+    from pip._internal import main
 
 python_version = platform.python_version()[:3]
 
