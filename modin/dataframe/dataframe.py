@@ -2335,6 +2335,8 @@ class DataFrame(object):
         partition, index_within_partition = \
             self._col_metadata.insert(column, loc)
 
+        index = self.index
+
         # Deploy insert function to specific column partition, and replace that
         # column
         def insert_col_part(df):
@@ -2348,8 +2350,10 @@ class DataFrame(object):
                           value, allow_duplicates)
                 df.index = pandas.RangeIndex(0, len(df))
             else:
+                df.index = index
                 df.insert(index_within_partition, column,
                           value, allow_duplicates)
+                df.index = pandas.RangeIndex(0, len(df))
             return df
 
         new_obj = _deploy_func.remote(insert_col_part,
