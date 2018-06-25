@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 import setuptools.command.build_ext as _build_ext
 import sys
 import platform
-import pip
+from pip._internal import main  # https://github.com/pypa/pip/issues/5240
 
 python_version = platform.python_version()[:3]
 
@@ -37,7 +37,7 @@ elif sys.platform == "darwin":
 
 class build_ext(_build_ext.build_ext):
     def run(self):
-        pip.main(['install', ray_whl])
+        main(['install', ray_whl])
 
 
 setup(
