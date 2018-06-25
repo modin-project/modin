@@ -8,6 +8,13 @@ import sys
 import platform
 import pip
 
+pip_major = int(pip.__version__.split(".")[0])
+if pip_major < 10:
+    # https://github.com/pypa/pip/issues/5240
+    from pip import main
+else:
+    from pip._internal import main
+
 python_version = platform.python_version()[:3]
 
 ray_whl = "ray"  # Fall back on pip install if no relevant wheel exists
@@ -37,7 +44,7 @@ elif sys.platform == "darwin":
 
 class build_ext(_build_ext.build_ext):
     def run(self):
-        pip.main(['install', ray_whl])
+        main(['install', ray_whl])
 
 
 setup(
