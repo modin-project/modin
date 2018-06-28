@@ -3,17 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 from setuptools import setup, find_packages
-import setuptools.command.build_ext as _build_ext
 import sys
 import platform
-import pip
-
-pip_major = int(pip.__version__.split(".")[0])
-if pip_major < 10:
-    # https://github.com/pypa/pip/issues/5240
-    from pip import main
-else:
-    from pip._internal import main
 
 python_version = platform.python_version()[:3]
 
@@ -41,18 +32,13 @@ elif sys.platform == "darwin":
     elif python_version == "3.6":
         ray_whl = ray_whl_prefix + "ray-0.4.0-cp36-cp36m-macosx_10_6_intel.whl"
 
-
-class build_ext(_build_ext.build_ext):
-    def run(self):
-        main(['install', ray_whl])
-
-
 setup(
     name="modin",
     version="0.0.2",
     description="Modin: Pandas on Ray - Make your pandas code run faster with "
                 "a single line of code change.",
     packages=find_packages(),
-    cmdclass={"build_ext": build_ext},
     url="https://github.com/modin-project/modin",
-    install_requires=["pandas==0.22"])
+    install_requires=["pandas==0.22",
+                      "ray==0.4.0"],
+    dependency_links=[ray_whl])
