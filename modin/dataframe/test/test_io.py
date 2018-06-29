@@ -287,13 +287,14 @@ def test_from_parquet():
 
     teardown_parquet_file()
 
+
 def test_from_parquet_with_columns():
     setup_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
     ray_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
     assert ray_df_equals_pandas(ray_df, pandas_df)
-    
+
     teardown_parquet_file()
 
 
