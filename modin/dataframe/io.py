@@ -30,7 +30,7 @@ def read_parquet(path, engine='auto', columns=None, **kwargs):
               We only support local files for now.
         engine: Ray only support pyarrow reader.
                 This argument doesn't do anything for now.
-        kwargs: Pass into parquet's read_row_group function.
+        kwargs: Pass into parquet's read_pandas function.
 
     Notes:
         ParquetFile API is used. Please refer to the documentation here
