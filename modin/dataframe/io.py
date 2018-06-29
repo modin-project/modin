@@ -5,7 +5,6 @@ from __future__ import print_function
 import pandas
 from pandas.io.common import _infer_compression
 
-from itertools import chain
 from io import BytesIO
 import os
 from pyarrow.parquet import ParquetFile
@@ -40,14 +39,16 @@ def read_parquet(path, engine='auto', columns=None, **kwargs):
     if not columns:
         pf = ParquetFile(path)
         columns = [
-            name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
+            name for name in pf.metadata.schema.names
+            if not PQ_INDEX_REGEX.match(name)
         ]
 
     # Each item in this list will be a column of original df
     # partitioned to smaller pieces along rows.
     # We need to transpose the oids array to fit our schema.
     blk_partitions = [
-        ray.get(_read_parquet_column.remote(path, col, kwargs)) for col in columns
+        ray.get(_read_parquet_column.remote(path, col, kwargs))
+        for col in columns
     ]
     blk_partitions = np.array(blk_partitions).T
 
@@ -56,7 +57,7 @@ def read_parquet(path, engine='auto', columns=None, **kwargs):
 
 @ray.remote
 def _read_parquet_column(path, column, kwargs={}):
-    df = pq.read_pandas(path, columns = [column], **kwargs).to_pandas()
+    df = pq.read_pandas(path, columns=[column], **kwargs).to_pandas()
     oids = _partition_pandas_dataframe(df, num_partitions=get_npartitions())
     return oids
 
@@ -266,8 +267,8 @@ def read_csv(filepath_or_buffer,
     else:
         ignore_first_line = True
 
-    offsets = _compute_offset(filepath, get_npartitions(),
-                              ignore_first_line=ignore_first_line)
+    offsets = _compute_offset(
+        filepath, get_npartitions(), ignore_first_line=ignore_first_line)
 
     # Serialize objects to speed up later use in remote tasks
     first_line_id = ray.put(first_line)
@@ -282,8 +283,7 @@ def read_csv(filepath_or_buffer,
                 num_return_vals=2)
         else:
             df, index = _read_csv_with_offset._submit(
-                args=(filepath, start, end, kwargs_id),
-                num_return_vals=2)
+                args=(filepath, start, end, kwargs_id), num_return_vals=2)
         df_obj_ids.append(df)
         index_obj_ids.append(index)
 
@@ -310,11 +310,10 @@ def read_json(path_or_buf=None,
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
 
-    port_frame = pandas.read_json(path_or_buf, orient, typ, dtype,
-                                  convert_axes, convert_dates,
-                                  keep_default_dates, numpy, precise_float,
-                                  date_unit, encoding, lines, chunksize,
-                                  compression)
+    port_frame = pandas.read_json(
+        path_or_buf, orient, typ, dtype, convert_axes, convert_dates,
+        keep_default_dates, numpy, precise_float, date_unit, encoding, lines,
+        chunksize, compression)
     ray_frame = from_pandas(port_frame, get_npartitions())
 
     return ray_frame
@@ -382,19 +381,16 @@ def read_excel(io,
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
 
-    port_frame = pandas.read_excel(io, sheet_name, header, skiprows,
-                                   skip_footer, index_col, names, usecols,
-                                   parse_dates, date_parser, na_values,
-                                   thousands, convert_float, converters, dtype,
-                                   true_values, false_values, engine, squeeze)
+    port_frame = pandas.read_excel(
+        io, sheet_name, header, skiprows, skip_footer, index_col, names,
+        usecols, parse_dates, date_parser, na_values, thousands, convert_float,
+        converters, dtype, true_values, false_values, engine, squeeze)
     ray_frame = from_pandas(port_frame, get_npartitions())
 
     return ray_frame
 
 
-def read_hdf(path_or_buf,
-             key=None,
-             mode='r'):
+def read_hdf(path_or_buf, key=None, mode='r'):
 
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
@@ -405,8 +401,7 @@ def read_hdf(path_or_buf,
     return ray_frame
 
 
-def read_feather(path,
-                 nthreads=1):
+def read_feather(path, nthreads=1):
 
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
@@ -417,9 +412,7 @@ def read_feather(path,
     return ray_frame
 
 
-def read_msgpack(path_or_buf,
-                 encoding='utf-8',
-                 iterator=False):
+def read_msgpack(path_or_buf, encoding='utf-8', iterator=False):
 
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
@@ -471,8 +464,7 @@ def read_sas(filepath_or_buffer,
     return ray_frame
 
 
-def read_pickle(path,
-                compression='infer'):
+def read_pickle(path, compression='infer'):
 
     warnings.warn("Defaulting to Pandas implementation",
                   PendingDeprecationWarning)
