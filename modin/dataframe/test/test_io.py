@@ -23,7 +23,6 @@ TEST_PICKLE_FILENAME = 'test.pkl'
 TEST_SAS_FILENAME = os.getcwd() + '/data/test1.sas7bdat'
 TEST_SQL_FILENAME = 'test.db'
 SMALL_ROW_SIZE = 2000
-LARGE_ROW_SIZE = 7e6
 
 
 @pytest.fixture
@@ -279,8 +278,7 @@ def teardown_sql_file():
         os.remove(TEST_SQL_FILENAME)
 
 
-def test_from_parquet_small():
-
+def test_from_parquet():
     setup_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
@@ -289,15 +287,13 @@ def test_from_parquet_small():
 
     teardown_parquet_file()
 
+def test_from_parquet_with_columns():
+    setup_parquet_file(SMALL_ROW_SIZE)
 
-def test_from_parquet_large():
-    setup_parquet_file(LARGE_ROW_SIZE)
-
-    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
-    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
+    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
     assert ray_df_equals_pandas(ray_df, pandas_df)
-
+    
     teardown_parquet_file()
 
 
