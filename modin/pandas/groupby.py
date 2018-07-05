@@ -27,40 +27,32 @@ class DataFrameGroupBy(object):
         self._index = df.index
         self._axis = axis
 
+        self._df = df
+        self._by = by
+        self._level = level
+        self._as_index = as_index
+        self._sort = sort
+        self._group_keys = group_keys
+        self._squeeze = squeeze
+
         self._row_metadata = df._row_metadata
         self._col_metadata = df._col_metadata
 
         if axis == 0:
-            partitions = [column for column in df._block_partitions.T]
-            self._index_grouped = \
-                pandas.Series(self._index, index=self._index) \
-                .groupby(by=by, sort=sort)
+            self._partitions = df._block_partitions.T
         else:
-            partitions = [row for row in df._block_partitions]
-            self._index_grouped = \
-                pandas.Series(self._columns, index=self._columns) \
-                .groupby(by=by, sort=sort)
+            self._partitions = df._block_partitions
 
-        self._keys_and_values = [(k, v)
-                                 for k, v in self._index_grouped]
-
-        if len(self) > 1:
-            self._grouped_partitions = \
-                list(zip(*(groupby._submit(args=(by,
-                                                 axis,
-                                                 level,
-                                                 as_index,
-                                                 sort,
-                                                 group_keys,
-                                                 squeeze)
-                                           + tuple(part.tolist()),
-                                           num_return_vals=len(self))
-                           for part in partitions)))
-        else:
-            if axis == 0:
-                self._grouped_partitions = [df._col_partitions]
-            else:
-                self._grouped_partitions = [df._row_partitions]
+        # self._keys_and_values = []
+        #
+        # if len(self) > 1:
+        #     self._grouped_partitions = \
+        #         list()
+        # else:
+        #     if axis == 0:
+        #         self._grouped_partitions = [df._col_partitions]
+        #     else:
+        #         self._grouped_partitions = [df._row_partitions]
 
     def __getattr__(self, key):
         """Afer regular attribute access, looks up the name in the columns
@@ -81,24 +73,67 @@ class DataFrameGroupBy(object):
                     "github.com/ray-project/ray.")
             raise e
 
+    _index_grouped_cache = None
+
+    @property
+    def _index_grouped(self):
+        if self._index_grouped_cache is None:
+            if self._axis == 0:
+                self._index_grouped_cache = \
+                    pandas.Series(self._index, index=self._index)\
+                        .groupby(by=self._by, sort=self._sort)
+            else:
+                self._index_grouped_cache = \
+                    pandas.Series(self._columns, index=self._columns)\
+                        .groupby(by=self._by, sort=self._sort)
+
+        return self._index_grouped_cache
+
+    _keys_and_values_cache = None
+
+    @property
+    def _keys_and_values(self):
+        if self._keys_and_values_cache is None:
+            self._keys_and_values_cache = \
+                [(k, v) for k, v in self._index_grouped]
+        return self._keys_and_values_cache
+
+    @property
+    def _grouped_partitions(self):
+        if len(self) > 1:
+            return zip(*(groupby._submit(args=(self._by,
+                                               self._axis,
+                                               self._level,
+                                               self._as_index,
+                                               self._sort,
+                                               self._group_keys,
+                                               self._squeeze)
+                                         + tuple(part.tolist()),
+                                         num_return_vals=len(self))
+                         for part in self._partitions))
+        elif self._axis == 0:
+            return [self._df._col_partitions]
+        else:
+            return [self._df._row_partitions]
+
     @property
     def _iter(self):
         from .dataframe import DataFrame
 
         if self._axis == 0:
-            return [(self._keys_and_values[i][0],
+            return ((self._keys_and_values[i][0],
                      DataFrame(col_partitions=part,
                                columns=self._columns,
                                index=self._keys_and_values[i][1].index,
                                col_metadata=self._col_metadata))
-                    for i, part in enumerate(self._grouped_partitions)]
+                    for i, part in enumerate(self._grouped_partitions))
         else:
-            return [(self._keys_and_values[i][0],
+            return ((self._keys_and_values[i][0],
                      DataFrame(row_partitions=part,
                                columns=self._keys_and_values[i][1].index,
                                index=self._index,
                                row_metadata=self._row_metadata))
-                    for i, part in enumerate(self._grouped_partitions)]
+                    for i, part in enumerate(self._grouped_partitions))
 
     @property
     def ngroups(self):
@@ -361,7 +396,7 @@ class DataFrameGroupBy(object):
             "github.com/ray-project/ray.")
 
     def __len__(self):
-        return len(self._keys_and_values)
+        return len(self._index_grouped)
 
     def all(self):
         return self._apply_agg_function(lambda df: df.all())
