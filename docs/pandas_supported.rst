@@ -716,7 +716,7 @@ this.
 List of Other Supported Operations Available on Import
 ------------------------------------------------------
 
-If you ``import modin.dataframe as pd`` the following operations are available
+If you ``import modin.pandas as pd`` the following operations are available
 from ``pd.<op>``, e.g. ``pd.concat``. If you do not see an operation that
 **pandas** enables and would like to request it, feel free to `open an issue`_.
 Make sure you tell us your primary use-case so we can make it happen faster!
