@@ -93,7 +93,7 @@ class DataFrameGroupBy(object):
         # It is expensive to put this multiple times, so let's just put it once
         remote_by = ray.put(self._by)
 
-        if len(self) > 1:
+        if len(self._index_grouped) > 1:
             return zip(*(groupby._submit(args=(remote_by,
                                                self._axis,
                                                self._level,
@@ -102,7 +102,8 @@ class DataFrameGroupBy(object):
                                                self._group_keys,
                                                self._squeeze)
                                          + tuple(part.tolist()),
-                                         num_return_vals=len(self))
+                                         num_return_vals=len(
+                                             self._index_grouped))
                          for part in self._partitions))
         elif self._axis == 0:
             return [self._df._col_partitions]
