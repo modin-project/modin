@@ -4,8 +4,8 @@ from __future__ import print_function
 
 import pytest
 import pandas
-import modin.dataframe as pd
-from modin.dataframe.utils import (
+import modin.pandas as pd
+from modin.pandas.utils import (
     to_pandas,
     from_pandas
 )

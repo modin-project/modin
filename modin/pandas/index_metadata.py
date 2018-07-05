@@ -36,7 +36,7 @@ class _IndexMetadata(object):
         """Inits a IndexMetadata from Ray DataFrame partitions
 
         Args:
-            dfs ([ObjectID]): ObjectIDs of dataframe partitions
+            dfs ([ObjectID]): ObjectIDs of DataFrame partitions
             index (pandas.Index): Index of the Ray DataFrame.
             axis: Axis of partition (0=row partitions, 1=column partitions)
 
@@ -72,7 +72,7 @@ class _IndexMetadata(object):
     _lengths = property(_get__lengths, _set__lengths)
 
     def _get__coord_df(self):
-        """Get the coordinate dataframe wrapped by this _IndexMetadata.
+        """Get the coordinate DataFrame wrapped by this _IndexMetadata.
 
         Since we may have had an index set before our coord_df was
         materialized, we'll have to apply it to the newly materialized df
@@ -85,7 +85,7 @@ class _IndexMetadata(object):
         return self._coord_df_cache
 
     def _set__coord_df(self, coord_df):
-        """Set the coordinate dataframe wrapped by this _IndexMetadata.
+        """Set the coordinate DataFrame wrapped by this _IndexMetadata.
 
         Sometimes we set the _IndexMetadata's coord_df outside of the
         constructor, generally using fxns like drop(). This produces a modified

@@ -37,7 +37,7 @@ def concat(objs, axis=0, join='outer', join_axes=None, ignore_index=False,
     if type_check is not None:
         raise ValueError("cannot concatenate object of type \"{0}\"; only "
                          "pandas.Series, pandas.DataFrame, "
-                         "and modin.dataframe.DataFrame objs are "
+                         "and modin.pandas.DataFrame objs are "
                          "valid", type(type_check))
 
     all_series = all(isinstance(obj, pandas.Series)

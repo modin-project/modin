@@ -125,11 +125,11 @@ def _get_nan_block_id(n_row=1, n_col=1, transpose=False):
 
 
 def _get_lengths(df):
-    """Gets the length of the dataframe.
+    """Gets the length of the DataFrame.
     Args:
         df: A remote pandas.DataFrame object.
     Returns:
-        Returns an integer length of the dataframe object. If the attempt
+        Returns an integer length of the DataFrame object. If the attempt
             fails, returns 0 as the length.
     """
     try:
@@ -141,11 +141,11 @@ def _get_lengths(df):
 
 
 def _get_widths(df):
-    """Gets the width (number of columns) of the dataframe.
+    """Gets the width (number of columns) of the DataFrame.
     Args:
         df: A remote pandas.DataFrame object.
     Returns:
-        Returns an integer width of the dataframe object. If the attempt
+        Returns an integer width of the DataFrame object. If the attempt
             fails, returns 0 as the length.
     """
     try:
@@ -164,7 +164,7 @@ def _partition_pandas_dataframe(df, num_partitions=None, row_chunksize=None):
             into. Has priority over chunksize.
         row_chunksize (int): The number of rows to put in each partition.
     Returns:
-        [ObjectID]: A list of object IDs corresponding to the dataframe
+        [ObjectID]: A list of object IDs corresponding to the DataFrame
         partitions
     """
     if num_partitions is not None:
@@ -342,7 +342,7 @@ def _build_row_lengths(df_row):
 
 @ray.remote
 def _build_coord_df(lengths, index):
-    """Build the coordinate dataframe over all partitions."""
+    """Build the coordinate DataFrame over all partitions."""
     filtered_lengths = [x for x in lengths if x > 0]
     coords = None
     if len(filtered_lengths) > 0:
@@ -462,7 +462,7 @@ def _inherit_docstrings(parent, excluded=[]):
 
 @ray.remote
 def _reindex_helper(old_index, new_index, axis, npartitions, *df):
-    """Reindexes a dataframe to prepare for join/concat.
+    """Reindexes a DataFrame to prepare for join/concat.
 
     Args:
         df: The DataFrame partition
