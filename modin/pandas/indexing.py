@@ -24,7 +24,7 @@ _Location_Indexer_Base provide methods framework for __getitem__
   and perform lookup/item write.
 
 _LocIndexer and _iLocIndexer is responsible for indexer specific logic and
-  lookup computation. Loc will take care of enlarge dataframe. Both indexer
+  lookup computation. Loc will take care of enlarge DataFrame. Both indexer
   will take care of translating pandas's lookup to Ray DataFrame's internal
   lookup.
 
@@ -145,8 +145,8 @@ class _Location_Indexer_Base():
     def __getitem__(self, row_lookup, col_lookup, ndim):
         """
         Args:
-            row_lookup: A pandas dataframe, a partial view from row_coord_df
-            col_lookup: A pandas dataframe, a partial view from col_coord_df
+            row_lookup: A pandas DataFrame, a partial view from row_coord_df
+            col_lookup: A pandas DataFrame, a partial view from col_coord_df
             ndim: the dimension of returned data
         """
         if ndim == 2:
@@ -218,8 +218,8 @@ class _Location_Indexer_Base():
     def __setitem__(self, row_lookup, col_lookup, item):
         """
         Args:
-            row_lookup: A pandas dataframe, a partial view from row_coord_df
-            col_lookup: A pandas dataframe, a partial view from col_coord_df
+            row_lookup: A pandas DataFrame, a partial view from row_coord_df
+            col_lookup: A pandas DataFrame, a partial view from col_coord_df
             item: The new item needs to be set. It can be any shape that's
                 broadcastable to the product of the lookup tables.
         """

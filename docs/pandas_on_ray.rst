@@ -13,7 +13,7 @@ to use Pandas on Ray just like you would Pandas.
 .. code-block:: python
 
   # import pandas as pd
-  import modin.dataframe as pd
+  import modin.pandas as pd
 
 Currently, we have part of the Pandas API implemented and are working toward
 full functional parity with Pandas.
@@ -29,7 +29,7 @@ output:
 
 .. code-block:: text
 
-  >>> import modin.dataframe as pd
+  >>> import modin.pandas as pd
 
   Waiting for redis server at 127.0.0.1:14618 to respond...
   Waiting for redis server at 127.0.0.1:31410 to respond...
@@ -39,7 +39,7 @@ output:
   View the web UI at http://localhost:8889/notebooks/ray_ui36796.ipynb?token=ac25867d62c4ae87941bc5a0ecd5f517dbf80bd8e9b04218
   ======================================================================
 
-Once you have executed  ``import modin.dataframe as pd``, you're ready to begin
+Once you have executed  ``import modin.pandas as pd``, you're ready to begin
 running your pandas pipeline as you were before.
 
 APIs Supported

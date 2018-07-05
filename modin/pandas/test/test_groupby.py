@@ -6,8 +6,8 @@ import pytest
 import sys
 import pandas
 import numpy as np
-import modin.dataframe as pd
-from modin.dataframe.utils import (
+import modin.pandas as pd
+from modin.pandas.utils import (
     from_pandas,
     to_pandas)
 

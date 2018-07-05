@@ -9,7 +9,7 @@ Modin
 
 |
 
-*Modin is the parent project of Pandas on Ray*
+*Modin is a library for unifying the way you interact with your data*
 
 Modin can be installed with pip: ``pip install modin``
 
@@ -24,7 +24,7 @@ Pandas on Ray
 |.. code-block:: python                        |.. code-block:: python                           |
 |                                              |                                                 |
 | # Normal pandas import                       | # Pandas on Ray import                          |
-| import pandas as pd                          | import modin.dataframe as pd                    |
+| import pandas as pd                          | import modin.pandas as pd                       |
 |                                              |                                                 |
 | df = pd.DataFrame({'col1': [1, 2, 3],        | df = pd.DataFrame({'col1': [1, 2, 3],           |
 |                    'col2': [1.0, 2.0, 3.0]}) |                    'col2': [1.0, 2.0, 3.0]})    |

@@ -65,22 +65,22 @@ class DataFrame(object):
                 Dict can contain Series, arrays, constants, or list-like
                 objects.
             index (pandas.Index, list, ObjectID): The row index for this
-                dataframe.
-            columns (pandas.Index): The column names for this dataframe, in
+                DataFrame.
+            columns (pandas.Index): The column names for this DataFrame, in
                 pandas Index object.
             dtype: Data type to force. Only a single dtype is allowed.
                 If None, infer
             copy (boolean): Copy data from inputs.
                 Only affects DataFrame / 2d ndarray input
             col_partitions ([ObjectID]): The list of ObjectIDs that contain
-                the column dataframe partitions.
+                the column DataFrame partitions.
             row_partitions ([ObjectID]): The list of ObjectIDs that contain the
-                row dataframe partitions.
+                row DataFrame partitions.
             block_partitions: A 2D numpy array of block partitions.
             row_metadata (_IndexMetadata):
-                Metadata for the new dataframe's rows
+                Metadata for the new DataFrame's rows
             col_metadata (_IndexMetadata):
-                Metadata for the new dataframe's columns
+                Metadata for the new DataFrame's columns
         """
         if isinstance(data, DataFrame):
             self._frame_data = data._frame_data
@@ -2001,7 +2001,7 @@ class DataFrame(object):
             axis: axis to filter on
 
         Returns:
-            A new dataframe with the filter applied.
+            A new DataFrame with the filter applied.
         """
         nkw = com._count_not_none(items, like, regex)
         if nkw > 1:
@@ -2159,13 +2159,13 @@ class DataFrame(object):
         return self._operator_helper(pandas.DataFrame.gt, other, axis, level)
 
     def head(self, n=5):
-        """Get the first n rows of the dataframe.
+        """Get the first n rows of the DataFrame.
 
         Args:
             n (int): The number of rows to return.
 
         Returns:
-            A new dataframe with the first n rows of the dataframe.
+            A new DataFrame with the first n rows of the DataFrame.
         """
         if n >= len(self._row_metadata):
             return self.copy()
@@ -2254,7 +2254,7 @@ class DataFrame(object):
         lines = result.split('\n')
 
         # Class denoted in info() output
-        class_string = '<class \'modin.dataframe.dataframe.DataFrame\'>\n'
+        class_string = '<class \'modin.pandas.dataframe.DataFrame\'>\n'
 
         # Create the Index info() string by parsing self.index
         index_string = self.index.summary() + '\n'
@@ -3492,7 +3492,7 @@ class DataFrame(object):
         Args:
             level: Only remove the given levels from the index. Removes all
                 levels by default
-            drop: Do not try to insert index into dataframe columns. This
+            drop: Do not try to insert index into DataFrame columns. This
                 resets the index to the default integer index.
             inplace: Modify the DataFrame in place (do not create a new object)
             col_level : If the columns have multiple levels, determines which
@@ -4244,13 +4244,13 @@ class DataFrame(object):
             "github.com/ray-project/ray.")
 
     def tail(self, n=5):
-        """Get the last n rows of the dataframe.
+        """Get the last n rows of the DataFrame.
 
         Args:
             n (int): The number of rows to return.
 
         Returns:
-            A new dataframe with the last n rows of this dataframe.
+            A new DataFrame with the last n rows of this DataFrame.
         """
         if n >= len(self._row_metadata):
             return self
@@ -4873,10 +4873,10 @@ class DataFrame(object):
             self.insert(loc=loc, column=key, value=value)
 
     def __len__(self):
-        """Gets the length of the dataframe.
+        """Gets the length of the DataFrame.
 
         Returns:
-            Returns an integer length of the dataframe object.
+            Returns an integer length of the DataFrame object.
         """
         return len(self._row_metadata)
 
@@ -4899,7 +4899,7 @@ class DataFrame(object):
         """Iterate over the columns
 
         Returns:
-            An Iterator over the columns of the dataframe.
+            An Iterator over the columns of the DataFrame.
         """
         return iter(self.columns)
 
@@ -5260,7 +5260,7 @@ class DataFrame(object):
         return zip(new_partitions_self, new_partitions_other)
 
     def _operator_helper(self, func, other, axis, level, *args):
-        """Helper method for inter-dataframe and scalar operations"""
+        """Helper method for inter-DataFrame and scalar operations"""
         if isinstance(other, DataFrame):
             return self._inter_df_op_helper(
                 lambda x, y: func(x, y, axis, level, *args),

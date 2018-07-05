@@ -7,8 +7,8 @@ import numpy as np
 import pandas
 import pandas.util.testing as tm
 from pandas.tests.frame.common import TestData
-import modin.dataframe as pd
-from modin.dataframe.utils import to_pandas
+import modin.pandas as pd
+from modin.pandas.utils import to_pandas
 
 
 @pytest.fixture
@@ -1997,7 +1997,7 @@ def test_infer_objects():
 @pytest.fixture
 def test_info(ray_df):
     info_string = ray_df.info()
-    assert '<class \'modin.dataframe.dataframe.DataFrame\'>\n' in info_string
+    assert '<class \'modin.pandas.dataframe.DataFrame\'>\n' in info_string
     info_string = ray_df.info(memory_usage=True)
     assert 'memory_usage: ' in info_string
 

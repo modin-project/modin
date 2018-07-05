@@ -33,7 +33,7 @@ install:
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
 
-  - python -m pytest modin/dataframe/test/test_dataframe.py
-  - python -m pytest modin/dataframe/test/test_concat.py
-  - python -m pytest modin/dataframe/test/test_io.py
-  - python -m pytest modin/dataframe/test/test_groupby.py
+  - python -m pytest modin/pandas/test/test_dataframe.py
+  - python -m pytest modin/pandas/test/test_concat.py
+  - python -m pytest modin/pandas/test/test_io.py
+  - python -m pytest modin/pandas/test/test_groupby.py

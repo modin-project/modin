@@ -5,8 +5,8 @@ from __future__ import print_function
 import pytest
 import numpy as np
 import pandas
-from modin.dataframe.utils import to_pandas
-import modin.dataframe as pd
+from modin.pandas.utils import to_pandas
+import modin.pandas as pd
 import os
 import sqlite3
 
