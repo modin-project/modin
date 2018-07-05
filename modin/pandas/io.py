@@ -64,7 +64,7 @@ def _read_parquet_column(path, column, kwargs={}):
 
 
 # CSV
-def _skip_header(fp, kwargs={}):
+def _skip_header(f, kwargs={}):
     lines_read = 0
     comment = kwargs["comment"]
     skiprows = kwargs["skiprows"]
@@ -85,13 +85,14 @@ def _skip_header(fp, kwargs={}):
     if isinstance(skiprows, int):
         lines_read += skiprows
         for _ in range(skiprows):
-            fp.readline()
+            f.readline()
         skiprows = None
 
     header_lines = header + 1 if isinstance(header, int) else max(header) + 1
 
     header_lines_skipped = 0
-    for line in fp:
+    # Python 2 files use a read-ahead buffer which breaks our use of tell()
+    for line in iter(f.readline, ""):
         lines_read += 1
         skip = False
         if not skip and comment is not None:
