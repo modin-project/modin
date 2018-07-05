@@ -48,11 +48,11 @@ SQL on Ray
    >>> c = conn.cursor()
    >>> c.execute("CREATE TABLE example (col1, col2, column 3, col4)")
    >>> c.execute("INSERT INTO example VALUES ('1', 2.0, 'A String of information', True)")
-    col1  col2                 column 3  col4
+     col1  col2                 column 3  col4
    0    1   2.0  A String of information  True
 
    >>> c.execute("INSERT INTO example VALUES ('6', 17.0, 'A String of different information', False)")
-    col1  col2                           column 3   col4
+     col1  col2                           column 3   col4
    0    1   2.0            A String of information   True
    1    6  17.0  A String of different information  False
 
