@@ -408,7 +408,12 @@ def _create_blocks_helper(df, npartitions, axis):
 @ray.remote
 def _blocks_to_col(*partition):
     if len(partition):
-        return pandas.DataFrame(np.concatenate(partition, axis=0))
+        df = pandas.DataFrame(np.concatenate(partition, axis=0))
+
+        if len(np.unique(partition.dtypes.values)) > 1: # heterogenous type
+            df = df.astype(partition[0].dtypes, copy=False)
+            
+        return df
     else:
         return pandas.Series()
 
@@ -416,8 +421,8 @@ def _blocks_to_col(*partition):
 @memoize
 @ray.remote
 def _blocks_to_row(*partition):
-    row_part = pandas.DataFrame(np.concatenate(partition, axis=1))
-
+    row_part = pandas.concat(partition, axis=1, copy=False)\
+        .reset_index(drop=True)
     # Because our block partitions contain different indices (for the
     # columns), this change is needed to ensure correctness.
     row_part.columns = pandas.RangeIndex(0, len(row_part.columns))
