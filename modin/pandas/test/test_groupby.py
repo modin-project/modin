@@ -208,7 +208,7 @@ def test_large_row_groupby():
 
     ray_df = from_pandas(pandas_df, 2)
 
-    by = pandas_df['A'].tolist()
+    by = [str(i) for i in pandas_df['A'].tolist()]
     n = 4
 
     ray_groupby = ray_df.groupby(by=by)
@@ -388,7 +388,8 @@ def test_min(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_idxmax(ray_groupby, pandas_groupby):
-    ray_df_equals_pandas(ray_groupby.idxmax(), pandas_groupby.idxmax())
+    with pytest.raises(NotImplementedError):
+        ray_df_equals_pandas(ray_groupby.idxmax(), pandas_groupby.idxmax())
 
 
 @pytest.fixture
@@ -451,7 +452,8 @@ def test_bfill(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_idxmin(ray_groupby, pandas_groupby):
-    ray_df_equals_pandas(ray_groupby.idxmin(), pandas_groupby.idxmin())
+    with pytest.raises(NotImplementedError):
+        ray_df_equals_pandas(ray_groupby.idxmin(), pandas_groupby.idxmin())
 
 
 @pytest.fixture
@@ -529,7 +531,8 @@ def test_median(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_head(ray_groupby, pandas_groupby, n):
-    ray_df_equals_pandas(ray_groupby.head(n=n), pandas_groupby.head(n=n))
+    with pytest.raises(NotImplementedError):
+        ray_df_equals_pandas(ray_groupby.head(n=n), pandas_groupby.head(n=n))
 
 
 @pytest.fixture
@@ -575,7 +578,8 @@ def test_pipe(ray_groupby, pandas_groupby, func):
 
 @pytest.fixture
 def test_tail(ray_groupby, pandas_groupby, n):
-    ray_df_equals_pandas(ray_groupby.tail(n=n), pandas_groupby.tail(n=n))
+    with pytest.raises(NotImplementedError):
+        ray_df_equals_pandas(ray_groupby.tail(n=n), pandas_groupby.tail(n=n))
 
 
 @pytest.fixture
