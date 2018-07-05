@@ -43,18 +43,9 @@ SQL on Ray
 **We have implemented a simple example that can be found below. Feedback welcome!**
 
 .. code-block:: python
-    :emphasize-lines: 1, 11, 12, 13, 14, 18
 
     >>> import modin.sql as sql
-    Process STDOUT and STDERR is being redirected to /tmp/raylogs/.
-    Waiting for redis server at 127.0.0.1:46487 to respond...
-    Waiting for redis server at 127.0.0.1:23966 to respond...
-    Starting local scheduler with the following resources: {'GPU': 0, 'CPU': 8}.
-
-    ======================================================================
-    View the web UI at http://localhost:8892/notebooks/ray_ui78522.ipynb?token=02776ac38ddf5756b29da5b06ad06c491dc9ddca324b1f0a
-    ======================================================================
-
+    >>>
     >>> conn = sql.connect("db_name")
     >>> c = conn.cursor()
     >>> c.execute("CREATE TABLE example (col1, col2, column 3, col4)")
