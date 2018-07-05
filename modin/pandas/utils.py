@@ -15,7 +15,7 @@ _NAN_BLOCKS = {}
 _MEMOIZER_CAPACITY = 1000  # Capacity per function
 
 
-class LRUCache:
+class LRUCache(object):
     """A LRUCache implemented with collections.OrderedDict
 
     Notes:
@@ -48,7 +48,7 @@ class LRUCache:
         self.cache[key] = value
 
 
-class memoize:
+class memoize(object):
     """A basic memoizer that cache the input and output of the remote function
 
     Notes:
