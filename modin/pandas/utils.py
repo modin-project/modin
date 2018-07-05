@@ -410,7 +410,8 @@ def _blocks_to_col(*partition):
     if len(partition):
         df = pandas.DataFrame(np.concatenate(partition, axis=0))
 
-        if len(np.unique(partition[0].dtypes.values)) > 1:  # heterogenous types
+        # heterogenous types
+        if len(np.unique(partition[0].dtypes.values)) > 1:
             df = df.astype(partition[0].dtypes, copy=False)
 
         return df
