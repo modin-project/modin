@@ -167,20 +167,19 @@ def _read_csv_from_file(filepath, npartitions, kwargs={}):
             partition_ids.append(partition_id)
             index_ids.append(index_id)
 
-        # Construct index
-        index_id = get_index.remote([empty_pd_df.index.name], *index_ids) \
-            if kwargs["index_col"] is not None else None
+    # Construct index
+    index_id = get_index.remote([empty_pd_df.index.name], *index_ids) \
+        if kwargs["index_col"] is not None else None
 
-        df = DataFrame(
-                row_partitions=partition_ids, columns=names, index=index_id)
+    df = DataFrame(row_partitions=partition_ids, columns=names, index=index_id)
 
-        skipfooter = kwargs["skipfooter"] or kwargs["skip_footer"]
-        if skipfooter:
-            df = df.drop(df.index[-skipfooter:])
-        if kwargs["squeeze"] and len(df.columns) == 1:
-            return df[df.columns[0]]
+    skipfooter = kwargs["skipfooter"] or kwargs["skip_footer"]
+    if skipfooter:
+        df = df.drop(df.index[-skipfooter:])
+    if kwargs["squeeze"] and len(df.columns) == 1:
+        return df[df.columns[0]]
 
-        return df
+    return df
 
 
 @ray.remote
