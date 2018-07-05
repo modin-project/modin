@@ -42,7 +42,7 @@ SQL on Ray
 
 **We have implemented a simple example that can be found below. Feedback welcome!**
 
-.. code-block:: python
+.. code-block::
 
   >>> import modin.sql as sql
   Process STDOUT and STDERR is being redirected to /tmp/raylogs/.
