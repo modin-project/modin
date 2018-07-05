@@ -127,7 +127,7 @@ def _compute_ndim(row_loc, col_loc):
     return ndim
 
 
-class _Location_Indexer_Base():
+class _Location_Indexer_Base(object):
     """Base class for location indexer like loc and iloc
     """
 
