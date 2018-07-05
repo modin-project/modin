@@ -66,7 +66,7 @@ class DataFrame(object):
                 objects.
             index (pandas.Index, list, ObjectID): The row index for this
                 DataFrame.
-            columns (pandas.Index): The column names for this pandas, in
+            columns (pandas.Index): The column names for this DataFrame, in
                 pandas Index object.
             dtype: Data type to force. Only a single dtype is allowed.
                 If None, infer
@@ -4250,7 +4250,7 @@ class DataFrame(object):
             n (int): The number of rows to return.
 
         Returns:
-            A new pandas with the last n rows of this DataFrame.
+            A new DataFrame with the last n rows of this DataFrame.
         """
         if n >= len(self._row_metadata):
             return self
