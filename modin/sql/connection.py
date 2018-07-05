@@ -29,13 +29,13 @@ class Cursor(object):
 
     def execute(self, query):
         split_query = query.split(" ")
-        if split_query[:2] == ["CREATE", "TABLE"]:
+        if " ".join(split_query[:2]) == "CREATE TABLE":
             column_names = " ".join(split_query[3:])\
                 .replace("(", "").replace(")", "").split(", ")
             columns = Series(column_names)
             self._tables[split_query[2]] = DataFrame(columns=columns)
 
-        elif split_query[:2] == ["INSERT", "INTO"]:
+        elif " ".join(split_query[:2]) == "INSERT INTO":
             table = self._tables[split_query[2]]
             values = " ".join(split_query[4:])\
                 .replace("(", "").replace(")", "").split(", ")
@@ -44,7 +44,8 @@ class Cursor(object):
                 table.append(to_append, ignore_index=True)
             print(self._tables[split_query[2]])
         else:
-            print("ERROR")
+            raise NotImplementedError("This API is for demonstration purposes "
+                                      "only. Coming Soon!")
 
 
 def connect(name):
