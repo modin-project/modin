@@ -201,6 +201,7 @@ def test_single_group_row_groupby():
     test_take(ray_groupby, pandas_groupby)
 
 
+@pytest.mark.skip(reason="See Modin issue #21.")
 def test_large_row_groupby():
     pandas_df = pandas.DataFrame(np.random.randint(0, 8, size=(100, 4)),
                                  columns=list('ABCD'))
