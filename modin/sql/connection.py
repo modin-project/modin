@@ -30,22 +30,28 @@ class Cursor(object):
     def execute(self, query):
         split_query = query.split(" ")
         if " ".join(split_query[:2]) == "CREATE TABLE":
-            column_names = " ".join(split_query[3:])\
-                .replace("(", "").replace(")", "").split(", ")
-            columns = Series(column_names)
-            self._tables[split_query[2]] = DataFrame(columns=columns)
+            self._create_table(split_query)
 
         elif " ".join(split_query[:2]) == "INSERT INTO":
-            table = self._tables[split_query[2]]
-            values = " ".join(split_query[4:])\
-                .replace("(", "").replace(")", "").split(", ")
-            to_append = Series([eval(i) for i in values], index=table.columns)
-            self._tables[split_query[2]] =\
-                table.append(to_append, ignore_index=True)
-            print(self._tables[split_query[2]])
+            self._insert_into(split_query)
         else:
             raise NotImplementedError("This API is for demonstration purposes "
                                       "only. Coming Soon!")
+
+    def _create_table(self, split_query):
+        column_names = " ".join(split_query[3:]) \
+            .replace("(", "").replace(")", "").split(", ")
+        columns = Series(column_names)
+        self._tables[split_query[2]] = DataFrame(columns=columns)
+
+    def _insert_into(self, split_query):
+        table = self._tables[split_query[2]]
+        values = " ".join(split_query[4:]) \
+            .replace("(", "").replace(")", "").split(", ")
+        to_append = Series([eval(i) for i in values], index=table.columns)
+        self._tables[split_query[2]] = \
+            table.append(to_append, ignore_index=True)
+        print(self._tables[split_query[2]])
 
 
 def connect(name):
