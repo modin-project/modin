@@ -4,9 +4,8 @@ from __future__ import print_function
 
 import logging
 import argparse
-import ray
 import os
-import modin.pandas as pd
+import pandas as pd
 
 from utils import time_logger
 
@@ -32,44 +31,33 @@ logging.basicConfig(filename=args.logfile, level=logging.INFO)
 df_left = pd.read_csv(file_left)
 df_right = pd.read_csv(file_right)
 
-blocks = df_left._block_partitions.flatten().tolist()
-ray.wait(blocks, len(blocks))
-blocks = df_right._block_partitions.flatten().tolist()
-ray.wait(blocks, len(blocks))
-
 with time_logger("Inner Join: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
     result = df_left.join(df_right, how="inner", lsuffix='left_')
-    ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Outer Join: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
     result = df_left.join(df_right, how="outer", lsuffix='left_')
-    ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Self Join: {}; Size: {} bytes".format(
         file_left, file_right, file_size_left, file_size_right)):
     result = df_left.join(df_left, how="inner", lsuffix='left_')
-    ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Inner Merge: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
     result = df_left.merge(df_right, how="inner",
                            left_index=True, right_index=True)
-    ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Outer Merge: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
     result = df_left.merge(df_right, how="outer",
                            left_index=True, right_index=True)
-    ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Self Merge: {}; Size: {} bytes".format(
         file_left, file_right)):
     result = df_left.merge(df_left, how="inner",
                            left_index=True, right_index=True)
-    ray.wait(result._block_partitions.flatten().tolist())

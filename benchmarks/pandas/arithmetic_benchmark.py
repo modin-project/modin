@@ -4,9 +4,8 @@ from __future__ import print_function
 
 import logging
 import argparse
-import ray
 import os
-import modin.pandas as pd
+import pandas as pd
 
 from utils import time_logger
 
@@ -24,8 +23,6 @@ if not os.path.exists(args.logfile):
 logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 df = pd.read_csv(file)
-blocks = df._block_partitions.flatten().tolist()
-ray.wait(blocks, len(blocks))
 
 with time_logger("Sum on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.sum()

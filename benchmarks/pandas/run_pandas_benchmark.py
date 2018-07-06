@@ -18,9 +18,9 @@ timeout = 60 * 5
 
 for _ in range(num_iterations):
     for f in files:
-        p = Popen(["python", "benchmarks/arithmetic_benchmark.py",
+        p = Popen(["python", "benchmarks/pandas/arithmetic_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
-                   "--logfile", "benchmark-results/modin-arithmetic.log"],
+                   "--logfile", "benchmark-results/pandas-arithmetic.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
         try:
             p.wait(timeout)
@@ -29,9 +29,9 @@ for _ in range(num_iterations):
 
 for _ in range(num_iterations):
     for f in files:
-        p = Popen(["python", "benchmarks/io_benchmark.py",
+        p = Popen(["python", "benchmarks/pandas/io_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
-                   "--logfile", "benchmark-results/modin-io.log"],
+                   "--logfile", "benchmark-results/pandas-io.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
         try:
             p.wait(timeout)
@@ -43,10 +43,10 @@ multi_df_files = os.listdir("benchmarks/data/multi")
 for _ in range(num_iterations):
     for f in files:
         for g in multi_df_files:
-            p = Popen(["python", "benchmarks/join_merge_benchmark.py",
+            p = Popen(["python", "benchmarks/pandas/join_merge_benchmark.py",
                        "--left", "benchmarks/data/{}".format(f),
                        "--right", "benchmarks/data/{}".format(g),
-                       "--logfile", "benchmark-results/modin-join-merge.log"],
+                       "--logfile", "benchmark-results/pandas-join-merge.log"],
                       stdout=DEVNULL, stderr=DEVNULL)
             try:
                 p.wait(timeout)
