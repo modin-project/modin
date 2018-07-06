@@ -13,7 +13,7 @@ from utils import time_logger
 
 logging.basicConfig(filename='benchmarks.log', level=logging.DEBUG)
 
-parser = argparse.ArgumentParser(description='Modin read_csv Benchmark')
+parser = argparse.ArgumentParser(description='read_csv benchmark')
 parser.add_argument('--path', dest='path', help='path to the csv file')
 args = parser.parse_args()
 file = args.path
@@ -23,3 +23,6 @@ with time_logger("Read csv file: {}; Size: {} bytes".format(file, file_size)):
     df = pd.read_csv(file)
     blocks = df._block_partitions.flatten().tolist()
     ray.wait(blocks, len(blocks))
+
+with time_logger("Write csv file; Size: {} bytes".format(file_size)):
+    df.to_csv("/tmp/test_file.csv")
