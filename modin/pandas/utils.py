@@ -408,13 +408,8 @@ def _create_blocks_helper(df, npartitions, axis):
 @ray.remote
 def _blocks_to_col(*partition):
     if len(partition):
-        df = pandas.DataFrame(np.concatenate(partition, axis=0))
-
-        # heterogenous types
-        if len(np.unique(partition[0].dtypes.values)) > 1:
-            df = df.astype(partition[0].dtypes, copy=False)
-
-        return df
+        return pandas.concat(partition, axis=0, copy=False)\
+            .reset_index(drop=True)
     else:
         return pandas.Series()
 
