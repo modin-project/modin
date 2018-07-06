@@ -18,7 +18,7 @@ args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
 
-logging.basicConfig(filename=logfile, level=logging.INFO)
+logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 with time_logger("Read csv file: {}; Size: {} bytes".format(file, file_size)):
     df = pd.read_csv(file)
