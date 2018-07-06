@@ -29,10 +29,12 @@ new_row = np.random.randint(0, 100, size=num_cols)
 new_col = np.random.randint(0, 100, size=num_rows)
 
 
-def rand_row_loc(): return np.random.randint(0, num_rows)
+def rand_row_loc():
+    return np.random.randint(0, num_rows)
 
 
-def rand_col_loc(): return np.random.randint(0, num_cols)
+def rand_col_loc():
+    return np.random.randint(0, num_cols)
 
 
 # row/col r/w
