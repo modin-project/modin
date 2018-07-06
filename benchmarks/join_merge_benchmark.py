@@ -54,16 +54,19 @@ with time_logger("Self Join: {}; Size: {} bytes".format(
 with time_logger("Inner Merge: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
-    result = df_left.merge(df_right, how="inner", left_index=True, right_index=True)
+    result = df_left.merge(df_right, how="inner",
+                           left_index=True, right_index=True)
     ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Outer Merge: {} & {}; Left Size: {} bytes; Right Size: {} "
                  "bytes".format(file_left, file_right, file_size_left,
                                 file_size_right)):
-    result = df_left.merge(df_right, how="outer", left_index=True, right_index=True)
+    result = df_left.merge(df_right, how="outer",
+                           left_index=True, right_index=True)
     ray.wait(result._block_partitions.flatten().tolist())
 
 with time_logger("Self Merge: {}; Size: {} bytes".format(
         file_left, file_right)):
-    result = df_left.merge(df_left, how="inner", left_index=True, right_index=True)
+    result = df_left.merge(df_left, how="inner",
+                           left_index=True, right_index=True)
     ray.wait(result._block_partitions.flatten().tolist())
