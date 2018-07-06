@@ -17,7 +17,7 @@ args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
 
-if not os.path.exists(args.logfile):
+if not os.path.exists(os.path.split(args.logfile)[0]):
     os.makedirs(os.path.split(args.logfile)[0])
 
 logging.basicConfig(filename=args.logfile, level=logging.INFO)

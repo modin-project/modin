@@ -17,16 +17,15 @@ args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
 
-if not os.path.exists(args.logfile):
+if not os.path.exists(os.path.split(args.logfile)[0]):
     os.makedirs(os.path.split(args.logfile)[0])
 
 logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 with time_logger("Read csv file: {}; Size: {} bytes".format(file, file_size)):
     df = pd.read_csv(file)
-    blocks = df._block_partitions.flatten().tolist()
 
 # with time_logger("Write csv file; Size: {} bytes".format(file_size)):
 #     df.to_csv("/tmp/test_file.csv")
-# 
+#
 # os.remove("/tmp/test_file.csv")
