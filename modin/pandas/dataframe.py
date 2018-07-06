@@ -325,7 +325,7 @@ class DataFrame(object):
             return repr(self._repr_helper_())
         # The split here is so that we don't repr pandas row lengths.
         result = self._repr_helper_()
-        final_result = repr(result).rsplit("\n\n", maxsplit=1)[0] + \
+        final_result = repr(result).rsplit("\n\n", 1)[0] + \
             "\n\n[{0} rows x {1} columns]".format(len(self.index),
                                                   len(self.columns))
         return final_result
