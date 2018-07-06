@@ -11,8 +11,8 @@ import numpy as np
 import ray
 from warnings import warn
 
-from .utils import (_get_nan_block_id, extractor,
-                    _mask_block_partitions, writer, _blocks_to_series)
+from .utils import (_get_nan_block_id, extractor, _mask_block_partitions,
+                    writer, _blocks_to_series)
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
 
