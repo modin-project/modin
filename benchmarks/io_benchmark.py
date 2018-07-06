@@ -11,13 +11,14 @@ import modin.pandas as pd
 from utils import time_logger
 
 
-logging.basicConfig(filename='benchmarks.log', level=logging.DEBUG)
-
 parser = argparse.ArgumentParser(description='read_csv benchmark')
 parser.add_argument('--path', dest='path', help='path to the csv file')
+parser.add_argument('--logfile', dest='logfile', help='path to the log file')
 args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
+
+logging.basicConfig(filename=logfile, level=logging.INFO)
 
 with time_logger("Read csv file: {}; Size: {} bytes".format(file, file_size)):
     df = pd.read_csv(file)
