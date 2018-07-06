@@ -2,8 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-#import modin.pandas as pd
-import pandas as pd
+import modin.pandas as pd
 import numpy as np
 import os
 
@@ -16,7 +15,7 @@ if not os.path.exists(path_to_data):
 
 for r in num_rows:
     for c in num_cols:
-        file_path = path_to_data + "test-data-{}-{}.csv".format(r,c)
+        file_path = path_to_data + "test-data-{}-{}.csv".format(r, c)
         if os.path.exists(file_path):
             print(f"{file_path} exists! skipping")
             continue

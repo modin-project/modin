@@ -29,9 +29,31 @@ for _ in range(num_iterations):
 
 for _ in range(num_iterations):
     for f in files:
+        p = Popen(["python", "benchmarks/pandas/groupby_benchmark.py",
+                   "--path", "benchmarks/data/{}".format(f),
+                   "--logfile", "benchmark-results/pandas-groupby.log"],
+                  stdout=DEVNULL, stderr=DEVNULL)
+        try:
+            p.wait(timeout)
+        except TimeoutExpired:
+            p.kill()
+
+for _ in range(num_iterations):
+    for f in files:
         p = Popen(["python", "benchmarks/pandas/io_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
                    "--logfile", "benchmark-results/pandas-io.log"],
+                  stdout=DEVNULL, stderr=DEVNULL)
+        try:
+            p.wait(timeout)
+        except TimeoutExpired:
+            p.kill()
+
+for _ in range(num_iterations):
+    for f in files:
+        p = Popen(["python", "benchmarks/pandas/rw_benchmark.py",
+                   "--path", "benchmarks/data/{}".format(f),
+                   "--logfile", "benchmark-results/pandas-rw.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
         try:
             p.wait(timeout)

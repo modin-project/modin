@@ -4,9 +4,8 @@ from __future__ import print_function
 
 import logging
 import argparse
-import ray
 import os
-import modin.pandas as pd
+import pandas as pd
 
 from utils import time_logger
 import numpy as np
@@ -21,8 +20,6 @@ file_size = os.path.getsize(file)
 logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 df = pd.read_csv(file)
-blocks = df._block_partitions.flatten().tolist()
-ray.wait(blocks, len(blocks))
 
 num_rows, num_cols = df.shape
 new_row = np.random.randint(0, 100, size=num_cols)

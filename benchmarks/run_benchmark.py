@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import os
 import argparse
-from subprocess import Popen, DEVNULL, TimeoutExpired, PIPE
+from subprocess import Popen, DEVNULL, TimeoutExpired
 
 parser = argparse.ArgumentParser(description='run benchmarks')
 parser.add_argument('--N', dest='n', default=1, nargs='?', type=int,
@@ -29,6 +29,17 @@ for _ in range(num_iterations):
 
 for _ in range(num_iterations):
     for f in files:
+        p = Popen(["python", "benchmarks/groupby_benchmark.py",
+                   "--path", "benchmarks/data/{}".format(f),
+                   "--logfile", "benchmark-results/modin-groupby.log"],
+                  stdout=DEVNULL, stderr=DEVNULL)
+        try:
+            p.wait(timeout)
+        except TimeoutExpired:
+            p.kill()
+
+for _ in range(num_iterations):
+    for f in files:
         p = Popen(["python", "benchmarks/io_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
                    "--logfile", "benchmark-results/modin-io.log"],
@@ -42,7 +53,7 @@ for _ in range(num_iterations):
     for f in files:
         p = Popen(["python", "benchmarks/rw_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
-                   "--logfile", "benchmark-results/amodin-rw.log"],
+                   "--logfile", "benchmark-results/modin-rw.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
         try:
             p.wait(timeout)
