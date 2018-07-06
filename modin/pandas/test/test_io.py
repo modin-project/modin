@@ -313,8 +313,9 @@ def test_from_csv_chunksize():
     setup_csv_file(SMALL_ROW_SIZE)
 
     # Tests __next__ and correctness of reader as an iterator
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
+    # Use larger chunksize to read through file quicker
+    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
+    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
 
     for ray_df, pd_df in zip(rdf_reader, pd_reader):
         assert ray_df_equals_pandas(ray_df, pd_df)
