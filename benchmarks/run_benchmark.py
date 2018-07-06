@@ -51,7 +51,7 @@ for _ in range(num_iterations):
 
 for _ in range(num_iterations):
     for f in files:
-        p = Popen(["python", "benchmarks/rw_benchmark.py",
+        p = Popen(["python", "benchmarks/df_op_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
                    "--logfile", "benchmark-results/modin-rw.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
