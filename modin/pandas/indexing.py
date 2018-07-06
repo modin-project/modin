@@ -12,7 +12,7 @@ import ray
 from warnings import warn
 
 from .utils import (_blocks_to_col, _get_nan_block_id, extractor,
-                    _mask_block_partitions, writer)
+                    _mask_block_partitions, writer, _blocks_to_series)
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
 
@@ -154,7 +154,7 @@ class _Location_Indexer_Base(object):
 
         extracted = self._retrive_items(row_lookup, col_lookup)
         if ndim == 1:
-            result = ray.get(_blocks_to_col.remote(*extracted)).squeeze()
+            result = ray.get(_blocks_to_series.remote(*extracted)).squeeze()
 
             if is_scalar(result):
                 result = pandas.Series(result)
