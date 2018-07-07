@@ -419,19 +419,6 @@ def _blocks_to_series(*partition):
 
 @memoize
 @ray.remote
-def _blocks_to_series(*partition):
-    """Used in indexing, concatenating blocks in a flexible way
-    """
-    if len(partition) == 0:
-        return pandas.Series()
-
-    partition = [pandas.Series(p.squeeze()) for p in partition]
-    series = pandas.concat(partition)
-    return series
-
-
-@memoize
-@ray.remote
 def _blocks_to_col(*partition):
     if len(partition):
         return pandas.concat(partition, axis=0, copy=False)\
