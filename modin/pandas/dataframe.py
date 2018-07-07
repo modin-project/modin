@@ -2747,6 +2747,11 @@ class DataFrame(object):
             raise ValueError("can not merge DataFrame with instance of type "
                              "{}".format(type(right)))
 
+        if left_index is False or right_index is False:
+            raise NotImplementedError(
+                "To contribute to Pandas on Ray, please visit "
+                "github.com/modin-project/modin.")
+
         args = (how, on, left_on, right_on, left_index, right_index, sort,
                 suffixes, False, indicator, validate)
 
