@@ -14,7 +14,7 @@ num_iterations = args.n
 
 files = os.listdir("benchmarks/data")
 
-timeout = 60 * 5
+timeout = 60 * 20
 
 for _ in range(num_iterations):
     for f in files:
@@ -27,7 +27,6 @@ for _ in range(num_iterations):
         except TimeoutExpired:
             p.kill()
 
-for _ in range(num_iterations):
     for f in files:
         p = Popen(["python3", "benchmarks/pandas/groupby_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
@@ -38,7 +37,6 @@ for _ in range(num_iterations):
         except TimeoutExpired:
             p.kill()
 
-for _ in range(num_iterations):
     for f in files:
         p = Popen(["python3", "benchmarks/pandas/io_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
@@ -49,7 +47,6 @@ for _ in range(num_iterations):
         except TimeoutExpired:
             p.kill()
 
-for _ in range(num_iterations):
     for f in files:
         p = Popen(["python3", "benchmarks/pandas/df_op_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
@@ -60,9 +57,8 @@ for _ in range(num_iterations):
         except TimeoutExpired:
             p.kill()
 
-multi_df_files = os.listdir("benchmarks/data/multi")
+    multi_df_files = os.listdir("benchmarks/data/multi")
 
-for _ in range(num_iterations):
     for f in files:
         for g in multi_df_files:
             p = Popen(["python3", "benchmarks/pandas/join_merge_benchmark.py",

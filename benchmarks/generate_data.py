@@ -6,8 +6,8 @@ import modin.pandas as pd
 import numpy as np
 import os
 
-num_rows = [100, 1000, 2000, 4000, 10000, 100000, 200000, 500000, 1000000]
-num_cols = [100, 1000]
+num_rows = [100, 10000, 100000, 150000, 200000, 350000, 500000]
+num_cols = [1000]
 
 path_to_data = "benchmarks/data/"
 if not os.path.exists(path_to_data):

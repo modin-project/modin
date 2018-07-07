@@ -24,22 +24,21 @@ logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 df = pd.read_csv(file)
 
-by = [str(i) for i in df['1']]
 with time_logger("Groupby + sum aggregation on axis=0: {}; Size: {} bytes"
                  .format(file, file_size)):
-    df_groupby = df.groupby(by=by)
+    df_groupby = df.groupby('1')
     df_groupby.sum()
 
 with time_logger("Groupby mean on axis=0: {}; Size: {} bytes"
                  .format(file, file_size)):
     df_groupby.mean()
 
-by = [str(i) for i in df.iloc[2]]
-with time_logger("Groupby + sum aggregation on axis=1: {}; Size: {} bytes"
-                 .format(file, file_size)):
-    df_groupby = df.groupby(by=by, axis=1)
-    df_groupby.sum()
-
-with time_logger("Groupby mean on axis=1: {}; Size: {} bytes"
-                 .format(file, file_size)):
-    df_groupby.mean()
+# by = [str(i) for i in df.iloc[2]]
+# with time_logger("Groupby + sum aggregation on axis=1: {}; Size: {} bytes"
+#                  .format(file, file_size)):
+#     df_groupby = df.groupby(by=by, axis=1)
+#     df_groupby.sum()
+#
+# with time_logger("Groupby mean on axis=1: {}; Size: {} bytes"
+#                  .format(file, file_size)):
+#     df_groupby.mean()
