@@ -412,7 +412,7 @@ def _blocks_to_series(*partition):
     if len(partition) == 0:
         return pandas.Series()
 
-    partition = [p.squeeze() for p in partition]
+    partition = [pd.Series(p.squeeze()) for p in partition]
     series = pandas.concat(partition)
     return series
 
