@@ -66,7 +66,7 @@ More information and Getting Involved
 - Submit bug reports to our `GitHub Issues Page`_.
 - Contributions are welcome! Open a `pull request`_.
 
-.. _`Documentation`: http://http://modin.readthedocs.io/en/latest/
+.. _`Documentation`: https://modin.readthedocs.io/en/latest/
 .. _`modin-dev@googlegroups.com`: https://groups.google.com/forum/#!forum/modin-dev
 .. _`GitHub Issues Page`: https://github.com/modin-project/modin/issues
 .. _`pull request`: https://github.com/modin-project/modin/pulls
