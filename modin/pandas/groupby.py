@@ -59,7 +59,7 @@ class DataFrameGroupBy(object):
                 raise NotImplementedError(
                     "SeriesGroupBy is not implemented."
                     "To contribute to Pandas on Ray, please visit "
-                    "github.com/ray-project/ray.")
+                    "github.com/modin-project/modin.")
             raise e
 
     _index_grouped_cache = None
@@ -144,7 +144,7 @@ class DataFrameGroupBy(object):
     def sem(self, ddof=1):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def mean(self, *args, **kwargs):
         return self._apply_agg_function(
@@ -158,23 +158,23 @@ class DataFrameGroupBy(object):
     def plot(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def ohlc(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __bytes__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def tshift(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def groups(self):
@@ -187,7 +187,7 @@ class DataFrameGroupBy(object):
     def idxmax(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def ndim(self):
@@ -196,12 +196,12 @@ class DataFrameGroupBy(object):
     def shift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def nth(self, n, dropna=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def cumsum(self, axis=0, *args, **kwargs):
         return self._apply_df_function(lambda df: df.cumsum(axis,
@@ -215,12 +215,12 @@ class DataFrameGroupBy(object):
     def pct_change(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def filter(self, func, dropna=True, *args, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def cummax(self, axis=0, **kwargs):
         return self._apply_df_function(lambda df: df.cummax(axis,
@@ -278,7 +278,7 @@ class DataFrameGroupBy(object):
     def first(self, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def backfill(self, limit=None):
         return self.bfill(limit)
@@ -287,7 +287,7 @@ class DataFrameGroupBy(object):
         # This operation requires a SeriesGroupBy Object
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def cummin(self, axis=0, **kwargs):
         return self._apply_df_function(lambda df: df.cummin(axis=axis,
@@ -300,7 +300,7 @@ class DataFrameGroupBy(object):
     def idxmin(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def prod(self, **kwargs):
         return self._apply_agg_function(
@@ -320,19 +320,19 @@ class DataFrameGroupBy(object):
             raise NotImplementedError(
                 "This requires Multi-level index to be implemented. "
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
         return self._apply_agg_function(
             lambda df: _agg_remote.remote(df, self._axis, arg, kwargs, *args))
 
     def last(self, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def mad(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def rank(self):
         return self._apply_df_function(lambda df: df.rank(axis=self._axis))
@@ -341,12 +341,12 @@ class DataFrameGroupBy(object):
     def corrwith(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def pad(self, limit=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def max(self, **kwargs):
         return self._apply_agg_function(
@@ -359,7 +359,7 @@ class DataFrameGroupBy(object):
     def get_group(self, name, obj=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __len__(self):
         return len(self._index_grouped)
@@ -378,18 +378,18 @@ class DataFrameGroupBy(object):
     def __unicode__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def describe(self, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def boxplot(self, grouped, subplots=True, column=None, fontsize=None,
                 rot=0, grid=True, ax=None, figsize=None, layout=None, **kwds):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def ngroup(self, ascending=True):
         return self._index_grouped.ngroup(ascending)
@@ -401,7 +401,7 @@ class DataFrameGroupBy(object):
     def resample(self, rule, *args, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def median(self, **kwargs):
         return self._apply_agg_function(
@@ -410,7 +410,7 @@ class DataFrameGroupBy(object):
     def head(self, n=5):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def cumprod(self, axis=0, *args, **kwargs):
         return self._apply_df_function(lambda df: df.cumprod(axis,
@@ -426,7 +426,7 @@ class DataFrameGroupBy(object):
     def cov(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def transform(self, func, *args, **kwargs):
         return self._apply_df_function(lambda df: df.transform(func,
@@ -436,7 +436,7 @@ class DataFrameGroupBy(object):
     def corr(self, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def fillna(self, **kwargs):
         return self._apply_df_function(lambda df: df.fillna(axis=self._axis,
@@ -452,36 +452,36 @@ class DataFrameGroupBy(object):
     def cumcount(self, ascending=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def tail(self, n=5):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     # expanding and rolling are unique cases and need to likely be handled
     # separately. They do not appear to be commonly used.
     def expanding(self, *args, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def rolling(self, *args, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def hist(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def quantile(self, q=0.5, **kwargs):
         if is_list_like(q):
             raise NotImplementedError(
                 "This requires Multi-level index to be implemented. "
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
 
         return self._apply_agg_function(
             lambda df: _quantile_remote.remote(df, self._axis, q, kwargs))
@@ -489,7 +489,7 @@ class DataFrameGroupBy(object):
     def diff(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def take(self, **kwargs):
         return self._apply_df_function(lambda df: df.take(**kwargs))
