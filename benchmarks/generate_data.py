@@ -15,10 +15,6 @@ if not os.path.exists(path_to_data):
 
 for r in num_rows:
     for c in num_cols:
-        file_path = path_to_data + "test-data-{}-{}.csv".format(r, c)
-        if os.path.exists(file_path):
-            print(f"{file_path} exists! skipping")
-            continue
         df = pd.DataFrame(np.random.randint(0, 100, size=(r, c)))
         df.to_csv(path_to_data + "test-data-{}-{}.csv".format(r, c))
 
