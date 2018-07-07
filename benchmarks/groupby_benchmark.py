@@ -37,15 +37,3 @@ with time_logger("Groupby mean on axis=0: {}; Size: {} bytes"
                  .format(file, file_size)):
     blocks = df_groupby.mean()._block_partitions.flatten().tolist()
     ray.wait(blocks, len(blocks))
-
-# by = [str(i) for i in df.iloc[2]]
-# with time_logger("Groupby + sum aggregation on axis=1: {}; Size: {} bytes"
-#                  .format(file, file_size)):
-#     df_groupby = df.groupby(by=by, axis=1)
-#     blocks = df_groupby.sum()._block_partitions.flatten().tolist()
-#     ray.wait(blocks, len(blocks))
-# 
-# with time_logger("Groupby mean on axis=1: {}; Size: {} bytes"
-#                  .format(file, file_size)):
-#     blocks = df_groupby.mean()._block_partitions.flatten().tolist()
-#     ray.wait(blocks, len(blocks))
