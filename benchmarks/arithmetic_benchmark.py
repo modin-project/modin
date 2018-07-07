@@ -27,6 +27,10 @@ df = pd.read_csv(file)
 blocks = df._block_partitions.flatten().tolist()
 ray.wait(blocks, len(blocks))
 
+with time_logger("Transpose: {}; Size: {} bytes".format(file, file_size)):
+    blocks = df.T.flatten().tolist()
+    ray.wait(blocks, len(blocks))
+
 with time_logger("Sum on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.sum()
 

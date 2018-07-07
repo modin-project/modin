@@ -24,6 +24,9 @@ logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 df = pd.read_csv(file)
 
+with time_logger("Transpose: {}; Size: {} bytes".format(file, file_size)):
+    df.T
+
 with time_logger("Sum on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.sum()
 
