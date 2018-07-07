@@ -411,18 +411,21 @@ def _blocks_to_col(*partition):
         return pandas.concat(partition, axis=0, copy=False)\
             .reset_index(drop=True)
     else:
-        return pandas.Series()
+        return pandas.DataFrame()
 
 
 @memoize
 @ray.remote
 def _blocks_to_row(*partition):
-    row_part = pandas.concat(partition, axis=1, copy=False)\
-        .reset_index(drop=True)
-    # Because our block partitions contain different indices (for the
-    # columns), this change is needed to ensure correctness.
-    row_part.columns = pandas.RangeIndex(0, len(row_part.columns))
-    return row_part
+    if len(partition):
+        row_part = pandas.concat(partition, axis=1, copy=False)\
+            .reset_index(drop=True)
+        # Because our block partitions contain different indices (for the
+        # columns), this change is needed to ensure correctness.
+        row_part.columns = pandas.RangeIndex(0, len(row_part.columns))
+        return row_part
+    else:
+        return pandas.DataFrame()
 
 
 def _inherit_docstrings(parent, excluded=[]):
