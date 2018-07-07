@@ -53,7 +53,7 @@ for _ in range(num_iterations):
     for f in files:
         p = Popen(["python", "benchmarks/pandas/df_op_benchmark.py",
                    "--path", "benchmarks/data/{}".format(f),
-                   "--logfile", "benchmark-results/pandas-rw.log"],
+                   "--logfile", "benchmark-results/pandas-df-op.log"],
                   stdout=DEVNULL, stderr=DEVNULL)
         try:
             p.wait(timeout)
