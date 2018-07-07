@@ -28,7 +28,7 @@ with time_logger("Read csv file: {}; Size: {} bytes".format(file, file_size)):
     blocks = df._block_partitions.flatten().tolist()
     ray.wait(blocks, len(blocks))
 
-with time_logger("Write csv file; Size: {} bytes".format(file_size)):
-    df.to_csv("/tmp/test_file.csv")
-
-os.remove("/tmp/test_file.csv")
+# with time_logger("Write csv file; Size: {} bytes".format(file_size)):
+#     df.to_csv("/tmp/test_file.csv")
+#
+# os.remove("/tmp/test_file.csv")
