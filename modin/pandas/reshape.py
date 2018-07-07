@@ -40,7 +40,7 @@ def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     if columns is None:
         columns_to_encode = data.dtypes.isin([np.dtype("O"), 'category'])

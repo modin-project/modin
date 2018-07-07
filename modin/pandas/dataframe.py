@@ -961,7 +961,7 @@ class DataFrame(object):
         elif isinstance(arg, dict):
             raise NotImplementedError(
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
         elif is_list_like(arg):
             return self.apply(arg, axis=_axis, args=args, **kwargs)
         elif callable(arg):
@@ -1094,7 +1094,7 @@ class DataFrame(object):
               broadcast_axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def all(self, axis=None, bool_only=None, skipna=None, level=None,
             **kwargs):
@@ -1242,7 +1242,7 @@ class DataFrame(object):
     def as_blocks(self, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def as_matrix(self, columns=None):
         """Convert the frame to its Numpy-array representation.
@@ -1261,17 +1261,17 @@ class DataFrame(object):
                fill_value=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def asof(self, where, subset=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def assign(self, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def astype(self, dtype, copy=True, errors='raise', **kwargs):
         if isinstance(dtype, dict):
@@ -1314,13 +1314,13 @@ class DataFrame(object):
     def at_time(self, time, asof=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def between_time(self, start_time, end_time, include_start=True,
                      include_end=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='bfill')
@@ -1355,59 +1355,59 @@ class DataFrame(object):
                 **kwds):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args,
              **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def clip_lower(self, threshold, axis=None, inplace=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def clip_upper(self, threshold, axis=None, inplace=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def combine_first(self, other):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def compound(self, axis=None, skipna=None, level=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def consolidate(self, inplace=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def convert_objects(self, convert_dates=True, convert_numeric=False,
                         convert_timedeltas=True, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def corr(self, method='pearson', min_periods=1):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def corrwith(self, other, axis=0, drop=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def count(self, axis=0, level=None, numeric_only=False):
         """Get the count of non-null objects in the DataFrame.
@@ -1429,7 +1429,7 @@ class DataFrame(object):
     def cov(self, min_periods=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def _cumulative_helper(self, func, axis):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None \
@@ -1603,7 +1603,7 @@ class DataFrame(object):
     def dot(self, other):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def drop(self, labels=None, axis=0, index=None, columns=None, level=None,
              inplace=False, errors='raise'):
@@ -1735,12 +1735,12 @@ class DataFrame(object):
     def drop_duplicates(self, subset=None, keep='first', inplace=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def duplicated(self, subset=None, keep='first'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def eq(self, other, axis='columns', level=None):
         """Checks element-wise that this is equal to other.
@@ -1860,12 +1860,12 @@ class DataFrame(object):
             min_periods=0, freq=None, adjust=True, ignore_na=False, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='ffill')
@@ -2035,7 +2035,7 @@ class DataFrame(object):
     def first(self, offset):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.
@@ -2066,26 +2066,26 @@ class DataFrame(object):
                  infer_datetime_format=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @classmethod
     def from_dict(self, data, orient='columns', dtype=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @classmethod
     def from_items(self, items, columns=None, orient='columns'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @classmethod
     def from_records(self, data, index=None, exclude=None, columns=None,
                      coerce_float=False, nrows=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def ge(self, other, axis='columns', level=None):
         """Checks element-wise that this is greater than or equal to other.
@@ -2138,12 +2138,12 @@ class DataFrame(object):
     def get_value(self, index, col, takeable=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def get_values(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def gt(self, other, axis='columns', level=None):
         """Checks element-wise that this is greater than other.
@@ -2185,7 +2185,7 @@ class DataFrame(object):
              sharey=False, figsize=None, layout=None, bins=10, **kwds):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def idxmax(self, axis=0, skipna=True):
         """Get the index of the first occurrence of the max value of the axis.
@@ -2234,7 +2234,7 @@ class DataFrame(object):
     def infer_objects(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def info(self, verbose=None, buf=None, max_cols=None, memory_usage=None,
              null_counts=None):
@@ -2372,7 +2372,7 @@ class DataFrame(object):
                     limit_direction='forward', downcast=None, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def iterrows(self):
         """Iterate over DataFrame rows as (index, Series) pairs.
@@ -2582,18 +2582,18 @@ class DataFrame(object):
              **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None,
                  **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def last(self, offset):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.
@@ -2619,7 +2619,7 @@ class DataFrame(object):
     def lookup(self, row_labels, col_labels):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def lt(self, other, axis='columns', level=None):
         """Checks element-wise that this is less than other.
@@ -2637,13 +2637,13 @@ class DataFrame(object):
     def mad(self, axis=None, skipna=None, level=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def mask(self, cond, other=np.nan, inplace=False, axis=None, level=None,
              errors='raise', try_cast=False, raise_on_error=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None,
             **kwargs):
@@ -2700,7 +2700,7 @@ class DataFrame(object):
              value_name='value', col_level=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def memory_usage(self, index=True, deep=False):
 
@@ -2977,7 +2977,7 @@ class DataFrame(object):
     def nlargest(self, n, columns, keep='first'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def notna(self):
         """Perform notna across the DataFrame.
@@ -3025,7 +3025,7 @@ class DataFrame(object):
     def nsmallest(self, n, columns, keep='first'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def nunique(self, axis=0, dropna=True):
         """Return Series with number of distinct
@@ -3047,7 +3047,7 @@ class DataFrame(object):
                    **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def pipe(self, func, *args, **kwargs):
         """Apply func(self, *args, **kwargs)
@@ -3065,14 +3065,14 @@ class DataFrame(object):
     def pivot(self, index=None, columns=None, values=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def pivot_table(self, values=None, index=None, columns=None,
                     aggfunc='mean', fill_value=None, margins=False,
                     dropna=True, margins_name='All'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def plot(self, x=None, y=None, kind='line', ax=None, subplots=False,
              sharex=None, sharey=False, layout=None, figsize=None,
@@ -3083,7 +3083,7 @@ class DataFrame(object):
              sort_columns=False, **kwds):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def pop(self, item):
         """Pops an item from this DataFrame and returns it.
@@ -3344,7 +3344,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Multilevel Index not Implemented. "
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
 
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None \
             else 0
@@ -3387,13 +3387,13 @@ class DataFrame(object):
                      limit=None, fill_value=np.nan):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def reindex_like(self, other, method=None, copy=True, limit=None,
                      tolerance=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def rename(self, mapper=None, index=None, columns=None, axis=None,
                copy=True, inplace=False, level=None):
@@ -3470,20 +3470,20 @@ class DataFrame(object):
     def reorder_levels(self, order, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def replace(self, to_replace=None, value=None, inplace=False, limit=None,
                 regex=False, method='pad', axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def resample(self, rule, how=None, axis=0, fill_method=None, closed=None,
                  label=None, convention='start', kind=None, loffset=None,
                  limit=None, base=0, on=None, level=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def reset_index(self, level=None, drop=False, inplace=False, col_level=0,
                     col_fill=''):
@@ -3610,7 +3610,7 @@ class DataFrame(object):
                 win_type=None, on=None, axis=0, closed=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def round(self, decimals=0, *args, **kwargs):
         new_block_partitions = np.array([_map_partitions(
@@ -3802,7 +3802,7 @@ class DataFrame(object):
     def select(self, crit, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -3846,7 +3846,7 @@ class DataFrame(object):
             numeric_only=None, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def set_axis(self, labels, axis=0, inplace=None):
         """Assign desired index to given axis.
@@ -3963,12 +3963,12 @@ class DataFrame(object):
     def set_value(self, index, col, value, takeable=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def shift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None,
              **kwargs):
@@ -3993,7 +3993,7 @@ class DataFrame(object):
     def slice_shift(self, periods=1, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
                    kind='quicksort', na_position='last', sort_remaining=True,
@@ -4174,17 +4174,17 @@ class DataFrame(object):
                   sort_remaining=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def squeeze(self, axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def stack(self, level=-1, dropna=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def std(self, axis=None, skipna=None, level=None, ddof=1,
             numeric_only=None, **kwargs):
@@ -4236,12 +4236,12 @@ class DataFrame(object):
     def swapaxes(self, axis1, axis2, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def swaplevel(self, i=-2, j=-1, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.
@@ -4267,7 +4267,7 @@ class DataFrame(object):
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
 
@@ -4359,12 +4359,12 @@ class DataFrame(object):
     def to_dense(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_dict(self, orient='dict', into=dict):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_excel(self, excel_writer, sheet_name='Sheet1', na_rep='',
                  float_format=None, columns=None, header=True, index=True,
@@ -4395,7 +4395,7 @@ class DataFrame(object):
                private_key=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_hdf(self, path_or_buf, key, **kwargs):
 
@@ -4443,7 +4443,7 @@ class DataFrame(object):
                  multicolumn_format=None, multirow=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_msgpack(self, path_or_buf=None, encoding='utf-8', **kwargs):
 
@@ -4456,7 +4456,7 @@ class DataFrame(object):
     def to_panel(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_parquet(self, fname, engine='auto', compression='snappy',
                    **kwargs):
@@ -4470,7 +4470,7 @@ class DataFrame(object):
     def to_period(self, freq=None, axis=0, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_pickle(self, path, compression='infer',
                   protocol=pkl.HIGHEST_PROTOCOL):
@@ -4484,12 +4484,12 @@ class DataFrame(object):
     def to_records(self, index=True, convert_datetime64=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_sparse(self, fill_value=None, kind='block'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_sql(self, name, con, flavor=None, schema=None, if_exists='fail',
                index=True, index_label=None, chunksize=None, dtype=None):
@@ -4520,17 +4520,17 @@ class DataFrame(object):
                   show_dimensions=False):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_timestamp(self, freq=None, how='start', axis=0, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def to_xarray(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def transform(self, func, *args, **kwargs):
         kwargs["is_transform"] = True
@@ -4560,28 +4560,28 @@ class DataFrame(object):
     def truncate(self, before=None, after=None, axis=None, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def tshift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def tz_localize(self, tz, axis=0, level=None, copy=True,
                     ambiguous='raise'):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def unstack(self, level=-1, fill_value=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def update(self, other, join='left', overwrite=True, filter_func=None,
                raise_conflict=False):
@@ -4602,7 +4602,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "raise_conflict parameter not yet supported. "
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
 
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
@@ -4739,7 +4739,7 @@ class DataFrame(object):
     def xs(self, key, axis=0, level=None, drop_level=True):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __getitem__(self, key):
         """Get the column specified by key for this DataFrame.
@@ -4769,11 +4769,11 @@ class DataFrame(object):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
             raise NotImplementedError("To contribute to Pandas on Ray, please"
-                                      "visit github.com/ray-project/ray.")
+                                      "visit github.com/modin-project/modin.")
             # return self._getitem_frame(key)
         elif is_mi_columns:
             raise NotImplementedError("To contribute to Pandas on Ray, please"
-                                      "visit github.com/ray-project/ray.")
+                                      "visit github.com/modin-project/modin.")
             # return self._getitem_multilevel(key)
         else:
             return self._getitem_column(key)
@@ -4864,7 +4864,7 @@ class DataFrame(object):
         if not isinstance(key, str):
             raise NotImplementedError(
                 "To contribute to Pandas on Ray, please visit "
-                "github.com/ray-project/ray.")
+                "github.com/modin-project/modin.")
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
         else:
@@ -4883,17 +4883,17 @@ class DataFrame(object):
     def __unicode__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __invert__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __hash__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __iter__(self):
         """Iterate over the columns
@@ -4917,12 +4917,12 @@ class DataFrame(object):
     def __nonzero__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __bool__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __abs__(self):
         """Creates a modified DataFrame by taking the absolute value.
@@ -4935,7 +4935,7 @@ class DataFrame(object):
     def __round__(self, decimals=0):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __array__(self, dtype=None):
         # TODO: This is very inefficient and needs fix, also see as_matrix
@@ -4948,12 +4948,12 @@ class DataFrame(object):
     def __getstate__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __setstate__(self, state):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -5008,7 +5008,7 @@ class DataFrame(object):
     def __finalize__(self, other, method=None, **kwargs):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __copy__(self, deep=True):
         """Make a copy using modin.DataFrame.copy method
@@ -5037,17 +5037,17 @@ class DataFrame(object):
     def __and__(self, other):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __or__(self, other):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __xor__(self, other):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def __lt__(self, other):
         return self.lt(other)
@@ -5161,30 +5161,30 @@ class DataFrame(object):
     def __sizeof__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def __doc__(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def blocks(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def style(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def iat(self, axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def loc(self):
@@ -5200,17 +5200,17 @@ class DataFrame(object):
     def is_copy(self):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def at(self, axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     def ix(self, axis=None):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
-            "github.com/ray-project/ray.")
+            "github.com/modin-project/modin.")
 
     @property
     def iloc(self):
