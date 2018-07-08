@@ -24,9 +24,7 @@ typically means better performance and more correct code.
 
 Modin also depends on Ray_. Ray is a task-parallel execution framework for
 parallelizing new and existing applications with minor code changes. Currently,
-we depend on the most recent Ray code, some of which has not yet been released.
-As a part of our build process, we will also install the latest Ray from their
-published nightly wheels.
+we depend on the most recent Ray release: 0.5.0.
 
 Building Modin from Source
 --------------------------
