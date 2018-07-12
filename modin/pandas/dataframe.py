@@ -239,8 +239,7 @@ class DataFrame(object):
             if get_local_head:
                 return df.head(n)
 
-            new_dfs = _map_partitions(lambda df: df.head(n),
-                                      df)
+            new_dfs = _map_partitions(lambda df: df.head(n), df)
 
             index = self.index[:n]
             pandas_head = pandas.concat(ray.get(new_dfs), axis=1, copy=False)
@@ -253,8 +252,7 @@ class DataFrame(object):
             if get_local_tail:
                 return df.tail(n)
 
-            new_dfs = _map_partitions(lambda df: df.tail(n),
-                                      df)
+            new_dfs = _map_partitions(lambda df: df.tail(n), df)
 
             index = self.index[-n:]
             pandas_tail = pandas.concat(ray.get(new_dfs), axis=1, copy=False)
