@@ -229,7 +229,7 @@ class DataFrame(object):
     def __str__(self):
         return repr(self)
 
-    def _repr_helper_(self):
+    def _repr_helper(self):
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
             return to_pandas(self)
@@ -322,9 +322,9 @@ class DataFrame(object):
         # We use pandas repr so that we match them.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return repr(self._repr_helper_())
+            return repr(self._repr_helper())
         # The split here is so that we don't repr pandas row lengths.
-        result = self._repr_helper_()
+        result = self._repr_helper()
         final_result = repr(result).rsplit("\n\n", 1)[0] + \
             "\n\n[{0} rows x {1} columns]".format(len(self.index),
                                                   len(self.columns))
@@ -341,9 +341,9 @@ class DataFrame(object):
         # of the dataframe.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return self._repr_helper_()._repr_html_()
+            return self._repr_helper()._repr_html_()
         # We split so that we insert our correct dataframe dimensions.
-        result = self._repr_helper_()._repr_html_()
+        result = self._repr_helper()._repr_html_()
         return result.split("<p>")[0] + \
             "<p>{0} rows x {1} columns</p>\n</div>".format(len(self.index),
                                                            len(self.columns))
@@ -2174,7 +2174,8 @@ class DataFrame(object):
         idx = np.digitize(n, length_bins)
 
         if idx > 0:
-            remaining = n - np.sum(length_bins[:idx])
+            # This value will be what we need to get from the last block
+            remaining = n - length_bins[idx - 1]
         else:
             remaining = n
 
@@ -4269,14 +4270,33 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the last n rows of this DataFrame.
         """
-        if n >= len(self._row_metadata):
-            return self
+        if n >= len(self):
+            return self.copy()
 
-        new_dfs = _map_partitions(lambda df: df.tail(n),
-                                  self._col_partitions)
+        npartitions = len(self._row_metadata._lengths) - 1
+        length_bins = np.cumsum(self._row_metadata._lengths[::-1])
+
+        idx = np.digitize(n, length_bins)
+
+        if idx > 0:
+            # This value will be what we need to get from the last block
+            remaining = n - length_bins[idx - 1]
+        else:
+            remaining = n
+        print(self)
+        # We are building the blocks in reverse order, then reversing the
+        # numpy array order
+        new_blocks = \
+            np.array([self._block_partitions[npartitions - i]
+                      if i != idx
+                      else [_deploy_func.remote(lambda df: df.tail(remaining),
+                                                blk)
+                            for blk in self._block_partitions[npartitions - i]]
+                      for i in range(idx + 1)])[::-1]
 
         index = self._row_metadata.index[-n:]
-        return DataFrame(col_partitions=new_dfs,
+
+        return DataFrame(block_partitions=new_blocks,
                          col_metadata=self._col_metadata,
                          index=index,
                          dtypes_cache=self._dtypes_cache)
