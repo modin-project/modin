@@ -4273,7 +4273,7 @@ class DataFrame(object):
             remaining = n - length_bins[idx - 1]
         else:
             remaining = n
-        print(self)
+
         # We are building the blocks in reverse order, then reversing the
         # numpy array order
         return np.array(
