@@ -2170,12 +2170,24 @@ class DataFrame(object):
         if n >= len(self._row_metadata):
             return self.copy()
 
-        new_dfs = _map_partitions(lambda df: df.head(n),
-                                  self._col_partitions)
+        length_bins = np.cumsum(self._row_metadata._lengths)
+        idx = np.digitize(n, length_bins)
+
+        if idx > 0:
+            remaining = n - np.sum(length_bins[:idx])
+        else:
+            remaining = n
+
+        new_blocks = \
+            np.array([self._block_partitions[i] if i != idx
+                      else [_deploy_func.remote(lambda df: df.head(remaining),
+                                                blk)
+                            for blk in self._block_partitions[i]]
+                      for i in range(idx + 1)])
 
         index = self._row_metadata.index[:n]
 
-        return DataFrame(col_partitions=new_dfs,
+        return DataFrame(block_partitions=new_blocks,
                          col_metadata=self._col_metadata,
                          index=index,
                          dtypes_cache=self._dtypes_cache)
