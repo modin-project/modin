@@ -229,7 +229,7 @@ class DataFrame(object):
     def __str__(self):
         return repr(self)
 
-    def _repr_helper(self):
+    def _repr_helper_(self):
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
             return to_pandas(self)
@@ -322,9 +322,9 @@ class DataFrame(object):
         # We use pandas repr so that we match them.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return repr(self._repr_helper())
+            return repr(self._repr_helper_())
         # The split here is so that we don't repr pandas row lengths.
-        result = self._repr_helper()
+        result = self._repr_helper_()
         final_result = repr(result).rsplit("\n\n", 1)[0] + \
             "\n\n[{0} rows x {1} columns]".format(len(self.index),
                                                   len(self.columns))
@@ -341,9 +341,9 @@ class DataFrame(object):
         # of the dataframe.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return self._repr_helper()._repr_html_()
+            return self._repr_helper_()._repr_html_()
         # We split so that we insert our correct dataframe dimensions.
-        result = self._repr_helper()._repr_html_()
+        result = self._repr_helper_()._repr_html_()
         return result.split("<p>")[0] + \
             "<p>{0} rows x {1} columns</p>\n</div>".format(len(self.index),
                                                            len(self.columns))
