@@ -234,32 +234,6 @@ class DataFrame(object):
            len(self._col_metadata) <= 20:
             return to_pandas(self)
 
-        def head(df, n, get_local_head=False):
-            """Compute the head for this without creating a new DataFrame"""
-            if get_local_head:
-                return df.head(n)
-
-            new_dfs = _map_partitions(lambda df: df.head(n), df)
-
-            index = self.index[:n]
-            pandas_head = pandas.concat(ray.get(new_dfs), axis=1, copy=False)
-            pandas_head.index = index
-            pandas_head.columns = self.columns
-            return pandas_head
-
-        def tail(df, n, get_local_tail=False):
-            """Compute the tail for this without creating a new DataFrame"""
-            if get_local_tail:
-                return df.tail(n)
-
-            new_dfs = _map_partitions(lambda df: df.tail(n), df)
-
-            index = self.index[-n:]
-            pandas_tail = pandas.concat(ray.get(new_dfs), axis=1, copy=False)
-            pandas_tail.index = index
-            pandas_tail.columns = self.columns
-            return pandas_tail
-
         def front(df, n):
             """Get first n columns without creating a new Dataframe"""
 
@@ -288,11 +262,18 @@ class DataFrame(object):
         x = self._col_partitions
         get_local_head = False
 
+        if len(self.index) <= 60:
+            head_blocks = self._head_block_builder(30)
+            tail_blocks = self._tail_block_builder(30)
+        else:
+            head_blocks = self._block_partitions
+            tail_blocks = None
         # Get first and last 10 columns if there are more than 20 columns
         if len(self._col_metadata) >= 20:
+
             get_local_head = True
-            front = front(x, 10)
-            back = back(x, 10)
+            front = front(head_blocks, 10)
+            back = back(head_blocks, 10)
 
             col_dots = pandas.Series(["..." for _ in range(len(self.index))])
             col_dots.index = self.index
