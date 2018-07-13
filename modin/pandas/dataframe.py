@@ -2158,6 +2158,21 @@ class DataFrame(object):
         """
         return self._operator_helper(pandas.DataFrame.gt, other, axis, level)
 
+    def _head_block_builder(self, n):
+        length_bins = np.cumsum(self._row_metadata._lengths)
+        idx = np.digitize(n, length_bins)
+
+        if idx > 0:
+            # This value will be what we need to get from the last block
+            remaining = n - length_bins[idx - 1]
+        else:
+            remaining = n
+        return np.array([self._block_partitions[i] if i != idx
+                         else [_deploy_func.remote(lambda df:
+                                                   df.head(remaining), blk)
+                               for blk in self._block_partitions[i]]
+                         for i in range(idx + 1)])
+
     def head(self, n=5):
         """Get the first n rows of the DataFrame.
 
@@ -2170,12 +2185,11 @@ class DataFrame(object):
         if n >= len(self._row_metadata):
             return self.copy()
 
-        new_dfs = _map_partitions(lambda df: df.head(n),
-                                  self._col_partitions)
+        new_blocks = self._head_block_builder(n)
 
         index = self._row_metadata.index[:n]
 
-        return DataFrame(col_partitions=new_dfs,
+        return DataFrame(block_partitions=new_blocks,
                          col_metadata=self._col_metadata,
                          index=index,
                          dtypes_cache=self._dtypes_cache)
@@ -4248,6 +4262,26 @@ class DataFrame(object):
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
 
+    def _tail_block_builder(self, n):
+        npartitions = len(self._row_metadata._lengths) - 1
+        length_bins = np.cumsum(self._row_metadata._lengths[::-1])
+
+        idx = np.digitize(n, length_bins)
+
+        if idx > 0:
+            # This value will be what we need to get from the last block
+            remaining = n - length_bins[idx - 1]
+        else:
+            remaining = n
+
+        # We are building the blocks in reverse order, then reversing the
+        # numpy array order
+        return np.array(
+            [self._block_partitions[npartitions - i] if i != idx
+             else [_deploy_func.remote(lambda df: df.tail(remaining), blk)
+                   for blk in self._block_partitions[npartitions - i]]
+             for i in range(idx + 1)])[::-1]
+
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.
 
@@ -4257,14 +4291,13 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the last n rows of this DataFrame.
         """
-        if n >= len(self._row_metadata):
-            return self
+        if n >= len(self):
+            return self.copy()
 
-        new_dfs = _map_partitions(lambda df: df.tail(n),
-                                  self._col_partitions)
-
+        new_blocks = self._tail_block_builder(n)
         index = self._row_metadata.index[-n:]
-        return DataFrame(col_partitions=new_dfs,
+
+        return DataFrame(block_partitions=new_blocks,
                          col_metadata=self._col_metadata,
                          index=index,
                          dtypes_cache=self._dtypes_cache)
