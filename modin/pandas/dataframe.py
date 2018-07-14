@@ -234,68 +234,129 @@ class DataFrame(object):
            len(self._col_metadata) <= 20:
             return to_pandas(self)
 
-        def front(df, n):
+        def front(blocks, n):
             """Get first n columns without creating a new Dataframe"""
 
             cum_col_lengths = self._col_metadata._lengths.cumsum()
-            index = np.argmax(cum_col_lengths >= 10)
-            pandas_front = pandas.concat(ray.get(x[:index + 1]),
-                                         axis=1, copy=False)
-            pandas_front = pandas_front.iloc[:, :n]
-            pandas_front.index = self.index
-            pandas_front.columns = self.columns[:n]
-            return pandas_front
+            idx = np.digitize(n, cum_col_lengths)
 
-        def back(df, n):
+            if idx > 0:
+                # This value will be what we need to get from the last block
+                remaining = n - cum_col_lengths[idx - 1]
+                x = pandas.concat([pandas.concat(ray.get(df.tolist()), axis=1)
+                                   for df in blocks[:, :idx]])
+            else:
+                remaining = n
+                x = pandas.DataFrame()
+
+            y = pandas.concat(ray.get([_deploy_func.remote(
+                lambda df: df.iloc[:, :remaining], df)
+                for df in blocks[:, idx]]))
+
+            z = pandas.concat([x, y], axis=1)
+            return z
+            # np.array([blk if i != idx else
+            #           [_deploy_func.remote(lambda df: df.iloc[:, :remaining],
+            #                                blk)
+            #            for i, blk in enumerate(blocks)]])
+
+            # pandas_front = [pandas.concat(ray.get(df[:index + 1]),
+            #                              axis=1, copy=False) for df in blocks]
+            # pandas_front = pandas_front.iloc[:, :n]
+            # pandas_front.index = self.index
+            # pandas_front.columns = self.columns[:n]
+            # return pandas_front
+
+        def back(blocks, n):
             """Get last n columns without creating a new Dataframe"""
+            npartitions = len(self._col_metadata._lengths)
+            cum_col_lengths = self._col_metadata._lengths[::-1].cumsum()
+            idx = np.digitize(n, cum_col_lengths)
 
-            cum_col_lengths = np.flip(self._col_metadata._lengths,
-                                      axis=0).cumsum()
-            index = np.argmax(cum_col_lengths >= 10)
-            pandas_back = pandas.concat(ray.get(x[-(index + 1):]),
-                                        axis=1, copy=False)
-            pandas_back = pandas_back.iloc[:, -n:]
-            pandas_back.index = self.index
-            pandas_back.columns = self.columns[-n:]
-            return pandas_back
+            if idx > 0:
+                # This value will be what we need to get from the last block
+                remaining = n - cum_col_lengths[idx - 1]
+                x = pandas.concat([pandas.concat(ray.get(df.tolist()), axis=1)
+                                   for df in blocks[:, npartitions - idx:]])
+            else:
+                remaining = n
+                x = pandas.DataFrame()
 
-        x = self._col_partitions
-        get_local_head = False
+            y = pandas.concat(ray.get([_deploy_func.remote(
+                lambda df: df.iloc[:, :remaining], df)
+                for df in blocks[:, idx]]))
 
-        if len(self.index) <= 60:
+            z = pandas.concat([x, y], axis=1)
+            return z
+
+            # cum_col_lengths = np.flip(self._col_metadata._lengths,
+            #                           axis=0).cumsum()
+            # index = np.argmax(cum_col_lengths >= 10)
+            # pandas_back = pandas.concat(ray.get(x[-(index + 1):]),
+            #                             axis=1, copy=False)
+            # pandas_back = pandas_back.iloc[:, -n:]
+            # pandas_back.index = self.index
+            # pandas_back.columns = self.columns[-n:]
+            # return pandas_back
+
+        # x = self._col_partitions
+        # get_local_head = False
+
+        if len(self.index) >= 60:
             head_blocks = self._head_block_builder(30)
             tail_blocks = self._tail_block_builder(30)
+            length_of_index = 30
         else:
             head_blocks = self._block_partitions
             tail_blocks = None
+            length_of_index = len(self.index)
         # Get first and last 10 columns if there are more than 20 columns
         if len(self._col_metadata) >= 20:
 
-            get_local_head = True
-            front = front(head_blocks, 10)
-            back = back(head_blocks, 10)
+            # get_local_head = True
+            front_blocks = front(head_blocks, 10)
+            front_blocks.columns = self.columns[:10]
+            back_blocks = back(head_blocks, 10)
+            back_blocks.columns = self.columns[-10:]
 
-            col_dots = pandas.Series(["..." for _ in range(len(self.index))])
-            col_dots.index = self.index
+            col_dots = pandas.Series(["..." for _ in range(length_of_index)])
+            col_dots.index = self.index[:length_of_index]
             col_dots.name = "..."
-            x = pandas.concat([front, col_dots, back], axis=1, copy=False)
+            full_head = pandas.concat([front_blocks, col_dots, back_blocks],
+                                      axis=1, copy=False)
+
+            if tail_blocks is not None:
+                front_blocks = front(tail_blocks, 10)
+                front_blocks.columns = self.columns[:10]
+                back_blocks = back(tail_blocks, 10)
+                back_blocks.columns = self.columns[-10:]
+
+                col_dots = pandas.Series(["..." for _ in range(30)])
+                col_dots.index = self.index[-30:]
+                col_dots.name = "..."
+
+                full_tail = pandas.concat([front_blocks, col_dots, back_blocks],
+                                          axis=1, copy=False)
 
             # If less than 60 rows, x is already in the correct format.
-            if len(self._row_metadata) < 60:
-                return x
+            # if len(self._row_metadata) < 60:
+            #     return x
 
-        head = head(x, 30, get_local_head)
-        tail = tail(x, 30, get_local_head)
+                # head = head(x, 30, get_local_head)
+                # tail = tail(x, 30, get_local_head)
 
-        # Make the dots in between the head and tail
-        row_dots = pandas.Series(["..." for _ in range(len(head.columns))])
-        row_dots.index = head.columns
-        row_dots.name = "..."
+                # Make the dots in between the head and tail
+                row_dots = pandas.Series(["..."
+                                          for _ in range(len(full_head.columns))])
+                row_dots.index = full_head.columns
+                row_dots.name = "..."
 
-        # We have to do it this way or convert dots to a dataframe and
-        # transpose. This seems better.
-        result = head.append(row_dots).append(tail)
-        return result
+                # We have to do it this way or convert dots to a dataframe and
+                # transpose. This seems better.
+                result = full_head.append(row_dots).append(full_tail)
+                return result
+            else:
+                return full_head
 
     def __repr__(self):
         # We use pandas repr so that we match them.
