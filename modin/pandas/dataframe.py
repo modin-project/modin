@@ -229,7 +229,7 @@ class DataFrame(object):
     def __str__(self):
         return repr(self)
 
-    def _repr_helper(self):
+    def _repr_pandas_builder(self):
         """Creates a pandas DataFrame of appropriate size from this DataFrame.
 
         Note: Currently the values for the sizes are hard-coded, but eventually
@@ -346,21 +346,21 @@ class DataFrame(object):
 
             return full_head.append(row_dots).append(full_tail)
 
-        def col_dots_builder(front_blocks, back_blocks):
+        def col_dots_builder(full_front, full_back):
             """Inserts a column of dots between head and tail DataFrames.
 
             Args:
-                front_blocks: The front DataFrame for the repr.
-                back_blocks: The back DataFrame for the repr.
+                full_front: The front DataFrame for the repr.
+                full_back: The back DataFrame for the repr.
 
             Returns:
                  A new DataFrame combining front_blocks and back_blocks with a
                  column of dots inserted between.
             """
-            col_dots = pandas.Series(["..." for _ in range(len(front_blocks))])
+            col_dots = pandas.Series(["..." for _ in range(len(full_front))])
             col_dots.index = index_of_head
             col_dots.name = "..."
-            return pandas.concat([front_blocks, col_dots, back_blocks],
+            return pandas.concat([full_front, col_dots, full_back],
                                  axis=1, copy=False)
 
         # If we don't exceed the maximum number of values on either dimension
@@ -373,6 +373,7 @@ class DataFrame(object):
             length_of_index = 30
         else:
             head_blocks = self._block_partitions
+            # We set this to None so we know
             tail_blocks = None
             length_of_index = len(self.index)
 
@@ -381,39 +382,52 @@ class DataFrame(object):
 
             index_of_head = self.index[:length_of_index]
 
-            front_blocks = front_block_builder(head_blocks, 10, index_of_head)
+            # Building the front blocks from head_blocks
+            front_blocks = \
+                front_block_builder(head_blocks, 10, index_of_head)
             front_blocks.columns = self.columns[:10]
 
+            # Building the back blocks from head_blocks
             back_blocks = back_block_builder(head_blocks, 10, index_of_head)
             back_blocks.columns = self.columns[-10:]
 
             full_head = col_dots_builder(front_blocks, back_blocks)
 
+            # True only if we have >60 rows in the DataFrame
             if tail_blocks is not None:
                 index_of_tail = self.index[-30:]
-                front_blocks = front_block_builder(tail_blocks, 10, index_of_tail)
+                # Building the font blocks from tail_blocks
+                front_blocks = \
+                    front_block_builder(tail_blocks, 10, index_of_tail)
                 front_blocks.columns = self.columns[:10]
-                back_blocks = back_block_builder(tail_blocks, 10, index_of_tail)
+
+                # Building the back blocks from tail_blocks
+                back_blocks = \
+                    back_block_builder(tail_blocks, 10, index_of_tail)
                 back_blocks.columns = self.columns[-10:]
 
                 full_tail = col_dots_builder(front_blocks, back_blocks)
 
-                # Make the dots in between the head and tail
                 return row_dots_builder(full_head, full_tail)
             else:
                 return full_head
 
         else:
+            # Convert head_blocks into a pandas DataFrame
             list_of_head_rows = [pandas.concat(ray.get(df.tolist()), axis=1)
                                  for df in head_blocks]
             full_head = pandas.concat(list_of_head_rows)
             full_head.columns = self.columns
 
+            # True only if we have >60 rows in the DataFrame
             if tail_blocks is not None:
-                list_of_tail_rows = [pandas.concat(ray.get(df.tolist()), axis=1)
-                                     for df in tail_blocks]
+                # Convert tail_blocks into a pandas DataFrame
+                list_of_tail_rows = \
+                    [pandas.concat(ray.get(df.tolist()), axis=1)
+                     for df in tail_blocks]
                 full_tail = pandas.concat(list_of_tail_rows)
                 full_tail.columns = self.columns
+
                 return row_dots_builder(full_head, full_tail)
             else:
                 return full_head
@@ -422,9 +436,9 @@ class DataFrame(object):
         # We use pandas repr so that we match them.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return repr(self._repr_helper_())
+            return repr(self._repr_pandas_builder())
         # The split here is so that we don't repr pandas row lengths.
-        result = self._repr_helper_()
+        result = self._repr_pandas_builder()
         final_result = repr(result).rsplit("\n\n", 1)[0] + \
             "\n\n[{0} rows x {1} columns]".format(len(self.index),
                                                   len(self.columns))
@@ -441,9 +455,9 @@ class DataFrame(object):
         # of the dataframe.
         if len(self._row_metadata) <= 60 and \
            len(self._col_metadata) <= 20:
-            return self._repr_helper_()._repr_html_()
+            return self._repr_pandas_builder()._repr_html_()
         # We split so that we insert our correct dataframe dimensions.
-        result = self._repr_helper_()._repr_html_()
+        result = self._repr_pandas_builder()._repr_html_()
         return result.split("<p>")[0] + \
             "<p>{0} rows x {1} columns</p>\n</div>".format(len(self.index),
                                                            len(self.columns))
