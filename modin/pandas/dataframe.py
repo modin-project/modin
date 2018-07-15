@@ -263,8 +263,10 @@ class DataFrame(object):
                 # These are the blocks that we will take (all the blocks before
                 # the cutoff n)
                 full_blocks = \
-                    pandas.concat([pandas.concat(ray.get(df.tolist()), axis=1)
-                                   for df in blocks[:, :idx]])
+                    pandas.concat([pandas.concat(ray.get(df.tolist()),
+                                                 axis=1, copy=False)
+                                   for df in blocks[:, :idx]],
+                                  copy=False)
             else:
                 remaining = n
                 full_blocks = pandas.DataFrame()
@@ -278,10 +280,11 @@ class DataFrame(object):
             partial_blocks = \
                 pandas.concat(ray.get([_deploy_func.remote(
                     lambda df: df.iloc[:, :remaining], df)
-                    for df in blocks[:, idx]]))
+                    for df in blocks[:, idx]]), copy=False)
 
             all_n_columns = \
-                pandas.concat([full_blocks, partial_blocks], axis=1)
+                pandas.concat([full_blocks, partial_blocks],
+                              axis=1, copy=False)
             all_n_columns.index = index
             return all_n_columns
 
@@ -314,8 +317,10 @@ class DataFrame(object):
                 # These are the blocks that we will take (all the blocks before
                 # the cutoff n)
                 full_blocks = \
-                    pandas.concat([pandas.concat(ray.get(df.tolist()), axis=1)
-                                   for df in blocks[:, nparts - idx:]])
+                    pandas.concat([pandas.concat(ray.get(df.tolist()),
+                                                 axis=1, copy=False)
+                                   for df in blocks[:, nparts - idx:]],
+                                  copy=False)
             else:
                 remaining = n
                 full_blocks = pandas.DataFrame()
@@ -329,10 +334,11 @@ class DataFrame(object):
             partial_blocks = \
                 pandas.concat(ray.get([_deploy_func.remote(
                     lambda df: df.iloc[:, -remaining:], df)
-                    for df in blocks[:, -idx - 1]]))
+                    for df in blocks[:, -idx - 1]]), copy=False)
 
             all_n_columns = \
-                pandas.concat([partial_blocks, full_blocks], axis=1)
+                pandas.concat([partial_blocks, full_blocks],
+                              axis=1, copy=False)
             all_n_columns.index = index
             return all_n_columns
 
