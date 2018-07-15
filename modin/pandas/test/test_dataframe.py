@@ -3265,6 +3265,47 @@ def test___rsub__():
     test_inter_df_math_right_ops("__rsub__")
 
 
+def test___repr__():
+    frame_data = np.random.randint(0, 100, size=(1000, 100))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+
+    assert repr(pandas_df) == repr(ray_df)
+
+    frame_data = np.random.randint(0, 100, size=(1000, 99))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+
+    assert repr(pandas_df) == repr(ray_df)
+
+    # These currently fails because the dots do not line up.
+    # For some reason only two dots are being added for our DataFrame
+
+    # frame_data = np.random.randint(0, 100, size=(1000, 101))
+    # pandas_df = pandas.DataFrame(frame_data)
+    # ray_df = pd.DataFrame(frame_data)
+    #
+    # assert repr(pandas_df) == repr(ray_df)
+    #
+    # frame_data = np.random.randint(0, 100, size=(1000, 102))
+    # pandas_df = pandas.DataFrame(frame_data)
+    # ray_df = pd.DataFrame(frame_data)
+    #
+    # assert repr(pandas_df) == repr(ray_df)
+
+    frame_data = np.random.randint(0, 100, size=(10, 100))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+
+    assert repr(pandas_df) == repr(ray_df)
+
+    frame_data = np.random.randint(0, 100, size=(10, 10))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+
+    assert repr(pandas_df) == repr(ray_df)
+
+
 @pytest.fixture
 def test_loc(ray_df, pd_df):
     # Singleton

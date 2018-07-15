@@ -269,6 +269,10 @@ class DataFrame(object):
                 remaining = n
                 full_blocks = pandas.DataFrame()
 
+            if remaining == 0:
+                full_blocks.index = index
+                return full_blocks
+
             # These are the blocks that we need extract the remaining (not
             # already extracted from full_blocks) columns from.
             partial_blocks = \
@@ -311,17 +315,21 @@ class DataFrame(object):
                 # the cutoff n)
                 full_blocks = \
                     pandas.concat([pandas.concat(ray.get(df.tolist()), axis=1)
-                                   for df in blocks[:, nparts - idx:]][::-1])
+                                   for df in blocks[:, nparts - idx:]])
             else:
                 remaining = n
                 full_blocks = pandas.DataFrame()
+
+            if remaining == 0:
+                full_blocks.index = index
+                return full_blocks
 
             # These are the blocks that we need extract the remaining (not
             # already extracted from full_blocks) columns from.
             partial_blocks = \
                 pandas.concat(ray.get([_deploy_func.remote(
-                    lambda df: df.iloc[:, :remaining], df)
-                    for df in blocks[:, idx]]))
+                    lambda df: df.iloc[:, -remaining:], df)
+                    for df in blocks[:, -idx - 1]]))
 
             all_n_columns = \
                 pandas.concat([partial_blocks, full_blocks], axis=1)
