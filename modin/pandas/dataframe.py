@@ -123,7 +123,8 @@ class DataFrame(object):
             if block_partitions is not None:
                 axis = 0
                 # put in numpy array here to make accesses easier since it's 2D
-                self._block_partitions = np.array(block_partitions)
+                if not isinstance(block_partitions, np.ndarray):
+                    self._block_partitions = np.array(block_partitions)
                 self._block_partitions = \
                     _fix_blocks_dimensions(self._block_partitions, axis)
 
