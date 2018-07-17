@@ -88,6 +88,8 @@ class DataFrame(object):
 
         self._dtypes_cache = dtypes_cache
 
+        self._is_view = False
+
         # Check type of data and use appropriate constructor
         if data is not None or (col_partitions is None and
                                 row_partitions is None and
@@ -125,6 +127,8 @@ class DataFrame(object):
                 # put in numpy array here to make accesses easier since it's 2D
                 if not isinstance(block_partitions, np.ndarray):
                     self._block_partitions = np.array(block_partitions)
+                else:
+                    self._block_partitions = block_partitions
                 self._block_partitions = \
                     _fix_blocks_dimensions(self._block_partitions, axis)
 
