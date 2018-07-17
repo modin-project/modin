@@ -375,8 +375,9 @@ class _Loc_Indexer(_Location_Indexer_Base):
 
         lens = major_meta._lengths
         lens = np.concatenate([lens, np.array([num_nan_labels])])
+        lens_oid = ray.put(np.array(lens))
 
-        metadata_view = _IndexMetadata(coord_df_oid=coord_df, lengths_oid=lens)
+        metadata_view = _IndexMetadata(coord_df_oid=coord_df, lengths_oid=lens_oid)
         return metadata_view
 
     def _compute_enlarge_labels(self, locator, base_index):
