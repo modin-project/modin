@@ -104,6 +104,29 @@ class memoize(object):
         return result
 
 
+def post_task_gc(func):
+    """Perform garbage collection after the task is executed.
+
+    Usage:
+        ```
+        @ray.remote
+        @post_task_gc
+        def memory_hungry_op():
+            ...
+        ```
+    Note:
+        - This will invoke the GC for the entire process. Expect
+          About 100ms latency. 
+    """
+    def wrapped(*args):
+        result = func(*args)
+
+        import gc
+        gc.collect()
+
+        return result
+    return wrapped
+
 def _get_nan_block_id(n_row=1, n_col=1, transpose=False):
     """A memory efficent way to get a block of NaNs.
 
