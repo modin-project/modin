@@ -8,6 +8,7 @@ import collections
 import numpy as np
 import ray
 import time
+import gc
 
 from . import get_npartitions
 
@@ -130,8 +131,6 @@ def post_task_gc(func):
         duration_s = time.time() - start_time
         duration_ms = duration_s * 1000
         if duration_ms > 500:
-            # We import GC here because this will be ran remotely
-            import gc
             gc.collect()
 
         return result
