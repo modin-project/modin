@@ -1,0 +1,10 @@
+execution_engine: ray
+key: ~/.ssh/key.pem
+
+head_node:
+  hostname: ubuntu@127.0.0.1
+
+nodes:
+  - hostname: ubuntu@127.0.0.2
+  - hostname: ubuntu@127.0.0.2
+    key: ~/.ssh/other_key.pem

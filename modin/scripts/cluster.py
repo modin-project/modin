@@ -1,7 +1,10 @@
+import os
+import subprocess
 import yaml
 
 
 REQUIRED, OPTIONAL = True, False
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 CLUSTER_CONFIG_SCHEMA = {
     # Execution engine for the cluster.
@@ -105,5 +108,75 @@ def validate_config(config, schema=CLUSTER_CONFIG_SCHEMA):
 
 
 def load_config(filename):
+    """Loads a YAML file"""
     with open(filename) as f:
         return yaml.load(f.read())
+
+
+def resolve_script_path(script_basename):
+    """Returns the filepath of the script"""
+    return os.path.join(SCRIPTS_DIR, script_basename)
+
+
+def setup_head_node(config):
+    """Sets up the head node given a valid configuration"""
+    hostname = config["head_node"]["hostname"]
+    key = config["head_node"].get("key") or config.get("key")
+    if not key:
+        raise ValueError("Missing key for head_node")
+
+    output = subprocess.check_output(
+            ["sh", resolve_script_path("configure_head_node.sh"), hostname,
+             key])
+
+    redis_address = subprocess.check_output(
+            ["sh", resolve_script_path("get_redis_address.sh"), output])
+    redis_address = redis_address.decode("ascii").strip()
+
+    return redis_address
+
+
+def setup_nodes(config, redis_address):
+    """Sets up nodes given the config and the redis address"""
+    try:
+        from subprocess import DEVNULL
+    except ImportError:
+        import os
+        DEVNULL = open(os.devnull, "wb")
+
+    for node in config.get("nodes", []):
+        hostname = node["hostname"]
+        key = node.get("key") or config.get("key")
+        if not key:
+            raise ValueError("Missing key for node {0}".format(hostname))
+
+        subprocess.Popen(
+                ["sh", resolve_script_path("configure_node.sh"), hostname, key,
+                 redis_address], stdout=DEVNULL, stderr=DEVNULL)
+
+
+def setup_cluster(config):
+    """Sets up a cluster given a valid configuration"""
+    if config["execution_engine"] != "ray":
+        raise ValueError("Only Ray clusters supported for now")
+
+    redis_address = setup_head_node(config)
+    setup_nodes(config, redis_address)
+
+    return redis_address
+
+
+def launch_notebook(config, port, blocking=True):
+    """SSH into the head node, launches a notebook, and forwards port"""
+    hostname = config["head_node"]["hostname"]
+    key = config["head_node"].get("key") or config.get("key")
+    if not key:
+        raise ValueError("Missing key for head_node")
+
+    if blocking:
+        subprocess.call(
+                ["sh", resolve_script_path("launch_notebook.sh"), hostname,
+                 key, port])
+    else:
+        subprocess.Popen(["sh", resolve_script_path("launch_notebook.sh"),
+                          hostname, key, port])
