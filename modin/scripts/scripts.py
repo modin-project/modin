@@ -34,7 +34,7 @@ def notebook(config, port):
            "\t\tray.init(redis_address=\"{0}\")\n"
            "\t\timport modin").format(redis_address))
     print("*" * 68)
-           
+
     cluster.launch_notebook(config, port)
 
 

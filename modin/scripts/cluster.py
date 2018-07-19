@@ -30,7 +30,7 @@ CLUSTER_CONFIG_SCHEMA = {
                 "key": (str, OPTIONAL),     # overrides global key
             }
         ],
-    OPTIONAL),
+        OPTIONAL),
 }
 
 
