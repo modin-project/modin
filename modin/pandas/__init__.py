@@ -9,6 +9,7 @@ from pandas import (eval, unique, value_counts, cut, to_numeric, factorize,
                     CategoricalIndex, Series, bdate_range, DatetimeIndex,
                     Timedelta, Timestamp, to_timedelta, set_eng_float_format,
                     set_option, NaT, PeriodIndex, Categorical)
+import os
 import threading
 
 DEFAULT_NPARTITIONS = 8
@@ -46,6 +47,11 @@ __all__ = [
 try:
     if threading.current_thread().name == "MainThread":
         import ray
-        ray.init()
+        if os.environ.get("MODIN_EXECUTION_FRAMEWORK") == "ray" and \
+                os.environ.get("MODIN_RAY_REDIS_ADDRESS"):
+            redis_address = os.environ.get("MODIN_RAY_REDIS_ADDRESS")
+            ray.init(redis_address=redis_address)
+        else:
+            ray.init()
 except AssertionError:
     pass
