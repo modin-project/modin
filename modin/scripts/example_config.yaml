@@ -1,9 +1,16 @@
+# The execution engine on which Modin runs. Currently only supports ray.
 execution_engine: ray
+
+# Optional. The default SSH key used to access nodes.
 key: ~/.ssh/key.pem
 
+# Configuration for the head node. Requires hostname.
+# Can set an optional key to override the global key.
 head_node:
   hostname: ubuntu@127.0.0.1
 
+# Configuration for other nodes in the cluster. Each node requires a hostname.
+# For each node, can set an optional key to override the global key.
 nodes:
   - hostname: ubuntu@127.0.0.2
   - hostname: ubuntu@127.0.0.2
