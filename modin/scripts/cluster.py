@@ -9,7 +9,7 @@ SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 CLUSTER_CONFIG_SCHEMA = {
     # Execution engine for the cluster.
     # Possible options: ray.
-    "execution_engine": (str, REQUIRED),
+    "execution_framework": (str, REQUIRED),
 
     # Default key used to SSH into nodes.
     "key": (str, OPTIONAL),
@@ -157,7 +157,7 @@ def setup_nodes(config, redis_address):
 
 def setup_cluster(config):
     """Sets up a cluster given a valid configuration"""
-    if config["execution_engine"] != "ray":
+    if config["execution_framework"] != "ray":
         raise NotImplementedError("Only Ray clusters supported for now")
 
     redis_address = setup_head_node(config)

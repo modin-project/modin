@@ -73,8 +73,8 @@ A config file looks like this:
 
 .. code-block:: yaml
 
-  # The execution engine on which Modin runs. Currently only supports ray.
-  execution_engine: ray
+  # The execution framework on which Modin runs. Currently only supports ray.
+  execution_framework: ray
 
   # Optional. The default SSH key used to access nodes.
   key: ~/.ssh/key.pem
