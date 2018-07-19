@@ -7,6 +7,8 @@ import pandas
 import collections
 import numpy as np
 import ray
+import time
+import gc
 
 from . import get_npartitions
 
@@ -102,6 +104,37 @@ class memoize(object):
         result = self.old_remote_func(*args)
         self.cache[args] = result
         return result
+
+
+def post_task_gc(func):
+    """Perform garbage collection after the task is executed.
+
+    Usage:
+        ```
+        @ray.remote
+        @post_task_gc
+        def memory_hungry_op():
+            ...
+        ```
+    Note:
+        - This will invoke the GC for the entire process. Expect
+          About 100ms latency.
+        - We have a basic herustic in place to balance of tradeoff between
+          speed and memory. If the task takes more than 500ms to run, we
+          will do the GC.
+    """
+    def wrapped(*args):
+        start_time = time.time()
+
+        result = func(*args)
+
+        duration_s = time.time() - start_time
+        duration_ms = duration_s * 1000
+        if duration_ms > 500:
+            gc.collect()
+
+        return result
+    return wrapped
 
 
 def _get_nan_block_id(n_row=1, n_col=1, transpose=False):

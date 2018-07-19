@@ -12,7 +12,7 @@ import ray
 
 from .concat import concat
 from .index_metadata import _IndexMetadata
-from .utils import _inherit_docstrings, _reindex_helper
+from .utils import _inherit_docstrings, _reindex_helper, post_task_gc
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy,
@@ -553,6 +553,7 @@ class DataFrameGroupBy(object):
 
 
 @ray.remote
+@post_task_gc
 def groupby(by, axis, level, as_index, sort, group_keys, squeeze, *df):
 
     df = pandas.concat(df, axis=axis)
