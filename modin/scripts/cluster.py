@@ -158,7 +158,7 @@ def setup_nodes(config, redis_address):
 def setup_cluster(config):
     """Sets up a cluster given a valid configuration"""
     if config["execution_engine"] != "ray":
-        raise ValueError("Only Ray clusters supported for now")
+        raise NotImplementedError("Only Ray clusters supported for now")
 
     redis_address = setup_head_node(config)
     setup_nodes(config, redis_address)
