@@ -61,8 +61,33 @@ has not already requested that functionality.
 Using Pandas on Ray on a Cluster
 --------------------------------
 
-Currently, we do not yet support running Pandas on Ray on a cluster. Coming
-Soon!
+Currently, you can run Modin on a cluster using a Jupyter notebook interface.
+
+First, create a config file which specifies the nodes in the cluster.
+Then, run ``modin notebook --config=/path/to/config.yaml --port=8890`` from the
+console in order to configure the cluster for use with Modin. The command will
+launch a Jupyter notebook on the head node and expose it to the local machine
+at the specified port.
+
+A config file looks like this:
+.. code-block:: yaml
+  # The execution engine on which Modin runs. Currently only supports ray.
+  execution_engine: ray
+
+  # Optional. The default SSH key used to access nodes.
+  key: ~/.ssh/key.pem
+
+  # Configuration for the head node. Requires hostname.
+  # Can set an optional key to override the global key.
+  head_node:
+    hostname: ubuntu@127.0.0.1
+
+  # Configuration for other nodes in the cluster. Each node requires a hostname.
+  # For each node, can set an optional key to override the global key.
+  nodes:
+    - hostname: ubuntu@127.0.0.2
+    - hostname: ubuntu@127.0.0.2
+      key: ~/.ssh/other_key.pem
 
 Examples
 --------
