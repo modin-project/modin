@@ -27,15 +27,8 @@ def notebook(config, port):
     print("\nSetting up cluster\n")
     redis_address = cluster.setup_cluster(config)
     print("\nLaunching notebook\n")
-    print("*" * 68)
-    print(("To connect to the cluster, run the following commands in the "
-           "notebook:\n"
-           "\t\timport ray\n"
-           "\t\tray.init(redis_address=\"{0}\")\n"
-           "\t\timport modin").format(redis_address))
-    print("*" * 68)
 
-    cluster.launch_notebook(config, port)
+    cluster.launch_notebook(config, port, redis_address=redis_address)
 
 
 cli.add_command(notebook)

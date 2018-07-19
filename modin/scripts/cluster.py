@@ -166,8 +166,9 @@ def setup_cluster(config):
     return redis_address
 
 
-def launch_notebook(config, port, blocking=True):
+def launch_notebook(config, port, redis_address="", blocking=True):
     """SSH into the head node, launches a notebook, and forwards port"""
+    exec_framework = config["execution_framework"]
     hostname = config["head_node"]["hostname"]
     key = config["head_node"].get("key") or config.get("key")
     if not key:
@@ -176,7 +177,7 @@ def launch_notebook(config, port, blocking=True):
     if blocking:
         subprocess.call(
                 ["sh", resolve_script_path("launch_notebook.sh"), hostname,
-                 key, port])
+                 key, port, exec_framework, redis_address])
     else:
         subprocess.Popen(["sh", resolve_script_path("launch_notebook.sh"),
-                          hostname, key, port])
+                          hostname, key, port, exec_framework, redis_address])
