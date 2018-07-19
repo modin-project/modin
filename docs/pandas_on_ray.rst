@@ -70,7 +70,9 @@ launch a Jupyter notebook on the head node and expose it to the local machine
 at the specified port.
 
 A config file looks like this:
+
 .. code-block:: yaml
+
   # The execution engine on which Modin runs. Currently only supports ray.
   execution_engine: ray
 
