@@ -203,11 +203,14 @@ class _Location_Indexer_Base(object):
         for i in col_lookup["partition"]:
             col_lengths[i] += 1
 
+        row_lengths_oid = ray.put(np.array(row_lengths))
+        col_lengths_oid = ray.put(np.array(col_lengths))
+
         row_metadata_view = _IndexMetadata(
-            coord_df_oid=row_lookup, lengths_oid=row_lengths)
+            coord_df_oid=row_lookup, lengths_oid=row_lengths_oid)
 
         col_metadata_view = _IndexMetadata(
-            coord_df_oid=col_lookup, lengths_oid=col_lengths)
+            coord_df_oid=col_lookup, lengths_oid=col_lengths_oid)
 
         df_view = DataFrameView(
             block_partitions=self.block_oids,
@@ -368,8 +371,11 @@ class _Loc_Indexer(_Location_Indexer_Base):
 
         lens = major_meta._lengths
         lens = np.concatenate([lens, np.array([num_nan_labels])])
+        lens_oid = ray.put(np.array(lens))
 
-        metadata_view = _IndexMetadata(coord_df_oid=coord_df, lengths_oid=lens)
+        metadata_view = _IndexMetadata(
+            coord_df_oid=coord_df, 
+            lengths_oid=lens_oid)
         return metadata_view
 
     def _compute_enlarge_labels(self, locator, base_index):
