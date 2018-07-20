@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import click
 
-from modin.scripts import cluster
+from modin.experimental.scripts import cluster
 
 
 @click.group()
