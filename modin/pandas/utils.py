@@ -287,34 +287,6 @@ def writer(df_chunk, row_loc, col_loc, item):
     return df_chunk
 
 
-def _mask_block_partitions(blk_partitions, row_metadata, col_metadata):
-    """Return the squeezed/expanded block partitions as defined by
-    row_metadata and col_metadata.
-
-    Note:
-        Very naive implementation. Extract one scaler at a time in a double
-        for loop.
-    """
-    col_df = col_metadata._coord_df
-    row_df = row_metadata._coord_df
-
-    result_oids = []
-    shape = (len(row_df.index), len(col_df.index))
-
-    for _, row_partition_data in row_df.iterrows():
-        for _, col_partition_data in col_df.iterrows():
-            row_part = row_partition_data.partition
-            col_part = col_partition_data.partition
-            block_oid = blk_partitions[row_part, col_part]
-
-            row_idx = row_partition_data['index_within_partition']
-            col_idx = col_partition_data['index_within_partition']
-
-            result_oid = extractor.remote(block_oid, [row_idx], [col_idx])
-            result_oids.append(result_oid)
-    return np.array(result_oids).reshape(shape)
-
-
 @ray.remote
 def _deploy_func(func, dataframe, *args):
     """Deploys a function for the _map_partitions call.

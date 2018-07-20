@@ -12,7 +12,7 @@ import ray
 from warnings import warn
 
 from .utils import (_get_nan_block_id, extractor,
-                    _mask_block_partitions, writer, _blocks_to_series)
+                    writer, _blocks_to_series)
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
 
@@ -65,6 +65,15 @@ http://pandas.pydata.org/pandas-docs/stable/indexing.html#deprecate-loc-reindex-
 _ILOC_INT_ONLY_ERROR = """
 Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
+"""
+
+_SETTING_WITHOUT_COPYING_WARING = """
+SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation:
+http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  self._setitem_with_indexer(indexer, value)
 """
 
 
@@ -137,10 +146,7 @@ class _Location_Indexer_Base(object):
         self.row_coord_df = ray_df._row_metadata._coord_df
         self.block_oids = ray_df._block_partitions
 
-        self.is_view = False
-        if isinstance(ray_df, DataFrameView):
-            self.block_oids = ray_df._block_partitions_data
-            self.is_view = True
+        self.is_view = self.df._is_view
 
     def __getitem__(self, row_lookup, col_lookup, ndim):
         """
@@ -200,18 +206,23 @@ class _Location_Indexer_Base(object):
         for i in col_lookup["partition"]:
             col_lengths[i] += 1
 
+        row_lengths_oid = ray.put(np.array(row_lengths))
+        col_lengths_oid = ray.put(np.array(col_lengths))
+
         row_metadata_view = _IndexMetadata(
-            coord_df_oid=row_lookup, lengths_oid=row_lengths)
+            coord_df_oid=row_lookup, lengths_oid=row_lengths_oid)
 
         col_metadata_view = _IndexMetadata(
-            coord_df_oid=col_lookup, lengths_oid=col_lengths)
+            coord_df_oid=col_lookup, lengths_oid=col_lengths_oid)
 
-        df_view = DataFrameView(
+        df_view = DataFrame(
             block_partitions=self.block_oids,
             row_metadata=row_metadata_view,
             col_metadata=col_metadata_view,
             index=row_metadata_view.index,
             columns=col_metadata_view.index)
+
+        df_view._is_view = True
 
         return df_view
 
@@ -273,14 +284,13 @@ class _Location_Indexer_Base(object):
                 result_oid = writer.remote(block_oid, row_idx, col_idx,
                                            item_to_write)
 
-                if self.is_view:
-                    self.df._block_partitions_data[row_blk,
-                                                   col_blk] = result_oid
-                else:
-                    self.df._block_partitions[row_blk, col_blk] = result_oid
+                self.df._block_partitions[row_blk, col_blk] = result_oid
 
                 col_item_index += col_len
             row_item_index += row_len
+
+        if self.is_view:
+            warn(_SETTING_WITHOUT_COPYING_WARING)
 
 
 class _Loc_Indexer(_Location_Indexer_Base):
@@ -365,8 +375,11 @@ class _Loc_Indexer(_Location_Indexer_Base):
 
         lens = major_meta._lengths
         lens = np.concatenate([lens, np.array([num_nan_labels])])
+        lens_oid = ray.put(np.array(lens))
 
-        metadata_view = _IndexMetadata(coord_df_oid=coord_df, lengths_oid=lens)
+        metadata_view = _IndexMetadata(
+            coord_df_oid=coord_df, 
+            lengths_oid=lens_oid)
         return metadata_view
 
     def _compute_enlarge_labels(self, locator, base_index):
@@ -448,27 +461,3 @@ class _iLoc_Indexer(_Location_Indexer_Base):
 
         if not any([is_int, is_int_slice, is_int_list, is_bool_arr]):
             raise ValueError(_ILOC_INT_ONLY_ERROR)
-
-
-class DataFrameView(DataFrame):
-    """A subclass of DataFrame where the index can be smaller than blocks.
-    """
-
-    def __init__(self, block_partitions, row_metadata, col_metadata, index,
-                 columns):
-        self._block_partitions = block_partitions
-        self._row_metadata = row_metadata
-        self._col_metadata = col_metadata
-        self.index = index
-        self.columns = columns
-
-    def _get_block_partitions(self):
-        oid_arr = _mask_block_partitions(self._block_partitions_data,
-                                         self._row_metadata,
-                                         self._col_metadata)
-        return oid_arr
-
-    def _set_block_partitions(self, new_block_partitions):
-        self._block_partitions_data = new_block_partitions
-
-    _block_partitions = property(_get_block_partitions, _set_block_partitions)
