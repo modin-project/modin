@@ -24,11 +24,12 @@ def cli():
 def notebook(config, port):
     config = cluster.load_config(config)
     cluster.validate_config(config)
-    print("\nSetting up cluster\n")
-    redis_address = cluster.setup_cluster(config)
-    print("\nLaunching notebook\n")
-
-    cluster.launch_notebook(config, port, redis_address=redis_address)
+    execution_framework = config["execution_framework"]
+    if execution_framework == "ray":
+        cluster.setup_notebook_ray(config, port)
+    raise NotImplementedError(
+            "Execution framework '{0}' not supported yet".format(
+                execution_framework))
 
 
 cli.add_command(notebook)

@@ -118,66 +118,29 @@ def resolve_script_path(script_basename):
     return os.path.join(SCRIPTS_DIR, script_basename)
 
 
-def setup_head_node(config):
-    """Sets up the head node given a valid configuration"""
-    hostname = config["head_node"]["hostname"]
-    key = config["head_node"].get("key") or config.get("key")
-    if not key:
-        raise ValueError("Missing key for head_node")
-
-    output = subprocess.check_output(
-            ["sh", resolve_script_path("configure_head_node.sh"), hostname,
-             key])
-
-    redis_address = subprocess.check_output(
-            ["sh", resolve_script_path("get_redis_address.sh"), output])
-    redis_address = redis_address.decode("ascii").strip()
-
-    return redis_address
+def add_key_to_ssh_agent(key_path):
+    """Adds a key to SSH agent"""
+    subprocess.call(["ssh-add", key_path])
 
 
-def setup_nodes(config, redis_address):
-    """Sets up nodes given the config and the redis address"""
-    try:
-        from subprocess import DEVNULL
-    except ImportError:
-        import os
-        DEVNULL = open(os.devnull, "wb")
-
-    for node in config.get("nodes", []):
-        hostname = node["hostname"]
-        key = node.get("key") or config.get("key")
-        if not key:
-            raise ValueError("Missing key for node {0}".format(hostname))
-
-        subprocess.Popen(
-                ["sh", resolve_script_path("configure_node.sh"), hostname, key,
-                 redis_address], stdout=DEVNULL, stderr=DEVNULL)
+def add_keys_to_ssh_agent(config):
+    """Adds keys to SSH agent"""
+    if "key" in config:
+        add_key_to_ssh_agent(config["key"])
+    if "key" in config["head_node"]:
+        add_key_to_ssh_agent(config["head_node"]["key"])
+    for node_config in config.get("nodes", []):
+        if "key" in node_config:
+            add_key_to_ssh_agent(node_config["key"])
 
 
-def setup_cluster(config):
-    """Sets up a cluster given a valid configuration"""
-    if config["execution_framework"] != "ray":
-        raise NotImplementedError("Only Ray clusters supported for now")
+def setup_notebook_ray(config, port):
+    # Create nodes file
+    with open("nodes.txt", "w") as f:
+        for node_config in config.get("nodes", []):
+            f.write(node_config["hostname"] + "\n")
 
-    redis_address = setup_head_node(config)
-    setup_nodes(config, redis_address)
-
-    return redis_address
-
-
-def launch_notebook(config, port, redis_address="", blocking=True):
-    """SSH into the head node, launches a notebook, and forwards port"""
-    exec_framework = config["execution_framework"]
-    hostname = config["head_node"]["hostname"]
-    key = config["head_node"].get("key") or config.get("key")
-    if not key:
-        raise ValueError("Missing key for head_node")
-
-    if blocking:
-        subprocess.call(
-                ["sh", resolve_script_path("launch_notebook.sh"), hostname,
-                 key, port, exec_framework, redis_address])
-    else:
-        subprocess.Popen(["sh", resolve_script_path("launch_notebook.sh"),
-                          hostname, key, port, exec_framework, redis_address])
+    # Launch cluster
+    subprocess.call(
+            ["sh", resolve_script_path("configure_ray_cluster.sh"),
+             config["head_node"]["hostname"], "nodes.txt", port])
