@@ -10,9 +10,9 @@ from pandas import (eval, unique, value_counts, cut, to_numeric, factorize,
                     Timedelta, Timestamp, to_timedelta, set_eng_float_format,
                     set_option, NaT, PeriodIndex, Categorical)
 import threading
+import multiprocessing
 
-DEFAULT_NPARTITIONS = 8
-
+DEFAULT_NPARTITIONS = multiprocessing.cpu_count()
 
 def set_npartition_default(n):
     global DEFAULT_NPARTITIONS
