@@ -390,6 +390,9 @@ class _IndexMetadata(object):
                 new_coord_df['partition'][new_coord_df['partition'] == i] \
                     -= num_dropped
 
+        new_coord_df['index_within_partition'] = [i for l in self._lengths
+                                                  for i in range(l)]
+
         self._coord_df = new_coord_df
         return dropped
 
