@@ -97,7 +97,7 @@ class DataFrameGroupBy(object):
              self._df._col_metadata._coord_df.copy().groupby(by='partition')] \
             if self._axis == 0 \
             else [ray.put(v.index) for _, v in
-                  self._df._row_metadata._coord_df.copy()\
+                  self._df._row_metadata._coord_df.copy()
                       .groupby(by='partition')]
 
         if len(self._index_grouped) > 1:
