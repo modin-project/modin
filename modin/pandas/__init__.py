@@ -14,6 +14,7 @@ import multiprocessing
 
 DEFAULT_NPARTITIONS = multiprocessing.cpu_count()
 
+
 def set_npartition_default(n):
     global DEFAULT_NPARTITIONS
     DEFAULT_NPARTITIONS = n
