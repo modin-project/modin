@@ -1775,61 +1775,48 @@ class DataFrame(object):
             if axis == 'index':
                 try:
                     coords = obj._row_metadata[label]
-                    if isinstance(coords, pandas.DataFrame):
-                        partitions = list(coords['partition'])
-                        indexes = list(coords['index_within_partition'])
-                    else:
-                        partitions, indexes = coords
-                        partitions = [partitions]
-                        indexes = [indexes]
-
-                    for part, index in zip(partitions, indexes):
-                        x = _deploy_func.remote(
-                            lambda df: df.drop(labels=index, axis=axis,
-                                               errors='ignore'),
-                            obj._row_partitions[part])
-                        obj._row_partitions = \
-                            [obj._row_partitions[i] if i != part
-                             else x
-                             for i in range(len(obj._row_partitions))]
-
-                        # The decrement here is because we're dropping one at a
-                        # time and the index is automatically updated when we
-                        # convert back to blocks.
-                        obj._row_metadata.squeeze(part, index)
-
-                    obj._row_metadata.drop(labels=label)
+                    object_partitions = obj._row_partitions
                 except KeyError:
                     return obj
             else:
                 try:
                     coords = obj._col_metadata[label]
-                    if isinstance(coords, pandas.DataFrame):
-                        partitions = list(coords['partition'])
-                        indexes = list(coords['index_within_partition'])
-                    else:
-                        partitions, indexes = coords
-                        partitions = [partitions]
-                        indexes = [indexes]
-
-                    for part, index in zip(partitions, indexes):
-                        x = _deploy_func.remote(
-                            lambda df: df.drop(labels=index, axis=axis,
-                                               errors='ignore'),
-                            obj._col_partitions[part])
-                        obj._col_partitions = \
-                            [obj._col_partitions[i] if i != part
-                             else x
-                             for i in range(len(obj._col_partitions))]
-
-                        # The decrement here is because we're dropping one at a
-                        # time and the index is automatically updated when we
-                        # convert back to blocks.
-                        obj._col_metadata.squeeze(part, index)
-
-                    obj._col_metadata.drop(labels=label)
+                    object_partitions = obj._col_partitions
                 except KeyError:
                     return obj
+
+            if isinstance(coords, pandas.DataFrame):
+                drop_map = {part: list(df['index_within_partition'])
+                            for part, df in
+                            coords.copy().groupby('partition')}
+            else:
+                partitions, indexes = coords
+                drop_map = {partitions: indexes}
+
+            new_partitions = {}
+
+            for part in drop_map:
+                index = drop_map[part]
+
+                new_partitions[part] = _deploy_func.remote(
+                    lambda df: df.drop(labels=index, axis=axis,
+                                       errors='ignore'),
+                    object_partitions[part])
+
+            if axis == 'index':
+                obj._row_partitions = \
+                    [object_partitions[i] if i not in new_partitions
+                     else new_partitions[i]
+                     for i in range(len(object_partitions))]
+
+                obj._row_metadata.drop(labels=label)
+            else:
+                obj._col_partitions = \
+                    [object_partitions[i] if i not in new_partitions
+                     else new_partitions[i]
+                     for i in range(len(object_partitions))]
+
+                obj._col_metadata.drop(labels=label)
 
             return obj
 
