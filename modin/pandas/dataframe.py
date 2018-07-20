@@ -2082,15 +2082,13 @@ class DataFrame(object):
                 try:
                     part, index = coords_obj[val]
 
-                    if not part in partition_dict:
+                    if part not in partition_dict:
                         partition_dict[part] = {}
                     partition_dict[part][index] = value[val]
-                    print(part, index)
                 # Pandas ignores these errors so we will suppress them too.
                 except KeyError:
                     continue
 
-            print(partition_dict)
             for part, value_map in partition_dict.items():
                 new_vals[part] = _deploy_func.remote(lambda df: df.fillna(
                     value=value_map,
@@ -2100,7 +2098,6 @@ class DataFrame(object):
                     limit=limit,
                     downcast=downcast,
                     **kwargs), parts[part])
-                print(ray.get(new_vals[part]))
 
             # Not every partition was changed, so we put everything back that
             # was not changed and update those that were.
