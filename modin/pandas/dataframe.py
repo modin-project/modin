@@ -2063,16 +2063,22 @@ class DataFrame(object):
         if isinstance(value, (pandas.Series, dict)):
             new_vals = {}
             value = dict(value)
+            partition_dict = {}
             for val in value:
                 # Get the local index for the partition
                 try:
                     part, index = coords_obj[val]
+
+                    if part not in partition_dict:
+                        partition_dict[part] = {}
+                    partition_dict[part][index] = value[val]
                 # Pandas ignores these errors so we will suppress them too.
                 except KeyError:
                     continue
 
-                new_vals[val] = _deploy_func.remote(lambda df: df.fillna(
-                    value={index: value[val]},
+            for part, value_map in partition_dict.items():
+                new_vals[part] = _deploy_func.remote(lambda df: df.fillna(
+                    value=value_map,
                     method=method,
                     axis=axis,
                     inplace=False,
@@ -2082,8 +2088,7 @@ class DataFrame(object):
 
             # Not every partition was changed, so we put everything back that
             # was not changed and update those that were.
-            new_parts = [parts[i] if coords_obj.index[i] not in new_vals
-                         else new_vals[coords_obj.index[i]]
+            new_parts = [parts[i] if i not in new_vals else new_vals[i]
                          for i in range(len(parts))]
         else:
             new_parts = _map_partitions(lambda df: df.fillna(
