@@ -374,7 +374,7 @@ class _Loc_Indexer(_Location_Indexer_Base):
         lens_oid = ray.put(np.array(lens))
 
         metadata_view = _IndexMetadata(
-            coord_df_oid=coord_df, 
+            coord_df_oid=coord_df,
             lengths_oid=lens_oid)
         return metadata_view
 
