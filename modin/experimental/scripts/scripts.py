@@ -19,7 +19,7 @@ def cli():
     help="the config file for the cluster")
 @click.option(
     "--port",
-    required=True,
+    default="8890",
     help="port to which to forward the notebook server")
 def notebook(config, port):
     config = cluster.load_config(config)
@@ -27,7 +27,8 @@ def notebook(config, port):
     execution_framework = config["execution_framework"]
     if execution_framework == "ray":
         cluster.setup_notebook_ray(config, port)
-    raise NotImplementedError(
+    else:
+        raise NotImplementedError(
             "Execution framework '{0}' not supported yet".format(
                 execution_framework))
 
