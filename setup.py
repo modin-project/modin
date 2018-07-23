@@ -13,4 +13,4 @@ setup(
     packages=find_packages(),
     url="https://github.com/modin-project/modin",
     install_requires=["pandas==0.22", "ray==0.5"],
-    entry_points={"console_scripts": ["modin=modin.scripts.scripts:main"]})
+    entry_points={"console_scripts": ["modin=modin.experimental.scripts.scripts:main"]})
