@@ -92,9 +92,17 @@ class DataFrameGroupBy(object):
 
         # It is expensive to put this multiple times, so let's just put it once
         remote_by = ray.put(self._by)
+        remote_index = \
+            [ray.put(v.index) for _, v in
+             self._df._col_metadata._coord_df.copy().groupby(by='partition')] \
+            if self._axis == 0 \
+            else [ray.put(v.index) for _, v in
+                  self._df._row_metadata._coord_df.copy()
+                      .groupby(by='partition')]
 
         if len(self._index_grouped) > 1:
-            return zip(*(groupby._submit(args=(remote_by,
+            return zip(*(groupby._submit(args=(remote_index[i],
+                                               remote_by,
                                                self._axis,
                                                self._level,
                                                self._as_index,
@@ -104,7 +112,7 @@ class DataFrameGroupBy(object):
                                          + tuple(part.tolist()),
                                          num_return_vals=len(
                                              self._index_grouped))
-                         for part in self._partitions))
+                         for i, part in enumerate(self._partitions)))
         elif self._axis == 0:
             return [self._df._col_partitions]
         else:
@@ -554,10 +562,14 @@ class DataFrameGroupBy(object):
 
 @ray.remote
 @post_task_gc
-def groupby(by, axis, level, as_index, sort, group_keys, squeeze, *df):
+def groupby(index, by, axis, level, as_index, sort, group_keys, squeeze, *df):
 
     df = pandas.concat(df, axis=axis)
 
+    if axis == 0:
+        df.columns = index
+    else:
+        df.index = index
     return [v for k, v in df.groupby(by=by,
                                      axis=axis,
                                      level=level,
