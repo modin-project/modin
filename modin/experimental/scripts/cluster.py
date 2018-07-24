@@ -47,18 +47,18 @@ def typename(v):
 
 def check_required(config, schema):
     """Check required config entries"""
-    if type(config) is not dict and type(config) is not list:
+    if not isinstance(config, (dict, list)):
         raise ValueError("Config is not a dictionary or a list")
-    if type(config) != type(schema):
+    if not isinstance(config, type(schema)):
         raise ValueError("Config is a {0}, but schema is a {1}".format(
             typename(config), typename(schema)))
-    if type(config) is list:
+    if isinstance(config, list):
         if not len(config):
             return
         item_schema = schema[0]
         for item_config in config:
             check_required(item_config, item_schema)
-    elif type(config) is dict:
+    elif isinstance(config, dict):
         for k, (v, kreq) in schema.items():
             if v is None:
                 continue
@@ -73,12 +73,12 @@ def check_required(config, schema):
 
 def check_extraneous(config, schema):
     """Check that all items in config are valid in schema"""
-    if type(config) is not dict and type(config) is not list:
+    if not isinstance(config, (dict, list)):
         raise ValueError("Config is not a dictionary or a list")
-    if type(config) != type(schema):
+    if not isinstance(config, type(schema)):
         raise ValueError("Config is a {0}, but schema is a {1}".format(
             typename(config), typename(schema)))
-    if type(config) is list:
+    if isinstance(config, list):
         if not len(config):
             return
         item_schema = schema[0]
@@ -87,7 +87,7 @@ def check_extraneous(config, schema):
             # does not navigate extraneous schema paths
             check_required(item_config, item_schema)
             check_extraneous(item_config, item_schema)
-    elif type(config) is dict:
+    elif isinstance(config, dict):
         for k in config:
             if k not in schema:
                 raise ValueError(
