@@ -263,30 +263,6 @@ def to_pandas(df):
     return pandas_df
 
 
-@ray.remote
-def extractor(df_chunk, row_loc, col_loc):
-    """Retrieve an item from remote block
-    """
-    # We currently have to do the writable flag trick because a pandas bug
-    # https://github.com/pandas-dev/pandas/issues/17192
-    try:
-        row_loc.flags.writeable = True
-        col_loc.flags.writeable = True
-    except AttributeError:
-        # Locators might be scaler or python list
-        pass
-    return df_chunk.iloc[row_loc, col_loc]
-
-
-@ray.remote
-def writer(df_chunk, row_loc, col_loc, item):
-    """Make a copy of the block and write new item to it
-    """
-    df_chunk = df_chunk.copy()
-    df_chunk.iloc[row_loc, col_loc] = item
-    return df_chunk
-
-
 def _mask_block_partitions(blk_partitions, row_metadata, col_metadata):
     """Return the squeezed/expanded block partitions as defined by
     row_metadata and col_metadata.
@@ -315,21 +291,6 @@ def _mask_block_partitions(blk_partitions, row_metadata, col_metadata):
     return np.array(result_oids).reshape(shape)
 
 
-@ray.remote
-def _deploy_func(func, dataframe, *args):
-    """Deploys a function for the _map_partitions call.
-    Args:
-        dataframe (pandas.DataFrame): The pandas DataFrame for this partition.
-    Returns:
-        A futures object representing the return value of the function
-        provided.
-    """
-    if len(args) == 0:
-        return func(dataframe)
-    else:
-        return func(dataframe, *args)
-
-
 def _map_partitions(func, partitions, *argslists):
     """Apply a function across the specified axis
 
@@ -353,6 +314,135 @@ def _map_partitions(func, partitions, *argslists):
         assert(all(len(args) == len(partitions) for args in argslists))
         return [_deploy_func.remote(func, *args)
                 for args in zip(partitions, *argslists)]
+
+
+def _create_block_partitions(partitions, axis=0, length=None):
+
+    if length is not None and length != 0 and get_npartitions() > length:
+        npartitions = length
+    elif length == 0:
+        npartitions = 1
+    else:
+        npartitions = get_npartitions()
+
+    x = [create_blocks._submit(args=(partition, npartitions, axis),
+                               num_return_vals=npartitions)
+         for partition in partitions]
+
+    # In the case that axis is 1 we have to transpose because we build the
+    # columns into rows. Fortunately numpy is efficient at this.
+    blocks = np.array(x) if axis == 0 else np.array(x).T
+
+    # Sometimes we only get a single column or row, which is
+    # problematic for building blocks from the partitions, so we
+    # add whatever dimension we're missing from the input.
+    return _fix_blocks_dimensions(blocks, axis)
+
+
+def _create_blocks_helper(df, npartitions, axis):
+    # Single partition dataframes don't need to be repartitioned
+    if npartitions == 1:
+        return df
+    # In the case that the size is not a multiple of the number of partitions,
+    # we need to add one to each partition to avoid losing data off the end
+    block_size = df.shape[axis ^ 1] // npartitions \
+        if df.shape[axis ^ 1] % npartitions == 0 \
+        else df.shape[axis ^ 1] // npartitions + 1
+
+    # if not isinstance(df.columns, pandas.RangeIndex):
+    #     df.columns = pandas.RangeIndex(0, len(df.columns))
+
+    blocks = [df.iloc[:, i * block_size: (i + 1) * block_size]
+              if axis == 0
+              else df.iloc[i * block_size: (i + 1) * block_size, :]
+              for i in range(npartitions)]
+
+    for block in blocks:
+        block.columns = pandas.RangeIndex(0, len(block.columns))
+        block.reset_index(inplace=True, drop=True)
+    return blocks
+
+
+def _inherit_docstrings(parent, excluded=[]):
+    """Creates a decorator which overwrites a decorated class' __doc__
+    attribute with parent's __doc__ attribute. Also overwrites __doc__ of
+    methods and properties defined in the class with the __doc__ of matching
+    methods and properties in parent.
+
+    Args:
+        parent (object): Class from which the decorated class inherits __doc__.
+        excluded (list): List of parent objects from which the class does not
+            inherit docstrings.
+
+    Returns:
+        function: decorator which replaces the decorated class' documentation
+            parent's documentation.
+    """
+    def decorator(cls):
+        if parent not in excluded:
+            cls.__doc__ = parent.__doc__
+        for attr, obj in cls.__dict__.items():
+            parent_obj = getattr(parent, attr, None)
+            if parent_obj in excluded or \
+                    (not callable(parent_obj) and
+                     not isinstance(parent_obj, property)):
+                continue
+            if callable(obj):
+                obj.__doc__ = parent_obj.__doc__
+            elif isinstance(obj, property) and obj.fget is not None:
+                p = property(obj.fget, obj.fset, obj.fdel, parent_obj.__doc__)
+                setattr(cls, attr, p)
+
+        return cls
+
+    return decorator
+
+
+def _fix_blocks_dimensions(blocks, axis):
+    """Checks that blocks is 2D, and adds a dimension if not.
+    """
+    if blocks.ndim < 2:
+        return np.expand_dims(blocks, axis=axis ^ 1)
+    return blocks
+
+
+@ray.remote
+def _deploy_func(func, dataframe, *args):
+    """Deploys a function for the _map_partitions call.
+    Args:
+        dataframe (pandas.DataFrame): The pandas DataFrame for this partition.
+    Returns:
+        A futures object representing the return value of the function
+        provided.
+    """
+    if len(args) == 0:
+        return func(dataframe)
+    else:
+        return func(dataframe, *args)
+
+
+@ray.remote
+def extractor(df_chunk, row_loc, col_loc):
+    """Retrieve an item from remote block
+    """
+    # We currently have to do the writable flag trick because a pandas bug
+    # https://github.com/pandas-dev/pandas/issues/17192
+    try:
+        row_loc.flags.writeable = True
+        col_loc.flags.writeable = True
+    except AttributeError:
+        # Locators might be scaler or python list
+        pass
+    return df_chunk.iloc[row_loc, col_loc]
+
+
+@ray.remote
+def writer(df_chunk, row_loc, col_loc, item):
+    """Make a copy of the block and write new item to it
+    """
+    df_chunk = df_chunk.copy()
+    df_chunk.iloc[row_loc, col_loc] = item
+    return df_chunk
 
 
 @ray.remote
@@ -385,56 +475,9 @@ def _build_coord_df(lengths, index):
     return pandas.DataFrame(coords, index=index, columns=col_names)
 
 
-def _create_block_partitions(partitions, axis=0, length=None):
-
-    if length is not None and length != 0 and get_npartitions() > length:
-        npartitions = length
-    elif length == 0:
-        npartitions = 1
-    else:
-        npartitions = get_npartitions()
-
-    x = [create_blocks._submit(args=(partition, npartitions, axis),
-                               num_return_vals=npartitions)
-         for partition in partitions]
-
-    # In the case that axis is 1 we have to transpose because we build the
-    # columns into rows. Fortunately numpy is efficient at this.
-    blocks = np.array(x) if axis == 0 else np.array(x).T
-
-    # Sometimes we only get a single column or row, which is
-    # problematic for building blocks from the partitions, so we
-    # add whatever dimension we're missing from the input.
-    return _fix_blocks_dimensions(blocks, axis)
-
-
 @ray.remote
 def create_blocks(df, npartitions, axis):
     return _create_blocks_helper(df, npartitions, axis)
-
-
-def _create_blocks_helper(df, npartitions, axis):
-    # Single partition dataframes don't need to be repartitioned
-    if npartitions == 1:
-        return df
-    # In the case that the size is not a multiple of the number of partitions,
-    # we need to add one to each partition to avoid losing data off the end
-    block_size = df.shape[axis ^ 1] // npartitions \
-        if df.shape[axis ^ 1] % npartitions == 0 \
-        else df.shape[axis ^ 1] // npartitions + 1
-
-    # if not isinstance(df.columns, pandas.RangeIndex):
-    #     df.columns = pandas.RangeIndex(0, len(df.columns))
-
-    blocks = [df.iloc[:, i * block_size: (i + 1) * block_size]
-              if axis == 0
-              else df.iloc[i * block_size: (i + 1) * block_size, :]
-              for i in range(npartitions)]
-
-    for block in blocks:
-        block.columns = pandas.RangeIndex(0, len(block.columns))
-        block.reset_index(inplace=True, drop=True)
-    return blocks
 
 
 @memoize
@@ -472,41 +515,6 @@ def _blocks_to_row(*partition):
         return row_part
     else:
         return pandas.DataFrame()
-
-
-def _inherit_docstrings(parent, excluded=[]):
-    """Creates a decorator which overwrites a decorated class' __doc__
-    attribute with parent's __doc__ attribute. Also overwrites __doc__ of
-    methods and properties defined in the class with the __doc__ of matching
-    methods and properties in parent.
-
-    Args:
-        parent (object): Class from which the decorated class inherits __doc__.
-        excluded (list): List of parent objects from which the class does not
-            inherit docstrings.
-
-    Returns:
-        function: decorator which replaces the decorated class' documentation
-            parent's documentation.
-    """
-    def decorator(cls):
-        if parent not in excluded:
-            cls.__doc__ = parent.__doc__
-        for attr, obj in cls.__dict__.items():
-            parent_obj = getattr(parent, attr, None)
-            if parent_obj in excluded or \
-                    (not callable(parent_obj) and
-                     not isinstance(parent_obj, property)):
-                continue
-            if callable(obj):
-                obj.__doc__ = parent_obj.__doc__
-            elif isinstance(obj, property) and obj.fget is not None:
-                p = property(obj.fget, obj.fset, obj.fdel, parent_obj.__doc__)
-                setattr(cls, attr, p)
-
-        return cls
-
-    return decorator
 
 
 @ray.remote
@@ -611,14 +619,6 @@ def _match_partitioning(column_partition, lengths, index):
 @ray.remote
 def _concat_index(*index_parts):
     return index_parts[0].append(index_parts[1:])
-
-
-def _fix_blocks_dimensions(blocks, axis):
-    """Checks that blocks is 2D, and adds a dimension if not.
-    """
-    if blocks.ndim < 2:
-        return np.expand_dims(blocks, axis=axis ^ 1)
-    return blocks
 
 
 @ray.remote
