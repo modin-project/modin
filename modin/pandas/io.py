@@ -56,13 +56,6 @@ def read_parquet(path, engine='auto', columns=None, **kwargs):
     return DataFrame(block_partitions=blk_partitions, columns=columns)
 
 
-@ray.remote
-def _read_parquet_column(path, column, kwargs={}):
-    df = pq.read_pandas(path, columns=[column], **kwargs).to_pandas()
-    oids = _partition_pandas_dataframe(df, num_partitions=get_npartitions())
-    return oids
-
-
 # CSV
 def _skip_header(f, kwargs={}):
     lines_read = 0
@@ -183,19 +176,6 @@ def _read_csv_from_file(filepath, npartitions, kwargs={}):
     return df
 
 
-@ray.remote
-def _read_csv_with_offset(fn, start, end, kwargs={}, header=b''):
-    bio = open(fn, 'rb')
-    bio.seek(start)
-    to_read = header + bio.read(end - start)
-    bio.close()
-    pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-    index = pandas_df.index
-    # Partitions must have RangeIndex
-    pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
-    return pandas_df, index
-
-
 def _read_csv_from_pandas(filepath_or_buffer, kwargs):
     pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
 
@@ -209,13 +189,6 @@ def _read_csv_from_pandas(filepath_or_buffer, kwargs):
             from_pandas(pd_read(*args, **kwargs), get_npartitions())
 
     return pd_obj
-
-
-@ray.remote
-def get_index(index_name, *partition_indices):
-    index = partition_indices[0].append(partition_indices[1:])
-    index.names = index_name
-    return index
 
 
 def read_csv(filepath_or_buffer,
@@ -598,3 +571,30 @@ def read_sql(sql,
     ray_frame = from_pandas(port_frame, get_npartitions())
 
     return ray_frame
+
+
+@ray.remote
+def get_index(index_name, *partition_indices):
+    index = partition_indices[0].append(partition_indices[1:])
+    index.names = index_name
+    return index
+
+
+@ray.remote
+def _read_csv_with_offset(fn, start, end, kwargs={}, header=b''):
+    bio = open(fn, 'rb')
+    bio.seek(start)
+    to_read = header + bio.read(end - start)
+    bio.close()
+    pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+    index = pandas_df.index
+    # Partitions must have RangeIndex
+    pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
+    return pandas_df, index
+
+
+@ray.remote
+def _read_parquet_column(path, column, kwargs={}):
+    df = pq.read_pandas(path, columns=[column], **kwargs).to_pandas()
+    oids = _partition_pandas_dataframe(df, num_partitions=get_npartitions())
+    return oids
