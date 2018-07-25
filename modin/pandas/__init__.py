@@ -15,16 +15,16 @@ import ray
 
 try:
     if threading.current_thread().name == "MainThread":
-        os.environ['OMP_NUM_THREADS'] = "1"
-        ray.init()
+        ray.init(redirect_output=True, include_webui=False,
+                 redirect_worker_output=True)
 except AssertionError:
     pass
 
 # Set this so that Pandas doesn't try to multithread by itself
-#
+os.environ['OMP_NUM_THREADS'] = "1"
 
 num_cpus = ray.global_state.cluster_resources()['CPU']
-DEFAULT_NPARTITIONS = num_cpus
+DEFAULT_NPARTITIONS = int(num_cpus)
 
 
 def set_npartition_default(n):
