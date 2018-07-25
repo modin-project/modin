@@ -28,39 +28,39 @@ def ray_df_equals(ray_df1, ray_df2):
 
 @pytest.fixture
 def create_test_dataframe():
-    return pd.DataFrame({'col1': [0, 1, 2, 3],
-                         'col2': [4, 5, 6, 7],
-                         'col3': [8, 9, 10, 11],
-                         'col4': [12, 13, 14, 15],
-                         'col5': [0, 0, 0, 0]})
+    return pd.DataFrame({
+        'col1': [0, 1, 2, 3],
+        'col2': [4, 5, 6, 7],
+        'col3': [8, 9, 10, 11],
+        'col4': [12, 13, 14, 15],
+        'col5': [0, 0, 0, 0]
+    })
 
 
 def test_int_dataframe():
-    frame_data = {'col1': [0, 1, 2, 3],
-                  'col2': [4, 5, 6, 7],
-                  'col3': [8, 9, 10, 11],
-                  'col4': [12, 13, 14, 15],
-                  'col5': [0, 0, 0, 0]}
+    frame_data = {
+        'col1': [0, 1, 2, 3],
+        'col2': [4, 5, 6, 7],
+        'col3': [8, 9, 10, 11],
+        'col4': [12, 13, 14, 15],
+        'col5': [0, 0, 0, 0]
+    }
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
-    testfuncs = [lambda x: x + 1,
-                 lambda x: str(x),
-                 lambda x: x * x,
-                 lambda x: x,
-                 lambda x: False]
+    testfuncs = [
+        lambda x: x + 1, lambda x: str(x), lambda x: x * x, lambda x: x,
+        lambda x: False
+    ]
 
-    query_funcs = ['col1 < col2', 'col3 > col4', 'col1 == col2',
-                   '(col2 > col1) and (col1 < col3)']
+    query_funcs = [
+        'col1 < col2', 'col3 > col4', 'col1 == col2',
+        '(col2 > col1) and (col1 < col3)'
+    ]
 
-    keys = ['col1',
-            'col2',
-            'col3',
-            'col4']
+    keys = ['col1', 'col2', 'col3', 'col4']
 
-    filter_by = {'items': ['col1', 'col5'],
-                 'regex': '4$|3$',
-                 'like': 'col'}
+    filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
@@ -171,8 +171,9 @@ def test_int_dataframe():
 
     test___array__(ray_df, pandas_df)
 
-    apply_agg_functions = ['sum', lambda df: df.sum(), ['sum', 'mean'],
-                           ['sum', 'sum']]
+    apply_agg_functions = [
+        'sum', lambda df: df.sum(), ['sum', 'mean'], ['sum', 'sum']
+    ]
     for func in apply_agg_functions:
         test_apply(ray_df, pandas_df, func, 0)
         test_aggregate(ray_df, pandas_df, func, 0)
@@ -206,32 +207,30 @@ def test_int_dataframe():
 
 
 def test_float_dataframe():
-    frame_data = {'col1': [0.0, 1.0, 2.0, 3.0],
-                  'col2': [4.0, 5.0, 6.0, 7.0],
-                  'col3': [8.0, 9.0, 10.0, 11.0],
-                  'col4': [12.0, 13.0, 14.0, 15.0],
-                  'col5': [0.0, 0.0, 0.0, 0.0]}
+    frame_data = {
+        'col1': [0.0, 1.0, 2.0, 3.0],
+        'col2': [4.0, 5.0, 6.0, 7.0],
+        'col3': [8.0, 9.0, 10.0, 11.0],
+        'col4': [12.0, 13.0, 14.0, 15.0],
+        'col5': [0.0, 0.0, 0.0, 0.0]
+    }
 
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
-    testfuncs = [lambda x: x + 1,
-                 lambda x: str(x),
-                 lambda x: x * x,
-                 lambda x: x,
-                 lambda x: False]
+    testfuncs = [
+        lambda x: x + 1, lambda x: str(x), lambda x: x * x, lambda x: x,
+        lambda x: False
+    ]
 
-    query_funcs = ['col1 < col2', 'col3 > col4', 'col1 == col2',
-                   '(col2 > col1) and (col1 < col3)']
+    query_funcs = [
+        'col1 < col2', 'col3 > col4', 'col1 == col2',
+        '(col2 > col1) and (col1 < col3)'
+    ]
 
-    keys = ['col1',
-            'col2',
-            'col3',
-            'col4']
+    keys = ['col1', 'col2', 'col3', 'col4']
 
-    filter_by = {'items': ['col1', 'col5'],
-                 'regex': '4$|3$',
-                 'like': 'col'}
+    filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
@@ -344,8 +343,9 @@ def test_float_dataframe():
     # TODO Nans are always not equal to each other, fix it
     # test___array__(ray_df, pandas_df)
 
-    apply_agg_functions = ['sum', lambda df: df.sum(), ['sum', 'mean'],
-                           ['sum', 'sum']]
+    apply_agg_functions = [
+        'sum', lambda df: df.sum(), ['sum', 'mean'], ['sum', 'sum']
+    ]
     for func in apply_agg_functions:
         test_apply(ray_df, pandas_df, func, 0)
         test_aggregate(ray_df, pandas_df, func, 0)
@@ -379,30 +379,27 @@ def test_float_dataframe():
 
 
 def test_mixed_dtype_dataframe():
-    frame_data = {'col1': [1, 2, 3, 4],
-                  'col2': [4, 5, 6, 7],
-                  'col3': [8.0, 9.4, 10.1, 11.3],
-                  'col4': ['a', 'b', 'c', 'd']}
+    frame_data = {
+        'col1': [1, 2, 3, 4],
+        'col2': [4, 5, 6, 7],
+        'col3': [8.0, 9.4, 10.1, 11.3],
+        'col4': ['a', 'b', 'c', 'd']
+    }
 
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
-    testfuncs = [lambda x: x + x,
-                 lambda x: str(x),
-                 lambda x: x,
-                 lambda x: False]
+    testfuncs = [
+        lambda x: x + x, lambda x: str(x), lambda x: x, lambda x: False
+    ]
 
-    query_funcs = ['col1 < col2', 'col1 == col2',
-                   '(col2 > col1) and (col1 < col3)']
+    query_funcs = [
+        'col1 < col2', 'col1 == col2', '(col2 > col1) and (col1 < col3)'
+    ]
 
-    keys = ['col1',
-            'col2',
-            'col3',
-            'col4']
+    keys = ['col1', 'col2', 'col3', 'col4']
 
-    filter_by = {'items': ['col1', 'col5'],
-                 'regex': '4$|3$',
-                 'like': 'col'}
+    filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
@@ -548,30 +545,28 @@ def test_mixed_dtype_dataframe():
 
 
 def test_nan_dataframe():
-    frame_data = {'col1': [1, 2, 3, np.nan],
-                  'col2': [4, 5, np.nan, 7],
-                  'col3': [8, np.nan, 10, 11],
-                  'col4': [np.nan, 13, 14, 15]}
+    frame_data = {
+        'col1': [1, 2, 3, np.nan],
+        'col2': [4, 5, np.nan, 7],
+        'col3': [8, np.nan, 10, 11],
+        'col4': [np.nan, 13, 14, 15]
+    }
 
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
-    testfuncs = [lambda x: x + x,
-                 lambda x: str(x),
-                 lambda x: x,
-                 lambda x: False]
+    testfuncs = [
+        lambda x: x + x, lambda x: str(x), lambda x: x, lambda x: False
+    ]
 
-    query_funcs = ['col1 < col2', 'col3 > col4', 'col1 == col2',
-                   '(col2 > col1) and (col1 < col3)']
+    query_funcs = [
+        'col1 < col2', 'col3 > col4', 'col1 == col2',
+        '(col2 > col1) and (col1 < col3)'
+    ]
 
-    keys = ['col1',
-            'col2',
-            'col3',
-            'col4']
+    keys = ['col1', 'col2', 'col3', 'col4']
 
-    filter_by = {'items': ['col1', 'col5'],
-                 'regex': '4$|3$',
-                 'like': 'col'}
+    filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
@@ -680,8 +675,9 @@ def test_nan_dataframe():
     # TODO Nans are always not equal to each other, fix it
     # test___array__(ray_df, pandas_df)
 
-    apply_agg_functions = ['sum', lambda df: df.sum(), ['sum', 'mean'],
-                           ['sum', 'sum']]
+    apply_agg_functions = [
+        'sum', lambda df: df.sum(), ['sum', 'mean'], ['sum', 'sum']
+    ]
     for func in apply_agg_functions:
         test_apply(ray_df, pandas_df, func, 0)
         test_aggregate(ray_df, pandas_df, func, 0)
@@ -753,8 +749,7 @@ def test_is_empty(df):
 
 
 def test_dense_nan_df():
-    frame_data = [[np.nan, 2, np.nan, 0],
-                  [3, 4, np.nan, 1],
+    frame_data = [[np.nan, 2, np.nan, 0], [3, 4, np.nan, 1],
                   [np.nan, np.nan, np.nan, 5]]
     ray_df = pd.DataFrame(frame_data, columns=list('ABCD'))
 
@@ -773,72 +768,96 @@ def test_dense_nan_df():
 
 @pytest.fixture
 def test_inter_df_math(op, simple=False):
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(getattr(ray_df, op)(ray_df),
-                                getattr(pandas_df, op)(pandas_df))
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4),
-                                getattr(pandas_df, op)(4))
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4.0),
-                                getattr(pandas_df, op)(4.0))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(ray_df),
+        getattr(pandas_df, op)(pandas_df))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4),
+        getattr(pandas_df, op)(4))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4.0),
+        getattr(pandas_df, op)(4.0))
 
     frame_data = {"A": [0, 2], "col1": [0, 19], "col2": [1, 1]}
     ray_df2 = pd.DataFrame(frame_data)
     pandas_df2 = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(getattr(ray_df, op)(ray_df2),
-                                getattr(pandas_df, op)(pandas_df2))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(ray_df2),
+        getattr(pandas_df, op)(pandas_df2))
 
     list_test = [0, 1, 2, 4]
 
     if not simple:
-        assert ray_df_equals_pandas(getattr(ray_df, op)(list_test, axis=1),
-                                    getattr(pandas_df, op)(list_test, axis=1))
+        assert ray_df_equals_pandas(
+            getattr(ray_df, op)(list_test, axis=1),
+            getattr(pandas_df, op)(list_test, axis=1))
 
-        assert ray_df_equals_pandas(getattr(ray_df, op)(list_test, axis=0),
-                                    getattr(pandas_df, op)(list_test, axis=0))
+        assert ray_df_equals_pandas(
+            getattr(ray_df, op)(list_test, axis=0),
+            getattr(pandas_df, op)(list_test, axis=0))
 
 
 @pytest.fixture
 def test_comparison_inter_ops(op):
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(getattr(ray_df, op)(ray_df),
-                                getattr(pandas_df, op)(pandas_df))
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4),
-                                getattr(pandas_df, op)(4))
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4.0),
-                                getattr(pandas_df, op)(4.0))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(ray_df),
+        getattr(pandas_df, op)(pandas_df))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4),
+        getattr(pandas_df, op)(4))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4.0),
+        getattr(pandas_df, op)(4.0))
 
     frame_data = {"A": [0, 2], "col1": [0, 19], "col2": [1, 1]}
 
     ray_df2 = pd.DataFrame(frame_data)
     pandas_df2 = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(getattr(ray_df2, op)(ray_df2),
-                                getattr(pandas_df2, op)(pandas_df2))
+    assert ray_df_equals_pandas(
+        getattr(ray_df2, op)(ray_df2),
+        getattr(pandas_df2, op)(pandas_df2))
 
 
 @pytest.fixture
 def test_inter_df_math_right_ops(op):
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4),
-                                getattr(pandas_df, op)(4))
-    assert ray_df_equals_pandas(getattr(ray_df, op)(4.0),
-                                getattr(pandas_df, op)(4.0))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4),
+        getattr(pandas_df, op)(4))
+    assert ray_df_equals_pandas(
+        getattr(ray_df, op)(4.0),
+        getattr(pandas_df, op)(4.0))
 
 
 @pytest.fixture
@@ -1004,8 +1023,12 @@ def test_any(ray_df, pd_df):
 
 
 def test_append():
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
@@ -1015,8 +1038,8 @@ def test_append():
     ray_df2 = pd.DataFrame(frame_data2)
     pandas_df2 = pandas.DataFrame(frame_data2)
 
-    assert ray_df_equals_pandas(ray_df.append(ray_df2),
-                                pandas_df.append(pandas_df2))
+    assert ray_df_equals_pandas(
+        ray_df.append(ray_df2), pandas_df.append(pandas_df2))
 
     with pytest.raises(ValueError):
         ray_df.append(ray_df2, verify_integrity=True)
@@ -1092,23 +1115,26 @@ def test_astype():
     td = TestData()
     ray_df = pd.DataFrame(td.frame)
     our_df_casted = ray_df.astype(np.int32)
-    expected_df_casted = pandas.DataFrame(td.frame.values.astype(np.int32),
-                                          index=td.frame.index,
-                                          columns=td.frame.columns)
+    expected_df_casted = pandas.DataFrame(
+        td.frame.values.astype(np.int32),
+        index=td.frame.index,
+        columns=td.frame.columns)
 
     assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
 
     our_df_casted = ray_df.astype(np.float64)
-    expected_df_casted = pandas.DataFrame(td.frame.values.astype(np.float64),
-                                          index=td.frame.index,
-                                          columns=td.frame.columns)
+    expected_df_casted = pandas.DataFrame(
+        td.frame.values.astype(np.float64),
+        index=td.frame.index,
+        columns=td.frame.columns)
 
     assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
 
     our_df_casted = ray_df.astype(str)
-    expected_df_casted = pandas.DataFrame(td.frame.values.astype(str),
-                                          index=td.frame.index,
-                                          columns=td.frame.columns)
+    expected_df_casted = pandas.DataFrame(
+        td.frame.values.astype(str),
+        index=td.frame.index,
+        columns=td.frame.columns)
 
     assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
 
@@ -1267,8 +1293,8 @@ def test_describe(ray_df, pandas_df):
 def test_diff(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.diff(), pandas_df.diff())
     assert ray_df_equals_pandas(ray_df.diff(axis=1), pandas_df.diff(axis=1))
-    assert ray_df_equals_pandas(ray_df.diff(periods=1),
-                                pandas_df.diff(periods=1))
+    assert ray_df_equals_pandas(
+        ray_df.diff(periods=1), pandas_df.diff(periods=1))
 
 
 def test_div():
@@ -1291,12 +1317,12 @@ def test_drop():
     simple = pandas.DataFrame(frame_data)
     ray_simple = pd.DataFrame(frame_data)
     assert ray_df_equals_pandas(ray_simple.drop("A", axis=1), simple[['B']])
-    assert ray_df_equals_pandas(ray_simple.drop(["A", "B"], axis='columns'),
-                                simple[[]])
-    assert ray_df_equals_pandas(ray_simple.drop([0, 1, 3], axis=0),
-                                simple.loc[[2], :])
-    assert ray_df_equals_pandas(ray_simple.drop([0, 3], axis='index'),
-                                simple.loc[[1, 2], :])
+    assert ray_df_equals_pandas(
+        ray_simple.drop(["A", "B"], axis='columns'), simple[[]])
+    assert ray_df_equals_pandas(
+        ray_simple.drop([0, 1, 3], axis=0), simple.loc[[2], :])
+    assert ray_df_equals_pandas(
+        ray_simple.drop([0, 3], axis='index'), simple.loc[[1, 2], :])
 
     pytest.raises(ValueError, ray_simple.drop, 5)
     pytest.raises(ValueError, ray_simple.drop, 'C', 1)
@@ -1305,31 +1331,30 @@ def test_drop():
 
     # errors = 'ignore'
     assert ray_df_equals_pandas(ray_simple.drop(5, errors='ignore'), simple)
-    assert ray_df_equals_pandas(ray_simple.drop([0, 5], errors='ignore'),
-                                simple.loc[[1, 2, 3], :])
-    assert ray_df_equals_pandas(ray_simple.drop('C', axis=1, errors='ignore'),
-                                simple)
-    assert ray_df_equals_pandas(ray_simple.drop(['A', 'C'], axis=1,
-                                errors='ignore'),
-                                simple[['B']])
+    assert ray_df_equals_pandas(
+        ray_simple.drop([0, 5], errors='ignore'), simple.loc[[1, 2, 3], :])
+    assert ray_df_equals_pandas(
+        ray_simple.drop('C', axis=1, errors='ignore'), simple)
+    assert ray_df_equals_pandas(
+        ray_simple.drop(['A', 'C'], axis=1, errors='ignore'), simple[['B']])
 
     # non-unique
-    nu_df = pandas.DataFrame(pandas.compat.lzip(range(3), range(-3, 1),
-                                                list('abc')),
-                             columns=['a', 'a', 'b'])
+    nu_df = pandas.DataFrame(
+        pandas.compat.lzip(range(3), range(-3, 1), list('abc')),
+        columns=['a', 'a', 'b'])
     ray_nu_df = pd.DataFrame(nu_df)
     assert ray_df_equals_pandas(ray_nu_df.drop('a', axis=1), nu_df[['b']])
-    assert ray_df_equals_pandas(ray_nu_df.drop('b', axis='columns'),
-                                nu_df['a'])
+    assert ray_df_equals_pandas(
+        ray_nu_df.drop('b', axis='columns'), nu_df['a'])
     assert ray_df_equals_pandas(ray_nu_df.drop([]), nu_df)
 
     nu_df = nu_df.set_index(pandas.Index(['X', 'Y', 'X']))
     nu_df.columns = list('abc')
     ray_nu_df = pd.DataFrame(nu_df)
-    assert ray_df_equals_pandas(ray_nu_df.drop('X', axis='rows'),
-                                nu_df.loc[["Y"], :])
-    assert ray_df_equals_pandas(ray_nu_df.drop(['X', 'Y'], axis=0),
-                                nu_df.loc[[], :])
+    assert ray_df_equals_pandas(
+        ray_nu_df.drop('X', axis='rows'), nu_df.loc[["Y"], :])
+    assert ray_df_equals_pandas(
+        ray_nu_df.drop(['X', 'Y'], axis=0), nu_df.loc[[], :])
 
     # inplace cache issue
     frame_data = np.random.randn(10, 3)
@@ -1344,8 +1369,8 @@ def test_drop_api_equivalence():
     # equivalence of the labels/axis and index/columns API's
     frame_data = [[1, 2, 3], [3, 4, 5], [5, 6, 7]]
 
-    ray_df = pd.DataFrame(frame_data, index=['a', 'b', 'c'],
-                          columns=['d', 'e', 'f'])
+    ray_df = pd.DataFrame(
+        frame_data, index=['a', 'b', 'c'], columns=['d', 'e', 'f'])
 
     ray_df1 = ray_df.drop('a')
     ray_df2 = ray_df.drop(index='a')
@@ -1386,17 +1411,17 @@ def test_drop_duplicates():
 
 @pytest.fixture
 def test_dropna(ray_df, pd_df):
-    assert ray_df_equals_pandas(ray_df.dropna(axis=1, how='all'),
-                                pd_df.dropna(axis=1, how='all'))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(axis=1, how='all'), pd_df.dropna(axis=1, how='all'))
 
-    assert ray_df_equals_pandas(ray_df.dropna(axis=1, how='any'),
-                                pd_df.dropna(axis=1, how='any'))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(axis=1, how='any'), pd_df.dropna(axis=1, how='any'))
 
-    assert ray_df_equals_pandas(ray_df.dropna(axis=0, how='all'),
-                                pd_df.dropna(axis=0, how='all'))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(axis=0, how='all'), pd_df.dropna(axis=0, how='all'))
 
-    assert ray_df_equals_pandas(ray_df.dropna(thresh=2),
-                                pd_df.dropna(thresh=2))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(thresh=2), pd_df.dropna(thresh=2))
 
 
 @pytest.fixture
@@ -1417,10 +1442,12 @@ def test_dropna_inplace(ray_df, pd_df):
 
 @pytest.fixture
 def test_dropna_multiple_axes(ray_df, pd_df):
-    assert ray_df_equals_pandas(ray_df.dropna(how='all', axis=[0, 1]),
-                                pd_df.dropna(how='all', axis=[0, 1]))
-    assert ray_df_equals_pandas(ray_df.dropna(how='all', axis=(0, 1)),
-                                pd_df.dropna(how='all', axis=(0, 1)))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(how='all', axis=[0, 1]),
+        pd_df.dropna(how='all', axis=[0, 1]))
+    assert ray_df_equals_pandas(
+        ray_df.dropna(how='all', axis=(0, 1)),
+        pd_df.dropna(how='all', axis=(0, 1)))
 
 
 @pytest.fixture
@@ -1445,11 +1472,13 @@ def test_dropna_multiple_axes_inplace(ray_df, pd_df):
 @pytest.fixture
 def test_dropna_subset(ray_df, pd_df, column_subsets, row_subsets):
     for subset in column_subsets:
-        assert ray_df_equals_pandas(ray_df.dropna(how='all', subset=subset),
-                                    pd_df.dropna(how='all', subset=subset))
+        assert ray_df_equals_pandas(
+            ray_df.dropna(how='all', subset=subset),
+            pd_df.dropna(how='all', subset=subset))
 
-        assert ray_df_equals_pandas(ray_df.dropna(how='any', subset=subset),
-                                    pd_df.dropna(how='any', subset=subset))
+        assert ray_df_equals_pandas(
+            ray_df.dropna(how='any', subset=subset),
+            pd_df.dropna(how='any', subset=subset))
 
     for subset in row_subsets:
         assert ray_df_equals_pandas(
@@ -1499,11 +1528,16 @@ def test_eval_df_use_case():
     frame_data = {'a': np.random.randn(10), 'b': np.random.randn(10)}
     df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
-    df.eval("e = arctan2(sin(a), b)",
-            engine='python', parser='pandas', inplace=True)
-    ray_df.eval("e = arctan2(sin(a), b)",
-                engine='python',
-                parser='pandas', inplace=True)
+    df.eval(
+        "e = arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas',
+        inplace=True)
+    ray_df.eval(
+        "e = arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas',
+        inplace=True)
     # TODO: Use a series equality validator.
     assert ray_df_equals_pandas(ray_df, df)
 
@@ -1512,10 +1546,10 @@ def test_eval_df_arithmetic_subexpression():
     frame_data = {'a': np.random.randn(10), 'b': np.random.randn(10)}
     df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
-    df.eval("not_e = sin(a + b)",
-            engine='python', parser='pandas', inplace=True)
-    ray_df.eval("not_e = sin(a + b)",
-                engine='python', parser='pandas', inplace=True)
+    df.eval(
+        "not_e = sin(a + b)", engine='python', parser='pandas', inplace=True)
+    ray_df.eval(
+        "not_e = sin(a + b)", engine='python', parser='pandas', inplace=True)
     # TODO: Use a series equality validator.
     assert ray_df_equals_pandas(ray_df, df)
 
@@ -1620,8 +1654,7 @@ def test_fillna_sanity():
     #     df.x.fillna(method=m)
 
     # with different dtype
-    frame_data = [['a', 'a', np.nan, 'a'],
-                  ['b', 'b', np.nan, 'b'],
+    frame_data = [['a', 'a', np.nan, 'a'], ['b', 'b', np.nan, 'b'],
                   ['c', 'c', np.nan, 'c']]
     df = pandas.DataFrame(frame_data)
 
@@ -1635,8 +1668,10 @@ def test_fillna_sanity():
     ray_df.fillna({2: 'foo'}, inplace=True)
     assert ray_df_equals_pandas(ray_df, result)
 
-    frame_data = {'Date': [pandas.NaT, pandas.Timestamp("2014-1-1")],
-                  'Date2': [pandas.Timestamp("2013-1-1"), pandas.NaT]}
+    frame_data = {
+        'Date': [pandas.NaT, pandas.Timestamp("2014-1-1")],
+        'Date2': [pandas.Timestamp("2013-1-1"), pandas.NaT]
+    }
     df = pandas.DataFrame(frame_data)
     result = df.fillna(value={'Date': df['Date2']})
     ray_df = pd.DataFrame(frame_data).fillna(value={'Date': df['Date2']})
@@ -1683,8 +1718,9 @@ def test_ffill2():
     test_data.tsframe['A'][:5] = np.nan
     test_data.tsframe['A'][-5:] = np.nan
     ray_df = pd.DataFrame(test_data.tsframe)
-    assert ray_df_equals_pandas(ray_df.fillna(method='ffill'),
-                                test_data.tsframe.fillna(method='ffill'))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='ffill'),
+        test_data.tsframe.fillna(method='ffill'))
 
 
 @pytest.fixture
@@ -1693,8 +1729,9 @@ def test_bfill2():
     test_data.tsframe['A'][:5] = np.nan
     test_data.tsframe['A'][-5:] = np.nan
     ray_df = pd.DataFrame(test_data.tsframe)
-    assert ray_df_equals_pandas(ray_df.fillna(method='bfill'),
-                                test_data.tsframe.fillna(method='bfill'))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='bfill'),
+        test_data.tsframe.fillna(method='bfill'))
 
 
 @pytest.fixture
@@ -1739,8 +1776,8 @@ def test_frame_fillna_limit():
 
     expected = df[-2:].reindex(index)
     expected = expected.fillna(method='backfill', limit=5)
-    ray_df = pd.DataFrame(df[-2:].reindex(index)).fillna(method='backfill',
-                                                         limit=5)
+    ray_df = pd.DataFrame(df[-2:].reindex(index)).fillna(
+        method='backfill', limit=5)
     assert ray_df_equals_pandas(ray_df, expected)
 
 
@@ -1752,13 +1789,15 @@ def test_frame_pad_backfill_limit():
 
     result = df[:2].reindex(index)
     ray_df = pd.DataFrame(result)
-    assert ray_df_equals_pandas(ray_df.fillna(method='pad', limit=5),
-                                result.fillna(method='pad', limit=5))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='pad', limit=5),
+        result.fillna(method='pad', limit=5))
 
     result = df[-2:].reindex(index)
     ray_df = pd.DataFrame(result)
-    assert ray_df_equals_pandas(ray_df.fillna(method='backfill', limit=5),
-                                result.fillna(method='backfill', limit=5))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='backfill', limit=5),
+        result.fillna(method='backfill', limit=5))
 
 
 @pytest.fixture
@@ -1788,17 +1827,33 @@ def test_fillna_skip_certain_blocks():
 
 @pytest.fixture
 def test_fillna_dict_series():
-    frame_data = {'a': [np.nan, 1, 2, np.nan, np.nan],
-                  'b': [1, 2, 3, np.nan, np.nan],
-                  'c': [np.nan, 1, 2, 3, 4]}
+    frame_data = {
+        'a': [np.nan, 1, 2, np.nan, np.nan],
+        'b': [1, 2, 3, np.nan, np.nan],
+        'c': [np.nan, 1, 2, 3, 4]
+    }
     df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(ray_df.fillna({'a': 0, 'b': 5}),
-                                df.fillna({'a': 0, 'b': 5}))
+    assert ray_df_equals_pandas(
+        ray_df.fillna({
+            'a': 0,
+            'b': 5
+        }), df.fillna({
+            'a': 0,
+            'b': 5
+        }))
 
-    assert ray_df_equals_pandas(ray_df.fillna({'a': 0, 'b': 5, 'd': 7}),
-                                df.fillna({'a': 0, 'b': 5, 'd': 7}))
+    assert ray_df_equals_pandas(
+        ray_df.fillna({
+            'a': 0,
+            'b': 5,
+            'd': 7
+        }), df.fillna({
+            'a': 0,
+            'b': 5,
+            'd': 7
+        }))
 
     # Series treated same as dict
     assert ray_df_equals_pandas(ray_df.fillna(df.max()), df.fillna(df.max()))
@@ -1806,17 +1861,22 @@ def test_fillna_dict_series():
 
 @pytest.fixture
 def test_fillna_dataframe():
-    frame_data = {'a': [np.nan, 1, 2, np.nan, np.nan],
-                  'b': [1, 2, 3, np.nan, np.nan],
-                  'c': [np.nan, 1, 2, 3, 4]}
+    frame_data = {
+        'a': [np.nan, 1, 2, np.nan, np.nan],
+        'b': [1, 2, 3, np.nan, np.nan],
+        'c': [np.nan, 1, 2, 3, 4]
+    }
     df = pandas.DataFrame(frame_data, index=list('VWXYZ'))
     ray_df = pd.DataFrame(frame_data, index=list('VWXYZ'))
 
     # df2 may have different index and columns
-    df2 = pandas.DataFrame({'a': [np.nan, 10, 20, 30, 40],
-                            'b': [50, 60, 70, 80, 90],
-                            'foo': ['bar'] * 5},
-                           index=list('VWXuZ'))
+    df2 = pandas.DataFrame(
+        {
+            'a': [np.nan, 10, 20, 30, 40],
+            'b': [50, 60, 70, 80, 90],
+            'foo': ['bar'] * 5
+        },
+        index=list('VWXuZ'))
 
     # only those columns and indices which are shared get filled
     assert ray_df_equals_pandas(ray_df.fillna(df2), df.fillna(df2))
@@ -1829,13 +1889,15 @@ def test_fillna_columns():
     df.values[:, ::2] = np.nan
     ray_df = pd.DataFrame(df)
 
-    assert ray_df_equals_pandas(ray_df.fillna(method='ffill', axis=1),
-                                df.fillna(method='ffill', axis=1))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='ffill', axis=1), df.fillna(
+            method='ffill', axis=1))
 
     df.insert(6, 'foo', 5)
     ray_df = pd.DataFrame(df)
-    assert ray_df_equals_pandas(ray_df.fillna(method='ffill', axis=1),
-                                df.fillna(method='ffill', axis=1))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='ffill', axis=1), df.fillna(
+            method='ffill', axis=1))
 
 
 @pytest.fixture
@@ -1865,8 +1927,8 @@ def test_fillna_col_reordering():
     data = np.random.rand(20, 5)
     df = pandas.DataFrame(index=range(20), columns=cols, data=data)
     ray_df = pd.DataFrame(index=range(20), columns=cols, data=data)
-    assert ray_df_equals_pandas(ray_df.fillna(method='ffill'),
-                                df.fillna(method='ffill'))
+    assert ray_df_equals_pandas(
+        ray_df.fillna(method='ffill'), df.fillna(method='ffill'))
 
 
 """
@@ -1895,14 +1957,14 @@ def test_fillna_datetime_columns():
 
 @pytest.fixture
 def test_filter(ray_df, pandas_df, by):
-    assert ray_df_equals_pandas(ray_df.filter(items=by['items']),
-                                pandas_df.filter(items=by['items']))
+    assert ray_df_equals_pandas(
+        ray_df.filter(items=by['items']), pandas_df.filter(items=by['items']))
 
-    assert ray_df_equals_pandas(ray_df.filter(regex=by['regex']),
-                                pandas_df.filter(regex=by['regex']))
+    assert ray_df_equals_pandas(
+        ray_df.filter(regex=by['regex']), pandas_df.filter(regex=by['regex']))
 
-    assert ray_df_equals_pandas(ray_df.filter(like=by['like']),
-                                pandas_df.filter(like=by['like']))
+    assert ray_df_equals_pandas(
+        ray_df.filter(like=by['like']), pandas_df.filter(like=by['like']))
 
 
 def test_first():
@@ -2072,8 +2134,12 @@ def test_itertuples(ray_df, pandas_df):
 
 
 def test_join():
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
@@ -2187,8 +2253,12 @@ def test_memory_usage(ray_df):
 
 
 def test_merge():
-    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7],
-                  "col3": [8, 9, 0, 1], "col4": [2, 4, 5, 6]}
+    frame_data = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 0, 1],
+        "col4": [2, 4, 5, 6]
+    }
 
     ray_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
@@ -2206,38 +2276,38 @@ def test_merge():
             ray_df_equals_pandas(ray_result, pandas_result)
 
             # left_on and right_index
-            ray_result = ray_df.merge(ray_df2, how=how, left_on='col1',
-                                      right_index=True)
-            pandas_result = pandas_df.merge(pandas_df2, how=how,
-                                            left_on='col1', right_index=True)
+            ray_result = ray_df.merge(
+                ray_df2, how=how, left_on='col1', right_index=True)
+            pandas_result = pandas_df.merge(
+                pandas_df2, how=how, left_on='col1', right_index=True)
             ray_df_equals_pandas(ray_result, pandas_result)
 
             # left_index and right_on
-            ray_result = ray_df.merge(ray_df2, how=how, left_index=True,
-                                      right_on='col1')
-            pandas_result = pandas_df.merge(pandas_df2, how=how,
-                                            left_index=True, right_on='col1')
+            ray_result = ray_df.merge(
+                ray_df2, how=how, left_index=True, right_on='col1')
+            pandas_result = pandas_df.merge(
+                pandas_df2, how=how, left_index=True, right_on='col1')
             ray_df_equals_pandas(ray_result, pandas_result)
 
             # left_on and right_on col1
-            ray_result = ray_df.merge(ray_df2, how=how, left_on='col1',
-                                      right_on='col1')
-            pandas_result = pandas_df.merge(pandas_df2, how=how,
-                                            left_on='col1', right_on='col1')
+            ray_result = ray_df.merge(
+                ray_df2, how=how, left_on='col1', right_on='col1')
+            pandas_result = pandas_df.merge(
+                pandas_df2, how=how, left_on='col1', right_on='col1')
             ray_df_equals_pandas(ray_result, pandas_result)
 
             # left_on and right_on col2
-            ray_result = ray_df.merge(ray_df2, how=how, left_on='col2',
-                                      right_on='col2')
-            pandas_result = pandas_df.merge(pandas_df2, how=how,
-                                            left_on='col2', right_on='col2')
+            ray_result = ray_df.merge(
+                ray_df2, how=how, left_on='col2', right_on='col2')
+            pandas_result = pandas_df.merge(
+                pandas_df2, how=how, left_on='col2', right_on='col2')
             ray_df_equals_pandas(ray_result, pandas_result)
 
         # left_index and right_index
-        ray_result = ray_df.merge(ray_df2, how=how, left_index=True,
-                                  right_index=True)
-        pandas_result = pandas_df.merge(pandas_df2, how=how, left_index=True,
-                                        right_index=True)
+        ray_result = ray_df.merge(
+            ray_df2, how=how, left_index=True, right_index=True)
+        pandas_result = pandas_df.merge(
+            pandas_df2, how=how, left_index=True, right_index=True)
         ray_df_equals_pandas(ray_result, pandas_result)
 
 
@@ -2254,8 +2324,8 @@ def test_mod():
 @pytest.fixture
 def test_mode(ray_df, pandas_df):
     assert ray_series_equals_pandas(ray_df.mode(), pandas_df.mode())
-    assert ray_series_equals_pandas(ray_df.mode(axis=1),
-                                    pandas_df.mode(axis=1))
+    assert ray_series_equals_pandas(
+        ray_df.mode(axis=1), pandas_df.mode(axis=1))
 
 
 def test_mul():
@@ -2297,8 +2367,8 @@ def test_nsmallest():
 @pytest.fixture
 def test_nunique(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.nunique(), pandas_df.nunique())
-    assert ray_df_equals_pandas(ray_df.nunique(axis=1),
-                                pandas_df.nunique(axis=1))
+    assert ray_df_equals_pandas(
+        ray_df.nunique(axis=1), pandas_df.nunique(axis=1))
 
 
 def test_pct_change():
@@ -2325,17 +2395,13 @@ def test_pipe(ray_df, pandas_df):
     def f(x, arg2=0, arg3=0):
         return x.drop([arg2, arg3])
 
-    assert ray_df_equals(f(g(h(ray_df), arg1=a), arg2=b, arg3=c),
-                         (ray_df.pipe(h)
-                                .pipe(g, arg1=a)
-                                .pipe(f, arg2=b, arg3=c)))
+    assert ray_df_equals(
+        f(g(h(ray_df), arg1=a), arg2=b, arg3=c),
+        (ray_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)))
 
-    assert ray_df_equals_pandas((ray_df.pipe(h)
-                                .pipe(g, arg1=a)
-                                .pipe(f, arg2=b, arg3=c)),
-                                (pandas_df.pipe(h)
-                                .pipe(g, arg1=a)
-                                .pipe(f, arg2=b, arg3=c)))
+    assert ray_df_equals_pandas(
+        (ray_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),
+        (pandas_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)))
 
 
 def test_pivot():
@@ -2410,11 +2476,13 @@ def test_rdiv():
 
 
 def test_reindex():
-    frame_data = {'col1': [0, 1, 2, 3],
-                  'col2': [4, 5, 6, 7],
-                  'col3': [8, 9, 10, 11],
-                  'col4': [12, 13, 14, 15],
-                  'col5': [0, 0, 0, 0]}
+    frame_data = {
+        'col1': [0, 1, 2, 3],
+        'col2': [4, 5, 6, 7],
+        'col3': [8, 9, 10, 11],
+        'col4': [12, 13, 14, 15],
+        'col5': [0, 0, 0, 0]
+    }
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
@@ -2433,10 +2501,10 @@ def test_reindex():
         pandas_df.reindex(['col1', 'col7', 'col4', 'col8'], axis=1))
 
     assert ray_df_equals_pandas(
-        ray_df.reindex(index=[0, 1, 5],
-                       columns=['col1', 'col7', 'col4', 'col8']),
-        pandas_df.reindex(index=[0, 1, 5],
-                          columns=['col1', 'col7', 'col4', 'col8']))
+        ray_df.reindex(
+            index=[0, 1, 5], columns=['col1', 'col7', 'col4', 'col8']),
+        pandas_df.reindex(
+            index=[0, 1, 5], columns=['col1', 'col7', 'col4', 'col8']))
 
 
 def test_reindex_axis():
@@ -2455,6 +2523,7 @@ def test_reindex_like():
 
 # Renaming
 
+
 def test_rename():
     test_rename_sanity()
     test_rename_multiindex()
@@ -2470,15 +2539,16 @@ def test_rename_sanity():
     mapping = {'A': 'a', 'B': 'b', 'C': 'c', 'D': 'd'}
 
     ray_df = pd.DataFrame(test_data.frame)
-    assert ray_df_equals_pandas(ray_df.rename(columns=mapping),
-                                test_data.frame.rename(columns=mapping))
+    assert ray_df_equals_pandas(
+        ray_df.rename(columns=mapping),
+        test_data.frame.rename(columns=mapping))
 
     renamed2 = test_data.frame.rename(columns=str.lower)
     assert ray_df_equals_pandas(ray_df.rename(columns=str.lower), renamed2)
 
     ray_df = pd.DataFrame(renamed2)
-    assert ray_df_equals_pandas(ray_df.rename(columns=str.upper),
-                                renamed2.rename(columns=str.upper))
+    assert ray_df_equals_pandas(
+        ray_df.rename(columns=str.upper), renamed2.rename(columns=str.upper))
 
     # index
     data = {'A': {'foo': 0, 'bar': 1}}
@@ -2487,11 +2557,17 @@ def test_rename_sanity():
     df = pandas.DataFrame(data)
     ray_df = pd.DataFrame(data)
     tm.assert_index_equal(
-        ray_df.rename(index={'foo': 'bar', 'bar': 'foo'}).index,
-        df.rename(index={'foo': 'bar', 'bar': 'foo'}).index)
+        ray_df.rename(index={
+            'foo': 'bar',
+            'bar': 'foo'
+        }).index,
+        df.rename(index={
+            'foo': 'bar',
+            'bar': 'foo'
+        }).index)
 
-    tm.assert_index_equal(ray_df.rename(index=str.upper).index,
-                          df.rename(index=str.upper).index)
+    tm.assert_index_equal(
+        ray_df.rename(index=str.upper).index, df.rename(index=str.upper).index)
 
     # have to pass something
     pytest.raises(TypeError, ray_df.rename)
@@ -2500,8 +2576,14 @@ def test_rename_sanity():
     renamed = test_data.frame.rename(columns={'C': 'foo', 'D': 'bar'})
     ray_df = pd.DataFrame(test_data.frame)
     tm.assert_index_equal(
-        ray_df.rename(columns={'C': 'foo', 'D': 'bar'}).index,
-        test_data.frame.rename(columns={'C': 'foo', 'D': 'bar'}).index)
+        ray_df.rename(columns={
+            'C': 'foo',
+            'D': 'bar'
+        }).index,
+        test_data.frame.rename(columns={
+            'C': 'foo',
+            'D': 'bar'
+        }).index)
 
     # TODO: Uncomment when transpose works
     # other axis
@@ -2536,14 +2618,35 @@ def test_rename_multiindex():
 
     #
     # without specifying level -> accross all levels
-    renamed = df.rename(index={'foo1': 'foo3', 'bar2': 'bar3'},
-                        columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'})
-    ray_renamed = ray_df.rename(index={'foo1': 'foo3', 'bar2': 'bar3'},
-                                columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'})
+    renamed = df.rename(
+        index={
+            'foo1': 'foo3',
+            'bar2': 'bar3'
+        },
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        })
+    ray_renamed = ray_df.rename(
+        index={
+            'foo1': 'foo3',
+            'bar2': 'bar3'
+        },
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        })
     tm.assert_index_equal(renamed.index, ray_renamed.index)
 
-    renamed = df.rename(index={'foo1': 'foo3', 'bar2': 'bar3'},
-                        columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'})
+    renamed = df.rename(
+        index={
+            'foo1': 'foo3',
+            'bar2': 'bar3'
+        },
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        })
     tm.assert_index_equal(renamed.columns, ray_renamed.columns)
     assert renamed.index.names == ray_renamed.index.names
     assert renamed.columns.names == ray_renamed.columns.names
@@ -2552,25 +2655,42 @@ def test_rename_multiindex():
     # with specifying a level
 
     # dict
-    renamed = df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                        level=0)
-    ray_renamed = ray_df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                                level=0)
+    renamed = df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'}, level=0)
+    ray_renamed = ray_df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level=0)
     tm.assert_index_equal(renamed.columns, ray_renamed.columns)
-    renamed = df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                        level='fizz')
-    ray_renamed = ray_df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                                level='fizz')
+    renamed = df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level='fizz')
+    ray_renamed = ray_df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level='fizz')
     tm.assert_index_equal(renamed.columns, ray_renamed.columns)
 
     renamed = df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'}, level=1)
-    ray_renamed = ray_df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                                level=1)
+    ray_renamed = ray_df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level=1)
     tm.assert_index_equal(renamed.columns, ray_renamed.columns)
-    renamed = df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                        level='buzz')
-    ray_renamed = ray_df.rename(columns={'fizz1': 'fizz3', 'buzz2': 'buzz3'},
-                                level='buzz')
+    renamed = df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level='buzz')
+    ray_renamed = ray_df.rename(
+        columns={
+            'fizz1': 'fizz3',
+            'buzz2': 'buzz3'
+        }, level='buzz')
     tm.assert_index_equal(renamed.columns, ray_renamed.columns)
 
     # function
@@ -2591,8 +2711,11 @@ def test_rename_multiindex():
 
     # index
     renamed = df.rename(index={'foo1': 'foo3', 'bar2': 'bar3'}, level=0)
-    ray_renamed = ray_df.rename(index={'foo1': 'foo3', 'bar2': 'bar3'},
-                                level=0)
+    ray_renamed = ray_df.rename(
+        index={
+            'foo1': 'foo3',
+            'bar2': 'bar3'
+        }, level=0)
     tm.assert_index_equal(ray_renamed.index, renamed.index)
 
 
@@ -2610,8 +2733,9 @@ def test_rename_inplace():
     test_data = TestData().frame
     ray_df = pd.DataFrame(test_data)
 
-    assert ray_df_equals_pandas(ray_df.rename(columns={'C': 'foo'}),
-                                test_data.rename(columns={'C': 'foo'}))
+    assert ray_df_equals_pandas(
+        ray_df.rename(columns={'C': 'foo'}),
+        test_data.rename(columns={'C': 'foo'}))
 
     frame = test_data.copy()
     ray_frame = ray_df.copy()
@@ -2698,13 +2822,13 @@ def test_reset_index(ray_df, pandas_df, inplace=False):
 
 
 @pytest.mark.skip(reason="dtypes on different partitions may not match up, "
-                         "no fix for this yet")
+                  "no fix for this yet")
 def test_rfloordiv():
     test_inter_df_math_right_ops("rfloordiv")
 
 
 @pytest.mark.skip(reason="dtypes on different partitions may not match up, "
-                         "no fix for this yet")
+                  "no fix for this yet")
 def test_rmod():
     test_inter_df_math_right_ops("rmod")
 
@@ -2735,7 +2859,7 @@ def test_rsub():
 
 
 @pytest.mark.skip(reason="dtypes on different partitions may not match up, "
-                         "no fix for this yet")
+                  "no fix for this yet")
 def test_rtruediv():
     test_inter_df_math_right_ops("rtruediv")
 
@@ -2754,12 +2878,14 @@ def test_select():
 
 
 def test_select_dtypes():
-    frame_data = {'test1': list('abc'),
-                  'test2': np.arange(3, 6).astype('u1'),
-                  'test3': np.arange(8.0, 11.0, dtype='float64'),
-                  'test4': [True, False, True],
-                  'test5': pandas.date_range('now', periods=3).values,
-                  'test6': list(range(5, 8))}
+    frame_data = {
+        'test1': list('abc'),
+        'test2': np.arange(3, 6).astype('u1'),
+        'test3': np.arange(8.0, 11.0, dtype='float64'),
+        'test4': [True, False, True],
+        'test5': pandas.date_range('now', periods=3).values,
+        'test6': list(range(5, 8))
+    }
     df = pandas.DataFrame(frame_data)
     rd = pd.DataFrame(frame_data)
 
@@ -2820,8 +2946,7 @@ def test_shift():
 @pytest.fixture
 def test_skew(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.skew(), pandas_df.skew())
-    assert ray_df_equals_pandas(ray_df.skew(axis=1),
-                                pandas_df.skew(axis=1))
+    assert ray_df_equals_pandas(ray_df.skew(axis=1), pandas_df.skew(axis=1))
 
 
 def test_slice_shift():
@@ -2970,10 +3095,11 @@ def test_to_xarray():
 
 @pytest.fixture
 def test_transform(ray_df, pandas_df):
-    assert ray_df_equals_pandas(ray_df.transform(lambda df: df.isna()),
-                                pandas_df.transform(lambda df: df.isna()))
-    assert ray_df_equals_pandas(ray_df.transform('isna'),
-                                pandas_df.transform('isna'))
+    assert ray_df_equals_pandas(
+        ray_df.transform(lambda df: df.isna()),
+        pandas_df.transform(lambda df: df.isna()))
+    assert ray_df_equals_pandas(
+        ray_df.transform('isna'), pandas_df.transform('isna'))
 
 
 def test_truediv():
@@ -3016,19 +3142,15 @@ def test_unstack():
 
 
 def test_update():
-    df = pd.DataFrame([[1.5, np.nan, 3.],
-                       [1.5, np.nan, 3.],
-                       [1.5, np.nan, 3],
+    df = pd.DataFrame([[1.5, np.nan, 3.], [1.5, np.nan, 3.], [1.5, np.nan, 3],
                        [1.5, np.nan, 3]])
 
-    other = pd.DataFrame([[3.6, 2., np.nan],
-                          [np.nan, np.nan, 7]], index=[1, 3])
+    other = pd.DataFrame(
+        [[3.6, 2., np.nan], [np.nan, np.nan, 7]], index=[1, 3])
 
     df.update(other)
 
-    expected = pd.DataFrame([[1.5, np.nan, 3],
-                             [3.6, 2, 3],
-                             [1.5, np.nan, 3],
+    expected = pd.DataFrame([[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3],
                              [1.5, np.nan, 7.]])
     assert ray_df_equals(df, expected)
 
@@ -3375,9 +3497,7 @@ def test__doc__():
 
 
 def test_to_datetime():
-    frame_data = {'year': [2015, 2016],
-                  'month': [2, 3],
-                  'day': [4, 5]}
+    frame_data = {'year': [2015, 2016], 'month': [2, 3], 'day': [4, 5]}
     ray_df = pd.DataFrame(frame_data)
     pd_df = pandas.DataFrame(frame_data)
 
@@ -3385,11 +3505,9 @@ def test_to_datetime():
 
 
 def test_get_dummies():
-    frame_data = {'A': ['a', 'b', 'a'],
-                  'B': ['b', 'a', 'c'],
-                  'C': [1, 2, 3]}
+    frame_data = {'A': ['a', 'b', 'a'], 'B': ['b', 'a', 'c'], 'C': [1, 2, 3]}
     ray_df = pd.DataFrame(frame_data)
     pd_df = pandas.DataFrame(frame_data)
 
-    assert ray_df_equals_pandas(pd.get_dummies(ray_df),
-                                pandas.get_dummies(pd_df))
+    assert ray_df_equals_pandas(
+        pd.get_dummies(ray_df), pandas.get_dummies(pd_df))

@@ -2003,8 +2003,8 @@ def test_to_csv():
     ray_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_csv(None, None, None, None, None, None, None, None,
-                          None, None)
+        ray_series.to_csv(None, None, None, None, None, None, None, None, None,
+                          None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

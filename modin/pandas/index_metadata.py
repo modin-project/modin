@@ -7,10 +7,7 @@ import pandas
 import numpy as np
 import ray
 
-from .utils import (
-    _build_row_lengths,
-    _build_col_widths,
-    _build_coord_df)
+from .utils import (_build_row_lengths, _build_col_widths, _build_coord_df)
 
 from pandas.core.indexing import convert_to_index_sliceable
 
@@ -31,7 +28,11 @@ class _IndexMetadata(object):
     lengths. Otherwise bad things might happen!
     """
 
-    def __init__(self, dfs=None, index=None, axis=0, lengths_oid=None,
+    def __init__(self,
+                 dfs=None,
+                 index=None,
+                 axis=0,
+                 lengths_oid=None,
                  coord_df_oid=None):
         """Inits a IndexMetadata from Ray DataFrame partitions
 
@@ -144,8 +145,7 @@ class _IndexMetadata(object):
         """
         if self._index_cache_validator is None:
             self._index_cache_validator = pandas.RangeIndex(len(self))
-        elif isinstance(self._index_cache_validator,
-                        ray.ObjectID):
+        elif isinstance(self._index_cache_validator, ray.ObjectID):
             self._index_cache_validator = ray.get(self._index_cache_validator)
 
         return self._index_cache_validator
@@ -181,8 +181,15 @@ class _IndexMetadata(object):
         """
         return self._coord_df.loc[key]
 
-    def groupby(self, by=None, axis=0, level=None, as_index=True, sort=True,
-                group_keys=True, squeeze=False, **kwargs):
+    def groupby(self,
+                by=None,
+                axis=0,
+                level=None,
+                as_index=True,
+                sort=True,
+                group_keys=True,
+                squeeze=False,
+                **kwargs):
         # TODO: Find out what this does, and write a docstring
         assignments_df = self._coord_df.groupby(by=by, axis=axis, level=level,
                                                 as_index=as_index, sort=sort,
@@ -218,7 +225,10 @@ class _IndexMetadata(object):
                                    'index_within_partition'] = np.arange(
                                        sum(partition_mask)).astype(int)
 
-    def insert(self, key, loc=None, partition=None,
+    def insert(self,
+               key,
+               loc=None,
+               partition=None,
                index_within_partition=None):
         """Inserts a key at a certain location in the index, or a certain coord
         in a partition. Called with either `loc` or `partition` and
@@ -269,9 +279,11 @@ class _IndexMetadata(object):
         # pandas, because this is very annoying/unsure of efficiency
         # Create new coord entry to insert
         coord_to_insert = pandas.DataFrame(
-                {'partition': partition,
-                 'index_within_partition': index_within_partition},
-                index=[key])
+            {
+                'partition': partition,
+                'index_within_partition': index_within_partition
+            },
+            index=[key])
 
         # Insert into cached RangeIndex, and order by new column index
         self._coord_df = _coord_df_copy.append(coord_to_insert).loc[new_index]
@@ -315,9 +327,10 @@ class _IndexMetadata(object):
         if self._index_cache is not None:
             index_copy = self._index_cache.copy()
 
-        return _IndexMetadata(index=index_copy,
-                              coord_df_oid=coord_df_copy,
-                              lengths_oid=lengths_copy)
+        return _IndexMetadata(
+            index=index_copy,
+            coord_df_oid=coord_df_copy,
+            lengths_oid=lengths_copy)
 
     def __getitem__(self, key):
         """Returns the coordinates (partition, index_within_partition) of the
@@ -390,8 +403,9 @@ class _IndexMetadata(object):
                 new_coord_df['partition'][new_coord_df['partition'] == i] \
                     -= num_dropped
 
-        new_coord_df['index_within_partition'] = [i for l in self._lengths
-                                                  for i in range(l)]
+        new_coord_df['index_within_partition'] = [
+            i for l in self._lengths for i in range(l)
+        ]
 
         self._coord_df = new_coord_df
         return dropped
@@ -418,6 +432,5 @@ class _IndexMetadata(object):
         return self._coord_df[self._coord_df.partition == partition_id]
 
     def sorted_index(self):
-        return (self._coord_df
-                    .sort_values(['partition', 'index_within_partition'])
-                    .index)
+        return (self._coord_df.sort_values(
+            ['partition', 'index_within_partition']).index)

@@ -7,9 +7,7 @@ import sys
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.pandas.utils import (
-    from_pandas,
-    to_pandas)
+from modin.pandas.utils import (from_pandas, to_pandas)
 
 PY2 = False
 if sys.version_info.major < 3:
@@ -48,11 +46,13 @@ def ray_groupby_equals_pandas(ray_groupby, pandas_groupby):
 
 
 def test_simple_row_groupby():
-    pandas_df = pandas.DataFrame({'col1': [0, 1, 2, 3],
-                                  'col2': [4, 5, 6, 7],
-                                  'col3': [3, 8, 12, 10],
-                                  'col4': [17, 13, 16, 15],
-                                  'col5': [-4, -5, -6, -7]})
+    pandas_df = pandas.DataFrame({
+        'col1': [0, 1, 2, 3],
+        'col2': [4, 5, 6, 7],
+        'col3': [3, 8, 12, 10],
+        'col4': [17, 13, 16, 15],
+        'col5': [-4, -5, -6, -7]
+    })
 
     ray_df = from_pandas(pandas_df, 2)
 
@@ -125,11 +125,13 @@ def test_simple_row_groupby():
 
 
 def test_single_group_row_groupby():
-    pandas_df = pandas.DataFrame({'col1': [0, 1, 2, 3],
-                                  'col2': [4, 5, 36, 7],
-                                  'col3': [3, 8, 12, 10],
-                                  'col4': [17, 3, 16, 15],
-                                  'col5': [-4, 5, -6, -7]})
+    pandas_df = pandas.DataFrame({
+        'col1': [0, 1, 2, 3],
+        'col2': [4, 5, 36, 7],
+        'col3': [3, 8, 12, 10],
+        'col4': [17, 3, 16, 15],
+        'col5': [-4, 5, -6, -7]
+    })
 
     ray_df = from_pandas(pandas_df, 2)
 
@@ -203,8 +205,8 @@ def test_single_group_row_groupby():
 
 @pytest.mark.skip(reason="See Modin issue #21.")
 def test_large_row_groupby():
-    pandas_df = pandas.DataFrame(np.random.randint(0, 8, size=(100, 4)),
-                                 columns=list('ABCD'))
+    pandas_df = pandas.DataFrame(
+        np.random.randint(0, 8, size=(100, 4)), columns=list('ABCD'))
 
     ray_df = from_pandas(pandas_df, 2)
 
@@ -277,11 +279,13 @@ def test_large_row_groupby():
 
 
 def test_simple_col_groupby():
-    pandas_df = pandas.DataFrame({'col1': [0, 3, 2, 3],
-                                  'col2': [4, 1, 6, 7],
-                                  'col3': [3, 8, 2, 10],
-                                  'col4': [1, 13, 6, 15],
-                                  'col5': [-4, 5, 6, -7]})
+    pandas_df = pandas.DataFrame({
+        'col1': [0, 3, 2, 3],
+        'col2': [4, 1, 6, 7],
+        'col3': [3, 8, 2, 10],
+        'col4': [1, 13, 6, 15],
+        'col5': [-4, 5, 6, -7]
+    })
 
     ray_df = from_pandas(pandas_df, 2)
 
@@ -400,8 +404,8 @@ def test_ndim(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_cumsum(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.cumsum(), pandas_groupby.cumsum())
-    ray_df_equals_pandas(ray_groupby.cumsum(axis=1),
-                         pandas_groupby.cumsum(axis=1))
+    ray_df_equals_pandas(
+        ray_groupby.cumsum(axis=1), pandas_groupby.cumsum(axis=1))
 
 
 @pytest.fixture
@@ -413,8 +417,8 @@ def test_pct_change(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_cummax(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.cummax(), pandas_groupby.cummax())
-    ray_df_equals_pandas(ray_groupby.cummax(axis=1),
-                         pandas_groupby.cummax(axis=1))
+    ray_df_equals_pandas(
+        ray_groupby.cummax(axis=1), pandas_groupby.cummax(axis=1))
 
 
 @pytest.fixture
@@ -441,8 +445,8 @@ def test_backfill(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_cummin(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.cummin(), pandas_groupby.cummin())
-    ray_df_equals_pandas(ray_groupby.cummin(axis=1),
-                         pandas_groupby.cummin(axis=1))
+    ray_df_equals_pandas(
+        ray_groupby.cummin(axis=1), pandas_groupby.cummin(axis=1))
 
 
 @pytest.fixture
@@ -468,8 +472,8 @@ def test_std(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_aggregate(ray_groupby, pandas_groupby, func):
-    ray_df_equals_pandas(ray_groupby.aggregate(func),
-                         pandas_groupby.aggregate(func))
+    ray_df_equals_pandas(
+        ray_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
 
 @pytest.fixture
@@ -538,8 +542,8 @@ def test_head(ray_groupby, pandas_groupby, n):
 @pytest.fixture
 def test_cumprod(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.cumprod(), pandas_groupby.cumprod())
-    ray_df_equals_pandas(ray_groupby.cumprod(axis=1),
-                         pandas_groupby.cumprod(axis=1))
+    ray_df_equals_pandas(
+        ray_groupby.cumprod(axis=1), pandas_groupby.cumprod(axis=1))
 
 
 @pytest.fixture
@@ -550,8 +554,8 @@ def test_cov(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_transform(ray_groupby, pandas_groupby, func):
-    ray_df_equals_pandas(ray_groupby.transform(func),
-                         pandas_groupby.transform(func))
+    ray_df_equals_pandas(
+        ray_groupby.transform(func), pandas_groupby.transform(func))
 
 
 @pytest.fixture
@@ -562,8 +566,9 @@ def test_corr(ray_groupby, pandas_groupby):
 
 @pytest.fixture
 def test_fillna(ray_groupby, pandas_groupby):
-    ray_df_equals_pandas(ray_groupby.fillna(method="ffill"),
-                         pandas_groupby.fillna(method="ffill"))
+    ray_df_equals_pandas(
+        ray_groupby.fillna(method="ffill"),
+        pandas_groupby.fillna(method="ffill"))
 
 
 @pytest.fixture
@@ -584,8 +589,8 @@ def test_tail(ray_groupby, pandas_groupby, n):
 
 @pytest.fixture
 def test_quantile(ray_groupby, pandas_groupby):
-    ray_df_equals_pandas(ray_groupby.quantile(q=0.4),
-                         pandas_groupby.quantile(q=0.4))
+    ray_df_equals_pandas(
+        ray_groupby.quantile(q=0.4), pandas_groupby.quantile(q=0.4))
 
 
 @pytest.fixture

@@ -15,11 +15,13 @@ from .index_metadata import _IndexMetadata
 from .utils import _inherit_docstrings, _reindex_helper, post_task_gc
 
 
-@_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy,
-                     excluded=[pandas.core.groupby.DataFrameGroupBy,
-                               pandas.core.groupby.DataFrameGroupBy.__init__])
+@_inherit_docstrings(
+    pandas.core.groupby.DataFrameGroupBy,
+    excluded=[
+        pandas.core.groupby.DataFrameGroupBy,
+        pandas.core.groupby.DataFrameGroupBy.__init__
+    ])
 class DataFrameGroupBy(object):
-
     def __init__(self, df, by, axis, level, as_index, sort, group_keys,
                  squeeze, **kwargs):
 
@@ -70,11 +72,13 @@ class DataFrameGroupBy(object):
             if self._axis == 0:
                 self._index_grouped_cache = pandas.Series(
                     np.zeros(len(self._index), dtype=np.uint8),
-                    index=self._index).groupby(by=self._by, sort=self._sort)
+                    index=self._index).groupby(
+                        by=self._by, sort=self._sort)
             else:
                 self._index_grouped_cache = pandas.Series(
                     np.zeros(len(self._columns), dtype=np.uint8),
-                    index=self._columns).groupby(by=self._by, sort=self._sort)
+                    index=self._columns).groupby(
+                        by=self._by, sort=self._sort)
 
         return self._index_grouped_cache
 
@@ -101,17 +105,11 @@ class DataFrameGroupBy(object):
                       .groupby(by='partition')]
 
         if len(self._index_grouped) > 1:
-            return zip(*(groupby._submit(args=(remote_index[i],
-                                               remote_by,
-                                               self._axis,
-                                               self._level,
-                                               self._as_index,
-                                               self._sort,
-                                               self._group_keys,
-                                               self._squeeze)
-                                         + tuple(part.tolist()),
-                                         num_return_vals=len(
-                                             self._index_grouped))
+            return zip(*(groupby._submit(
+                args=(remote_index[i], remote_by, self._axis, self._level,
+                      self._as_index, self._sort, self._group_keys,
+                      self._squeeze) + tuple(part.tolist()),
+                num_return_vals=len(self._index_grouped))
                          for i, part in enumerate(self._partitions)))
         elif self._axis == 0:
             return [self._df._col_partitions]
@@ -124,17 +122,19 @@ class DataFrameGroupBy(object):
 
         if self._axis == 0:
             return ((self._keys_and_values[i][0],
-                     DataFrame(col_partitions=part,
-                               columns=self._columns,
-                               index=self._keys_and_values[i][1].index,
-                               col_metadata=self._col_metadata))
+                     DataFrame(
+                         col_partitions=part,
+                         columns=self._columns,
+                         index=self._keys_and_values[i][1].index,
+                         col_metadata=self._col_metadata))
                     for i, part in enumerate(self._grouped_partitions))
         else:
             return ((self._keys_and_values[i][0],
-                     DataFrame(row_partitions=part,
-                               columns=self._keys_and_values[i][1].index,
-                               index=self._index,
-                               row_metadata=self._row_metadata))
+                     DataFrame(
+                         row_partitions=part,
+                         columns=self._keys_and_values[i][1].index,
+                         index=self._index,
+                         row_metadata=self._row_metadata))
                     for i, part in enumerate(self._grouped_partitions))
 
     @property
@@ -146,8 +146,8 @@ class DataFrameGroupBy(object):
             lambda df: _skew_remote.remote(df, self._axis, kwargs))
 
     def ffill(self, limit=None):
-        return self._apply_df_function(lambda df: df.ffill(axis=self._axis,
-                                                           limit=limit))
+        return self._apply_df_function(
+            lambda df: df.ffill(axis=self._axis, limit=limit))
 
     def sem(self, ddof=1):
         raise NotImplementedError(
@@ -212,9 +212,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._apply_df_function(lambda df: df.cumsum(axis,
-                                                            *args,
-                                                            **kwargs))
+        return self._apply_df_function(
+            lambda df: df.cumsum(axis, *args, **kwargs))
 
     @property
     def indices(self):
@@ -231,8 +230,7 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cummax(self, axis=0, **kwargs):
-        return self._apply_df_function(lambda df: df.cummax(axis,
-                                                            **kwargs))
+        return self._apply_df_function(lambda df: df.cummax(axis, **kwargs))
 
     def apply(self, func, *args, **kwargs):
         def apply_helper(df):
@@ -247,12 +245,15 @@ class DataFrameGroupBy(object):
                 new_df.index = [k for k, v in self._iter]
             else:
                 new_df = concat(result, axis=self._axis)
-                new_df._block_partitions = np.array([_reindex_helper._submit(
-                    args=tuple([new_df.index, self._index, self._axis ^ 1,
-                                len(new_df._block_partitions)]
-                               + block.tolist()),
-                    num_return_vals=len(new_df._block_partitions))
-                    for block in new_df._block_partitions.T]).T
+                new_df._block_partitions = np.array([
+                    _reindex_helper._submit(
+                        args=tuple([
+                            new_df.index, self._index, self._axis ^ 1,
+                            len(new_df._block_partitions)
+                        ] + block.tolist()),
+                        num_return_vals=len(new_df._block_partitions))
+                    for block in new_df._block_partitions.T
+                ]).T
                 new_df.index = self._index
                 new_df._row_metadata = \
                     _IndexMetadata(new_df._block_partitions[:, 0],
@@ -265,12 +266,15 @@ class DataFrameGroupBy(object):
                 new_df.index = self._index
             else:
                 new_df = concat(result, axis=self._axis)
-                new_df._block_partitions = np.array([_reindex_helper._submit(
-                    args=tuple([new_df.columns, self._columns, self._axis ^ 1,
-                                new_df._block_partitions.shape[1]]
-                               + block.tolist()),
-                    num_return_vals=new_df._block_partitions.shape[1])
-                    for block in new_df._block_partitions])
+                new_df._block_partitions = np.array([
+                    _reindex_helper._submit(
+                        args=tuple([
+                            new_df.columns, self._columns, self._axis ^ 1,
+                            new_df._block_partitions.shape[1]
+                        ] + block.tolist()),
+                        num_return_vals=new_df._block_partitions.shape[1])
+                    for block in new_df._block_partitions
+                ])
                 new_df.columns = self._columns
                 new_df._col_metadata = \
                     _IndexMetadata(new_df._block_partitions[0, :],
@@ -298,12 +302,12 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cummin(self, axis=0, **kwargs):
-        return self._apply_df_function(lambda df: df.cummin(axis=axis,
-                                                            **kwargs))
+        return self._apply_df_function(
+            lambda df: df.cummin(axis=axis, **kwargs))
 
     def bfill(self, limit=None):
-        return self._apply_df_function(lambda df: df.bfill(axis=self._axis,
-                                                           limit=limit))
+        return self._apply_df_function(
+            lambda df: df.bfill(axis=self._axis, limit=limit))
 
     def idxmin(self):
         raise NotImplementedError(
@@ -393,8 +397,17 @@ class DataFrameGroupBy(object):
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
 
-    def boxplot(self, grouped, subplots=True, column=None, fontsize=None,
-                rot=0, grid=True, ax=None, figsize=None, layout=None, **kwds):
+    def boxplot(self,
+                grouped,
+                subplots=True,
+                column=None,
+                fontsize=None,
+                rot=0,
+                grid=True,
+                ax=None,
+                figsize=None,
+                layout=None,
+                **kwds):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
@@ -421,9 +434,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._apply_df_function(lambda df: df.cumprod(axis,
-                                                             *args,
-                                                             **kwargs))
+        return self._apply_df_function(
+            lambda df: df.cumprod(axis, *args, **kwargs))
 
     def __iter__(self):
         return self._iter.__iter__()
@@ -437,9 +449,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def transform(self, func, *args, **kwargs):
-        return self._apply_df_function(lambda df: df.transform(func,
-                                                               *args,
-                                                               **kwargs))
+        return self._apply_df_function(
+            lambda df: df.transform(func, *args, **kwargs))
 
     def corr(self, **kwargs):
         raise NotImplementedError(
@@ -447,8 +458,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def fillna(self, **kwargs):
-        return self._apply_df_function(lambda df: df.fillna(axis=self._axis,
-                                                            **kwargs))
+        return self._apply_df_function(
+            lambda df: df.fillna(axis=self._axis, **kwargs))
 
     def count(self, **kwargs):
         return self._apply_agg_function(
@@ -519,13 +530,17 @@ class DataFrameGroupBy(object):
 
         from .dataframe import DataFrame
         if self._axis == 0:
-            return DataFrame(block_partitions=blocks, columns=self._columns,
-                             index=index if index is not None
-                             else [k for k, _ in self._index_grouped])
+            return DataFrame(
+                block_partitions=blocks,
+                columns=self._columns,
+                index=index
+                if index is not None else [k for k, _ in self._index_grouped])
         else:
-            return DataFrame(block_partitions=blocks.T, index=self._index,
-                             columns=index if index is not None
-                             else [k for k, _ in self._index_grouped])
+            return DataFrame(
+                block_partitions=blocks.T,
+                index=self._index,
+                columns=index
+                if index is not None else [k for k, _ in self._index_grouped])
 
     def _apply_df_function(self, f, concat_axis=None):
         assert callable(f), "\'{0}\' object is not callable".format(type(f))
@@ -536,22 +551,29 @@ class DataFrameGroupBy(object):
         new_df = concat(result, axis=concat_axis)
 
         if self._axis == 0:
-            new_df._block_partitions = np.array([_reindex_helper._submit(
-                args=tuple([new_df.index, self._index, 1,
-                            len(new_df._block_partitions)] + block.tolist()),
-                num_return_vals=len(new_df._block_partitions))
-                for block in new_df._block_partitions.T]).T
+            new_df._block_partitions = np.array([
+                _reindex_helper._submit(
+                    args=tuple([
+                        new_df.index, self._index, 1,
+                        len(new_df._block_partitions)
+                    ] + block.tolist()),
+                    num_return_vals=len(new_df._block_partitions))
+                for block in new_df._block_partitions.T
+            ]).T
             new_df.index = self._index
             new_df._row_metadata = \
                 _IndexMetadata(new_df._block_partitions[:, 0],
                                index=new_df.index, axis=0)
         else:
-            new_df._block_partitions = np.array([_reindex_helper._submit(
-                args=tuple([new_df.columns, self._columns, 0,
-                            new_df._block_partitions.shape[1]]
-                           + block.tolist()),
-                num_return_vals=new_df._block_partitions.shape[1])
-                for block in new_df._block_partitions])
+            new_df._block_partitions = np.array([
+                _reindex_helper._submit(
+                    args=tuple([
+                        new_df.columns, self._columns, 0,
+                        new_df._block_partitions.shape[1]
+                    ] + block.tolist()),
+                    num_return_vals=new_df._block_partitions.shape[1])
+                for block in new_df._block_partitions
+            ])
             new_df.columns = self._columns
             new_df._col_metadata = \
                 _IndexMetadata(new_df._block_partitions[0, :],
@@ -570,13 +592,16 @@ def groupby(index, by, axis, level, as_index, sort, group_keys, squeeze, *df):
         df.columns = index
     else:
         df.index = index
-    return [v for k, v in df.groupby(by=by,
-                                     axis=axis,
-                                     level=level,
-                                     as_index=as_index,
-                                     sort=sort,
-                                     group_keys=group_keys,
-                                     squeeze=squeeze)]
+    return [
+        v for k, v in df.groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze)
+    ]
 
 
 @ray.remote

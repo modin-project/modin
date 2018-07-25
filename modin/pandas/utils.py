@@ -12,7 +12,6 @@ import gc
 
 from . import get_npartitions
 
-
 _NAN_BLOCKS = {}
 _MEMOIZER_CAPACITY = 1000  # Capacity per function
 
@@ -123,6 +122,7 @@ def post_task_gc(func):
           speed and memory. If the task takes more than 500ms to run, we
           will do the GC.
     """
+
     def wrapped(*args):
         start_time = time.time()
 
@@ -134,6 +134,7 @@ def post_task_gc(func):
             gc.collect()
 
         return result
+
     return wrapped
 
 
@@ -245,9 +246,8 @@ def from_pandas(df, num_partitions=None, chunksize=None):
     row_partitions = \
         _partition_pandas_dataframe(df, num_partitions, chunksize)
 
-    return DataFrame(row_partitions=row_partitions,
-                     columns=df.columns,
-                     index=df.index)
+    return DataFrame(
+        row_partitions=row_partitions, columns=df.columns, index=df.index)
 
 
 def to_pandas(df):
@@ -304,16 +304,20 @@ def _map_partitions(func, partitions, *argslists):
     if partitions is None:
         return None
 
-    assert(callable(func))
+    assert (callable(func))
     if len(argslists) == 0:
         return [_deploy_func.remote(func, part) for part in partitions]
     elif len(argslists) == 1:
-        return [_deploy_func.remote(func, part, argslists[0])
-                for part in partitions]
+        return [
+            _deploy_func.remote(func, part, argslists[0])
+            for part in partitions
+        ]
     else:
-        assert(all(len(args) == len(partitions) for args in argslists))
-        return [_deploy_func.remote(func, *args)
-                for args in zip(partitions, *argslists)]
+        assert (all(len(args) == len(partitions) for args in argslists))
+        return [
+            _deploy_func.remote(func, *args)
+            for args in zip(partitions, *argslists)
+        ]
 
 
 def _create_block_partitions(partitions, axis=0, length=None):
@@ -325,9 +329,11 @@ def _create_block_partitions(partitions, axis=0, length=None):
     else:
         npartitions = get_npartitions()
 
-    x = [create_blocks._submit(args=(partition, npartitions, axis),
-                               num_return_vals=npartitions)
-         for partition in partitions]
+    x = [
+        create_blocks._submit(
+            args=(partition, npartitions, axis), num_return_vals=npartitions)
+        for partition in partitions
+    ]
 
     # In the case that axis is 1 we have to transpose because we build the
     # columns into rows. Fortunately numpy is efficient at this.
@@ -352,10 +358,11 @@ def _create_blocks_helper(df, npartitions, axis):
     # if not isinstance(df.columns, pandas.RangeIndex):
     #     df.columns = pandas.RangeIndex(0, len(df.columns))
 
-    blocks = [df.iloc[:, i * block_size: (i + 1) * block_size]
-              if axis == 0
-              else df.iloc[i * block_size: (i + 1) * block_size, :]
-              for i in range(npartitions)]
+    blocks = [
+        df.iloc[:, i * block_size:(i + 1) * block_size]
+        if axis == 0 else df.iloc[i * block_size:(i + 1) * block_size, :]
+        for i in range(npartitions)
+    ]
 
     for block in blocks:
         block.columns = pandas.RangeIndex(0, len(block.columns))
@@ -378,6 +385,7 @@ def _inherit_docstrings(parent, excluded=[]):
         function: decorator which replaces the decorated class' documentation
             parent's documentation.
     """
+
     def decorator(cls):
         if parent not in excluded:
             cls.__doc__ = parent.__doc__
@@ -448,8 +456,8 @@ def writer(df_chunk, row_loc, col_loc, item):
 @ray.remote
 def _build_col_widths(df_col):
     """Compute widths (# of columns) for each partition."""
-    widths = np.array(ray.get([_deploy_func.remote(_get_widths, d)
-                      for d in df_col]))
+    widths = np.array(
+        ray.get([_deploy_func.remote(_get_widths, d) for d in df_col]))
 
     return widths
 
@@ -457,8 +465,8 @@ def _build_col_widths(df_col):
 @ray.remote
 def _build_row_lengths(df_row):
     """Compute lengths (# of rows) for each partition."""
-    lengths = np.array(ray.get([_deploy_func.remote(_get_lengths, d)
-                       for d in df_row]))
+    lengths = np.array(
+        ray.get([_deploy_func.remote(_get_lengths, d) for d in df_row]))
 
     return lengths
 
@@ -469,8 +477,10 @@ def _build_coord_df(lengths, index):
     filtered_lengths = [x for x in lengths if x > 0]
     coords = None
     if len(filtered_lengths) > 0:
-        coords = np.vstack([np.column_stack((np.full(l, i), np.arange(l)))
-                            for i, l in enumerate(filtered_lengths)])
+        coords = np.vstack([
+            np.column_stack((np.full(l, i), np.arange(l)))
+            for i, l in enumerate(filtered_lengths)
+        ])
     col_names = ("partition", "index_within_partition")
     return pandas.DataFrame(coords, index=index, columns=col_names)
 
