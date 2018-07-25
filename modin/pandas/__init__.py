@@ -10,8 +10,21 @@ from pandas import (eval, unique, value_counts, cut, to_numeric, factorize,
                     Timedelta, Timestamp, to_timedelta, set_eng_float_format,
                     set_option, NaT, PeriodIndex, Categorical)
 import threading
+import os
+import ray
 
-DEFAULT_NPARTITIONS = 8
+try:
+    if threading.current_thread().name == "MainThread":
+        ray.init(redirect_output=True, include_webui=False,
+                 redirect_worker_output=True)
+except AssertionError:
+    pass
+
+# Set this so that Pandas doesn't try to multithread by itself
+os.environ['OMP_NUM_THREADS'] = "1"
+
+num_cpus = ray.global_state.cluster_resources()['CPU']
+DEFAULT_NPARTITIONS = int(num_cpus)
 
 
 def set_npartition_default(n):
@@ -42,10 +55,3 @@ __all__ = [
     "set_eng_float_format", "set_option", "CategoricalIndex", "Timedelta",
     "Timestamp", "NaT", "PeriodIndex", "Categorical"
 ]
-
-try:
-    if threading.current_thread().name == "MainThread":
-        import ray
-        ray.init()
-except AssertionError:
-    pass
