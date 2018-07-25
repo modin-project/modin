@@ -118,14 +118,14 @@ def _read_csv_from_file(filepath, npartitions, kwargs={}):
         DataFrame or Series constructed from CSV file.
     """
     empty_pd_df = pandas.read_csv(
-            filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0))
+        filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0))
     names = empty_pd_df.columns
 
     skipfooter = kwargs["skipfooter"]
     skip_footer = kwargs["skip_footer"]
 
     partition_kwargs = dict(
-            kwargs, header=None, names=names, skipfooter=0, skip_footer=0)
+        kwargs, header=None, names=names, skipfooter=0, skip_footer=0)
     with open(filepath, "rb") as f:
         # Get the BOM if necessary
         prefix = b""
@@ -148,16 +148,16 @@ def _read_csv_from_file(filepath, npartitions, kwargs={}):
         while f.tell() < total_bytes:
             start = f.tell()
             f.seek(chunk_size, os.SEEK_CUR)
-            f.readline()    # Read a whole number of lines
+            f.readline()  # Read a whole number of lines
 
             if f.tell() >= total_bytes:
                 kwargs["skipfooter"] = skipfooter
                 kwargs["skip_footer"] = skip_footer
 
             partition_id, index_id = _read_csv_with_offset._submit(
-                    args=(filepath, start, f.tell(), partition_kwargs_id,
-                          prefix_id),
-                    num_return_vals=2)
+                args=(filepath, start, f.tell(), partition_kwargs_id,
+                      prefix_id),
+                num_return_vals=2)
             partition_ids.append(partition_id)
             index_ids.append(index_id)
 

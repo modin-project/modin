@@ -41,17 +41,20 @@ def get_npartitions():
 from .concat import concat  # noqa: 402
 from .dataframe import DataFrame  # noqa: 402
 from .datetimes import to_datetime  # noqa: 402
-from .io import (read_csv, read_parquet, read_json, read_html,  # noqa: 402
-                 read_clipboard, read_excel, read_hdf, read_feather,  # noqa: 402
-                 read_msgpack, read_stata, read_sas, read_pickle,  # noqa: 402
-                 read_sql)  # noqa: 402
+from .io import (  # noqa: 402
+    read_csv, read_parquet, read_json, read_html, read_clipboard, read_excel,
+    read_hdf, read_feather, read_msgpack, read_stata, read_sas, read_pickle,
+    read_sql)
 from .reshape import get_dummies  # noqa: 402
 
 __all__ = [
-    "DataFrame", "Series", "read_csv", "read_parquet", "concat", "eval",
-    "unique", "value_counts", "cut", "to_numeric", "factorize", "test", "qcut",
-    "match", "to_datetime", "get_dummies", "Panel", "date_range", "Index",
-    "MultiIndex", "Series", "bdate_range", "DatetimeIndex", "to_timedelta",
-    "set_eng_float_format", "set_option", "CategoricalIndex", "Timedelta",
-    "Timestamp", "NaT", "PeriodIndex", "Categorical"
+    "DataFrame", "Series", "read_csv", "read_parquet", "read_json",
+    "read_html", "read_clipboard", "read_excel", "read_hdf", "read_feather",
+    "read_msgpack", "read_stata", "read_sas", "read_pickle", "read_sql",
+    "concat", "eval", "unique", "value_counts", "cut", "to_numeric",
+    "factorize", "test", "qcut", "match", "to_datetime", "get_dummies",
+    "Panel", "date_range", "Index", "MultiIndex", "Series", "bdate_range",
+    "DatetimeIndex", "to_timedelta", "set_eng_float_format", "set_option",
+    "CategoricalIndex", "Timedelta", "Timestamp", "NaT", "PeriodIndex",
+    "Categorical"
 ]

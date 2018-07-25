@@ -24,9 +24,8 @@ def code_gen(pandas_obj, ray_obj, path):
                 # let's not mess with these
                 continue
             try:
-                outfile.write(
-                    "\ndef " + func +
-                    str(inspect.signature(getattr(pandas_obj, func))) + ":\n")
+                outfile.write("\ndef " + func + str(
+                    inspect.signature(getattr(pandas_obj, func))) + ":\n")
 
             except TypeError:
                 outfile.write("\n@property")
@@ -48,10 +47,10 @@ def code_gen_test(ray_obj, path, name):
                 continue
 
             outfile.write("\n\ndef test_" + func + "():\n")
-            outfile.write(
-                "    ray_" + name + " = create_test_" + name + "()\n\n" +
-                "    with pytest.raises(NotImplementedError):\n" +
-                "        ray_" + name + "." + func)
+            outfile.write("    ray_" + name + " = create_test_" + name +
+                          "()\n\n" +
+                          "    with pytest.raises(NotImplementedError):\n" +
+                          "        ray_" + name + "." + func)
             try:
                 first = True
                 param_num = \
@@ -87,8 +86,8 @@ def pandas_ray_diff(pandas_obj, ray_obj):
     pandas_funcs = dir(pandas_obj)
     ray_funcs = dir(ray_obj)
 
-    pandas_funcs = set(filter(lambda f: f[0] != "_" or f[1] == "_",
-                              pandas_funcs))
+    pandas_funcs = set(
+        filter(lambda f: f[0] != "_" or f[1] == "_", pandas_funcs))
 
     diff = [x for x in pandas_funcs if x not in set(ray_funcs)]
     return diff

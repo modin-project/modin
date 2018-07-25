@@ -55,7 +55,7 @@ elif [[ "$LINT" == "1" ]]; then
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
   # Install Python linting tools.
-  pip install -q flake8 flake8-comprehensions
+  pip install -q flake8 flake8-comprehensions yapf
 else
   echo "Unrecognized environment."
   exit 1

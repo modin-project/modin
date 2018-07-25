@@ -14,8 +14,13 @@ from .dataframe import DataFrame
 from .utils import _deploy_func
 
 
-def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
-                columns=None, sparse=False, drop_first=False):
+def get_dummies(data,
+                prefix=None,
+                prefix_sep='_',
+                dummy_na=False,
+                columns=None,
+                sparse=False,
+                drop_first=False):
     """Convert categorical variable into indicator variables.
 
     Args:
@@ -32,9 +37,14 @@ def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
         DataFrame or one-hot encoded data.
     """
     if not isinstance(data, DataFrame):
-        return pandas.get_dummies(data, prefix=prefix, prefix_sep=prefix_sep,
-                                  dummy_na=dummy_na, columns=columns,
-                                  sparse=sparse, drop_first=drop_first)
+        return pandas.get_dummies(
+            data,
+            prefix=prefix,
+            prefix_sep=prefix_sep,
+            dummy_na=dummy_na,
+            columns=columns,
+            sparse=sparse,
+            drop_first=drop_first)
 
     if sparse:
         raise NotImplementedError(
@@ -54,8 +64,10 @@ def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
 
         if is_list_like(item):
             if not len(item) == len(columns_to_encode):
-                len_msg = len_msg.format(name=name, len_item=len(item),
-                                         len_enc=len(columns_to_encode))
+                len_msg = len_msg.format(
+                    name=name,
+                    len_item=len(item),
+                    len_enc=len(columns_to_encode))
                 raise ValueError(len_msg)
 
     check_len(prefix, 'prefix')
@@ -89,9 +101,14 @@ def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
         if df.size == 0:
             return df, df.columns
 
-        df = pandas.get_dummies(df, prefix=prefix, prefix_sep=prefix_sep,
-                                dummy_na=dummy_na, columns=None, sparse=sparse,
-                                drop_first=drop_first)
+        df = pandas.get_dummies(
+            df,
+            prefix=prefix,
+            prefix_sep=prefix_sep,
+            dummy_na=dummy_na,
+            columns=None,
+            sparse=sparse,
+            drop_first=drop_first)
         columns = df.columns
         df.columns = pandas.RangeIndex(0, len(df.columns))
         return df, columns
@@ -120,6 +137,5 @@ def get_dummies(data, prefix=None, prefix_sep='_', dummy_na=False,
     columns = ray.get(columns)
     dropped_columns = dropped_columns.append(columns)
 
-    return DataFrame(col_partitions=with_dummies,
-                     columns=dropped_columns,
-                     index=data.index)
+    return DataFrame(
+        col_partitions=with_dummies, columns=dropped_columns, index=data.index)

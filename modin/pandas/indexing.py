@@ -11,11 +11,10 @@ import numpy as np
 import ray
 from warnings import warn
 
-from .utils import (_get_nan_block_id, extractor,
-                    _mask_block_partitions, writer, _blocks_to_series)
+from .utils import (_get_nan_block_id, extractor, _mask_block_partitions,
+                    writer, _blocks_to_series)
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
-
 """Indexing Helper Class works as follows:
 
 _Location_Indexer_Base provide methods framework for __getitem__
@@ -33,16 +32,20 @@ https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
 
-def is_slice(x): return isinstance(x, slice)
+def is_slice(x):
+    return isinstance(x, slice)
 
 
-def is_2d(x): return is_list_like(x) or is_slice(x)
+def is_2d(x):
+    return is_list_like(x) or is_slice(x)
 
 
-def is_tuple(x): return isinstance(x, tuple)
+def is_tuple(x):
+    return isinstance(x, tuple)
 
 
-def is_boolean_array(x): return is_list_like(x) and all(map(is_bool, x))
+def is_boolean_array(x):
+    return is_list_like(x) and all(map(is_bool, x))
 
 
 def is_integer_slice(x):
@@ -241,10 +244,9 @@ class _Location_Indexer_Base(object):
                 return np.broadcast_to(item, to_shape)
         except ValueError:
             from_shape = np.array(item).shape
-            raise ValueError(
-                "could not broadcast input array from \
+            raise ValueError("could not broadcast input array from \
                 shape {from_shape} into shape {to_shape}".format(
-                    from_shape=from_shape, to_shape=to_shape))
+                from_shape=from_shape, to_shape=to_shape))
 
     def _write_items(self, row_lookup, col_lookup, item):
         """Perform remote write and replace blocks.
@@ -299,8 +301,7 @@ class _Loc_Indexer(_Location_Indexer_Base):
         row_loc, col_loc, _ = _parse_tuple(key)
         self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_Loc_Indexer, self).__setitem__(row_lookup, col_lookup,
-                                              item)
+        super(_Loc_Indexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _handle_enlargement(self, row_loc, col_loc):
         """Handle Enlargement (if there is one).
@@ -353,11 +354,13 @@ class _Loc_Indexer(_Location_Indexer_Base):
             [self.block_oids, nan_blks], axis=0 if row_based_bool else 1)
 
         # 3. Prepare metadata to return
-        nan_coord_df = pandas.DataFrame(data=[{
-            '': name,
-            'partition': blk_part_n_row if row_based_bool else blk_part_n_col,
-            'index_within_partition': i
-        } for name, i in zip(nan_labels, np.arange(num_nan_labels))
+        nan_coord_df = pandas.DataFrame(data=[
+            {
+                '': name,
+                'partition': blk_part_n_row
+                if row_based_bool else blk_part_n_col,
+                'index_within_partition': i
+            } for name, i in zip(nan_labels, np.arange(num_nan_labels))
         ]).set_index('')
 
         coord_df = pandas.concat([major_meta._coord_df, nan_coord_df])
@@ -433,8 +436,7 @@ class _iLoc_Indexer(_Location_Indexer_Base):
         self._check_dtypes(col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_iLoc_Indexer, self).__setitem__(
-            row_lookup, col_lookup, item)
+        super(_iLoc_Indexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc):
         # We use reindex for list to avoid duplicates.
