@@ -15,8 +15,10 @@ import ray
 
 try:
     if threading.current_thread().name == "MainThread":
-        ray.init(redirect_output=True, include_webui=False,
-                 redirect_worker_output=True)
+        ray.init(
+            redirect_output=True,
+            include_webui=False,
+            redirect_worker_output=True)
 except AssertionError:
     pass
 
