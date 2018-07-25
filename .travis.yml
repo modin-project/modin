@@ -25,7 +25,7 @@ matrix:
       env: LINT=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
-        - yapf -df modin/pandas
+        - yapf -dr modin/pandas
         - flake8 .
 
 install:
