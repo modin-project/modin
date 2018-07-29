@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="modin",
-    version="0.1.0",
+    version="0.1.1",
     description="Modin: Pandas on Ray - Make your pandas code run faster with "
                 "a single line of code change.",
     packages=find_packages(),
