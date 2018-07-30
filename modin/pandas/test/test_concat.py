@@ -5,7 +5,7 @@ from __future__ import print_function
 import pytest
 import pandas
 import modin.pandas as pd
-from modin.pandas.utils import (to_pandas, from_pandas)
+from modin.pandas.utils import from_pandas, to_pandas
 
 
 @pytest.fixture
@@ -63,15 +63,27 @@ def test_df_concat():
 
 def test_ray_concat():
     df, df2 = generate_dfs()
-    ray_df, ray_df2 = from_pandas(df, 2), from_pandas(df2, 2)
+    ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
 
     assert ray_df_equals_pandas(
         pd.concat([ray_df, ray_df2]), pandas.concat([df, df2]))
 
+def test_ray_concat_with_series():
+    df, df2 = generate_dfs()
+    ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
+    pandas_series = pandas.Series([1,2,3,4], name="new_col")
+
+    assert ray_df_equals_pandas(
+        pd.concat([ray_df, ray_df2, pandas_series], axis=0), pandas.concat([df,
+            df2, pandas_series], axis=0))
+
+    assert ray_df_equals_pandas(
+        pd.concat([ray_df, ray_df2, pandas_series], axis=1), pandas.concat([df,
+            df2, pandas_series], axis=1))
 
 def test_ray_concat_on_index():
     df, df2 = generate_dfs()
-    ray_df, ray_df2 = from_pandas(df, 2), from_pandas(df2, 2)
+    ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
 
     assert ray_df_equals_pandas(
         pd.concat([ray_df, ray_df2], axis='index'),
@@ -87,7 +99,7 @@ def test_ray_concat_on_index():
 
 def test_ray_concat_on_column():
     df, df2 = generate_dfs()
-    ray_df, ray_df2 = from_pandas(df, 2), from_pandas(df2, 2)
+    ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
 
     assert ray_df_equals_pandas(
         pd.concat([ray_df, ray_df2], axis=1), pandas.concat([df, df2], axis=1))
@@ -99,7 +111,7 @@ def test_ray_concat_on_column():
 
 def test_invalid_axis_errors():
     df, df2 = generate_dfs()
-    ray_df, ray_df2 = from_pandas(df, 2), from_pandas(df2, 2)
+    ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
 
     with pytest.raises(ValueError):
         pd.concat([ray_df, ray_df2], axis=2)
@@ -109,7 +121,7 @@ def test_mixed_concat():
     df, df2 = generate_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df, 2), from_pandas(df2, 2), df3]
+    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     assert (ray_df_equals_pandas(
         pd.concat(mixed_dfs), pandas.concat([df, df2, df3])))
@@ -119,7 +131,7 @@ def test_mixed_inner_concat():
     df, df2 = generate_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df, 2), from_pandas(df2, 2), df3]
+    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     assert (ray_df_equals_pandas(
         pd.concat(mixed_dfs, join='inner'),
@@ -130,7 +142,7 @@ def test_mixed_none_concat():
     df, df2 = generate_none_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df, 2), from_pandas(df2, 2), df3]
+    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     assert (ray_df_equals_pandas(
         pd.concat(mixed_dfs), pandas.concat([df, df2, df3])))

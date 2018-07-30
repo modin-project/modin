@@ -3,12 +3,14 @@ from __future__ import division
 from __future__ import print_function
 
 import pytest
+import io
 import numpy as np
 import pandas
 import pandas.util.testing as tm
 from pandas.tests.frame.common import TestData
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
+from numpy.testing import assert_array_equal
 
 
 @pytest.fixture
@@ -23,7 +25,8 @@ def ray_series_equals_pandas(ray_series, pandas_series):
 
 @pytest.fixture
 def ray_df_equals(ray_df1, ray_df2):
-    return ray_df1.equals(ray_df2)
+    # return ray_df1.equals(ray_df2)
+    return to_pandas(ray_df1).equals(to_pandas(ray_df2))
 
 
 @pytest.fixture
@@ -62,6 +65,7 @@ def test_int_dataframe():
 
     filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
+    test_sample(ray_df, pandas_df)
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
     test_size(ray_df, pandas_df)
@@ -232,6 +236,7 @@ def test_float_dataframe():
 
     filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
+    test_sample(ray_df, pandas_df)
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
     test_size(ray_df, pandas_df)
@@ -259,7 +264,7 @@ def test_float_dataframe():
 
     test_mean(ray_df, pandas_df)
     # TODO Clear floating point error.
-    # test_var(ray_df, pandas_df)
+    test_var(ray_df, pandas_df)
     test_std(ray_df, pandas_df)
     test_median(ray_df, pandas_df)
 
@@ -340,8 +345,7 @@ def test_float_dataframe():
         test_insert(ray_df, pandas_df, 1, "New Column", ray_df[key])
         test_insert(ray_df, pandas_df, 4, "New Column", ray_df[key])
 
-    # TODO Nans are always not equal to each other, fix it
-    # test___array__(ray_df, pandas_df)
+    test___array__(ray_df, pandas_df)
 
     apply_agg_functions = [
         'sum', lambda df: df.sum(), ['sum', 'mean'], ['sum', 'sum']
@@ -401,6 +405,7 @@ def test_mixed_dtype_dataframe():
 
     filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
+    test_sample(ray_df, pandas_df)
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
     test_size(ray_df, pandas_df)
@@ -430,7 +435,7 @@ def test_mixed_dtype_dataframe():
 
     test_mean(ray_df, pandas_df)
     # TODO Clear floating point error.
-    # test_var(ray_df, pandas_df)
+    test_var(ray_df, pandas_df)
     test_std(ray_df, pandas_df)
     test_median(ray_df, pandas_df)
 
@@ -442,7 +447,7 @@ def test_mixed_dtype_dataframe():
     test_describe(ray_df, pandas_df)
 
     # TODO Reolve once Pandas-20962 is resolved.
-    # test_rank(ray_df, pandas_df)
+    test_rank(ray_df, pandas_df)
 
     test_all(ray_df, pandas_df)
     test_any(ray_df, pandas_df)
@@ -568,6 +573,7 @@ def test_nan_dataframe():
 
     filter_by = {'items': ['col1', 'col5'], 'regex': '4$|3$', 'like': 'col'}
 
+    test_sample(ray_df, pandas_df)
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
     test_size(ray_df, pandas_df)
@@ -673,7 +679,7 @@ def test_nan_dataframe():
         test_insert(ray_df, pandas_df, 4, "New Column", ray_df[key])
 
     # TODO Nans are always not equal to each other, fix it
-    # test___array__(ray_df, pandas_df)
+    test___array__(ray_df, pandas_df)
 
     apply_agg_functions = [
         'sum', lambda df: df.sum(), ['sum', 'mean'], ['sum', 'sum']
@@ -937,8 +943,8 @@ def test_copy(ray_df):
     new_ray_df = ray_df.copy()
 
     assert new_ray_df is not ray_df
-    assert np.array_equal(new_ray_df._block_partitions,
-                          ray_df._block_partitions)
+    assert np.array_equal(new_ray_df._data_manager.data.partitions,
+                          ray_df._data_manager.data.partitions)
 
 
 @pytest.fixture
@@ -1047,6 +1053,7 @@ def test_append():
 
 @pytest.fixture
 def test_apply(ray_df, pandas_df, func, axis):
+    print(func)
     ray_result = ray_df.apply(func, axis)
     pandas_result = pandas_df.apply(func, axis)
     if isinstance(ray_result, pd.DataFrame):
@@ -1113,30 +1120,28 @@ def test_assign():
 
 def test_astype():
     td = TestData()
-    ray_df = pd.DataFrame(td.frame)
-    our_df_casted = ray_df.astype(np.int32)
-    expected_df_casted = pandas.DataFrame(
-        td.frame.values.astype(np.int32),
+    ray_df = pd.DataFrame(td.frame.values,
+            index=td.frame.index,
+            columns=td.frame.columns)
+    expected_df = pandas.DataFrame(
+        td.frame.values,
         index=td.frame.index,
         columns=td.frame.columns)
 
-    assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
+    ray_df_casted = ray_df.astype(np.int32)
+    expected_df_casted = expected_df.astype(np.int32)
 
-    our_df_casted = ray_df.astype(np.float64)
-    expected_df_casted = pandas.DataFrame(
-        td.frame.values.astype(np.float64),
-        index=td.frame.index,
-        columns=td.frame.columns)
+    assert ray_df_equals_pandas(ray_df_casted, expected_df_casted)
 
-    assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
+    ray_df_casted = ray_df.astype(np.float64)
+    expected_df_casted = expected_df.astype(np.float64)
 
-    our_df_casted = ray_df.astype(str)
-    expected_df_casted = pandas.DataFrame(
-        td.frame.values.astype(str),
-        index=td.frame.index,
-        columns=td.frame.columns)
+    assert ray_df_equals_pandas(ray_df_casted, expected_df_casted)
 
-    assert ray_df_equals_pandas(our_df_casted, expected_df_casted)
+    ray_df_casted = ray_df.astype(str)
+    expected_df_casted = expected_df.astype(str)
+
+    assert ray_df_equals_pandas(ray_df_casted, expected_df_casted)
 
 
 def test_at_time():
@@ -1286,7 +1291,7 @@ def test_cumsum(ray_df, pandas_df):
 
 @pytest.fixture
 def test_describe(ray_df, pandas_df):
-    assert ray_df.describe().equals(pandas_df.describe())
+    assert ray_df_equals_pandas(ray_df.describe(), pandas_df.describe())
 
 
 @pytest.fixture
@@ -1528,6 +1533,32 @@ def test_eval_df_use_case():
     frame_data = {'a': np.random.randn(10), 'b': np.random.randn(10)}
     df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
+
+    # test eval for series results
+    tmp_pandas = df.eval(
+        "arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas')
+    tmp_ray = ray_df.eval(
+        "arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas')
+
+    assert isinstance(tmp_ray, pandas.Series)
+    assert ray_series_equals_pandas(tmp_ray, tmp_pandas)
+
+    # Test not inplace assignments
+    tmp_pandas = df.eval(
+        "e = arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas')
+    tmp_ray = ray_df.eval(
+        "e = arctan2(sin(a), b)",
+        engine='python',
+        parser='pandas')
+    assert ray_df_equals_pandas(tmp_ray, tmp_pandas)
+
+    # Test inplace assignments
     df.eval(
         "e = arctan2(sin(a), b)",
         engine='python',
@@ -1590,9 +1621,9 @@ def test_fillna():
     # test_frame_pad_backfill_limit()
     test_fillna_dtype_conversion()
     test_fillna_skip_certain_blocks()
-    test_fillna_dict_series()
 
     with pytest.raises(NotImplementedError):
+        test_fillna_dict_series()
         test_fillna_dataframe()
 
     test_fillna_columns()
@@ -2055,12 +2086,26 @@ def test_infer_objects():
         ray_df.infer_objects()
 
 
-@pytest.fixture
-def test_info(ray_df):
-    info_string = ray_df.info()
-    assert '<class \'modin.pandas.dataframe.DataFrame\'>\n' in info_string
-    info_string = ray_df.info(memory_usage=True)
-    assert 'memory_usage: ' in info_string
+#@pytest.fixture
+def test_info():
+    ray_df = pd.DataFrame({
+        'col1': [1, 2, 3, np.nan],
+        'col2': [4, 5, np.nan, 7],
+        'col3': [8, np.nan, 10, 11],
+        'col4': [np.nan, 13, 14, 15]
+    })
+    ray_df.info(memory_usage='deep')
+    with io.StringIO() as buf:
+        ray_df.info(buf=buf)
+        info_string = buf.getvalue()
+        assert '<class \'modin.pandas.dataframe.DataFrame\'>\n' in info_string
+        assert 'memory usage: ' in info_string
+        assert 'Data columns (total 4 columns):' in info_string
+    with io.StringIO() as buf:
+        ray_df.info(buf=buf, verbose=False, memory_usage=False)
+        info_string = buf.getvalue()
+        assert 'memory usage: ' not in info_string
+        assert 'Columns: 4 entries, col1 to col4' in info_string
 
 
 @pytest.fixture
@@ -2243,8 +2288,9 @@ def test_melt():
         ray_df.melt()
 
 
-@pytest.fixture
-def test_memory_usage(ray_df):
+#@pytest.fixture
+def test_memory_usage():
+    ray_df = create_test_dataframe()
     assert type(ray_df.memory_usage()) is pandas.core.series.Series
     assert ray_df.memory_usage(index=True).at['Index'] is not None
     assert ray_df.memory_usage(deep=True).sum() >= \
@@ -2864,10 +2910,19 @@ def test_rtruediv():
     test_inter_df_math_right_ops("rtruediv")
 
 
-def test_sample():
-    ray_df = create_test_dataframe()
-    assert len(ray_df.sample(n=4)) == 4
-    assert len(ray_df.sample(frac=0.5)) == 2
+@pytest.fixture
+def test_sample(ray_df, pd_df):
+    with pytest.raises(ValueError):
+        ray_df.sample(n=3, frac=0.4)
+
+    assert ray_df_equals_pandas(
+            ray_df.sample(frac=0.5, random_state=42),
+            pd_df.sample(frac=0.5, random_state=42)
+            )
+    assert ray_df_equals_pandas(
+            ray_df.sample(n=2, random_state=42),
+            pd_df.sample(n=2, random_state=42)
+            )
 
 
 def test_select():
@@ -3144,12 +3199,10 @@ def test_unstack():
 def test_update():
     df = pd.DataFrame([[1.5, np.nan, 3.], [1.5, np.nan, 3.], [1.5, np.nan, 3],
                        [1.5, np.nan, 3]])
-
-    other = pd.DataFrame([[3.6, 2., np.nan], [np.nan, np.nan, 7]],
-                         index=[1, 3])
+    other = pd.DataFrame(
+        [[3.6, 2., np.nan], [np.nan, np.nan, 7]], index=[1, 3])
 
     df.update(other)
-
     expected = pd.DataFrame([[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3],
                              [1.5, np.nan, 7.]])
     assert ray_df_equals(df, expected)
@@ -3164,33 +3217,26 @@ def test_where():
     frame_data = np.random.randn(100, 10)
     pandas_df = pandas.DataFrame(frame_data, columns=list('abcdefghij'))
     ray_df = pd.DataFrame(frame_data, columns=list('abcdefghij'))
-
     pandas_cond_df = pandas_df % 5 < 2
     ray_cond_df = ray_df % 5 < 2
 
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     ray_result = ray_df.where(ray_cond_df, -ray_df)
-
-    assert ray_df_equals_pandas(ray_result, pandas_result)
+    assert all((to_pandas(ray_result) == pandas_result).all())
 
     other = pandas_df.loc[3]
-
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)
     ray_result = ray_df.where(ray_cond_df, other, axis=1)
-
-    assert ray_df_equals_pandas(ray_result, pandas_result)
+    assert all((to_pandas(ray_result) == pandas_result).all())
 
     other = pandas_df['e']
-
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=0)
     ray_result = ray_df.where(ray_cond_df, other, axis=0)
-
-    assert ray_df_equals_pandas(ray_result, pandas_result)
+    assert all((to_pandas(ray_result) == pandas_result).all())
 
     pandas_result = pandas_df.where(pandas_df < 2, True)
     ray_result = ray_df.where(ray_df < 2, True)
-
-    assert ray_df_equals_pandas(ray_result, pandas_result)
+    assert all((to_pandas(ray_result) == pandas_result).all())
 
 
 def test_xs():
@@ -3311,7 +3357,7 @@ def test___round__():
 
 @pytest.fixture
 def test___array__(ray_df, pandas_df):
-    assert np.array_equal(ray_df.__array__(), pandas_df.__array__())
+    assert_array_equal(ray_df.__array__(), pandas_df.__array__())
 
 
 def test___getstate__():
@@ -3391,29 +3437,22 @@ def test___repr__():
     frame_data = np.random.randint(0, 100, size=(1000, 100))
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
-
     assert repr(pandas_df) == repr(ray_df)
 
     frame_data = np.random.randint(0, 100, size=(1000, 99))
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
-
     assert repr(pandas_df) == repr(ray_df)
 
-    # These currently fails because the dots do not line up.
-    # For some reason only two dots are being added for our DataFrame
+    frame_data = np.random.randint(0, 100, size=(1000, 101))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+    assert repr(pandas_df) == repr(ray_df)
 
-    # frame_data = np.random.randint(0, 100, size=(1000, 101))
-    # pandas_df = pandas.DataFrame(frame_data)
-    # ray_df = pd.DataFrame(frame_data)
-    #
-    # assert repr(pandas_df) == repr(ray_df)
-    #
-    # frame_data = np.random.randint(0, 100, size=(1000, 102))
-    # pandas_df = pandas.DataFrame(frame_data)
-    # ray_df = pd.DataFrame(frame_data)
-    #
-    # assert repr(pandas_df) == repr(ray_df)
+    frame_data = np.random.randint(0, 100, size=(1000, 102))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+    assert repr(pandas_df) == repr(ray_df)
 
     # ___repr___ method has a different code path depending on
     # whether the number of rows is >60; and a different code path
@@ -3455,11 +3494,19 @@ def test_loc(ray_df, pd_df):
 
     # DataFrame
     assert ray_df_equals_pandas(ray_df.loc[[1, 2]], pd_df.loc[[1, 2]])
-    assert ray_df_equals_pandas(ray_df.loc[[1, 2], ['col1']],
-                                pd_df.loc[[1, 2], ['col1']])
+
+    # See issue #80
+    # assert ray_df_equals_pandas(ray_df.loc[[1, 2], ['col1']],
+    #                             pd_df.loc[[1, 2], ['col1']])
     assert ray_df_equals_pandas(ray_df.loc[1:2, 'col1':'col2'],
                                 pd_df.loc[1:2, 'col1':'col2'])
 
+    # Write Item
+    ray_df_copy = ray_df.copy()
+    pd_df_copy = pd_df.copy()
+    ray_df_copy.loc[[1, 2]] = 42
+    pd_df_copy.loc[[1,2]] = 42
+    assert ray_df_equals_pandas(ray_df_copy, pd_df_copy)
 
 def test_is_copy():
     ray_df = create_test_dataframe()
@@ -3498,12 +3545,20 @@ def test_iloc(ray_df, pd_df):
 
     # DataFrame
     assert ray_df_equals_pandas(ray_df.iloc[[1, 2]], pd_df.iloc[[1, 2]])
-    assert ray_df_equals_pandas(ray_df.iloc[[1, 2], [1, 0]],
-                                pd_df.iloc[[1, 2], [1, 0]])
+    # See issue #80
+    # assert ray_df_equals_pandas(ray_df.iloc[[1, 2], [1, 0]],
+    #                             pd_df.iloc[[1, 2], [1, 0]])
     assert ray_df_equals_pandas(ray_df.iloc[1:2, 0:2], pd_df.iloc[1:2, 0:2])
 
     # Issue #43
     ray_df.iloc[0:3, :]
+
+    # Write Item
+    ray_df_copy = ray_df.copy()
+    pd_df_copy = pd_df.copy()
+    ray_df_copy.iloc[[1, 2]] = 42
+    pd_df_copy.iloc[[1,2]] = 42
+    assert ray_df_equals_pandas(ray_df_copy, pd_df_copy)
 
 
 def test__doc__():
@@ -3529,6 +3584,17 @@ def test_get_dummies():
     frame_data = {'A': ['a', 'b', 'a'], 'B': ['b', 'a', 'c'], 'C': [1, 2, 3]}
     ray_df = pd.DataFrame(frame_data)
     pd_df = pandas.DataFrame(frame_data)
+    assert ray_df_equals_pandas(
+        pd.get_dummies(ray_df), pandas.get_dummies(pd_df))
 
+    frame_data = {'A': ['a'], 'B': ['b']}
+    ray_df = pd.DataFrame(frame_data)
+    pd_df = pandas.DataFrame(frame_data)
+    assert ray_df_equals_pandas(
+        pd.get_dummies(ray_df), pandas.get_dummies(pd_df))
+
+    frame_data = {'A': [1, 2, 3], 'B': [4, 5, 6], 'C': [1, 2, 3]}
+    ray_df = pd.DataFrame(frame_data)
+    pd_df = pandas.DataFrame(frame_data)
     assert ray_df_equals_pandas(
         pd.get_dummies(ray_df), pandas.get_dummies(pd_df))
