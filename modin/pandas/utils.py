@@ -441,6 +441,11 @@ def extractor(df_chunk, row_loc, col_loc):
     except AttributeError:
         # Locators might be scaler or python list
         pass
+    # Python2 doesn't allow writable flag to be set on this object. Copying
+    # into a list allows it to be used by iloc.
+    except ValueError:
+        row_loc = list(row_loc)
+        col_loc = list(col_loc)
     return df_chunk.iloc[row_loc, col_loc]
 
 
