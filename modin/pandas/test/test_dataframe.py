@@ -3455,10 +3455,10 @@ def test_loc(ray_df, pd_df):
 
     # DataFrame
     assert ray_df_equals_pandas(ray_df.loc[[1, 2]], pd_df.loc[[1, 2]])
-    assert ray_df_equals_pandas(
-        ray_df.loc[[1, 2], ['col1']], pd_df.loc[[1, 2], ['col1']])
-    assert ray_df_equals_pandas(
-        ray_df.loc[1:2, 'col1':'col2'], pd_df.loc[1:2, 'col1':'col2'])
+    assert ray_df_equals_pandas(ray_df.loc[[1, 2], ['col1']],
+                                pd_df.loc[[1, 2], ['col1']])
+    assert ray_df_equals_pandas(ray_df.loc[1:2, 'col1':'col2'],
+                                pd_df.loc[1:2, 'col1':'col2'])
 
 
 def test_is_copy():
@@ -3498,8 +3498,8 @@ def test_iloc(ray_df, pd_df):
 
     # DataFrame
     assert ray_df_equals_pandas(ray_df.iloc[[1, 2]], pd_df.iloc[[1, 2]])
-    assert ray_df_equals_pandas(
-        ray_df.iloc[[1, 2], [1, 0]], pd_df.iloc[[1, 2], [1, 0]])
+    assert ray_df_equals_pandas(ray_df.iloc[[1, 2], [1, 0]],
+                                pd_df.iloc[[1, 2], [1, 0]])
     assert ray_df_equals_pandas(ray_df.iloc[1:2, 0:2], pd_df.iloc[1:2, 0:2])
 
     # Issue #43
