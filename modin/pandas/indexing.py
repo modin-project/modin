@@ -11,10 +11,13 @@ import numpy as np
 import ray
 from warnings import warn
 
-from .utils import (_get_nan_block_id, extractor, _mask_block_partitions,
-                    writer, _blocks_to_series)
+from .utils import (_get_nan_block_id, extractor, _repartition_coord_df,
+                    _generate_blocks, _mask_block_partitions, writer,
+                    _blocks_to_series)
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
+from . import get_npartitions
+
 """Indexing Helper Class works as follows:
 
 _Location_Indexer_Base provide methods framework for __getitem__
@@ -68,6 +71,11 @@ http://pandas.pydata.org/pandas-docs/stable/indexing.html#deprecate-loc-reindex-
 _ILOC_INT_ONLY_ERROR = """
 Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
+"""
+
+_VIEW_IS_COPY_WARNING = """
+Modin is making a copy of of the DataFrame. This behavior diverges from Pandas.
+This will be fixed in future releases.
 """
 
 
@@ -153,7 +161,7 @@ class _Location_Indexer_Base(object):
             ndim: the dimension of returned data
         """
         if ndim == 2:
-            return self._generate_view(row_lookup, col_lookup)
+            return self._generate_view_copy(row_lookup, col_lookup)
 
         extracted = self._retrive_items(row_lookup, col_lookup)
         if ndim == 1:
@@ -193,8 +201,47 @@ class _Location_Indexer_Base(object):
                 result_oids.append(result_oid)
         return result_oids
 
+    def _generate_view_copy(self, row_lookup, col_lookup):
+        """Generate a new DataFrame by making copies.
+
+        Note (simon):
+            - This is a temporary replacement for _generate_view
+              function below.
+        """
+        warn(_VIEW_IS_COPY_WARNING)
+
+        row_lookup_new = _repartition_coord_df(row_lookup, get_npartitions())
+        col_lookup_new = _repartition_coord_df(col_lookup, get_npartitions())
+
+        new_blocks = _generate_blocks(
+            row_lookup, row_lookup_new,
+            col_lookup, col_lookup_new,
+            self.block_oids
+            )
+
+        row_lengths_oid = ray.put(np.bincount(row_lookup_new['partition']))
+        col_lengths_oid = ray.put(np.bincount(col_lookup_new['partition']))
+
+        new_row_metadata = _IndexMetadata(
+            coord_df_oid=row_lookup_new, lengths_oid=row_lengths_oid)
+
+        new_col_metadata = _IndexMetadata(
+            coord_df_oid=col_lookup_new, lengths_oid=col_lengths_oid)
+
+        df_view = DataFrame(
+            block_partitions=new_blocks,
+            row_metadata=new_row_metadata,
+            col_metadata=new_col_metadata,
+            index=row_lookup.index,
+            columns=col_lookup.index)
+
+        return df_view
+
     def _generate_view(self, row_lookup, col_lookup):
         """Generate a DataFrameView from lookup
+
+        Note (simon):
+            - This is not used because of index metadata was broken
         """
         row_lengths = [0] * len(self.df._row_metadata._lengths)
         for i in row_lookup["partition"]:
@@ -460,6 +507,8 @@ class _iLoc_Indexer(_Location_Indexer_Base):
 
 class DataFrameView(DataFrame):
     """A subclass of DataFrame where the index can be smaller than blocks.
+
+    Deprecated because _generate_view_copy is used instead of _generate_view
     """
 
     def __init__(self, block_partitions, row_metadata, col_metadata, index,

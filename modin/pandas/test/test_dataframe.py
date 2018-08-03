@@ -143,7 +143,7 @@ def test_int_dataframe():
     test_cumsum(ray_df, pandas_df)
     test_pipe(ray_df, pandas_df)
 
-    # test_loc(ray_df, pandas_df)
+    test_loc(ray_df, pandas_df)
     test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
@@ -313,7 +313,7 @@ def test_float_dataframe():
     test_iteritems(ray_df, pandas_df)
     test_itertuples(ray_df, pandas_df)
 
-    # test_loc(ray_df, pandas_df)
+    test_loc(ray_df, pandas_df)
     test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
@@ -495,7 +495,7 @@ def test_mixed_dtype_dataframe():
     test_iteritems(ray_df, pandas_df)
     test_itertuples(ray_df, pandas_df)
 
-    # test_loc(ray_df, pandas_df)
+    test_loc(ray_df, pandas_df)
     test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
@@ -646,7 +646,7 @@ def test_nan_dataframe():
     test_iteritems(ray_df, pandas_df)
     test_itertuples(ray_df, pandas_df)
 
-    # test_loc(ray_df, pandas_df)
+    test_loc(ray_df, pandas_df)
     test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
@@ -3445,18 +3445,20 @@ def test___repr__():
 
 @pytest.fixture
 def test_loc(ray_df, pd_df):
-    # Singleton
-    assert ray_df.loc[0].equals(pd_df.loc[0])
+    # Scaler
     assert ray_df.loc[0, 'col1'] == pd_df.loc[0, 'col1']
 
-    # List
-    assert ray_df.loc[[1, 2]].equals(pd_df.loc[[1, 2]])
-    assert ray_df.loc[[1, 2], ['col1']].equals(pd_df.loc[[1, 2], ['col1']])
-
-    # Slice
+    # Series
+    assert ray_df.loc[0].equals(pd_df.loc[0])
     assert ray_df.loc[1:, 'col1'].equals(pd_df.loc[1:, 'col1'])
     assert ray_df.loc[1:2, 'col1'].equals(pd_df.loc[1:2, 'col1'])
-    assert ray_df.loc[1:2, 'col1':'col2'].equals(pd_df.loc[1:2, 'col1':'col2'])
+
+    # DataFrame
+    assert ray_df_equals_pandas(ray_df.loc[[1, 2]], pd_df.loc[[1, 2]])
+    assert ray_df_equals_pandas(
+        ray_df.loc[[1, 2], ['col1']], pd_df.loc[[1, 2], ['col1']])
+    assert ray_df_equals_pandas(
+        ray_df.loc[1:2, 'col1':'col2'], pd_df.loc[1:2, 'col1':'col2'])
 
 
 def test_is_copy():
@@ -3486,18 +3488,22 @@ def test_ix():
 
 @pytest.fixture
 def test_iloc(ray_df, pd_df):
-    # Singleton
-    assert ray_df.iloc[0].equals(pd_df.iloc[0])
+    # Scaler
     assert ray_df.iloc[0, 1] == pd_df.iloc[0, 1]
 
-    # List
-    assert ray_df.iloc[[1, 2]].equals(pd_df.iloc[[1, 2]])
-    assert ray_df.iloc[[1, 2], [1, 0]].equals(pd_df.iloc[[1, 2], [1, 0]])
-
-    # Slice
+    # Series
+    assert ray_df.iloc[0].equals(pd_df.iloc[0])
     assert ray_df.iloc[1:, 0].equals(pd_df.iloc[1:, 0])
     assert ray_df.iloc[1:2, 0].equals(pd_df.iloc[1:2, 0])
-    assert ray_df.iloc[1:2, 0:2].equals(pd_df.iloc[1:2, 0:2])
+
+    # DataFrame
+    assert ray_df_equals_pandas(ray_df.iloc[[1, 2]], pd_df.iloc[[1, 2]])
+    assert ray_df_equals_pandas(
+        ray_df.iloc[[1, 2], [1, 0]], pd_df.iloc[[1, 2], [1, 0]])
+    assert ray_df_equals_pandas(ray_df.iloc[1:2, 0:2], pd_df.iloc[1:2, 0:2])
+
+    # Issue #43
+    ray_df.iloc[0:3, :]
 
 
 def test__doc__():
