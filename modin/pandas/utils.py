@@ -512,11 +512,11 @@ def _deploy_func(func, dataframe, *args):
 def extractor(df_chunk, row_loc, col_loc):
     """Retrieve an item from remote block
     """
-    # We currently have to do the writable flag trick because a pandas bug
+    # We currently have to do this hack because a pandas bug
     # https://github.com/pandas-dev/pandas/issues/17192
     try:
-        row_loc.flags.writeable = True
-        col_loc.flags.writeable = True
+        row_loc = row_loc.copy()
+        col_loc = col_loc.copy()
     except AttributeError:
         # Locators might be scaler or python list
         pass
