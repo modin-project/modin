@@ -17,7 +17,6 @@ from .utils import (_get_nan_block_id, extractor, _repartition_coord_df,
 from .index_metadata import _IndexMetadata
 from .dataframe import DataFrame
 from . import get_npartitions
-
 """Indexing Helper Class works as follows:
 
 _Location_Indexer_Base provide methods framework for __getitem__
@@ -213,11 +212,8 @@ class _Location_Indexer_Base(object):
         row_lookup_new = _repartition_coord_df(row_lookup, get_npartitions())
         col_lookup_new = _repartition_coord_df(col_lookup, get_npartitions())
 
-        new_blocks = _generate_blocks(
-            row_lookup, row_lookup_new,
-            col_lookup, col_lookup_new,
-            self.block_oids
-            )
+        new_blocks = _generate_blocks(row_lookup, row_lookup_new, col_lookup,
+                                      col_lookup_new, self.block_oids)
 
         row_lengths_oid = ray.put(np.bincount(row_lookup_new['partition']))
         col_lengths_oid = ray.put(np.bincount(col_lookup_new['partition']))
@@ -421,8 +417,7 @@ class _Loc_Indexer(_Location_Indexer_Base):
         lens_oid = ray.put(np.array(lens))
 
         metadata_view = _IndexMetadata(
-            coord_df_oid=coord_df,
-            lengths_oid=lens_oid)
+            coord_df_oid=coord_df, lengths_oid=lens_oid)
         return metadata_view
 
     def _compute_enlarge_labels(self, locator, base_index):

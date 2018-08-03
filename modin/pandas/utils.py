@@ -317,12 +317,10 @@ def _generate_blocks(old_row, new_row, old_col, new_col,
     Given {old, new} x {row, col} meta data and the old 2d oid array,
     return a new 2d oid array.
     """
+
     def join(old, new):
-        return new.merge(old,
-                         left_index=True,
-                         right_index=True,
-                         suffixes=('_new', '_old')
-                         )
+        return new.merge(
+            old, left_index=True, right_index=True, suffixes=('_new', '_old'))
 
     row_grouped = join(old_row, new_row).groupby('partition_new')
     col_grouped = join(old_col, new_col).groupby('partition_new')
@@ -731,7 +729,9 @@ def extract_block(blk_partitions, row_lookup, col_lookup, col_name_suffix):
 
     Pass in col_name_suffix='_old' when operate on a joined df.
     """
-    def apply_suffix(s): return s + col_name_suffix
+
+    def apply_suffix(s):
+        return s + col_name_suffix
 
     # Address Arrow Error:
     #   Buffer source array is read-only
