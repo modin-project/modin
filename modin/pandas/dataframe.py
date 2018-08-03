@@ -2009,7 +2009,7 @@ class DataFrame(object):
         """
         if isinstance(other, pandas.DataFrame):
             # Copy into a Ray DataFrame to simplify logic below
-            other = DataFrame(other) 
+            other = DataFrame(other)
 
         if not self.index.equals(other.index) or not \
                 self.columns.equals(other.columns):
