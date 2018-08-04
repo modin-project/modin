@@ -2007,6 +2007,9 @@ class DataFrame(object):
         Returns:
             Boolean: True if equal, otherwise False
         """
+        if isinstance(other, pandas.DataFrame):
+            # Copy into a Ray DataFrame to simplify logic below
+            other = DataFrame(other)
 
         if not self.index.equals(other.index) or not \
                 self.columns.equals(other.columns):

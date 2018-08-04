@@ -144,7 +144,7 @@ def test_int_dataframe():
     test_pipe(ray_df, pandas_df)
 
     # test_loc(ray_df, pandas_df)
-    # test_iloc(ray_df, pandas_df)
+    test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
     test_set_axis(ray_df, pandas_df, labels, 0)
@@ -314,7 +314,7 @@ def test_float_dataframe():
     test_itertuples(ray_df, pandas_df)
 
     # test_loc(ray_df, pandas_df)
-    # test_iloc(ray_df, pandas_df)
+    test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
     test_set_axis(ray_df, pandas_df, labels, 0)
@@ -496,7 +496,7 @@ def test_mixed_dtype_dataframe():
     test_itertuples(ray_df, pandas_df)
 
     # test_loc(ray_df, pandas_df)
-    # test_iloc(ray_df, pandas_df)
+    test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
     test_set_axis(ray_df, pandas_df, labels, 0)
@@ -647,7 +647,7 @@ def test_nan_dataframe():
     test_itertuples(ray_df, pandas_df)
 
     # test_loc(ray_df, pandas_df)
-    # test_iloc(ray_df, pandas_df)
+    test_iloc(ray_df, pandas_df)
 
     labels = ['a', 'b', 'c', 'd']
     test_set_axis(ray_df, pandas_df, labels, 0)
