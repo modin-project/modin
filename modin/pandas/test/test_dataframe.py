@@ -3415,13 +3415,28 @@ def test___repr__():
     #
     # assert repr(pandas_df) == repr(ray_df)
 
+    # ___repr___ method has a different code path depending on
+    # whether the number of rows is >60; and a different code path
+    # depending on the number of columns is >20.
+    # Previous test cases already check the case when cols>20
+    # and rows>60. The cases that follow exercise the other three
+    # combinations.
+    # rows <= 60, cols > 20
     frame_data = np.random.randint(0, 100, size=(10, 100))
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
     assert repr(pandas_df) == repr(ray_df)
 
+    # rows <= 60, cols <= 20
     frame_data = np.random.randint(0, 100, size=(10, 10))
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+
+    assert repr(pandas_df) == repr(ray_df)
+
+    # rows > 60, cols <= 20
+    frame_data = np.random.randint(0, 100, size=(100, 10))
     pandas_df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
 
