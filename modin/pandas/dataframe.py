@@ -385,18 +385,16 @@ class DataFrame(object):
         if len(self.index) >= 60:
             head_blocks = self._head_block_builder(30)
             tail_blocks = self._tail_block_builder(30)
-            length_of_index = 30
+            index_of_head = self.index[:30]
+            index_of_tail = self.index[-30:]
         else:
             head_blocks = self._block_partitions
             # We set this to None so we know
             tail_blocks = None
-            length_of_index = len(self.index)
+            index_of_head = self.index
 
         # Get first and last 10 columns if there are more than 20 columns
         if len(self._col_metadata) >= 20:
-
-            index_of_head = self.index[:length_of_index]
-
             # Building the front blocks from head_blocks
             front_blocks = \
                 front_block_builder(head_blocks, 10, index_of_head)
@@ -410,7 +408,6 @@ class DataFrame(object):
 
             # True only if we have >60 rows in the DataFrame
             if tail_blocks is not None:
-                index_of_tail = self.index[-30:]
                 # Building the font blocks from tail_blocks
                 front_blocks = \
                     front_block_builder(tail_blocks, 10, index_of_tail)
@@ -435,6 +432,7 @@ class DataFrame(object):
             ]
             full_head = pandas.concat(list_of_head_rows)
             full_head.columns = self.columns
+            full_head.index = index_of_head
 
             # True only if we have >60 rows in the DataFrame
             if tail_blocks is not None:
@@ -444,6 +442,7 @@ class DataFrame(object):
                      for df in tail_blocks]
                 full_tail = pandas.concat(list_of_tail_rows)
                 full_tail.columns = self.columns
+                full_tail.index = index_of_tail
 
                 return row_dots_builder(full_head, full_tail)
             else:
