@@ -303,8 +303,9 @@ def _repartition_coord_df(old_coord_df, npartition):
         passed in.
     """
     length = len(old_coord_df)
-    chunksize = len(old_coord_df) // npartition if len(
-        old_coord_df) % npartition == 0 else len(old_coord_df) // npartition + 1
+    chunksize = (len(old_coord_df) // npartition
+                 if len(old_coord_df) % npartition == 0 else
+                 len(old_coord_df) // npartition + 1)
 
     # genereate array([0, 0, 0, 1, 1, 1, 2])
     partitions = np.repeat(np.arange(npartition), chunksize)[:length]
