@@ -263,6 +263,107 @@ def to_pandas(df):
     return pandas_df
 
 
+"""
+Indexing Section
+    Generate View Copy Helpers
+    Function list:
+        - `extract_block` (ray.remote function, move to EOF)
+        - `_generate_block`
+        - `_repartition_coord_df`
+    Call Dependency:
+        - _generate_block calls extract_block remote
+    Pipeline:
+        - Repartition the dataframe by npartition
+        - Use case:
+              The dataframe is a DataFrameView, the two coord_dfs only
+              describe the subset of the block partition data. We want
+              to create a new copy of this subset and re-partition
+              the new dataframe.
+"""
+
+
+def _repartition_coord_df(old_coord_df, npartition):
+    """Repartition the (view of) coord_df by npartition
+
+    This function is best used when old_coord_df is not contigous.
+    For example, it turns:
+
+        partition index_within_partition
+    i0  0         0
+    i6  3         2
+
+    into
+
+        partition index_within_partition
+    i0  0         0
+    i6  0         1
+
+    Note(simon):
+        The resulting npartition will be <= npartition
+        passed in.
+    """
+    length = len(old_coord_df)
+    chunksize = (len(old_coord_df) // npartition
+                 if len(old_coord_df) % npartition == 0 else
+                 len(old_coord_df) // npartition + 1)
+
+    # genereate array([0, 0, 0, 1, 1, 1, 2])
+    partitions = np.repeat(np.arange(npartition), chunksize)[:length]
+
+    # generate array([0, 1, 2, 0, 1, 2, 0])
+    final_n_partition = np.max(partitions)
+    idx_in_part = np.tile(np.arange(chunksize), final_n_partition + 1)[:length]
+
+    final_df = pandas.DataFrame(
+        {
+            'partition': partitions,
+            'index_within_partition': idx_in_part
+        },
+        index=old_coord_df.index)
+
+    return final_df
+
+
+def _generate_blocks(old_row, new_row, old_col, new_col,
+                     block_partition_2d_oid_arr):
+    """
+    Given the four coord_dfs:
+        - Old Row Coord df
+        - New Row Coord df
+        - Old Col Coord df
+        - New Col Coord df
+    and the block partition array, this function will generate the new
+    block partition array.
+    """
+
+    # We join the old and new coord_df to find out which chunk in the old
+    # partition belongs to the chunk in the new partition. The new coord df
+    # should have the same index as the old coord df in order to align the
+    # row/column. This is guaranteed by _repartition_coord_df.
+    def join(old, new):
+        return new.merge(
+            old, left_index=True, right_index=True, suffixes=('_new', '_old'))
+
+    row_grouped = join(old_row, new_row).groupby('partition_new')
+    col_grouped = join(old_col, new_col).groupby('partition_new')
+
+    oid_lst = []
+    for row_idx, row_lookup in row_grouped:
+        for col_idx, col_lookup in col_grouped:
+            oid = extract_block.remote(
+                block_partition_2d_oid_arr,
+                row_lookup,
+                col_lookup,
+                col_name_suffix='_old')
+            oid_lst.append(oid)
+    return np.array(oid_lst).reshape(len(row_grouped), len(col_grouped))
+
+
+# Indexing
+#  Generate View Copy Helpers
+# END
+
+
 def _mask_block_partitions(blk_partitions, row_metadata, col_metadata):
     """Return the squeezed/expanded block partitions as defined by
     row_metadata and col_metadata.
@@ -640,3 +741,38 @@ def _concat_index(*index_parts):
 def _compile_remote_dtypes(*column_of_blocks):
     small_dfs = [df.loc[0:0] for df in column_of_blocks]
     return pandas.concat(small_dfs, copy=False).dtypes
+
+
+@ray.remote
+def extract_block(blk_partitions, row_lookup, col_lookup, col_name_suffix):
+    """
+    This function extracts a single block from blk_partitions using
+    the row_lookup and col_lookup.
+
+    Pass in col_name_suffix='_old' when operate on a joined df.
+    """
+
+    def apply_suffix(s):
+        return s + col_name_suffix
+
+    # Address Arrow Error:
+    #   Buffer source array is read-only
+    row_lookup = row_lookup.copy()
+    col_lookup = col_lookup.copy()
+
+    df_columns = []
+    for row_idx, row_df in row_lookup.groupby(apply_suffix('partition')):
+        this_column = []
+        for col_idx, col_df in col_lookup.groupby(apply_suffix('partition')):
+            block_df_oid = blk_partitions[row_idx, col_idx]
+            block_df = ray.get(block_df_oid)
+            chunk = block_df.iloc[row_df[apply_suffix(
+                'index_within_partition')], col_df[apply_suffix(
+                    'index_within_partition')]]
+            this_column.append(chunk)
+        df_columns.append(pandas.concat(this_column, axis=1))
+    final_df = pandas.concat(df_columns)
+    final_df.index = pandas.RangeIndex(0, final_df.shape[0])
+    final_df.columns = pandas.RangeIndex(0, final_df.shape[1])
+
+    return final_df
