@@ -13,6 +13,8 @@ import threading
 import os
 import ray
 
+from .. import __git_revision__, __version__
+
 try:
     if threading.current_thread().name == "MainThread":
         ray.init(
@@ -58,5 +60,5 @@ __all__ = [
     "Panel", "date_range", "Index", "MultiIndex", "Series", "bdate_range",
     "DatetimeIndex", "to_timedelta", "set_eng_float_format", "set_option",
     "CategoricalIndex", "Timedelta", "Timestamp", "NaT", "PeriodIndex",
-    "Categorical"
+    "Categorical", "__git_revision__", "__version__"
 ]
