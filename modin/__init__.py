@@ -14,9 +14,8 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        return subprocess.Popen(cmd,
-                                stdout=subprocess.PIPE,
-                                env=env).communicate()[0]
+        return subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
 
     try:
         git_revision = _execute_cmd_in_temp_env(['git', 'rev-parse', 'HEAD'])
