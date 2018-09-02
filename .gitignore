@@ -157,3 +157,8 @@ fabric.properties
 
 # Editor-based Rest Client
 .idea/httpRequests
+
+# Cscope and Tags
+tags
+cscope.files
+cscope.out
