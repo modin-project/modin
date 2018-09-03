@@ -12,4 +12,4 @@ setup(
                 "a single line of code change.",
     packages=find_packages(),
     url="https://github.com/modin-project/modin",
-    install_requires=["pandas==0.22", "ray==0.5"])
+    install_requires=["pandas==0.22", "ray==0.5.2"])
