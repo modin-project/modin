@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
-bash miniconda.sh -b -p $HOME/miniconda
-export PATH="$HOME/miniconda/bin:$PATH"
-conda install -y python==3.6.5
+ if [[ "$PYTHON" == "2.7" ]]; then
+  wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh -nv
+  bash miniconda.sh -b -p $HOME/miniconda
+  export PATH="$HOME/miniconda/bin:$PATH"
 
-# There was a pandas + numpy installation version issue
-# https://github.com/pandas-dev/pandas/issues/20775
-PIP_NO_BUILD_ISOLATION=false pip install -r requirements.txt
+elif [[ "$PYTHON" == "3.6" ]]; then
+  wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
+  bash miniconda.sh -b -p $HOME/miniconda
+  export PATH="$HOME/miniconda/bin:$PATH"
+  conda install -y python==3.6.5
+
+pip install -r requirements.txt
 pip install -q pytest flake8 flake8-comprehensions yapf feather-format lxml openpyxl xlrd numpy
