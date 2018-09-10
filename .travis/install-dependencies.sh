@@ -3,6 +3,7 @@
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
 bash miniconda.sh -b -p $HOME/miniconda
 export PATH="$HOME/miniconda/bin:$PATH"
+conda install -y python==3.6.5
 
 # There was a pandas + numpy installation version issue
 # https://github.com/pandas-dev/pandas/issues/20775
