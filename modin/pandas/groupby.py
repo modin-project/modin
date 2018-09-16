@@ -568,8 +568,8 @@ class DataFrameGroupBy(object):
             new_df._block_partitions = np.array([
                 _reindex_helper._submit(
                     args=tuple([
-                        new_df.columns, self._columns, 0,
-                        new_df._block_partitions.shape[1]
+                        new_df.columns, self._columns, 0, new_df.
+                        _block_partitions.shape[1]
                     ] + block.tolist()),
                     num_return_vals=new_df._block_partitions.shape[1])
                 for block in new_df._block_partitions

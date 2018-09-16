@@ -117,8 +117,8 @@ def concat(objs,
     # Put all of the DataFrames into Ray format
     # TODO just partition the DataFrames instead of building a new Ray DF.
     objs = [
-        DataFrame(obj)
-        if isinstance(obj, (pandas.DataFrame, pandas.Series)) else obj
+        DataFrame(obj) if isinstance(obj, (pandas.DataFrame,
+                                           pandas.Series)) else obj
         for obj in objs
     ]
 
