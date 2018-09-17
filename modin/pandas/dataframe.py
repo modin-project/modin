@@ -1720,7 +1720,7 @@ class DataFrame(object):
             memory_usage (bool, str, optional): Specifies whether the total memory
                 usage of the DataFrame elements (including index) should be displayed.
                 True always show memory usage. False never shows memory usage. A value 
-                of ‘deep’ is equivalent to “True with deep introspection”. Memory usage 
+                of 'deep' is equivalent to "True with deep introspection". Memory usage
                 is shown in human-readable units (base-2 representation). Without deep 
                 introspection a memory estimation is made based in column dtype and number 
                 of rows assuming values consume the same memory amount for corresponding 
