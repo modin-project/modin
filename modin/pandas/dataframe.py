@@ -375,8 +375,9 @@ class DataFrame(object):
             col_dots = pandas.Series(["..." for _ in range(len(full_front))])
             col_dots.index = index_of_head
             col_dots.name = "..."
-            return pandas.concat(
-                [full_front, col_dots, full_back], axis=1, copy=False)
+            return pandas.concat([full_front, col_dots, full_back],
+                                 axis=1,
+                                 copy=False)
 
         # If we don't exceed the maximum number of values on either dimension
         if len(self.index) <= 60 and len(self.columns) <= 20:
@@ -524,8 +525,8 @@ class DataFrame(object):
 
         oid_series = ray.get(
             _map_partitions(
-                remote_func, self._col_partitions
-                if axis == 0 else self._row_partitions))
+                remote_func,
+                self._col_partitions if axis == 0 else self._row_partitions))
 
         if axis == 0:
             # We use the index to get the internal index.
@@ -538,8 +539,9 @@ class DataFrame(object):
                     df.index = \
                         this_partition[this_partition.isin(df.index)].index
 
-            result_series = pandas.concat(
-                [obj[0] for obj in oid_series], axis=0, copy=False)
+            result_series = pandas.concat([obj[0] for obj in oid_series],
+                                          axis=0,
+                                          copy=False)
         else:
             result_series = pandas.concat(oid_series, axis=0, copy=False)
             result_series.index = self.index
@@ -1507,9 +1509,9 @@ class DataFrame(object):
                 raise KeyError("Only a column name can be used for the key in"
                                "a dtype mappings argument.")
             columns = list(dtype.keys())
-            col_idx = [(self.columns.get_loc(columns[i]), columns[i]) if
-                       columns[i] in self.columns else (columns[i], columns[i])
-                       for i in range(len(columns))]
+            col_idx = [(self.columns.get_loc(columns[i]),
+                        columns[i]) if columns[i] in self.columns else
+                       (columns[i], columns[i]) for i in range(len(columns))]
             new_dict = {}
             for idx, key in col_idx:
                 new_dict[idx] = dtype[key]
@@ -3667,8 +3669,9 @@ class DataFrame(object):
                 if next((True for t in self.dtypes if check_bad_dtype(t)),
                         False):
                     dtype = next(t for t in self.dtypes if check_bad_dtype(t))
-                    raise ValueError("Cannot compare type '{}' with type '{}'"
-                                     .format(type(dtype), float))
+                    raise ValueError(
+                        "Cannot compare type '{}' with type '{}'".format(
+                            type(dtype), float))
         else:
             # Normally pandas returns this near the end of the quantile, but we
             # can't afford the overhead of running the entire operation before
@@ -5896,8 +5899,8 @@ class DataFrame(object):
         for t in self.dtypes:
             if not (is_bool_dtype(t) or is_numeric_dtype(t)
                     or is_timedelta64_dtype(t)):
-                raise TypeError("Unary negative expects numeric dtype, not {}"
-                                .format(t))
+                raise TypeError(
+                    "Unary negative expects numeric dtype, not {}".format(t))
 
         new_block_partitions = np.array([
             _map_partitions(lambda df: df.__neg__(), block)

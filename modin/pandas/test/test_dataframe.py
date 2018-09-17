@@ -1870,13 +1870,12 @@ def test_fillna_dataframe():
     ray_df = pd.DataFrame(frame_data, index=list('VWXYZ'))
 
     # df2 may have different index and columns
-    df2 = pandas.DataFrame(
-        {
-            'a': [np.nan, 10, 20, 30, 40],
-            'b': [50, 60, 70, 80, 90],
-            'foo': ['bar'] * 5
-        },
-        index=list('VWXuZ'))
+    df2 = pandas.DataFrame({
+        'a': [np.nan, 10, 20, 30, 40],
+        'b': [50, 60, 70, 80, 90],
+        'foo': ['bar'] * 5
+    },
+                           index=list('VWXuZ'))
 
     # only those columns and indices which are shared get filled
     assert ray_df_equals_pandas(ray_df.fillna(df2), df.fillna(df2))
@@ -2567,7 +2566,8 @@ def test_rename_sanity():
         }).index)
 
     tm.assert_index_equal(
-        ray_df.rename(index=str.upper).index, df.rename(index=str.upper).index)
+        ray_df.rename(index=str.upper).index,
+        df.rename(index=str.upper).index)
 
     # have to pass something
     pytest.raises(TypeError, ray_df.rename)
@@ -3145,8 +3145,8 @@ def test_update():
     df = pd.DataFrame([[1.5, np.nan, 3.], [1.5, np.nan, 3.], [1.5, np.nan, 3],
                        [1.5, np.nan, 3]])
 
-    other = pd.DataFrame(
-        [[3.6, 2., np.nan], [np.nan, np.nan, 7]], index=[1, 3])
+    other = pd.DataFrame([[3.6, 2., np.nan], [np.nan, np.nan, 7]],
+                         index=[1, 3])
 
     df.update(other)
 

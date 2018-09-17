@@ -199,8 +199,8 @@ class _IndexMetadata(object):
         return assignments_df
 
     def partition_series(self, partition):
-        return self[self._coord_df['partition'] == partition,
-                    'index_within_partition']
+        return self[self._coord_df['partition'] ==
+                    partition, 'index_within_partition']
 
     def __len__(self):
         return int(sum(self._lengths))

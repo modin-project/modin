@@ -315,8 +315,9 @@ class _Location_Indexer_Base(object):
                 row_idx = row_data['index_within_partition']
                 col_idx = col_data['index_within_partition']
 
-                item_to_write = item[row_item_index:row_item_index + row_len,
-                                     col_item_index:col_item_index + col_len]
+                item_to_write = item[row_item_index:row_item_index +
+                                     row_len, col_item_index:col_item_index +
+                                     col_len]
 
                 result_oid = writer.remote(block_oid, row_idx, col_idx,
                                            item_to_write)
@@ -396,15 +397,15 @@ class _Loc_Indexer(_Location_Indexer_Base):
         ]])
         nan_blks = nan_blks.T if not row_based_bool else nan_blks
 
-        self.block_oids = np.concatenate(
-            [self.block_oids, nan_blks], axis=0 if row_based_bool else 1)
+        self.block_oids = np.concatenate([self.block_oids, nan_blks],
+                                         axis=0 if row_based_bool else 1)
 
         # 3. Prepare metadata to return
         nan_coord_df = pandas.DataFrame(data=[
             {
                 '': name,
-                'partition': blk_part_n_row
-                if row_based_bool else blk_part_n_col,
+                'partition':
+                blk_part_n_row if row_based_bool else blk_part_n_col,
                 'index_within_partition': i
             } for name, i in zip(nan_labels, np.arange(num_nan_labels))
         ]).set_index('')

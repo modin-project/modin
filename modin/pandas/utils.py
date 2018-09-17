@@ -303,9 +303,8 @@ def _repartition_coord_df(old_coord_df, npartition):
         passed in.
     """
     length = len(old_coord_df)
-    chunksize = (len(old_coord_df) // npartition
-                 if len(old_coord_df) % npartition == 0 else
-                 len(old_coord_df) // npartition + 1)
+    chunksize = (len(old_coord_df) // npartition if len(old_coord_df) %
+                 npartition == 0 else len(old_coord_df) // npartition + 1)
 
     # genereate array([0, 0, 0, 1, 1, 1, 2])
     partitions = np.repeat(np.arange(npartition), chunksize)[:length]
@@ -314,12 +313,11 @@ def _repartition_coord_df(old_coord_df, npartition):
     final_n_partition = np.max(partitions)
     idx_in_part = np.tile(np.arange(chunksize), final_n_partition + 1)[:length]
 
-    final_df = pandas.DataFrame(
-        {
-            'partition': partitions,
-            'index_within_partition': idx_in_part
-        },
-        index=old_coord_df.index)
+    final_df = pandas.DataFrame({
+        'partition': partitions,
+        'index_within_partition': idx_in_part
+    },
+                                index=old_coord_df.index)
 
     return final_df
 
@@ -767,8 +765,8 @@ def extract_block(blk_partitions, row_lookup, col_lookup, col_name_suffix):
             block_df_oid = blk_partitions[row_idx, col_idx]
             block_df = ray.get(block_df_oid)
             chunk = block_df.iloc[row_df[apply_suffix(
-                'index_within_partition')], col_df[apply_suffix(
-                    'index_within_partition')]]
+                'index_within_partition'
+            )], col_df[apply_suffix('index_within_partition')]]
             this_column.append(chunk)
         df_columns.append(pandas.concat(this_column, axis=1))
     final_df = pandas.concat(df_columns)
