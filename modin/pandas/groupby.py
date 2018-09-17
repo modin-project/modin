@@ -26,10 +26,12 @@ class DataFrameGroupBy(object):
         self._columns = self._data_manager.columns
         self._by = by
         self._level = level
-        self._kwargs = {"sort": sort,
-                        "as_index": as_index,
-                        "group_keys": group_keys,
-                        "squeeze": squeeze}
+        self._kwargs = {
+            "sort": sort,
+            "as_index": as_index,
+            "group_keys": group_keys,
+            "squeeze": squeeze
+        }
 
     def __getattr__(self, key):
         """Afer regular attribute access, looks up the name in the columns
@@ -77,9 +79,17 @@ class DataFrameGroupBy(object):
         from .dataframe import DataFrame
 
         if self._axis == 0:
-            return ((k, DataFrame(data_manager=self._data_manager.getitem_row_array(self._index_grouped[k]))) for k, _ in self._keys_and_values)
+            return ((k,
+                     DataFrame(
+                         data_manager=self._data_manager.getitem_row_array(
+                             self._index_grouped[k])))
+                    for k, _ in self._keys_and_values)
         else:
-            return ((k, DataFrame(data_manager=self._data_manager.getitem_column_array(self._index_grouped[k]))) for k, _ in self._keys_and_values)
+            return ((k,
+                     DataFrame(
+                         data_manager=self._data_manager.getitem_column_array(
+                             self._index_grouped[k])))
+                    for k, _ in self._keys_and_values)
 
     @property
     def ngroups(self):
@@ -154,7 +164,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.cumsum(axis, *args, **kwargs))
 
     @property
     def indices(self):
@@ -174,7 +185,8 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
 
     def apply(self, func, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.apply(func, *args, **kwargs))
 
     @property
     def dtypes(self):
@@ -215,7 +227,8 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.prod(**kwargs))
 
     def std(self, ddof=1, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.std(ddof, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.std(ddof, *args, **kwargs))
 
     def aggregate(self, arg, *args, **kwargs):
         if self._axis != 0:
@@ -228,7 +241,8 @@ class DataFrameGroupBy(object):
                 "This requires Multi-level index to be implemented. "
                 "To contribute to Pandas on Ray, please visit "
                 "github.com/modin-project/modin.")
-        return self._apply_agg_function(lambda df: df.aggregate(arg, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.aggregate(arg, *args, **kwargs))
 
     def last(self, **kwargs):
         raise NotImplementedError(
@@ -258,7 +272,8 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.max(**kwargs))
 
     def var(self, ddof=1, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.var(ddof, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.var(ddof, *args, **kwargs))
 
     def get_group(self, name, obj=None):
         raise NotImplementedError(
@@ -304,7 +319,8 @@ class DataFrameGroupBy(object):
 
     def ngroup(self, ascending=True):
         index = self._index if not self._axis else self._columns
-        return pandas.Series(index=index).groupby(by=self._by, **self._kwargs).ngroup(ascending)
+        return pandas.Series(index=index).groupby(
+            by=self._by, **self._kwargs).ngroup(ascending)
 
     def nunique(self, dropna=True):
         return self._apply_agg_function(lambda df: df.nunique(dropna))
@@ -323,7 +339,8 @@ class DataFrameGroupBy(object):
             "github.com/modin-project/modin.")
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.cumprod(axis, *args, **kwargs))
 
     def __iter__(self):
         return self._iter.__iter__()
@@ -411,5 +428,6 @@ class DataFrameGroupBy(object):
         """
         assert callable(f), "\'{0}\' object is not callable".format(type(f))
         from .dataframe import DataFrame
-        new_manager = self._data_manager.groupby_agg(self._by, self._axis, f, self._kwargs, kwargs)
+        new_manager = self._data_manager.groupby_agg(self._by, self._axis, f,
+                                                     self._kwargs, kwargs)
         return DataFrame(data_manager=new_manager)

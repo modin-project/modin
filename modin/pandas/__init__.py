@@ -17,10 +17,9 @@ from .. import __git_revision__, __version__
 from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
-from .io import (
-    read_csv, read_parquet, read_json, read_html, read_clipboard, read_excel,
-    read_hdf, read_feather, read_msgpack, read_stata, read_sas, read_pickle,
-    read_sql)
+from .io import (read_csv, read_parquet, read_json, read_html, read_clipboard,
+                 read_excel, read_hdf, read_feather, read_msgpack, read_stata,
+                 read_sas, read_pickle, read_sql)
 from .reshape import get_dummies
 
 try:

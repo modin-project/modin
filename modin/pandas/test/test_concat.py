@@ -68,18 +68,20 @@ def test_ray_concat():
     assert ray_df_equals_pandas(
         pd.concat([ray_df, ray_df2]), pandas.concat([df, df2]))
 
+
 def test_ray_concat_with_series():
     df, df2 = generate_dfs()
     ray_df, ray_df2 = from_pandas(df), from_pandas(df2)
-    pandas_series = pandas.Series([1,2,3,4], name="new_col")
+    pandas_series = pandas.Series([1, 2, 3, 4], name="new_col")
 
     assert ray_df_equals_pandas(
-        pd.concat([ray_df, ray_df2, pandas_series], axis=0), pandas.concat([df,
-            df2, pandas_series], axis=0))
+        pd.concat([ray_df, ray_df2, pandas_series], axis=0),
+        pandas.concat([df, df2, pandas_series], axis=0))
 
     assert ray_df_equals_pandas(
-        pd.concat([ray_df, ray_df2, pandas_series], axis=1), pandas.concat([df,
-            df2, pandas_series], axis=1))
+        pd.concat([ray_df, ray_df2, pandas_series], axis=1),
+        pandas.concat([df, df2, pandas_series], axis=1))
+
 
 def test_ray_concat_on_index():
     df, df2 = generate_dfs()

@@ -9,7 +9,9 @@ class PartitionedIndex(object):
 
     def _get_partition_lengths(self):
         if self._index_lengths_cache is None:
-            self._index_lengths_cache = [obj.apply(len).get() for obj in self.index_partitions[: 0]]
+            self._index_lengths_cache = [
+                obj.apply(len).get() for obj in self.index_partitions[:0]
+            ]
         return self._index_lengths_cache
 
     def _set_partition_lengths(self, new_value):
@@ -23,7 +25,5 @@ class PartitionedIndex(object):
 
 
 class RayPartitionedIndex(PartitionedIndex):
-
     def __init__(self, index_partitions):
         self.index_partitions = index_partitions
-

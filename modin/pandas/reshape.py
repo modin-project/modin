@@ -51,10 +51,11 @@ def get_dummies(data,
     elif is_list_like(data):
         df = DataFrame(data)
 
-    new_manager = df._data_manager.get_dummies(columns,
-                                               prefix=prefix,
-                                               prefix_sep=prefix_sep,
-                                               dummy_na=dummy_na,
-                                               drop_first=drop_first)
+    new_manager = df._data_manager.get_dummies(
+        columns,
+        prefix=prefix,
+        prefix_sep=prefix_sep,
+        dummy_na=dummy_na,
+        drop_first=drop_first)
 
     return DataFrame(data_manager=new_manager)

@@ -10,7 +10,8 @@ from pandas.core.dtypes.common import (_get_dtype_from_object, is_bool_dtype,
                                        is_list_like, is_numeric_dtype,
                                        is_timedelta64_dtype)
 from pandas.core.index import _ensure_index_from_sequences
-from pandas.core.indexing import (check_bool_indexer, convert_to_index_sliceable)
+from pandas.core.indexing import (check_bool_indexer,
+                                  convert_to_index_sliceable)
 from pandas.util._validators import validate_bool_kwarg
 
 import itertools
@@ -119,7 +120,9 @@ class DataFrame(object):
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
-            return result.rsplit("\n\n", 1)[0] + "\n\n[{0} rows x {1} columns]".format(len(self.index), len(self.columns))
+            return result.rsplit("\n\n",
+                                 1)[0] + "\n\n[{0} rows x {1} columns]".format(
+                                     len(self.index), len(self.columns))
         else:
             return result
 
@@ -139,7 +142,9 @@ class DataFrame(object):
         result = self._build_repr_df(num_rows, num_cols)._repr_html_()
         if len(self.index) > num_rows or len(self.columns) > num_cols:
             # We split so that we insert our correct dataframe dimensions.
-            return result.split("<p>")[0] + "<p>{0} rows x {1} columns</p>\n</div>".format(len(self.index), len(self.columns))
+            return result.split(
+                "<p>")[0] + "<p>{0} rows x {1} columns</p>\n</div>".format(
+                    len(self.index), len(self.columns))
         else:
             return result
 
@@ -228,8 +233,7 @@ class DataFrame(object):
         # The ftypes are common across all partitions.
         # The first partition will be enough.
         dtypes = self.dtypes.copy()
-        ftypes = ["{0}:dense".format(str(dtype)) 
-                for dtype in dtypes.values]
+        ftypes = ["{0}:dense".format(str(dtype)) for dtype in dtypes.values]
         result = pandas.Series(ftypes, index=self.columns)
         return result
 
@@ -384,7 +388,8 @@ class DataFrame(object):
         Returns:
             The sum of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.sum(
             axis=axis,
@@ -457,7 +462,8 @@ class DataFrame(object):
         Returns:
             A new DataFrame transposed from this DataFrame.
         """
-        return DataFrame(data_manager=self._data_manager.transpose(*args, **kwargs))
+        return DataFrame(
+            data_manager=self._data_manager.transpose(*args, **kwargs))
 
     T = property(transpose)
 
@@ -519,7 +525,8 @@ class DataFrame(object):
                 if check.any():
                     raise KeyError(list(np.compress(check, subset)))
 
-        new_manager = self._data_manager.dropna(axis=axis, how=how, thresh=thresh, subset=subset)
+        new_manager = self._data_manager.dropna(
+            axis=axis, how=how, thresh=thresh, subset=subset)
 
         if not inplace:
             return DataFrame(data_manager=new_manager)
@@ -544,10 +551,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.add(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.add(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def agg(self, func, axis=0, *args, **kwargs):
@@ -634,7 +639,8 @@ class DataFrame(object):
             If axis=None or axis=0, this call applies df.all(axis=1)
                 to the transpose of df.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.all(
             axis=axis,
@@ -651,7 +657,8 @@ class DataFrame(object):
             If axis=None or axis=0, this call applies on the column partitions,
                 otherwise operates on row partitions
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.any(
             axis=axis,
@@ -686,7 +693,8 @@ class DataFrame(object):
                 index = pandas.Index([other.name], name=self.index.name)
 
             # Create a Modin DataFrame from this Series for ease of development
-            other = DataFrame(pandas.DataFrame(other).T, index=index)._data_manager
+            other = DataFrame(
+                pandas.DataFrame(other).T, index=index)._data_manager
         elif isinstance(other, list):
             if not isinstance(other[0], DataFrame):
                 other = pandas.DataFrame(other)
@@ -703,11 +711,14 @@ class DataFrame(object):
         # We also do this first to ensure that we don't waste compute/memory.
         if verify_integrity and not ignore_index:
             appended_index = self.index.append(other.index)
-            is_valid = next((False for idx in appended_index.duplicated() if idx), True)
+            is_valid = next(
+                (False for idx in appended_index.duplicated() if idx), True)
             if not is_valid:
-                raise ValueError("Indexes have overlapping values: {}".format(appended_index[appended_index.duplicated()]))
+                raise ValueError("Indexes have overlapping values: {}".format(
+                    appended_index[appended_index.duplicated()]))
 
-        data_manager = self._data_manager.concat(0, other, ignore_index=ignore_index)
+        data_manager = self._data_manager.concat(
+            0, other, ignore_index=ignore_index)
         return DataFrame(data_manager=data_manager)
 
     def apply(self,
@@ -810,7 +821,8 @@ class DataFrame(object):
             for column in self.columns:
                 col_dtypes[column] = dtype
 
-        new_data_manager = self._data_manager.astype(col_dtypes, errors, **kwargs)
+        new_data_manager = self._data_manager.astype(col_dtypes, errors,
+                                                     **kwargs)
         if copy:
             return DataFrame(data_manager=new_data_manager)
         else:
@@ -946,8 +958,10 @@ class DataFrame(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return self._data_manager.count(axis=axis, level=level, numeric_only=numeric_only)
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
+        return self._data_manager.count(
+            axis=axis, level=level, numeric_only=numeric_only)
 
     def cov(self, min_periods=None):
         raise NotImplementedError(
@@ -964,8 +978,11 @@ class DataFrame(object):
         Returns:
             The cumulative maximum of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return DataFrame(data_manager=self._data_manager.cummax(axis=axis, skipna=skipna, **kwargs))
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
+        return DataFrame(
+            data_manager=self._data_manager.cummax(
+                axis=axis, skipna=skipna, **kwargs))
 
     def cummin(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative minimum across the DataFrame.
@@ -977,8 +994,11 @@ class DataFrame(object):
         Returns:
             The cumulative minimum of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return DataFrame(data_manager=self._data_manager.cummin(axis=axis, skipna=skipna, **kwargs))
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
+        return DataFrame(
+            data_manager=self._data_manager.cummin(
+                axis=axis, skipna=skipna, **kwargs))
 
     def cumprod(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative product across the DataFrame.
@@ -990,8 +1010,11 @@ class DataFrame(object):
         Returns:
             The cumulative product of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return DataFrame(data_manager=self._data_manager.cumprod(axis=axis, skipna=skipna, **kwargs))
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
+        return DataFrame(
+            data_manager=self._data_manager.cumprod(
+                axis=axis, skipna=skipna, **kwargs))
 
     def cumsum(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative sum across the DataFrame.
@@ -1003,8 +1026,11 @@ class DataFrame(object):
         Returns:
             The cumulative sum of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return DataFrame(data_manager=self._data_manager.cumsum(axis=axis, skipna=skipna, **kwargs))
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
+        return DataFrame(
+            data_manager=self._data_manager.cumsum(
+                axis=axis, skipna=skipna, **kwargs))
 
     def describe(self, percentiles=None, include=None, exclude=None):
         """
@@ -1027,12 +1053,15 @@ class DataFrame(object):
         if exclude is None:
             exclude = "object"
         elif "object" not in include:
-            exclude = ([exclude] + "object") if isinstance(exclude, str) else list(exclude) + "object"
+            exclude = ([exclude] + "object") if isinstance(
+                exclude, str) else list(exclude) + "object"
 
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
 
-        return DataFrame(data_manager=self._data_manager.describe(percentiles=percentiles, include=include, exclude=exclude))
+        return DataFrame(
+            data_manager=self._data_manager.describe(
+                percentiles=percentiles, include=include, exclude=exclude))
 
     def diff(self, periods=1, axis=0):
         """Finds the difference between elements on the axis requested
@@ -1044,7 +1073,8 @@ class DataFrame(object):
         Returns:
             DataFrame with the diff applied
         """
-        return DataFrame(data_manager=self._data_manager.diff(periods=periods, axis=axis))
+        return DataFrame(
+            data_manager=self._data_manager.diff(periods=periods, axis=axis))
 
     def div(self, other, axis='columns', level=None, fill_value=None):
         """Divides this DataFrame against another DataFrame/Series/scalar.
@@ -1063,10 +1093,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.div(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.div(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def divide(self, other, axis='columns', level=None, fill_value=None):
@@ -1135,11 +1163,16 @@ class DataFrame(object):
             if not is_list_like(axes["index"]):
                 axes["index"] = [axes["index"]]
             if errors == 'raise':
-                non_existant = [obj for obj in axes["index"] if obj not in self.index]
+                non_existant = [
+                    obj for obj in axes["index"] if obj not in self.index
+                ]
                 if len(non_existant):
-                    raise ValueError("labels {} not contained in axis".format(non_existant))
+                    raise ValueError(
+                        "labels {} not contained in axis".format(non_existant))
             else:
-                axes["index"] = [obj for obj in axes["index"] if obj in self.index]
+                axes["index"] = [
+                    obj for obj in axes["index"] if obj in self.index
+                ]
                 # If the length is zero, we will just do nothing
                 if not len(axes["index"]):
                     axes["index"] = None
@@ -1150,16 +1183,22 @@ class DataFrame(object):
             if not is_list_like(axes["columns"]):
                 axes["columns"] = [axes["columns"]]
             if errors == 'raise':
-                non_existant = [obj for obj in axes["columns"] if obj not in self.columns]
+                non_existant = [
+                    obj for obj in axes["columns"] if obj not in self.columns
+                ]
                 if len(non_existant):
-                    raise ValueError("labels {} not contained in axis".format(non_existant))
+                    raise ValueError(
+                        "labels {} not contained in axis".format(non_existant))
             else:
-                axes["columns"] = [obj for obj in axes["columns"] if obj in self.columns]
+                axes["columns"] = [
+                    obj for obj in axes["columns"] if obj in self.columns
+                ]
                 # If the length is zero, we will just do nothing
                 if not len(axes["columns"]):
                     axes["columns"] = None
 
-        new_manager = self._data_manager.drop(index=axes["index"], columns=axes["columns"])
+        new_manager = self._data_manager.drop(
+            index=axes["index"], columns=axes["columns"])
 
         if inplace:
             self._update_inplace(new_manager=new_manager)
@@ -1192,9 +1231,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.eq(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.eq(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def equals(self, other):
@@ -1370,7 +1408,14 @@ class DataFrame(object):
         if isinstance(value, pandas.Series):
             raise NotImplementedError("value as a Series not yet supported.")
 
-        new_manager = self._data_manager.fillna(value=value, method=method, axis=axis, inplace=False, limit=limit, downcast=downcast, **kwargs)
+        new_manager = self._data_manager.fillna(
+            value=value,
+            method=method,
+            axis=axis,
+            inplace=False,
+            limit=limit,
+            downcast=downcast,
+            **kwargs)
 
         if inplace:
             self._update_inplace(new_manager=new_manager)
@@ -1452,10 +1497,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.floordiv(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.floordiv(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     @classmethod
@@ -1512,9 +1555,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.ge(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.ge(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def get(self, key, default=None):
@@ -1580,9 +1622,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.gt(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.gt(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def head(self, n=5):
@@ -1658,12 +1699,12 @@ class DataFrame(object):
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
 
-    def info(self, 
-            verbose=None,
-            buf=None,
-            max_cols=None,
-            memory_usage=None,
-            null_counts=None):
+    def info(self,
+             verbose=None,
+             buf=None,
+             max_cols=None,
+             memory_usage=None,
+             null_counts=None):
         """Print a concise summary of a DataFrame, which includes the index
         dtype and column dtypes, non-null values and memory usage.
 
@@ -1710,14 +1751,15 @@ class DataFrame(object):
                 null_counts = False
 
         # Determine if actually verbose
-        actually_verbose = True if verbose and max_cols > len(columns) else False
+        actually_verbose = True if verbose and max_cols > len(
+            columns) else False
 
         if type(memory_usage) == str and memory_usage == 'deep':
             memory_usage_deep = True
         else:
             memory_usage_deep = False
 
-        # Start putting together output 
+        # Start putting together output
         # Class denoted in info() output
         class_string = '<class \'modin.pandas.dataframe.DataFrame\'>\n'
 
@@ -1727,7 +1769,8 @@ class DataFrame(object):
         if null_counts:
             counts = self._data_manager.count()
         if memory_usage:
-            memory_usage_data = self._data_manager.memory_usage(deep=memory_usage_deep, index=True)
+            memory_usage_data = self._data_manager.memory_usage(
+                deep=memory_usage_deep, index=True)
 
         if actually_verbose:
             # Create string for verbose output
@@ -1753,14 +1796,17 @@ class DataFrame(object):
         memory_string = ''
         if memory_usage:
             if memory_usage_deep:
-                memory_string = 'memory usage: {0} bytes'.format(memory_usage_data)
+                memory_string = 'memory usage: {0} bytes'.format(
+                    memory_usage_data)
             else:
-                memory_string = 'memory usage: {0}+ bytes'.format(memory_usage_data)
+                memory_string = 'memory usage: {0}+ bytes'.format(
+                    memory_usage_data)
 
         # Combine all the components of the info() output
         result = ''.join([
-            class_string, index_string, col_string, dtypes_string, memory_string 
-            ])
+            class_string, index_string, col_string, dtypes_string,
+            memory_string
+        ])
 
         # Write to specified output buffer
         buf.write(result)
@@ -1822,7 +1868,8 @@ class DataFrame(object):
             df.index = [next(index_iter)]
             return df.iterrows()
 
-        partition_iterator = PartitionIterator(self._data_manager, 0, iterrow_builder)
+        partition_iterator = PartitionIterator(self._data_manager, 0,
+                                               iterrow_builder)
 
         for v in partition_iterator:
             yield v
@@ -1845,7 +1892,8 @@ class DataFrame(object):
             df.index = self.index
             return df.items()
 
-        partition_iterator = PartitionIterator(self._data_manager, 1, items_builder)
+        partition_iterator = PartitionIterator(self._data_manager, 1,
+                                               items_builder)
 
         for v in partition_iterator:
             yield v
@@ -1884,7 +1932,8 @@ class DataFrame(object):
             df.index = [next(index_iter)]
             return df.itertuples(index=index, name=name)
 
-        partition_iterator = PartitionIterator(self._data_manager, 0, itertuples_builder)
+        partition_iterator = PartitionIterator(self._data_manager, 0,
+                                               itertuples_builder)
 
         for v in partition_iterator:
             yield v
@@ -1922,9 +1971,18 @@ class DataFrame(object):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
             # would otherwise require a lot more logic.
-            pandas.DataFrame(columns=self.columns).join(pandas.DataFrame(columns=other.columns), lsuffix=lsuffix, rsuffix=rsuffix).columns
+            pandas.DataFrame(columns=self.columns).join(
+                pandas.DataFrame(columns=other.columns),
+                lsuffix=lsuffix,
+                rsuffix=rsuffix).columns
 
-            return DataFrame(data_manager=self._data_manager.join(other._data_manager, how=how, lsuffix=lsuffix, rsuffix=rsuffix, sort=sort))
+            return DataFrame(
+                data_manager=self._data_manager.join(
+                    other._data_manager,
+                    how=how,
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                    sort=sort))
         else:
             # This constraint carried over from Pandas.
             if on is not None:
@@ -1937,7 +1995,13 @@ class DataFrame(object):
                 lsuffix=lsuffix,
                 rsuffix=rsuffix).columns
 
-            return DataFrame(data_manager=self._data_manager.join([obj._data_manager for obj in other], how=how, lsuffix=lsuffix, rsuffix=rsuffix, sort=sort))
+            return DataFrame(
+                data_manager=self._data_manager.join(
+                    [obj._data_manager for obj in other],
+                    how=how,
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                    sort=sort))
 
     def kurt(self,
              axis=None,
@@ -1988,9 +2052,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.le(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.le(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def lookup(self, row_labels, col_labels):
@@ -2014,9 +2077,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.lt(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.lt(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def mad(self, axis=None, skipna=None, level=None):
@@ -2052,7 +2114,8 @@ class DataFrame(object):
         Returns:
             The max of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.max(
             axis=axis,
@@ -2076,7 +2139,8 @@ class DataFrame(object):
         Returns:
             The mean of the DataFrame. (Pandas series)
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.mean(
             axis=axis,
@@ -2100,7 +2164,8 @@ class DataFrame(object):
         Returns:
             The median of the DataFrame. (Pandas series)
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
         return self._data_manager.median(
             axis=axis,
             skipna=skipna,
@@ -2187,7 +2252,12 @@ class DataFrame(object):
                 "github.com/modin-project/modin.")
 
         if left_index and right_index:
-            return self.join(right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort)
+            return self.join(
+                right,
+                how=how,
+                lsuffix=suffixes[0],
+                rsuffix=suffixes[1],
+                sort=sort)
 
     def min(self,
             axis=None,
@@ -2204,7 +2274,8 @@ class DataFrame(object):
         Returns:
             The min of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.min(
             axis=axis,
@@ -2230,10 +2301,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.mod(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.mod(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def mode(self, axis=0, numeric_only=False):
@@ -2248,7 +2317,9 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
 
-        return DataFrame(data_manager=self._data_manager.mode(axis=axis, numeric_only=numeric_only))
+        return DataFrame(
+            data_manager=self._data_manager.mode(
+                axis=axis, numeric_only=numeric_only))
 
     def mul(self, other, axis='columns', level=None, fill_value=None):
         """Multiplies this DataFrame against another DataFrame/Series/scalar.
@@ -2267,10 +2338,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.mul(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.mul(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def multiply(self, other, axis='columns', level=None, fill_value=None):
@@ -2303,9 +2372,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.ne(other=other,
-                                             axis=axis,
-                                             level=level)
+        new_manager = self._data_manager.ne(
+            other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def nlargest(self, n, columns, keep='first'):
@@ -2456,10 +2524,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.pow(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.pow(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def prod(self,
@@ -2481,7 +2547,8 @@ class DataFrame(object):
         Returns:
             prod : Series or DataFrame (if level specified)
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.prod(
             axis=axis,
@@ -2572,10 +2639,19 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
 
         if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
-            return DataFrame(data_manager=self._data_manager.quantile_for_list_of_values(q=q, axis=axis, numeric_only=numeric_only, interpolation=interpolation))
+            return DataFrame(
+                data_manager=self._data_manager.quantile_for_list_of_values(
+                    q=q,
+                    axis=axis,
+                    numeric_only=numeric_only,
+                    interpolation=interpolation))
 
         else:
-            return self._data_manager.quantile_for_single_value(q=q, axis=axis, numeric_only=numeric_only, interpolation=interpolation)
+            return self._data_manager.quantile_for_single_value(
+                q=q,
+                axis=axis,
+                numeric_only=numeric_only,
+                interpolation=interpolation)
 
     def query(self, expr, inplace=False, **kwargs):
         """Queries the Dataframe with a boolean expression
@@ -2626,13 +2702,14 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
 
-        return DataFrame(data_manager=self._data_manager.rank(
-            axis=axis,
-            method=method,
-            numeric_only=numeric_only,
-            na_option=na_option,
-            ascending=ascending,
-            pct=pct))
+        return DataFrame(
+            data_manager=self._data_manager.rank(
+                axis=axis,
+                method=method,
+                numeric_only=numeric_only,
+                na_option=na_option,
+                ascending=ascending,
+                pct=pct))
 
     def rdiv(self, other, axis='columns', level=None, fill_value=None):
         """Div this DataFrame against another DataFrame/Series/scalar.
@@ -2651,10 +2728,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.rdiv(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.rdiv(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def reindex(self,
@@ -2682,12 +2757,24 @@ class DataFrame(object):
             columns = labels
 
         if index is not None:
-            new_manager = self._data_manager.reindex(0, index, method=method, fill_value=fill_value, limit=limit, tolerance=tolerance)
+            new_manager = self._data_manager.reindex(
+                0,
+                index,
+                method=method,
+                fill_value=fill_value,
+                limit=limit,
+                tolerance=tolerance)
         else:
             new_manager = self._data_manager
 
         if columns is not None:
-            final_manager = new_manager.reindex(1, columns, method=method, fill_value=fill_value, limit=limit, tolerance=tolerance)
+            final_manager = new_manager.reindex(
+                1,
+                columns,
+                method=method,
+                fill_value=fill_value,
+                limit=limit,
+                tolerance=tolerance)
         else:
             final_manager = new_manager
 
@@ -2905,7 +2992,8 @@ class DataFrame(object):
         Returns:
              A new DataFrame.
         """
-        return DataFrame(data_manager=self._data_manager.round(decimals=decimals, **kwargs))
+        return DataFrame(
+            data_manager=self._data_manager.round(decimals=decimals, **kwargs))
 
     def rpow(self, other, axis='columns', level=None, fill_value=None):
         """Pow this DataFrame against another DataFrame/Series/scalar.
@@ -2924,13 +3012,10 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.rpow(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.rpow(
+            other=other, axis=axis, level=level, fill_value=fill_value)
 
         return self._create_dataframe_from_manager(new_manager)
-
 
     def rsub(self, other, axis='columns', level=None, fill_value=None):
         """Subtract a DataFrame/Series/scalar from this DataFrame.
@@ -2949,10 +3034,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.rsub(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.rsub(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def rtruediv(self, other, axis='columns', level=None, fill_value=None):
@@ -3091,7 +3174,7 @@ class DataFrame(object):
             # choose random numbers and then get corresponding labels from
             # chosen axis
             sample_indices = random_num_gen.choice(
-                    np.arange(0, axis_length), size=n, replace=replace)
+                np.arange(0, axis_length), size=n, replace=replace)
             samples = axis_labels[sample_indices]
         else:
             # randomly select labels from chosen axis
@@ -3398,12 +3481,16 @@ class DataFrame(object):
         # TODO create a more efficient way to sort
         if axis == 0:
             broadcast_value_dict = {col: self[col] for col in by}
-            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
+            broadcast_values = pandas.DataFrame(
+                broadcast_value_dict, index=self.index)
 
-            new_index = broadcast_values.sort_values(by=by, axis=axis, ascending=ascending, kind=kind).index
+            new_index = broadcast_values.sort_values(
+                by=by, axis=axis, ascending=ascending, kind=kind).index
             return self.reindex(index=new_index)
         else:
-            broadcast_value_list = [to_pandas(self[row::len(self.index)]) for row in by]
+            broadcast_value_list = [
+                to_pandas(self[row::len(self.index)]) for row in by
+            ]
 
             index_builder = list(zip(broadcast_value_list, by))
 
@@ -3411,7 +3498,8 @@ class DataFrame(object):
                 pandas.concat([row for row, idx in index_builder], copy=False)
 
             broadcast_values.columns = self.columns
-            new_columns = broadcast_values.sort_values(by=by, axis=axis, ascending=ascending, kind=kind).columns
+            new_columns = broadcast_values.sort_values(
+                by=by, axis=axis, ascending=ascending, kind=kind).columns
 
             return self.reindex(columns=new_columns)
 
@@ -3452,7 +3540,8 @@ class DataFrame(object):
         Returns:
             The std of the DataFrame (Pandas Series)
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.std(
             axis=axis,
@@ -3479,10 +3568,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.sub(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.sub(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def subtract(self, other, axis='columns', level=None, fill_value=None):
@@ -3864,10 +3951,8 @@ class DataFrame(object):
                                       "in Pandas on Ray")
 
         other = self._validate_other(other, axis)
-        new_manager = self._data_manager.truediv(other=other,
-                                             axis=axis,
-                                             level=level,
-                                             fill_value=fill_value)
+        new_manager = self._data_manager.truediv(
+            other=other, axis=axis, level=level, fill_value=fill_value)
         return self._create_dataframe_from_manager(new_manager)
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
@@ -3924,7 +4009,12 @@ class DataFrame(object):
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
 
-        data_manager = self._data_manager.update(other._data_manager, join=join, overwrite=overwrite, filter_func=filter_func, raise_conflict=raise_conflict)
+        data_manager = self._data_manager.update(
+            other._data_manager,
+            join=join,
+            overwrite=overwrite,
+            filter_func=filter_func,
+            raise_conflict=raise_conflict)
         self._update_inplace(new_manager=data_manager)
 
     def var(self,
@@ -3944,7 +4034,8 @@ class DataFrame(object):
         Returns:
             The variance of the DataFrame.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        axis = pandas.DataFrame()._get_axis_number(
+            axis) if axis is not None else 0
 
         return self._data_manager.var(
             axis=axis,
@@ -4012,7 +4103,8 @@ class DataFrame(object):
             index = self.index if not axis else self.columns
             other = pandas.Series(other, index=index)
 
-        data_manager = self._data_manager.where(cond._data_manager, other, axis=axis, level=level)
+        data_manager = self._data_manager.where(
+            cond._data_manager, other, axis=axis, level=level)
         if inplace:
             self._update_inplace(new_manager=data_manager)
         else:
@@ -4044,7 +4136,8 @@ class DataFrame(object):
 
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
-        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        indexer = convert_to_index_sliceable(
+            pandas.DataFrame(index=self.index), key)
         if indexer is not None:
             return self._getitem_slice(indexer)
 
@@ -4081,15 +4174,18 @@ class DataFrame(object):
             # We convert here because the data_manager assumes it is a list of
             # indices. This greatly decreases the complexity of the code.
             key = self.index[key]
-            return DataFrame(data_manager=self._data_manager.getitem_row_array(key))
+            return DataFrame(
+                data_manager=self._data_manager.getitem_row_array(key))
         else:
-            return DataFrame(data_manager=self._data_manager.getitem_column_array(key))
+            return DataFrame(
+                data_manager=self._data_manager.getitem_column_array(key))
 
     def _getitem_slice(self, key):
         # We convert here because the data_manager assumes it is a list of
         # indices. This greatly decreases the complexity of the code.
         key = self.index[key]
-        return DataFrame(data_manager=self._data_manager.getitem_row_array(key))
+        return DataFrame(
+            data_manager=self._data_manager.getitem_row_array(key))
 
     def __getattr__(self, key):
         """After regular attribute access, looks up the name in the columns
@@ -4451,7 +4547,6 @@ class DataFrame(object):
                         "Unable to coerce to Series, length must be {0}: "
                         "given {1}".format(len(self.columns), len(other)))
         return other
-
 
 
 @ray.remote
