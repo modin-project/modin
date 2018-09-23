@@ -90,7 +90,9 @@ class RayAxisPartition(AxisPartition):
         if other_axis_partition is not None:
             return [RayRemotePartition(obj) for obj in deploy_ray_func_between_two_axis_partitions._submit(args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs) + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks), num_return_vals=num_splits)]
 
-        return [RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(args=(self.axis, func, num_splits, kwargs, *self.list_of_blocks), num_return_vals=num_splits)]
+        args = [self.axis, func, num_splits, kwargs]
+        args.extend(self.list_of_blocks)
+        return [RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)]
 
     def shuffle(self, func, num_splits=None, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
@@ -105,7 +107,10 @@ class RayAxisPartition(AxisPartition):
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
-        return [RayRemotePartition(obj) for obj in deploy_ray_shuffle_func._submit(args=(self.axis, func, num_splits, kwargs, *self.list_of_blocks), num_return_vals=num_splits)]
+        args = [self.axis, func, num_splits, kwargs]
+        args.extend(self.list_of_blocks)
+        return [RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)]
+
 
 
 class RayColumnPartition(RayAxisPartition):

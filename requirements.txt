@@ -1,3 +1,4 @@
 pandas==0.22
 ray==0.5.2
 strip_hints
+typing
