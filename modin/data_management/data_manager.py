@@ -125,12 +125,12 @@ class PandasDataManager(object):
     # Please be careful when changing these!
     def _prepare_method(self, pandas_func, **kwargs):
         """Prepares methods given various metadata.
+        Args:
+            pandas_func: The function to prepare.
 
-        :param pandas_func:
-        :param kwargs:
-        :return:
+        Returns
+            Helper function which handles potential transpose.
         """
-
         if self._is_transposed:
             def helper(df, internal_indices=[]):
                 return pandas_func(df.T, **kwargs)
@@ -141,9 +141,6 @@ class PandasDataManager(object):
 
     def numeric_columns(self):
         """Returns the numeric columns of the Manager.
-        
-        Args:
-            axis: The axis to extract the indices from.
 
         Returns:
             List of index names.
@@ -156,7 +153,7 @@ class PandasDataManager(object):
 
     def numeric_function_clean_dataframe(self, axis):
         """Preprocesses numeric functions to clean dataframe and pick numeric indices.
-        
+
         Args:
             axis: '0' if columns and '1' if rows.
 
@@ -214,10 +211,13 @@ class PandasDataManager(object):
     def _join_index_objects(self, axis, other_index, how, sort=True):
         """Joins a pair of index objects (columns or rows) by a given strategy.
 
-        :param other_index:
-        :param axis: The axis index object to join (0 for columns, 1 for index)
-        :param how:
-        :return:
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other_index: The other_index to join on.
+            how: The type of join to join to make (e.g. right, left).
+
+        Returns:
+            Joined indices.
         """
         if isinstance(other_index, list):
             joined_obj = self.columns if not axis else self.index
@@ -232,12 +232,29 @@ class PandasDataManager(object):
             return self.index.join(other_index, how=how, sort=sort)
 
     def join(self, other, **kwargs):
+        """Joins a list or two objects together
+
+        Args:
+            other: The other object(s) to join on.
+
+        Returns:
+            Joined objects.
+        """
         if isinstance(other, list):
             return self._join_list_of_managers(other, **kwargs)
         else:
             return self._join_data_manager(other, **kwargs)
 
     def concat(self, axis, other, **kwargs):
+        """Concatenates two objects together
+
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other: The other_index to concat with.
+
+        Returns:
+            Concatenated objects.
+        """
         return self._append_list_of_managers(other, axis, **kwargs)
 
     def _append_list_of_managers(self, others, axis, **kwargs):
@@ -336,8 +353,15 @@ class PandasDataManager(object):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
     def inter_manager_operations(self, other, how_to_join, func):
+        """Inter-data operations (e.g. add, sub)
 
+        Args:
+            other: The other Manager for the operation.
+            how_to_join: The type of join to join to make (e.g. right, outer).
 
+        Returns:
+            New DataManager with new data and index.
+        """
         assert isinstance(other, type(self)), \
             "Must have the same DataManager subclass to perform this operation"
 
@@ -366,7 +390,15 @@ class PandasDataManager(object):
         return self.__constructor__(new_data, joined_index, new_columns)
 
     def _inter_df_op_handler(self, func, other, **kwargs):
-        """Helper method for inter-DataFrame and scalar operations"""
+        """Helper method for inter-manager and scalar operations
+
+        Args:
+            func: The function to use on the Manager/scalar.
+            other: The other Manager/scalar.
+
+        Returns:
+            New DataManager with new data and index.
+        """
         axis = kwargs.get("axis", 0)
 
         if isinstance(other, type(self)):
@@ -375,75 +407,220 @@ class PandasDataManager(object):
             return self.scalar_operations(axis, other, lambda df: func(df, other, **kwargs))
 
     def add(self, other, **kwargs):
+        """Adds this manager with other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with added data and new index.
+        """
         # TODO: need to write a prepare_function for inter_df operations
         func = pandas.DataFrame.add
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def div(self, other, **kwargs):
+        """Divides this manager with other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with divided data and new index.
+        """
         func = pandas.DataFrame.div
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def eq(self, other, **kwargs):
+        """Compares equality (==) with other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.eq
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def floordiv(self, other, **kwargs):
+        """Floordivs this manager with other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with floordiv-ed data and index.
+        """
         func = pandas.DataFrame.floordiv
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def ge(self, other, **kwargs):
+        """Compares this manager >= than other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.ge
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def gt(self, other, **kwargs):
+        """Compares this manager > than other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.gt
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def le(self, other, **kwargs):
+        """Compares this manager < than other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.le
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def lt(self, other, **kwargs):
+        """Compares this manager <= than other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.lt
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def mod(self, other, **kwargs):
+        """Mods this manager against other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with mod-ed data and index.
+        """
         func = pandas.DataFrame.mod
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def mul(self, other, **kwargs):
+        """Multiplies this manager against other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with multiplied data and index.
+        """
         func = pandas.DataFrame.mul
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def ne(self, other, **kwargs):
+        """Compares this manager != to other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with compared data and index.
+        """
         func = pandas.DataFrame.ne
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def pow(self, other, **kwargs):
+        """Exponential power of this manager to other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with pow-ed data and index.
+        """
         func = pandas.DataFrame.pow
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def rdiv(self, other, **kwargs):
+        """Divides other object (manager or scalar) with this manager
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with divided data and new index.
+        """
         func = pandas.DataFrame.rdiv
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def rpow(self, other, **kwargs):
+        """Exponential power of other object (manager or scalar) to this manager
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with pow-ed data and new index.
+        """
         func = pandas.DataFrame.rpow
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def rsub(self, other, **kwargs):
+        """Subtracts other object (manager or scalar) from this manager
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with subtracted data and new index.
+        """
         func = pandas.DataFrame.rsub
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def sub(self, other, **kwargs):
+        """Subtracts this manager from other object (manager or scalar)
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with subtracted data and new index.
+        """
         func = pandas.DataFrame.sub
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def truediv(self, other, **kwargs):
+        """Divides this manager with other object (manager or scalar)
+           Functionally same as div
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with divided data and new index.
+        """
         func = pandas.DataFrame.truediv
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def update(self, other, **kwargs):
+        """Uses other manager to update corresponding values in this manager
+
+        Args:
+            other: The other manager.
+
+        Returns:
+            New DataManager with updated data and index.
+        """
         assert isinstance(other, type(self)), \
             "Must have the same DataManager subclass to perform this operation"
 
@@ -454,7 +631,14 @@ class PandasDataManager(object):
         return self._inter_df_op_handler(update_builder, other, **kwargs)
 
     def where(self, cond, other, **kwargs):
+        """Gets values from this manager where cond is true else from other
 
+        Args:
+            cond: Condition on which to evaluate values.
+
+        Returns:
+            New DataManager with updated data and index.
+        """
 
         assert isinstance(cond, type(self)), \
             "Must have the same DataManager subclass to perform this operation"
@@ -499,6 +683,16 @@ class PandasDataManager(object):
 
     # Single Manager scalar operations (e.g. add to scalar, list of scalars)
     def scalar_operations(self, axis, scalar, func):
+        """Handler for mapping scalar operations across a Manager
+
+        Args:
+            axis: The axis index object to execute the function on.
+            scalar: The scalar value to map.
+            func: The function to use on the Manager with the scalar.
+
+        Returns:
+            New DataManager with updated data and new index.
+        """
         if isinstance(scalar, list):
 
             new_data = self.map_across_full_axis(axis, func)
@@ -509,6 +703,15 @@ class PandasDataManager(object):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
+        """Fits a new index for this Manger
+
+        Args:
+            axis: The axis index object to target the reindex on.
+            labels: New labels to conform 'axis' on to.
+
+        Returns:
+            New DataManager with updated data and new index.
+        """
         # To reindex, we need a function that will be shipped to each of the
         # partitions.
         def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
@@ -542,7 +745,11 @@ class PandasDataManager(object):
         return self.__constructor__(new_data, new_index, new_columns)
 
     def reset_index(self, **kwargs):
+        """Removes all levels from index and sets a default level_0 index
 
+        Returns:
+            New DataManager with updated data and reset index.
+        """
         drop = kwargs.get("drop", False)
         new_index = pandas.RangeIndex(len(self.index))
 
@@ -572,7 +779,11 @@ class PandasDataManager(object):
     _is_transposed = 0
 
     def transpose(self, *args, **kwargs):
+        """Transposes this DataManager
 
+        Returns:
+            Transposed new DataManager.
+        """
         new_data = self.data.transpose(*args, **kwargs)
         # Switch the index and columns and transpose the
         new_manager = self.__constructor__(new_data, self.columns, self.index)
@@ -831,9 +1042,9 @@ class PandasDataManager(object):
     def full_axis_reduce(self, func, axis):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
-        Args: 
+        Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
-        
+
         Return:
             Pandas series containing the reduced data.
         """
@@ -852,7 +1063,7 @@ class PandasDataManager(object):
         Args:
             axis: 0 for columns and 1 for rows. Defaults to 0.
 
-        Return: 
+        Return:
             Pandas Series containing boolean values.
         """
         axis = kwargs.get("axis", 0)
@@ -864,7 +1075,7 @@ class PandasDataManager(object):
 
         Args:
             axis: 0 for columns and 1 for rows. Defaults to 0.
-            
+
         Return:
             Pandas Series containing boolean values.
         """
@@ -1011,7 +1222,7 @@ class PandasDataManager(object):
             axis: 0 for columns and 1 for rows. Defaults to 0.
             index: Index of the resulting series.
             pandas_result: Return the result as a Pandas Series instead of raw data.
-            
+
         Returns:
             Either a Pandas Series with index or BlockPartitions object.
         """
@@ -1037,7 +1248,7 @@ class PandasDataManager(object):
         """
         axis = 0
 
-        # Only describe numeric if there are numeric 
+        # Only describe numeric if there are numeric
         # Otherwise, describe all
         new_index = self.numeric_columns()
         if len(new_index) != 0:
@@ -1391,7 +1602,7 @@ class PandasDataManager(object):
             BlockPartitions containing the result of mapping func over axis on indices.
         """
         return self.data.apply_func_to_select_indices_along_full_axis(axis, func, indices, keep_remaining)
-        
+
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
