@@ -6,7 +6,7 @@ set -x
 
 # We need to install md5sum for miniconda installer on mac
 unamestr="$(uname)"
-if [["$unamestr" == "Darwin"]]
+if [[ "$unamestr" == "Darwin" ]]
 then
   brew install md5sha1sum
 fi
