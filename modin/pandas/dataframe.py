@@ -8,7 +8,7 @@ from pandas.compat import to_str, string_types, cPickle as pkl
 import pandas.core.common as com
 from pandas.core.dtypes.common import (_get_dtype_from_object, is_bool_dtype,
                                        is_list_like, is_numeric_dtype,
-                                       is_timedelta64_dtype)
+                                       is_datetime_or_timedelta_dtype, is_dtype_equal)
 from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import (check_bool_indexer,
                                   convert_to_index_sliceable)
@@ -631,7 +631,7 @@ class DataFrame(object):
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
 
-    def all(self, axis=None, bool_only=None, skipna=None, level=None,
+    def all(self, axis=0, bool_only=None, skipna=None, level=None,
             **kwargs):
         """Return whether all elements are True over requested axis
 
@@ -639,15 +639,21 @@ class DataFrame(object):
             If axis=None or axis=0, this call applies df.all(axis=1)
                 to the transpose of df.
         """
-        axis = pandas.DataFrame()._get_axis_number(
-            axis) if axis is not None else 0
+        if axis is not None:
+            axis = pandas.DataFrame()._get_axis_number(axis)
+        else:
+            axis = None
 
-        return self._data_manager.all(
+        result = self._data_manager.all(
             axis=axis,
             bool_only=bool_only,
             skipna=skipna,
             level=level,
             **kwargs)
+        if axis is not None:
+            return result
+        else:
+            return result.all()
 
     def any(self, axis=None, bool_only=None, skipna=None, level=None,
             **kwargs):
@@ -2611,26 +2617,27 @@ class DataFrame(object):
                     are the quantiles.
         """
 
-        def check_bad_dtype(t):
-            return t == np.dtype('O') or is_timedelta64_dtype(t)
+        def check_dtype(t):
+            return (is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t))
 
         if not numeric_only:
-            # check if there are any object columns
-            if all(check_bad_dtype(t) for t in self.dtypes):
+            # If not numeric_only and columns, then check all columns are either numeric, timestamp, or timedelta
+            if not axis and not all(check_dtype(t) for t in self.dtypes):
                 raise TypeError("can't multiply sequence by non-int of type "
                                 "'float'")
-            else:
-                if next((True for t in self.dtypes if check_bad_dtype(t)),
-                        False):
-                    dtype = next(t for t in self.dtypes if check_bad_dtype(t))
-                    raise ValueError(
-                        "Cannot compare type '{}' with type '{}'".format(
-                            type(dtype), float))
+
+            # If over rows, then make sure that all dtypes are equal for not numeric_only
+            elif axis:
+                for i in range(1, len(self.dtypes)):
+                    pre_dtype = self.dtypes[i-1]
+                    curr_dtype = self.dtypes[i]
+                    if not is_dtype_equal(pre_dtype, curr_dtype):
+                        raise TypeError("Cannot compare type '{0}' with type '{1}'".format(pre_dtype, curr_dtype))
         else:
             # Normally pandas returns this near the end of the quantile, but we
             # can't afford the overhead of running the entire operation before
             # we error.
-            if all(check_bad_dtype(t) for t in self.dtypes):
+            if not any(is_numeric_dtype(t) for t in self.dtypes):
                 raise ValueError("need at least one array to concatenate")
 
         # check that all qs are between 0 and 1
@@ -4452,7 +4459,7 @@ class DataFrame(object):
         """
         for t in self.dtypes:
             if not (is_bool_dtype(t) or is_numeric_dtype(t)
-                    or is_timedelta64_dtype(t)):
+                    or is_datetime_or_timedelta_dtype(t)):
                 raise TypeError(
                     "Unary negative expects numeric dtype, not {}".format(t))
 
