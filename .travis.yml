@@ -30,6 +30,7 @@ matrix:
 
 install:
   - ./.travis/install-dependencies.sh
+  - if [[ "$PYTHON" == "2.7" ]]; then python ./travis/strip-type-hints.py; fi
 
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
