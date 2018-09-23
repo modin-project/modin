@@ -3,36 +3,54 @@ set -e
 set -x
 
 
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE:-$0}")"; pwd)
+echo "PYTHON is $PYTHON"
 
-# We need to install md5sum for miniconda installer on mac
+platform="unknown"
 unamestr="$(uname)"
-if [[ "$unamestr" == "Darwin" ]]
-then
-  brew install md5sha1sum
+if [[ "$unamestr" == "Linux" ]]; then
+  echo "Platform is linux."
+  platform="linux"
+elif [[ "$unamestr" == "Darwin" ]]; then
+  echo "Platform is macosx."
+  platform="macosx"
+else
+  echo "Unrecognized platform."
+  exit 1
 fi
 
-if [[ "$PYTHON" == "2.7" ]]
-then
+if [[ "$PYTHON" == "2.7" ]] && [[ "$platform" == "linux" ]]; then
   wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh -nv
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
-  pip install strip-hints
-elif [[ "$PYTHON" == "3.6" ]] || [[ "$LINT" == "1" ]]
-then
+
+elif [[ "$PYTHON" == "3.6" ]] && [[ "$platform" == "linux" ]]; then
   wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
   conda install -y python==3.6.5
-elif [[ "$LINT" == "1" ]]
-then
+
+elif [[ "$PYTHON" == "2.7" ]] && [[ "$platform" == "macosx" ]]; then
+  wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O miniconda.sh -nv
+  bash miniconda.sh -b -p $HOME/miniconda
+  export PATH="$HOME/miniconda/bin:$PATH"
+
+elif [[ "$PYTHON" == "3.6" ]] && [[ "$platform" == "macosx" ]]; then
+  wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh -nv
+  bash miniconda.sh -b -p $HOME/miniconda
+  export PATH="$HOME/miniconda/bin:$PATH"
+  conda install -y python==3.6.5
+
+elif [[ "$LINT" == "1" ]]; then
   wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
-  conda install -y python==3.6.5 mypy
+  
 else
-  echo "Must set environment variable PYTHON or LINT"
+  echo "Unrecognized environment."
   exit 1
 fi
 
-pip install -r requirements.txt
+pip install -r -q requirements.txt
 pip install -q pytest flake8 flake8-comprehensions yapf feather-format lxml openpyxl xlrd numpy
+
