@@ -1413,6 +1413,11 @@ class PandasDataManager(object):
         return self.__constructor__(new_data, self.index, self.columns)
 
     def dropna(self, **kwargs):
+        """Returns a new DataManager with null values dropped along given axis.
+
+        Return:
+            a new DataManager
+        """
         axis = kwargs.get("axis", 0)
         subset = kwargs.get("subset")
         thresh = kwargs.get("thresh")
@@ -1454,13 +1459,20 @@ class PandasDataManager(object):
         return self.drop(index=rm_from_index, columns=rm_from_columns)
 
     def eval(self, expr, **kwargs):
+        """Returns a new DataManager with expr evaluated on columns.
 
+        Args:
+            expr: The string expression to evaluate.
+
+        Returns:
+            A new PandasDataManager with new columns after applying expr.
+        """
         inplace = kwargs.get("inplace", False)
 
         columns = self.index if self._is_transposed else self.columns
         index = self.columns if self._is_transposed else self.index
 
-        # Dun eval on columns to determine result type
+        # Make a copy of columns and eval on the copy to determine if result type is series or not
         columns_copy = pandas.DataFrame(columns=self.columns)
         columns_copy = columns_copy.eval(expr, inplace=False, **kwargs)
         expect_series = isinstance(columns_copy, pandas.Series)
@@ -1492,6 +1504,11 @@ class PandasDataManager(object):
             return self.__constructor__(new_data, self.index, columns)
 
     def mode(self, **kwargs):
+        """Returns a new DataManager with modes calculated for each label along given axis.
+
+        Returns:
+            A new PandasDataManager with modes calculated.
+        """
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
@@ -1511,8 +1528,11 @@ class PandasDataManager(object):
         return self.__constructor__(final_data, new_index, new_columns, self._dtype_cache)
 
     def fillna(self, **kwargs):
+        """Returns a new DataManager with null values filled by given values or according to given method.
 
-
+        Returns:
+            A new PandasDataManager with null values filled.
+        """
         axis = kwargs.get("axis", 0)
         value = kwargs.get("value")
 
@@ -1761,6 +1781,14 @@ class PandasDataManager(object):
 
     # __getitem__ methods
     def getitem_single_key(self, key):
+        """Get item for a single target index.
+
+        Args:
+            key: Target index by which to retrieve data.
+
+        Returns:
+            A new PandasDataManager.
+        """
         numeric_index = self.columns.get_indexer_for([key])
 
         new_data = self.getitem_column_array([key])
@@ -1773,7 +1801,14 @@ class PandasDataManager(object):
             return new_data.to_pandas()[key]
 
     def getitem_column_array(self, key):
+        """Get column data for target labels.
 
+        Args:
+            key: Target labels by which to retrieve data.
+
+        Returns:
+            A new PandasDataManager.
+        """
         # Convert to list for type checking
         numeric_indices = list(self.columns.get_indexer_for(key))
 
@@ -1791,6 +1826,14 @@ class PandasDataManager(object):
         return self.__constructor__(result, self.index, new_columns, new_dtypes)
 
     def getitem_row_array(self, key):
+        """Get row data for target labels.
+
+        Args:
+            key: Target labels by which to retrieve data.
+
+        Returns:
+            A new PandasDataManager.
+        """
         # Convert to list for type checking
         numeric_indices = list(self.index.get_indexer_for(key))
 
@@ -1811,8 +1854,15 @@ class PandasDataManager(object):
         return self.drop(columns=[key])
 
     def drop(self, index=None, columns=None):
+        """Remove row data for target index and columns.
 
+        Args:
+            index: Target index to drop.
+            columns: Target columns to drop.
 
+        Returns:
+            A new PandasDataManager.
+        """
         if index is None:
             new_data = self.data
             new_index = self.index
@@ -1848,8 +1898,16 @@ class PandasDataManager(object):
     # return a new one from here and let the front end handle the inplace
     # update.
     def insert(self, loc, column, value):
+        """Insert new column data.
 
+        Args:
+            loc: Insertion index.
+            column: Column labels to insert.
+            value: Dtype object values to insert.
 
+        Returns:
+            A new PandasDataManager with new data inserted.
+        """
         def insert(df, internal_indices=[]):
             internal_idx = internal_indices[0]
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
@@ -1871,6 +1929,15 @@ class PandasDataManager(object):
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
     def apply(self, func, axis, *args, **kwargs):
+        """Apply func across given axis.
+
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasDataManager.
+        """
         if callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
         elif isinstance(func, dict):
@@ -1881,6 +1948,15 @@ class PandasDataManager(object):
             pass
 
     def _post_process_apply(self, result_data, axis, try_scale=True):
+        """Recompute the index after applying function.
+
+        Args:
+            result_data: a BlockPartitions object.
+            axis: Target axis along which function was applied.
+
+        Returns:
+            A new PandasDataManager.
+        """
         if try_scale:
             try:
                 index = self.compute_index(0, result_data, True)
@@ -1913,6 +1989,15 @@ class PandasDataManager(object):
         return self.__constructor__(result_data, index, columns)
 
     def _dict_func(self, func, axis, *args, **kwargs):
+        """Apply function to certain indices across given axis.
+
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasDataManager.
+        """
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
@@ -1939,7 +2024,15 @@ class PandasDataManager(object):
         return full_result
 
     def _list_like_func(self, func, axis, *args, **kwargs):
+        """Apply list-like function across given axis.
 
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasDataManager.
+        """
         func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
         new_data = self.map_across_full_axis(axis, func_prepared)
 
@@ -1948,7 +2041,15 @@ class PandasDataManager(object):
         return self.__constructor__(new_data, new_index, self.columns)
 
     def _callable_func(self, func, axis, *args, **kwargs):
+        """Apply callable functions across given axis.
 
+        Args:
+            func: The functions to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasDataManager.
+        """
         def callable_apply_builder(df, func, axis, index, *args, **kwargs):
             if not axis:
                 df.index = index
@@ -1974,8 +2075,9 @@ class PandasDataManager(object):
     def _manual_repartition(self, axis, repartition_func, **kwargs):
         """This method applies all manual partitioning functions.
 
-        :param axis:
-        :param repartition_func:
+        Args:
+            axis: The axis to shuffle data along.
+            repartition_func: The function used to repartition data.
 
         Returns:
             A `BlockPartitions` object.
@@ -1998,6 +2100,14 @@ class PandasDataManager(object):
     # END Manual Partitioning methods
 
     def get_dummies(self, columns, **kwargs):
+        """Convert categorical variables to dummy variables for certain columns.
+
+        Args:
+            columns: The columns to convert.
+
+        Returns:
+            A new PandasDataManager.
+        """
         cls = type(self)
 
         # `columns` as None does not mean all columns, by default it means only
@@ -2110,9 +2220,12 @@ class PandasDataManager(object):
         """
         Note: this function involves making copies of the index in memory.
 
-        :param axis:
-        :param indices:
-        :return:
+        Args:
+            axis: Axis to extract indices.
+            indices: Indices to convert to numerical.
+
+        Returns:
+            An Index object.
         """
         assert axis in ['row', 'col', 'columns']
         if axis == 'row':
@@ -2143,8 +2256,9 @@ class PandasDataManagerView(PandasDataManager):
                  index_map_series: pandas.Series=None,
                  columns_map_series: pandas.Series=None):
         """
-        :param index_map_series: a Pandas Series Object mapping user-facing index to numeric index.
-        :param columns_map_series: a Pandas Series Object mapping user-facing index to numeric index.
+        Args:
+            index_map_series: a Pandas Series Object mapping user-facing index to numeric index.
+            columns_map_series: a Pandas Series Object mapping user-facing index to numeric index.
         """
         assert index_map_series is not None
         assert columns_map_series is not None
@@ -2167,7 +2281,9 @@ class PandasDataManagerView(PandasDataManager):
     def _get_data(self) -> BlockPartitions:
         """
         Perform the map step
-        :return:
+
+        Returns:
+            A BlockPartitions object.
         """
         def iloc(partition, row_internal_indices, col_internal_indices):
             return partition.iloc[row_internal_indices, col_internal_indices]
