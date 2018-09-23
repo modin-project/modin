@@ -6,7 +6,6 @@ from ..pandas import Series, DataFrame
 
 
 class Connection(object):
-
     def __init__(self, name):
         self._name = name
         self._cursor = None
@@ -23,7 +22,6 @@ class Connection(object):
 
 
 class Cursor(object):
-
     def __init__(self):
         self._tables = {}
 

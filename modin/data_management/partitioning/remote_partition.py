@@ -142,7 +142,6 @@ class RemotePartition(object):
 
 
 class RayRemotePartition(RemotePartition):
-
     def __init__(self, object_id):
         assert type(object_id) is ray.ObjectID
 
@@ -188,16 +187,15 @@ class RayRemotePartition(RemotePartition):
 
             return oid_obj
 
-        oid = deploy_ray_func.remote(call_queue_closure, oid, kwargs={'call_queues': self.call_queue})
+        oid = deploy_ray_func.remote(
+            call_queue_closure, oid, kwargs={'call_queues': self.call_queue})
         self.call_queue = []
 
         return RayRemotePartition(oid)
 
-
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
         return self
-
 
     def __copy__(self):
         return RayRemotePartition(object_id=self.oid)
@@ -209,7 +207,8 @@ class RayRemotePartition(RemotePartition):
             A Pandas DataFrame.
         """
         dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
+        assert type(dataframe) is pandas.DataFrame or type(
+            dataframe) is pandas.Series
 
         return dataframe
 

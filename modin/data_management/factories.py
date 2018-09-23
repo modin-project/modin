@@ -11,7 +11,6 @@ from .partitioning.partition_collections import RayBlockPartitions
 
 
 class BaseFactory(object):
-
     @classmethod
     def _determine_engine(cls):
         factory_name = \

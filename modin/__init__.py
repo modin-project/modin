@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def git_version():
     def _execute_cmd_in_temp_env(cmd):
         # construct environment

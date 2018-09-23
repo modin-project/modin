@@ -27,7 +27,9 @@ class AxisPartition(object):
 
         The only abstract method needed to implement is the `apply` method.
     """
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+
+    def apply(self, func, num_splits=None, other_axis_partition=None,
+              **kwargs):
         """Applies a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
@@ -65,12 +67,12 @@ class AxisPartition(object):
 
 
 class RayAxisPartition(AxisPartition):
-
     def __init__(self, list_of_blocks):
         # Unwrap from RemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, other_axis_partition=None,
+              **kwargs):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -88,11 +90,22 @@ class RayAxisPartition(AxisPartition):
             num_splits = len(self.list_of_blocks)
 
         if other_axis_partition is not None:
-            return [RayRemotePartition(obj) for obj in deploy_ray_func_between_two_axis_partitions._submit(args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs) + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks), num_return_vals=num_splits)]
+            return [
+                RayRemotePartition(obj)
+                for obj in deploy_ray_func_between_two_axis_partitions._submit(
+                    args=(self.axis, func, num_splits,
+                          len(self.list_of_blocks), kwargs) +
+                    tuple(self.list_of_blocks +
+                          other_axis_partition.list_of_blocks),
+                    num_return_vals=num_splits)
+            ]
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
-        return [RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)]
+        return [
+            RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(
+                args, num_return_vals=num_splits)
+        ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
@@ -109,8 +122,10 @@ class RayAxisPartition(AxisPartition):
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
-        return [RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)]
-
+        return [
+            RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(
+                args, num_return_vals=num_splits)
+        ]
 
 
 class RayColumnPartition(RayAxisPartition):
@@ -144,10 +159,16 @@ def split_result_of_axis_func_pandas(axis, num_splits, result):
     # We do this to restore block partitioning
     if axis == 0 or type(result) is pandas.Series:
         chunksize = compute_chunksize(len(result), num_splits)
-        return [result.iloc[chunksize * i: chunksize * (i + 1)] for i in range(num_splits)]
+        return [
+            result.iloc[chunksize * i:chunksize * (i + 1)]
+            for i in range(num_splits)
+        ]
     else:
         chunksize = compute_chunksize(len(result.columns), num_splits)
-        return [result.iloc[:, chunksize * i: chunksize * (i + 1)] for i in range(num_splits)]
+        return [
+            result.iloc[:, chunksize * i:chunksize * (i + 1)]
+            for i in range(num_splits)
+        ]
 
 
 @ray.remote
@@ -171,7 +192,8 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
 
 
 @ray.remote
-def deploy_ray_func_between_two_axis_partitions(axis, func, num_splits, len_of_left, kwargs, *partitions):
+def deploy_ray_func_between_two_axis_partitions(
+        axis, func, num_splits, len_of_left, kwargs, *partitions):
     """Deploy a function along a full axis between two data sets in Ray.
 
     Args:
@@ -188,8 +210,10 @@ def deploy_ray_func_between_two_axis_partitions(axis, func, num_splits, len_of_l
     Returns:
         A list of Pandas DataFrames.
     """
-    lt_frame = pandas.concat(list(partitions[:len_of_left]), axis=axis, copy=False)
-    rt_frame = pandas.concat(list(partitions[len_of_left:]), axis=axis, copy=False)
+    lt_frame = pandas.concat(
+        list(partitions[:len_of_left]), axis=axis, copy=False)
+    rt_frame = pandas.concat(
+        list(partitions[len_of_left:]), axis=axis, copy=False)
 
     result = func(lt_frame, rt_frame, **kwargs)
     return split_result_of_axis_func_pandas(axis, num_splits, result)
