@@ -1,6 +1,10 @@
 import os
 import subprocess
 
+from strip_hints import strip_on_import
+strip_on_import(__file__, to_empty=False, no_ast=False,
+                no_colon_move=False, only_assigns_and_defs=False,
+                py3_also=False)
 
 def git_version():
     def _execute_cmd_in_temp_env(cmd):
