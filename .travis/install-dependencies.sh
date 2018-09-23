@@ -51,6 +51,6 @@ else
   exit 1
 fi
 
-pip install -rq requirements.txt
+pip install -r requirements.txt
 pip install -q pytest flake8 flake8-comprehensions yapf feather-format lxml openpyxl xlrd numpy
 
