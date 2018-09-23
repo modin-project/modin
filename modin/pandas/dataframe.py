@@ -6,9 +6,9 @@ import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import to_str, string_types, cPickle as pkl
 import pandas.core.common as com
-from pandas.core.dtypes.common import (_get_dtype_from_object, is_bool_dtype,
-                                       is_list_like, is_numeric_dtype,
-                                       is_datetime_or_timedelta_dtype, is_dtype_equal)
+from pandas.core.dtypes.common import (
+    _get_dtype_from_object, is_bool_dtype, is_list_like, is_numeric_dtype,
+    is_datetime_or_timedelta_dtype, is_dtype_equal)
 from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import (check_bool_indexer,
                                   convert_to_index_sliceable)
@@ -631,8 +631,7 @@ class DataFrame(object):
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
 
-    def all(self, axis=0, bool_only=None, skipna=None, level=None,
-            **kwargs):
+    def all(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether all elements are True over requested axis
 
         Note:
@@ -2629,10 +2628,12 @@ class DataFrame(object):
             # If over rows, then make sure that all dtypes are equal for not numeric_only
             elif axis:
                 for i in range(1, len(self.dtypes)):
-                    pre_dtype = self.dtypes[i-1]
+                    pre_dtype = self.dtypes[i - 1]
                     curr_dtype = self.dtypes[i]
                     if not is_dtype_equal(pre_dtype, curr_dtype):
-                        raise TypeError("Cannot compare type '{0}' with type '{1}'".format(pre_dtype, curr_dtype))
+                        raise TypeError(
+                            "Cannot compare type '{0}' with type '{1}'".format(
+                                pre_dtype, curr_dtype))
         else:
             # Normally pandas returns this near the end of the quantile, but we
             # can't afford the overhead of running the entire operation before
