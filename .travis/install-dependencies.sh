@@ -2,6 +2,12 @@
 set -e
 set -x
 
+# We need to install md5sum for miniconda installer on mac
+if [["$uname" == "Darwin"]]
+then
+  brew install md5sha1sum
+fi
+
 if [[ "$PYTHON" == "2.7" ]]
 then
   wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh -nv
