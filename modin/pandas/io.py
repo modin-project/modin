@@ -280,12 +280,18 @@ def read_csv(filepath_or_buffer,
     # number of nodes in the cluster.
     frame = inspect.currentframe()
     _, _, _, kwargs = inspect.getargvalues(frame)
-    args, _, _, defaults, _, _, _ = inspect.getfullargspec(read_csv)
-    defaults = dict(zip(args[1:], defaults))
-    kwargs = {
-        kw: kwargs[kw]
-        for kw in kwargs if kw in defaults and kwargs[kw] != defaults[kw]
-    }
+    try:
+        args, _, _, defaults, _, _, _ = inspect.getfullargspec(read_csv)
+        defaults = dict(zip(args[1:], defaults))
+        kwargs = {
+            kw: kwargs[kw]
+            for kw in kwargs if kw in defaults and kwargs[kw] != defaults[kw]
+        }
+    # This happens on Python2, we will just default to serializing the entire dictionary
+    except AttributeError:
+        # We suppress the error and delete the kwargs not needed in the remote function.
+        del kwargs["filepath_or_buffer"]
+        del kwargs["frame"]
 
     if isinstance(filepath_or_buffer, str):
         if not os.path.exists(filepath_or_buffer):

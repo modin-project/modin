@@ -35,7 +35,7 @@ except AssertionError:
     pass
 
 num_cpus = ray.global_state.cluster_resources()['CPU']
-DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+DEFAULT_NPARTITIONS = 4 # max(4, int(num_cpus))
 
 __all__ = [
     "DataFrame", "Series", "read_csv", "read_parquet", "read_json",
