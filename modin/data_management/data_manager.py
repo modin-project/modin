@@ -238,7 +238,7 @@ class PandasDataManager(object):
     #
     # Currently this computation is not delayed, and it may make a copy of the
     # DataFrame in memory. This can be problematic and should be fixed in the
-    # future. TODO: Delay reindexing
+    # future. TODO (devin-petersohn): Delay reindexing
     def _join_index_objects(self, axis, other_index, how, sort=True):
         """Joins a pair of index objects (columns or rows) by a given strategy.
 
