@@ -2252,7 +2252,12 @@ def test_mask():
 @pytest.fixture
 def test_max(ray_df, pandas_df):
     assert ray_series_equals_pandas(ray_df.max(), pandas_df.max())
-    assert ray_series_equals_pandas(ray_df.max(axis=1), pandas_df.max(axis=1))
+
+    # We pass in numeric_only because
+    # https://github.com/modin-project/modin/issues/83
+    assert ray_series_equals_pandas(
+            ray_df.max(axis=1, numeric_only=True), 
+            pandas_df.max(axis=1, numeric_only=True))
 
 
 @pytest.fixture
