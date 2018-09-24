@@ -1412,10 +1412,8 @@ class PandasDataManager(object):
         def skew_builder(df, internal_indices=[], **kwargs):
             return pandas.DataFrame.skew(df, **kwargs)
 
-        func = self._prepare_method(
-            skew_builder, internal_indices=[], **kwargs)
-        return data_manager.full_axis_reduce_along_select_indices(
-            func, axis, index)
+        func = self._prepare_method(skew_builder, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.

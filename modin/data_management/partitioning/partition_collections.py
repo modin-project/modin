@@ -372,7 +372,7 @@ class BlockPartitions(object):
                     isinstance(part, pandas.Series)
                     for row in retrieved_objects for part in row):
                 axis = 0
-                retrieved_objects = np.array(retrieved_objects).T
+                # retrieved_objects = retrieved_objects
             elif all(
                     isinstance(part, pandas.DataFrame)
                     for row in retrieved_objects for part in row):
@@ -381,7 +381,6 @@ class BlockPartitions(object):
                 raise ValueError(
                     "Some partitions contain Series and some contain DataFrames"
                 )
-
             df_rows = [
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
