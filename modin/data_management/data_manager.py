@@ -326,7 +326,8 @@ class PandasDataManager(object):
             return self.__constructor__(new_data, new_index, joined_axis)
         else:
             # The columns will be appended to form the final columns.
-            new_columns = self.columns.append([other.columns for other in others])
+            new_columns = self.columns.append(
+                [other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
     def _join_data_manager(self, other, **kwargs):
