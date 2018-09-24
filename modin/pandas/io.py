@@ -589,7 +589,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs,
 
 
 @ray.remote
-def _read_parquet_column(path, column, num_splits, **kwargs):
+def _read_parquet_column(path, column, num_splits, kwargs):
     """Use a Ray task to read a column from Parquet into a Pandas DataFrame.
 
     Args:
