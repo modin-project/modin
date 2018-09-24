@@ -2290,7 +2290,7 @@ class PandasDataManager(object):
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args={}, agg_args={}):
+    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
         remote_index = self.index if not axis else self.columns
 
         def groupby_agg_builder(df):
@@ -2298,8 +2298,7 @@ class PandasDataManager(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            return agg_func(
-                df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
+            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
 
         func_prepared = self._prepare_method(
             lambda df: groupby_agg_builder(df))

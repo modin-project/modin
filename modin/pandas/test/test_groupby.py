@@ -137,7 +137,7 @@ def test_single_group_row_groupby():
 
     ray_df = from_pandas(pandas_df)
 
-    by = [1, 1, 1, 1]
+    by = ["1", "1", "1", "1"]
     n = 6
 
     ray_groupby = ray_df.groupby(by=by)
