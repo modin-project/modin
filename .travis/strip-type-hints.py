@@ -14,7 +14,6 @@ def find_files(directory, pattern):
 modin_path = os.path.relpath("../")
 
 for path in find_files(modin_path, '*.py'):
-    print("Working on {}".format(path))
     string = strip_file_to_string(path, to_empty=False, no_ast=False,
                                   no_colon_move=False, only_assigns_and_defs=False)
     with open(path, 'w') as f:
