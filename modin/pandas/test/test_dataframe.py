@@ -263,7 +263,6 @@ def test_float_dataframe():
     test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
-    # TODO Clear floating point error.
     test_var(ray_df, pandas_df)
     test_std(ray_df, pandas_df)
     test_median(ray_df, pandas_df)
@@ -434,7 +433,6 @@ def test_mixed_dtype_dataframe():
     test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
-    # TODO Clear floating point error.
     test_var(ray_df, pandas_df)
     test_std(ray_df, pandas_df)
     test_median(ray_df, pandas_df)
@@ -678,7 +676,6 @@ def test_nan_dataframe():
         test_insert(ray_df, pandas_df, 1, "New Column", ray_df[key])
         test_insert(ray_df, pandas_df, 4, "New Column", ray_df[key])
 
-    # TODO Nans are always not equal to each other, fix it
     test___array__(ray_df, pandas_df)
 
     apply_agg_functions = [
@@ -1053,7 +1050,6 @@ def test_append():
 
 @pytest.fixture
 def test_apply(ray_df, pandas_df, func, axis):
-    print(func)
     ray_result = ray_df.apply(func, axis)
     pandas_result = pandas_df.apply(func, axis)
     if isinstance(ray_result, pd.DataFrame):
@@ -1935,9 +1931,8 @@ def test_fillna_invalid_value():
     pytest.raises(TypeError, ray_df.fillna, [1, 2])
     # tuple
     pytest.raises(TypeError, ray_df.fillna, (1, 2))
-    # TODO: Uncomment when iloc is implemented
     # frame with series
-    # pytest.raises(ValueError, ray_df.iloc[:, 0].fillna, ray_df)
+    pytest.raises(ValueError, ray_df.iloc[:, 0].fillna, ray_df)
 
 
 @pytest.fixture
@@ -3197,7 +3192,10 @@ def test_update():
 
 @pytest.fixture
 def test_var(ray_df, pandas_df):
-    assert ray_df.var().equals(pandas_df.var())
+    # Because of some differences in floating point arithmetic, we need to check that
+    # they are almost equal if they are not identically equal.
+    assert (ray_df.var() == pandas_df.var()).all() or \
+           ((ray_df.var() - pandas_df.var()).abs() < 10**-10).all()
 
 
 def test_where():
