@@ -136,8 +136,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0))
     column_names = empty_pd_df.columns
 
-    skipfooter = kwargs.get("skipfooter", None) or kwargs.get(
-        "skip_footer", None)
+    skipfooter = kwargs.get("skipfooter", None) or kwargs.get("skip_footer", None)
 
     partition_kwargs = dict(
         kwargs, header=None, names=column_names, skipfooter=0, skip_footer=0)
