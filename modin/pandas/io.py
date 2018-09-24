@@ -17,7 +17,9 @@ from .dataframe import ray, DataFrame
 from .utils import from_pandas
 from ..data_management.partitioning.partition_collections import RayBlockPartitions
 from ..data_management.partitioning.remote_partition import RayRemotePartition
-from ..data_management.partitioning.axis_partition import split_result_of_axis_func_pandas
+from ..data_management.partitioning.axis_partition import (
+    split_result_of_axis_func_pandas
+)
 from ..data_management.data_manager import PandasDataManager
 
 PQ_INDEX_REGEX = re.compile('__index_level_\d+__')
@@ -136,7 +138,8 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0))
     column_names = empty_pd_df.columns
 
-    skipfooter = kwargs.get("skipfooter", None) or kwargs.get("skip_footer", None)
+    skipfooter = kwargs.get("skipfooter", None) or kwargs.get(
+        "skip_footer", None)
 
     partition_kwargs = dict(
         kwargs, header=None, names=column_names, skipfooter=0, skip_footer=0)
@@ -511,8 +514,7 @@ def read_sas(filepath_or_buffer,
              chunksize=None,
              iterator=False):
 
-    warnings.warn("Defaulting to Pandas implementation",
-                  PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
 
     port_frame = pandas.read_sas(filepath_or_buffer, format, index, encoding,
                                  chunksize, iterator)
@@ -523,8 +525,7 @@ def read_sas(filepath_or_buffer,
 
 def read_pickle(path, compression='infer'):
 
-    warnings.warn("Defaulting to Pandas implementation",
-                  PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
 
     port_frame = pandas.read_pickle(path, compression)
     ray_frame = from_pandas(port_frame)
@@ -541,8 +542,7 @@ def read_sql(sql,
              columns=None,
              chunksize=None):
 
-    warnings.warn("Defaulting to Pandas implementation",
-                  PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
 
     port_frame = pandas.read_sql(sql, con, index_col, coerce_float, params,
                                  parse_dates, columns, chunksize)
@@ -559,8 +559,7 @@ def get_index(index_name, *partition_indices):
 
 
 @ray.remote
-def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs,
-                                        header):
+def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, header):
     """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
 
     Args:

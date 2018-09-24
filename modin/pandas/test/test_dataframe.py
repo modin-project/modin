@@ -2070,7 +2070,6 @@ def test_infer_objects():
         ray_df.infer_objects()
 
 
-#@pytest.fixture
 def test_info():
     ray_df = pd.DataFrame({
         'col1': [1, 2, 3, np.nan],
@@ -2256,8 +2255,8 @@ def test_max(ray_df, pandas_df):
     # We pass in numeric_only because
     # https://github.com/modin-project/modin/issues/83
     assert ray_series_equals_pandas(
-            ray_df.max(axis=1, numeric_only=True), 
-            pandas_df.max(axis=1, numeric_only=True))
+        ray_df.max(axis=1, numeric_only=True),
+        pandas_df.max(axis=1, numeric_only=True))
 
 
 @pytest.fixture
@@ -2277,7 +2276,6 @@ def test_melt():
         ray_df.melt()
 
 
-#@pytest.fixture
 def test_memory_usage():
     ray_df = create_test_dataframe()
     assert type(ray_df.memory_usage()) is pandas.core.series.Series

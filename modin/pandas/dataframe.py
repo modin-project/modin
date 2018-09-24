@@ -1724,18 +1724,19 @@ class DataFrame(object):
 
             memory_usage (bool, str, optional): Specifies whether the total memory
                 usage of the DataFrame elements (including index) should be displayed.
-                True always show memory usage. False never shows memory usage. A value 
+                True always show memory usage. False never shows memory usage. A value
                 of 'deep' is equivalent to "True with deep introspection". Memory usage
-                is shown in human-readable units (base-2 representation). Without deep 
-                introspection a memory estimation is made based in column dtype and number 
-                of rows assuming values consume the same memory amount for corresponding 
-                dtypes. With deep memory introspection, a real memory usage calculation is 
-                performed at the cost of computational resources. Defaults to True.
+                is shown in human-readable units (base-2 representation). Without deep
+                introspection a memory estimation is made based in column dtype and
+                number of rows assuming values consume the same memory amount for
+                corresponding dtypes. With deep memory introspection, a real memory
+                usage calculation is performed at the cost of computational resources.
+                Defaults to True.
 
-            null_counts (bool, optional): Whetehr to show the non-null counts. By default,
-                this is shown only when the frame is smaller than 100 columns and 1690785
-                rows. A value of True always shows the counts and False never shows the 
-                counts.
+            null_counts (bool, optional): Whetehr to show the non-null counts. By
+                default, this is shown only when the frame is smaller than 100 columns
+                and 1690785 rows. A value of True always shows the counts and False
+                never shows the counts.
 
         Returns:
             Prints the summary of a DataFrame and returns None.
@@ -2194,7 +2195,7 @@ class DataFrame(object):
         Args:
             index (bool): Whether to include the memory usage of the DataFrame's
                 index in returned Series. Defaults to True
-            deep (bool): If True, introspect the data deeply by interrogating 
+            deep (bool): If True, introspect the data deeply by interrogating
             objects dtypes for system-level memory consumption. Defaults to False
 
         Returns:
@@ -2620,12 +2621,14 @@ class DataFrame(object):
             return (is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t))
 
         if not numeric_only:
-            # If not numeric_only and columns, then check all columns are either numeric, timestamp, or timedelta
+            # If not numeric_only and columns, then check all columns are either
+            # numeric, timestamp, or timedelta
             if not axis and not all(check_dtype(t) for t in self.dtypes):
                 raise TypeError("can't multiply sequence by non-int of type "
                                 "'float'")
 
-            # If over rows, then make sure that all dtypes are equal for not numeric_only
+            # If over rows, then make sure that all dtypes are equal for not
+            # numeric_only
             elif axis:
                 for i in range(1, len(self.dtypes)):
                     pre_dtype = self.dtypes[i - 1]

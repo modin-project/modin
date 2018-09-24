@@ -56,7 +56,6 @@ def to_datetime(arg,
             origin=origin)
 
     # Pandas seems to ignore this kwarg so we will too
-    #if errors == 'raise':
     pandas.to_datetime(
         pandas.DataFrame(columns=arg.columns),
         errors=errors,

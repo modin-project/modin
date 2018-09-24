@@ -702,7 +702,7 @@ class PandasDataManager(object):
                 return cond.where(cond, other, **kwargs)
 
             def where_builder_second_pass(df, new_other, **kwargs):
-                return df.where(new_other == True, new_other, **kwargs)
+                return df.where(new_other.eq(True), new_other, **kwargs)
 
             # We are required to perform this reindexing on everything to
             # shuffle the data together
@@ -876,7 +876,8 @@ class PandasDataManager(object):
             Returns Pandas Series containing the results from map_func and reduce_func.
         """
         if numeric_only:
-            result, index, data_manager = self.numeric_function_clean_dataframe(axis)
+            result, index, data_manager = self.numeric_function_clean_dataframe(
+                axis)
             if result is not None:
                 return result
         else:
@@ -969,7 +970,6 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        index = self.index if axis else self.columns
         func = self._prepare_method(pandas.DataFrame.prod, **kwargs)
         return self.full_reduce(axis, func, numeric_only=True)
 
@@ -1304,7 +1304,8 @@ class PandasDataManager(object):
         """Reduce Manger along select indices using function that needs full axis.
 
         Args:
-            func: Callable that reduces Manager to Series using full knowledge of an axis.
+            func: Callable that reduces Manager to Series using full knowledge of an
+                axis.
             axis: 0 for columns and 1 for rows. Defaults to 0.
             index: Index of the resulting series.
             pandas_result: Return the result as a Pandas Series instead of raw data.
@@ -1332,8 +1333,6 @@ class PandasDataManager(object):
         Returns:
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
-        axis = 0
-
         # Only describe numeric if there are numeric
         # Otherwise, describe all
         new_index = self.numeric_columns()
@@ -1432,7 +1431,8 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(axis)
+        result, index, data_manager = self.numeric_function_clean_dataframe(
+            axis)
         if result is not None:
             return result
 
@@ -1451,7 +1451,8 @@ class PandasDataManager(object):
         assert type(q) is float
 
         if numeric_only:
-            result, _, data_manager = self.numeric_function_clean_dataframe(axis)
+            result, _, data_manager = self.numeric_function_clean_dataframe(
+                axis)
             if result is not None:
                 return result
         else:
@@ -1576,7 +1577,8 @@ class PandasDataManager(object):
         columns = self.index if self._is_transposed else self.columns
         index = self.columns if self._is_transposed else self.index
 
-        # Make a copy of columns and eval on the copy to determine if result type is series or not
+        # Make a copy of columns and eval on the copy to determine if result type is
+        # series or not
         columns_copy = pandas.DataFrame(columns=self.columns)
         columns_copy = columns_copy.eval(expr, inplace=False, **kwargs)
         expect_series = isinstance(columns_copy, pandas.Series)
@@ -1638,7 +1640,7 @@ class PandasDataManager(object):
                                     self._dtype_cache)
 
     def fillna(self, **kwargs):
-        """Returns a new DataManager with null values filled by given values or according to given method.
+        """Replaces NaN values with the method provided.
 
         Returns:
             A new PandasDataManager with null values filled.
@@ -1765,10 +1767,10 @@ class PandasDataManager(object):
                 if (is_numeric_dtype(dtype)
                     or is_datetime_or_timedelta_dtype(dtype))
             ]
-        index = self.index if axis else self.columns
         if axis:
-            # If along rows, then drop the nonnumeric columns, record the index, and take transpose.
-            # We have to do this because if we don't, the result is all in one column for some reason.
+            # If along rows, then drop the nonnumeric columns, record the index, and
+            # take transpose. We have to do this because if we don't, the result is all
+            # in one column for some reason.
             nonnumeric = [
                 col for col, dtype in zip(self.columns, self.dtypes)
                 if not is_numeric_dtype(dtype)
@@ -2276,7 +2278,8 @@ class PandasDataManager(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
+            return agg_func(
+                df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
 
         func_prepared = self._prepare_method(
             lambda df: groupby_agg_builder(df))
@@ -2463,8 +2466,10 @@ class PandasDataManagerView(PandasDataManager):
                  columns_map_series: pandas.Series = None):
         """
         Args:
-            index_map_series: a Pandas Series Object mapping user-facing index to numeric index.
-            columns_map_series: a Pandas Series Object mapping user-facing index to numeric index.
+            index_map_series: a Pandas Series Object mapping user-facing index to
+                numeric index.
+            columns_map_series: a Pandas Series Object mapping user-facing index to
+                numeric index.
         """
         assert index_map_series is not None
         assert columns_map_series is not None
@@ -2509,7 +2514,9 @@ class PandasDataManagerView(PandasDataManager):
         return masked_data
 
     def _set_data(self, new_data):
-        """Note this setter will be called by the `super(PandasDataManagerView).__init__` function"""
+        """Note this setter will be called by the
+            `super(PandasDataManagerView).__init__` function
+        """
         self.parent_data = new_data
 
     data = property(_get_data, _set_data)

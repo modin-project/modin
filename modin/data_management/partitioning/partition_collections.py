@@ -237,7 +237,8 @@ class BlockPartitions(object):
 
         Args:
             axis: The axis to extract (0 for extracting rows, 1 for extracting columns)
-            n: The number of rows or columns to extract, negative denotes to extract from the bottom of the object
+            n: The number of rows or columns to extract, negative denotes to extract
+                from the bottom of the object
 
         Returns:
             A new BlockPartitions object, the type of object that called this.
@@ -771,7 +772,8 @@ class BlockPartitions(object):
         Apply a function to along both axis
 
         Important: For your func to operate directly on the indices provided,
-            it must use `row_internal_indices, col_internal_indices` as keyword arguments.
+            it must use `row_internal_indices, col_internal_indices` as keyword
+            arguments.
         """
         cls = type(self)
 
