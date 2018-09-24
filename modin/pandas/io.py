@@ -159,9 +159,12 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         partition_ids = []
         index_ids = []
         total_bytes = os.path.getsize(filepath)
-        num_splits = min(
-            len(column_names), RayBlockPartitions._compute_num_partitions())
-        chunk_size = max(1, (total_bytes - f.tell()) // num_splits)
+        # Max number of partitions available
+        num_parts = RayBlockPartitions._compute_num_partitions()
+        # This is the number of splits for the columns
+        num_splits = min(len(column_names), num_parts)
+        # This is the chunksize each partition will read
+        chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
 
         while f.tell() < total_bytes:
             start = f.tell()
