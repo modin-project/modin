@@ -191,17 +191,16 @@ class PandasDataManager(object):
         if not axis and len(index) == 0:
             result = pandas.Series(dtype=np.float64)
 
-        if axis:
-            nonnumeric = [
-                col for col, dtype in zip(self.columns, self.dtypes)
-                if not is_numeric_dtype(dtype)
-            ]
-            if len(nonnumeric) == len(self.columns):
-                # If over rows and no numeric columns, return this
-                result = pandas.Series([np.NaN for _ in self.index])
-            else:
-                data_manager = self.drop(columns=nonnumeric)
-                index = data_manager.index
+        nonnumeric = [
+            col for col, dtype in zip(self.columns, self.dtypes)
+            if not is_numeric_dtype(dtype)
+        ]
+        if len(nonnumeric) == len(self.columns):
+            # If over rows and no numeric columns, return this
+            result = pandas.Series([np.NaN for _ in self.index])
+        else:
+            data_manager = self.drop(columns=nonnumeric)
+            index = data_manager.index
 
         return result, index, data_manager
 
@@ -877,17 +876,11 @@ class PandasDataManager(object):
             Returns Pandas Series containing the results from map_func and reduce_func.
         """
         if numeric_only:
-            result, index, data_manager = self.numeric_function_clean_dataframe(
-                axis)
+            result, index, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return result
         else:
             data_manager = self
-            if not axis:
-                index = self.columns
-            else:
-                index = self.index
-
         if reduce_func is None:
             reduce_func = map_func
 
@@ -895,7 +888,10 @@ class PandasDataManager(object):
         # exists on the internal partitions. We flip the axis
         result = data_manager.data.full_reduce(map_func, reduce_func,
                                                axis ^ self._is_transposed)
-        result.index = index
+        if not axis:
+            result.index = data_manager.columns
+        else:
+            result.index = data_manager.index
         return result
 
     def count(self, **kwargs):
@@ -942,11 +938,7 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-
-        def mean_builder(df, internal_indices=[], **kwargs):
-            return pandas.DataFrame.mean(df, **kwargs)
-
-        func = self._prepare_method(mean_builder, **kwargs)
+        func = self._prepare_method(pandas.DataFrame.mean, **kwargs)
         return self.full_reduce(axis, func, numeric_only=True)
 
     def min(self, **kwargs):
@@ -1330,10 +1322,7 @@ class PandasDataManager(object):
 
         if pandas_result:
             result = result.to_pandas(self._is_transposed)
-            if not axis:
-                result.index = index
-            else:
-                result.index = index
+            result.index = index
 
         return result
 
@@ -1443,15 +1432,11 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(
-            axis)
+        result, index, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
 
-        def var_builder(df, **kwargs):
-            return pandas.DataFrame.var(df, **kwargs)
-
-        func = data_manager._prepare_method(var_builder, **kwargs)
+        func = data_manager._prepare_method(pandas.DataFrame.var, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
     def quantile_for_single_value(self, **kwargs):
@@ -1466,20 +1451,17 @@ class PandasDataManager(object):
         assert type(q) is float
 
         if numeric_only:
-            result, new_index, data_manager = self.numeric_function_clean_dataframe(
-                axis)
+            result, _, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return result
         else:
-            new_index = [
-                col for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype)
-                    or is_datetime_or_timedelta_dtype(dtype))
-            ]
             data_manager = self
 
         def quantile_builder(df, **kwargs):
-            return pandas.DataFrame.quantile(df, **kwargs)
+            try:
+                return pandas.DataFrame.quantile(df, **kwargs)
+            except ValueError:
+                return pandas.Series()
 
         func = self._prepare_method(quantile_builder, **kwargs)
         result = data_manager.full_axis_reduce(func, axis)
