@@ -102,7 +102,6 @@ class DataFrameGroupBy(object):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
-        return self._apply_agg_function(lambda df: df.ffill(limit=limit))
 
     def sem(self, ddof=1):
         raise NotImplementedError(
@@ -216,7 +215,6 @@ class DataFrameGroupBy(object):
         raise NotImplementedError(
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin.")
-        return self._apply_agg_function(lambda df: df.bfill(limit))
 
     def idxmin(self):
         raise NotImplementedError(

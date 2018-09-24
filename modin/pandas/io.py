@@ -555,6 +555,22 @@ def get_index(index_name, *partition_indices):
 @ray.remote
 def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs,
                                         header):
+    """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
+
+    Args:
+        fname: The filename of the file to open.
+        num_splits: The number of splits (partitions) to separate the DataFrame into.
+        start: The start byte offset.
+        end: The end byte offset.
+        kwargs: The kwargs for the Pandas `read_csv` function.
+        header: The header of the file.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element. If there is not `index_col` set, then we just return the length.
+            This is used to determine the total length of the DataFrame to build a
+            default Index.
+    """
     bio = open(fname, 'rb')
     bio.seek(start)
     to_read = header + bio.read(end - start)
@@ -573,7 +589,20 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs,
 
 
 @ray.remote
-def _read_parquet_column(path, column, num_splits, kwargs={}):
+def _read_parquet_column(path, column, num_splits, **kwargs):
+    """Use a Ray task to read a column from Parquet into a Pandas DataFrame.
+
+    Args:
+        path: The path of the Parquet file.
+        column: The column name to read.
+        num_splits: The number of partitions to split the column into.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element. If there is not `index_col` set, then we just return the length.
+            This is used to determine the total length of the DataFrame to build a
+            default Index.
+    """
     import pyarrow.parquet as pq
     df = pq.read_pandas(path, columns=[column], **kwargs).to_pandas()
     # Append the length of the index here to build it externally
