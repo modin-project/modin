@@ -203,7 +203,7 @@ class PandasDataManager(object):
                 data_manager = self.drop(columns=nonnumeric)
                 index = data_manager.index
 
-        return (result, index, data_manager)
+        return result, index, data_manager
 
     # END Internal methods
 
@@ -1355,7 +1355,7 @@ class PandasDataManager(object):
             # If no numeric dtypes, then do all
             new_index = self.columns
 
-        def describe_builder(df, internal_indices=[], **kwargs):
+        def describe_builder(df, **kwargs):
             return pandas.DataFrame.describe(df, **kwargs)
 
         # Apply describe and update indices, columns, and dtypes
@@ -1388,12 +1388,11 @@ class PandasDataManager(object):
         if result is not None:
             return result
 
-        def median_builder(df, internal_indices=[], **kwargs):
+        def median_builder(df, **kwargs):
             return pandas.DataFrame.median(df, **kwargs)
 
         func = self._prepare_method(median_builder, **kwargs)
-        return data_manager.full_axis_reduce_along_select_indices(
-            func, axis, index)
+        return data_manager.full_axis_reduce(func, axis)
 
     def skew(self, **kwargs):
         """Returns skew of each column or row.
@@ -1409,7 +1408,7 @@ class PandasDataManager(object):
         if result is not None:
             return result
 
-        def skew_builder(df, internal_indices=[], **kwargs):
+        def skew_builder(df, **kwargs):
             return pandas.DataFrame.skew(df, **kwargs)
 
         func = self._prepare_method(skew_builder, **kwargs)
@@ -1429,12 +1428,11 @@ class PandasDataManager(object):
         if result is not None:
             return result
 
-        def std_builder(df, internal_indices=[], **kwargs):
+        def std_builder(df, **kwargs):
             return pandas.DataFrame.std(df, **kwargs)
 
         func = self._prepare_method(std_builder, **kwargs)
-        return data_manager.full_axis_reduce_along_select_indices(
-            func, axis, index)
+        return data_manager.full_axis_reduce(func, axis)
 
     def var(self, **kwargs):
         """Returns varience of each column or row.
@@ -1450,12 +1448,11 @@ class PandasDataManager(object):
         if result is not None:
             return result
 
-        def var_builder(df, internal_indices=[], **kwargs):
+        def var_builder(df, **kwargs):
             return pandas.DataFrame.var(df, **kwargs)
 
         func = data_manager._prepare_method(var_builder, **kwargs)
-        return data_manager.full_axis_reduce_along_select_indices(
-            func, axis, index)
+        return data_manager.full_axis_reduce(func, axis)
 
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
@@ -1481,12 +1478,11 @@ class PandasDataManager(object):
             ]
             data_manager = self
 
-        def quantile_builder(df, internal_indices=[], **kwargs):
+        def quantile_builder(df, **kwargs):
             return pandas.DataFrame.quantile(df, **kwargs)
 
         func = self._prepare_method(quantile_builder, **kwargs)
-        result = data_manager.full_axis_reduce_along_select_indices(
-            func, axis, new_index)
+        result = data_manager.full_axis_reduce(func, axis)
         result.name = q
         return result
 
