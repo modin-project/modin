@@ -698,7 +698,7 @@ class PandasDataManager(object):
             # data. This can be done with a single map, but it will take a
             # modification in the `BlockPartition` class.
             # If this were in one pass it would be ~2x faster.
-            # TODO rewrite this to take one pass.
+            # TODO (devin-petersohn) rewrite this to take one pass.
             def where_builder_first_pass(cond, other, **kwargs):
                 return cond.where(cond, other, **kwargs)
 
