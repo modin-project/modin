@@ -814,7 +814,7 @@ class DataFrame(object):
             "github.com/modin-project/modin.")
 
     def astype(self, dtype, copy=True, errors='raise', **kwargs):
-        col_dtypes = dict()
+        col_dtypes = {}
         if isinstance(dtype, dict):
             if (not set(dtype.keys()).issubset(set(self.columns))
                     and errors == 'raise'):

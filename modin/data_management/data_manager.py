@@ -168,7 +168,7 @@ class PandasDataManager(object):
         Returns:
             List of index names.
         """
-        columns = list()
+        columns = []
         for col, dtype in zip(self.columns, self.dtypes):
             if is_numeric_dtype(dtype):
                 columns.append(col)
@@ -322,12 +322,11 @@ class PandasDataManager(object):
             new_index = self.index.append([
                 other.index for other in others
             ]) if not ignore_index else pandas.RangeIndex(
-                len(self.index) + sum([len(other.index) for other in others]))
+                len(self.index) + sum(len(other.index) for other in others))
             return self.__constructor__(new_data, new_index, joined_axis)
         else:
             # The columns will be appended to form the final columns.
-            new_columns = self.columns.append(
-                [other.columns for other in others])
+            new_columns = self.columns.append([other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
     def _join_data_manager(self, other, **kwargs):
@@ -1063,7 +1062,7 @@ class PandasDataManager(object):
             DataFrame with updated dtypes.
         """
         # Group indices to update by dtype for less map operations
-        dtype_indices = dict()
+        dtype_indices = {}
         columns = col_dtypes.keys()
         numeric_indices = list(self.columns.get_indexer_for(columns))
 
@@ -1093,7 +1092,7 @@ class PandasDataManager(object):
         for dtype in dtype_indices.keys():
 
             def astype(df, internal_indices=[]):
-                block_dtypes = dict()
+                block_dtypes = {}
                 for ind in internal_indices:
                     block_dtypes[df.columns[ind]] = dtype
                 return df.astype(block_dtypes)

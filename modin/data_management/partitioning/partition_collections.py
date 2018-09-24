@@ -799,7 +799,7 @@ class BlockPartitions(object):
                         col_position_counter + len(col_internal_idx)]
                     item = {'item': item}
                 else:
-                    item = dict()
+                    item = {}
 
                 if lazy:
                     result = remote_part.add_to_apply_calls(
