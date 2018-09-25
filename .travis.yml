@@ -25,7 +25,7 @@ matrix:
       env: LINT=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
-        - black --check --diff modin/
+        - black --check modin/
         - flake8 .
 
 install:
