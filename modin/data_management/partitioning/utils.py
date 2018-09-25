@@ -8,8 +8,9 @@ import pandas
 
 def compute_chunksize(length, num_splits):
     # We do this to avoid zeros and having an extremely large last partition
-    return length // num_splits if length % num_splits == 0 \
-        else length // num_splits + 1
+    return (
+        length // num_splits if length % num_splits == 0 else length // num_splits + 1
+    )
 
 
 def _get_nan_block_id(partition_class, n_row=1, n_col=1, transpose=False):

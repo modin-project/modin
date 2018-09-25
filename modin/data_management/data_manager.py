@@ -7,9 +7,12 @@ import pandas
 
 from pandas.compat import string_types
 from pandas.core.dtypes.cast import find_common_type
-from pandas.core.dtypes.common import (_get_dtype_from_object, is_list_like,
-                                       is_numeric_dtype,
-                                       is_datetime_or_timedelta_dtype)
+from pandas.core.dtypes.common import (
+    _get_dtype_from_object,
+    is_list_like,
+    is_numeric_dtype,
+    is_datetime_or_timedelta_dtype,
+)
 from pandas.core.index import _ensure_index
 
 from .partitioning.partition_collections import BlockPartitions
@@ -19,11 +22,13 @@ class PandasDataManager(object):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
 
-    def __init__(self,
-                 block_partitions_object: BlockPartitions,
-                 index: pandas.Index,
-                 columns: pandas.Index,
-                 dtypes=None):
+    def __init__(
+        self,
+        block_partitions_object: BlockPartitions,
+        index: pandas.Index,
+        columns: pandas.Index,
+        dtypes=None,
+    ):
         assert isinstance(block_partitions_object, BlockPartitions)
         self.data = block_partitions_object
         self.index = index
@@ -31,11 +36,7 @@ class PandasDataManager(object):
         if dtypes is not None:
             self._dtype_cache = dtypes
 
-    def __constructor__(self,
-                        block_paritions_object,
-                        index,
-                        columns,
-                        dtypes=None):
+    def __constructor__(self, block_paritions_object, index, columns, dtypes=None):
         """By default, constructor method will invoke an init"""
         return type(self)(block_paritions_object, index, columns, dtypes)
 
@@ -48,11 +49,9 @@ class PandasDataManager(object):
             map_func = self._prepare_method(lambda df: df.dtypes)
 
             def dtype_builder(df):
-                return df.apply(
-                    lambda row: find_common_type(row.values), axis=0)
+                return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder,
-                                                      0)
+            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
             self._dtype_cache.index = self.columns
         return self._dtype_cache
 
@@ -77,8 +76,9 @@ class PandasDataManager(object):
         new_len = len(new_labels)
         if old_len != new_len:
             raise ValueError(
-                'Length mismatch: Expected axis has %d elements, '
-                'new values have %d elements' % (old_len, new_len))
+                "Length mismatch: Expected axis has %d elements, "
+                "new values have %d elements" % (old_len, new_len)
+            )
         return new_labels
 
     def _set_index(self, new_index):
@@ -92,8 +92,7 @@ class PandasDataManager(object):
         if self._columns_cache is None:
             self._columns_cache = _ensure_index(new_columns)
         else:
-            new_columns = self._validate_set_axis(new_columns,
-                                                  self._columns_cache)
+            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
 
     columns = property(_get_columns, _set_columns)
@@ -133,7 +132,8 @@ class PandasDataManager(object):
         new_indices = data_object.get_indices(
             axis=axis,
             index_func=lambda df: pandas_index_extraction(df, axis),
-            old_blocks=old_blocks)
+            old_blocks=old_blocks,
+        )
 
         return index_obj[new_indices] if compute_diff else new_indices
 
@@ -154,6 +154,7 @@ class PandasDataManager(object):
 
             def helper(df, internal_indices=[]):
                 return pandas_func(df.T, **kwargs)
+
         else:
 
             def helper(df, internal_indices=[]):
@@ -190,7 +191,8 @@ class PandasDataManager(object):
             result = pandas.Series(dtype=np.float64)
 
         nonnumeric = [
-            col for col, dtype in zip(self.columns, self.dtypes)
+            col
+            for col, dtype in zip(self.columns, self.dtypes)
             if not is_numeric_dtype(dtype)
         ]
         if len(nonnumeric) == len(self.columns):
@@ -206,13 +208,15 @@ class PandasDataManager(object):
     # Metadata modification methods
     def add_prefix(self, prefix):
         new_column_names = self.columns.map(lambda x: str(prefix) + str(x))
-        return self.__constructor__(self.data, self.index, new_column_names,
-                                    self._dtype_cache)
+        return self.__constructor__(
+            self.data, self.index, new_column_names, self._dtype_cache
+        )
 
     def add_suffix(self, suffix):
         new_column_names = self.columns.map(lambda x: str(x) + str(suffix))
-        return self.__constructor__(self.data, self.index, new_column_names,
-                                    self._dtype_cache)
+        return self.__constructor__(
+            self.data, self.index, new_column_names, self._dtype_cache
+        )
 
     # END Metadata modification methods
 
@@ -221,8 +225,9 @@ class PandasDataManager(object):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        return self.__constructor__(self.data.copy(), self.index.copy(),
-                                    self.columns.copy(), self._dtype_cache)
+        return self.__constructor__(
+            self.data.copy(), self.index.copy(), self.columns.copy(), self._dtype_cache
+        )
 
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
@@ -287,8 +292,9 @@ class PandasDataManager(object):
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
             others = [others]
-        assert all(isinstance(other, type(self)) for other in others), \
-            "Different Manager objects are being used. This is not allowed"
+        assert all(
+            isinstance(other, type(self)) for other in others
+        ), "Different Manager objects are being used. This is not allowed"
 
         sort = kwargs.get("sort", None)
         join = kwargs.get("join", "outer")
@@ -301,13 +307,12 @@ class PandasDataManager(object):
             axis,
             [other.columns if axis == 0 else other.index for other in others],
             join,
-            sort=sort)
+            sort=sort,
+        )
 
         # Since we are concatenating a list of managers, we will align all of
         # the indices based on the `joined_axis` computed above.
-        to_append = [
-            other.reindex(axis ^ 1, joined_axis).data for other in others
-        ]
+        to_append = [other.reindex(axis ^ 1, joined_axis).data for other in others]
         new_self = self.reindex(axis ^ 1, joined_axis).data
         new_data = new_self.concat(axis, to_append)
 
@@ -316,20 +321,23 @@ class PandasDataManager(object):
             # If `ignore_index` is true, we create a RangeIndex that is the
             # length of all of the index objects combined. This is the same
             # behavior as pandas.
-            new_index = self.index.append([
-                other.index for other in others
-            ]) if not ignore_index else pandas.RangeIndex(
-                len(self.index) + sum(len(other.index) for other in others))
+            new_index = (
+                self.index.append([other.index for other in others])
+                if not ignore_index
+                else pandas.RangeIndex(
+                    len(self.index) + sum(len(other.index) for other in others)
+                )
+            )
             return self.__constructor__(new_data, new_index, joined_axis)
         else:
             # The columns will be appended to form the final columns.
-            new_columns = self.columns.append(
-                [other.columns for other in others])
+            new_columns = self.columns.append([other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
     def _join_data_manager(self, other, **kwargs):
-        assert isinstance(other, type(self)), \
-            "This method is for data manager objects only"
+        assert isinstance(
+            other, type(self)
+        ), "This method is for data manager objects only"
 
         # Uses join's default value (though should not revert to default)
         how = kwargs.get("how", "left")
@@ -349,15 +357,18 @@ class PandasDataManager(object):
         self_proxy = pandas.DataFrame(columns=self.columns)
         other_proxy = pandas.DataFrame(columns=other.columns)
         new_columns = self_proxy.join(
-            other_proxy, lsuffix=lsuffix, rsuffix=rsuffix).columns
+            other_proxy, lsuffix=lsuffix, rsuffix=rsuffix
+        ).columns
 
         return self.__constructor__(new_data, joined_index, new_columns)
 
     def _join_list_of_managers(self, others, **kwargs):
-        assert isinstance(others, list), \
-            "This method is for lists of DataManager objects only"
-        assert all(isinstance(other, type(self)) for other in others), \
-            "Different Manager objects are being used. This is not allowed"
+        assert isinstance(
+            others, list
+        ), "This method is for lists of DataManager objects only"
+        assert all(
+            isinstance(other, type(self)) for other in others
+        ), "Different Manager objects are being used. This is not allowed"
 
         # Uses join's default value (though should not revert to default)
         how = kwargs.get("how", "left")
@@ -366,7 +377,8 @@ class PandasDataManager(object):
         rsuffix = kwargs.get("rsuffix", "")
 
         joined_index = self._join_index_objects(
-            1, [other.index for other in others], how, sort=sort)
+            1, [other.index for other in others], how, sort=sort
+        )
 
         to_join = [other.reindex(0, joined_index).data for other in others]
         new_self = self.reindex(0, joined_index).data
@@ -376,11 +388,10 @@ class PandasDataManager(object):
         # This stage is to efficiently get the resulting columns, including the
         # suffixes.
         self_proxy = pandas.DataFrame(columns=self.columns)
-        others_proxy = [
-            pandas.DataFrame(columns=other.columns) for other in others
-        ]
+        others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
         new_columns = self_proxy.join(
-            others_proxy, lsuffix=lsuffix, rsuffix=rsuffix).columns
+            others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
+        ).columns
 
         return self.__constructor__(new_data, joined_index, new_columns)
 
@@ -401,13 +412,14 @@ class PandasDataManager(object):
         Returns:
             New DataManager with new data and index.
         """
-        assert isinstance(other, type(self)), \
-            "Must have the same DataManager subclass to perform this operation"
+        assert isinstance(
+            other, type(self)
+        ), "Must have the same DataManager subclass to perform this operation"
 
-        joined_index = self._join_index_objects(
-            1, other.index, how_to_join, sort=False)
+        joined_index = self._join_index_objects(1, other.index, how_to_join, sort=False)
         new_columns = self._join_index_objects(
-            0, other.columns, how_to_join, sort=False)
+            0, other.columns, how_to_join, sort=False
+        )
 
         reindexed_other = other.reindex(0, joined_index).data
         reindexed_self = self.reindex(0, joined_index).data
@@ -429,7 +441,8 @@ class PandasDataManager(object):
         new_data = reindexed_self.inter_data_operation(
             1,
             lambda l, r: inter_data_op_builder(l, r, self_cols, other_cols, func),
-            reindexed_other)
+            reindexed_other,
+        )
 
         return self.__constructor__(new_data, joined_index, new_columns)
 
@@ -447,10 +460,12 @@ class PandasDataManager(object):
 
         if isinstance(other, type(self)):
             return self.inter_manager_operations(
-                other, "outer", lambda x, y: func(x, y, **kwargs))
+                other, "outer", lambda x, y: func(x, y, **kwargs)
+            )
         else:
-            return self.scalar_operations(axis, other,
-                                          lambda df: func(df, other, **kwargs))
+            return self.scalar_operations(
+                axis, other, lambda df: func(df, other, **kwargs)
+            )
 
     def add(self, other, **kwargs):
         """Adds this manager with other object (manager or scalar).
@@ -667,8 +682,9 @@ class PandasDataManager(object):
         Returns:
             New DataManager with updated data and index.
         """
-        assert isinstance(other, type(self)), \
-            "Must have the same DataManager subclass to perform this operation"
+        assert isinstance(
+            other, type(self)
+        ), "Must have the same DataManager subclass to perform this operation"
 
         def update_builder(df, other, **kwargs):
             df.update(other, **kwargs)
@@ -686,8 +702,9 @@ class PandasDataManager(object):
             New DataManager with updated data and index.
         """
 
-        assert isinstance(cond, type(self)), \
-            "Must have the same DataManager subclass to perform this operation"
+        assert isinstance(
+            cond, type(self)
+        ), "Must have the same DataManager subclass to perform this operation"
 
         if isinstance(other, type(self)):
             # Note: Currently we are doing this with two maps across the entire
@@ -708,11 +725,13 @@ class PandasDataManager(object):
             reindexed_self = self.reindex(0, self.index).data
 
             first_pass = reindexed_cond.inter_data_operation(
-                1, lambda l, r: where_builder_first_pass(l, r, **kwargs),
-                reindexed_other)
+                1,
+                lambda l, r: where_builder_first_pass(l, r, **kwargs),
+                reindexed_other,
+            )
             final_pass = reindexed_self.inter_data_operation(
-                1, lambda l, r: where_builder_second_pass(l, r, **kwargs),
-                first_pass)
+                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass
+            )
             return self.__constructor__(final_pass, self.index, self.columns)
         else:
             axis = kwargs.get("axis", 0)
@@ -725,13 +744,17 @@ class PandasDataManager(object):
                 return df.where(cond, other, **kwargs)
 
             reindexed_self = self.reindex(
-                axis, self.index if not axis else self.columns).data
+                axis, self.index if not axis else self.columns
+            ).data
             reindexed_cond = cond.reindex(
-                axis, self.index if not axis else self.columns).data
+                axis, self.index if not axis else self.columns
+            ).data
 
             new_data = reindexed_self.inter_data_operation(
-                axis, lambda l, r: where_builder_series(l, r, other, **kwargs),
-                reindexed_cond)
+                axis,
+                lambda l, r: where_builder_series(l, r, other, **kwargs),
+                reindexed_cond,
+            )
             return self.__constructor__(new_data, self.index, self.columns)
 
     # END Inter-Data operations
@@ -791,7 +814,8 @@ class PandasDataManager(object):
         new_columns = labels if axis else self.columns
 
         func = self._prepare_method(
-            lambda df: reindex_builer(df, axis, old_labels, labels, **kwargs))
+            lambda df: reindex_builer(df, axis, old_labels, labels, **kwargs)
+        )
 
         # The reindex can just be mapped over the axis we are modifying. This
         # is for simplicity in implementation. We specify num_splits here
@@ -819,8 +843,9 @@ class PandasDataManager(object):
         else:
             # The copies here are to ensure that we do not give references to
             # this object for the purposes of updates.
-            return self.__constructor__(self.data.copy(), new_index,
-                                        self.columns.copy(), self._dtype_cache)
+            return self.__constructor__(
+                self.data.copy(), new_index, self.columns.copy(), self._dtype_cache
+            )
 
     # END Reindex/reset_index
 
@@ -858,8 +883,7 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_reduce(self, axis, map_func, reduce_func=None,
-                    numeric_only=False):
+    def full_reduce(self, axis, map_func, reduce_func=None, numeric_only=False):
         """Apply function that will reduce the data to a Pandas Series.
 
         Args:
@@ -883,8 +907,9 @@ class PandasDataManager(object):
 
         # The XOR here will ensure that we reduce over the correct axis that
         # exists on the internal partitions. We flip the axis
-        result = data_manager.data.full_reduce(map_func, reduce_func,
-                                               axis ^ self._is_transposed)
+        result = data_manager.data.full_reduce(
+            map_func, reduce_func, axis ^ self._is_transposed
+        )
         if not axis:
             result.index = data_manager.columns
         else:
@@ -967,36 +992,39 @@ class PandasDataManager(object):
     # These operations are operations that apply a function to every partition.
     def map_partitions(self, func, new_dtypes=None):
         return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns,
-            new_dtypes)
+            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
+        )
 
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
-        new_dtypes = pandas.Series([np.dtype('float64') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("float64") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def applymap(self, func):
-        remote_func = self._prepare_method(
-            pandas.DataFrame.applymap, func=func)
+        remote_func = self._prepare_method(pandas.DataFrame.applymap, func=func)
         return self.map_partitions(remote_func)
 
     def isin(self, **kwargs):
         func = self._prepare_method(pandas.DataFrame.isin, **kwargs)
-        new_dtypes = pandas.Series([np.dtype('bool') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("bool") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def isna(self):
         func = self._prepare_method(pandas.DataFrame.isna)
-        new_dtypes = pandas.Series([np.dtype('bool') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("bool") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def isnull(self):
         func = self._prepare_method(pandas.DataFrame.isnull)
-        new_dtypes = pandas.Series([np.dtype('bool') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("bool") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def negative(self, **kwargs):
@@ -1005,14 +1033,16 @@ class PandasDataManager(object):
 
     def notna(self):
         func = self._prepare_method(pandas.DataFrame.notna)
-        new_dtypes = pandas.Series([np.dtype('bool') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("bool") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def notnull(self):
         func = self._prepare_method(pandas.DataFrame.notnull)
-        new_dtypes = pandas.Series([np.dtype('bool') for _ in self.columns],
-                                   index=self.columns)
+        new_dtypes = pandas.Series(
+            [np.dtype("bool") for _ in self.columns], index=self.columns
+        )
         return self.map_partitions(func, new_dtypes=new_dtypes)
 
     def round(self, **kwargs):
@@ -1053,9 +1083,9 @@ class PandasDataManager(object):
                 # Update the new dtype series to the proper pandas dtype
                 new_dtype = np.dtype(dtype)
                 if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtype = np.dtype('int64')
+                    new_dtype = np.dtype("int64")
                 elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtype = np.dtype('float64')
+                    new_dtype = np.dtype("float64")
                 new_dtypes[column] = new_dtype
 
         # Update partitions for each dtype that is updated
@@ -1069,10 +1099,10 @@ class PandasDataManager(object):
                 return df.astype(block_dtypes)
 
             new_data = new_data.apply_func_to_select_indices(
-                0, astype, dtype_indices[dtype], keep_remaining=True)
+                0, astype, dtype_indices[dtype], keep_remaining=True
+            )
 
-        return self.__constructor__(new_data, self.index, self.columns,
-                                    new_dtypes)
+        return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
 
     # END Map partitions across select indices
 
@@ -1092,7 +1122,8 @@ class PandasDataManager(object):
             Pandas series containing the reduced data.
         """
         result = self.data.map_across_full_axis(axis, func).to_pandas(
-            self._is_transposed)
+            self._is_transposed
+        )
 
         if not axis:
             result.index = self.columns
@@ -1223,7 +1254,7 @@ class PandasDataManager(object):
         def memory_usage_builder(df, **kwargs):
             return df.memory_usage(index=False, deep=deep)
 
-        deep = kwargs.get('deep', False)
+        deep = kwargs.get("deep", False)
         func = self._prepare_method(memory_usage_builder, **kwargs)
         return self.full_axis_reduce(func, 0)
 
@@ -1260,11 +1291,9 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce_along_select_indices(self,
-                                              func,
-                                              axis,
-                                              index,
-                                              pandas_result=True):
+    def full_axis_reduce_along_select_indices(
+        self, func, axis, index, pandas_result=True
+    ):
         """Reduce Manger along select indices using function that needs full axis.
 
         Args:
@@ -1279,11 +1308,10 @@ class PandasDataManager(object):
         """
         # Convert indices to numeric indices
         old_index = self.index if axis else self.columns
-        numeric_indices = [
-            i for i, name in enumerate(old_index) if name in index
-        ]
+        numeric_indices = [i for i, name in enumerate(old_index) if name in index]
         result = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, numeric_indices)
+            axis, func, numeric_indices
+        )
 
         if pandas_result:
             result = result.to_pandas(self._is_transposed)
@@ -1311,19 +1339,19 @@ class PandasDataManager(object):
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self.full_axis_reduce_along_select_indices(
-            func, 0, new_index, False)
+        new_data = self.full_axis_reduce_along_select_indices(func, 0, new_index, False)
         new_index = self.compute_index(0, new_data, False)
         new_columns = self.compute_index(1, new_data, True)
         if numeric:
-            new_dtypes = pandas.Series([np.float64 for _ in new_columns],
-                                       index=new_columns)
+            new_dtypes = pandas.Series(
+                [np.float64 for _ in new_columns], index=new_columns
+            )
         else:
-            new_dtypes = pandas.Series([np.object for _ in new_columns],
-                                       index=new_columns)
+            new_dtypes = pandas.Series(
+                [np.object for _ in new_columns], index=new_columns
+            )
 
-        return self.__constructor__(new_data, new_index, new_columns,
-                                    new_dtypes)
+        return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
     def median(self, **kwargs):
         """Returns median of each column or row.
@@ -1440,8 +1468,9 @@ class PandasDataManager(object):
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(func, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
-        return self.__constructor__(new_data, self.index, self.columns,
-                                    self._dtype_cache)
+        return self.__constructor__(
+            new_data, self.index, self.columns, self._dtype_cache
+        )
 
     def cumsum(self, **kwargs):
         return self._cumulative_builder(pandas.DataFrame.cumsum, **kwargs)
@@ -1493,13 +1522,11 @@ class PandasDataManager(object):
             # Count the number of NA values and specify which are higher than
             # thresh.
             drop_values = {
-                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1) > thresh
-                for ax in axis
+                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1) > thresh for ax in axis
             }
         else:
             drop_values = {
-                ax ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1)
-                for ax in axis
+                ax ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1) for ax in axis
             }
 
         if 0 not in drop_values:
@@ -1508,16 +1535,25 @@ class PandasDataManager(object):
         if 1 not in drop_values:
             drop_values[1] = None
 
-            rm_from_index = [obj for obj in compute_na.index[drop_values[1]]
-                             ] if drop_values[1] is not None else None
-            rm_from_columns = [
-                obj for obj in compute_na.columns[drop_values[0]]
-            ] if drop_values[0] is not None else None
+            rm_from_index = (
+                [obj for obj in compute_na.index[drop_values[1]]]
+                if drop_values[1] is not None
+                else None
+            )
+            rm_from_columns = (
+                [obj for obj in compute_na.columns[drop_values[0]]]
+                if drop_values[0] is not None
+                else None
+            )
         else:
-            rm_from_index = compute_na.index[
-                drop_values[1]] if drop_values[1] is not None else None
-            rm_from_columns = compute_na.columns[
-                drop_values[0]] if drop_values[0] is not None else None
+            rm_from_index = (
+                compute_na.index[drop_values[1]] if drop_values[1] is not None else None
+            )
+            rm_from_columns = (
+                compute_na.columns[drop_values[0]]
+                if drop_values[0] is not None
+                else None
+            )
 
         return self.drop(index=rm_from_index, columns=rm_from_columns)
 
@@ -1545,8 +1581,7 @@ class PandasDataManager(object):
         # in the first column
         if expect_series:
             if inplace:
-                raise ValueError(
-                    "Cannot operate inplace if there is no assignment")
+                raise ValueError("Cannot operate inplace if there is no assignment")
             else:
                 expr = "{0} = {1}".format(columns[0], expr)
 
@@ -1578,13 +1613,15 @@ class PandasDataManager(object):
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
 
-        counts = self.__constructor__(new_data, self.index,
-                                      self.columns).notnull().sum(axis=axis)
+        counts = (
+            self.__constructor__(new_data, self.index, self.columns)
+            .notnull()
+            .sum(axis=axis)
+        )
         max_count = counts.max()
 
         new_index = pandas.RangeIndex(max_count) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(
-            max_count)
+        new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
 
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
@@ -1592,10 +1629,13 @@ class PandasDataManager(object):
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
         final_data = self.__constructor__(
-            new_data, new_index, new_columns).map_across_full_axis(
-                axis, lambda df: df.reindex(axis=axis, labels=final_labels))
-        return self.__constructor__(final_data, new_index, new_columns,
-                                    self._dtype_cache)
+            new_data, new_index, new_columns
+        ).map_across_full_axis(
+            axis, lambda df: df.reindex(axis=axis, labels=final_labels)
+        )
+        return self.__constructor__(
+            final_data, new_index, new_columns, self._dtype_cache
+        )
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -1614,15 +1654,15 @@ class PandasDataManager(object):
             else:
                 index = self.index
             value = {
-                idx: value[key]
-                for key in value for idx in index.get_indexer_for([key])
+                idx: value[key] for key in value for idx in index.get_indexer_for([key])
             }
 
             def fillna_dict_builder(df, func_dict={}):
                 return df.fillna(value=func_dict, **kwargs)
 
             new_data = self.data.apply_func_to_select_indices(
-                axis, fillna_dict_builder, value, keep_remaining=True)
+                axis, fillna_dict_builder, value, keep_remaining=True
+            )
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             func = self._prepare_method(pandas.DataFrame.fillna, **kwargs)
@@ -1655,8 +1695,7 @@ class PandasDataManager(object):
         # Query removes rows, so we need to update the index
         new_index = self.compute_index(0, new_data, True)
 
-        return self.__constructor__(new_data, new_index, self.columns,
-                                    self.dtypes)
+        return self.__constructor__(new_data, new_index, self.columns, self.dtypes)
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
@@ -1676,10 +1715,8 @@ class PandasDataManager(object):
             new_columns = self.compute_index(1, new_data, True)
         else:
             new_columns = self.columns
-        new_dtypes = pandas.Series([np.float64 for _ in new_columns],
-                                   index=new_columns)
-        return self.__constructor__(new_data, self.index, new_columns,
-                                    new_dtypes)
+        new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
+        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
 
     # END Map across rows/columns
 
@@ -1687,11 +1724,9 @@ class PandasDataManager(object):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
-    def map_across_full_axis_select_indices(self,
-                                            axis,
-                                            func,
-                                            indices,
-                                            keep_remaining=False):
+    def map_across_full_axis_select_indices(
+        self, axis, func, indices, keep_remaining=False
+    ):
         """Maps function to select indices along full axis.
 
         Args:
@@ -1704,7 +1739,8 @@ class PandasDataManager(object):
             BlockPartitions containing the result of mapping func over axis on indices.
         """
         return self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, indices, keep_remaining)
+            axis, func, indices, keep_remaining
+        )
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
@@ -1721,22 +1757,22 @@ class PandasDataManager(object):
             new_columns = self.numeric_columns()
         else:
             new_columns = [
-                col for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype)
-                    or is_datetime_or_timedelta_dtype(dtype))
+                col
+                for col, dtype in zip(self.columns, self.dtypes)
+                if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
             ]
         if axis:
             # If along rows, then drop the nonnumeric columns, record the index, and
             # take transpose. We have to do this because if we don't, the result is all
             # in one column for some reason.
             nonnumeric = [
-                col for col, dtype in zip(self.columns, self.dtypes)
+                col
+                for col, dtype in zip(self.columns, self.dtypes)
                 if not is_numeric_dtype(dtype)
             ]
             data_manager = self.drop(columns=nonnumeric)
             new_columns = data_manager.index
-            numeric_indices = list(
-                data_manager.index.get_indexer_for(new_columns))
+            numeric_indices = list(data_manager.index.get_indexer_for(new_columns))
             data_manager = data_manager.transpose()
             kwargs.pop("axis")
         else:
@@ -1749,7 +1785,8 @@ class PandasDataManager(object):
         func = self._prepare_method(quantile_builder, **kwargs)
         q_index = pandas.Float64Index(q)
         new_data = data_manager.map_across_full_axis_select_indices(
-            0, func, numeric_indices)
+            0, func, numeric_indices
+        )
         return self.__constructor__(new_data, q_index, new_columns)
 
     # END Map across rows/columns
@@ -1773,13 +1810,16 @@ class PandasDataManager(object):
             # on a transposed manager is already set to the correct value, so
             # we need to only take the head of that instead of re-transposing.
             result = self.__constructor__(
-                self.data.transpose().take(1, n).transpose(), self.index[:n],
-                self.columns, self._dtype_cache)
+                self.data.transpose().take(1, n).transpose(),
+                self.index[:n],
+                self.columns,
+                self._dtype_cache,
+            )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(0, n), self.index[:n], self.columns,
-                self._dtype_cache)
+                self.data.take(0, n), self.index[:n], self.columns, self._dtype_cache
+            )
         return result
 
     def tail(self, n):
@@ -1794,13 +1834,16 @@ class PandasDataManager(object):
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
-                self.data.transpose().take(1, -n).transpose(), self.index[-n:],
-                self.columns, self._dtype_cache)
+                self.data.transpose().take(1, -n).transpose(),
+                self.index[-n:],
+                self.columns,
+                self._dtype_cache,
+            )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(0, -n), self.index[-n:], self.columns,
-                self._dtype_cache)
+                self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
+            )
 
         return result
 
@@ -1816,13 +1859,16 @@ class PandasDataManager(object):
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
-                self.data.transpose().take(0, n).transpose(), self.index,
-                self.columns[:n], self.dtypes[:n])
+                self.data.transpose().take(0, n).transpose(),
+                self.index,
+                self.columns[:n],
+                self.dtypes[:n],
+            )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, n), self.index, self.columns[:n],
-                self.dtypes[:n])
+                self.data.take(1, n), self.index, self.columns[:n], self.dtypes[:n]
+            )
         return result
 
     def back(self, n):
@@ -1837,13 +1883,16 @@ class PandasDataManager(object):
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
-                self.data.transpose().take(0, -n).transpose(), self.index,
-                self.columns[-n:], self.dtypes[-n:])
+                self.data.transpose().take(0, -n).transpose(),
+                self.index,
+                self.columns[-n:],
+                self.dtypes[-n:],
+            )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, -n), self.index, self.columns[-n:],
-                self.dtypes[-n:])
+                self.data.take(1, -n), self.index, self.columns[-n:], self.dtypes[-n:]
+            )
         return result
 
     # End Head/Tail/Front/Back
@@ -1928,14 +1977,14 @@ class PandasDataManager(object):
             return df.iloc[:, internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            0, getitem, numeric_indices, keep_remaining=False)
+            0, getitem, numeric_indices, keep_remaining=False
+        )
 
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
         new_columns = self.columns[numeric_indices]
         new_dtypes = self.dtypes[numeric_indices]
-        return self.__constructor__(result, self.index, new_columns,
-                                    new_dtypes)
+        return self.__constructor__(result, self.index, new_columns, new_dtypes)
 
     def getitem_row_array(self, key):
         """Get row data for target labels.
@@ -1953,12 +2002,12 @@ class PandasDataManager(object):
             return df.iloc[internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            1, getitem, numeric_indices, keep_remaining=False)
+            1, getitem, numeric_indices, keep_remaining=False
+        )
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
         new_index = self.index[numeric_indices]
-        return self.__constructor__(result, new_index, self.columns,
-                                    self._dtype_cache)
+        return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
 
     # END __getitem__ methods
 
@@ -1987,11 +2036,13 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.index.get_indexer_for(index))
             new_data = self.data.apply_func_to_select_indices(
-                1, delitem, numeric_indices, keep_remaining=True)
+                1, delitem, numeric_indices, keep_remaining=True
+            )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
             new_index = [
-                self.index[i] for i in range(len(self.index))
+                self.index[i]
+                for i in range(len(self.index))
                 if i not in numeric_indices
             ]
 
@@ -2005,16 +2056,17 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.columns.get_indexer_for(columns))
             new_data = new_data.apply_func_to_select_indices(
-                0, delitem, numeric_indices, keep_remaining=True)
+                0, delitem, numeric_indices, keep_remaining=True
+            )
             # We can't use self.columns.drop with duplicate keys because in Pandas
             # it throws an error.
             new_columns = [
-                self.columns[i] for i in range(len(self.columns))
+                self.columns[i]
+                for i in range(len(self.columns))
                 if i not in numeric_indices
             ]
             new_dtypes = self.dtypes.drop(columns)
-        return self.__constructor__(new_data, new_index, new_columns,
-                                    new_dtypes)
+        return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
     # END __delitem__ and drop
 
@@ -2041,7 +2093,8 @@ class PandasDataManager(object):
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
-            0, insert, loc, keep_remaining=True)
+            0, insert, loc, keep_remaining=True
+        )
         new_columns = self.columns.insert(loc, column)
 
         # Because a Pandas Series does not allow insert, we make a DataFrame
@@ -2050,8 +2103,7 @@ class PandasDataManager(object):
         temp_dtypes.insert(loc, column, _get_dtype_from_object(value))
         new_dtypes = temp_dtypes.iloc[0]
 
-        return self.__constructor__(new_data, self.index, new_columns,
-                                    new_dtypes)
+        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
 
     # END Insert
 
@@ -2108,11 +2160,17 @@ class PandasDataManager(object):
         # this logic here.
         if len(columns) == 0:
             series_result = result_data.to_pandas(False)
-            if not axis and len(series_result) == len(
-                    self.columns) and len(index) != len(series_result):
+            if (
+                not axis
+                and len(series_result) == len(self.columns)
+                and len(index) != len(series_result)
+            ):
                 index = self.columns
-            elif axis and len(series_result) == len(
-                    self.index) and len(index) != len(series_result):
+            elif (
+                axis
+                and len(series_result) == len(self.index)
+                and len(index) != len(series_result)
+            ):
                 index = self.index
 
             series_result.index = index
@@ -2138,16 +2196,14 @@ class PandasDataManager(object):
         else:
             index = self.index
 
-        func = {
-            idx: func[key]
-            for key in func for idx in index.get_indexer_for([key])
-        }
+        func = {idx: func[key] for key in func for idx in index.get_indexer_for([key])}
 
         def dict_apply_builder(df, func_dict={}):
             return df.apply(func_dict, *args, **kwargs)
 
         result_data = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, dict_apply_builder, func, keep_remaining=False)
+            axis, dict_apply_builder, func, keep_remaining=False
+        )
 
         full_result = self._post_process_apply(result_data, axis)
 
@@ -2169,14 +2225,11 @@ class PandasDataManager(object):
         Returns:
             A new PandasDataManager.
         """
-        func_prepared = self._prepare_method(
-            lambda df: df.apply(func, *args, **kwargs))
+        func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
         new_data = self.map_across_full_axis(axis, func_prepared)
 
         # When the function is list-like, the function names become the index
-        new_index = [
-            f if isinstance(f, string_types) else f.__name__ for f in func
-        ]
+        new_index = [f if isinstance(f, string_types) else f.__name__ for f in func]
         return self.__constructor__(new_data, new_index, self.columns)
 
     def _callable_func(self, func, axis, *args, **kwargs):
@@ -2236,11 +2289,9 @@ class PandasDataManager(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            return agg_func(
-                df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
+            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
 
-        func_prepared = self._prepare_method(
-            lambda df: groupby_agg_builder(df))
+        func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
         return self._post_process_apply(result_data, axis, try_scale=False)
 
@@ -2260,9 +2311,7 @@ class PandasDataManager(object):
         # `columns` as None does not mean all columns, by default it means only
         # non-numeric columns.
         if columns is None:
-            columns = [
-                c for c in self.columns if not is_numeric_dtype(self.dtypes[c])
-            ]
+            columns = [c for c in self.columns if not is_numeric_dtype(self.dtypes[c])]
 
             # If we aren't computing any dummies, there is no need for any
             # remote compute.
@@ -2286,7 +2335,8 @@ class PandasDataManager(object):
 
         set_cols = self.columns
         columns_applied = self.map_across_full_axis(
-            1, lambda df: set_columns(df, set_cols))
+            1, lambda df: set_columns(df, set_cols)
+        )
 
         # In some cases, we are mapping across all of the data. It is more
         # efficient if we are mapping over all of the data to do it this way
@@ -2307,11 +2357,13 @@ class PandasDataManager(object):
 
             def get_dummies_builder(df, internal_indices=[]):
                 return pandas.get_dummies(
-                    df.iloc[:, internal_indices], columns=None, **kwargs)
+                    df.iloc[:, internal_indices], columns=None, **kwargs
+                )
 
             numeric_indices = list(self.columns.get_indexer_for(columns))
             new_data = columns_applied.apply_func_to_select_indices_along_full_axis(
-                0, get_dummies_builder, numeric_indices, keep_remaining=False)
+                0, get_dummies_builder, numeric_indices, keep_remaining=False
+            )
             untouched_data = self.drop(columns=columns)
 
         # Since we set the columns in the beginning, we can just extract them
@@ -2324,26 +2376,30 @@ class PandasDataManager(object):
         # not selected.
         if len(columns) != len(self.columns):
             new_data = untouched_data.data.concat(1, new_data)
-            final_columns = untouched_data.columns.append(
-                pandas.Index(final_columns))
+            final_columns = untouched_data.columns.append(pandas.Index(final_columns))
 
         return cls(new_data, self.index, final_columns)
 
     # Indexing
     def view(self, index=None, columns=None):
-        index_map_series = pandas.Series(
-            np.arange(len(self.index)), index=self.index)
+        index_map_series = pandas.Series(np.arange(len(self.index)), index=self.index)
         column_map_series = pandas.Series(
-            np.arange(len(self.columns)), index=self.columns)
+            np.arange(len(self.columns)), index=self.columns
+        )
 
         if index is not None:
             index_map_series = index_map_series.reindex(index)
         if columns is not None:
             column_map_series = column_map_series.reindex(columns)
 
-        return PandasDataManagerView(self.data, index_map_series.index,
-                                     column_map_series.index, self.dtypes,
-                                     index_map_series, column_map_series)
+        return PandasDataManagerView(
+            self.data,
+            index_map_series.index,
+            column_map_series.index,
+            self.dtypes,
+            index_map_series,
+            column_map_series,
+        )
 
     def squeeze(self, ndim=0, axis=None):
         squeezed = self.data.to_pandas().squeeze()
@@ -2358,10 +2414,8 @@ class PandasDataManager(object):
 
         return squeezed
 
-    def write_items(self, row_numeric_index, col_numeric_index,
-                    broadcasted_items):
-        def iloc_mut(partition, row_internal_indices, col_internal_indices,
-                     item):
+    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+        def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             partition = partition.copy()
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
@@ -2371,7 +2425,8 @@ class PandasDataManager(object):
             row_indices=row_numeric_index,
             col_indices=col_numeric_index,
             mutate=True,
-            item_to_distribute=broadcasted_items)
+            item_to_distribute=broadcasted_items,
+        )
         self.data = mutated_blk_partitions
 
     def global_idx_to_numeric_idx(self, axis, indices):
@@ -2385,25 +2440,34 @@ class PandasDataManager(object):
         Returns:
             An Index object.
         """
-        assert axis in ['row', 'col', 'columns']
-        if axis == 'row':
+        assert axis in ["row", "col", "columns"]
+        if axis == "row":
             return pandas.Index(
-                pandas.Series(np.arange(len(self.index)),
-                              index=self.index).loc[indices].values)
-        elif axis in ['col', 'columns']:
+                pandas.Series(np.arange(len(self.index)), index=self.index)
+                .loc[indices]
+                .values
+            )
+        elif axis in ["col", "columns"]:
             return pandas.Index(
-                pandas.Series(
-                    np.arange(len(self.columns)),
-                    index=self.columns).loc[indices].values)
+                pandas.Series(np.arange(len(self.columns)), index=self.columns)
+                .loc[indices]
+                .values
+            )
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         new_data = self.data.enlarge_partitions(
-            len(new_row_labels), len(new_col_labels))
-        concated_index = self.index.append(type(
-            self.index)(new_row_labels)) if new_row_labels else self.index
-        concated_columns = self.columns.append(
-            type(self.columns)(
-                new_col_labels)) if new_col_labels else self.columns
+            len(new_row_labels), len(new_col_labels)
+        )
+        concated_index = (
+            self.index.append(type(self.index)(new_row_labels))
+            if new_row_labels
+            else self.index
+        )
+        concated_columns = (
+            self.columns.append(type(self.columns)(new_col_labels))
+            if new_col_labels
+            else self.columns
+        )
         return self.__constructor__(new_data, concated_index, concated_columns)
 
 
@@ -2415,13 +2479,15 @@ class PandasDataManagerView(PandasDataManager):
     - (len(self.index), len(self.columns)) != self.data.shape
     """
 
-    def __init__(self,
-                 block_partitions_object: BlockPartitions,
-                 index: pandas.Index,
-                 columns: pandas.Index,
-                 dtypes=None,
-                 index_map_series: pandas.Series = None,
-                 columns_map_series: pandas.Series = None):
+    def __init__(
+        self,
+        block_partitions_object: BlockPartitions,
+        index: pandas.Index,
+        columns: pandas.Index,
+        dtypes=None,
+        index_map_series: pandas.Series = None,
+        columns_map_series: pandas.Series = None,
+    ):
         """
         Args:
             index_map_series: a Pandas Series Object mapping user-facing index to
@@ -2438,19 +2504,28 @@ class PandasDataManagerView(PandasDataManager):
         self.columns_map = columns_map_series
         self.is_view = True
 
-        PandasDataManager.__init__(self, block_partitions_object, index,
-                                   columns, dtypes)
+        PandasDataManager.__init__(
+            self, block_partitions_object, index, columns, dtypes
+        )
 
-    def __constructor__(self,
-                        block_partitions_object: BlockPartitions,
-                        index: pandas.Index,
-                        columns: pandas.Index,
-                        dtypes=None):
+    def __constructor__(
+        self,
+        block_partitions_object: BlockPartitions,
+        index: pandas.Index,
+        columns: pandas.Index,
+        dtypes=None,
+    ):
         new_index_map = self.index_map.reindex(index)
         new_columns_map = self.columns_map.reindex(columns)
 
-        return type(self)(block_partitions_object, index, columns, dtypes,
-                          new_index_map, new_columns_map)
+        return type(self)(
+            block_partitions_object,
+            index,
+            columns,
+            dtypes,
+            new_index_map,
+            new_columns_map,
+        )
 
     def _get_data(self) -> BlockPartitions:
         """Perform the map step
@@ -2467,7 +2542,8 @@ class PandasDataManagerView(PandasDataManager):
             row_indices=self.index_map.values,
             col_indices=self.columns_map.values,
             lazy=True,
-            keep_remaining=False)
+            keep_remaining=False,
+        )
         return masked_data
 
     def _set_data(self, new_data):
@@ -2479,8 +2555,8 @@ class PandasDataManagerView(PandasDataManager):
     data = property(_get_data, _set_data)
 
     def global_idx_to_numeric_idx(self, axis, indices):
-        assert axis in ['row', 'col', 'columns']
-        if axis == 'row':
+        assert axis in ["row", "col", "columns"]
+        if axis == "row":
             return self.index_map.loc[indices].index
-        elif axis in ['col', 'columns']:
+        elif axis in ["col", "columns"]:
             return self.columns_map.loc[indices].index

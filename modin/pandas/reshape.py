@@ -8,13 +8,15 @@ from pandas.core.dtypes.common import is_list_like
 from .dataframe import DataFrame
 
 
-def get_dummies(data,
-                prefix=None,
-                prefix_sep='_',
-                dummy_na=False,
-                columns=None,
-                sparse=False,
-                drop_first=False):
+def get_dummies(
+    data,
+    prefix=None,
+    prefix_sep="_",
+    dummy_na=False,
+    columns=None,
+    sparse=False,
+    drop_first=False,
+):
     """Convert categorical variable into indicator variables.
 
     Args:
@@ -34,7 +36,8 @@ def get_dummies(data,
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
             "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin.")
+            "github.com/modin-project/modin."
+        )
 
     if not isinstance(data, DataFrame):
         return pandas.get_dummies(
@@ -44,7 +47,8 @@ def get_dummies(data,
             dummy_na=dummy_na,
             columns=columns,
             sparse=sparse,
-            drop_first=drop_first)
+            drop_first=drop_first,
+        )
 
     if isinstance(data, DataFrame):
         df = data
@@ -56,6 +60,7 @@ def get_dummies(data,
         prefix=prefix,
         prefix_sep=prefix_sep,
         dummy_na=dummy_na,
-        drop_first=drop_first)
+        drop_first=drop_first,
+    )
 
     return DataFrame(data_manager=new_manager)

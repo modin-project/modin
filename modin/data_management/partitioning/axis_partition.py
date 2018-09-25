@@ -28,8 +28,7 @@ class AxisPartition(object):
         The only abstract method needed to implement is the `apply` method.
     """
 
-    def apply(self, func, num_splits=None, other_axis_partition=None,
-              **kwargs):
+    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """Applies a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
@@ -71,8 +70,7 @@ class RayAxisPartition(AxisPartition):
         # Unwrap from RemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None,
-              **kwargs):
+    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -93,18 +91,17 @@ class RayAxisPartition(AxisPartition):
             return [
                 RayRemotePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions._submit(
-                    args=(self.axis, func, num_splits,
-                          len(self.list_of_blocks), kwargs) +
-                    tuple(self.list_of_blocks +
-                          other_axis_partition.list_of_blocks),
-                    num_return_vals=num_splits)
+                    args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
+                    + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
+                    num_return_vals=num_splits,
+                )
             ]
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(
-                args, num_return_vals=num_splits)
+            RayRemotePartition(obj)
+            for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -123,8 +120,8 @@ class RayAxisPartition(AxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            RayRemotePartition(obj) for obj in deploy_ray_axis_func._submit(
-                args, num_return_vals=num_splits)
+            RayRemotePartition(obj)
+            for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)
         ]
 
 
@@ -133,6 +130,7 @@ class RayColumnPartition(RayAxisPartition):
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
     """
+
     axis = 0
 
 
@@ -141,6 +139,7 @@ class RayRowPartition(RayAxisPartition):
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
     """
+
     axis = 1
 
 
@@ -160,13 +159,12 @@ def split_result_of_axis_func_pandas(axis, num_splits, result):
     if axis == 0 or type(result) is pandas.Series:
         chunksize = compute_chunksize(len(result), num_splits)
         return [
-            result.iloc[chunksize * i:chunksize * (i + 1)]
-            for i in range(num_splits)
+            result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)
         ]
     else:
         chunksize = compute_chunksize(len(result.columns), num_splits)
         return [
-            result.iloc[:, chunksize * i:chunksize * (i + 1)]
+            result.iloc[:, chunksize * i : chunksize * (i + 1)]
             for i in range(num_splits)
         ]
 
@@ -193,7 +191,8 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-        axis, func, num_splits, len_of_left, kwargs, *partitions):
+    axis, func, num_splits, len_of_left, kwargs, *partitions
+):
     """Deploy a function along a full axis between two data sets in Ray.
 
     Args:
@@ -210,10 +209,8 @@ def deploy_ray_func_between_two_axis_partitions(
     Returns:
         A list of Pandas DataFrames.
     """
-    lt_frame = pandas.concat(
-        list(partitions[:len_of_left]), axis=axis, copy=False)
-    rt_frame = pandas.concat(
-        list(partitions[len_of_left:]), axis=axis, copy=False)
+    lt_frame = pandas.concat(list(partitions[:len_of_left]), axis=axis, copy=False)
+    rt_frame = pandas.concat(list(partitions[len_of_left:]), axis=axis, copy=False)
 
     result = func(lt_frame, rt_frame, **kwargs)
     return split_result_of_axis_func_pandas(axis, num_splits, result)

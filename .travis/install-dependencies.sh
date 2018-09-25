@@ -46,6 +46,8 @@ elif [[ "$LINT" == "1" ]]; then
   bash miniconda.sh -b -p $HOME/miniconda
   export PATH="$HOME/miniconda/bin:$PATH"
   conda install -y python==3.6.5
+  # black is python3.6 only
+  pip install black
   
 else
   echo "Unrecognized environment."
@@ -53,5 +55,5 @@ else
 fi
 
 pip install -r requirements.txt
-pip install -q pytest flake8 flake8-comprehensions yapf feather-format lxml openpyxl xlrd numpy
+pip install -q pytest flake8 flake8-comprehensions feather-format lxml openpyxl xlrd numpy
 

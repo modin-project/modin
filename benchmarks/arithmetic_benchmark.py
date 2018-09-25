@@ -11,9 +11,9 @@ import modin.pandas as pd
 from utils import time_logger
 
 
-parser = argparse.ArgumentParser(description='arithmetic benchmark')
-parser.add_argument('--path', dest='path', help='path to the csv data file')
-parser.add_argument('--logfile', dest='logfile', help='path to the log file')
+parser = argparse.ArgumentParser(description="arithmetic benchmark")
+parser.add_argument("--path", dest="path", help="path to the csv data file")
+parser.add_argument("--logfile", dest="logfile", help="path to the log file")
 args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
@@ -37,26 +37,20 @@ with time_logger("Sum on axis=0: {}; Size: {} bytes".format(file, file_size)):
 with time_logger("Sum on axis=1: {}; Size: {} bytes".format(file, file_size)):
     df.sum(axis=1)
 
-with time_logger("Median on axis=0: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("Median on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.median()
 
-with time_logger("Median on axis=1: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("Median on axis=1: {}; Size: {} bytes".format(file, file_size)):
     df.median(axis=1)
 
-with time_logger("nunique on axis=0: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("nunique on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.nunique()
 
-with time_logger("nunique on axis=1: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("nunique on axis=1: {}; Size: {} bytes".format(file, file_size)):
     df.nunique(axis=1)
 
-with time_logger("Sum UDF on axis=0: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("Sum UDF on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df.apply(lambda df: df.sum())
 
-with time_logger("Sum UDF on axis=1: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("Sum UDF on axis=1: {}; Size: {} bytes".format(file, file_size)):
     df.apply(lambda df: df.sum(), axis=1)
