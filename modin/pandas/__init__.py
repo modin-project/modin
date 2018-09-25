@@ -14,6 +14,16 @@ import os
 import ray
 
 from .. import __git_revision__, __version__
+from .concat import concat
+from .dataframe import DataFrame
+from .datetimes import to_datetime
+from .io import (read_csv, read_parquet, read_json, read_html, read_clipboard,
+                 read_excel, read_hdf, read_feather, read_msgpack, read_stata,
+                 read_sas, read_pickle, read_sql)
+from .reshape import get_dummies
+
+# Set this so that Pandas doesn't try to multithread by itself
+os.environ['OMP_NUM_THREADS'] = "1"
 
 try:
     if threading.current_thread().name == "MainThread":
@@ -24,32 +34,8 @@ try:
 except AssertionError:
     pass
 
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ['OMP_NUM_THREADS'] = "1"
-
 num_cpus = ray.global_state.cluster_resources()['CPU']
-DEFAULT_NPARTITIONS = int(num_cpus)
-
-
-def set_npartition_default(n):
-    global DEFAULT_NPARTITIONS
-    DEFAULT_NPARTITIONS = n
-
-
-def get_npartitions():
-    return DEFAULT_NPARTITIONS
-
-
-# We import these file after above two function
-# because they depend on npartitions.
-from .concat import concat  # noqa: 402
-from .dataframe import DataFrame  # noqa: 402
-from .datetimes import to_datetime  # noqa: 402
-from .io import (  # noqa: 402
-    read_csv, read_parquet, read_json, read_html, read_clipboard, read_excel,
-    read_hdf, read_feather, read_msgpack, read_stata, read_sas, read_pickle,
-    read_sql)
-from .reshape import get_dummies  # noqa: 402
+DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
 __all__ = [
     "DataFrame", "Series", "read_csv", "read_parquet", "read_json",

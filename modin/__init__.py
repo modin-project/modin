@@ -19,10 +19,30 @@ def git_version():
 
     try:
         git_revision = _execute_cmd_in_temp_env(['git', 'rev-parse', 'HEAD'])
-        return git_revision.strip().decode('ascii')
+        return git_revision.strip().decode()
     except OSError:
         return "Unknown"
 
 
+def get_execution_engine():
+    # In the future, when there are multiple engines and different ways of
+    # backing the DataFrame, there will have to be some changed logic here to
+    # decide these things. In the meantime, we will use the currently supported
+    # execution engine + backing (Pandas + Ray).
+    return "Ray"
+
+
+def get_partition_format():
+    # See note above about engine + backing.
+    return "Pandas"
+
+
 __git_revision__ = git_version()
 __version__ = "0.1.2"
+__execution_engine__ = get_execution_engine()
+__partition_format__ = get_partition_format()
+
+# We don't want these used outside of this file.
+del git_version
+del get_execution_engine
+del get_partition_format
