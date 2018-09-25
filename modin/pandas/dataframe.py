@@ -826,8 +826,7 @@ class DataFrame(object):
             for column in self.columns:
                 col_dtypes[column] = dtype
 
-        new_data_manager = self._data_manager.astype(col_dtypes, errors,
-                                                     **kwargs)
+        new_data_manager = self._data_manager.astype(col_dtypes, **kwargs)
         if copy:
             return DataFrame(data_manager=new_data_manager)
         else:
