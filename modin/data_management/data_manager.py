@@ -17,8 +17,7 @@ from .partitioning.partition_collections import BlockPartitions
 
 class PandasDataManager(object):
     """This class implements the logic necessary for operating on partitions
-        with a Pandas backend. This logic is specific to Pandas.
-    """
+        with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(self,
                  block_partitions_object: BlockPartitions,
@@ -37,7 +36,7 @@ class PandasDataManager(object):
                         index,
                         columns,
                         dtypes=None):
-        """By default, clone method will invoke an init"""
+        """By default, constructor method will invoke an init"""
         return type(self)(block_paritions_object, index, columns, dtypes)
 
     # Index, columns and dtypes objects
@@ -895,10 +894,6 @@ class PandasDataManager(object):
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
-
         Return:
             Pandas series containing counts of non-NaN objects from each column or row.
         """
@@ -910,10 +905,6 @@ class PandasDataManager(object):
 
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
 
         Return:
             Pandas series with the maximum values from each column or row.
@@ -927,10 +918,6 @@ class PandasDataManager(object):
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
 
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
-
         Return:
             Pandas series containing the mean from each numerical column or row.
         """
@@ -941,10 +928,6 @@ class PandasDataManager(object):
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
 
         Return:
             Pandas series with the minimum value from each column or row.
@@ -958,10 +941,6 @@ class PandasDataManager(object):
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
 
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
-
         Return:
             Pandas series with the product of each numerical column or row.
         """
@@ -972,10 +951,6 @@ class PandasDataManager(object):
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            numeric_only: If true, only considers numerical columns.
 
         Return:
             Pandas series with the sum of each numerical column or row.
@@ -991,7 +966,6 @@ class PandasDataManager(object):
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     def map_partitions(self, func, new_dtypes=None):
-
         return self.__constructor__(
             self.data.map_across_blocks(func), self.index, self.columns,
             new_dtypes)
@@ -1048,13 +1022,12 @@ class PandasDataManager(object):
     # END Map partitions operations
 
     # Map partitions across select indices
-    def astype(self, col_dtypes, errors='raise', **kwargs):
+    def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
 
         Args:
             col_dtypes: Dictionary of {col: dtype,...} where col is the column
                 name and dtype is a numpy dtype.
-            errors: Controlling the raising of errors.
 
         Returns:
             DataFrame with updated dtypes.
@@ -1131,9 +1104,6 @@ class PandasDataManager(object):
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
 
-        Args:
-            axis: 0 for columns and 1 for rows. Defaults to 0.
-
         Return:
             Pandas Series containing boolean values.
         """
@@ -1143,9 +1113,6 @@ class PandasDataManager(object):
 
     def any(self, **kwargs):
         """Returns whether any element is true over the requested axis.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Defaults to 0.
 
         Return:
             Pandas Series containing boolean values.
@@ -1321,7 +1288,6 @@ class PandasDataManager(object):
         if pandas_result:
             result = result.to_pandas(self._is_transposed)
             result.index = index
-
         return result
 
     def describe(self, **kwargs):
@@ -2487,8 +2453,7 @@ class PandasDataManagerView(PandasDataManager):
                           new_index_map, new_columns_map)
 
     def _get_data(self) -> BlockPartitions:
-        """
-        Perform the map step
+        """Perform the map step
 
         Returns:
             A BlockPartitions object.

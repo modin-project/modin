@@ -848,8 +848,7 @@ class DataFrame(object):
             "github.com/modin-project/modin.")
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
-        """Synonym for DataFrame.fillna(method='bfill')
-        """
+        """Synonym for DataFrame.fillna(method='bfill')"""
         new_df = self.fillna(
             method='bfill',
             axis=axis,
