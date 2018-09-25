@@ -26,7 +26,7 @@ matrix:
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check .
-        - flake8 --max-line-length=88 .
+        - flake8 --max-line-length=88 --ignore=E203 .
 
 install:
   - ./.travis/install-dependencies.sh
