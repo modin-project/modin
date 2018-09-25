@@ -4,13 +4,14 @@ from __future__ import print_function
 
 import numpy as np
 import pandas
-from pandas.api.types import (is_scalar, is_list_like, is_bool)
+from pandas.api.types import is_scalar, is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer
 from pandas.core.indexing import IndexingError
 from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
+
 """Indexing Helper Class works as follows:
 
 _LocationIndexerBase provide methods framework for __getitem__
@@ -86,7 +87,7 @@ def _parse_tuple(tup):
         if len(tup) == 2:
             col_loc = tup[1]
         if len(tup) > 2:
-            raise IndexingError('Too many indexers')
+            raise IndexingError("Too many indexers")
     else:
         row_loc = tup
 
@@ -105,8 +106,12 @@ def _is_enlargement(locator, global_index):
     Enlargement happens when you trying to locate using labels isn't in the
     original index. In other words, enlargement == adding NaNs !
     """
-    if is_list_like(locator) and not is_slice(
-            locator) and len(locator) > 0 and not is_boolean_array(locator):
+    if (
+        is_list_like(locator)
+        and not is_slice(locator)
+        and len(locator) > 0
+        and not is_boolean_array(locator)
+    ):
         n_diff_elems = len(pandas.Index(locator).difference(global_index))
         is_enlargement_boolean = n_diff_elems > 0
         return is_enlargement_boolean
@@ -144,11 +149,11 @@ class _LocationIndexerBase(object):
         self.row_scaler = False
         self.col_scaler = False
 
-    def __getitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index,
-                    ndim: int):
+    def __getitem__(
+        self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
+    ):
         if self.is_view:
-            dm_view = self.dm.__constructor__(self.dm.data, row_lookup,
-                                              col_lookup)
+            dm_view = self.dm.__constructor__(self.dm.data, row_lookup, col_lookup)
         else:
             dm_view = self.dm.view(row_lookup, col_lookup)
 
@@ -160,8 +165,7 @@ class _LocationIndexerBase(object):
             single_axis = 1 if self.col_scaler else 0
             return dm_view.squeeze(ndim=1, axis=single_axis)
 
-    def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index,
-                    item):
+    def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """
         Args:
             row_lookup: the global row index to write item to
@@ -187,15 +191,18 @@ class _LocationIndexerBase(object):
                 return np.broadcast_to(item, to_shape)
         except ValueError:
             from_shape = np.array(item).shape
-            raise ValueError("could not broadcast input array from \
+            raise ValueError(
+                "could not broadcast input array from \
                 shape {from_shape} into shape {to_shape}".format(
-                from_shape=from_shape, to_shape=to_shape))
+                    from_shape=from_shape, to_shape=to_shape
+                )
+            )
 
     def _write_items(self, row_lookup, col_lookup, item):
         """Perform remote write and replace blocks.
         """
-        row_numeric_idx = self.dm.global_idx_to_numeric_idx('row', row_lookup)
-        col_numeric_idx = self.dm.global_idx_to_numeric_idx('col', col_lookup)
+        row_numeric_idx = self.dm.global_idx_to_numeric_idx("row", row_lookup)
+        col_numeric_idx = self.dm.global_idx_to_numeric_idx("col", col_lookup)
         self.dm.write_items(row_numeric_idx, col_numeric_idx, item)
 
 
@@ -203,13 +210,11 @@ class _LocIndexer(_LocationIndexerBase):
     """A indexer for ray_df.loc[] functionality"""
 
     def __getitem__(self, key):
-        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(
-            key)
+        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         ndim = self._expand_dim(row_lookup, col_lookup, ndim)
-        result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup,
-                                                      ndim)
+        result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         return result
 
     def __setitem__(self, key, item):
@@ -224,13 +229,13 @@ class _LocIndexer(_LocationIndexerBase):
             None
         """
         if _is_enlargement(row_loc, self.dm.index) or _is_enlargement(
-                col_loc, self.dm.columns):
+            col_loc, self.dm.columns
+        ):
             _warn_enlargement()
             self.dm.enlarge_partitions(
-                new_row_labels=self._compute_enlarge_labels(
-                    row_loc, self.dm.index),
-                new_col_labels=self._compute_enlarge_labels(
-                    col_loc, self.dm.columns))
+                new_row_labels=self._compute_enlarge_labels(row_loc, self.dm.index),
+                new_col_labels=self._compute_enlarge_labels(col_loc, self.dm.columns),
+            )
 
     def _compute_enlarge_labels(self, locator, base_index):
         """Helper for _enlarge_axis, compute common labels and extra labels.
@@ -249,8 +254,10 @@ class _LocIndexer(_LocationIndexerBase):
 
         if len(common_labels) == 0:
             raise KeyError(
-                'None of [{labels}] are in the [{base_index_name}]'.format(
-                    labels=list(locator_as_index), base_index_name=base_index))
+                "None of [{labels}] are in the [{base_index_name}]".format(
+                    labels=list(locator_as_index), base_index_name=base_index
+                )
+            )
 
         return nan_labels
 
@@ -268,8 +275,7 @@ class _LocIndexer(_LocationIndexerBase):
 
         return ndim
 
-    def _compute_lookup(self, row_loc,
-                        col_loc) -> Tuple[pandas.Index, pandas.Index]:
+    def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
         row_lookup = self.dm.index.to_series().loc[row_loc].index
         col_lookup = self.dm.columns.to_series().loc[col_loc].index
         return row_lookup, col_lookup
@@ -279,15 +285,13 @@ class _iLocIndexer(_LocationIndexerBase):
     """A indexer for ray_df.iloc[] functionality"""
 
     def __getitem__(self, key):
-        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(
-            key)
+        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
 
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup,
-                                                       ndim)
+        result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         return result
 
     def __setitem__(self, key, item):
@@ -299,8 +303,7 @@ class _iLocIndexer(_LocationIndexerBase):
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
-    def _compute_lookup(self, row_loc,
-                        col_loc) -> Tuple[pandas.Index, pandas.Index]:
+    def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
         row_lookup = self.dm.index.to_series().iloc[row_loc].index
         col_lookup = self.dm.columns.to_series().iloc[col_loc].index
         return row_lookup, col_lookup

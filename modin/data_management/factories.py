@@ -13,8 +13,7 @@ from .partitioning.partition_collections import RayBlockPartitions
 class BaseFactory(object):
     @classmethod
     def _determine_engine(cls):
-        factory_name = \
-            partition_format + "Backed" + execution_engine + "Factory"
+        factory_name = partition_format + "Backed" + execution_engine + "Factory"
 
         return getattr(sys.modules[__name__], factory_name)
 

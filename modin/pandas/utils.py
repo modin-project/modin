@@ -49,9 +49,9 @@ def _inherit_docstrings(parent, excluded=[]):
             cls.__doc__ = parent.__doc__
         for attr, obj in cls.__dict__.items():
             parent_obj = getattr(parent, attr, None)
-            if parent_obj in excluded or \
-                    (not callable(parent_obj) and
-                     not isinstance(parent_obj, property)):
+            if parent_obj in excluded or (
+                not callable(parent_obj) and not isinstance(parent_obj, property)
+            ):
                 continue
             if callable(obj):
                 obj.__doc__ = parent_obj.__doc__

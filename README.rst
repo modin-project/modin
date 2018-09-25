@@ -7,6 +7,8 @@ Modin
 .. image:: https://readthedocs.org/projects/modin/badge/?version=latest
     :target: https://modin.readthedocs.io/en/latest/?badge=latest
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/ambv/black
 |
 
 *Modin is a library for unifying the way you interact with your data*
