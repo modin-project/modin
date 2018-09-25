@@ -25,8 +25,8 @@ matrix:
       env: LINT=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
-        - black --diff modin/
-        - flake8 --max-line-length=88 .
+        - black --check --diff modin/
+        - flake8 .
 
 install:
   - ./.travis/install-dependencies.sh
