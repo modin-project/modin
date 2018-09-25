@@ -17,8 +17,9 @@ class PartitionIterator(Iterator):
         """
         self.data_manager = data_manager
         self.axis = axis
-        self.index_iter = iter(self.data_manager.columns) if axis else iter(
-            self.data_manager.index)
+        self.index_iter = (
+            iter(self.data_manager.columns) if axis else iter(self.data_manager.index)
+        )
         self.func = func
 
     def __iter__(self):

@@ -53,5 +53,5 @@ else
 fi
 
 pip install -r requirements.txt
-pip install -q pytest flake8 flake8-comprehensions yapf feather-format lxml openpyxl xlrd numpy
+pip install -q pytest flake8 flake8-comprehensions black feather-format lxml openpyxl xlrd numpy
 
