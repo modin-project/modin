@@ -10,18 +10,18 @@ import modin.pandas as pd
 import os
 import sqlite3
 
-TEST_PARQUET_FILENAME = 'test.parquet'
-TEST_CSV_FILENAME = 'test.csv'
-TEST_JSON_FILENAME = 'test.json'
-TEST_HTML_FILENAME = 'test.html'
-TEST_EXCEL_FILENAME = 'test.xlsx'
-TEST_FEATHER_FILENAME = 'test.feather'
-TEST_HDF_FILENAME = 'test.hdf'
-TEST_MSGPACK_FILENAME = 'test.msg'
-TEST_STATA_FILENAME = 'test.dta'
-TEST_PICKLE_FILENAME = 'test.pkl'
-TEST_SAS_FILENAME = os.getcwd() + '/data/test1.sas7bdat'
-TEST_SQL_FILENAME = 'test.db'
+TEST_PARQUET_FILENAME = "test.parquet"
+TEST_CSV_FILENAME = "test.csv"
+TEST_JSON_FILENAME = "test.json"
+TEST_HTML_FILENAME = "test.html"
+TEST_EXCEL_FILENAME = "test.xlsx"
+TEST_FEATHER_FILENAME = "test.feather"
+TEST_HDF_FILENAME = "test.hdf"
+TEST_MSGPACK_FILENAME = "test.msg"
+TEST_STATA_FILENAME = "test.dta"
+TEST_PICKLE_FILENAME = "test.pkl"
+TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
+TEST_SQL_FILENAME = "test.db"
 SMALL_ROW_SIZE = 2000
 
 
@@ -35,42 +35,45 @@ def setup_parquet_file(row_size, force=False):
     if os.path.exists(TEST_PARQUET_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_parquet(TEST_PARQUET_FILENAME)
 
 
 @pytest.fixture
 def create_test_ray_dataframe():
-    df = pd.DataFrame({
-        'col1': [0, 1, 2, 3],
-        'col2': [4, 5, 6, 7],
-        'col3': [8, 9, 10, 11],
-        'col4': [12, 13, 14, 15],
-        'col5': [0, 0, 0, 0]
-    })
+    df = pd.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
 
     return df
 
 
 @pytest.fixture
 def create_test_pandas_dataframe():
-    df = pandas.DataFrame({
-        'col1': [0, 1, 2, 3],
-        'col2': [4, 5, 6, 7],
-        'col3': [8, 9, 10, 11],
-        'col4': [12, 13, 14, 15],
-        'col5': [0, 0, 0, 0]
-    })
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
 
     return df
 
 
 @pytest.fixture
 def test_files_eq(path1, path2):
-    with open(path1, 'rb') as file1, open(path2, 'rb') as file2:
+    with open(path1, "rb") as file1, open(path2, "rb") as file2:
         file1_content = file1.read()
         file2_content = file2.read()
 
@@ -93,14 +96,13 @@ def teardown_parquet_file():
 
 
 @pytest.fixture
-def setup_csv_file(row_size, force=False, delimiter=','):
+def setup_csv_file(row_size, force=False, delimiter=","):
     if os.path.exists(TEST_CSV_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_csv(TEST_CSV_FILENAME, sep=delimiter)
 
 
@@ -115,10 +117,9 @@ def setup_json_file(row_size, force=False):
     if os.path.exists(TEST_JSON_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_json(TEST_JSON_FILENAME)
 
 
@@ -133,10 +134,9 @@ def setup_html_file(row_size, force=False):
     if os.path.exists(TEST_HTML_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_html(TEST_HTML_FILENAME)
 
 
@@ -148,10 +148,7 @@ def teardown_html_file():
 
 @pytest.fixture
 def setup_clipboard(row_size, force=False):
-    df = pandas.DataFrame({
-        'col1': np.arange(row_size),
-        'col2': np.arange(row_size)
-    })
+    df = pandas.DataFrame({"col1": np.arange(row_size), "col2": np.arange(row_size)})
     df.to_clipboard()
 
 
@@ -160,10 +157,9 @@ def setup_excel_file(row_size, force=False):
     if os.path.exists(TEST_EXCEL_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_excel(TEST_EXCEL_FILENAME)
 
 
@@ -178,10 +174,9 @@ def setup_feather_file(row_size, force=False):
     if os.path.exists(TEST_FEATHER_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_feather(TEST_FEATHER_FILENAME)
 
 
@@ -196,11 +191,10 @@ def setup_hdf_file(row_size, force=False):
     if os.path.exists(TEST_HDF_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
-        df.to_hdf(TEST_HDF_FILENAME, 'test')
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
+        df.to_hdf(TEST_HDF_FILENAME, "test")
 
 
 @pytest.fixture
@@ -214,10 +208,9 @@ def setup_msgpack_file(row_size, force=False):
     if os.path.exists(TEST_MSGPACK_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_msgpack(TEST_MSGPACK_FILENAME)
 
 
@@ -232,10 +225,9 @@ def setup_stata_file(row_size, force=False):
     if os.path.exists(TEST_STATA_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_stata(TEST_STATA_FILENAME)
 
 
@@ -250,10 +242,9 @@ def setup_pickle_file(row_size, force=False):
     if os.path.exists(TEST_PICKLE_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': np.arange(row_size),
-            'col2': np.arange(row_size)
-        })
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
         df.to_pickle(TEST_PICKLE_FILENAME)
 
 
@@ -268,13 +259,15 @@ def setup_sql_file(conn, force=False):
     if os.path.exists(TEST_SQL_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame({
-            'col1': [0, 1, 2, 3],
-            'col2': [4, 5, 6, 7],
-            'col3': [8, 9, 10, 11],
-            'col4': [12, 13, 14, 15],
-            'col5': [0, 0, 0, 0]
-        })
+        df = pandas.DataFrame(
+            {
+                "col1": [0, 1, 2, 3],
+                "col2": [4, 5, 6, 7],
+                "col3": [8, 9, 10, 11],
+                "col4": [12, 13, 14, 15],
+                "col5": [0, 0, 0, 0],
+            }
+        )
         df.to_sql(TEST_SQL_FILENAME.split(".")[0], conn)
 
 
@@ -297,8 +290,8 @@ def test_from_parquet():
 def test_from_parquet_with_columns():
     setup_parquet_file(SMALL_ROW_SIZE)
 
-    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
-    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=['col1'])
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_parquet_file()
@@ -403,8 +396,8 @@ def test_from_feather():
 def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE)
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key='test')
-    ray_df = pd.read_hdf(TEST_HDF_FILENAME, key='test')
+    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="test")
+    ray_df = pd.read_hdf(TEST_HDF_FILENAME, key="test")
 
     assert ray_df_equals_pandas(ray_df, pandas_df)
 
@@ -465,7 +458,7 @@ def test_from_sas():
 
 
 def test_from_csv_delimiter():
-    setup_csv_file(SMALL_ROW_SIZE, delimiter='|')
+    setup_csv_file(SMALL_ROW_SIZE, delimiter="|")
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
     ray_df = pd.read_csv(TEST_CSV_FILENAME)
@@ -486,7 +479,7 @@ def test_to_clipboard():
     pandas_df.to_clipboard()
     pandas_as_clip = pandas.read_clipboard()
 
-    assert (ray_as_clip.equals(pandas_as_clip))
+    assert ray_as_clip.equals(pandas_as_clip)
 
 
 def test_to_csv():
@@ -499,7 +492,7 @@ def test_to_csv():
     ray_df.to_csv(TEST_CSV_DF_FILENAME)
     pandas_df.to_csv(TEST_CSV_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME))
+    assert test_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
 
     teardown_test_file(TEST_CSV_pandas_FILENAME)
     teardown_test_file(TEST_CSV_DF_FILENAME)
@@ -535,7 +528,7 @@ def test_to_excel():
     ray_writer.save()
     pandas_writer.save()
 
-    assert (test_files_eq(TEST_EXCEL_DF_FILENAME, TEST_EXCEL_pandas_FILENAME))
+    assert test_files_eq(TEST_EXCEL_DF_FILENAME, TEST_EXCEL_pandas_FILENAME)
 
     teardown_test_file(TEST_EXCEL_DF_FILENAME)
     teardown_test_file(TEST_EXCEL_pandas_FILENAME)
@@ -551,8 +544,7 @@ def test_to_feather():
     ray_df.to_feather(TEST_FEATHER_DF_FILENAME)
     pandas_df.to_feather(TEST_FEATHER_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_FEATHER_DF_FILENAME,
-                          TEST_FEATHER_pandas_FILENAME))
+    assert test_files_eq(TEST_FEATHER_DF_FILENAME, TEST_FEATHER_pandas_FILENAME)
 
     teardown_test_file(TEST_FEATHER_pandas_FILENAME)
     teardown_test_file(TEST_FEATHER_DF_FILENAME)
@@ -576,7 +568,7 @@ def test_to_html():
     ray_df.to_html(TEST_HTML_DF_FILENAME)
     pandas_df.to_html(TEST_HTML_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_HTML_DF_FILENAME, TEST_HTML_pandas_FILENAME))
+    assert test_files_eq(TEST_HTML_DF_FILENAME, TEST_HTML_pandas_FILENAME)
 
     teardown_test_file(TEST_HTML_pandas_FILENAME)
     teardown_test_file(TEST_HTML_DF_FILENAME)
@@ -592,7 +584,7 @@ def test_to_json():
     ray_df.to_json(TEST_JSON_DF_FILENAME)
     pandas_df.to_json(TEST_JSON_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_JSON_DF_FILENAME, TEST_JSON_pandas_FILENAME))
+    assert test_files_eq(TEST_JSON_DF_FILENAME, TEST_JSON_pandas_FILENAME)
 
     teardown_test_file(TEST_JSON_pandas_FILENAME)
     teardown_test_file(TEST_JSON_DF_FILENAME)
@@ -615,8 +607,7 @@ def test_to_msgpack():
     ray_df.to_msgpack(TEST_MSGPACK_DF_FILENAME)
     pandas_df.to_msgpack(TEST_MSGPACK_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_MSGPACK_DF_FILENAME,
-                          TEST_MSGPACK_pandas_FILENAME))
+    assert test_files_eq(TEST_MSGPACK_DF_FILENAME, TEST_MSGPACK_pandas_FILENAME)
 
     teardown_test_file(TEST_MSGPACK_pandas_FILENAME)
     teardown_test_file(TEST_MSGPACK_DF_FILENAME)
@@ -639,8 +630,7 @@ def test_to_parquet():
     ray_df.to_parquet(TEST_PARQUET_DF_FILENAME)
     pandas_df.to_parquet(TEST_PARQUET_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_PARQUET_DF_FILENAME,
-                          TEST_PARQUET_pandas_FILENAME))
+    assert test_files_eq(TEST_PARQUET_DF_FILENAME, TEST_PARQUET_pandas_FILENAME)
 
     teardown_test_file(TEST_PARQUET_pandas_FILENAME)
     teardown_test_file(TEST_PARQUET_DF_FILENAME)
@@ -663,8 +653,7 @@ def test_to_pickle():
     ray_df.to_pickle(TEST_PICKLE_DF_FILENAME)
     pandas_df.to_pickle(TEST_PICKLE_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_PICKLE_DF_FILENAME,
-                          TEST_PICKLE_pandas_FILENAME))
+    assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
 
     teardown_test_file(TEST_PICKLE_pandas_FILENAME)
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
@@ -680,7 +669,7 @@ def test_to_sql():
     ray_df.to_pickle(TEST_SQL_DF_FILENAME)
     pandas_df.to_pickle(TEST_SQL_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_SQL_DF_FILENAME, TEST_SQL_pandas_FILENAME))
+    assert test_files_eq(TEST_SQL_DF_FILENAME, TEST_SQL_pandas_FILENAME)
 
     teardown_test_file(TEST_SQL_DF_FILENAME)
     teardown_test_file(TEST_SQL_pandas_FILENAME)
@@ -696,7 +685,7 @@ def test_to_stata():
     ray_df.to_stata(TEST_STATA_DF_FILENAME)
     pandas_df.to_stata(TEST_STATA_pandas_FILENAME)
 
-    assert (test_files_eq(TEST_STATA_DF_FILENAME, TEST_STATA_pandas_FILENAME))
+    assert test_files_eq(TEST_STATA_DF_FILENAME, TEST_STATA_pandas_FILENAME)
 
     teardown_test_file(TEST_STATA_pandas_FILENAME)
     teardown_test_file(TEST_STATA_DF_FILENAME)
