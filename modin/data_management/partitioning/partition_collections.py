@@ -425,10 +425,6 @@ class BlockPartitions(object):
         Args:
             axis: This axis to extract the labels. (0 - index, 1 - columns).
             index_func: The function to be used to extract the function.
-            scale_index: True if we need to add the lengths of previous blocks,
-                False otherwise. This should be True if each block had the
-                index reset based on the length of that particular block,
-                otherwise it should be False.
             old_blocks: An optional previous object that this object was
                 created from. This is used to compute the correct offsets.
 

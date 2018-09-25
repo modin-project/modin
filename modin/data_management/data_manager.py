@@ -184,11 +184,10 @@ class PandasDataManager(object):
             Tuple with return value(if any), indices to apply func to & cleaned Manager.
         """
         result = None
-        index = self.numeric_columns()
         data_manager = self
 
         # If no numeric columns and over columns, then return empty Series
-        if not axis and len(index) == 0:
+        if not axis and len(self.index) == 0:
             result = pandas.Series(dtype=np.float64)
 
         nonnumeric = [
@@ -200,9 +199,8 @@ class PandasDataManager(object):
             result = pandas.Series([np.NaN for _ in self.index])
         else:
             data_manager = self.drop(columns=nonnumeric)
-            index = data_manager.index
 
-        return result, index, data_manager
+        return result, data_manager
 
     # END Internal methods
 
@@ -876,8 +874,7 @@ class PandasDataManager(object):
             Returns Pandas Series containing the results from map_func and reduce_func.
         """
         if numeric_only:
-            result, index, data_manager = self.numeric_function_clean_dataframe(
-                axis)
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return result
         else:
@@ -1371,8 +1368,7 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(
-            axis)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
 
@@ -1391,8 +1387,7 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(
-            axis)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
 
@@ -1411,8 +1406,7 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(
-            axis)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
 
@@ -1431,8 +1425,7 @@ class PandasDataManager(object):
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
 
-        result, index, data_manager = self.numeric_function_clean_dataframe(
-            axis)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
 
@@ -1451,8 +1444,7 @@ class PandasDataManager(object):
         assert type(q) is float
 
         if numeric_only:
-            result, _, data_manager = self.numeric_function_clean_dataframe(
-                axis)
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return result
         else:
