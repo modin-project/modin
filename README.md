@@ -10,9 +10,7 @@
 
 **Modin can be installed with pip: `pip install modin`**
 
-### `modin.pandas`
-
-`modin.pandas` scales your pandas workflow by changing only a single line of code.
+### `modin.pandas`: scale your pandas workflow by changing a single line of code.
 
 <p align="center">Simply replace:</p>
 
