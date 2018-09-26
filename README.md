@@ -38,6 +38,10 @@ The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Be
 is so light-weight, you can see improvements of up to 4x on a laptop with 4 physical 
 cores.
 
+<p align="center">
+<img src="docs/img/read_csv_benchmark.png"></a>
+</p>
+
 #### Modin as a DataFrame for datasets from 1KB to 1TB+ 
 
 We have focused heavily on bridging the solutions between DataFrames for small data 
