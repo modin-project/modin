@@ -55,7 +55,15 @@ DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because
 light-weight, Modin can provide speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
-any kind. With Modin, you are able to use all of the CPU cores on your machine.
+any kind. With Modin, you are able to use all of the CPU cores on your machine. Even in
+the following code, we can see large gains by efficiently and transparently distributing
+the work across your entire machine.
+
+```python
+import modin.pandas as pd
+
+df = pd.read_csv("my_dataset.csv")
+```
 
 #### Modin is a DataFrame for datasets from 1KB to 1TB+ 
 
