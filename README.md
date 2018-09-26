@@ -46,7 +46,7 @@ you would pandas.
 
 #### Faster pandas, even on your laptop
 
-<img align="right" style="display:inline;" height="300" width="260" src="docs/img/read_csv_benchmark.png"></a>
+<img align="right" style="display:inline;" height="350" width="300" src="docs/img/read_csv_benchmark.png"></a>
 
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
 transparently distributes the data and computation so that all you need to do is
