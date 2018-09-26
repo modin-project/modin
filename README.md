@@ -12,12 +12,12 @@
 
 ### `modin.pandas`: scale your pandas workflow by changing a single line of code.
 
-<p align="center">Simply replace:</p>
+<p align="left">Simply replace:</p>
 
 ```python
 import pandas as pd
 ```
-<p align="center">with</p>
+<p align="left">with</p>
 
 ```python
 import modin.pandas as pd
