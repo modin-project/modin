@@ -35,16 +35,11 @@ df = pd.DataFrame(frame_data).add_prefix("col_")
 
 #### Faster pandas, even on your laptop
 
+<img align="right" style="display:inline;" height="350" width="300" src="docs/img/read_csv_benchmark.png"></a>
+
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Because it 
 is so light-weight, you can see improvements of up to 4x on a laptop with 4 physical 
 cores.
-
-<p align="right" style="display:inline;">
-<img style="width:35%" src="docs/img/read_csv_benchmark.png"></a>
-</p>
-
-<p style="display:inline;">next code block needs style of display:inline to match</p>
-
 
 #### Modin as a DataFrame for datasets from 1KB to 1TB+ 
 
