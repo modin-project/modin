@@ -12,21 +12,17 @@
 
 ### `modin.pandas`: scale your pandas workflow by changing a single line of code.
 
-<p align="left">Simply replace:</p>
+<p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 ```python
-import pandas as pd
-```
-<p align="left">with</p>
-
-```python
+# import pandas as pd
 import modin.pandas as pd
 ```
 
 Modin uses [Ray](https://github.com/ray-project/ray/) to provide an effortless way to 
 speeding up your pandas notebooks, scripts, and libraries. Unlike other distributed
 DataFrame libraries, **Modin** provides seamless integration and compatibility with
-existing pandas code. Even simply using the DataFrame constructor is identical.
+existing pandas code. Even using the DataFrame constructor is identical.
 
 ```python
 import modin.pandas as pd
