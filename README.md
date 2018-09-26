@@ -10,14 +10,14 @@
 
 **Modin can be installed with pip: `pip install modin`**
 
-### `modin.pandas`: scale your pandas workflow by changing a single line of code.
-
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 ```python
 # import pandas as pd
 import modin.pandas as pd
 ```
+
+### `modin.pandas`: scale your pandas workflow by changing a single line of code.
 
 Modin uses [Ray](https://github.com/ray-project/ray/) to provide an effortless way to 
 speeding up your pandas notebooks, scripts, and libraries. Unlike other distributed
