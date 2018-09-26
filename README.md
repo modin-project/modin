@@ -12,13 +12,44 @@
 
 ### `modin.pandas`
 
-`modin.pandas` scales your pandas workflow by changing only a single line of code
+`modin.pandas` scales your pandas workflow by changing only a single line of code.
 
+<p align="center">Simply replace:</p>
 
+```python
+import pandas as pd
+```
+<p align="center">with</p>
+
+```python
+import modin.pandas as pd
+```
+
+Modin uses [Ray](https://github.com/ray-project/ray/) to provide an effortless way to 
+speeding up your pandas notebooks, scripts, and libraries. Unlike other distributed
+DataFrame libraries, **Modin** provides seamless integration and compatibility with
+existing pandas code. Even simply using the DataFrame constructor is identical.
+
+```python
+import modin.pandas as pd
+import numpy as np
+
+frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
+df = pd.DataFrame(frame_data).add_prefix("col_")
+```
+
+#### Faster pandas, even on your laptop
+
+The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Because it 
+is so light-weight, you can see improvements of up to 4x on a laptop with 4 physical 
+cores.
+
+#### Modin as a DataFrame for datasets from 1KB to 1TB+ 
+
+We have focused heavily on bridging the solutions between DataFrames for small data 
+(e.g. pandas) and lar
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
-
-
 
 ### More information and Getting Involved
 
