@@ -1705,7 +1705,7 @@ def test_fillna_sanity():
 @pytest.fixture
 def test_fillna_downcast():
     # infer int64 from float64
-    frame_data = {"a": [1., np.nan]}
+    frame_data = {"a": [1.0, np.nan]}
     df = pandas.DataFrame(frame_data)
     result = df.fillna(0, downcast="infer")
     ray_df = pd.DataFrame(frame_data).fillna(0, downcast="infer")
@@ -1813,7 +1813,7 @@ def test_fillna_dtype_conversion():
     ray_df = pd.DataFrame(index=range(3), columns=["A", "B"], dtype="float64")
     assert ray_df_equals_pandas(ray_df.fillna("nan"), df.fillna("nan"))
 
-    frame_data = {"A": [1, np.nan], "B": [1., 2.]}
+    frame_data = {"A": [1, np.nan], "B": [1.0, 2.0]}
     df = pandas.DataFrame(frame_data)
     ray_df = pd.DataFrame(frame_data)
     for v in ["", 1, np.nan, 1.0]:
@@ -3123,13 +3123,13 @@ def test_unstack():
 
 def test_update():
     df = pd.DataFrame(
-        [[1.5, np.nan, 3.], [1.5, np.nan, 3.], [1.5, np.nan, 3], [1.5, np.nan, 3]]
+        [[1.5, np.nan, 3.0], [1.5, np.nan, 3.0], [1.5, np.nan, 3], [1.5, np.nan, 3]]
     )
-    other = pd.DataFrame([[3.6, 2., np.nan], [np.nan, np.nan, 7]], index=[1, 3])
+    other = pd.DataFrame([[3.6, 2.0, np.nan], [np.nan, np.nan, 7]], index=[1, 3])
 
     df.update(other)
     expected = pd.DataFrame(
-        [[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3], [1.5, np.nan, 7.]]
+        [[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3], [1.5, np.nan, 7.0]]
     )
     assert ray_df_equals(df, expected)
 
