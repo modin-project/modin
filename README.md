@@ -1,5 +1,5 @@
 <h1 align="center">Modin</h1>
-<h3 alight="center">Scale your pandas workflows by changing one line of code</h3>
+<h3 aligh="center">Scale your pandas workflows by changing one line of code</h3>
 
 <p align="center">
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
