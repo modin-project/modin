@@ -9,7 +9,8 @@
 </p>
 
 **Modin can be installed with pip: `pip install modin`**
-
+<p></p>
+<p></p>
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 ```python
@@ -38,9 +39,12 @@ The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Be
 is so light-weight, you can see improvements of up to 4x on a laptop with 4 physical 
 cores.
 
-<p align="center">
-<img src="docs/img/read_csv_benchmark.png"></a>
+<p align="right" style="display:inline;">
+<img style="width:35%" src="docs/img/read_csv_benchmark.png"></a>
 </p>
+
+<p style="display:inline;">next code block needs style of display:inline to match</p>
+
 
 #### Modin as a DataFrame for datasets from 1KB to 1TB+ 
 
