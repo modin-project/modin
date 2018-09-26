@@ -4,7 +4,7 @@
 <p align="center">
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest"></a>
-<a href="https://badge.fury.io/py/modin"><img alt="" src="https://badge.fury.io/py/modin.svg"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi%20package-0.1.2-blue.svg"></a>
 <a href="https://github.com/ambv/black"><img alt="" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
@@ -52,12 +52,12 @@ The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Mo
 transparently distributes the data and computation so that all you need to do is
 continue using the pandas API as you were before installing Modin. Unlike other parallel
 DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because it is so
-light-weight, Modin can provide speed-ups of up to 4x on a laptop with 4 physical cores.
+light-weight, Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
 any kind. With Modin, you are able to use all of the CPU cores on your machine. Even in
-the following code, we can see large gains by efficiently and transparently distributing
-the work across your entire machine.
+`read_csv`, we see large gains by efficiently distributing the work across your entire
+machine.
 
 ```python
 import modin.pandas as pd
