@@ -23,11 +23,11 @@ Modin can be installed from PyPI:
 pip install modin
 ```
 
-### `modin.pandas`: Scale your pandas workflow by changing a single line of code.
+### Scale your pandas workflow by changing a single line of code.
 
 Modin uses [Ray](https://github.com/ray-project/ray/) to provide an effortless way to 
 speeding up your pandas notebooks, scripts, and libraries. Unlike other distributed
-DataFrame libraries, **Modin** provides seamless integration and compatibility with
+DataFrame libraries, Modin provides seamless integration and compatibility with
 existing pandas code. Even using the DataFrame constructor is identical.
 
 ```python
