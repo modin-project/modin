@@ -25,8 +25,8 @@ pip install modin
 
 ### Scale your pandas workflow by changing a single line of code.
 
-Modin uses [Ray](https://github.com/ray-project/ray/) to provide an effortless way to 
-speeding up your pandas notebooks, scripts, and libraries. Unlike other distributed
+Modin uses **[Ray](https://github.com/ray-project/ray/)** to provide an effortless way
+to speed up your pandas notebooks, scripts, and libraries. Unlike other distributed
 DataFrame libraries, Modin provides seamless integration and compatibility with
 existing pandas code. Even using the DataFrame constructor is identical.
 
@@ -50,16 +50,21 @@ you would pandas.
 
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
 transparently distributes the data and computation so that all you need to do is
-continue using the pandas API as you were before installing Modin. Because it is so
+continue using the pandas API as you were before installing Modin. Unlike other parallel
+DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because it is so
 light-weight, Modin can provide speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
-any kind. In `modin.pandas`, you are using all of the CPU cores on your machine.
+any kind. With Modin, you are able to use all of the CPU cores on your machine.
 
 #### Modin is a DataFrame for datasets from 1KB to 1TB+ 
 
 We have focused heavily on bridging the solutions between DataFrames for small data 
-(e.g. pandas) and lar
+(e.g. pandas) and large data. Often data scientists require different tools for doing
+the same thing on different sizes of data. The DataFrame solutions that exist for 1KB do
+not scale to 1TB+, and the overheads of the solutions for 1TB+ are too costly for 
+datasets in the 1KB range. With Modin, because of its light-weight, robust, and scalable
+nature, you get a fast DataFrame at 1KB and 1TB+.
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
