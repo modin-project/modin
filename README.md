@@ -8,26 +8,21 @@
 <a href="https://github.com/ambv/black"><img alt="" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
-Modin can be installed with pip: `pip install modin`
+**Modin can be installed with pip: `pip install modin`**
 
-## Pandas
+### `modin.pandas`
 
 `modin.pandas` scales your pandas workflow by changing only a single line of code
 
 
-**Pandas on Ray is currently under active development. Requests and contributions are welcome!**
+
+**`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
 
 
-More information and Getting Involved
--------------------------------------
+### More information and Getting Involved
 
-- `Documentation`_
-- Ask questions on our mailing list `modin-dev@googlegroups.com`_.
-- Submit bug reports to our `GitHub Issues Page`_.
-- Contributions are welcome! Open a `pull request`_.
-
-.. _`Documentation`: https://modin.readthedocs.io/en/latest/
-.. _`modin-dev@googlegroups.com`: https://groups.google.com/forum/#!forum/modin-dev
-.. _`GitHub Issues Page`: https://github.com/modin-project/modin/issues
-.. _`pull request`: https://github.com/modin-project/modin/pulls
+- [Documentation](https://modin.readthedocs.io/en/latest/)
+- Ask questions on our mailing list [modin-dev@googlegroups.com](https://groups.google.com/forum/#!forum/modin-dev).
+- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
+- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls).
