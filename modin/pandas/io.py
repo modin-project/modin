@@ -18,7 +18,7 @@ from .utils import from_pandas
 from ..data_management.partitioning.partition_collections import RayBlockPartitions
 from ..data_management.partitioning.remote_partition import RayRemotePartition
 from ..data_management.partitioning.axis_partition import (
-    split_result_of_axis_func_pandas
+    split_result_of_axis_func_pandas,
 )
 from ..data_management.data_manager import PandasDataManager
 
