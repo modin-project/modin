@@ -1,5 +1,8 @@
+..class::center
 Modin
 =====
+
+
 
 .. image:: https://travis-ci.com/modin-project/modin.svg?branch=master
     :target: https://travis-ci.com/modin-project/modin
@@ -7,18 +10,23 @@ Modin
 .. image:: https://readthedocs.org/projects/modin/badge/?version=latest
     :target: https://modin.readthedocs.io/en/latest/?badge=latest
 
+.. image:: https://badge.fury.io/py/modin.svg
+    :target: https://badge.fury.io/py/modin
+
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/ambv/black
 |
 
-*Modin is a library for unifying the way you interact with your data*
+*Modin is a library that allows you to scale your Pandas workflows by changing one line of code*
 
 Modin can be installed with pip: ``pip install modin``
 
-Pandas on Ray
--------------
+Pandas
+------
 
-*Pandas on Ray is a library that allows you to effortlessly scale pandas by changing only a single line of code*
+Pandas is a library that allows you to effortlessly scale pandas by changing only a single line of code
+
+
 
 +----------------------------------------------+-------------------------------------------------+
 | **pandas**                                   | **Pandas on Ray**                               |
@@ -35,30 +43,9 @@ Pandas on Ray
 | ...                                          | ...                                             |
 +----------------------------------------------+-------------------------------------------------+
 
-**Pandas on Ray is currently for experimental use only. Requests and contributions are welcome!**
+**Pandas on Ray is currently under active development. Requests and contributions are welcome!**
 
-SQL on Ray
-----------
 
-*SQL on Ray is currently under development. Coming Soon!*
-
-**We have implemented a simple example that can be found below. Feedback welcome!**
-
-.. code-block:: python
-
-    >>> import modin.sql as sql
-    >>>
-    >>> conn = sql.connect("db_name")
-    >>> c = conn.cursor()
-    >>> c.execute("CREATE TABLE example (col1, col2, column 3, col4)")
-    >>> c.execute("INSERT INTO example VALUES ('1', 2.0, 'A String of information', True)")
-      col1  col2                 column 3  col4
-    0    1   2.0  A String of information  True
-
-    >>> c.execute("INSERT INTO example VALUES ('6', 17.0, 'A String of different information', False)")
-      col1  col2                           column 3   col4
-    0    1   2.0            A String of information   True
-    1    6  17.0  A String of different information  False
 
 More information and Getting Involved
 -------------------------------------
