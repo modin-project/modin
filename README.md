@@ -35,7 +35,7 @@ import modin.pandas as pd
 import numpy as np
 
 frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
-df = pd.DataFrame(frame_data).add_prefix("col_")
+df = pd.DataFrame(frame_data)
 ```
 
 To use Modin, you not need to know how many cores your system has, nor do you need to 
