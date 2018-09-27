@@ -9,15 +9,21 @@ matrix:
   include:
     - os: linux
       dist: trusty
-      env: PYTHON=2.7
+      env: 
+        - PYTHON=2.7
+        - MODIN_DEBUG=1
 
     - os: linux
       dist: trusty
-      env: PYTHON=3.6
+      env: 
+        - PYTHON=3.6
+        - MODIN_DEBUG=1
 
     - os: linux
       dist: trusty
-      env: LINT=1
+      env: 
+        - LINT=1
+        - MODIN_DEBUG=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check modin/
@@ -29,7 +35,7 @@ install:
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - if [[ "$PYTHON" == "2.7" ]]; then python .travis/strip-type-hints.py; fi
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_dataframe.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_concat.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_io.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_groupby.py
+  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_dataframe.py
+  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_concat.py
+  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_io.py
+  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_groupby.py
