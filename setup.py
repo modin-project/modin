@@ -4,6 +4,8 @@ from __future__ import print_function
 
 from setuptools import setup, find_packages
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
     name="modin",
@@ -12,4 +14,6 @@ setup(
                 "a single line of code change.",
     packages=find_packages(),
     url="https://github.com/modin-project/modin",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     install_requires=["pandas==0.22", "ray==0.5.2"])
