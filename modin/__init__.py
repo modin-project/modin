@@ -16,10 +16,13 @@ def _git_version():
         env["LC_ALL"] = "C"
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
 
-    try:
-        git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-        return git_revision.strip().decode()
-    except OSError:
+    if os.path.exists("./.git"):
+        try:
+            git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
+            return git_revision.strip().decode()
+        except OSError:
+            return "Unknown"
+    else:
         return "Unknown"
 
 
@@ -42,5 +45,8 @@ __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 
 # We don't want these used outside of this file.
+del _git_version
 del get_execution_engine
 del get_partition_format
+del os
+del subprocess
