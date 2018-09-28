@@ -49,5 +49,3 @@ __partition_format__ = get_partition_format()
 del _git_version
 del get_execution_engine
 del get_partition_format
-del os
-del subprocess
