@@ -1721,22 +1721,9 @@ class DataFrame(object):
         bins=10,
         **kwargs
     ):
-        return to_pandas(self).hist(
-            data,
-            column=column,
-            by=by,
-            grid=grid,
-            xlabelsize=xlabelsize,
-            xrot=xrot,
-            ylabelsize=ylabelsize,
-            yrot=yrot,
-            ax=ax,
-            sharex=sharex,
-            sharey=sharey,
-            figsize=figsize,
-            layout=layout,
-            bins=bins,
-            **kwargs
+        raise NotImplementedError(
+            "To contribute to Pandas on Ray, please visit "
+            "github.com/modin-project/modin."
         )
 
     def idxmax(self, axis=0, skipna=True):
@@ -3994,8 +3981,10 @@ class DataFrame(object):
         return to_pandas(self).to_parquet(fname, engine, compression, **kwargs)
 
     def to_period(self, freq=None, axis=0, copy=True):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-        return to_pandas(self).to_period(freq=freq, axis=axis, copy=copy)
+        raise NotImplementedError(
+            "To contribute to Pandas on Ray, please visit "
+            "github.com/modin-project/modin."
+        )
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
@@ -4446,13 +4435,11 @@ class DataFrame(object):
         return self.columns.__contains__(key)
 
     def __nonzero__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        raise ValueError("The truth value of a {0} is ambiguous. "
+                         "Use a.empty, a.bool(), a.item(), a.any() or a.all()."
+                         .format(self.__class__.__name__))
 
-    def __bool__(self):
-        return self.bool()
+    __bool__ = __nonzero__
 
     def __abs__(self):
         """Creates a modified DataFrame by taking the absolute value.
