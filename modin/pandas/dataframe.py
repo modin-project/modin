@@ -1568,12 +1568,12 @@ class DataFrame(object):
 
     @classmethod
     def from_dict(cls, data, orient="columns", dtype=None):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return from_pandas(pandas.DataFrame.from_dict(data, orient=orient, dtype=dtype))
 
     @classmethod
     def from_items(cls, items, columns=None, orient="columns"):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return from_pandas(
             pandas.DataFrame.from_items(items, columns=columns, orient=orient)
         )
@@ -1588,7 +1588,7 @@ class DataFrame(object):
         coerce_float=False,
         nrows=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return from_pandas(
             pandas.DataFrame.from_records(
                 data,
@@ -3718,7 +3718,7 @@ class DataFrame(object):
         )
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_clipboard(excel, sep, **kwargs)
 
     def to_csv(
@@ -3768,7 +3768,7 @@ class DataFrame(object):
             "decimal": decimal,
         }
 
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_csv(**kwargs)
 
     def to_dense(self):
@@ -3778,7 +3778,7 @@ class DataFrame(object):
         )
 
     def to_dict(self, orient="dict", into=dict):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_dict(orient=orient, into=into)
 
     def to_excel(
@@ -3800,7 +3800,7 @@ class DataFrame(object):
         verbose=True,
         freeze_panes=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_excel(
             excel_writer,
             sheet_name,
@@ -3821,7 +3821,7 @@ class DataFrame(object):
         )
 
     def to_feather(self, fname):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_feather(fname)
 
     def to_gbq(
@@ -3834,7 +3834,7 @@ class DataFrame(object):
         if_exists="fail",
         private_key=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_gbq(
             destination_table,
             project_id,
@@ -3846,7 +3846,7 @@ class DataFrame(object):
         )
 
     def to_hdf(self, path_or_buf, key, **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_hdf(path_or_buf, key, **kwargs)
 
     def to_html(
@@ -3872,7 +3872,7 @@ class DataFrame(object):
         decimal=".",
         border=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_html(
             buf,
             columns,
@@ -3908,7 +3908,7 @@ class DataFrame(object):
         lines=False,
         compression=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_json(
             path_or_buf,
             orient,
@@ -3943,7 +3943,7 @@ class DataFrame(object):
         multicolumn_format=None,
         multirow=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_latex(
             buf=buf,
             columns=columns,
@@ -3967,7 +3967,7 @@ class DataFrame(object):
         )
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_msgpack(path_or_buf, encoding, **kwargs)
 
     def to_panel(self):
@@ -3977,7 +3977,7 @@ class DataFrame(object):
         )
 
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_parquet(fname, engine, compression, **kwargs)
 
     def to_period(self, freq=None, axis=0, copy=True):
@@ -3987,11 +3987,11 @@ class DataFrame(object):
         )
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_pickle(path, compression, protocol)
 
     def to_records(self, index=True, convert_datetime64=True):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_records(
             index=index, convert_datetime64=convert_datetime64
         )
@@ -4014,7 +4014,7 @@ class DataFrame(object):
         chunksize=None,
         dtype=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_sql(
             name, con, flavor, schema, if_exists, index, index_label, chunksize, dtype
         )
@@ -4030,7 +4030,7 @@ class DataFrame(object):
         data_label=None,
         variable_labels=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_stata(
             fname,
             convert_dates,
@@ -4060,7 +4060,7 @@ class DataFrame(object):
         max_cols=None,
         show_dimensions=False,
     ):
-        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_string(
             buf=buf,
             columns=columns,
