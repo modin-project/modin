@@ -303,8 +303,8 @@ def read_csv(
     if isinstance(filepath_or_buffer, str):
         if not os.path.exists(filepath_or_buffer):
             warnings.warn(
-                ("File not found on disk. " "Defaulting to Pandas implementation."),
-                PendingDeprecationWarning,
+                "File not found on disk. Defaulting to Pandas implementation.",
+                UserWarning,
             )
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     elif not isinstance(filepath_or_buffer, py.path.local):
@@ -319,23 +319,23 @@ def read_csv(
             pass
         if read_from_pandas:
             warnings.warn(
-                ("Reading from buffer. " "Defaulting to Pandas implementation."),
-                PendingDeprecationWarning,
+                "Reading from buffer. Defaulting to Pandas implementation.",
+                UserWarning,
             )
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if _infer_compression(filepath_or_buffer, compression) is not None:
         warnings.warn(
-            ("Compression detected. " "Defaulting to Pandas implementation."),
-            PendingDeprecationWarning,
+            "Compression detected. Defaulting to Pandas implementation.",
+            UserWarning,
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if as_recarray:
-        warnings.warn("Defaulting to Pandas implementation.", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation.", UserWarning)
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if chunksize is not None:
         warnings.warn(
-            ("Reading chunks from a file. " "Defaulting to Pandas implementation."),
-            PendingDeprecationWarning,
+            "Reading chunks from a file. Defaulting to Pandas implementation.",
+            UserWarning,
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if skiprows is not None and not isinstance(skiprows, int):
@@ -349,7 +349,7 @@ def read_csv(
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     # TODO: replace this by reading lines from file.
     if nrows is not None:
-        warnings.warn("Defaulting to Pandas implementation.", PendingDeprecationWarning)
+        warnings.warn("Defaulting to Pandas implementation.", UserWarning)
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     else:
         return _read_csv_from_file_pandas_on_ray(filepath_or_buffer, kwargs)
@@ -371,7 +371,7 @@ def read_json(
     chunksize=None,
     compression="infer",
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_json(
         path_or_buf,
         orient,
@@ -409,7 +409,7 @@ def read_html(
     na_values=None,
     keep_default_na=True,
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_html(
         io,
         match,
@@ -432,7 +432,7 @@ def read_html(
 
 
 def read_clipboard(sep=r"\s+"):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_clipboard(sep)
     ray_frame = from_pandas(port_frame)
     return ray_frame
@@ -459,7 +459,7 @@ def read_excel(
     engine=None,
     squeeze=False,
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_excel(
         io,
         sheet_name,
@@ -486,21 +486,21 @@ def read_excel(
 
 
 def read_hdf(path_or_buf, key=None, mode="r"):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_hdf(path_or_buf, key, mode)
     ray_frame = from_pandas(port_frame)
     return ray_frame
 
 
 def read_feather(path, nthreads=1):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_feather(path)
     ray_frame = from_pandas(port_frame)
     return ray_frame
 
 
 def read_msgpack(path_or_buf, encoding="utf-8", iterator=False):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_msgpack(path_or_buf, encoding, iterator)
     ray_frame = from_pandas(port_frame)
     return ray_frame
@@ -519,7 +519,7 @@ def read_stata(
     chunksize=None,
     iterator=False,
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_stata(
         filepath_or_buffer,
         convert_dates,
@@ -545,7 +545,7 @@ def read_sas(
     chunksize=None,
     iterator=False,
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_sas(
         filepath_or_buffer, format, index, encoding, chunksize, iterator
     )
@@ -554,7 +554,7 @@ def read_sas(
 
 
 def read_pickle(path, compression="infer"):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_pickle(path, compression)
     ray_frame = from_pandas(port_frame)
     return ray_frame
@@ -570,7 +570,7 @@ def read_sql(
     columns=None,
     chunksize=None,
 ):
-    warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
     port_frame = pandas.read_sql(
         sql, con, index_col, coerce_float, params, parse_dates, columns, chunksize
     )
@@ -616,7 +616,6 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
         # We will use the lengths to build the index if we are not given an
         # `index_col`.
         index = len(pandas_df)
-
     return split_result_of_axis_func_pandas(1, num_splits, pandas_df) + [index]
 
 
