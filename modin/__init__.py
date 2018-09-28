@@ -16,12 +16,15 @@ def _git_version():
         env["LC_ALL"] = "C"
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
 
+    cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
         git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-        return git_revision.strip().decode()
+        rev_string =  git_revision.strip().decode()
     except OSError:
-        return "Unknown"
+        rev_string = "Unknown"
+    os.chdir(cwd)
+    return rev_string
 
 
 def get_execution_engine():
