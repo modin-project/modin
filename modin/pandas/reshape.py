@@ -38,7 +38,6 @@ def get_dummies(
             "To contribute to Pandas on Ray, please visit "
             "github.com/modin-project/modin."
         )
-
     if not isinstance(data, DataFrame):
         return pandas.get_dummies(
             data,
@@ -49,7 +48,6 @@ def get_dummies(
             sparse=sparse,
             drop_first=drop_first,
         )
-
     if isinstance(data, DataFrame):
         df = data
     elif is_list_like(data):
@@ -62,5 +60,4 @@ def get_dummies(
         dummy_na=dummy_na,
         drop_first=drop_first,
     )
-
     return DataFrame(data_manager=new_manager)

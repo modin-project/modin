@@ -57,7 +57,6 @@ def to_datetime(
             infer_datetime_format=infer_datetime_format,
             origin=origin,
         )
-
     # Pandas seems to ignore this kwarg so we will too
     pandas.to_datetime(
         pandas.DataFrame(columns=arg.columns),
@@ -72,5 +71,4 @@ def to_datetime(
         infer_datetime_format=infer_datetime_format,
         origin=origin,
     )
-
     return arg._data_manager.to_datetime()

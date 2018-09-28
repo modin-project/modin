@@ -143,7 +143,6 @@ class BlockPartitions(object):
             A Pandas Series
         """
         mapped_parts = self.map_across_blocks(map_func).partitions
-
         if reduce_func is None:
             reduce_func = map_func
         # For now we return a pandas.Series until ours gets implemented.
@@ -169,7 +168,6 @@ class BlockPartitions(object):
         # operation is performed across the other axis
         if axis == 1:
             full_frame = full_frame.T
-
         return reduce_func(full_frame)
 
     def map_across_blocks(self, map_func):
@@ -225,7 +223,6 @@ class BlockPartitions(object):
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
         num_splits = cls._compute_num_partitions()
-
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
         result_blocks = np.array(
@@ -251,7 +248,6 @@ class BlockPartitions(object):
             A new BlockPartitions object, the type of object that called this.
         """
         cls = type(self)
-
         # These are the partitions that we will extract over
         if not axis:
             partitions = self.partitions
@@ -259,7 +255,6 @@ class BlockPartitions(object):
         else:
             partitions = self.partitions.T
             bin_lengths = self.block_widths
-
         if n < 0:
             reversed_bins = bin_lengths
             reversed_bins.reverse()
@@ -322,7 +317,6 @@ class BlockPartitions(object):
                         for i in range(idx + 1)
                     ]
                 )
-
         return cls(result.T) if axis else cls(result)
 
     def concat(self, axis, other_blocks):
@@ -406,7 +400,6 @@ class BlockPartitions(object):
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
             ]
-
             if len(df_rows) == 0:
                 return pandas.DataFrame()
             else:
@@ -416,7 +409,6 @@ class BlockPartitions(object):
     def from_pandas(cls, df):
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
-
         row_chunksize = max(1, compute_chunksize(len(df), num_splits))
         col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
 
@@ -432,7 +424,6 @@ class BlockPartitions(object):
             [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
             for i in range(0, len(df), row_chunksize)
         ]
-
         return cls(np.array(parts))
 
     def get_indices(self, axis=0, index_func=None, old_blocks=None):
@@ -452,7 +443,6 @@ class BlockPartitions(object):
             A Pandas Index object.
         """
         assert callable(index_func), "Must tell this function how to extract index"
-
         if axis == 0:
             func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
@@ -472,9 +462,7 @@ class BlockPartitions(object):
                 cumulative_block_lengths = np.array(old_blocks.block_widths).cumsum()
             else:
                 cumulative_block_lengths = np.array(self.block_widths).cumsum()
-
         full_indices = new_indices[0]
-
         if old_blocks is not None:
             for i in range(len(new_indices)):
                 # If the length is 0 there is nothing to append.
@@ -490,7 +478,6 @@ class BlockPartitions(object):
                 full_indices = full_indices.append(append_val)
         else:
             full_indices = full_indices.append(new_indices[1:])
-
         return full_indices
 
     @classmethod
@@ -563,13 +550,11 @@ class BlockPartitions(object):
             self._get_blocks_containing_index(axis, i) for i in indices
         ]
         partitions_dict = {}
-
         for part_idx, internal_idx in all_partitions_and_idx:
             if part_idx not in partitions_dict:
                 partitions_dict[part_idx] = [internal_idx]
             else:
                 partitions_dict[part_idx].append(internal_idx)
-
         return partitions_dict
 
     def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
@@ -606,7 +591,6 @@ class BlockPartitions(object):
             A new BlockPartitions object, the type of object that called this.
         """
         cls = type(self)
-
         # Handling dictionaries has to be done differently, but we still want
         # to figure out the partitions that need to be applied to, so we will
         # store the dictionary in a separate variable and assign `indices` to
@@ -616,17 +600,13 @@ class BlockPartitions(object):
             indices = list(indices.keys())
         else:
             dict_indices = None
-
         if not isinstance(indices, list):
             indices = [indices]
-
         partitions_dict = self._get_dict_of_block_index(axis, indices)
-
         if not axis:
             partitions_for_apply = self.partitions.T
         else:
             partitions_for_apply = self.partitions
-
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
@@ -691,7 +671,6 @@ class BlockPartitions(object):
                         for i in range(len(partitions_for_apply))
                     ]
                 )
-
         return cls(result.T) if not axis else cls(result)
 
     def apply_func_to_select_indices_along_full_axis(
@@ -723,13 +702,10 @@ class BlockPartitions(object):
             indices = list(indices.keys())
         else:
             dict_indices = None
-
         if not isinstance(indices, list):
             indices = [indices]
-
         partitions_dict = self._get_dict_of_block_index(axis, indices)
         preprocessed_func = self.preprocess_func(func)
-
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
@@ -739,7 +715,6 @@ class BlockPartitions(object):
         else:
             partitions_for_apply = self.row_partitions
             partitions_for_remaining = self.partitions
-
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
@@ -795,7 +770,6 @@ class BlockPartitions(object):
                         for i in range(len(partitions_for_remaining))
                     ]
                 )
-
         return cls(result.T) if not axis else cls(result)
 
     def apply_func_to_indices_both_axis(
@@ -823,7 +797,6 @@ class BlockPartitions(object):
             partition_copy = self.partitions
 
         operation_mask = np.full(self.partitions.shape, False)
-
         row_position_counter = 0
         for row_blk_idx, row_internal_idx in self._get_dict_of_block_index(
             1, row_indices
@@ -859,18 +832,16 @@ class BlockPartitions(object):
                         col_internal_indices=col_internal_idx,
                         **item
                     )
-
                 partition_copy[row_blk_idx, col_blk_idx] = result
                 operation_mask[row_blk_idx, col_blk_idx] = True
-
                 col_position_counter += len(col_internal_idx)
+
             row_position_counter += len(row_internal_idx)
 
         column_idx = np.where(np.any(operation_mask, axis=0))[0]
         row_idx = np.where(np.any(operation_mask, axis=1))[0]
         if not keep_remaining:
             partition_copy = partition_copy[row_idx][:, column_idx]
-
         return cls(partition_copy)
 
     def inter_data_operation(self, axis, func, other):
@@ -885,16 +856,13 @@ class BlockPartitions(object):
             A new BlockPartitions object, the type of object that called this.
         """
         cls = type(self)
-
         if axis:
             partitions = self.row_partitions
             other_partitions = other.row_partitions
         else:
             partitions = self.column_partitions
             other_partitions = other.column_partitions
-
         func = self.preprocess_func(func)
-
         result = np.array(
             [
                 partitions[i].apply(
@@ -923,7 +891,6 @@ class BlockPartitions(object):
             partitions = self.row_partitions
         else:
             partitions = self.column_partitions
-
         func = self.preprocess_func(shuffle_func)
         result = np.array(
             [
@@ -965,7 +932,6 @@ class BlockPartitions(object):
             ]
             new_chunk = block_partitions_cls(np.array([nan_oids_lst]).T)
             data = self.concat(axis=1, other_blocks=new_chunk)
-
         return data
 
 
