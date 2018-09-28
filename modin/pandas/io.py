@@ -319,14 +319,12 @@ def read_csv(
             pass
         if read_from_pandas:
             warnings.warn(
-                "Reading from buffer. Defaulting to Pandas implementation.",
-                UserWarning,
+                "Reading from buffer. Defaulting to Pandas implementation.", UserWarning
             )
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if _infer_compression(filepath_or_buffer, compression) is not None:
         warnings.warn(
-            "Compression detected. Defaulting to Pandas implementation.",
-            UserWarning,
+            "Compression detected. Defaulting to Pandas implementation.", UserWarning
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if as_recarray:
