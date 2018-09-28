@@ -8,9 +8,13 @@ import numpy as np
 import pandas
 import pandas.util.testing as tm
 from pandas.tests.frame.common import TestData
+import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
+
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use("Agg")
 
 
 @pytest.fixture
@@ -1162,19 +1166,23 @@ def test_bfill():
 def test_bool(ray_df, pd_df):
     with pytest.raises(ValueError):
         ray_df.bool()
-        pd_df.bool()
+
+    with pytest.raises(ValueError):
+        ray_df.__bool__()
 
     single_bool_pd_df = pandas.DataFrame([True])
     single_bool_ray_df = pd.DataFrame([True])
 
     assert single_bool_pd_df.bool() == single_bool_ray_df.bool()
 
+    with pytest.raises(ValueError):
+        # __bool__ always raises this error for DataFrames
+        single_bool_ray_df.__bool__()
+
 
 def test_boxplot():
     ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.boxplot()
+    assert ray_df.boxplot() == to_pandas(ray_df).boxplot()
 
 
 def test_clip():
@@ -1977,26 +1985,6 @@ def test_floordiv():
     test_inter_df_math("floordiv", simple=False)
 
 
-def test_from_csv():
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_csv(None)
-
-
-def test_from_dict():
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_dict(None)
-
-
-def test_from_items():
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_items(None)
-
-
-def test_from_records():
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_records(None)
-
-
 def test_ge():
     test_comparison_inter_ops("ge")
 
@@ -2435,9 +2423,12 @@ def test_pivot_table():
 
 def test_plot():
     ray_df = create_test_dataframe()
+    # We have to test this way because equality in plots means same object.
+    zipped_plot_lines = zip(ray_df.plot().lines, to_pandas(ray_df).plot().lines)
 
-    with pytest.raises(NotImplementedError):
-        ray_df.plot()
+    for l, r in zipped_plot_lines:
+        assert np.array_equal(l.get_xdata(), r.get_xdata())
+        assert np.array_equal(l.get_ydata(), r.get_ydata())
 
 
 @pytest.fixture
@@ -3040,9 +3031,7 @@ def test_take():
 
 def test_to_records():
     ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.to_records()
+    assert np.array_equal(ray_df.to_records(), to_pandas(ray_df).to_records())
 
 
 def test_to_sparse():
@@ -3054,9 +3043,7 @@ def test_to_sparse():
 
 def test_to_string():
     ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.to_string()
+    assert ray_df.to_string() == to_pandas(ray_df).to_string()
 
 
 def test_to_timestamp():
@@ -3261,16 +3248,9 @@ def test___contains__(ray_df, key, result):
 
 def test___nonzero__():
     ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError):
+        # Always raises ValueError
         ray_df.__nonzero__()
-
-
-def test___bool__():
-    ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.__bool__()
 
 
 @pytest.fixture

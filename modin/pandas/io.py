@@ -9,11 +9,12 @@ import inspect
 from io import BytesIO
 import os
 import py
+import ray
 import re
 import warnings
 import numpy as np
 
-from .dataframe import ray, DataFrame
+from .dataframe import DataFrame
 from .utils import from_pandas
 from ..data_management.partitioning.partition_collections import RayBlockPartitions
 from ..data_management.partitioning.remote_partition import RayRemotePartition

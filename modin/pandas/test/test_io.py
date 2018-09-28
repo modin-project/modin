@@ -508,9 +508,7 @@ def test_to_dense():
 
 def test_to_dict():
     ray_df = create_test_ray_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.to_dict()
+    assert ray_df.to_dict() == to_pandas(ray_df).to_dict()
 
 
 def test_to_excel():
@@ -553,10 +551,9 @@ def test_to_feather():
 
 def test_to_gbq():
     ray_df = create_test_ray_dataframe()
-
-    TEST_GBQ_DF_FILENAME = "test_df.gbq"
-    with pytest.raises(NotImplementedError):
-        ray_df.to_gbq(TEST_GBQ_DF_FILENAME, None)
+    pandas_df = create_test_pandas_dataframe()
+    # Because we default to pandas, we can just test the equality of the two frames.
+    assert to_pandas(ray_df).equals(pandas_df)
 
 
 def test_to_html():
@@ -593,9 +590,7 @@ def test_to_json():
 
 def test_to_latex():
     ray_df = create_test_ray_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.to_latex()
+    assert ray_df.to_latex() == to_pandas(ray_df).to_latex()
 
 
 def test_to_msgpack():
