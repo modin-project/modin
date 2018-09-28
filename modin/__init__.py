@@ -20,7 +20,7 @@ def _git_version():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
         git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-        rev_string =  git_revision.strip().decode()
+        rev_string = git_revision.strip().decode()
     except OSError:
         rev_string = "Unknown"
     os.chdir(cwd)
