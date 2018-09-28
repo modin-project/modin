@@ -188,9 +188,6 @@ class DataFrame(object):
     index = property(_get_index, _set_index)
     columns = property(_get_columns, _set_columns)
 
-    def _map_reduce(self, *args, **kwargs):
-        raise ValueError("Fix this implementation")
-
     def _validate_eval_query(self, expr, **kwargs):
         """Helper function to check the arguments to eval() and query()
 
