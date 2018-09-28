@@ -35,7 +35,7 @@ import threading
 import os
 import ray
 
-from .. import __git_revision__, __version__
+from .. import _git_version, __version__
 from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
@@ -56,6 +56,7 @@ from .io import (
 )
 from .reshape import get_dummies
 
+__git_revision__ = git_version()
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
 
