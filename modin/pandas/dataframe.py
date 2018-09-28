@@ -3151,19 +3151,51 @@ class DataFrame(object):
         inplace=False,
         limit=None,
         regex=False,
-        method="pad",
-        axis=None,
+        method=None
     ):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.replace,
+        """Replace values given in to_replace with value.
+
+        Args:
+            to_replace: Values to replace. Can be type str, regex, list, dict, or Series
+
+            value: Value to replace anything matching to_replace with
+
+            inplace: If True, fill in place. Note: this will modify any other
+                views on this object.
+
+            limit: Maximum number of values to forward/backward fill.
+
+            regex: Whether to interpret to_replace as a regex.
+                   Can also input regular expressions as this arg
+                   and set to replace to None
+
+            method: Method to use for filling holes in reindexed Series pad.
+                ffill: propagate last valid observation forward to next valid
+                backfill.
+                bfill: use NEXT valid observation to fill gap.
+
+        Returns:
+            filled: DataFrame
+        """
+
+        inplace = validate_bool_kwarg(inplace, "inplace")
+
+        # if isinstance(to_replace, pandas.Series):
+        #     raise NotImplementedError("value as a Series not yet supported.")
+
+        new_manager = self._data_manager.replace(
             to_replace=to_replace,
             value=value,
-            inplace=inplace,
+            inplace=False,
             limit=limit,
             regex=regex,
-            method=method,
-            axis=axis,
+            method=method
         )
+
+        if inplace:
+            self._update_inplace(new_manager=new_manager)
+        else:
+            return DataFrame(data_manager=new_manager)
 
     def resample(
         self,

@@ -1101,6 +1101,54 @@ class PandasQueryCompiler(object):
         func = self._prepare_method(pandas.DataFrame.round, **kwargs)
         return self.map_partitions(func, new_dtypes=self._dtype_cache)
 
+    def replace(self, **kwargs):
+
+        # If dictionary isn't specific to certian columns, call Normally
+        # elsewise needs more complex logic
+
+        to_replace = kwargs.get("to_replace")
+
+        # if dict of dicts
+        if isinstance(to_replace, dict) and isinstance(next(iter(to_replace.values())), dict):
+            index = self.columns
+
+            to_replace = kwargs.pop("to_replace")
+
+            to_replace = {
+                idx: to_replace[key] for key in to_replace for idx in index.get_indexer_for([key])
+            }
+
+            def replace_dict_builder(df, func_dict={}):
+                return df.replace(to_replace=func_dict, **kwargs)
+
+            new_data = self.data.apply_func_to_select_indices(
+                0, replace_dict_builder, to_replace, keep_remaining=True
+            )
+            return self.__constructor__(new_data, self.index, self.columns)
+
+        # if dictionary keys are column names
+        value = kwargs.get("value")
+
+        if isinstance(value, dict):
+            index = self.columns
+
+            value = kwargs.pop("value")
+
+            value = {
+                idx: value[key] for key in value for idx in index.get_indexer_for([key])
+            }
+
+            def replace_dict_builder(df, func_dict={}):
+                return df.replace(value=func_dict, **kwargs)
+
+            new_data = self.data.apply_func_to_select_indices(
+                0, replace_dict_builder, value, keep_remaining=True
+            )
+            return self.__constructor__(new_data, self.index, self.columns)
+
+        func = self._prepare_method(pandas.DataFrame.replace, **kwargs)
+        return self.map_partitions(func)
+
     # END Map partitions operations
 
     # Map partitions across select indices

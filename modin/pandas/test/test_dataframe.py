@@ -2839,15 +2839,143 @@ def test_reorder_levels():
         ray_df.reorder_levels(None)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-def test_replace():
-    ray_df = create_test_dataframe()
+def test_replace_inplace():
+    test_frame = TestData().tsframe
+    test_frame['A'][:5] = np.nan
+    test_frame['A'][-5:] = np.nan
 
-    with pytest.raises(NotImplementedError):
-        ray_df.replace()
+    test_frame = pd.DataFrame(test_frame)
+
+    test_frame2 = test_frame.copy()
+    test_frame2.replace(np.nan, 0, inplace=True)
+    assert(ray_df_equals(test_frame2, test_frame.fillna(0)))
+
+    # mixed type
+    mf = TestData().mixed_frame
+    mf.iloc[5:20, mf.columns.get_loc('foo')] = np.nan
+    mf.iloc[-10:, mf.columns.get_loc('A')] = np.nan
+    mf = pd.DataFrame(mf)
+
+    expected = pd.DataFrame(mf).fillna(value=0)
+    result = pd.DataFrame(mf).replace(np.nan, 0)
+    assert(ray_df_equals(result, expected))
+
+    test_frame2 = test_frame.copy()
+    test_frame2.replace([np.nan], [0], inplace=True)
+    assert(test_frame2.equals(test_frame.fillna(0)))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
+def test_replace_mixed():
+    mf = TestData().mixed_frame
+    mixed_frame = TestData().mixed_frame
+    mf.iloc[5:20, mf.columns.get_loc('foo')] = np.nan
+    mf.iloc[-10:, mf.columns.get_loc('A')] = np.nan
+
+    result = mixed_frame.replace(np.nan, -18)
+    expected = mixed_frame.fillna(value=-18)
+    assert(result.equals(expected))
+    assert(result.replace(-18, np.nan).equals(mixed_frame))
+
+    result = mixed_frame.replace(np.nan, -1e8)
+    expected = mixed_frame.fillna(value=-1e8)
+    assert(result.equals(expected))
+    assert(result.replace(-1e8, np.nan).equals(mixed_frame))
+
+    # int block upcasting
+    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
+                       'B': pd.Series([0, 1], dtype='int64')})
+    expected = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
+                             'B': pd.Series([0.5, 1], dtype='float64')})
+    result = df.replace(0, 0.5)
+    assert(result.equals(expected))
+
+    df.replace(0, 0.5, inplace=True)
+    assert(df.equals(expected))
+
+    # int block splitting
+    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
+                       'B': pd.Series([0, 1], dtype='int64'),
+                       'C': pd.Series([1, 2], dtype='int64')})
+    expected = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
+                             'B': pd.Series([0.5, 1], dtype='float64'),
+                             'C': pd.Series([1, 2], dtype='int64')})
+    result = df.replace(0, 0.5)
+    assert(result.equals(expected))
+
+    # to object block upcasting
+    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
+                       'B': pd.Series([0, 1], dtype='int64')})
+    expected = pd.DataFrame({'A': pd.Series([1, 'foo'], dtype='object'),
+                             'B': pd.Series([0, 1], dtype='int64')})
+    result = df.replace(2, 'foo')
+    assert(result.equals(expected))
+
+    expected = pd.DataFrame({'A': pd.Series(['foo', 'bar'], dtype='object'),
+                             'B': pd.Series([0, 'foo'], dtype='object')})
+    result = df.replace([1, 2], ['foo', 'bar'])
+    assert(result.equals(expected))
+
+    # test case from
+    df = pd.DataFrame({'A': pd.Series([3, 0], dtype='int64'),
+                       'B': pd.Series([0, 3], dtype='int64')})
+    result = df.replace(3, df.mean().to_dict())
+    expected = df.copy().astype('float64')
+    m = df.mean()
+    expected.iloc[0, 0] = m[0]
+    expected.iloc[1, 1] = m[1]
+    assert(result.equals(expected))
+
+
+def test_replace_simple_nested_dict_with_nonexistent_value():
+    df = pd.DataFrame({'col': range(1, 5)})
+    expected = pd.DataFrame({'col': ['a', 2, 3, 'b']})
+
+    result = df.replace({'col': {-1: '-', 1: 'a', 4: 'b'}})
+    assert(expected.equals(result))
+
+    result = df.replace({-1: '-', 1: 'a', 4: 'b'})
+    assert(expected.equals(result))
+
+
+def test_replace_input_formats_listlike():
+    # both dicts
+    to_rep = {'A': np.nan, 'B': 0, 'C': ''}
+    values = {'A': 0, 'B': -1, 'C': 'missing'}
+    df = pd.DataFrame({'A': [np.nan, 0, np.inf], 'B': [0, 2, 5],
+                    'C': ['', 'asdf', 'fd']})
+    filled = df.replace(to_rep, values)
+    expected = {}
+    for k, v in pandas.compat.iteritems(df):
+        expected[k] = v.replace(to_rep[k], values[k])
+    assert(filled.equals(pd.DataFrame(expected)))
+
+    result = df.replace([0, 2, 5], [5, 2, 0])
+    expected = pd.DataFrame({'A': [np.nan, 5, np.inf], 'B': [5, 2, 0],
+                             'C': ['', 'asdf', 'fd']})
+    assert(result.equals(expected))
+
+    # scalar to dict
+    values = {'A': 0, 'B': -1, 'C': 'missing'}
+    df = pd.DataFrame({'A': [np.nan, 0, np.nan], 'B': [0, 2, 5],
+                       'C': ['', 'asdf', 'fd']})
+    filled = df.replace(np.nan, values)
+    expected = {}
+    for k, v in pandas.compat.iteritems(df):
+        expected[k] = v.replace(np.nan, values[k])
+    assert(filled.equals(pd.DataFrame(expected)))
+
+    # list to list
+    to_rep = [np.nan, 0, '']
+    values = [-2, -1, 'missing']
+    result = df.replace(to_rep, values)
+    expected = df.copy()
+    for i in range(len(to_rep)):
+        expected.replace(to_rep[i], values[i], inplace=True)
+    assert(result.equals(expected))
+
+    pytest.raises(ValueError, df.replace, to_rep, values[1:])
+
+
 def test_resample():
     ray_df = create_test_dataframe()
 
