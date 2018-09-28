@@ -2,7 +2,7 @@ import os
 import subprocess
 
 
-def git_version():
+def _git_version():
     def _execute_cmd_in_temp_env(cmd):
         # construct environment
         env = {}
@@ -16,11 +16,15 @@ def git_version():
         env["LC_ALL"] = "C"
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
 
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
         git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-        return git_revision.strip().decode()
+        rev_string = git_revision.strip().decode()
     except OSError:
-        return "Unknown"
+        rev_string = "Unknown"
+    os.chdir(cwd)
+    return rev_string
 
 
 def get_execution_engine():
@@ -36,12 +40,12 @@ def get_partition_format():
     return "Pandas"
 
 
-__git_revision__ = git_version()
+__git_revision__ = _git_version()
 __version__ = "0.1.2"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 
 # We don't want these used outside of this file.
-del git_version
+del _git_version
 del get_execution_engine
 del get_partition_format
