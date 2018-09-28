@@ -4523,13 +4523,13 @@ class DataFrame(object):
         return self.copy(deep=True)
 
     def __and__(self, other):
-        return self.bool() and other
+        return self.__bool__() and other
 
     def __or__(self, other):
-        return self.bool() or other
+        return self.__bool__() or other
 
     def __xor__(self, other):
-        return self.bool() ^ other
+        return self.__bool__() ^ other
 
     def __lt__(self, other):
         return self.lt(other)
