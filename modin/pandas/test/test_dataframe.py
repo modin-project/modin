@@ -2421,7 +2421,6 @@ def test_pivot_table():
         ray_df.pivot_table()
 
 
-@pytest.skip(reason="Cannot test equality ")
 def test_plot():
     ray_df = create_test_dataframe()
     # We have to test this way because equality in plots means same object.
