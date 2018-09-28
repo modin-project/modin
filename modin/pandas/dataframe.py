@@ -21,7 +21,6 @@ from pandas.util._validators import validate_bool_kwarg
 import itertools
 import functools
 import numpy as np
-import ray
 import re
 import sys
 import warnings
@@ -886,11 +885,19 @@ class DataFrame(object):
         figsize=None,
         layout=None,
         return_type=None,
-        **kwds
+        **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return to_pandas(self).boxplot(
+            column=column,
+            by=by,
+            ax=ax,
+            fontsize=fontsize,
+            rot=rot,
+            grid=grid,
+            figsize=figsize,
+            layout=layout,
+            return_type=return_type,
+            **kwargs
         )
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
@@ -1536,7 +1543,7 @@ class DataFrame(object):
 
     @classmethod
     def from_csv(
-        self,
+        cls,
         path,
         header=0,
         sep=", ",
@@ -1546,28 +1553,34 @@ class DataFrame(object):
         tupleize_cols=None,
         infer_datetime_format=False,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        from .io import read_csv
+
+        return read_csv(
+            path,
+            header=header,
+            sep=sep,
+            index_col=index_col,
+            parse_dates=parse_dates,
+            encoding=encoding,
+            tupleize_cols=tupleize_cols,
+            infer_datetime_format=infer_datetime_format,
         )
 
     @classmethod
-    def from_dict(self, data, orient="columns", dtype=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+    def from_dict(cls, data, orient="columns", dtype=None):
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return from_pandas(pandas.DataFrame.from_dict(data, orient=orient, dtype=dtype))
 
     @classmethod
-    def from_items(self, items, columns=None, orient="columns"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+    def from_items(cls, items, columns=None, orient="columns"):
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return from_pandas(
+            pandas.DataFrame.from_items(items, columns=columns, orient=orient)
         )
 
     @classmethod
     def from_records(
-        self,
+        cls,
         data,
         index=None,
         exclude=None,
@@ -1575,9 +1588,16 @@ class DataFrame(object):
         coerce_float=False,
         nrows=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return from_pandas(
+            pandas.DataFrame.from_records(
+                data,
+                index=index,
+                exclude=exclude,
+                columns=columns,
+                coerce_float=coerce_float,
+                nrows=nrows,
+            )
         )
 
     def ge(self, other, axis="columns", level=None):
@@ -1699,11 +1719,24 @@ class DataFrame(object):
         figsize=None,
         layout=None,
         bins=10,
-        **kwds
+        **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return to_pandas(self).hist(
+            data,
+            column=column,
+            by=by,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            ax=ax,
+            sharex=sharex,
+            sharey=sharey,
+            figsize=figsize,
+            layout=layout,
+            bins=bins,
+            **kwargs
         )
 
     def idxmax(self, axis=0, skipna=True):
@@ -2506,11 +2539,39 @@ class DataFrame(object):
         xerr=None,
         secondary_y=False,
         sort_columns=False,
-        **kwds
+        **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return to_pandas(self).plot(
+            x=x,
+            y=y,
+            kind=kind,
+            ax=ax,
+            subplots=subplots,
+            sharex=sharex,
+            sharey=sharey,
+            layout=layout,
+            figsize=figsize,
+            use_index=use_index,
+            title=title,
+            grid=grid,
+            legend=legend,
+            style=style,
+            logx=logx,
+            logy=logy,
+            loglog=loglog,
+            xticks=xticks,
+            yticks=yticks,
+            xlim=xlim,
+            ylim=ylim,
+            rot=rot,
+            fontsize=fontsize,
+            colormap=colormap,
+            table=table,
+            yerr=yerr,
+            xerr=xerr,
+            secondary_y=secondary_y,
+            sort_columns=sort_columns,
+            **kwargs
         )
 
     def pop(self, item):
@@ -3670,11 +3731,8 @@ class DataFrame(object):
         )
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_clipboard(excel, sep, **kwargs)
+        return to_pandas(self).to_clipboard(excel, sep, **kwargs)
 
     def to_csv(
         self,
@@ -3733,10 +3791,8 @@ class DataFrame(object):
         )
 
     def to_dict(self, orient="dict", into=dict):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_dict(orient=orient, into=into)
 
     def to_excel(
         self,
@@ -3757,11 +3813,8 @@ class DataFrame(object):
         verbose=True,
         freeze_panes=None,
     ):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_excel(
+        return to_pandas(self).to_excel(
             excel_writer,
             sheet_name,
             na_rep,
@@ -3781,11 +3834,8 @@ class DataFrame(object):
         )
 
     def to_feather(self, fname):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_feather(fname)
+        return to_pandas(self).to_feather(fname)
 
     def to_gbq(
         self,
@@ -3797,17 +3847,20 @@ class DataFrame(object):
         if_exists="fail",
         private_key=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_gbq(
+            destination_table,
+            project_id,
+            chunksize=chunksize,
+            verbose=verbose,
+            reauth=reauth,
+            if_exists=if_exists,
+            private_key=private_key,
         )
 
     def to_hdf(self, path_or_buf, key, **kwargs):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_hdf(path_or_buf, key, **kwargs)
+        return to_pandas(self).to_hdf(path_or_buf, key, **kwargs)
 
     def to_html(
         self,
@@ -3832,11 +3885,8 @@ class DataFrame(object):
         decimal=".",
         border=None,
     ):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_html(
+        return to_pandas(self).to_html(
             buf,
             columns,
             col_space,
@@ -3871,11 +3921,8 @@ class DataFrame(object):
         lines=False,
         compression=None,
     ):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_json(
+        return to_pandas(self).to_json(
             path_or_buf,
             orient,
             date_format,
@@ -3909,17 +3956,32 @@ class DataFrame(object):
         multicolumn_format=None,
         multirow=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_latex(
+            buf=buf,
+            columns=columns,
+            col_space=col_space,
+            header=header,
+            index=index,
+            na_rep=na_rep,
+            formatters=formatters,
+            float_format=float_format,
+            sparsify=sparsify,
+            index_names=index_names,
+            bold_rows=bold_rows,
+            column_format=column_format,
+            longtable=longtable,
+            escape=escape,
+            encoding=encoding,
+            decimal=decimal,
+            multicolumn=multicolumn,
+            multicolumn_format=multicolumn_format,
+            multirow=multirow,
         )
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_msgpack(path_or_buf, encoding, **kwargs)
+        return to_pandas(self).to_msgpack(path_or_buf, encoding, **kwargs)
 
     def to_panel(self):
         raise NotImplementedError(
@@ -3928,29 +3990,21 @@ class DataFrame(object):
         )
 
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_parquet(fname, engine, compression, **kwargs)
+        return to_pandas(self).to_parquet(fname, engine, compression, **kwargs)
 
     def to_period(self, freq=None, axis=0, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_period(freq=freq, axis=axis, copy=copy)
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_pickle(path, compression, protocol)
+        return to_pandas(self).to_pickle(path, compression, protocol)
 
     def to_records(self, index=True, convert_datetime64=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_records(
+            index=index, convert_datetime64=convert_datetime64
         )
 
     def to_sparse(self, fill_value=None, kind="block"):
@@ -3971,11 +4025,8 @@ class DataFrame(object):
         chunksize=None,
         dtype=None,
     ):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_sql(
+        return to_pandas(self).to_sql(
             name, con, flavor, schema, if_exists, index, index_label, chunksize, dtype
         )
 
@@ -3990,11 +4041,8 @@ class DataFrame(object):
         data_label=None,
         variable_labels=None,
     ):
-
         warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
-        port_frame = to_pandas(self)
-        port_frame.to_stata(
+        return to_pandas(self).to_stata(
             fname,
             convert_dates,
             write_index,
@@ -4023,9 +4071,23 @@ class DataFrame(object):
         max_cols=None,
         show_dimensions=False,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
+        return to_pandas(self).to_string(
+            buf=buf,
+            columns=columns,
+            col_space=col_space,
+            header=header,
+            index=index,
+            na_rep=na_rep,
+            formatters=formatters,
+            float_format=float_format,
+            sparsify=sparsify,
+            index_names=index_names,
+            justify=justify,
+            line_width=line_width,
+            max_rows=max_rows,
+            max_cols=max_cols,
+            show_dimensions=show_dimensions,
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
@@ -4390,10 +4452,7 @@ class DataFrame(object):
         )
 
     def __bool__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.bool()
 
     def __abs__(self):
         """Creates a modified DataFrame by taking the absolute value.
@@ -4474,22 +4533,13 @@ class DataFrame(object):
         return self.copy(deep=True)
 
     def __and__(self, other):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.bool() and other
 
     def __or__(self, other):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.bool() or other
 
     def __xor__(self, other):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.bool() ^ other
 
     def __lt__(self, other):
         return self.lt(other)
@@ -4697,22 +4747,3 @@ class DataFrame(object):
                         "given {1}".format(len(self.columns), len(other))
                     )
         return other
-
-
-@ray.remote
-def _merge_columns(left_columns, right_columns, *args):
-    """Merge two columns to get the correct column names and order.
-
-    Args:
-        left_columns: The columns on the left side of the merge.
-        right_columns: The columns on the right side of the merge.
-        args: The arguments for the merge.
-
-    Returns:
-         The columns for the merge operation.
-    """
-    return (
-        pandas.DataFrame(columns=left_columns, index=[0], dtype="uint8")
-        .merge(pandas.DataFrame(columns=right_columns, index=[0], dtype="uint8"), *args)
-        .columns
-    )
