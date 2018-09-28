@@ -14,7 +14,7 @@ from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
 
 # Force matplotlib to not use any Xwindows backend.
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 
 
 @pytest.fixture
