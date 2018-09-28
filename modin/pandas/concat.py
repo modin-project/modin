@@ -19,12 +19,10 @@ def concat(
     verify_integrity=False,
     copy=True,
 ):
-
     if keys is not None:
         objs = [objs[k] for k in keys]
     else:
         objs = list(objs)
-
     if len(objs) == 0:
         raise ValueError("No objects to concatenate")
 
@@ -49,7 +47,6 @@ def concat(
             "valid",
             type(type_check),
         )
-
     all_series = all(isinstance(obj, pandas.Series) for obj in objs)
     if all_series:
         return DataFrame(
@@ -66,20 +63,17 @@ def concat(
                 copy,
             )
         )
-
     if isinstance(objs, dict):
         raise NotImplementedError(
             "Obj as dicts not implemented. To contribute to "
             "Pandas on Ray, please visit github.com/ray-project/ray."
         )
-
     axis = pandas.DataFrame()._get_axis_number(axis)
 
     if join not in ["inner", "outer"]:
         raise ValueError(
             "Only can inner (intersect) or outer (union) join the" " other axis"
         )
-
     # We have the weird Series and axis check because, when concatenating a
     # dataframe to a series on axis=0, pandas ignores the name of the series,
     # and this check aims to mirror that (possibly buggy) functionality

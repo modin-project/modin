@@ -88,13 +88,11 @@ def _skip_header(f, kwargs={}):
 
     if header is None:
         return lines_read
-
-    if header == "infer":
+    elif header == "infer":
         if names is not None:
             return lines_read
         else:
             header = 0
-
     # Skip lines before the header
     if isinstance(skiprows, int):
         lines_read += skiprows
@@ -103,7 +101,6 @@ def _skip_header(f, kwargs={}):
         skiprows = None
 
     header_lines = header + 1 if isinstance(header, int) else max(header) + 1
-
     header_lines_skipped = 0
     # Python 2 files use a read-ahead buffer which breaks our use of tell()
     for line in iter(f.readline, ""):
@@ -123,7 +120,6 @@ def _skip_header(f, kwargs={}):
             header_lines_skipped += 1
             if header_lines_skipped == header_lines:
                 return lines_read
-
     return lines_read
 
 
@@ -142,9 +138,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0)
     )
     column_names = empty_pd_df.columns
-
     skipfooter = kwargs.get("skipfooter", None) or kwargs.get("skip_footer", None)
-
     partition_kwargs = dict(
         kwargs, header=None, names=column_names, skipfooter=0, skip_footer=0
     )
@@ -158,10 +152,8 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
 
         prefix_id = ray.put(prefix)
         partition_kwargs_id = ray.put(partition_kwargs)
-
         # Skip the header since we already have the header information
         _skip_header(f, kwargs)
-
         # Launch tasks to read partitions
         partition_ids = []
         index_ids = []
@@ -177,7 +169,6 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
             start = f.tell()
             f.seek(chunk_size, os.SEEK_CUR)
             f.readline()  # Read a whole number of lines
-
             partition_id = _read_csv_with_offset_pandas_on_ray._submit(
                 args=(
                     filepath,
@@ -214,7 +205,6 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
 
 def _read_csv_from_pandas(filepath_or_buffer, kwargs):
     pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
-
     if isinstance(pd_obj, pandas.DataFrame):
         return from_pandas(pd_obj)
     elif isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -319,7 +309,6 @@ def read_csv(
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     elif not isinstance(filepath_or_buffer, py.path.local):
         read_from_pandas = True
-
         # Pandas read_csv supports pathlib.Path
         try:
             import pathlib
@@ -328,32 +317,27 @@ def read_csv(
                 read_from_pandas = False
         except ImportError:
             pass
-
         if read_from_pandas:
             warnings.warn(
                 ("Reading from buffer. " "Defaulting to Pandas implementation."),
                 PendingDeprecationWarning,
             )
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
     if _infer_compression(filepath_or_buffer, compression) is not None:
         warnings.warn(
             ("Compression detected. " "Defaulting to Pandas implementation."),
             PendingDeprecationWarning,
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
     if as_recarray:
         warnings.warn("Defaulting to Pandas implementation.", PendingDeprecationWarning)
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
     if chunksize is not None:
         warnings.warn(
             ("Reading chunks from a file. " "Defaulting to Pandas implementation."),
             PendingDeprecationWarning,
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
     if skiprows is not None and not isinstance(skiprows, int):
         warnings.warn(
             (
@@ -362,15 +346,13 @@ def read_csv(
                 "comment the rows to skip instead."
             )
         )
-
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
     # TODO: replace this by reading lines from file.
     if nrows is not None:
         warnings.warn("Defaulting to Pandas implementation.", PendingDeprecationWarning)
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-
-    return _read_csv_from_file_pandas_on_ray(filepath_or_buffer, kwargs)
+    else:
+        return _read_csv_from_file_pandas_on_ray(filepath_or_buffer, kwargs)
 
 
 def read_json(
@@ -389,9 +371,7 @@ def read_json(
     chunksize=None,
     compression="infer",
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_json(
         path_or_buf,
         orient,
@@ -409,7 +389,6 @@ def read_json(
         compression,
     )
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
@@ -430,9 +409,7 @@ def read_html(
     na_values=None,
     keep_default_na=True,
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_html(
         io,
         match,
@@ -451,17 +428,13 @@ def read_html(
         keep_default_na,
     )
     ray_frame = from_pandas(port_frame[0])
-
     return ray_frame
 
 
 def read_clipboard(sep=r"\s+"):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_clipboard(sep)
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
@@ -486,9 +459,7 @@ def read_excel(
     engine=None,
     squeeze=False,
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_excel(
         io,
         sheet_name,
@@ -511,37 +482,27 @@ def read_excel(
         squeeze,
     )
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
 def read_hdf(path_or_buf, key=None, mode="r"):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_hdf(path_or_buf, key, mode)
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
 def read_feather(path, nthreads=1):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_feather(path)
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
 def read_msgpack(path_or_buf, encoding="utf-8", iterator=False):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_msgpack(path_or_buf, encoding, iterator)
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
@@ -558,9 +519,7 @@ def read_stata(
     chunksize=None,
     iterator=False,
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_stata(
         filepath_or_buffer,
         convert_dates,
@@ -575,7 +534,6 @@ def read_stata(
         iterator,
     )
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
@@ -587,24 +545,18 @@ def read_sas(
     chunksize=None,
     iterator=False,
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_sas(
         filepath_or_buffer, format, index, encoding, chunksize, iterator
     )
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
 def read_pickle(path, compression="infer"):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_pickle(path, compression)
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 
@@ -618,14 +570,11 @@ def read_sql(
     columns=None,
     chunksize=None,
 ):
-
     warnings.warn("Defaulting to Pandas implementation", PendingDeprecationWarning)
-
     port_frame = pandas.read_sql(
         sql, con, index_col, coerce_float, params, parse_dates, columns, chunksize
     )
     ray_frame = from_pandas(port_frame)
-
     return ray_frame
 
 

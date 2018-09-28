@@ -258,7 +258,6 @@ class _LocIndexer(_LocationIndexerBase):
                     labels=list(locator_as_index), base_index_name=base_index
                 )
             )
-
         return nan_labels
 
     def _expand_dim(self, row_lookup, col_lookup, ndim):
@@ -272,7 +271,6 @@ class _LocIndexer(_LocationIndexerBase):
             ndim = 1
         if ndim == 1 and (many_rows and many_cols):
             ndim = 2
-
         return ndim
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
@@ -286,7 +284,6 @@ class _iLocIndexer(_LocationIndexerBase):
 
     def __getitem__(self, key):
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
-
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -296,7 +293,6 @@ class _iLocIndexer(_LocationIndexerBase):
 
     def __setitem__(self, key, item):
         row_loc, col_loc, _, __, ___ = _parse_tuple(key)
-
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 

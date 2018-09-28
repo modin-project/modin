@@ -58,7 +58,6 @@ def _inherit_docstrings(parent, excluded=[]):
             elif isinstance(obj, property) and obj.fget is not None:
                 p = property(obj.fget, obj.fset, obj.fdel, parent_obj.__doc__)
                 setattr(cls, attr, p)
-
         return cls
 
     return decorator

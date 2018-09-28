@@ -64,7 +64,6 @@ class DataFrameGroupBy(object):
                 self._index_grouped_cache = self._index.groupby(self._by)
             else:
                 self._index_grouped_cache = self._columns.groupby(self._by)
-
         return self._index_grouped_cache
 
     _keys_and_values_cache = None
