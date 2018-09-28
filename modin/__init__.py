@@ -16,13 +16,11 @@ def _git_version():
         env["LC_ALL"] = "C"
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
 
-    if os.path.exists("./.git"):
-        try:
-            git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-            return git_revision.strip().decode()
-        except OSError:
-            return "Unknown"
-    else:
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
+        return git_revision.strip().decode()
+    except OSError:
         return "Unknown"
 
 
