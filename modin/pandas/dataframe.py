@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import pandas
 from pandas.api.types import is_scalar
-from pandas.compat import to_str, string_types, cPickle as pkl
+from pandas.compat import to_str, string_types, numpy, cPickle as pkl
 import pandas.core.common as com
 from pandas.core.dtypes.common import (
     _get_dtype_from_object,
@@ -901,22 +901,34 @@ class DataFrame(object):
         )
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        # validate inputs
+        if type(lower) == list or type(upper) == list:
+            if axis is None:
+                raise ValueError("Must specify axis =0 or 1")
+            self._validate_other(lower, axis)
+            self._validate_other(upper, axis)
+        inplace = validate_bool_kwarg(inplace, "inplace")
+        axis = numpy.function.validate_clip_with_axis(axis, args, kwargs)
+
+        # any np.nan bounds are treated as None
+        if lower and np.any(np.isnan(lower)):
+            lower = None
+        if upper and np.any(np.isnan(upper)):
+            upper = None
+
+        new_manager = self._data_manager.clip(
+            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs)
+
+        if inplace:
+            self._update_inplace(new_manager=new_manager)
+        else:
+            return DataFrame(data_manager=new_manager)
 
     def clip_lower(self, threshold, axis=None, inplace=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.clip(lower=threshold, upper=None, axis=axis, inplace=inplace)
 
     def clip_upper(self, threshold, axis=None, inplace=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self.clip(lower=None, upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         raise NotImplementedError(

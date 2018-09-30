@@ -673,6 +673,12 @@ class PandasDataManager(object):
         func = pandas.DataFrame.truediv
         return self._inter_df_op_handler(func, other, **kwargs)
 
+    def clip(self, lower, upper, **kwargs):
+        kwargs["lower"] = lower
+        kwargs["upper"] = upper
+        func = self._prepare_method(pandas.DataFrame.clip, **kwargs)
+        return self.scalar_operations(kwargs.get("axis", 0), lower or upper, func)
+
     def update(self, other, **kwargs):
         """Uses other manager to update corresponding values in this manager.
 
