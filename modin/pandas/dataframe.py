@@ -673,7 +673,7 @@ class DataFrame(object):
         )
 
     def append(self, other, ignore_index=False, verify_integrity=False,
-            sort=None):
+               sort=None):
         """Append another DataFrame/list/Series to this one.
 
         Args:
@@ -727,7 +727,8 @@ class DataFrame(object):
                 )
 
         data_manager = self._data_manager.concat(0, other,
-                ignore_index=ignore_index, sort=sort)
+                                                 ignore_index=ignore_index,
+                                                 sort=sort)
         return DataFrame(data_manager=data_manager)
 
     def apply(
