@@ -321,7 +321,6 @@ def test_simple_col_groupby():
         # idxmax and idxmin fail on column groupby in pandas with python2
         test_idxmax(ray_groupby, pandas_groupby)
         test_idxmin(ray_groupby, pandas_groupby)
-        test_rank(ray_groupby, pandas_groupby)
         test_quantile(ray_groupby, pandas_groupby)
 
     # https://github.com/pandas-dev/pandas/issues/21127

@@ -1085,7 +1085,7 @@ def test_as_matrix():
 
     df = pd.DataFrame({"real": [1, 2, 3], "complex": [1j, 2j, 3j]})
     mat = df.as_matrix()
-    assert mat[0, 0] == 1j
+    assert mat[0, 1] == 1j
 
     # single block corner case
     mat = pd.DataFrame(test_data.frame).as_matrix(["A", "B"])
@@ -1916,7 +1916,7 @@ def test_fillna_invalid_value():
     # tuple
     pytest.raises(TypeError, ray_df.fillna, (1, 2))
     # frame with series
-    pytest.raises(ValueError, ray_df.iloc[:, 0].fillna, ray_df)
+    pytest.raises(TypeError, ray_df.iloc[:, 0].fillna, ray_df)
 
 
 @pytest.fixture
