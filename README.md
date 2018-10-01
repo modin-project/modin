@@ -4,7 +4,7 @@
 <p align="center">
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest"></a>
-<a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-70.7%25-orange.svg"></a>
+<a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg"></a>
 <a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi%20package-0.1.2-blue.svg"></a>
 <a href="https://github.com/ambv/black"><img alt="" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>

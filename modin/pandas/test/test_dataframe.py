@@ -1208,9 +1208,13 @@ def test_clip(ray_df, pandas_df):
     # test lower and upper scalar bound
     assert ray_df_equals_pandas(ray_df.clip(lower, upper), pandas_df.clip(lower, upper))
     # test lower and upper list bound on each column
-    assert ray_df_equals_pandas(ray_df.clip(lower_0, upper_0, axis=0), pandas_df.clip(lower_0, upper_0, axis=0))
+    assert ray_df_equals_pandas(
+        ray_df.clip(lower_0, upper_0, axis=0), pandas_df.clip(lower_0, upper_0, axis=0)
+    )
     # test only upper list bound on each column
-    assert ray_df_equals_pandas(ray_df.clip(np.nan, upper_0, axis=0), pandas_df.clip(np.nan, upper_0, axis=0))
+    assert ray_df_equals_pandas(
+        ray_df.clip(np.nan, upper_0, axis=0), pandas_df.clip(np.nan, upper_0, axis=0)
+    )
 
 
 @pytest.fixture
@@ -1222,7 +1226,9 @@ def test_clip_lower(ray_df, pandas_df):
     # test lower scalar bound
     assert ray_df_equals_pandas(ray_df.clip_lower(lower), pandas_df.clip_lower(lower))
     # test lower list bound on each column
-    assert ray_df_equals_pandas(ray_df.clip_lower(lower_0, axis=0), pandas_df.clip_lower(lower_0, axis=0))
+    assert ray_df_equals_pandas(
+        ray_df.clip_lower(lower_0, axis=0), pandas_df.clip_lower(lower_0, axis=0)
+    )
 
 
 @pytest.fixture
@@ -1234,7 +1240,9 @@ def test_clip_upper(ray_df, pandas_df):
     # test upper scalar bound
     assert ray_df_equals_pandas(ray_df.clip_upper(upper), pandas_df.clip_upper(upper))
     # test upper list bound on each column
-    assert ray_df_equals_pandas(ray_df.clip_upper(upper_0, axis=0), pandas_df.clip_upper(upper_0, axis=0))
+    assert ray_df_equals_pandas(
+        ray_df.clip_upper(upper_0, axis=0), pandas_df.clip_upper(upper_0, axis=0)
+    )
 
 
 def test_combine():

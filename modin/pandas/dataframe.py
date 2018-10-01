@@ -917,7 +917,8 @@ class DataFrame(object):
             upper = None
 
         new_manager = self._data_manager.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs)
+            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+        )
 
         if inplace:
             self._update_inplace(new_manager=new_manager)
