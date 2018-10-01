@@ -157,6 +157,9 @@ def test_int_dataframe():
     test_cumprod(ray_df, pandas_df)
     test_cumsum(ray_df, pandas_df)
     test_pipe(ray_df, pandas_df)
+    test_clip(ray_df, pandas_df)
+    test_clip_lower(ray_df, pandas_df)
+    test_clip_upper(ray_df, pandas_df)
 
     test_loc(ray_df, pandas_df)
     test_iloc(ray_df, pandas_df)
@@ -316,6 +319,9 @@ def test_float_dataframe():
     test_cumprod(ray_df, pandas_df)
     test_cumsum(ray_df, pandas_df)
     test_pipe(ray_df, pandas_df)
+    test_clip(ray_df, pandas_df)
+    test_clip_lower(ray_df, pandas_df)
+    test_clip_upper(ray_df, pandas_df)
 
     test___len__(ray_df, pandas_df)
     test_first_valid_index(ray_df, pandas_df)
@@ -643,6 +649,9 @@ def test_nan_dataframe():
     test_cumprod(ray_df, pandas_df)
     test_cumsum(ray_df, pandas_df)
     test_pipe(ray_df, pandas_df)
+    test_clip(ray_df, pandas_df)
+    test_clip_lower(ray_df, pandas_df)
+    test_clip_upper(ray_df, pandas_df)
 
     test___len__(ray_df, pandas_df)
     test_first_valid_index(ray_df, pandas_df)
@@ -1185,25 +1194,55 @@ def test_boxplot():
     assert ray_df.boxplot() == to_pandas(ray_df).boxplot()
 
 
-def test_clip():
-    ray_df = create_test_dataframe()
+@pytest.fixture
+def test_clip(ray_df, pandas_df):
+    # set bounds
+    lower, upper = 2, 9
+    lower_0 = [0, 14, 6, 1]
+    upper_0 = [12, 1, 10, 7]
 
-    with pytest.raises(NotImplementedError):
-        ray_df.clip()
+    # test no input
+    assert ray_df_equals_pandas(ray_df.clip(), pandas_df.clip())
+    # test only upper scalar bound
+    assert ray_df_equals_pandas(ray_df.clip(None, lower), pandas_df.clip(None, lower))
+    # test lower and upper scalar bound
+    assert ray_df_equals_pandas(ray_df.clip(lower, upper), pandas_df.clip(lower, upper))
+    # test lower and upper list bound on each column
+    assert ray_df_equals_pandas(
+        ray_df.clip(lower_0, upper_0, axis=0), pandas_df.clip(lower_0, upper_0, axis=0)
+    )
+    # test only upper list bound on each column
+    assert ray_df_equals_pandas(
+        ray_df.clip(np.nan, upper_0, axis=0), pandas_df.clip(np.nan, upper_0, axis=0)
+    )
 
 
-def test_clip_lower():
-    ray_df = create_test_dataframe()
+@pytest.fixture
+def test_clip_lower(ray_df, pandas_df):
+    # set bounds
+    lower = 2
+    lower_0 = [0, 14, 6, 1]
 
-    with pytest.raises(NotImplementedError):
-        ray_df.clip_lower(None)
+    # test lower scalar bound
+    assert ray_df_equals_pandas(ray_df.clip_lower(lower), pandas_df.clip_lower(lower))
+    # test lower list bound on each column
+    assert ray_df_equals_pandas(
+        ray_df.clip_lower(lower_0, axis=0), pandas_df.clip_lower(lower_0, axis=0)
+    )
 
 
-def test_clip_upper():
-    ray_df = create_test_dataframe()
+@pytest.fixture
+def test_clip_upper(ray_df, pandas_df):
+    # set bounds
+    upper = 9
+    upper_0 = [12, 1, 10, 7]
 
-    with pytest.raises(NotImplementedError):
-        ray_df.clip_upper(None)
+    # test upper scalar bound
+    assert ray_df_equals_pandas(ray_df.clip_upper(upper), pandas_df.clip_upper(upper))
+    # test upper list bound on each column
+    assert ray_df_equals_pandas(
+        ray_df.clip_upper(upper_0, axis=0), pandas_df.clip_upper(upper_0, axis=0)
+    )
 
 
 def test_combine():
