@@ -134,14 +134,10 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
     Returns:
         DataFrame or Series constructed from CSV file.
     """
-    empty_pd_df = pandas.read_csv(
-        filepath, **dict(kwargs, nrows=0, skipfooter=0)
-    )
+    empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
     column_names = empty_pd_df.columns
     skipfooter = kwargs.get("skipfooter", None)
-    partition_kwargs = dict(
-        kwargs, header=None, names=column_names, skipfooter=0
-    )
+    partition_kwargs = dict(kwargs, header=None, names=column_names, skipfooter=0)
     with open(filepath, "rb") as f:
         # Get the BOM if necessary
         prefix = b""
