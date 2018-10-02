@@ -61,7 +61,12 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 try:
     if threading.current_thread().name == "MainThread":
-        ray.init(redirect_output=True, include_webui=False, redirect_worker_output=True)
+        ray.init(
+            redirect_output=True,
+            include_webui=False,
+            redirect_worker_output=True,
+            use_raylet=True,
+        )
 except AssertionError:
     pass
 
