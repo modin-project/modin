@@ -318,9 +318,6 @@ def read_csv(
             "Compression detected. Defaulting to Pandas implementation.", UserWarning
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-    if as_recarray:
-        warnings.warn("Defaulting to Pandas implementation.", UserWarning)
-        return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if chunksize is not None:
         warnings.warn(
             "Reading chunks from a file. Defaulting to Pandas implementation.",
