@@ -1674,6 +1674,78 @@ class PandasDataManager(object):
         new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
         return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
 
+    def corr(self, method="pearson", min_periods=1):
+        """Compute pairwise correlation of columns, excluding NA/null values.
+         Arguments:
+            method: {‘pearson’, ‘kendall’, ‘spearman’}
+            min_periods: Minimum number of observations required per pair of
+                columns to have a valid result. Currently only available for
+                pearson and spearman correlation
+         Returns:
+            DataFrame of correlations between each pair of columns.
+        """
+        if method != 'pearson':
+            raise NotImplementedError(
+                "To contribute to Pandas on Ray, please visit "
+                "github.com/ray-project/ray.")
+        #Correlation only matters for numeric columns, so we filter out any nonnumeric columns
+        new_cols = self.dtypes[self.dtypes.apply(
+            lambda x: is_numeric_dtype(x))].index
+        num_rows = len(self.index)
+        #Computing mean for each numerical column and demeaning columns
+        subtracted_means = self.map_across_full_axis(0, 
+                lambda df: (np.subtract(df.select_dtypes([np.number]),
+                            (df.select_dtypes([np.number])
+                            .sum(axis=0)/num_rows).values)))
+        #Computing standard deviations for each numerical column
+        stdevs = subtracted_means.map_across_full_axis(0,
+                (lambda df: np.sqrt(df.pow(2).sum()/(num_rows-1))))
+        #Reindexing intermediate tables to have same labels as original DataFrame
+        subtracted_means = subtracted_means.to_pandas()
+        subtracted_means.columns = new_cols
+        stdevs = stdevs.to_pandas()
+        stdevs.index = new_cols
+        #Computing pairwise correlation for columns 
+        corr_dict = {}
+        for col in new_cols:
+            norm = subtracted_means[col]
+            stdev = stdevs[col]
+            data = [(norm*subtracted_means[col2]).sum()/((num_rows-1)*stdev*stdevs[col2])
+                    if stdev*stdevs[col2] != 0 else np.nan for col2 in new_cols]
+            corr_dict[col] = data
+        #Returning correlation DataFrame
+        return pandas.DataFrame(data = corr_dict, index = new_cols, columns = new_cols)
+
+    def cov(self, min_periods=None):
+        """Compute pairwise covariance of columns, excluding NA/null values.
+         Arguments:
+            min_periods: Minimum number of observations required per pair of
+                columns to have a valid result.
+         Returns:
+            DataFrame of covariances between each pair of columns.
+        """
+        #Covariance only matters for numeric columns, so we filter out any nonnumeric columns
+        new_cols = self.dtypes[self.dtypes.apply(
+            lambda x: is_numeric_dtype(x))].index
+        num_rows = len(self.index)
+        #Computing mean for each numerical column and demeaning columns
+        subtracted_means = self.map_across_full_axis(0, 
+                lambda df: (np.subtract(df.select_dtypes([np.number]),
+                            (df.select_dtypes([np.number])
+                            .sum(axis=0)/num_rows).values)))
+        #Reindexing intermediate tables to have same labels as original DataFrame
+        subtracted_means = subtracted_means.to_pandas()
+        subtracted_means.columns = new_cols
+        #Computing pairwise covariance for columns
+        cov_dict = {}
+        for col in new_cols:
+            norm = subtracted_means[col]
+            data = [(norm*subtracted_means[col2]).sum()/(num_rows-1)
+                    for col2 in new_cols]
+            cov_dict[col] = data
+        #Returning covariance DataFrame
+        return pandas.DataFrame(data = cov_dict, index = new_cols, columns = new_cols)
+
     # END Map across rows/columns
 
     # Map across rows/columns
