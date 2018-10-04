@@ -12,9 +12,15 @@ import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
+import sys
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+if sys.version_info[0] < 3:
+    PY2 = True
+else:
+    PY2 = False
 
 
 @pytest.fixture
@@ -1085,7 +1091,10 @@ def test_as_matrix():
 
     df = pd.DataFrame({"real": [1, 2, 3], "complex": [1j, 2j, 3j]})
     mat = df.as_matrix()
-    assert mat[0, 1] == 1j
+    if PY2:
+        assert mat[0, 0] == 1j
+    else:
+        assert mat[0, 1] == 1j
 
     # single block corner case
     mat = pd.DataFrame(test_data.frame).as_matrix(["A", "B"])

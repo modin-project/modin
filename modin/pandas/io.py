@@ -258,11 +258,7 @@ def read_csv(
     skipfooter=0,
     doublequote=True,
     delim_whitespace=False,
-    as_recarray=None,
-    compact_ints=None,
-    use_unsigned=None,
     low_memory=True,
-    buffer_lines=None,
     memory_map=False,
     float_precision=None,
 ):
