@@ -18,6 +18,7 @@ def concat(
     names=None,
     verify_integrity=False,
     copy=True,
+    sort=False,
 ):
     if keys is not None:
         objs = [objs[k] for k in keys]
@@ -61,6 +62,7 @@ def concat(
                 names,
                 verify_integrity,
                 copy,
+                sort,
             )
         )
     if isinstance(objs, dict):
@@ -98,5 +100,6 @@ def concat(
         names=None,
         verify_integrity=False,
         copy=True,
+        sort=False,
     )
     return DataFrame(data_manager=new_manager)

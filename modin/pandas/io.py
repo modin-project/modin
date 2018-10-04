@@ -134,14 +134,10 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
     Returns:
         DataFrame or Series constructed from CSV file.
     """
-    empty_pd_df = pandas.read_csv(
-        filepath, **dict(kwargs, nrows=0, skipfooter=0, skip_footer=0)
-    )
+    empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
     column_names = empty_pd_df.columns
-    skipfooter = kwargs.get("skipfooter", None) or kwargs.get("skip_footer", None)
-    partition_kwargs = dict(
-        kwargs, header=None, names=column_names, skipfooter=0, skip_footer=0
-    )
+    skipfooter = kwargs.get("skipfooter", None)
+    partition_kwargs = dict(kwargs, header=None, names=column_names, skipfooter=0)
     with open(filepath, "rb") as f:
         # Get the BOM if necessary
         prefix = b""
@@ -260,14 +256,9 @@ def read_csv(
     error_bad_lines=True,
     warn_bad_lines=True,
     skipfooter=0,
-    skip_footer=0,
     doublequote=True,
     delim_whitespace=False,
-    as_recarray=None,
-    compact_ints=None,
-    use_unsigned=None,
     low_memory=True,
-    buffer_lines=None,
     memory_map=False,
     float_precision=None,
 ):
@@ -326,9 +317,6 @@ def read_csv(
         warnings.warn(
             "Compression detected. Defaulting to Pandas implementation.", UserWarning
         )
-        return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-    if as_recarray:
-        warnings.warn("Defaulting to Pandas implementation.", UserWarning)
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     if chunksize is not None:
         warnings.warn(
@@ -441,7 +429,6 @@ def read_excel(
     sheet_name=0,
     header=0,
     skiprows=None,
-    skip_footer=0,
     index_col=None,
     names=None,
     usecols=None,
@@ -463,7 +450,6 @@ def read_excel(
         sheet_name,
         header,
         skiprows,
-        skip_footer,
         index_col,
         names,
         usecols,
