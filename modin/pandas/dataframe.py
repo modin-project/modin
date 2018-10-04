@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import pandas
 from pandas.api.types import is_scalar
-from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle as pkl
+from pandas.compat import to_str, string_types, cPickle as pkl
 import pandas.core.common as com
 from pandas.core.dtypes.common import (
     _get_dtype_from_object,
@@ -187,6 +187,9 @@ class DataFrame(object):
 
     index = property(_get_index, _set_index)
     columns = property(_get_columns, _set_columns)
+
+    def _map_reduce(self, *args, **kwargs):
+        raise ValueError("Fix this implementation")
 
     def _validate_eval_query(self, expr, **kwargs):
         """Helper function to check the arguments to eval() and query()
@@ -898,35 +901,22 @@ class DataFrame(object):
         )
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
-        # validate inputs
-        if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis =0 or 1")
-            self._validate_other(lower, axis)
-            self._validate_other(upper, axis)
-        inplace = validate_bool_kwarg(inplace, "inplace")
-        axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
-
-        # any np.nan bounds are treated as None
-        if lower and np.any(np.isnan(lower)):
-            lower = None
-        if upper and np.any(np.isnan(upper)):
-            upper = None
-
-        new_manager = self._data_manager.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+        raise NotImplementedError(
+            "To contribute to Pandas on Ray, please visit "
+            "github.com/modin-project/modin."
         )
 
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-        else:
-            return DataFrame(data_manager=new_manager)
-
     def clip_lower(self, threshold, axis=None, inplace=False):
-        return self.clip(lower=threshold, axis=axis, inplace=inplace)
+        raise NotImplementedError(
+            "To contribute to Pandas on Ray, please visit "
+            "github.com/modin-project/modin."
+        )
 
     def clip_upper(self, threshold, axis=None, inplace=False):
-        return self.clip(upper=threshold, axis=axis, inplace=inplace)
+        raise NotImplementedError(
+            "To contribute to Pandas on Ray, please visit "
+            "github.com/modin-project/modin."
+        )
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         raise NotImplementedError(
@@ -965,10 +955,48 @@ class DataFrame(object):
         )
 
     def corr(self, method="pearson", min_periods=1):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        """Compute pairwise correlation of columns, excluding NA/null values.
+         Arguments:
+            method: {‘pearson’, ‘kendall’, ‘spearman’}
+            min_periods: Minimum number of observations required per pair of
+                columns to have a valid result. Currently only available for
+                pearson and spearman correlation
+         Returns:
+            DataFrame of correlations between each pair of columns.
+        """
+        if method != 'pearson':
+            raise NotImplementedError(
+                "To contribute to Pandas on Ray, please visit "
+                "github.com/ray-project/ray.")
+        #Correlation only matters for numeric columns, so we filter out any nonnumeric columns
+        new_cols = self.dtypes[self.dtypes.apply(
+            lambda x: is_numeric_dtype(x))].index
+        num_rows = len(self.index)
+        #Computing mean for each numerical column and demeaning columns
+        subtracted_means = self._data_manager.map_across_full_axis(0, 
+                lambda df: (np.subtract(df.select_dtypes([np.number]),
+                            (df.select_dtypes([np.number])
+                            .sum(axis=0)/num_rows).values)))
+        #Computing standard deviations for each numerical column
+        stdevs = subtracted_means.map_across_full_axis(0,
+                (lambda df: np.sqrt(df.pow(2).sum()/(num_rows-1))))
+        #Reindexing intermediate tables to have same labels as original DataFrame
+        subtracted_means = subtracted_means.to_pandas()
+        subtracted_means.columns = new_cols
+        stdevs = stdevs.to_pandas()
+        stdevs.index = new_cols
+        #Computing pairwise correlation for columns 
+        corr_dict = {}
+        for col in new_cols:
+            norm = subtracted_means[col]
+            stdev = stdevs[col]
+            data = [(norm*subtracted_means[col2]).sum()/((num_rows-1)*stdev*stdevs[col2])
+                    if stdev*stdevs[col2] != 0 else np.nan for col2 in new_cols]
+            corr_dict[col] = data
+        #Returning correlation DataFrame
+        return pandas.DataFrame(data = corr_dict, index = new_cols, columns = new_cols)
+
+
 
     def corrwith(self, other, axis=0, drop=False):
         raise NotImplementedError(
@@ -994,10 +1022,34 @@ class DataFrame(object):
         )
 
     def cov(self, min_periods=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        """Compute pairwise covariance of columns, excluding NA/null values.
+         Arguments:
+            min_periods: Minimum number of observations required per pair of
+                columns to have a valid result.
+         Returns:
+            DataFrame of covariances between each pair of columns.
+        """
+        #Covariance only matters for numeric columns, so we filter out any nonnumeric columns
+        new_cols = self.dtypes[self.dtypes.apply(
+            lambda x: is_numeric_dtype(x))].index
+        num_rows = len(self.index)
+        #Computing mean for each numerical column and demeaning columns
+        subtracted_means = self._data_manager.map_across_full_axis(0, 
+                lambda df: (np.subtract(df.select_dtypes([np.number]),
+                            (df.select_dtypes([np.number])
+                            .sum(axis=0)/num_rows).values)))
+        #Reindexing intermediate tables to have same labels as original DataFrame
+        subtracted_means = subtracted_means.to_pandas()
+        subtracted_means.columns = new_cols
+        #Computing pairwise covariance for columns
+        cov_dict = {}
+        for col in new_cols:
+            norm = subtracted_means[col]
+            data = [(norm*subtracted_means[col2]).sum()/(num_rows-1)
+                    for col2 in new_cols]
+            cov_dict[col] = data
+        #Returning covariance DataFrame
+        return pandas.DataFrame(data = cov_dict, index = new_cols, columns = new_cols)
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative maximum across the DataFrame.
@@ -1072,16 +1124,23 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
+        # This is important because we don't have communication between
+        # partitions. We need to communicate to the partitions if they should
+        # be operating on object data or not.
+        # TODO uncomment after dtypes is fixed
+        # if not all(t == np.dtype("O") for t in self.dtypes):
         if exclude is None:
             exclude = "object"
         elif "object" not in include:
             exclude = (
-                ([exclude] + ["object"])
+                ([exclude] + "object")
                 if isinstance(exclude, str)
-                else list(exclude) + ["object"]
+                else list(exclude) + "object"
             )
+
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
+
         return DataFrame(
             data_manager=self._data_manager.describe(
                 percentiles=percentiles, include=include, exclude=exclude
@@ -1118,6 +1177,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.div(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1264,6 +1324,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.eq(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1278,6 +1339,7 @@ class DataFrame(object):
         if isinstance(other, pandas.DataFrame):
             # Copy into a Ray DataFrame to simplify logic below
             other = DataFrame(other)
+
         if not self.index.equals(other.index) or not self.columns.equals(other.columns):
             return False
 
@@ -1330,6 +1392,7 @@ class DataFrame(object):
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         result = self._data_manager.eval(expr, **kwargs)
 
         if isinstance(result, pandas.Series):
@@ -1417,7 +1480,9 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Passing a DataFrame as the value for " "fillna is not yet supported."
             )
+
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
         if isinstance(value, (list, tuple)):
@@ -1435,6 +1500,7 @@ class DataFrame(object):
                 expecting=expecting, method=method
             )
             raise ValueError(msg)
+
         if isinstance(value, pandas.Series):
             raise NotImplementedError("value as a Series not yet supported.")
 
@@ -1447,6 +1513,7 @@ class DataFrame(object):
             downcast=downcast,
             **kwargs
         )
+
         if inplace:
             self._update_inplace(new_manager=new_manager)
         else:
@@ -1472,6 +1539,7 @@ class DataFrame(object):
             )
         if nkw == 0:
             raise TypeError("Must pass either `items`, `like`, or `regex`")
+
         if axis is None:
             axis = "columns"  # This is the default info axis for dataframes
 
@@ -1493,6 +1561,7 @@ class DataFrame(object):
 
             matcher = re.compile(regex)
             bool_arr = labels.map(f).tolist()
+
         if not axis:
             return self[bool_arr]
         return self[self.columns[bool_arr]]
@@ -1527,6 +1596,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1607,6 +1677,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ge(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1675,6 +1746,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.gt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1690,6 +1762,7 @@ class DataFrame(object):
         """
         if n >= len(self.index):
             return self.copy()
+
         return DataFrame(data_manager=self._data_manager.head(n))
 
     def hist(
@@ -1728,6 +1801,7 @@ class DataFrame(object):
         """
         if not all(d != np.dtype("O") for d in self.dtypes):
             raise TypeError("reduction operation 'argmax' not allowed for this dtype")
+
         return self._data_manager.idxmax(axis=axis, skipna=skipna)
 
     def idxmin(self, axis=0, skipna=True):
@@ -1743,6 +1817,7 @@ class DataFrame(object):
         """
         if not all(d != np.dtype("O") for d in self.dtypes):
             raise TypeError("reduction operation 'argmax' not allowed for this dtype")
+
         return self._data_manager.idxmin(axis=axis, skipna=skipna)
 
     def infer_objects(self):
@@ -1788,6 +1863,7 @@ class DataFrame(object):
         index = self.index
         columns = self.columns
         dtypes = self.dtypes
+
         # Set up default values
         verbose = True if verbose is None else verbose
         buf = sys.stdout if not buf else buf
@@ -1820,6 +1896,7 @@ class DataFrame(object):
             memory_usage_data = self._data_manager.memory_usage(
                 deep=memory_usage_deep, index=True
             )
+
         if actually_verbose:
             # Create string for verbose output
             col_string = "Data columns (total {0} columns):\n".format(len(columns))
@@ -1833,6 +1910,7 @@ class DataFrame(object):
             col_string = "Columns: {0} entries, {1} to {2}\n".format(
                 len(columns), columns[0], columns[-1]
             )
+
         # A summary of the dtypes in the dataframe
         dtypes_string = "dtypes: "
         for dtype, count in dtypes.value_counts().iteritems():
@@ -1846,10 +1924,12 @@ class DataFrame(object):
                 memory_string = "memory usage: {0} bytes".format(memory_usage_data)
             else:
                 memory_string = "memory usage: {0}+ bytes".format(memory_usage_data)
+
         # Combine all the components of the info() output
         result = "".join(
             [class_string, index_string, col_string, dtypes_string, memory_string]
         )
+
         # Write to specified output buffer
         buf.write(result)
 
@@ -1864,6 +1944,7 @@ class DataFrame(object):
         """
         if not is_list_like(value):
             value = np.full(len(self.index), value)
+
         if len(value) != len(self.index):
             raise ValueError("Length of values does not match length of index")
         if not allow_duplicates and column in self.columns:
@@ -1876,6 +1957,7 @@ class DataFrame(object):
             )
         if loc < 0:
             raise ValueError("unbounded slice")
+
         new_manager = self._data_manager.insert(loc, column, value)
         self._update_inplace(new_manager=new_manager)
 
@@ -1913,6 +1995,7 @@ class DataFrame(object):
             return df.iterrows()
 
         partition_iterator = PartitionIterator(self._data_manager, 0, iterrow_builder)
+
         for v in partition_iterator:
             yield v
 
@@ -1935,6 +2018,7 @@ class DataFrame(object):
             return df.items()
 
         partition_iterator = PartitionIterator(self._data_manager, 1, items_builder)
+
         for v in partition_iterator:
             yield v
 
@@ -1975,6 +2059,7 @@ class DataFrame(object):
         partition_iterator = PartitionIterator(
             self._data_manager, 0, itertuples_builder
         )
+
         for v in partition_iterator:
             yield v
 
@@ -1995,10 +2080,12 @@ class DataFrame(object):
 
         if on is not None:
             raise NotImplementedError("Not yet.")
+
         if isinstance(other, pandas.Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = DataFrame({other.name: other})
+
         if isinstance(other, DataFrame):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
@@ -2024,6 +2111,7 @@ class DataFrame(object):
                 raise ValueError(
                     "Joining multiple DataFrames only supported" " for joining on index"
                 )
+
             # See note above about error checking with an empty join.
             pandas.DataFrame(columns=self.columns).join(
                 [pandas.DataFrame(columns=obj.columns) for obj in other],
@@ -2082,6 +2170,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.le(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2107,6 +2196,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.lt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2144,6 +2234,7 @@ class DataFrame(object):
             The max of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.max(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2159,6 +2250,7 @@ class DataFrame(object):
             The mean of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.mean(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2206,6 +2298,7 @@ class DataFrame(object):
             then the first value of the Series will be 'Index' with its memory usage.
         """
         result = self._data_manager.memory_usage(index=index, deep=deep)
+
         result.index = self.columns
         if index:
             index_value = self.index.memory_usage(deep=deep)
@@ -2256,11 +2349,13 @@ class DataFrame(object):
                 "can not merge DataFrame with instance of type "
                 "{}".format(type(right))
             )
+
         if left_index is False or right_index is False:
             raise NotImplementedError(
                 "To contribute to Pandas on Ray, please visit "
                 "github.com/modin-project/modin."
             )
+
         if left_index and right_index:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
@@ -2277,6 +2372,7 @@ class DataFrame(object):
             The min of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.min(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2297,6 +2393,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2314,6 +2411,7 @@ class DataFrame(object):
             DataFrame: The mode of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+
         return DataFrame(
             data_manager=self._data_manager.mode(axis=axis, numeric_only=numeric_only)
         )
@@ -2334,6 +2432,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2369,6 +2468,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ne(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2582,6 +2682,7 @@ class DataFrame(object):
             prod : Series or DataFrame (if level specified)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.prod(
             axis=axis,
             skipna=skipna,
@@ -2651,6 +2752,7 @@ class DataFrame(object):
             # numeric, timestamp, or timedelta
             if not axis and not all(check_dtype(t) for t in self.dtypes):
                 raise TypeError("can't multiply sequence by non-int of type " "'float'")
+
             # If over rows, then make sure that all dtypes are equal for not
             # numeric_only
             elif axis:
@@ -2672,6 +2774,7 @@ class DataFrame(object):
 
         # check that all qs are between 0 and 1
         pandas.DataFrame()._check_percentile(q)
+
         axis = pandas.DataFrame()._get_axis_number(axis)
 
         if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
@@ -2683,6 +2786,7 @@ class DataFrame(object):
                     interpolation=interpolation,
                 )
             )
+
         else:
             return self._data_manager.quantile_for_single_value(
                 q=q, axis=axis, numeric_only=numeric_only, interpolation=interpolation
@@ -2696,6 +2800,7 @@ class DataFrame(object):
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         new_manager = self._data_manager.query(expr, **kwargs)
 
         if inplace:
@@ -2737,6 +2842,7 @@ class DataFrame(object):
             A new DataFrame
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+
         return DataFrame(
             data_manager=self._data_manager.rank(
                 axis=axis,
@@ -2764,6 +2870,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2789,11 +2896,13 @@ class DataFrame(object):
                 "To contribute to Pandas on Ray, please visit "
                 "github.com/modin-project/modin."
             )
+
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis == 0 and labels is not None:
             index = labels
         elif labels is not None:
             columns = labels
+
         if index is not None:
             new_manager = self._data_manager.reindex(
                 0,
@@ -2805,6 +2914,7 @@ class DataFrame(object):
             )
         else:
             new_manager = self._data_manager
+
         if columns is not None:
             final_manager = new_manager.reindex(
                 1,
@@ -2816,10 +2926,11 @@ class DataFrame(object):
             )
         else:
             final_manager = new_manager
+
         if copy:
             return DataFrame(data_manager=final_manager)
-        else:
-            self._update_inplace(new_manager=final_manager)
+
+        self._update_inplace(new_manager=final_manager)
 
     def reindex_axis(
         self,
@@ -2866,6 +2977,7 @@ class DataFrame(object):
             If inplace is False, a new DataFrame with the updated axes.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         # We have to do this with the args because of how rename handles
         # kwargs. It doesn't ignore None values passed in, so we have to filter
         # them ourselves.
@@ -2874,6 +2986,7 @@ class DataFrame(object):
         # inplace should always be true because this is just a copy, and we
         # will use the results after.
         kwargs["inplace"] = True
+
         df_to_rename = pandas.DataFrame(index=self.index, columns=self.columns)
         df_to_rename.rename(**kwargs)
 
@@ -2881,6 +2994,7 @@ class DataFrame(object):
             obj = self
         else:
             obj = self.copy()
+
         obj.index = df_to_rename.index
         obj.columns = df_to_rename.columns
 
@@ -2914,6 +3028,7 @@ class DataFrame(object):
             renamed.columns.set_names(name)
         else:
             renamed.index.set_names(name)
+
         if not inplace:
             return renamed
 
@@ -2984,11 +3099,13 @@ class DataFrame(object):
         if level is not None:
             raise NotImplementedError("Level not yet supported!")
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
         if not drop and all(n in self.columns for n in ["level_0", "index"]):
             raise ValueError("cannot insert level_0, already exists")
+
         new_manager = self._data_manager.reset_index(drop=drop, level=level)
         if inplace:
             self._update_inplace(new_manager=new_manager)
@@ -3049,6 +3166,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3072,6 +3190,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3123,11 +3242,14 @@ class DataFrame(object):
         else:
             axis_labels = self.column
             axis_length = len(axis_labels)
+
         if weights is not None:
+
             # Index of the weights Series should correspond to the index of the
             # Dataframe in order to sample
             if isinstance(weights, pandas.Series):
                 weights = weights.reindex(self.axes[axis])
+
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
             if isinstance(weights, string_types):
@@ -3142,19 +3264,24 @@ class DataFrame(object):
                         "weights when sampling from rows on "
                         "a DataFrame"
                     )
+
             weights = pandas.Series(weights, dtype="float64")
 
             if len(weights) != axis_length:
                 raise ValueError(
                     "Weights and axis to be sampled must be of " "same length"
                 )
+
             if (weights == np.inf).any() or (weights == -np.inf).any():
                 raise ValueError("weight vector may not include `inf` values")
+
             if (weights < 0).any():
                 raise ValueError("weight vector many not include negative " "values")
+
             # weights cannot be NaN when sampling, so we must set all nan
             # values to 0
             weights = weights.fillna(0)
+
             # If passed in weights are not equal to 1, renormalize them
             # otherwise numpy sampling function will error
             weights_sum = weights.sum()
@@ -3163,6 +3290,7 @@ class DataFrame(object):
                     weights = weights / weights_sum
                 else:
                     raise ValueError("Invalid weights: weights sum to zero")
+
             weights = weights.values
 
         if n is None and frac is None:
@@ -3183,6 +3311,7 @@ class DataFrame(object):
             raise ValueError(
                 "A negative number of rows requested. Please " "provide positive value."
             )
+
         if n == 0:
             # An Empty DataFrame is returned if the number of samples is 0.
             # The Empty Dataframe should have either columns or index specified
@@ -3191,6 +3320,7 @@ class DataFrame(object):
                 columns=[] if axis == 1 else self.columns,
                 index=self.index if axis == 1 else [],
             )
+
         if random_state is not None:
             # Get a random number generator depending on the type of
             # random_state that is passed in
@@ -3204,6 +3334,7 @@ class DataFrame(object):
                     "Please enter an `int` OR a "
                     "np.random.RandomState for random_state"
                 )
+
             # choose random numbers and then get corresponding labels from
             # chosen axis
             sample_indices = random_num_gen.choice(
@@ -3215,6 +3346,7 @@ class DataFrame(object):
             samples = np.random.choice(
                 a=axis_labels, size=n, replace=replace, p=weights
             )
+
         if axis == 1:
             data_manager = self._data_manager.getitem_col_array(samples)
             return DataFrame(data_manager=data_manager)
@@ -3237,13 +3369,16 @@ class DataFrame(object):
             include = [include]
         elif not include:
             include = []
+
         if exclude and not is_list_like(exclude):
             exclude = [exclude]
         elif not exclude:
             exclude = []
 
         sel = tuple(map(set, (include, exclude)))
+
         include, exclude = map(lambda x: set(map(_get_dtype_from_object, x)), sel)
+
         include_these = pandas.Series(not bool(include), index=self.columns)
         exclude_these = pandas.Series(not bool(exclude), index=self.columns)
 
@@ -3293,6 +3428,7 @@ class DataFrame(object):
                 stacklevel=2,
             )
             labels, axis = axis, labels
+
         if inplace is None:
             warnings.warn(
                 "set_axis currently defaults to operating inplace.\nThis "
@@ -3329,6 +3465,7 @@ class DataFrame(object):
         inplace = validate_bool_kwarg(inplace, "inplace")
         if not isinstance(keys, list):
             keys = [keys]
+
         if inplace:
             frame = self
         else:
@@ -3343,6 +3480,7 @@ class DataFrame(object):
                     arrays.append(self.index._get_level_values(i))
             else:
                 arrays.append(self.index)
+
         to_remove = []
         for col in keys:
             if isinstance(col, pandas.MultiIndex):
@@ -3368,6 +3506,7 @@ class DataFrame(object):
                 if drop:
                     to_remove.append(col)
             arrays.append(level)
+
         index = _ensure_index_from_sequences(arrays, names)
 
         if verify_integrity and not index.is_unique:
@@ -3376,8 +3515,10 @@ class DataFrame(object):
 
         for c in to_remove:
             del frame[c]
+
         # clear up memory usage
         index._cleanup()
+
         frame.index = index
 
         if not inplace:
@@ -3446,6 +3587,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError("Multilevel index not yet implemented.")
+
         if by is not None:
             warnings.warn(
                 "by argument to sort_index is deprecated, "
@@ -3456,13 +3598,16 @@ class DataFrame(object):
             if level is not None:
                 raise ValueError("unable to simultaneously sort by and level")
             return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
+
         axis = pandas.DataFrame()._get_axis_number(axis)
+
         if not axis:
             new_index = self.index.sort_values(ascending=ascending)
             new_columns = None
         else:
             new_index = None
             new_columns = self.columns.sort_values(ascending=ascending)
+
         return self.reindex(index=new_index, columns=new_columns)
 
     def sort_values(
@@ -3487,14 +3632,18 @@ class DataFrame(object):
         Returns:
              A sorted DataFrame.
         """
+
         axis = pandas.DataFrame()._get_axis_number(axis)
+
         if not is_list_like(by):
             by = [by]
+
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
         if axis == 0:
             broadcast_value_dict = {col: self[col] for col in by}
             broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
+
             new_index = broadcast_values.sort_values(
                 by=by, axis=axis, ascending=ascending, kind=kind
             ).index
@@ -3503,11 +3652,13 @@ class DataFrame(object):
             broadcast_value_list = [
                 to_pandas(self[row :: len(self.index)]) for row in by
             ]
+
             index_builder = list(zip(broadcast_value_list, by))
 
             broadcast_values = pandas.concat(
                 [row for row, idx in index_builder], copy=False
             )
+
             broadcast_values.columns = self.columns
             new_columns = broadcast_values.sort_values(
                 by=by, axis=axis, ascending=ascending, kind=kind
@@ -3549,6 +3700,7 @@ class DataFrame(object):
             The std of the DataFrame (Pandas Series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.std(
             axis=axis,
             skipna=skipna,
@@ -3574,6 +3726,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3617,6 +3770,7 @@ class DataFrame(object):
         """
         if n >= len(self.index):
             return self.copy()
+
         return DataFrame(data_manager=self._data_manager.tail(n))
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
@@ -3627,7 +3781,7 @@ class DataFrame(object):
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_clipboard(excel=excel, sep=sep, **kwargs)
+        return to_pandas(self).to_clipboard(excel, sep, **kwargs)
 
     def to_csv(
         self,
@@ -3675,6 +3829,7 @@ class DataFrame(object):
             "escapechar": escapechar,
             "decimal": decimal,
         }
+
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
         return to_pandas(self).to_csv(**kwargs)
 
@@ -4024,6 +4179,7 @@ class DataFrame(object):
             raise NotImplementedError(
                 "Mutlilevel index not yet supported " "in Pandas on Ray"
             )
+
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -4082,8 +4238,10 @@ class DataFrame(object):
                 "To contribute to Pandas on Ray, please visit "
                 "github.com/modin-project/modin."
             )
+
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
+
         data_manager = self._data_manager.update(
             other._data_manager,
             join=join,
@@ -4107,6 +4265,7 @@ class DataFrame(object):
             The variance of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         return self._data_manager.var(
             axis=axis,
             skipna=skipna,
@@ -4144,14 +4303,19 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the replaced values.
         """
+
         inplace = validate_bool_kwarg(inplace, "inplace")
+
         if isinstance(other, pandas.Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
+
         if level is not None:
             raise NotImplementedError(
                 "Multilevel Index not yet supported on " "Pandas on Ray."
             )
+
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+
         cond = cond(self) if callable(cond) else cond
 
         if not isinstance(cond, DataFrame):
@@ -4160,13 +4324,16 @@ class DataFrame(object):
             if cond.shape != self.shape:
                 raise ValueError("Array conditional must be same shape as " "self")
             cond = DataFrame(cond, index=self.index, columns=self.columns)
+
         if isinstance(other, DataFrame):
             other = other._data_manager
+
         elif isinstance(other, pandas.Series):
             other = other.reindex(self.index if not axis else self.columns)
         else:
             index = self.index if not axis else self.columns
             other = pandas.Series(other, index=index)
+
         data_manager = self._data_manager.where(
             cond._data_manager, other, axis=axis, level=level
         )
@@ -4191,6 +4358,7 @@ class DataFrame(object):
             A Pandas Series representing the value for the column.
         """
         key = com._apply_if_callable(key, self)
+
         # Shortcut if key is an actual column
         is_mi_columns = isinstance(self.columns, pandas.MultiIndex)
         try:
@@ -4198,11 +4366,13 @@ class DataFrame(object):
                 return self._getitem_column(key)
         except (KeyError, ValueError, TypeError):
             pass
+
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
         indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
         if indexer is not None:
             return self._getitem_slice(indexer)
+
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
@@ -4228,7 +4398,7 @@ class DataFrame(object):
             if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
                     "Boolean Series key will be reindexed to match " "DataFrame index.",
-                    PendingDeprecationWarning,
+                    UserWarning,
                     stacklevel=3,
                 )
             elif len(key) != len(self.index):
@@ -4238,6 +4408,7 @@ class DataFrame(object):
                     )
                 )
             key = check_bool_indexer(self.index, key)
+
             # We convert here because the data_manager assumes it is a list of
             # indices. This greatly decreases the complexity of the code.
             key = self.index[key]
@@ -4380,6 +4551,7 @@ class DataFrame(object):
         """
         if key not in self:
             raise KeyError(key)
+
         self._update_inplace(new_manager=self._data_manager.delitem(key))
 
     def __finalize__(self, other, method=None, **kwargs):
@@ -4610,6 +4782,7 @@ class DataFrame(object):
     def _validate_other(self, other, axis):
         """Helper method to check validity of other in inter-df operations"""
         axis = pandas.DataFrame()._get_axis_number(axis)
+
         if isinstance(other, DataFrame):
             return other._data_manager
         elif is_list_like(other):
