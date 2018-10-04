@@ -77,7 +77,6 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
-
 ### More information and Getting Involved
 
 - [Documentation](https://modin.readthedocs.io/en/latest/)
