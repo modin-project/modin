@@ -1295,22 +1295,24 @@ class PandasDataManager(object):
         """
         # Only describe numeric if there are numeric
         # Otherwise, describe all
-        new_index = self.numeric_columns()
-        if len(new_index) != 0:
+        columns_for_describe = self.numeric_columns()
+        if len(columns_for_describe) != 0 and "object" in kwargs["exclude"]:
             numeric = True
         else:
             numeric = False
             # If no numeric dtypes, then do all
-            new_index = self.columns
+            columns_for_describe = self.columns
 
         def describe_builder(df, **kwargs):
             return pandas.DataFrame.describe(df, **kwargs)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self.full_axis_reduce_along_select_indices(func, 0, new_index, False)
+        new_data = self.full_axis_reduce_along_select_indices(
+            func, 0, columns_for_describe, False
+        )
+        new_columns = columns_for_describe
         new_index = self.compute_index(0, new_data, False)
-        new_columns = self.compute_index(1, new_data, True)
         if numeric:
             new_dtypes = pandas.Series(
                 [np.float64 for _ in new_columns], index=new_columns
