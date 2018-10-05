@@ -592,6 +592,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
     to_read = header + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     if kwargs.get("index_col", None) is not None:
         index = pandas_df.index
         # Partitions must have RangeIndex
