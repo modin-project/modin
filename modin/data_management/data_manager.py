@@ -1820,7 +1820,6 @@ class PandasDataManager(object):
                 self.data.transpose().take(0, n).transpose(),
                 self.index,
                 self.columns[:n],
-                self.dtypes[:n],
             )
             result._is_transposed = True
         else:
@@ -1844,7 +1843,6 @@ class PandasDataManager(object):
                 self.data.transpose().take(0, -n).transpose(),
                 self.index,
                 self.columns[-n:],
-                self.dtypes[-n:],
             )
             result._is_transposed = True
         else:
