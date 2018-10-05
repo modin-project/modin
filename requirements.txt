@@ -1,4 +1,4 @@
-pandas==0.23
+pandas==0.23.4
 ray==0.5.3
 strip_hints
 typing

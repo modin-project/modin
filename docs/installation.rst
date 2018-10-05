@@ -17,7 +17,7 @@ Modin can be installed with pip.
 Dependencies
 ------------
 
-Currently, Modin depends on pandas version 0.22. The API of pandas has a
+Currently, Modin depends on pandas version 0.23.4. The API of pandas has a
 tendency to change some with each release, so we pin our current version to the
 most recent version to take advantage of the newest additions. This also
 typically means better performance and more correct code.
