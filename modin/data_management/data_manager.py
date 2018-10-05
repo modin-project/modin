@@ -1814,17 +1814,21 @@ class PandasDataManager(object):
         Returns:
             DataManager containing the first n columns of the original DataManager.
         """
+        new_dtypes = (
+            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[:n]
+        )
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(0, n).transpose(),
                 self.index,
                 self.columns[:n],
+                new_dtypes,
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, n), self.index, self.columns[:n], self.dtypes[:n]
+                self.data.take(1, n), self.index, self.columns[:n], new_dtypes
             )
         return result
 
@@ -1837,17 +1841,21 @@ class PandasDataManager(object):
         Returns:
             DataManager containing the last n columns of the original DataManager.
         """
+        new_dtypes = (
+            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[-n:]
+        )
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(0, -n).transpose(),
                 self.index,
                 self.columns[-n:],
+                new_dtypes,
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, -n), self.index, self.columns[-n:], self.dtypes[-n:]
+                self.data.take(1, -n), self.index, self.columns[-n:], new_dtypes
             )
         return result
 
