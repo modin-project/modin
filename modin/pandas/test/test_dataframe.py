@@ -2862,7 +2862,7 @@ def test_replace_inplace():
 
     test_frame2 = test_frame.copy()
     test_frame2.replace([np.nan], [0], inplace=True)
-    assert(test_frame2.equals(test_frame.fillna(0)))
+    assert(ray_df_equals(test_frame2, test_frame.fillna(0)))
 
 
 def test_replace_mixed():
@@ -2887,10 +2887,10 @@ def test_replace_mixed():
     expected = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
                              'B': pd.Series([0.5, 1], dtype='float64')})
     result = df.replace(0, 0.5)
-    assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
     df.replace(0, 0.5, inplace=True)
-    assert(df.equals(expected))
+    assert(ray_df_equals(df, expected))
 
     # int block splitting
     df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
@@ -2900,7 +2900,8 @@ def test_replace_mixed():
                              'B': pd.Series([0.5, 1], dtype='float64'),
                              'C': pd.Series([1, 2], dtype='int64')})
     result = df.replace(0, 0.5)
-    assert(result.equals(expected))
+    # assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
     # to object block upcasting
     df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
@@ -2908,12 +2909,12 @@ def test_replace_mixed():
     expected = pd.DataFrame({'A': pd.Series([1, 'foo'], dtype='object'),
                              'B': pd.Series([0, 1], dtype='int64')})
     result = df.replace(2, 'foo')
-    assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
     expected = pd.DataFrame({'A': pd.Series(['foo', 'bar'], dtype='object'),
                              'B': pd.Series([0, 'foo'], dtype='object')})
     result = df.replace([1, 2], ['foo', 'bar'])
-    assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
     # test case from
     df = pd.DataFrame({'A': pd.Series([3, 0], dtype='int64'),
@@ -2923,7 +2924,7 @@ def test_replace_mixed():
     m = df.mean()
     expected.iloc[0, 0] = m[0]
     expected.iloc[1, 1] = m[1]
-    assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
 
 def test_replace_simple_nested_dict_with_nonexistent_value():
@@ -2931,10 +2932,10 @@ def test_replace_simple_nested_dict_with_nonexistent_value():
     expected = pd.DataFrame({'col': ['a', 2, 3, 'b']})
 
     result = df.replace({'col': {-1: '-', 1: 'a', 4: 'b'}})
-    assert(expected.equals(result))
+    assert(ray_df_equals(result, expected))
 
     result = df.replace({-1: '-', 1: 'a', 4: 'b'})
-    assert(expected.equals(result))
+    assert(ray_df_equals(result, expected))
 
 
 def test_replace_input_formats_listlike():
@@ -2942,17 +2943,19 @@ def test_replace_input_formats_listlike():
     to_rep = {'A': np.nan, 'B': 0, 'C': ''}
     values = {'A': 0, 'B': -1, 'C': 'missing'}
     df = pd.DataFrame({'A': [np.nan, 0, np.inf], 'B': [0, 2, 5],
-                    'C': ['', 'asdf', 'fd']})
+                       'C': ['', 'asdf', 'fd']})
     filled = df.replace(to_rep, values)
     expected = {}
     for k, v in pandas.compat.iteritems(df):
         expected[k] = v.replace(to_rep[k], values[k])
-    assert(filled.equals(pd.DataFrame(expected)))
+    # assert(filled.equals(pd.DataFrame(expected)))
+    assert(ray_df_equals(filled, pd.DataFrame(expected)))
 
     result = df.replace([0, 2, 5], [5, 2, 0])
     expected = pd.DataFrame({'A': [np.nan, 5, np.inf], 'B': [5, 2, 0],
                              'C': ['', 'asdf', 'fd']})
-    assert(result.equals(expected))
+    # ray_df_equals(result, expected)
+    assert(ray_df_equals(result, expected))
 
     # scalar to dict
     values = {'A': 0, 'B': -1, 'C': 'missing'}
@@ -2962,7 +2965,8 @@ def test_replace_input_formats_listlike():
     expected = {}
     for k, v in pandas.compat.iteritems(df):
         expected[k] = v.replace(np.nan, values[k])
-    assert(filled.equals(pd.DataFrame(expected)))
+    # assert(filled.equals(pd.DataFrame(expected)))
+    assert(ray_df_equals(filled, pd.DataFrame(expected)))
 
     # list to list
     to_rep = [np.nan, 0, '']
@@ -2971,7 +2975,8 @@ def test_replace_input_formats_listlike():
     expected = df.copy()
     for i in range(len(to_rep)):
         expected.replace(to_rep[i], values[i], inplace=True)
-    assert(result.equals(expected))
+    # assert(result.equals(expected))
+    assert(ray_df_equals(result, expected))
 
     pytest.raises(ValueError, df.replace, to_rep, values[1:])
 

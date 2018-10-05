@@ -10,6 +10,8 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
+    is_string_like_dtype,
+    is_object_dtype,
     is_datetime_or_timedelta_dtype,
     is_bool_dtype,
 )
@@ -1108,7 +1110,7 @@ class PandasQueryCompiler(object):
 
         to_replace = kwargs.get("to_replace")
 
-        # if dict of dicts
+        # if to_replace is dict of dicts
         if isinstance(to_replace, dict) and isinstance(next(iter(to_replace.values())), dict):
             index = self.columns
 
@@ -1126,9 +1128,87 @@ class PandasQueryCompiler(object):
             )
             return self.__constructor__(new_data, self.index, self.columns)
 
-        # if dictionary keys are column names
         value = kwargs.get("value")
 
+        # if to_replace and values are dicts
+        if (isinstance(to_replace, dict) and isinstance(value, dict)):
+            index = self.columns
+            to_replace = kwargs.pop("to_replace")
+            value = kwargs.pop("value")
+
+            to_replace = {
+                idx: {
+                    to_r: value[idx]
+                } for idx, to_r in to_replace.items()
+            }
+            to_replace = {
+                idx: to_replace[key] for key in to_replace for idx in index.get_indexer_for([key])
+            }
+
+            def replace_dict_builder(df, func_dict={}):
+                return df.replace(to_replace=func_dict, **kwargs)
+
+            new_data = self.data.apply_func_to_select_indices(
+                0, replace_dict_builder, to_replace, keep_remaining=True
+            )
+            return self.__constructor__(new_data, self.index, self.columns)
+
+        # if to_replace, values are lists
+        if (isinstance(to_replace, list) and isinstance(value, list)):
+            to_replace = kwargs.pop("to_replace")
+            value = kwargs.pop("value")
+
+            # func_prepared = self._prepare_method(lambda df: df.replace(to_replace, value, **kwargs))
+            # handle error checking
+
+            def replace_list_builder(df):
+                # check if to_replace dtypes exist within the partition
+                # if they don't then remove them(?) or skip the partition (?)
+                # then, map across column partitions, as they have constant dtypes
+                print(df.dtypes)
+                to_replace_dtypes = [np.array(x).dtype for x in to_replace]
+                print(to_replace_dtypes)
+                new_to_replace = []
+                new_value = []
+                to_replace_dtype_numeric = np.unique([is_numeric_dtype(dtype) for dtype in df.dtypes])
+                to_replace_dtype_object = np.unique([is_object_dtype(dtype) for dtype in df.dtypes])
+                to_replace_dtype_timedelta = np.unique([is_datetime_or_timedelta_dtype(dtype) for dtype in df.dtypes])
+
+                for i in range(len(to_replace_dtypes)):
+                    if is_numeric_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_numeric):
+                        new_to_replace.append(to_replace[i])
+                        new_value.append(value[i])
+                    elif is_string_like_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_object):
+                        new_to_replace.append(to_replace[i])
+                        new_value.append(value[i])
+                    elif is_datetime_or_timedelta_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_timedelta):
+                        new_to_replace.append(to_replace[i])
+                        new_value.append(value[i])
+
+                if len(new_to_replace) == 0:
+                    return df.replace(None, None)
+
+                return df.replace(new_to_replace, new_value, **kwargs)
+
+                return df.replace(to_replace, value, **kwargs)
+
+            # func = self._prepare_method(replace_list_builder, **kwargs)
+            #
+            # return self.map_partitions(func, self._dtype_cache)
+
+            # new_data = self.data.apply_func_to_select_indices(
+            #     0, replace_list_builder, value, keep_remaining=True
+            # )
+            new_data = self.map_across_full_axis(1, replace_list_builder)
+
+            return self.__constructor__(new_data, self.index, self.columns)
+            #
+            # new_data = self.map_across_full_axis(0, replace_list_builder)
+            #
+            # # When the function is list-like, the function names become the index
+            # return self.__constructor__(new_data, self.index, self.columns)
+
+        # if dictionary keys are column names
         if isinstance(value, dict):
             index = self.columns
 
@@ -1147,7 +1227,7 @@ class PandasQueryCompiler(object):
             return self.__constructor__(new_data, self.index, self.columns)
 
         func = self._prepare_method(pandas.DataFrame.replace, **kwargs)
-        return self.map_partitions(func)
+        return self.map_partitions(func, self.dtypes)
 
     # END Map partitions operations
 

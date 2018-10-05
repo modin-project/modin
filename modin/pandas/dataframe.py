@@ -3183,7 +3183,11 @@ class DataFrame(object):
         # if isinstance(to_replace, pandas.Series):
         #     raise NotImplementedError("value as a Series not yet supported.")
 
-        new_manager = self._data_manager.replace(
+        if (isinstance(to_replace, list) and isinstance(value, list)):
+            if (len(to_replace) != len(value)):
+                raise ValueError("Replacement lists must match in length. Expecting %d got %d" % (len(to_replace), len(value)))
+
+        new_manager = self._query_compiler.replace(
             to_replace=to_replace,
             value=value,
             inplace=False,
@@ -3195,7 +3199,7 @@ class DataFrame(object):
         if inplace:
             self._update_inplace(new_manager=new_manager)
         else:
-            return DataFrame(data_manager=new_manager)
+            return self._create_dataframe_from_manager(new_manager)
 
     def resample(
         self,
