@@ -248,6 +248,13 @@ class RayRemotePartition(RemotePartition):
     def empty(cls):
         return cls.put(pandas.DataFrame())
 
+    def __del__(self):
+        try:
+            ray.internal.free(self.oid, local_only=True)
+            self.oid = None
+        except ray.worker.RayConnectionError:
+            pass
+
 
 def length_fn_pandas(df):
     assert isinstance(df, (pandas.DataFrame, pandas.Series))
