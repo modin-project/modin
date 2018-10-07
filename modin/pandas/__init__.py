@@ -31,6 +31,7 @@ from pandas import (
     PeriodIndex,
     Categorical,
 )
+import threading
 import os
 import ray
 
@@ -58,13 +59,16 @@ from .reshape import get_dummies
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
 
-ray.init(
-    redirect_output=True,
-    include_webui=False,
-    redirect_worker_output=True,
-    use_raylet=True,
-    ignore_reinit_error=True
-)
+try:
+    if threading.current_thread().name == "MainThread":
+        ray.init(
+            redirect_output=True,
+            include_webui=False,
+            redirect_worker_output=True,
+            use_raylet=True,
+        )
+except AssertionError:
+    pass
 
 num_cpus = ray.global_state.cluster_resources()["CPU"]
 DEFAULT_NPARTITIONS = max(4, int(num_cpus))
