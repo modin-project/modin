@@ -1100,6 +1100,7 @@ class DataFrame(object):
         Returns:
             DataFrame with the diff applied
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         return DataFrame(
             data_manager=self._data_manager.diff(periods=periods, axis=axis)
         )
