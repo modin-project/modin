@@ -43,9 +43,21 @@ class BlockPartitions(object):
 
     def _get_partitions(self):
         if 0 in self.block_lengths:
-            self._partitions_cache = np.array([self._partitions_cache[i] for i in range(len(self._partitions_cache)) if self.block_lengths[i] != 0])
+            self._partitions_cache = np.array(
+                [
+                    self._partitions_cache[i]
+                    for i in range(len(self._partitions_cache))
+                    if self.block_lengths[i] != 0
+                ]
+            )
         if 0 in self.block_widths:
-            self._partitions_cache = np.array([self._partitions_cache.T[i] for i in range(len(self._partitions_cache.T)) if self.block_widths[i] != 0]).T
+            self._partitions_cache = np.array(
+                [
+                    self._partitions_cache.T[i]
+                    for i in range(len(self._partitions_cache.T))
+                    if self.block_widths[i] != 0
+                ]
+            ).T
         self._remove_empty_blocks()
         return self._partitions_cache
 
@@ -115,7 +127,9 @@ class BlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
-            self._lengths_cache = [obj.length().get() for obj in self._partitions_cache.T[0]]
+            self._lengths_cache = [
+                obj.length().get() for obj in self._partitions_cache.T[0]
+            ]
         return self._lengths_cache
 
     # Widths of the blocks
@@ -132,7 +146,9 @@ class BlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
-            self._widths_cache = [obj.width().get() for obj in self._partitions_cache[0]]
+            self._widths_cache = [
+                obj.width().get() for obj in self._partitions_cache[0]
+            ]
         return self._widths_cache
 
     def _remove_empty_blocks(self):
