@@ -8,7 +8,6 @@ import pandas
 from pandas.compat import string_types
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
-    _get_dtype_from_object,
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
@@ -2056,13 +2055,7 @@ class PandasDataManager(object):
         )
         new_columns = self.columns.insert(loc, column)
 
-        # Because a Pandas Series does not allow insert, we make a DataFrame
-        # and insert the new dtype that way.
-        temp_dtypes = pandas.DataFrame(self.dtypes).T
-        temp_dtypes.insert(loc, column, _get_dtype_from_object(value))
-        new_dtypes = temp_dtypes.iloc[0]
-
-        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
+        return self.__constructor__(new_data, self.index, new_columns)
 
     # END Insert
 
