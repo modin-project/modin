@@ -889,7 +889,9 @@ class PandasDataManager(object):
         result = data_manager.data.full_reduce(
             map_func, reduce_func, axis ^ self._is_transposed
         )
-        if not axis:
+        if result.shape == (0, ):
+            return result
+        elif not axis:
             result.index = data_manager.columns
         else:
             result.index = data_manager.index
