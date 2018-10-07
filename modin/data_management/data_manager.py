@@ -1113,7 +1113,6 @@ class PandasDataManager(object):
         axis = kwargs.get("axis", 0)
         bool_only = kwargs.get("bool_only", None)
         index = self.index if axis else self.columns
-        
         if bool_only:
             not_bool = []
             for index, dtype in zip(index, self.dtypes):
@@ -1139,7 +1138,6 @@ class PandasDataManager(object):
         axis = kwargs.get("axis", 0)
         bool_only = kwargs.get("bool_only", None)
         index = self.index if axis else self.columns
-        
         if bool_only:
             not_bool = []
             for index, dtype in zip(index, self.dtypes):
