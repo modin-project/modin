@@ -4646,4 +4646,6 @@ class DataFrame(object):
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
             elif not numeric_only and t != dtype:
-                raise TypeError("Cannot compare type '{0}' with type '{1}'".format(t, dtype))
+                raise TypeError(
+                    "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
+                )
