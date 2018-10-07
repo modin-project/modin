@@ -1012,6 +1012,9 @@ class DataFrame(object):
             The cumulative maximum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if axis:
+            self._validate_dtypes()
+
         return DataFrame(
             data_manager=self._data_manager.cummax(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1027,6 +1030,9 @@ class DataFrame(object):
             The cumulative minimum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if axis:
+            self._validate_dtypes()
+
         return DataFrame(
             data_manager=self._data_manager.cummin(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1042,6 +1048,8 @@ class DataFrame(object):
             The cumulative product of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes(numeric_only=True)
+
         return DataFrame(
             data_manager=self._data_manager.cumprod(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1057,6 +1065,8 @@ class DataFrame(object):
             The cumulative sum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes(numeric_only=True)
+
         return DataFrame(
             data_manager=self._data_manager.cumsum(axis=axis, skipna=skipna, **kwargs)
         )
@@ -4628,3 +4638,12 @@ class DataFrame(object):
                         "given {1}".format(len(self.columns), len(other))
                     )
         return other
+
+    def _validate_dtypes(self, numeric_only=False):
+        """Helper method to check that all the dtypes are the same"""
+        dtype = self.dtypes[0]
+        for t in self.dtypes:
+            if numeric_only and not is_numeric_dtype(t):
+                raise TypeError("{0} is not a numeric data type".format(t))
+            elif not numeric_only and t != dtype:
+                raise TypeError("Cannot compare type '{0}' with type '{1}'".format(t, dtype))
