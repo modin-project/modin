@@ -510,6 +510,8 @@ class BlockPartitions(object):
         if not axis:
             cumulative_column_widths = np.array(self.block_widths).cumsum()
             block_idx = int(np.digitize(index, cumulative_column_widths))
+            if block_idx == len(cumulative_column_widths):
+                block_idx -= 1
             # Compute the internal index based on the previous lengths. This
             # is a global index, so we must subtract the lengths first.
             internal_idx = (

@@ -2056,13 +2056,7 @@ class PandasDataManager(object):
         )
         new_columns = self.columns.insert(loc, column)
 
-        # Because a Pandas Series does not allow insert, we make a DataFrame
-        # and insert the new dtype that way.
-        temp_dtypes = pandas.DataFrame(self.dtypes).T
-        temp_dtypes.insert(loc, column, _get_dtype_from_object(value))
-        new_dtypes = temp_dtypes.iloc[0]
-
-        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
+        return self.__constructor__(new_data, self.index, new_columns)
 
     # END Insert
 
