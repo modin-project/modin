@@ -8,6 +8,7 @@ import pandas
 from pandas.compat import string_types
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
+    _get_dtype_from_object,
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
@@ -184,7 +185,7 @@ class PandasDataManager(object):
         data_manager = self
         # If no numeric columns and over columns, then return empty Series
         if not axis and len(self.index) == 0:
-            result = pandas.Series(dtype=np.float64)
+            result = pandas.Series(dtype=np.int64)
 
         nonnumeric = [
             col
@@ -193,7 +194,8 @@ class PandasDataManager(object):
         ]
         if len(nonnumeric) == len(self.columns):
             # If over rows and no numeric columns, return this
-            result = pandas.Series([np.NaN for _ in self.index])
+            if axis:
+                result = pandas.Series([np.nan for _ in self.index])
         else:
             data_manager = self.drop(columns=nonnumeric)
         return result, data_manager
@@ -654,8 +656,8 @@ class PandasDataManager(object):
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def clip(self, lower, upper, **kwargs):
-        kwargs["lower"] = lower
-        kwargs["upper"] = upper
+        upper = kwargs.get("upper", None)
+        lower = kwargs.get("lower", None)
         func = self._prepare_method(pandas.DataFrame.clip, **kwargs)
         return self.scalar_operations(kwargs.get("axis", 0), lower or upper, func)
 
@@ -888,7 +890,9 @@ class PandasDataManager(object):
         result = data_manager.data.full_reduce(
             map_func, reduce_func, axis ^ self._is_transposed
         )
-        if not axis:
+        if result.shape == (0, ):
+            return result
+        elif not axis:
             result.index = data_manager.columns
         else:
             result.index = data_manager.index
@@ -926,8 +930,8 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.mean, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        kwargs["numeric_only"] = True
+        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -1110,8 +1114,24 @@ class PandasDataManager(object):
             Pandas Series containing boolean values.
         """
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.all, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        bool_only = kwargs.get("bool_only", None)
+        index = self.index if axis else self.columns
+        
+        if bool_only:
+            not_bool = []
+            for index, dtype in zip(index, self.dtypes):
+                if dtype != bool:
+                    not_bool.append(index)
+
+            if axis:
+                data_manager = self.drop(index=not_bool)
+            else:
+                data_manager = self.drop(columns=not_bool)
+        else:
+            data_manager = self
+
+        func = data_manager._prepare_method(pandas.DataFrame.all, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     def any(self, **kwargs):
         """Returns whether any element is true over the requested axis.
@@ -1120,8 +1140,24 @@ class PandasDataManager(object):
             Pandas Series containing boolean values.
         """
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.any, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        bool_only = kwargs.get("bool_only", None)
+        index = self.index if axis else self.columns
+        
+        if bool_only:
+            not_bool = []
+            for index, dtype in zip(index, self.dtypes):
+                if dtype != bool:
+                    not_bool.append(index)
+
+            if axis:
+                data_manager = self.drop(index=not_bool)
+            else:
+                data_manager = self.drop(columns=not_bool)
+        else:
+            data_manager = self
+
+        func = data_manager._prepare_method(pandas.DataFrame.any, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
@@ -1294,24 +1330,22 @@ class PandasDataManager(object):
         """
         # Only describe numeric if there are numeric
         # Otherwise, describe all
-        columns_for_describe = self.numeric_columns()
-        if len(columns_for_describe) != 0 and "object" in kwargs["exclude"]:
+        new_index = self.numeric_columns()
+        if len(new_index) != 0:
             numeric = True
         else:
             numeric = False
             # If no numeric dtypes, then do all
-            columns_for_describe = self.columns
+            new_index = self.columns
 
         def describe_builder(df, **kwargs):
             return pandas.DataFrame.describe(df, **kwargs)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self.full_axis_reduce_along_select_indices(
-            func, 0, columns_for_describe, False
-        )
-        new_columns = columns_for_describe
+        new_data = self.full_axis_reduce_along_select_indices(func, 0, new_index, False)
         new_index = self.compute_index(0, new_data, False)
+        new_columns = self.compute_index(1, new_data, True)
         if numeric:
             new_dtypes = pandas.Series(
                 [np.float64 for _ in new_columns], index=new_columns
@@ -1813,21 +1847,18 @@ class PandasDataManager(object):
         Returns:
             DataManager containing the first n columns of the original DataManager.
         """
-        new_dtypes = (
-            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[:n]
-        )
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(0, n).transpose(),
                 self.index,
                 self.columns[:n],
-                new_dtypes,
+                self.dtypes[:n],
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, n), self.index, self.columns[:n], new_dtypes
+                self.data.take(1, n), self.index, self.columns[:n], self.dtypes[:n]
             )
         return result
 
@@ -1840,21 +1871,18 @@ class PandasDataManager(object):
         Returns:
             DataManager containing the last n columns of the original DataManager.
         """
-        new_dtypes = (
-            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[-n:]
-        )
         # See head for an explanation of the transposed behavior
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(0, -n).transpose(),
                 self.index,
                 self.columns[-n:],
-                new_dtypes,
+                self.dtypes[-n:],
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(1, -n), self.index, self.columns[-n:], new_dtypes
+                self.data.take(1, -n), self.index, self.columns[-n:], self.dtypes[-n:]
             )
         return result
 
@@ -2055,7 +2083,13 @@ class PandasDataManager(object):
         )
         new_columns = self.columns.insert(loc, column)
 
-        return self.__constructor__(new_data, self.index, new_columns)
+        # Because a Pandas Series does not allow insert, we make a DataFrame
+        # and insert the new dtype that way.
+        temp_dtypes = pandas.DataFrame(self.dtypes).T
+        temp_dtypes.insert(loc, column, _get_dtype_from_object(value))
+        new_dtypes = temp_dtypes.iloc[0]
+
+        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
 
     # END Insert
 
