@@ -359,12 +359,14 @@ class BlockPartitions(object):
         cls = type(self)
         return cls(self.partitions.T)
 
-    def to_pandas(self, is_transposed=False):
+    def to_pandas(self, is_transposed=False, index=None, columns=None):
         """Convert this object into a Pandas DataFrame from the partitions.
 
         Args:
             is_transposed: A flag for telling this object that the external
                 representation is transposed, but not the internal.
+            index: index for the partition (optional)
+            columns: columns for the partition (optional)
 
         Returns:
             A Pandas DataFrame
@@ -374,7 +376,7 @@ class BlockPartitions(object):
         # is the same as if we individually transposed the blocks and
         # concatenated them, but the code is much smaller.
         if is_transposed:
-            return self.transpose().to_pandas(False).T
+            return self.transpose().to_pandas(False, index, columns).T
         else:
             retrieved_objects = [
                 [obj.to_pandas() for obj in part] for part in self.partitions
@@ -401,9 +403,13 @@ class BlockPartitions(object):
                 for row in retrieved_objects
             ]
             if len(df_rows) == 0:
-                return pandas.DataFrame()
+                return pandas.DataFrame([], index, columns)
             else:
-                return pandas.concat(df_rows)
+                df = pandas.concat(df_rows)
+                df.columns = columns
+                if not df.empty:
+                    df.index = index
+                return df
 
     @classmethod
     def from_pandas(cls, df):

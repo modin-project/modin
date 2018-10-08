@@ -1764,6 +1764,8 @@ class PandasDataManager(object):
         # We grab the front if it is transposed and flag as transposed so that
         # we are not physically updating the data from this manager. This
         # allows the implementation to stay modular and reduces data copying.
+        if n < 0:
+            n = max(0, len(self.index) + n)
         if self._is_transposed:
             # Transpose the blocks back to their original orientation first to
             # ensure that we extract the correct data on each node. The index
@@ -1792,17 +1794,23 @@ class PandasDataManager(object):
             DataManager containing the last n rows of the original DataManager.
         """
         # See head for an explanation of the transposed behavior
+        if n < 0:
+            n = max(0, len(self.index) + n)
+        if n == 0:
+            index = self.index[:0]
+        else:
+            index = self.index[-n:]
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(1, -n).transpose(),
-                self.index[-n:],
+                index,
                 self.columns,
                 self._dtype_cache,
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
+                self.data.take(0, -n), index, self.columns, self._dtype_cache
             )
 
         return result
@@ -1879,9 +1887,9 @@ class PandasDataManager(object):
         Returns:
             Pandas DataFrame of the DataManager.
         """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
-        df.index = self.index
-        df.columns = self.columns
+        df = self.data.to_pandas(is_transposed=self._is_transposed,
+                                 index=self.index,
+                                 columns=self.columns)
         return df
 
     @classmethod
