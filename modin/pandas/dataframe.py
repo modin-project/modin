@@ -633,7 +633,7 @@ class DataFrame(object):
         broadcast_axis=None,
     ):
         return self._default_to_pandas_func(
-            op="align",
+            op=pandas.DataFrame.align,
             other=other,
             join=join,
             axis=axis,
@@ -785,7 +785,7 @@ class DataFrame(object):
         return DataFrame(data_manager=data_manager)
 
     def as_blocks(self, copy=True):
-        return self._default_to_pandas_func(op="as_blocks", copy=copy)
+        return self._default_to_pandas_func(op=pandas.DataFrame.as_blocks, copy=copy)
 
     def as_matrix(self, columns=None):
         """Convert the frame to its Numpy-array representation.
@@ -802,7 +802,7 @@ class DataFrame(object):
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas_func(
-            op="asfreq",
+            op=pandas.DataFrame.asfreq,
             freq=freq,
             method=method,
             how=how,
@@ -811,10 +811,12 @@ class DataFrame(object):
         )
 
     def asof(self, where, subset=None):
-        return self._default_to_pandas_func(op="asof", where=where, subset=subset)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.asof, where=where, subset=subset
+        )
 
     def assign(self, **kwargs):
-        return self._default_to_pandas_func(op="assign", **kwargs)
+        return self._default_to_pandas_func(op=pandas.DataFrame.assign, **kwargs)
 
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
@@ -837,11 +839,13 @@ class DataFrame(object):
             self._update_inplace(new_data_manager)
 
     def at_time(self, time, asof=False):
-        return self._default_to_pandas_func(op="at_time", time=time, asof=asof)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.at_time, time=time, asof=asof
+        )
 
     def between_time(self, start_time, end_time, include_start=True, include_end=True):
         return self._default_to_pandas_func(
-            op="between_time",
+            op=pandas.DataFrame.between_time,
             start_time=start_time,
             end_time=end_time,
             include_start=include_start,
@@ -934,7 +938,7 @@ class DataFrame(object):
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         return self._default_to_pandas_func(
-            op="combine",
+            op=pandas.DataFrame.combine,
             other=other,
             func=func,
             fill_value=fill_value,
@@ -942,15 +946,19 @@ class DataFrame(object):
         )
 
     def combine_first(self, other):
-        return self._default_to_pandas_func(op="combine_first", other=other)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.combine_first, other=other
+        )
 
     def compound(self, axis=None, skipna=None, level=None):
         return self._default_to_pandas_func(
-            op="compound", axis=axis, skipna=skipna, level=level
+            op=pandas.DataFrame.compound, axis=axis, skipna=skipna, level=level
         )
 
     def consolidate(self, inplace=False):
-        return self._default_to_pandas_func(op="consolidate", inplace=inplace)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.consolidate, inplace=inplace
+        )
 
     def convert_objects(
         self,
@@ -960,7 +968,7 @@ class DataFrame(object):
         copy=True,
     ):
         return self._default_to_pandas_func(
-            op="convert_objects",
+            op=pandas.DataFrame.convert_objects,
             convert_dates=convert_dates,
             convert_numeric=convert_numeric,
             convert_timedeltas=convert_timedeltas,
@@ -969,12 +977,12 @@ class DataFrame(object):
 
     def corr(self, method="pearson", min_periods=1):
         return self._default_to_pandas_func(
-            op="corr", method=method, min_periods=min_periods
+            op=pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
 
     def corrwith(self, other, axis=0, drop=False):
         return self._default_to_pandas_func(
-            op="corrwith", other=other, axis=axis, drop=drop
+            op=pandas.DataFrame.corrwith, other=other, axis=axis, drop=drop
         )
 
     def count(self, axis=0, level=None, numeric_only=False):
@@ -995,7 +1003,9 @@ class DataFrame(object):
         )
 
     def cov(self, min_periods=None):
-        return self._default_to_pandas_func(op="cov", min_periods=min_periods)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.cov, min_periods=min_periods
+        )
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative maximum across the DataFrame.
@@ -1142,7 +1152,7 @@ class DataFrame(object):
         return self.div(other, axis, level, fill_value)
 
     def dot(self, other):
-        return self._default_to_pandas_func(op="dot", other=other)
+        return self._default_to_pandas_func(op=pandas.DataFrame.dot, other=other)
 
     def drop(
         self,
@@ -1239,11 +1249,16 @@ class DataFrame(object):
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
         return self._default_to_pandas_func(
-            op="drop_duplicates", subset=subset, keep=keep, inplace=inplace
+            op=pandas.DataFrame.drop_duplicates,
+            subset=subset,
+            keep=keep,
+            inplace=inplace,
         )
 
     def duplicated(self, subset=None, keep="first"):
-        return self._default_to_pandas_func(op="duplicated", subset=subset, keep=keep)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.duplicated, subset=subset, keep=keep
+        )
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.
@@ -1347,7 +1362,7 @@ class DataFrame(object):
         axis=0,
     ):
         return self._default_to_pandas_func(
-            op="ewm",
+            op=pandas.DataFrame.ewm,
             com=com,
             span=span,
             halflife=halflife,
@@ -1361,7 +1376,11 @@ class DataFrame(object):
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
         return self._default_to_pandas_func(
-            op="expanding", min_periods=min_periods, freq=freq, center=center, axis=axis
+            op=pandas.DataFrame.expanding,
+            min_periods=min_periods,
+            freq=freq,
+            center=center,
+            axis=axis,
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -1499,7 +1518,7 @@ class DataFrame(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
-        return self._default_to_pandas_func(op="first", offset=offset)
+        return self._default_to_pandas_func(op=pandas.DataFrame.first, offset=offset)
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.
@@ -1644,11 +1663,11 @@ class DataFrame(object):
 
     def get_value(self, index, col, takeable=False):
         return self._default_to_pandas_func(
-            op="get_value", index=index, col=col, takeable=takeable
+            op=pandas.DataFrame.get_value, index=index, col=col, takeable=takeable
         )
 
     def get_values(self):
-        return self._default_to_pandas_func(op="get_values")
+        return self._default_to_pandas_func(op=pandas.DataFrame.get_values)
 
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
@@ -1699,7 +1718,7 @@ class DataFrame(object):
         **kwargs
     ):
         return self._default_to_pandas_func(
-            op="hist",
+            op=pandas.DataFrame.hist,
             data=data,
             column=column,
             by=by,
@@ -1748,7 +1767,7 @@ class DataFrame(object):
         return self._data_manager.idxmin(axis=axis, skipna=skipna)
 
     def infer_objects(self):
-        return self._default_to_pandas_func(op="infer_objects")
+        return self._default_to_pandas_func(op=pandas.DataFrame.infer_objects)
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -1889,7 +1908,7 @@ class DataFrame(object):
         **kwargs
     ):
         return self._default_to_pandas_func(
-            op="interpolate",
+            op=pandas.DataFrame.interpolate,
             method=method,
             axis=axis,
             limit=limit,
@@ -2048,7 +2067,7 @@ class DataFrame(object):
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         return self._default_to_pandas_func(
-            op="kurt",
+            op=pandas.DataFrame.kurt,
             axis=axis,
             skipna=skipna,
             level=level,
@@ -2058,7 +2077,7 @@ class DataFrame(object):
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         return self._default_to_pandas_func(
-            op="kurtosis",
+            op=pandas.DataFrame.kurtosis,
             axis=axis,
             skipna=skipna,
             level=level,
@@ -2067,7 +2086,7 @@ class DataFrame(object):
         )
 
     def last(self, offset):
-        return self._default_to_pandas_func(op="last", offset=offset)
+        return self._default_to_pandas_func(op=pandas.DataFrame.last, offset=offset)
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.
@@ -2096,7 +2115,7 @@ class DataFrame(object):
 
     def lookup(self, row_labels, col_labels):
         return self._default_to_pandas_func(
-            op="lookup", row_labels=row_labels, col_labels=col_labels
+            op=pandas.DataFrame.lookup, row_labels=row_labels, col_labels=col_labels
         )
 
     def lt(self, other, axis="columns", level=None):
@@ -2118,7 +2137,7 @@ class DataFrame(object):
 
     def mad(self, axis=None, skipna=None, level=None):
         return self._default_to_pandas_func(
-            op="mad", axis=axis, skipna=skipna, level=level
+            op=pandas.DataFrame.mad, axis=axis, skipna=skipna, level=level
         )
 
     def mask(
@@ -2133,7 +2152,7 @@ class DataFrame(object):
         raise_on_error=None,
     ):
         return self._default_to_pandas_func(
-            op="mask",
+            op=pandas.DataFrame.mask,
             cond=cond,
             other=other,
             inplace=inplace,
@@ -2203,7 +2222,7 @@ class DataFrame(object):
         col_level=None,
     ):
         return self._default_to_pandas_func(
-            op="melt",
+            op=pandas.DataFrame.melt,
             id_vars=id_vars,
             value_vars=value_vars,
             var_name=var_name,
@@ -2389,7 +2408,7 @@ class DataFrame(object):
 
     def nlargest(self, n, columns, keep="first"):
         return self._default_to_pandas_func(
-            op="nlargest", n=n, columns=columns, keep=keep
+            op=pandas.DataFrame.nlargest, n=n, columns=columns, keep=keep
         )
 
     def notna(self):
@@ -2412,7 +2431,7 @@ class DataFrame(object):
 
     def nsmallest(self, n, columns, keep="first"):
         return self._default_to_pandas_func(
-            op="nsmallest", n=n, columns=columns, keep=keep
+            op=pandas.DataFrame.nsmallest, n=n, columns=columns, keep=keep
         )
 
     def nunique(self, axis=0, dropna=True):
@@ -2430,7 +2449,7 @@ class DataFrame(object):
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
         return self._default_to_pandas_func(
-            op="pct_change",
+            op=pandas.DataFrame.pct_change,
             periods=periods,
             fill_method=fill_method,
             limit=limit,
@@ -2453,7 +2472,7 @@ class DataFrame(object):
 
     def pivot(self, index=None, columns=None, values=None):
         return self._default_to_pandas_func(
-            op="pivot", index=index, columns=columns, values=values
+            op=pandas.DataFrame.pivot, index=index, columns=columns, values=values
         )
 
     def pivot_table(
@@ -2468,7 +2487,7 @@ class DataFrame(object):
         margins_name="All",
     ):
         return self._default_to_pandas_func(
-            op="pivot_table",
+            op=pandas.DataFrame.pivot_table,
             values=values,
             index=index,
             columns=columns,
@@ -2851,7 +2870,7 @@ class DataFrame(object):
         fill_value=np.nan,
     ):
         return self._default_to_pandas_func(
-            op="reindex_axis",
+            op=pandas.DataFrame.reindex_axis,
             labels=labels,
             axis=axis,
             method=method,
@@ -2863,7 +2882,7 @@ class DataFrame(object):
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         return self._default_to_pandas_func(
-            op="reindex_like",
+            op=pandas.DataFrame.reindex_like,
             other=other,
             method=method,
             copy=copy,
@@ -2947,7 +2966,9 @@ class DataFrame(object):
             return renamed
 
     def reorder_levels(self, order, axis=0):
-        return self._default_to_pandas_func(op="reorder_levels", order=order, axis=axis)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.reorder_levels, order=order, axis=axis
+        )
 
     def replace(
         self,
@@ -2960,7 +2981,7 @@ class DataFrame(object):
         axis=None,
     ):
         return self._default_to_pandas_func(
-            op="replace",
+            op=pandas.DataFrame.replace,
             to_replace=to_replace,
             value=value,
             inplace=inplace,
@@ -2987,7 +3008,7 @@ class DataFrame(object):
         level=None,
     ):
         return self._default_to_pandas_func(
-            op="resample",
+            op=pandas.DataFrame.resample,
             rule=rule,
             how=how,
             axis=axis,
@@ -3060,7 +3081,7 @@ class DataFrame(object):
         closed=None,
     ):
         return self._default_to_pandas_func(
-            op="rolling",
+            op=pandas.DataFrame.rolling,
             window=window,
             min_periods=min_periods,
             freq=freq,
@@ -3270,7 +3291,9 @@ class DataFrame(object):
             return DataFrame(data_manager=data_manager)
 
     def select(self, crit, axis=0):
-        return self._default_to_pandas_func(op="select", crit=crit, axis=axis)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.select, crit=crit, axis=axis
+        )
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -3312,7 +3335,7 @@ class DataFrame(object):
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
         return self._default_to_pandas_func(
-            op="sem",
+            op=pandas.DataFrame.sem,
             axis=axis,
             skipna=skipna,
             level=level,
@@ -3434,12 +3457,16 @@ class DataFrame(object):
 
     def set_value(self, index, col, value, takeable=False):
         return self._default_to_pandas_func(
-            op="set_values", index=index, col=col, value=value, takeable=takeable
+            op=pandas.DataFrame.set_values,
+            index=index,
+            col=col,
+            wvalue=value,
+            takeable=takeable,
         )
 
     def shift(self, periods=1, freq=None, axis=0):
         return self._default_to_pandas_func(
-            op="shift", periods=period, freq=freq, axis=axis
+            op=pandas.DataFrame.shift, periods=period, freq=freq, axis=axis
         )
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -3464,7 +3491,9 @@ class DataFrame(object):
         )
 
     def slice_shift(self, periods=1, axis=0):
-        return self._default_to_pandas_func(op="slice_shift", periods=period, axis=axis)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.slice_shift, periods=period, axis=axis
+        )
 
     def sort_index(
         self,
@@ -3567,7 +3596,7 @@ class DataFrame(object):
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
     ):
         return self._default_to_pandas_func(
-            op="sortlevel",
+            op=pandas.DataFrame.sortlevel,
             level=level,
             axis=axis,
             ascending=ascending,
@@ -3576,10 +3605,12 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        return self._default_to_pandas_func(op="squeeze", axis=axis)
+        return self._default_to_pandas_func(op=pandas.DataFrame.squeeze, axis=axis)
 
     def stack(self, level=-1, dropna=True):
-        return self._default_to_pandas_func(op="stack", level=level, dropna=dropna)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.stack, level=level, dropna=dropna
+        )
 
     def std(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
@@ -3643,11 +3674,13 @@ class DataFrame(object):
 
     def swapaxes(self, axis1, axis2, copy=True):
         return self._default_to_pandas_func(
-            op="swapaxes", axis1=axis1, axis2=axis2, copy=copy
+            op=pandas.DataFrame.swapaxes, axis1=axis1, axis2=axis2, copy=copy
         )
 
     def swaplevel(self, i=-2, j=-1, axis=0):
-        return self._default_to_pandas_func(op="swaplevel", i=i, j=j, axis=axis)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.swaplevel, i=i, j=j, axis=axis
+        )
 
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.
@@ -3664,7 +3697,7 @@ class DataFrame(object):
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
         return self._default_to_pandas_func(
-            op="take",
+            op=pandas.DataFrame.take,
             indices=indices,
             axis=axis,
             convert=convert,
@@ -3726,7 +3759,7 @@ class DataFrame(object):
         return to_pandas(self).to_csv(**kwargs)
 
     def to_dense(self):
-        return self._default_to_pandas_func(op="to_dense")
+        return self._default_to_pandas_func(op=pandas.DataFrame.to_dense)
 
     def to_dict(self, orient="dict", into=dict):
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
@@ -3919,15 +3952,18 @@ class DataFrame(object):
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
         return self._default_to_pandas_func(
-            op="to_msgpack", path_or_buf=path_or_buf, encoding=encoding, **kwargs
+            op=pandas.DataFrame.to_msgpack,
+            path_or_buf=path_or_buf,
+            encoding=encoding,
+            **kwargs
         )
 
     def to_panel(self):
-        return self._default_to_pandas_func(op="to_panel")
+        return self._default_to_pandas_func(op=pandas.DataFrame.to_panel)
 
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
         return self._default_to_pandas_func(
-            op="to_parquet",
+            op=pandas.DataFrame.to_parquet,
             fname=fname,
             engine=engine,
             compression=compression,
@@ -3936,22 +3972,27 @@ class DataFrame(object):
 
     def to_period(self, freq=None, axis=0, copy=True):
         return self._default_to_pandas_func(
-            op="to_period", freq=freq, axis=axis, copy=copy
+            op=pandas.DataFrame.to_period, freq=freq, axis=axis, copy=copy
         )
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
         return self._default_to_pandas_func(
-            op="to_pickle", path=path, compression=compression, protocol=protocol
+            op=pandas.DataFrame.to_pickle,
+            path=path,
+            compression=compression,
+            protocol=protocol,
         )
 
     def to_records(self, index=True, convert_datetime64=True):
         return self._default_to_pandas_func(
-            op="to_records", index=index, convert_datetime64=convert_datetime64
+            op=pandas.DataFrame.to_records,
+            index=index,
+            convert_datetime64=convert_datetime64,
         )
 
     def to_sparse(self, fill_value=None, kind="block"):
         return self._default_to_pandas_func(
-            op="to_sparse", fill_value=fill_value, kind=kind
+            op=pandas.DataFrame.to_sparse, fill_value=fill_value, kind=kind
         )
 
     def to_sql(
@@ -4033,11 +4074,11 @@ class DataFrame(object):
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
         return self._default_to_pandas_func(
-            op="to_timestamp", freq=freq, how=how, axis=axis, copy=copy
+            op=pandas.DataFrame.to_timestamp, freq=freq, how=how, axis=axis, copy=copy
         )
 
     def to_xarray(self):
-        return self._default_to_pandas_func(op="to_xarray")
+        return self._default_to_pandas_func(op=pandas.DataFrame.to_xarray)
 
     def transform(self, func, *args, **kwargs):
         kwargs["is_transform"] = True
@@ -4071,22 +4112,26 @@ class DataFrame(object):
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
         return self._default_to_pandas_func(
-            op="truncate", before=before, after=after, axis=axis, copy=copy
+            op=pandas.DataFrame.truncate,
+            before=before,
+            after=after,
+            axis=axis,
+            copy=copy,
         )
 
     def tshift(self, periods=1, freq=None, axis=0):
         return self._default_to_pandas_func(
-            op="tshift", periods=periods, freq=freq, axis=axis
+            op=pandas.DataFrame.tshift, periods=periods, freq=freq, axis=axis
         )
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
         return self._default_to_pandas_func(
-            op="tz_convert", tz=tz, axis=axis, level=level, copy=copy
+            op=pandas.DataFrame.tz_convert, tz=tz, axis=axis, level=level, copy=copy
         )
 
     def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
         return self._default_to_pandas_func(
-            op="tz_localize",
+            op=pandas.DataFrame.tz_localize,
             tz=tz,
             axis=axis,
             level=level,
@@ -4096,7 +4141,7 @@ class DataFrame(object):
 
     def unstack(self, level=-1, fill_value=None):
         return self._default_to_pandas_func(
-            op="unstack", level=level, fill_value=fill_value
+            op=pandas.DataFrame.unstack, level=level, fill_value=fill_value
         )
 
     def update(
@@ -4217,7 +4262,11 @@ class DataFrame(object):
 
     def xs(self, key, axis=0, level=None, drop_level=True):
         return self._default_to_pandas_func(
-            op="xs", key=key, axis=axis, level=level, drop_level=drop_level
+            op=pandas.DataFrame.xs,
+            key=key,
+            axis=axis,
+            level=level,
+            drop_level=drop_level,
         )
 
     def __getitem__(self, key):
@@ -4326,13 +4375,13 @@ class DataFrame(object):
         return len(self.index)
 
     def __unicode__(self):
-        return self._default_to_pandas_func(op="__unicode__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__unicode__)
 
     def __invert__(self):
-        return self._default_to_pandas_func(op="__invert__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__invert__)
 
     def __hash__(self):
-        return self._default_to_pandas_func(op="__hash__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__hash__)
 
     def __iter__(self):
         """Iterate over the columns
@@ -4372,7 +4421,9 @@ class DataFrame(object):
         return self.abs()
 
     def __round__(self, decimals=0):
-        return self._default_to_pandas_func(op="__round__", decimals=decimals)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.__round__, decimals=decimals
+        )
 
     def __array__(self, dtype=None):
         # TODO: This is very inefficient and needs fix, also see as_matrix
@@ -4383,10 +4434,10 @@ class DataFrame(object):
         return to_pandas(self).__array_wrap__(result, context=context)
 
     def __getstate__(self):
-        return self._default_to_pandas_func(op="__getstate__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
-        return self._default_to_pandas_func(op="__setstate__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__setstate__)
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4403,7 +4454,7 @@ class DataFrame(object):
 
     def __finalize__(self, other, method=None, **kwargs):
         return self._default_to_pandas_func(
-            op="__finalize__", other=other, method=method, **kwargs
+            op=pandas.DataFrame.__finalize__, other=other, method=method, **kwargs
         )
 
     def __copy__(self, deep=True):
@@ -4545,22 +4596,22 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.negative())
 
     def __sizeof__(self):
-        return self._default_to_pandas_func(op="__sizeof__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__sizeof__)
 
     @property
     def __doc__(self):
-        return self._default_to_pandas_func(op="__doc__")
+        return self._default_to_pandas_func(op=pandas.DataFrame.__doc__)
 
     @property
     def blocks(self):
-        return self._default_to_pandas_func(op="blocks")
+        return self._default_to_pandas_func(op=pandas.DataFrame.blocks)
 
     @property
     def style(self):
-        return self._default_to_pandas_func(op="style")
+        return self._default_to_pandas_func(op=pandas.DataFrame.style)
 
     def iat(self, axis=None):
-        return self._default_to_pandas_func(op="iat")
+        return self._default_to_pandas_func(op=pandas.DataFrame.iat)
 
     @property
     def loc(self):
@@ -4575,13 +4626,13 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        return self._default_to_pandas_func(op="iscopy")
+        return self._default_to_pandas_func(op=pandas.DataFrame.iscopy)
 
     def at(self, axis=None):
-        return self._default_to_pandas_func(op="at")
+        return self._default_to_pandas_func(op=pandas.DataFrame.at)
 
     def ix(self, axis=None):
-        return self._default_to_pandas_func(op="ix")
+        return self._default_to_pandas_func(op=pandas.DataFrame.ix)
 
     @property
     def iloc(self):
@@ -4635,5 +4686,4 @@ class DataFrame(object):
     def _default_to_pandas_func(self, op, *arg, **kwargs):
         """Helper method to use default pandas function"""
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        pandas_df = self._data_manager.to_pandas()
-        return getattr(pandas_df, op)(*arg, **kwargs)
+        return op(self._data_manager.to_pandas(), *arg, **kwargs)
