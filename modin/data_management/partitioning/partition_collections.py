@@ -60,6 +60,7 @@ class BlockPartitions(object):
         return self._partitions_cache
 
     def _set_partitions(self, new_partitions):
+        self._filtered_empties = False
         self._partitions_cache = new_partitions
 
     partitions = property(_get_partitions, _set_partitions)
