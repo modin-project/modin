@@ -1225,7 +1225,6 @@ class PandasDataManager(object):
         result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
-
         func = self._prepare_method(pandas.DataFrame.median, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
@@ -1292,7 +1291,6 @@ class PandasDataManager(object):
         result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
-
         func = self._prepare_method(pandas.DataFrame.skew, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
@@ -1307,7 +1305,6 @@ class PandasDataManager(object):
         result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
-
         func = self._prepare_method(pandas.DataFrame.std, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
@@ -1337,7 +1334,6 @@ class PandasDataManager(object):
         result, data_manager = self.numeric_function_clean_dataframe(axis)
         if result is not None:
             return result
-
         func = data_manager._prepare_method(pandas.DataFrame.var, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 

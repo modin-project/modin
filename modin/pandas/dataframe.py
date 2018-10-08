@@ -2176,7 +2176,6 @@ class DataFrame(object):
             The median of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
@@ -3416,7 +3415,6 @@ class DataFrame(object):
             skew : Series or DataFrame (if level specified)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
@@ -3561,7 +3559,6 @@ class DataFrame(object):
             The std of the DataFrame (Pandas Series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
@@ -4123,7 +4120,6 @@ class DataFrame(object):
             The variance of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
