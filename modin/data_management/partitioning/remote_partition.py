@@ -251,7 +251,11 @@ class RayRemotePartition(RemotePartition):
     def __del__(self):
         try:
             ray.internal.free(self.oid, local_only=True)
-            self.oid = None
+            # This seems weird, but it is how we have to flush the object store so we
+            # get the correct free behavior.
+            # https://github.com/ray-project/ray/pull/2542
+            for _ in range(64):
+                ray.get(ray.put(1))
         except ray.worker.RayConnectionError:
             pass
 
