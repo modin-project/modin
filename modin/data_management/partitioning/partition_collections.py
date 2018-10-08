@@ -983,7 +983,7 @@ class RayBlockPartitions(BlockPartitions):
     _partition_class = RayRemotePartition
 
     def __init__(self, partitions):
-        self._partitions_cache = partitions
+        self.partitions = partitions
 
     # We override these for performance reasons.
     # Lengths of the blocks
