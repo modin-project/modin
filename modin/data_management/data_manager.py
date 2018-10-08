@@ -1797,7 +1797,7 @@ class PandasDataManager(object):
         if n < 0:
             n = max(0, len(self.index) + n)
         if n == 0:
-            index = self.index[:0]
+            index = pandas.Index([])
         else:
             index = self.index[-n:]
         if self._is_transposed:
