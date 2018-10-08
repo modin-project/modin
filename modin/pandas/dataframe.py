@@ -634,10 +634,17 @@ class DataFrame(object):
         fill_axis=0,
         broadcast_axis=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="align",
+                                            other,
+                                            join=join,
+                                            axis=axis,
+                                            level=level,
+                                            copy=copy,
+                                            fill_value=fill_value,
+                                            method=method,
+                                            limit=limit,
+                                            fill_axis=fill_axis,
+                                            broadcast_axis=broadcast_axis)
 
     def all(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether all elements are True over requested axis
@@ -778,10 +785,8 @@ class DataFrame(object):
         return DataFrame(data_manager=data_manager)
 
     def as_blocks(self, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="as_blocks",
+                                            copy=copy)
 
     def as_matrix(self, columns=None):
         """Convert the frame to its Numpy-array representation.
@@ -797,22 +802,21 @@ class DataFrame(object):
         return to_pandas(self).as_matrix(columns)
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="asfreq",
+                                            freq,
+                                            method=method,
+                                            how=how,
+                                            normalize=normalize,
+                                            fill_value=fill_value)
 
     def asof(self, where, subset=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="asof",
+                                            where,
+                                            subset=subset)
 
     def assign(self, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="assign",
+                                            **kwargs)
 
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
@@ -835,16 +839,16 @@ class DataFrame(object):
             self._update_inplace(new_data_manager)
 
     def at_time(self, time, asof=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="at_time",
+                                            time,
+                                            asof=asof)
 
     def between_time(self, start_time, end_time, include_start=True, include_end=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="between_time",
+                                            start_time,
+                                            end_time,
+                                            include_start=include_start,
+                                            include_end=include_end)
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='bfill')"""
@@ -931,28 +935,25 @@ class DataFrame(object):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, overwrite=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="combine",
+                                            other,
+                                            func,
+                                            fill_value=fill_value,
+                                            overwrite=overwrite)
 
     def combine_first(self, other):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="combine_first",
+                                            other)
 
     def compound(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="compound",
+                                            axis=axis,
+                                            skipna=skipna,
+                                            level=level)
 
     def consolidate(self, inplace=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="consolidate",
+                                            inplace=inplace)
 
     def convert_objects(
         self,
@@ -961,22 +962,22 @@ class DataFrame(object):
         convert_timedeltas=True,
         copy=True,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="convert_objects",
+                                            convert_dates=convert_dates,
+                                            convert_numeric=convert_numeric,
+                                            convert_timedeltas=convert_timedeltas,
+                                            copy=copy)
 
     def corr(self, method="pearson", min_periods=1):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="corr",
+                                            method=method,
+                                            min_periods=min_periods)
 
     def corrwith(self, other, axis=0, drop=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="corrwith",
+                                            other,
+                                            axis=axis,
+                                            drop=drop)
 
     def count(self, axis=0, level=None, numeric_only=False):
         """Get the count of non-null objects in the DataFrame.
@@ -996,10 +997,8 @@ class DataFrame(object):
         )
 
     def cov(self, min_periods=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="cov",
+                                            min_periods=min_periods)
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative maximum across the DataFrame.
@@ -1148,10 +1147,8 @@ class DataFrame(object):
         return self.div(other, axis, level, fill_value)
 
     def dot(self, other):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="dot",
+                                            other)
 
     def drop(
         self,
@@ -1247,16 +1244,15 @@ class DataFrame(object):
         return DataFrame(data_manager=new_manager)
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="drop_duplicates",
+                                            subset=subset,
+                                            keep=keep,
+                                            inplace=inplace)
 
     def duplicated(self, subset=None, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="duplicated",
+                                            subset=subset,
+                                            keep=keep)
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.
@@ -1361,16 +1357,23 @@ class DataFrame(object):
         ignore_na=False,
         axis=0,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="ewm",
+                                            com=com,
+                                            span=span,
+                                            halflife=halflife,
+                                            alpha=alpha,
+                                            min_periods=min_periods,
+                                            freq=freq,
+                                            adjust=adjust,
+                                            ignore_na=ignore_na,
+                                            axis=axis)
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="expanding",
+                                            min_periods=min_periods,
+                                            freq=freq,
+                                            center=center,
+                                            axis=axis)
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='ffill')
@@ -1507,10 +1510,8 @@ class DataFrame(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="first",
+                                            offset)
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.
@@ -1658,16 +1659,13 @@ class DataFrame(object):
         return self.ftypes.value_counts().sort_index()
 
     def get_value(self, index, col, takeable=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="get_value",
+                                            index,
+                                            col,
+                                            takeable=takeable)
 
     def get_values(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="get_values")
 
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
@@ -1719,10 +1717,22 @@ class DataFrame(object):
         bins=10,
         **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="hist",
+                                            data,
+                                            column=column,
+                                            by=by,
+                                            grid=grid,
+                                            xlabelsize=xlabelsize,
+                                            xrot=xrot,
+                                            ylabelsize=ylabelsize,
+                                            yrot=yrot,
+                                            ax=ax,
+                                            sharex=sharex,
+                                            sharey=sharey,
+                                            figsize=figsize,
+                                            layout=layout,
+                                            bins=bins,
+                                            **kwargs)
 
     def idxmax(self, axis=0, skipna=True):
         """Get the index of the first occurrence of the max value of the axis.
@@ -1755,10 +1765,7 @@ class DataFrame(object):
         return self._data_manager.idxmin(axis=axis, skipna=skipna)
 
     def infer_objects(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="infer_objects")
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -1898,10 +1905,14 @@ class DataFrame(object):
         downcast=None,
         **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="interpolate"
+                                            method=method,
+                                            axis=axis,
+                                            limit=limit,
+                                            inplace=inplace,
+                                            limit_direction=limit_direction,
+                                            downcast=downcast,
+                                            **kwargs)
 
     def iterrows(self):
         """Iterate over DataFrame rows as (index, Series) pairs.
@@ -2051,22 +2062,24 @@ class DataFrame(object):
             )
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="kurt"
+                                            axis=axis,
+                                            skipna=skipna,
+                                            level=level,
+                                            numeric_only=numeric_only,
+                                            **kwargs)
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="kurtosis"
+                                            axis=axis,
+                                            skipna=skipna,
+                                            level=level,
+                                            numeric_only=numeric_only,
+                                            **kwargs)
 
     def last(self, offset):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="last"
+                                            offset)
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.
@@ -2096,10 +2109,9 @@ class DataFrame(object):
         return self._create_dataframe_from_manager(new_manager)
 
     def lookup(self, row_labels, col_labels):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="lookup",
+                                            row_labels,
+                                            col_labels)
 
     def lt(self, other, axis="columns", level=None):
         """Checks element-wise that this is less than other.
@@ -2121,10 +2133,10 @@ class DataFrame(object):
         return self._create_dataframe_from_manager(new_manager)
 
     def mad(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="mad",
+                                            axis=axis,
+                                            skipna=skipna,
+                                            level=level)
 
     def mask(
         self,
@@ -2137,10 +2149,15 @@ class DataFrame(object):
         try_cast=False,
         raise_on_error=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="mask",
+                                            cond,
+                                            other=other,
+                                            inplace=inplace,
+                                            axis=axis,
+                                            level=level,
+                                            errors=errors,
+                                            try_cast=try_cast,
+                                            raise_on_error=raise_on_error)
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         """Perform max across the DataFrame.
@@ -2200,10 +2217,12 @@ class DataFrame(object):
         value_name="value",
         col_level=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="melt",
+                                            id_vars=id_vars,
+                                            value_vars=value_vars,
+                                            var_name=var_name,
+                                            value_name=value_name,
+                                            col_level=col_level)
 
     def memory_usage(self, index=True, deep=False):
         """Returns the memory usage of each column in bytes
@@ -2388,10 +2407,10 @@ class DataFrame(object):
         return self._create_dataframe_from_manager(new_manager)
 
     def nlargest(self, n, columns, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="nlargest",
+                                            n,
+                                            columns,
+                                            keep=keep)
 
     def notna(self):
         """Perform notna across the DataFrame.
@@ -2412,10 +2431,10 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.notnull())
 
     def nsmallest(self, n, columns, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="nsmallest",
+                                            n,
+                                            columns,
+                                            keep=keep)
 
     def nunique(self, axis=0, dropna=True):
         """Return Series with number of distinct
@@ -2431,10 +2450,12 @@ class DataFrame(object):
         return self._data_manager.nunique(axis=axis, dropna=dropna)
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="pct_change",
+                                            periods=periods,
+                                            fill_method=fill_method,
+                                            limit=limit,
+                                            freq=freq,
+                                            **kwargs)
 
     def pipe(self, func, *args, **kwargs):
         """Apply func(self, *args, **kwargs)
@@ -2450,10 +2471,10 @@ class DataFrame(object):
         return com._pipe(self, func, *args, **kwargs)
 
     def pivot(self, index=None, columns=None, values=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="pivot",
+                                            index=index,
+                                            columns=columns,
+                                            values=values)
 
     def pivot_table(
         self,
@@ -2466,10 +2487,15 @@ class DataFrame(object):
         dropna=True,
         margins_name="All",
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="pivot_table",
+                                            values=values,
+                                            index=index,
+                                            columns=columns,
+                                            aggfunc=aggfunc,
+                                            fill_value=fill_value,
+                                            margins=margins,
+                                            dropna=dropna,
+                                            margins_name=margins_name)
 
     def plot(
         self,
@@ -2846,16 +2872,22 @@ class DataFrame(object):
         limit=None,
         fill_value=np.nan,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="reindex_axis",
+                                            labels,
+                                            axis=axis,
+                                            method=method,
+                                            level=level,
+                                            copy=copy,
+                                            limit=limit,
+                                            fill_value=fill_value)
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="reindex_like",
+                                            other,
+                                            method=method,
+                                            copy=copy,
+                                            limit=limit,
+                                            tolerance=tolerance)
 
     def rename(
         self,
@@ -2933,10 +2965,9 @@ class DataFrame(object):
             return renamed
 
     def reorder_levels(self, order, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="reorder_levels",
+                                            order,
+                                            axis=axis)
 
     def replace(
         self,
@@ -2948,10 +2979,14 @@ class DataFrame(object):
         method="pad",
         axis=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="replace",
+                                            to_replace=to_replace,
+                                            value=value,
+                                            inplace=inplace,
+                                            limit=limit,
+                                            regex=regex,
+                                            method=method,
+                                            axis=axis)
 
     def resample(
         self,
@@ -2969,10 +3004,20 @@ class DataFrame(object):
         on=None,
         level=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="resample",
+                                            rule,
+                                            how=how,
+                                            axis=axis,
+                                            fill_method=fill_method,
+                                            closed=closed,
+                                            label=label,
+                                            convention=convention,
+                                            kind=kind,
+                                            loffset=loffset,
+                                            limit=limit,
+                                            base=base,
+                                            on=on,
+                                            level=level)
 
     def reset_index(
         self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
@@ -3030,10 +3075,15 @@ class DataFrame(object):
         axis=0,
         closed=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="rolling",
+                                            window,
+                                            min_periods=min_periods,
+                                            freq=freq,
+                                            center=center,
+                                            win_type=win_type,
+                                            on=on,
+                                            axis=axis,
+                                            closed=closed)
 
     def round(self, decimals=0, *args, **kwargs):
         """Round each element in the DataFrame.
@@ -3238,10 +3288,9 @@ class DataFrame(object):
             return DataFrame(data_manager=data_manager)
 
     def select(self, crit, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="select",
+                                            crit,
+                                            axis=axis)
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -3282,10 +3331,13 @@ class DataFrame(object):
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="sem",
+                                            axis=axis,
+                                            skipna=skipna,
+                                            level=level,
+                                            ddof=ddof,
+                                            numeric_only=numeric_only,
+                                            **kwargs)
 
     def set_axis(self, labels, axis=0, inplace=None):
         """Assign desired index to given axis.
@@ -3399,16 +3451,17 @@ class DataFrame(object):
             return frame
 
     def set_value(self, index, col, value, takeable=False):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="set_values",
+                                            index,
+                                            col,
+                                            value,
+                                            takeable=takeable)
 
     def shift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="shift",
+                                            periods=period,
+                                            freq=freq,
+                                            axis=axis)
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         """Return unbiased skew over requested axis Normalized by N-1
@@ -3432,10 +3485,9 @@ class DataFrame(object):
         )
 
     def slice_shift(self, periods=1, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="slice_shift",
+                                            periods=period,
+                                            axis=axis)
 
     def sort_index(
         self,
@@ -3537,22 +3589,21 @@ class DataFrame(object):
     def sortlevel(
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
     ):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="sortlevel",
+                                            level=level,
+                                            axis=axis,
+                                            ascending=ascending,
+                                            inplace=inplace,
+                                            sort_remaining=sort_remaining)
 
     def squeeze(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="squeeze",
+                                            axis=axis)
 
     def stack(self, level=-1, dropna=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="stack",
+                                            level=level,
+                                            dropna=dropna)
 
     def std(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
@@ -3617,16 +3668,16 @@ class DataFrame(object):
         return self.sub(other, axis, level, fill_value)
 
     def swapaxes(self, axis1, axis2, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="swapaxes",
+                                            axis1,
+                                            axis2,
+                                            copy)
 
     def swaplevel(self, i=-2, j=-1, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="swaplevel",
+                                            i,
+                                            j,
+                                            axis)
 
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.
@@ -3642,10 +3693,12 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.tail(n))
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="take",
+                                            indices,
+                                            axis=axis,
+                                            convert=convert,
+                                            is_copy=is_copy,
+                                            **kwargs)
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
@@ -3701,10 +3754,7 @@ class DataFrame(object):
         return to_pandas(self).to_csv(**kwargs)
 
     def to_dense(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_dense")
 
     def to_dict(self, orient="dict", into=dict):
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
@@ -3896,40 +3946,42 @@ class DataFrame(object):
         )
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_msgpack(path_or_buf, encoding, **kwargs)
+        return self._default_to_pandas_func(op="to_msgpack",
+                                            path_or_buf=path_or_buf,
+                                            encoding=encoding,
+                                            **kwargs)
 
     def to_panel(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_panel")
 
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_parquet(fname, engine, compression, **kwargs)
+        return self._default_to_pandas_func(op="to_parquet",
+                                            fname,
+                                            engine=engine,
+                                            compression=compression,
+                                            **kwargs)
 
     def to_period(self, freq=None, axis=0, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_period",
+                                            freq=freq,
+                                            axis=axis,
+                                            copy=copy)
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_pickle(path, compression, protocol)
+        return self._default_to_pandas_func(op="to_pickle",
+                                            path,
+                                            compression=compression,
+                                            protocol=protocol)
 
     def to_records(self, index=True, convert_datetime64=True):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_records(
-            index=index, convert_datetime64=convert_datetime64
-        )
+        return self._default_to_pandas_func(op="to_records",
+                                            index=index,
+                                            convert_datetime64=convert_datetime64)
 
     def to_sparse(self, fill_value=None, kind="block"):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_sparse",
+                                            fill_value=fill_value,
+                                            kind=kind)
 
     def to_sql(
         self,
@@ -4009,16 +4061,14 @@ class DataFrame(object):
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_timestamp",
+                                            freq=freq,
+                                            how=how,
+                                            axis=axis,
+                                            copy=copy)
 
     def to_xarray(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="to_xarray")
 
     def transform(self, func, *args, **kwargs):
         kwargs["is_transform"] = True
@@ -4053,34 +4103,37 @@ class DataFrame(object):
         return self._create_dataframe_from_manager(new_manager)
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="truncate",
+                                            before=before,
+                                            after=after,
+                                            axis=axis,
+                                            copy=copy)
 
     def tshift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="tshift",
+                                            periods=periods,
+                                            freq=freq,
+                                            axis=axis)
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="tz_convert",
+                                            tz,
+                                            axis=axis,
+                                            level=level,
+                                            copy=copy)
 
     def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="tz_localize",
+                                            tz,
+                                            axis=axis,
+                                            level=level,
+                                            copy=copy,
+                                            ambiguous=ambiguous)
 
     def unstack(self, level=-1, fill_value=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="unstack",
+                                            level=level,
+                                            fill_value=fill_value)
 
     def update(
         self, other, join="left", overwrite=True, filter_func=None, raise_conflict=False
@@ -4201,10 +4254,11 @@ class DataFrame(object):
             return DataFrame(data_manager=data_manager)
 
     def xs(self, key, axis=0, level=None, drop_level=True):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="xs",
+                                            key,
+                                            axis=axis,
+                                            level=level,
+                                            drop_level=drop_level)
 
     def __getitem__(self, key):
         """Get the column specified by key for this DataFrame.
@@ -4314,22 +4368,13 @@ class DataFrame(object):
         return len(self.index)
 
     def __unicode__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__unicode__")
 
     def __invert__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__invert__")
 
     def __hash__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__hash__")
 
     def __iter__(self):
         """Iterate over the columns
@@ -4369,10 +4414,8 @@ class DataFrame(object):
         return self.abs()
 
     def __round__(self, decimals=0):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__round__",
+                                            decimals=decimals)
 
     def __array__(self, dtype=None):
         # TODO: This is very inefficient and needs fix, also see as_matrix
@@ -4383,16 +4426,10 @@ class DataFrame(object):
         return to_pandas(self).__array_wrap__(result, context=context)
 
     def __getstate__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__getstate__")
 
     def __setstate__(self, state):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__setstate__")
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4408,10 +4445,10 @@ class DataFrame(object):
         self._update_inplace(new_manager=self._data_manager.delitem(key))
 
     def __finalize__(self, other, method=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__finalize__",
+                                            other,
+                                            method=method,
+                                            **kwargs)
 
     def __copy__(self, deep=True):
         """Make a copy using modin.DataFrame.copy method
@@ -4552,37 +4589,22 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.negative())
 
     def __sizeof__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__sizeof__")
 
     @property
     def __doc__(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="__doc__")
 
     @property
     def blocks(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="blocks")
 
     @property
     def style(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="style")
 
     def iat(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="iat")
 
     @property
     def loc(self):
@@ -4597,22 +4619,13 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="iscopy")
 
     def at(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="at")
 
     def ix(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(op="ix")
 
     @property
     def iloc(self):
@@ -4662,3 +4675,9 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
+    def _default_to_pandas_func(self, op, *arg, **kwargs):
+        """Helper method to use default pandas function"""
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        pandas_df = self._data_manager.to_pandas()
+        return getattr(pandas_df, op)(*arg, **kwargs)
+        # return self._data_manager.to_pandas().op(*arg, **kwargs)
