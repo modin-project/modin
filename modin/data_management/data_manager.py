@@ -1104,7 +1104,7 @@ class PandasDataManager(object):
             result.index = self.index
         return result
 
-    def all(self, **kwargs):
+    def all_any(self, func, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
 
         Return:
@@ -1118,7 +1118,6 @@ class PandasDataManager(object):
             for index, dtype in zip(index, self.dtypes):
                 if dtype != bool:
                     not_bool.append(index)
-
             if axis:
                 data_manager = self.drop(index=not_bool)
             else:
@@ -1126,32 +1125,7 @@ class PandasDataManager(object):
         else:
             data_manager = self
 
-        func = data_manager._prepare_method(pandas.DataFrame.all, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def any(self, **kwargs):
-        """Returns whether any element is true over the requested axis.
-
-        Return:
-            Pandas Series containing boolean values.
-        """
-        axis = kwargs.get("axis", 0)
-        bool_only = kwargs.get("bool_only", None)
-        index = self.index if axis else self.columns
-        if bool_only:
-            not_bool = []
-            for index, dtype in zip(index, self.dtypes):
-                if dtype != bool:
-                    not_bool.append(index)
-
-            if axis:
-                data_manager = self.drop(index=not_bool)
-            else:
-                data_manager = self.drop(columns=not_bool)
-        else:
-            data_manager = self
-
-        func = data_manager._prepare_method(pandas.DataFrame.any, **kwargs)
+        func = data_manager._prepare_method(func, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
     def first_valid_index(self):

@@ -651,8 +651,8 @@ class DataFrame(object):
         else:
             axis = None
 
-        result = self._data_manager.all(
-            axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
+        result = self._data_manager.all_any(
+            func=pandas.DataFrame.all, axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
         if axis is not None:
             return result
@@ -666,11 +666,18 @@ class DataFrame(object):
             If axis=None or axis=0, this call applies on the column partitions,
                 otherwise operates on row partitions
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if axis is not None:
+            axis = pandas.DataFrame()._get_axis_number(axis)
+        else:
+            axis = None
 
-        return self._data_manager.any(
-            axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
+        result = self._data_manager.all_any(
+            func=pandas.DataFrame.any, axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
+        if axis is not None:
+            return result
+        else:
+            return result.all()
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=None):
         """Append another DataFrame/list/Series to this one.
