@@ -1890,7 +1890,10 @@ class PandasDataManager(object):
         df = self.data.to_pandas(is_transposed=self._is_transposed)
 
         if df.empty:
-            return pandas.DataFrame([], self.index, self.columns)
+            dtype_dict = {col_name: pandas.Series(dtype=self.dtypes[col_name]) for col_name in
+                    self.columns}
+            df = pandas.DataFrame(dtype_dict, self.index)
+            return df
 
         df.index = self.index
         df.columns = self.columns
