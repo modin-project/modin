@@ -652,7 +652,12 @@ class DataFrame(object):
             axis = None
 
         result = self._data_manager.all_any(
-            func=pandas.DataFrame.all, axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
+            func=pandas.DataFrame.all,
+            axis=axis,
+            bool_only=bool_only,
+            skipna=skipna,
+            level=level,
+            **kwargs
         )
         if axis is not None:
             return result
@@ -672,7 +677,12 @@ class DataFrame(object):
             axis = None
 
         result = self._data_manager.all_any(
-            func=pandas.DataFrame.any, axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
+            func=pandas.DataFrame.any,
+            axis=axis,
+            bool_only=bool_only,
+            skipna=skipna,
+            level=level,
+            **kwargs
         )
         if axis is not None:
             return result
