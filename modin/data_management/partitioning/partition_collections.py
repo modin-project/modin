@@ -40,6 +40,30 @@ class BlockPartitions(object):
     # Partition class is the class to use for storing each partition. It must
     # extend the `RemotePartition` class.
     _partition_class = None
+    # Whether or not we have already filtered out the empty partitions.
+    _filtered_empties = False
+
+    def _get_partitions(self):
+        if not self._filtered_empties:
+            self._partitions_cache = np.array(
+                [
+                    [
+                        self._partitions_cache[i][j]
+                        for j in range(len(self._partitions_cache[i]))
+                        if self.block_lengths[i] != 0 or self.block_widths[j] != 0
+                    ]
+                    for i in range(len(self._partitions_cache))
+                ]
+            )
+            self._remove_empty_blocks()
+            self._filtered_empties = True
+        return self._partitions_cache
+
+    def _set_partitions(self, new_partitions):
+        self._filtered_empties = False
+        self._partitions_cache = new_partitions
+
+    partitions = property(_get_partitions, _set_partitions)
 
     def preprocess_func(self, map_func):
         """Preprocess a function to be applied to `RemotePartition` objects.
@@ -102,7 +126,11 @@ class BlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
-            self._lengths_cache = [obj.length().get() for obj in self.partitions.T[0]]
+            self._lengths_cache = (
+                [obj.length().get() for obj in self._partitions_cache.T[0]]
+                if len(self._partitions_cache.T) > 0
+                else []
+            )
         return self._lengths_cache
 
     # Widths of the blocks
@@ -119,8 +147,20 @@ class BlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
-            self._widths_cache = [obj.width().get() for obj in self.partitions[0]]
+            self._widths_cache = (
+                [obj.width().get() for obj in self._partitions_cache[0]]
+                if len(self._partitions_cache) > 0
+                else []
+            )
         return self._widths_cache
+
+    def _remove_empty_blocks(self):
+        if self._widths_cache is not None:
+            self._widths_cache = [width for width in self._widths_cache if width != 0]
+        if self._lengths_cache is not None:
+            self._lengths_cache = [
+                length for length in self._lengths_cache if length != 0
+            ]
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -963,8 +1003,10 @@ class RayBlockPartitions(BlockPartitions):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
-            self._lengths_cache = ray.get(
-                [obj.length().oid for obj in self.partitions.T[0]]
+            self._lengths_cache = (
+                ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
+                if len(self._partitions_cache.T) > 0
+                else []
             )
         return self._lengths_cache
 
@@ -982,8 +1024,10 @@ class RayBlockPartitions(BlockPartitions):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
-            self._widths_cache = ray.get(
-                [obj.width().oid for obj in self.partitions[0]]
+            self._widths_cache = (
+                ray.get([obj.width().oid for obj in self._partitions_cache[0]])
+                if len(self._partitions_cache) > 0
+                else []
             )
         return self._widths_cache
 
