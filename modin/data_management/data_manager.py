@@ -929,8 +929,8 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.mean, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        kwargs["numeric_only"] = True
+        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
