@@ -1887,9 +1887,13 @@ class PandasDataManager(object):
         Returns:
             Pandas DataFrame of the DataManager.
         """
-        df = self.data.to_pandas(is_transposed=self._is_transposed,
-                                 index=self.index,
-                                 columns=self.columns)
+        df = self.data.to_pandas(is_transposed=self._is_transposed)
+
+        if df.empty:
+            return pandas.DataFrame([], self.index, self.columns)
+
+        df.index = self.index
+        df.columns = self.columns
         return df
 
     @classmethod
