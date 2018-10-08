@@ -1216,6 +1216,20 @@ class PandasDataManager(object):
 
         return self.index[first_result.max()]
 
+    def median(self, **kwargs):
+        """Returns median of each column or row.
+
+        Returns:
+            Series containing the median of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.median, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
+
     def memory_usage(self, **kwargs):
         """Returns the memory usage of each column.
 
@@ -1240,6 +1254,62 @@ class PandasDataManager(object):
         func = self._prepare_method(pandas.DataFrame.nunique, **kwargs)
         return self.full_axis_reduce(func, axis)
 
+    def quantile_for_single_value(self, **kwargs):
+        """Returns quantile of each column or row.
+
+        Returns:
+            Series containing the quantile of each column or row.
+        """
+        axis = kwargs.get("axis", 0)
+        q = kwargs.get("q", 0.5)
+        numeric_only = kwargs.get("numeric_only", True)
+        assert type(q) is float
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return result
+        else:
+            data_manager = self
+
+        def quantile_builder(df, **kwargs):
+            try:
+                return pandas.DataFrame.quantile(df, **kwargs)
+            except ValueError:
+                return pandas.Series()
+
+        func = self._prepare_method(quantile_builder, **kwargs)
+        result = data_manager.full_axis_reduce(func, axis)
+        result.name = q
+        return result
+
+    def skew(self, **kwargs):
+        """Returns skew of each column or row.
+
+        Returns:
+            Series containing the skew of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.skew, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
+
+    def std(self, **kwargs):
+        """Returns standard deviation of each column or row.
+
+        Returns:
+            Series containing the standard deviation of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.std, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
+
     def to_datetime(self, **kwargs):
         """Converts the Manager to a Series of DateTime objects.
 
@@ -1254,6 +1324,20 @@ class PandasDataManager(object):
 
         func = self._prepare_method(to_datetime_builder, **kwargs)
         return self.full_axis_reduce(func, 1)
+
+    def var(self, **kwargs):
+        """Returns varience of each column or row.
+
+        Returns:
+            Series containing the varience of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, data_manager = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = data_manager._prepare_method(pandas.DataFrame.var, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     # END Column/Row partitions reduce operations
 
@@ -1324,103 +1408,6 @@ class PandasDataManager(object):
                 [np.object for _ in new_columns], index=new_columns
             )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
-
-    def median(self, **kwargs):
-        """Returns median of each column or row.
-
-        Returns:
-            Series containing the median of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def median_builder(df, **kwargs):
-            return pandas.DataFrame.median(df, **kwargs)
-
-        func = self._prepare_method(median_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def skew(self, **kwargs):
-        """Returns skew of each column or row.
-
-        Returns:
-            Series containing the skew of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def skew_builder(df, **kwargs):
-            return pandas.DataFrame.skew(df, **kwargs)
-
-        func = self._prepare_method(skew_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def std(self, **kwargs):
-        """Returns standard deviation of each column or row.
-
-        Returns:
-            Series containing the standard deviation of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def std_builder(df, **kwargs):
-            return pandas.DataFrame.std(df, **kwargs)
-
-        func = self._prepare_method(std_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def var(self, **kwargs):
-        """Returns varience of each column or row.
-
-        Returns:
-            Series containing the varience of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        func = data_manager._prepare_method(pandas.DataFrame.var, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def quantile_for_single_value(self, **kwargs):
-        """Returns quantile of each column or row.
-
-        Returns:
-            Series containing the quantile of each column or row.
-        """
-        axis = kwargs.get("axis", 0)
-        q = kwargs.get("q", 0.5)
-        numeric_only = kwargs.get("numeric_only", True)
-        assert type(q) is float
-        if numeric_only:
-            result, data_manager = self.numeric_function_clean_dataframe(axis)
-            if result is not None:
-                return result
-        else:
-            data_manager = self
-
-        def quantile_builder(df, **kwargs):
-            try:
-                return pandas.DataFrame.quantile(df, **kwargs)
-            except ValueError:
-                return pandas.Series()
-
-        func = self._prepare_method(quantile_builder, **kwargs)
-        result = data_manager.full_axis_reduce(func, axis)
-        result.name = q
-        return result
 
     # END Column/Row partitions reduce operations over select indices
 

@@ -2185,6 +2185,9 @@ class DataFrame(object):
             The median of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+
         return self._data_manager.median(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2653,6 +2656,7 @@ class DataFrame(object):
                     index is the columns of self and the values
                     are the quantiles.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
         def check_dtype(t):
             return is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t)
@@ -3419,6 +3423,10 @@ class DataFrame(object):
         Returns:
             skew : Series or DataFrame (if level specified)
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+
         return self._data_manager.skew(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -3560,6 +3568,9 @@ class DataFrame(object):
             The std of the DataFrame (Pandas Series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+
         return self._data_manager.std(
             axis=axis,
             skipna=skipna,
@@ -4118,6 +4129,9 @@ class DataFrame(object):
             The variance of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+
         return self._data_manager.var(
             axis=axis,
             skipna=skipna,
