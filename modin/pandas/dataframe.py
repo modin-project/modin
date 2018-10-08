@@ -2161,10 +2161,8 @@ class DataFrame(object):
             The mean of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
-
         return self._data_manager.mean(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
