@@ -252,7 +252,7 @@ class RayRemotePartition(RemotePartition):
         try:
             ray.internal.free(self.oid, local_only=True)
             # This seems weird, but it is how we have to flush the object store so we
-            # get the correct free behavior.
+            # get the correct behavior. This forces the object to be freed.
             # https://github.com/ray-project/ray/pull/2542
             for _ in range(64):
                 ray.get(ray.put(1))
