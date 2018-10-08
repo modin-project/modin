@@ -50,7 +50,7 @@ class DataFrameGroupBy(object):
             if key in self._columns:
                 raise NotImplementedError(
                     "SeriesGroupBy is not implemented."
-                    "To contribute to Pandas on Ray, please visit "
+                    "To contribute to Modin, please visit "
                     "github.com/modin-project/modin."
                 )
             raise e
@@ -114,13 +114,13 @@ class DataFrameGroupBy(object):
 
     def ffill(self, limit=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def sem(self, ddof=1):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -133,26 +133,26 @@ class DataFrameGroupBy(object):
     @property
     def plot(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def ohlc(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def __bytes__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     @property
     def tshift(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -165,7 +165,7 @@ class DataFrameGroupBy(object):
 
     def idxmax(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -175,13 +175,13 @@ class DataFrameGroupBy(object):
 
     def shift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def nth(self, n, dropna=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -194,13 +194,13 @@ class DataFrameGroupBy(object):
 
     def pct_change(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -218,7 +218,7 @@ class DataFrameGroupBy(object):
 
     def first(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -228,7 +228,7 @@ class DataFrameGroupBy(object):
     def __getitem__(self, key):
         # This operation requires a SeriesGroupBy Object
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -237,13 +237,13 @@ class DataFrameGroupBy(object):
 
     def bfill(self, limit=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def idxmin(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -262,20 +262,20 @@ class DataFrameGroupBy(object):
         if is_list_like(arg):
             raise NotImplementedError(
                 "This requires Multi-level index to be implemented. "
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         return self._apply_agg_function(lambda df: df.aggregate(arg, *args, **kwargs))
 
     def last(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def mad(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -285,13 +285,13 @@ class DataFrameGroupBy(object):
     @property
     def corrwith(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def pad(self, limit=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -303,7 +303,7 @@ class DataFrameGroupBy(object):
 
     def get_group(self, name, obj=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -321,13 +321,13 @@ class DataFrameGroupBy(object):
 
     def __unicode__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def describe(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -345,7 +345,7 @@ class DataFrameGroupBy(object):
         **kwds
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -362,7 +362,7 @@ class DataFrameGroupBy(object):
 
     def resample(self, rule, *args, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -371,7 +371,7 @@ class DataFrameGroupBy(object):
 
     def head(self, n=5):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -386,7 +386,7 @@ class DataFrameGroupBy(object):
 
     def cov(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -395,7 +395,7 @@ class DataFrameGroupBy(object):
 
     def corr(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -410,13 +410,13 @@ class DataFrameGroupBy(object):
 
     def cumcount(self, ascending=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def tail(self, n=5):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -424,19 +424,19 @@ class DataFrameGroupBy(object):
     # separately. They do not appear to be commonly used.
     def expanding(self, *args, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def rolling(self, *args, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def hist(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -444,7 +444,7 @@ class DataFrameGroupBy(object):
         if is_list_like(q):
             raise NotImplementedError(
                 "This requires Multi-level index to be implemented. "
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
 
@@ -452,13 +452,13 @@ class DataFrameGroupBy(object):
 
     def diff(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def take(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 

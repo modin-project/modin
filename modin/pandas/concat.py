@@ -68,7 +68,7 @@ def concat(
     if isinstance(objs, dict):
         raise NotImplementedError(
             "Obj as dicts not implemented. To contribute to "
-            "Pandas on Ray, please visit github.com/ray-project/ray."
+            "Modin, please visit github.com/ray-project/ray."
         )
     axis = pandas.DataFrame()._get_axis_number(axis)
 

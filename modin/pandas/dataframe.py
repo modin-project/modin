@@ -550,7 +550,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
 
         other = self._validate_other(other, axis)
@@ -591,7 +591,7 @@ class DataFrame(object):
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         elif is_list_like(arg) or callable(arg):
@@ -635,7 +635,7 @@ class DataFrame(object):
         broadcast_axis=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -779,7 +779,7 @@ class DataFrame(object):
 
     def as_blocks(self, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -798,19 +798,19 @@ class DataFrame(object):
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def asof(self, where, subset=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def assign(self, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -836,13 +836,13 @@ class DataFrame(object):
 
     def at_time(self, time, asof=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def between_time(self, start_time, end_time, include_start=True, include_end=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -932,25 +932,25 @@ class DataFrame(object):
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def combine_first(self, other):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def compound(self, axis=None, skipna=None, level=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def consolidate(self, inplace=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -962,19 +962,19 @@ class DataFrame(object):
         copy=True,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def corr(self, method="pearson", min_periods=1):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def corrwith(self, other, axis=0, drop=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -997,7 +997,7 @@ class DataFrame(object):
 
     def cov(self, min_periods=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1125,7 +1125,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.div(
@@ -1149,7 +1149,7 @@ class DataFrame(object):
 
     def dot(self, other):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1248,13 +1248,13 @@ class DataFrame(object):
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def duplicated(self, subset=None, keep="first"):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1271,7 +1271,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.eq(other=other, axis=axis, level=level)
@@ -1362,13 +1362,13 @@ class DataFrame(object):
         axis=0,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1508,7 +1508,7 @@ class DataFrame(object):
 
     def first(self, offset):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1534,7 +1534,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.floordiv(
@@ -1614,7 +1614,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ge(other=other, axis=axis, level=level)
@@ -1659,13 +1659,13 @@ class DataFrame(object):
 
     def get_value(self, index, col, takeable=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def get_values(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1682,7 +1682,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.gt(other=other, axis=axis, level=level)
@@ -1720,7 +1720,7 @@ class DataFrame(object):
         **kwargs
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1756,7 +1756,7 @@ class DataFrame(object):
 
     def infer_objects(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -1899,7 +1899,7 @@ class DataFrame(object):
         **kwargs
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2052,19 +2052,19 @@ class DataFrame(object):
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def last(self, offset):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2089,7 +2089,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.le(other=other, axis=axis, level=level)
@@ -2097,7 +2097,7 @@ class DataFrame(object):
 
     def lookup(self, row_labels, col_labels):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2114,7 +2114,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.lt(other=other, axis=axis, level=level)
@@ -2122,7 +2122,7 @@ class DataFrame(object):
 
     def mad(self, axis=None, skipna=None, level=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2138,7 +2138,7 @@ class DataFrame(object):
         raise_on_error=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2201,7 +2201,7 @@ class DataFrame(object):
         col_level=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2272,7 +2272,7 @@ class DataFrame(object):
             )
         if left_index is False or right_index is False:
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         if left_index and right_index:
@@ -2309,7 +2309,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mod(
@@ -2346,7 +2346,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mul(
@@ -2381,7 +2381,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ne(other=other, axis=axis, level=level)
@@ -2389,7 +2389,7 @@ class DataFrame(object):
 
     def nlargest(self, n, columns, keep="first"):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2413,7 +2413,7 @@ class DataFrame(object):
 
     def nsmallest(self, n, columns, keep="first"):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2432,7 +2432,7 @@ class DataFrame(object):
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2451,7 +2451,7 @@ class DataFrame(object):
 
     def pivot(self, index=None, columns=None, values=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2467,7 +2467,7 @@ class DataFrame(object):
         margins_name="All",
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2565,7 +2565,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
 
         other = self._validate_other(other, axis)
@@ -2777,7 +2777,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rdiv(
@@ -2801,7 +2801,7 @@ class DataFrame(object):
         if level is not None:
             raise NotImplementedError(
                 "Multilevel Index not Implemented. "
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
@@ -2847,13 +2847,13 @@ class DataFrame(object):
         fill_value=np.nan,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2934,7 +2934,7 @@ class DataFrame(object):
 
     def reorder_levels(self, order, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2949,7 +2949,7 @@ class DataFrame(object):
         axis=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -2970,7 +2970,7 @@ class DataFrame(object):
         level=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3031,7 +3031,7 @@ class DataFrame(object):
         closed=None,
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3062,7 +3062,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rpow(
@@ -3085,7 +3085,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rsub(
@@ -3239,7 +3239,7 @@ class DataFrame(object):
 
     def select(self, crit, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3283,7 +3283,7 @@ class DataFrame(object):
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3400,13 +3400,13 @@ class DataFrame(object):
 
     def set_value(self, index, col, value, takeable=False):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def shift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3433,7 +3433,7 @@ class DataFrame(object):
 
     def slice_shift(self, periods=1, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3538,19 +3538,19 @@ class DataFrame(object):
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
     ):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def squeeze(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def stack(self, level=-1, dropna=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3594,7 +3594,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.sub(
@@ -3618,13 +3618,13 @@ class DataFrame(object):
 
     def swapaxes(self, axis1, axis2, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def swaplevel(self, i=-2, j=-1, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3643,7 +3643,7 @@ class DataFrame(object):
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3702,7 +3702,7 @@ class DataFrame(object):
 
     def to_dense(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3901,7 +3901,7 @@ class DataFrame(object):
 
     def to_panel(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3911,7 +3911,7 @@ class DataFrame(object):
 
     def to_period(self, freq=None, axis=0, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -3927,7 +3927,7 @@ class DataFrame(object):
 
     def to_sparse(self, fill_value=None, kind="block"):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4010,13 +4010,13 @@ class DataFrame(object):
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def to_xarray(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4044,7 +4044,7 @@ class DataFrame(object):
         """
         if level is not None:
             raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
+                "Mutlilevel index not yet supported " "in Modin"
             )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.truediv(
@@ -4054,31 +4054,31 @@ class DataFrame(object):
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def tshift(self, periods=1, freq=None, axis=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def unstack(self, level=-1, fill_value=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4101,7 +4101,7 @@ class DataFrame(object):
         if raise_conflict:
             raise NotImplementedError(
                 "raise_conflict parameter not yet supported. "
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         if not isinstance(other, DataFrame):
@@ -4174,7 +4174,7 @@ class DataFrame(object):
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             raise NotImplementedError(
-                "Multilevel Index not yet supported on " "Pandas on Ray."
+                "Multilevel Index not yet supported on " "Modin."
             )
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         cond = cond(self) if callable(cond) else cond
@@ -4202,7 +4202,7 @@ class DataFrame(object):
 
     def xs(self, key, axis=0, level=None, drop_level=True):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4232,13 +4232,13 @@ class DataFrame(object):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please"
+                "To contribute to Modin, please"
                 "visit github.com/modin-project/modin."
             )
             # return self._getitem_frame(key)
         elif is_mi_columns:
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please"
+                "To contribute to Modin, please"
                 "visit github.com/modin-project/modin."
             )
             # return self._getitem_multilevel(key)
@@ -4295,7 +4295,7 @@ class DataFrame(object):
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
+                "To contribute to Modin, please visit "
                 "github.com/modin-project/modin."
             )
         if key not in self.columns:
@@ -4315,19 +4315,19 @@ class DataFrame(object):
 
     def __unicode__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def __invert__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def __hash__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4370,7 +4370,7 @@ class DataFrame(object):
 
     def __round__(self, decimals=0):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4384,13 +4384,13 @@ class DataFrame(object):
 
     def __getstate__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def __setstate__(self, state):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4409,7 +4409,7 @@ class DataFrame(object):
 
     def __finalize__(self, other, method=None, **kwargs):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4553,34 +4553,34 @@ class DataFrame(object):
 
     def __sizeof__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     @property
     def __doc__(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     @property
     def blocks(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     @property
     def style(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def iat(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
@@ -4598,19 +4598,19 @@ class DataFrame(object):
     @property
     def is_copy(self):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def at(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 
     def ix(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
 

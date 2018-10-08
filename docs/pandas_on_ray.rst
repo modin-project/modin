@@ -50,7 +50,7 @@ following:
 
 .. code-block:: text
 
-  NotImplementedError: To contribute to Pandas on Ray, please visit github.com/modin-project/modin.
+  NotImplementedError: To contribute to Modin, please visit github.com/modin-project/modin.
 
 We have compiled a list of currently supported methods `here`_.
 
