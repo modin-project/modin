@@ -1611,18 +1611,30 @@ class PandasDataManager(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
-        new_data = self.map_across_full_axis(axis, func)
+        if numeric_only:
+            data_manager = self.numeric_function_clean_dataframe(axis)[1]
+        else:
+            data_manager = self
+        new_data = data_manager.map_across_full_axis(axis, func)
 
         counts = (
-            self.__constructor__(new_data, self.index, self.columns)
+            self.__constructor__(new_data, self.index, data_manager.columns)
             .notnull()
             .sum(axis=axis)
         )
         max_count = counts.max()
-
-        new_index = pandas.RangeIndex(max_count) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
+        if max_count is np.nan:
+            max_count = len(data_manager.columns) if axis else len(data_manager.index)
+        # new_index = pandas.RangeIndex(max_count) if not axis else self.index
+        # new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
+        if not axis:
+            new_index = pandas.RangeIndex(max_count) if max_count else pandas.Index([])
+            new_columns = data_manager.columns
+        else:
+            new_index = data_manager.index
+            new_columns = pandas.RangeIndex(max_count) if max_count else pandas.Index([])
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
         final_labels = new_index if not axis else new_columns
@@ -1634,7 +1646,7 @@ class PandasDataManager(object):
             axis, lambda df: df.reindex(axis=axis, labels=final_labels)
         )
         return self.__constructor__(
-            final_data, new_index, new_columns, self._dtype_cache
+            final_data, new_index, new_columns, data_manager._dtype_cache
         )
 
     def fillna(self, **kwargs):
