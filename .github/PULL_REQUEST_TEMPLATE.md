@@ -11,3 +11,4 @@ Thank you for your contribution!
 <!-- Are there any issues opened that will be resolved by merging this change? -->
 
 - [ ] passes `git diff upstream/master -u -- "*.py" | flake8 --diff`
+- [ ] passes `black --check modin/`
