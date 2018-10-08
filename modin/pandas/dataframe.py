@@ -1905,7 +1905,7 @@ class DataFrame(object):
         downcast=None,
         **kwargs
     ):
-        return self._default_to_pandas_func(op="interpolate"
+        return self._default_to_pandas_func(op="interpolate",
                                             method=method,
                                             axis=axis,
                                             limit=limit,
@@ -2062,7 +2062,7 @@ class DataFrame(object):
             )
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas_func(op="kurt"
+        return self._default_to_pandas_func(op="kurt",
                                             axis=axis,
                                             skipna=skipna,
                                             level=level,
@@ -2070,7 +2070,7 @@ class DataFrame(object):
                                             **kwargs)
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas_func(op="kurtosis"
+        return self._default_to_pandas_func(op="kurtosis",
                                             axis=axis,
                                             skipna=skipna,
                                             level=level,
@@ -2078,7 +2078,7 @@ class DataFrame(object):
                                             **kwargs)
 
     def last(self, offset):
-        return self._default_to_pandas_func(op="last"
+        return self._default_to_pandas_func(op="last",
                                             offset)
 
     def last_valid_index(self):
@@ -4675,6 +4675,7 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
+
     def _default_to_pandas_func(self, op, *arg, **kwargs):
         """Helper method to use default pandas function"""
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
