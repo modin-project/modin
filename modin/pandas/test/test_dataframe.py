@@ -768,6 +768,37 @@ def test_empty_df():
     assert len(df.columns) == 0
 
 
+def test_multilevel_dataframe():
+    # create dataframes with multilevel index
+    frame_data = {
+        "col1": [0.0, 1.0, 2.0, 3.0],
+        "col2": [4.0, 5.0, 6.0, 7.0],
+        "col3": [8.0, 9.0, 10.0, 11.0],
+        "col4": [12.0, 13.0, 14.0, 15.0],
+        "col5": [0.0, 0.0, 0.0, 0.0],
+    }
+
+    pandas_df = pandas.DataFrame(frame_data)
+    modin_df = pd.DataFrame(frame_data)
+
+    pandas_df.index = pandas.MultiIndex(
+        levels=[["s"], ["a", "b"], [1, 2]],
+        labels=[[0, 0, 0, 0], [0, 0, 1, 1], [0, 1, 0, 1]],
+    )
+    modin_df.index = [["s", "s", "s", "s"], ["a", "a", "b", "b"], [1, 2, 1, 2]]
+
+    pandas_df.columns = [["m", "m", "n", "n", "n"], [3, 4, 3, 4, 5]]
+    pandas_df.columns.names = ['multicol1', 'multicol2']
+    modin_df.columns = [["m", "m", "n", "n", "n"], [3, 4, 3, 4, 5]]
+    modin_df.columns.names = ['multicol1', 'multicol2']
+
+    # agg functions using map_across_full_axis: reindex, sum, sort_index
+    test_sum(modin_df, pandas_df, level=2)
+    test_sum(modin_df, pandas_df, level=[0, 2])
+    test_sum(modin_df, pandas_df, axis=1, level='multicol2')
+    test_sum(modin_df, pandas_df, axis=1, level=[0, 1])
+
+
 @pytest.fixture
 def test_is_empty(df):
     assert df.size == 0 and df.empty
@@ -963,8 +994,10 @@ def test_copy(ray_df):
 
 
 @pytest.fixture
-def test_sum(ray_df, pandas_df):
-    assert ray_df.sum().equals(pandas_df.sum())
+def test_sum(ray_df, pandas_df, axis=None, level=None):
+    assert ray_df.sum(axis=axis, level=level).equals(
+        pandas_df.sum(axis=axis, level=level)
+    )
 
 
 @pytest.fixture
