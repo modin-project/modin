@@ -1014,7 +1014,6 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis:
             self._validate_dtypes()
-
         return DataFrame(
             data_manager=self._data_manager.cummax(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1032,7 +1031,6 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis:
             self._validate_dtypes()
-
         return DataFrame(
             data_manager=self._data_manager.cummin(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1049,7 +1047,6 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         self._validate_dtypes(numeric_only=True)
-
         return DataFrame(
             data_manager=self._data_manager.cumprod(axis=axis, skipna=skipna, **kwargs)
         )
@@ -1066,7 +1063,6 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         self._validate_dtypes(numeric_only=True)
-
         return DataFrame(
             data_manager=self._data_manager.cumsum(axis=axis, skipna=skipna, **kwargs)
         )
