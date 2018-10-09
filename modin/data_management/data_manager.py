@@ -159,7 +159,7 @@ class PandasDataManager(object):
 
         return helper
 
-    def numeric_columns(self):
+    def numeric_columns(self, include_bool=True):
         """Returns the numeric columns of the Manager.
 
         Returns:
@@ -167,7 +167,9 @@ class PandasDataManager(object):
         """
         columns = []
         for col, dtype in zip(self.columns, self.dtypes):
-            if is_numeric_dtype(dtype):
+            if is_numeric_dtype(dtype) and (include_bool
+                                            or (not include_bool and dtype !=
+                                                np.bool_)):
                 columns.append(col)
         return columns
 
@@ -1379,25 +1381,39 @@ class PandasDataManager(object):
         Returns:
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
-        # Only describe numeric if there are numeric
+        # Only describe numeric if there are numeric columns
         # Otherwise, describe all
-        columns_for_describe = self.numeric_columns()
-        if len(columns_for_describe) != 0 and "object" in kwargs["exclude"]:
+        new_columns = self.numeric_columns(include_bool=False)
+        # new_index = [self.columns[i] for i in range(len(self.columns))
+        #                         if self.dtypes[i] != np.dtype(np.bool_)
+        #                         and self.columns[i] in new_index]
+        if len(new_columns) != 0:
             numeric = True
+            exclude = kwargs.get("exclude", None)
+            if is_list_like(exclude):
+                exclude.append([np.timedelta64, np.datetime64])
+            else:
+                exclude = [exclude, np.timedelta64, np.datetime64]
+            kwargs["exclude"] = exclude
         else:
             numeric = False
-            # If no numeric dtypes, then do all
-            columns_for_describe = self.columns
+            # If only timedelta and datetime objects, only do the timedelta
+            # columns
+            if all([dtype for dtype in self.dtypes if dtype == np.datetime64
+                                                    or dtype == np.timedelta64]):
+                new_columns = [self.columns[i] for i in range(len(self.columns))
+                                        if self.dtypes[i] != np.dtype('datetime64[ns]')]
+            else:
+                # Describe all columns
+                new_columns = self.columns
 
         def describe_builder(df, **kwargs):
             return pandas.DataFrame.describe(df, **kwargs)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self.full_axis_reduce_along_select_indices(
-            func, 0, columns_for_describe, False
-        )
-        new_columns = columns_for_describe
+        new_data = self.full_axis_reduce_along_select_indices(func, 0,
+                new_columns, False)
         new_index = self.compute_index(0, new_data, False)
         if numeric:
             new_dtypes = pandas.Series(
