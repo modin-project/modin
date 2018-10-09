@@ -167,9 +167,9 @@ class PandasDataManager(object):
         """
         columns = []
         for col, dtype in zip(self.columns, self.dtypes):
-            if is_numeric_dtype(dtype) and (include_bool
-                                            or (not include_bool and dtype !=
-                                                np.bool_)):
+            if is_numeric_dtype(dtype) and (
+                include_bool or (not include_bool and dtype != np.bool_)
+            ):
                 columns.append(col)
         return columns
 
@@ -1399,10 +1399,18 @@ class PandasDataManager(object):
             numeric = False
             # If only timedelta and datetime objects, only do the timedelta
             # columns
-            if all([dtype for dtype in self.dtypes if dtype == np.datetime64
-                                                    or dtype == np.timedelta64]):
-                new_columns = [self.columns[i] for i in range(len(self.columns))
-                                        if self.dtypes[i] != np.dtype('datetime64[ns]')]
+            if all(
+                [
+                    dtype
+                    for dtype in self.dtypes
+                    if dtype == np.datetime64 or dtype == np.timedelta64
+                ]
+            ):
+                new_columns = [
+                    self.columns[i]
+                    for i in range(len(self.columns))
+                    if self.dtypes[i] != np.dtype("datetime64[ns]")
+                ]
             else:
                 # Describe all columns
                 new_columns = self.columns
@@ -1412,8 +1420,9 @@ class PandasDataManager(object):
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self.full_axis_reduce_along_select_indices(func, 0,
-                new_columns, False)
+        new_data = self.full_axis_reduce_along_select_indices(
+            func, 0, new_columns, False
+        )
         new_index = self.compute_index(0, new_data, False)
         if numeric:
             new_dtypes = pandas.Series(
