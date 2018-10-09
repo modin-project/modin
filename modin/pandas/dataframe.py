@@ -4451,7 +4451,9 @@ class DataFrame(object):
         return self._default_to_pandas_func(op=pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
-        return self._default_to_pandas_func(op=pandas.DataFrame.__setstate__, state=state)
+        return self._default_to_pandas_func(
+            op=pandas.DataFrame.__setstate__, state=state
+        )
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4647,15 +4649,13 @@ class DataFrame(object):
     @property
     def at(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
+            "To contribute to Modin, please visit github.com/modin-project/modin."
         )
 
     @property
     def ix(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
+            "To contribute to Modin, please visit github.com/modin-project/modin."
         )
 
     @property
