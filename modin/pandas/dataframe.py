@@ -632,6 +632,8 @@ class DataFrame(object):
         fill_axis=0,
         broadcast_axis=None,
     ):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.align,
             other=other,
@@ -937,6 +939,8 @@ class DataFrame(object):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, overwrite=True):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.combine,
             other=other,
@@ -946,6 +950,8 @@ class DataFrame(object):
         )
 
     def combine_first(self, other):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.combine_first, other=other
         )
@@ -981,6 +987,8 @@ class DataFrame(object):
         )
 
     def corrwith(self, other, axis=0, drop=False):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.corrwith, other=other, axis=axis, drop=drop
         )
@@ -1152,6 +1160,8 @@ class DataFrame(object):
         return self.div(other, axis, level, fill_value)
 
     def dot(self, other):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(op=pandas.DataFrame.dot, other=other)
 
     def drop(
@@ -2151,6 +2161,8 @@ class DataFrame(object):
         try_cast=False,
         raise_on_error=None,
     ):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.mask,
             cond=cond,
@@ -2881,6 +2893,8 @@ class DataFrame(object):
         )
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.reindex_like,
             other=other,
@@ -3460,13 +3474,13 @@ class DataFrame(object):
             op=pandas.DataFrame.set_values,
             index=index,
             col=col,
-            wvalue=value,
+            value=value,
             takeable=takeable,
         )
 
     def shift(self, periods=1, freq=None, axis=0):
         return self._default_to_pandas_func(
-            op=pandas.DataFrame.shift, periods=period, freq=freq, axis=axis
+            op=pandas.DataFrame.shift, periods=periods, freq=freq, axis=axis
         )
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -3492,7 +3506,7 @@ class DataFrame(object):
 
     def slice_shift(self, periods=1, axis=0):
         return self._default_to_pandas_func(
-            op=pandas.DataFrame.slice_shift, periods=period, axis=axis
+            op=pandas.DataFrame.slice_shift, periods=periods, axis=axis
         )
 
     def sort_index(
@@ -4437,7 +4451,7 @@ class DataFrame(object):
         return self._default_to_pandas_func(op=pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
-        return self._default_to_pandas_func(op=pandas.DataFrame.__setstate__)
+        return self._default_to_pandas_func(op=pandas.DataFrame.__setstate__, state=state)
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4453,6 +4467,8 @@ class DataFrame(object):
         self._update_inplace(new_manager=self._data_manager.delitem(key))
 
     def __finalize__(self, other, method=None, **kwargs):
+        if isinstance(other, DataFrame):
+            other = other.to_pandas()
         return self._default_to_pandas_func(
             op=pandas.DataFrame.__finalize__, other=other, method=method, **kwargs
         )
@@ -4600,15 +4616,15 @@ class DataFrame(object):
 
     @property
     def __doc__(self):
-        return self._default_to_pandas_func(op=pandas.DataFrame.__doc__)
+        return self._data_manager.to_pandas().__doc__
 
     @property
     def blocks(self):
-        return self._default_to_pandas_func(op=pandas.DataFrame.blocks)
+        return self._data_manager.to_pandas().blocks
 
     @property
     def style(self):
-        return self._default_to_pandas_func(op=pandas.DataFrame.style)
+        return self._data_manager.to_pandas().style
 
     def iat(self, axis=None):
         return self._default_to_pandas_func(op=pandas.DataFrame.iat)
@@ -4626,13 +4642,21 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        return self._default_to_pandas_func(op=pandas.DataFrame.iscopy)
+        return self._data_manager.to_pandas().is_copy
 
+    @property
     def at(self, axis=None):
-        return self._default_to_pandas_func(op=pandas.DataFrame.at)
+        raise NotImplementedError(
+            "To contribute to Modin, please visit "
+            "github.com/modin-project/modin."
+        )
 
+    @property
     def ix(self, axis=None):
-        return self._default_to_pandas_func(op=pandas.DataFrame.ix)
+        raise NotImplementedError(
+            "To contribute to Modin, please visit "
+            "github.com/modin-project/modin."
+        )
 
     @property
     def iloc(self):

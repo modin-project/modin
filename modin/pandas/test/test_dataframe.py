@@ -1022,6 +1022,7 @@ def test_aggregate(ray_df, pandas_df, func, axis):
         assert ray_result.equals(pandas_result)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_align():
     ray_df = create_test_dataframe()
 
@@ -1073,6 +1074,7 @@ def test_apply(ray_df, pandas_df, func, axis):
         assert ray_result.equals(pandas_result)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_as_blocks():
     ray_df = create_test_dataframe()
 
@@ -1111,6 +1113,7 @@ def test_as_matrix():
     tm.assert_almost_equal(mat, expected)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_asfreq():
     ray_df = create_test_dataframe()
 
@@ -1118,6 +1121,7 @@ def test_asfreq():
         ray_df.asfreq(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_asof():
     ray_df = create_test_dataframe()
 
@@ -1125,6 +1129,7 @@ def test_asof():
         ray_df.asof(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_assign():
     ray_df = create_test_dataframe()
 
@@ -1157,6 +1162,7 @@ def test_astype():
     assert ray_df_equals_pandas(ray_df_casted, expected_df_casted)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_at_time():
     ray_df = create_test_dataframe()
 
@@ -1164,6 +1170,7 @@ def test_at_time():
         ray_df.at_time(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_between_time():
     ray_df = create_test_dataframe()
 
@@ -1254,6 +1261,7 @@ def test_clip_upper(ray_df, pandas_df):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_combine():
     ray_df = create_test_dataframe()
 
@@ -1261,6 +1269,7 @@ def test_combine():
         ray_df.combine(None, None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_combine_first():
     ray_df = create_test_dataframe()
 
@@ -1268,6 +1277,7 @@ def test_combine_first():
         ray_df.combine_first(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_compound():
     ray_df = create_test_dataframe()
 
@@ -1275,6 +1285,7 @@ def test_compound():
         ray_df.compound()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_consolidate():
     ray_df = create_test_dataframe()
 
@@ -1282,6 +1293,7 @@ def test_consolidate():
         ray_df.consolidate()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_convert_objects():
     ray_df = create_test_dataframe()
 
@@ -1289,6 +1301,7 @@ def test_convert_objects():
         ray_df.convert_objects()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_corr():
     ray_df = create_test_dataframe()
 
@@ -1296,6 +1309,7 @@ def test_corr():
         ray_df.corr()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_corrwith():
     ray_df = create_test_dataframe()
 
@@ -1309,6 +1323,7 @@ def test_count(ray_df, pd_df):
     assert ray_df.count(axis=1).equals(pd_df.count(axis=1))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_cov():
     ray_df = create_test_dataframe()
 
@@ -1356,6 +1371,7 @@ def test_divide():
     test_inter_df_math("divide", simple=False)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_dot():
     ray_df = create_test_dataframe()
 
@@ -1449,6 +1465,7 @@ def test_drop_api_equivalence():
         ray_df.drop(axis=1)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_drop_duplicates():
     ray_df = create_test_dataframe()
 
@@ -1552,6 +1569,7 @@ def test_dropna_subset_error(ray_df):
         ray_df.dropna(axis=1, subset=[4, 5])
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_duplicated():
     ray_df = create_test_dataframe()
 
@@ -1613,6 +1631,7 @@ def test_eval_df_arithmetic_subexpression():
     assert ray_df_equals_pandas(ray_df, df)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_ewm():
     ray_df = create_test_dataframe()
 
@@ -1620,6 +1639,7 @@ def test_ewm():
         ray_df.ewm()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_expanding():
     ray_df = create_test_dataframe()
 
@@ -2017,6 +2037,7 @@ def test_filter(ray_df, pandas_df, by):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_first():
     ray_df = create_test_dataframe()
 
@@ -2037,6 +2058,7 @@ def test_ge():
     test_comparison_inter_ops("ge")
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_get_value():
     ray_df = create_test_dataframe()
 
@@ -2044,6 +2066,7 @@ def test_get_value():
         ray_df.get_value(None, None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_get_values():
     ray_df = create_test_dataframe()
 
@@ -2060,6 +2083,7 @@ def test_head(ray_df, pandas_df, n=5):
     assert ray_df_equals_pandas(ray_df.head(n), pandas_df.head(n))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_hist():
     ray_df = create_test_dataframe()
 
@@ -2077,6 +2101,7 @@ def test_idxmin(ray_df, pandas_df):
     assert ray_df.idxmin().equals(pandas_df.idxmin())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_infer_objects():
     ray_df = create_test_dataframe()
 
@@ -2116,6 +2141,7 @@ def test_insert(ray_df, pandas_df, loc, column, value):
     pd_df_cp.insert(loc, column, value)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_interpolate():
     ray_df = create_test_dataframe()
 
@@ -2209,6 +2235,7 @@ def test_join():
         assert ray_df_equals_pandas(ray_join, pandas_join)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_kurt():
     ray_df = create_test_dataframe()
 
@@ -2216,6 +2243,7 @@ def test_kurt():
         ray_df.kurt()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_kurtosis():
     ray_df = create_test_dataframe()
 
@@ -2223,6 +2251,7 @@ def test_kurtosis():
         ray_df.kurtosis()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_last():
     ray_df = create_test_dataframe()
 
@@ -2239,6 +2268,7 @@ def test_le():
     test_comparison_inter_ops("le")
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_lookup():
     ray_df = create_test_dataframe()
 
@@ -2250,6 +2280,7 @@ def test_lt():
     test_comparison_inter_ops("lt")
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_mad():
     ray_df = create_test_dataframe()
 
@@ -2257,6 +2288,7 @@ def test_mad():
         ray_df.mad()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_mask():
     ray_df = create_test_dataframe()
 
@@ -2285,6 +2317,7 @@ def test_median(ray_df, pandas_df):
     assert ray_df.median().equals(pandas_df.median())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_melt():
     ray_df = create_test_dataframe()
 
@@ -2390,6 +2423,7 @@ def test_ne():
     test_comparison_inter_ops("ne")
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_nlargest():
     ray_df = create_test_dataframe()
 
@@ -2407,6 +2441,7 @@ def test_notnull(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.notnull(), pandas_df.notnull())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_nsmallest():
     ray_df = create_test_dataframe()
 
@@ -2420,6 +2455,7 @@ def test_nunique(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.nunique(axis=1), pandas_df.nunique(axis=1))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_pct_change():
     ray_df = create_test_dataframe()
 
@@ -2455,6 +2491,7 @@ def test_pipe(ray_df, pandas_df):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_pivot():
     ray_df = create_test_dataframe()
 
@@ -2462,6 +2499,7 @@ def test_pivot():
         ray_df.pivot()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_pivot_table():
     ray_df = create_test_dataframe()
 
@@ -2562,6 +2600,7 @@ def test_reindex():
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_reindex_axis():
     ray_df = create_test_dataframe()
 
@@ -2569,6 +2608,7 @@ def test_reindex_axis():
         ray_df.reindex_axis(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_reindex_like():
     ray_df = create_test_dataframe()
 
@@ -2794,6 +2834,7 @@ def test_rename_axis_inplace():
     assert ray_df_equals_pandas(ray_result, result)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_reorder_levels():
     ray_df = create_test_dataframe()
 
@@ -2801,6 +2842,7 @@ def test_reorder_levels():
         ray_df.reorder_levels(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_replace():
     ray_df = create_test_dataframe()
 
@@ -2808,6 +2850,7 @@ def test_replace():
         ray_df.replace()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_resample():
     ray_df = create_test_dataframe()
 
@@ -2847,6 +2890,7 @@ def test_rmul():
     test_inter_df_math_right_ops("rmul")
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_rolling():
     ray_df = create_test_dataframe()
 
@@ -2889,6 +2933,7 @@ def test_sample(ray_df, pd_df):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_select():
     ray_df = create_test_dataframe()
 
@@ -2922,6 +2967,7 @@ def test_select_dtypes():
         assert True
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_sem():
     ray_df = create_test_dataframe()
 
@@ -2948,6 +2994,7 @@ def test_set_index(ray_df, pandas_df, keys, inplace=False):
         assert to_pandas(ray_df_cp).equals(pd_df_cp)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_set_value():
     ray_df = create_test_dataframe()
 
@@ -2955,6 +3002,7 @@ def test_set_value():
         ray_df.set_value(None, None, None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_shift():
     ray_df = create_test_dataframe()
 
@@ -2968,6 +3016,7 @@ def test_skew(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.skew(axis=1), pandas_df.skew(axis=1))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_slice_shift():
     ray_df = create_test_dataframe()
 
@@ -3017,6 +3066,7 @@ def test_sort_values():
     assert ray_df_equals_pandas(ray_result, pandas_result)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_sortlevel():
     ray_df = create_test_dataframe()
 
@@ -3024,6 +3074,7 @@ def test_sortlevel():
         ray_df.sortlevel()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_squeeze():
     ray_df = create_test_dataframe()
 
@@ -3031,6 +3082,7 @@ def test_squeeze():
         ray_df.squeeze()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_stack():
     ray_df = create_test_dataframe()
 
@@ -3051,6 +3103,7 @@ def test_subtract():
     test_inter_df_math("subtract", simple=False)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_swapaxes():
     ray_df = create_test_dataframe()
 
@@ -3058,6 +3111,7 @@ def test_swapaxes():
         ray_df.swapaxes(None, None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_swaplevel():
     ray_df = create_test_dataframe()
 
@@ -3070,6 +3124,7 @@ def test_tail(ray_df, pandas_df):
     assert ray_df_equals_pandas(ray_df.tail(), pandas_df.tail())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_take():
     ray_df = create_test_dataframe()
 
@@ -3082,6 +3137,7 @@ def test_to_records():
     assert np.array_equal(ray_df.to_records(), to_pandas(ray_df).to_records())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_sparse():
     ray_df = create_test_dataframe()
 
@@ -3094,6 +3150,7 @@ def test_to_string():
     assert ray_df.to_string() == to_pandas(ray_df).to_string()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_timestamp():
     ray_df = create_test_dataframe()
 
@@ -3101,6 +3158,7 @@ def test_to_timestamp():
         ray_df.to_timestamp()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_xarray():
     ray_df = create_test_dataframe()
 
@@ -3121,6 +3179,7 @@ def test_truediv():
     test_inter_df_math("truediv", simple=False)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_truncate():
     ray_df = create_test_dataframe()
 
@@ -3128,6 +3187,7 @@ def test_truncate():
         ray_df.truncate()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_tshift():
     ray_df = create_test_dataframe()
 
@@ -3135,6 +3195,7 @@ def test_tshift():
         ray_df.tshift()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_tz_convert():
     ray_df = create_test_dataframe()
 
@@ -3142,6 +3203,7 @@ def test_tz_convert():
         ray_df.tz_convert(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_tz_localize():
     ray_df = create_test_dataframe()
 
@@ -3149,6 +3211,7 @@ def test_tz_localize():
         ray_df.tz_localize(None)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_unstack():
     ray_df = create_test_dataframe()
 
@@ -3204,6 +3267,7 @@ def test_where():
     assert all((to_pandas(ray_result) == pandas_result).all())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_xs():
     ray_df = create_test_dataframe()
 
@@ -3237,6 +3301,7 @@ def test___getattr__():
     assert isinstance(df2.columns, pandas.Index)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___setitem__():
     ray_df = create_test_dataframe()
 
@@ -3249,6 +3314,7 @@ def test___len__(ray_df, pandas_df):
     assert len(ray_df) == len(pandas_df)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___unicode__():
     ray_df = create_test_dataframe()
 
@@ -3262,6 +3328,7 @@ def test___neg__(ray_df, pd_df):
     assert pd_df.__neg__().equals(to_pandas(ray_df_neg))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___invert__():
     ray_df = create_test_dataframe()
 
@@ -3269,6 +3336,7 @@ def test___invert__():
         ray_df.__invert__()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___hash__():
     ray_df = create_test_dataframe()
 
@@ -3306,6 +3374,7 @@ def test___abs__(ray_df, pandas_df):
     assert ray_df_equals_pandas(abs(ray_df), abs(pandas_df))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___round__():
     ray_df = create_test_dataframe()
 
@@ -3318,6 +3387,7 @@ def test___array__(ray_df, pandas_df):
     assert_array_equal(ray_df.__array__(), pandas_df.__array__())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___getstate__():
     ray_df = create_test_dataframe()
 
@@ -3325,6 +3395,7 @@ def test___getstate__():
         ray_df.__getstate__()
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___setstate__():
     ray_df = create_test_dataframe()
 
@@ -3347,6 +3418,7 @@ def test___delitem__(ray_df, pd_df):
     ray_df_equals_pandas(ray_df, pd_df)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test___finalize__():
     ray_df = create_test_dataframe()
 
@@ -3366,6 +3438,7 @@ def test___deepcopy__(ray_df, pd_df):
     assert ray_df_equals_pandas(ray_df_copy, pd_df_copy)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_blocks():
     ray_df = create_test_dataframe()
 
@@ -3373,6 +3446,7 @@ def test_blocks():
         ray_df.blocks
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_style():
     ray_df = create_test_dataframe()
 
@@ -3380,6 +3454,7 @@ def test_style():
         ray_df.style
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_iat():
     ray_df = create_test_dataframe()
 
@@ -3468,6 +3543,7 @@ def test_loc(ray_df, pd_df):
     assert ray_df_equals_pandas(ray_df_copy, pd_df_copy)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_is_copy():
     ray_df = create_test_dataframe()
 
