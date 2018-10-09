@@ -1400,11 +1400,11 @@ class PandasDataManager(object):
             # If only timedelta and datetime objects, only do the timedelta
             # columns
             if all(
-                [
+                (
                     dtype
                     for dtype in self.dtypes
                     if dtype == np.datetime64 or dtype == np.timedelta64
-                ]
+                )
             ):
                 new_columns = [
                     self.columns[i]
