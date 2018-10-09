@@ -4676,4 +4676,7 @@ class DataFrame(object):
         """Helper method to use default pandas function"""
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
         result = op(self._data_manager.to_pandas(), *args, **kwargs)
-        return DataFrame(result)
+        if isinstance(result, pandas.DataFrame):
+            return DataFrame(result)
+        else:
+            return result

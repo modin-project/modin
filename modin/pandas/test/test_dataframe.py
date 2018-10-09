@@ -3132,7 +3132,6 @@ def test_take():
         ray_df.take(None)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_records():
     ray_df = create_test_dataframe()
     assert np.array_equal(ray_df.to_records(), to_pandas(ray_df).to_records())
