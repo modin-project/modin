@@ -35,7 +35,7 @@ def get_dummies(
     if sparse:
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):

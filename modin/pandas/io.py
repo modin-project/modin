@@ -328,7 +328,7 @@ def read_csv(
         warnings.warn(
             (
                 "Defaulting to Pandas implementation. To speed up "
-                "read_csv through the Pandas on Ray implementation, "
+                "read_csv through the Modin implementation, "
                 "comment the rows to skip instead."
             )
         )

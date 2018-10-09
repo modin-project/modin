@@ -199,7 +199,7 @@ class DataFrame(object):
             raise ValueError("expr cannot be an empty string")
 
         if isinstance(expr, str) and "@" in expr:
-            raise NotImplementedError("Local variables not yet supported in " "eval.")
+            raise NotImplementedError("Local variables not yet supported in eval.")
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
@@ -549,9 +549,7 @@ class DataFrame(object):
             A new DataFrame with the applied addition.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
 
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.add(
@@ -591,8 +589,7 @@ class DataFrame(object):
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
-                "github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
         elif is_list_like(arg) or callable(arg):
             return self.apply(arg, axis=_axis, args=args, **kwargs)
@@ -634,9 +631,20 @@ class DataFrame(object):
         fill_axis=0,
         broadcast_axis=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.align,
+            other,
+            join=join,
+            axis=axis,
+            level=level,
+            copy=copy,
+            fill_value=fill_value,
+            method=method,
+            limit=limit,
+            fill_axis=fill_axis,
+            broadcast_axis=broadcast_axis,
         )
 
     def all(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
@@ -778,10 +786,7 @@ class DataFrame(object):
         return DataFrame(data_manager=data_manager)
 
     def as_blocks(self, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.as_blocks, copy=copy)
 
     def as_matrix(self, columns=None):
         """Convert the frame to its Numpy-array representation.
@@ -797,22 +802,20 @@ class DataFrame(object):
         return to_pandas(self).as_matrix(columns)
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.asfreq,
+            freq,
+            method=method,
+            how=how,
+            normalize=normalize,
+            fill_value=fill_value,
         )
 
     def asof(self, where, subset=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.asof, where, subset=subset)
 
     def assign(self, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.assign, **kwargs)
 
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
@@ -835,15 +838,15 @@ class DataFrame(object):
             self._update_inplace(new_data_manager)
 
     def at_time(self, time, asof=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.at_time, time, asof=asof)
 
     def between_time(self, start_time, end_time, include_start=True, include_end=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.between_time,
+            start_time,
+            end_time,
+            include_start=include_start,
+            include_end=include_end,
         )
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -931,27 +934,29 @@ class DataFrame(object):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, overwrite=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.combine,
+            other,
+            func,
+            fill_value=fill_value,
+            overwrite=overwrite,
         )
 
     def combine_first(self, other):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(pandas.DataFrame.combine_first, other=other)
 
     def compound(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.compound, axis=axis, skipna=skipna, level=level
         )
 
     def consolidate(self, inplace=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.consolidate, inplace=inplace
         )
 
     def convert_objects(
@@ -961,21 +966,24 @@ class DataFrame(object):
         convert_timedeltas=True,
         copy=True,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.convert_objects,
+            convert_dates=convert_dates,
+            convert_numeric=convert_numeric,
+            convert_timedeltas=convert_timedeltas,
+            copy=copy,
         )
 
     def corr(self, method="pearson", min_periods=1):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
 
     def corrwith(self, other, axis=0, drop=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.corrwith, other, axis=axis, drop=drop
         )
 
     def count(self, axis=0, level=None, numeric_only=False):
@@ -996,9 +1004,8 @@ class DataFrame(object):
         )
 
     def cov(self, min_periods=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.cov, min_periods=min_periods
         )
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
@@ -1124,9 +1131,7 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.div(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1148,10 +1153,9 @@ class DataFrame(object):
         return self.div(other, axis, level, fill_value)
 
     def dot(self, other):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(pandas.DataFrame.dot, other)
 
     def drop(
         self,
@@ -1184,9 +1188,7 @@ class DataFrame(object):
         inplace = validate_bool_kwarg(inplace, "inplace")
         if labels is not None:
             if index is not None or columns is not None:
-                raise ValueError(
-                    "Cannot specify both 'labels' and " "'index'/'columns'"
-                )
+                raise ValueError("Cannot specify both 'labels' and 'index'/'columns'")
             axis = pandas.DataFrame()._get_axis_name(axis)
             axes = {axis: labels}
         elif index is not None or columns is not None:
@@ -1195,7 +1197,7 @@ class DataFrame(object):
             )
         else:
             raise ValueError(
-                "Need to specify at least one of 'labels', " "'index' or 'columns'"
+                "Need to specify at least one of 'labels', 'index' or 'columns'"
             )
 
         # TODO Clean up this error checking
@@ -1247,15 +1249,13 @@ class DataFrame(object):
         return DataFrame(data_manager=new_manager)
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.drop_duplicates, subset=subset, keep=keep, inplace=inplace
         )
 
     def duplicated(self, subset=None, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.duplicated, subset=subset, keep=keep
         )
 
     def eq(self, other, axis="columns", level=None):
@@ -1270,9 +1270,7 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.eq(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1361,15 +1359,26 @@ class DataFrame(object):
         ignore_na=False,
         axis=0,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.ewm,
+            com=com,
+            span=span,
+            halflife=halflife,
+            alpha=alpha,
+            min_periods=min_periods,
+            freq=freq,
+            adjust=adjust,
+            ignore_na=ignore_na,
+            axis=axis,
         )
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.expanding,
+            min_periods=min_periods,
+            freq=freq,
+            center=center,
+            axis=axis,
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -1424,7 +1433,7 @@ class DataFrame(object):
         # TODO implement value passed as DataFrame
         if isinstance(value, pandas.DataFrame):
             raise NotImplementedError(
-                "Passing a DataFrame as the value for " "fillna is not yet supported."
+                "Passing a DataFrame as the value for fillna is not yet supported."
             )
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
@@ -1507,10 +1516,7 @@ class DataFrame(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.first, offset)
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.
@@ -1533,9 +1539,7 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1613,9 +1617,7 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ge(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1658,16 +1660,12 @@ class DataFrame(object):
         return self.ftypes.value_counts().sort_index()
 
     def get_value(self, index, col, takeable=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.get_value, index, col, takeable=takeable
         )
 
     def get_values(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.get_values)
 
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
@@ -1681,9 +1679,7 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.gt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1719,9 +1715,23 @@ class DataFrame(object):
         bins=10,
         **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.hist,
+            data,
+            column=column,
+            by=by,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            ax=ax,
+            sharex=sharex,
+            sharey=sharey,
+            figsize=figsize,
+            layout=layout,
+            bins=bins,
+            **kwargs
         )
 
     def idxmax(self, axis=0, skipna=True):
@@ -1755,10 +1765,7 @@ class DataFrame(object):
         return self._data_manager.idxmin(axis=axis, skipna=skipna)
 
     def infer_objects(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.infer_objects)
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -1898,9 +1905,15 @@ class DataFrame(object):
         downcast=None,
         **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.interpolate,
+            method=method,
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            downcast=downcast,
+            **kwargs
         )
 
     def iterrows(self):
@@ -2031,7 +2044,7 @@ class DataFrame(object):
             # This constraint carried over from Pandas.
             if on is not None:
                 raise ValueError(
-                    "Joining multiple DataFrames only supported" " for joining on index"
+                    "Joining multiple DataFrames only supported for joining on index"
                 )
             # See note above about error checking with an empty join.
             pandas.DataFrame(columns=self.columns).join(
@@ -2051,22 +2064,27 @@ class DataFrame(object):
             )
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.kurt,
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs
         )
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.kurtosis,
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs
         )
 
     def last(self, offset):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.last, offset)
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.
@@ -2088,17 +2106,14 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.le(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def lookup(self, row_labels, col_labels):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.lookup, row_labels, col_labels
         )
 
     def lt(self, other, axis="columns", level=None):
@@ -2113,17 +2128,14 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.lt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def mad(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.mad, axis=axis, skipna=skipna, level=level
         )
 
     def mask(
@@ -2137,9 +2149,18 @@ class DataFrame(object):
         try_cast=False,
         raise_on_error=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.mask,
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+            raise_on_error=raise_on_error,
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -2200,9 +2221,13 @@ class DataFrame(object):
         value_name="value",
         col_level=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.melt,
+            id_vars=id_vars,
+            value_vars=value_vars,
+            var_name=var_name,
+            value_name=value_name,
+            col_level=col_level,
         )
 
     def memory_usage(self, index=True, deep=False):
@@ -2272,8 +2297,7 @@ class DataFrame(object):
             )
         if left_index is False or right_index is False:
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
-                "github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
         if left_index and right_index:
             return self.join(
@@ -2308,9 +2332,7 @@ class DataFrame(object):
             A new DataFrame with the Mod applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2345,9 +2367,7 @@ class DataFrame(object):
             A new DataFrame with the Multiply applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2380,17 +2400,14 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ne(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
     def nlargest(self, n, columns, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.nlargest, n, columns, keep=keep
         )
 
     def notna(self):
@@ -2412,9 +2429,8 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.notnull())
 
     def nsmallest(self, n, columns, keep="first"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.nsmallest, n, columns, keep=keep
         )
 
     def nunique(self, axis=0, dropna=True):
@@ -2431,9 +2447,13 @@ class DataFrame(object):
         return self._data_manager.nunique(axis=axis, dropna=dropna)
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.pct_change,
+            periods=periods,
+            fill_method=fill_method,
+            limit=limit,
+            freq=freq,
+            **kwargs
         )
 
     def pipe(self, func, *args, **kwargs):
@@ -2450,9 +2470,8 @@ class DataFrame(object):
         return com._pipe(self, func, *args, **kwargs)
 
     def pivot(self, index=None, columns=None, values=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.pivot, index=index, columns=columns, values=values
         )
 
     def pivot_table(
@@ -2466,9 +2485,16 @@ class DataFrame(object):
         dropna=True,
         margins_name="All",
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.pivot_table,
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggfunc,
+            fill_value=fill_value,
+            margins=margins,
+            dropna=dropna,
+            margins_name=margins_name,
         )
 
     def plot(
@@ -2564,9 +2590,7 @@ class DataFrame(object):
             A new DataFrame with the Pow applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
 
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.pow(
@@ -2665,7 +2689,7 @@ class DataFrame(object):
             # If not numeric_only and columns, then check all columns are either
             # numeric, timestamp, or timedelta
             if not axis and not all(check_dtype(t) for t in self.dtypes):
-                raise TypeError("can't multiply sequence by non-int of type " "'float'")
+                raise TypeError("can't multiply sequence by non-int of type 'float'")
             # If over rows, then make sure that all dtypes are equal for not
             # numeric_only
             elif axis:
@@ -2776,9 +2800,7 @@ class DataFrame(object):
             A new DataFrame with the rdiv applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2801,8 +2823,7 @@ class DataFrame(object):
         if level is not None:
             raise NotImplementedError(
                 "Multilevel Index not Implemented. "
-                "To contribute to Pandas on Ray, please visit "
-                "github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis == 0 and labels is not None:
@@ -2846,15 +2867,27 @@ class DataFrame(object):
         limit=None,
         fill_value=np.nan,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.reindex_axis,
+            labels,
+            axis=axis,
+            method=method,
+            level=level,
+            copy=copy,
+            limit=limit,
+            fill_value=fill_value,
         )
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.reindex_like,
+            other,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
         )
 
     def rename(
@@ -2933,9 +2966,8 @@ class DataFrame(object):
             return renamed
 
     def reorder_levels(self, order, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.reorder_levels, order, axis=axis
         )
 
     def replace(
@@ -2948,9 +2980,15 @@ class DataFrame(object):
         method="pad",
         axis=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.replace,
+            to_replace=to_replace,
+            value=value,
+            inplace=inplace,
+            limit=limit,
+            regex=regex,
+            method=method,
+            axis=axis,
         )
 
     def resample(
@@ -2969,9 +3007,21 @@ class DataFrame(object):
         on=None,
         level=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.resample,
+            rule,
+            how=how,
+            axis=axis,
+            fill_method=fill_method,
+            closed=closed,
+            label=label,
+            convention=convention,
+            kind=kind,
+            loffset=loffset,
+            limit=limit,
+            base=base,
+            on=on,
+            level=level,
         )
 
     def reset_index(
@@ -3030,9 +3080,16 @@ class DataFrame(object):
         axis=0,
         closed=None,
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.rolling,
+            window,
+            min_periods=min_periods,
+            freq=freq,
+            center=center,
+            win_type=win_type,
+            on=on,
+            axis=axis,
+            closed=closed,
         )
 
     def round(self, decimals=0, *args, **kwargs):
@@ -3061,9 +3118,7 @@ class DataFrame(object):
             A new DataFrame with the Pow applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3084,9 +3139,7 @@ class DataFrame(object):
              A new DataFrame with the subtraciont applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3150,7 +3203,7 @@ class DataFrame(object):
                     try:
                         weights = self[weights]
                     except KeyError:
-                        raise KeyError("String passed to weights not a " "valid column")
+                        raise KeyError("String passed to weights not a valid column")
                 else:
                     raise ValueError(
                         "Strings can only be passed to "
@@ -3161,12 +3214,12 @@ class DataFrame(object):
 
             if len(weights) != axis_length:
                 raise ValueError(
-                    "Weights and axis to be sampled must be of " "same length"
+                    "Weights and axis to be sampled must be of same length"
                 )
             if (weights == np.inf).any() or (weights == -np.inf).any():
                 raise ValueError("weight vector may not include `inf` values")
             if (weights < 0).any():
-                raise ValueError("weight vector many not include negative " "values")
+                raise ValueError("weight vector many not include negative values")
             # weights cannot be NaN when sampling, so we must set all nan
             # values to 0
             weights = weights.fillna(0)
@@ -3193,10 +3246,10 @@ class DataFrame(object):
         elif n is not None and frac is not None:
             # Pandas specification does not allow both n and frac to be passed
             # in
-            raise ValueError("Please enter a value for `frac` OR `n`, not " "both")
+            raise ValueError("Please enter a value for `frac` OR `n`, not both")
         if n < 0:
             raise ValueError(
-                "A negative number of rows requested. Please " "provide positive value."
+                "A negative number of rows requested. Please provide positive value."
             )
         if n == 0:
             # An Empty DataFrame is returned if the number of samples is 0.
@@ -3238,10 +3291,7 @@ class DataFrame(object):
             return DataFrame(data_manager=data_manager)
 
     def select(self, crit, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.select, crit, axis=axis)
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -3282,9 +3332,14 @@ class DataFrame(object):
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.sem,
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs
         )
 
     def set_axis(self, labels, axis=0, inplace=None):
@@ -3399,15 +3454,13 @@ class DataFrame(object):
             return frame
 
     def set_value(self, index, col, value, takeable=False):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.set_values, index, col, value, takeable=takeable
         )
 
     def shift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.shift, periods=periods, freq=freq, axis=axis
         )
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -3432,9 +3485,8 @@ class DataFrame(object):
         )
 
     def slice_shift(self, periods=1, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.slice_shift, periods=periods, axis=axis
         )
 
     def sort_index(
@@ -3537,21 +3589,21 @@ class DataFrame(object):
     def sortlevel(
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
     ):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.sortlevel,
+            level=level,
+            axis=axis,
+            ascending=ascending,
+            inplace=inplace,
+            sort_remaining=sort_remaining,
         )
 
     def squeeze(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
 
     def stack(self, level=-1, dropna=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.stack, level=level, dropna=dropna
         )
 
     def std(
@@ -3593,9 +3645,7 @@ class DataFrame(object):
              A new DataFrame with the subtraciont applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3617,15 +3667,13 @@ class DataFrame(object):
         return self.sub(other, axis, level, fill_value)
 
     def swapaxes(self, axis1, axis2, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.swapaxes, axis1, axis2, copy=copy
         )
 
     def swaplevel(self, i=-2, j=-1, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.swaplevel, i=i, j=j, axis=axis
         )
 
     def tail(self, n=5):
@@ -3642,9 +3690,13 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.tail(n))
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.take,
+            indices,
+            axis=axis,
+            convert=convert,
+            is_copy=is_copy,
+            **kwargs
         )
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
@@ -3701,10 +3753,7 @@ class DataFrame(object):
         return to_pandas(self).to_csv(**kwargs)
 
     def to_dense(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.to_dense)
 
     def to_dict(self, orient="dict", into=dict):
         warnings.warn("Defaulting to Pandas implementation", UserWarning)
@@ -3896,39 +3945,45 @@ class DataFrame(object):
         )
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_msgpack(path_or_buf, encoding, **kwargs)
-
-    def to_panel(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_msgpack,
+            path_or_buf=path_or_buf,
+            encoding=encoding,
+            **kwargs
         )
 
+    def to_panel(self):
+        return self._default_to_pandas_func(pandas.DataFrame.to_panel)
+
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_parquet(fname, engine, compression, **kwargs)
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_parquet,
+            fname,
+            engine=engine,
+            compression=compression,
+            **kwargs
+        )
 
     def to_period(self, freq=None, axis=0, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_period, freq=freq, axis=axis, copy=copy
         )
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_pickle(path, compression, protocol)
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_pickle, path, compression=compression, protocol=protocol
+        )
 
     def to_records(self, index=True, convert_datetime64=True):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_records(
-            index=index, convert_datetime64=convert_datetime64
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_records,
+            index=index,
+            convert_datetime64=convert_datetime64,
         )
 
     def to_sparse(self, fill_value=None, kind="block"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_sparse, fill_value=fill_value, kind=kind
         )
 
     def to_sql(
@@ -4009,16 +4064,12 @@ class DataFrame(object):
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.to_timestamp, freq=freq, how=how, axis=axis, copy=copy
         )
 
     def to_xarray(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.to_xarray)
 
     def transform(self, func, *args, **kwargs):
         kwargs["is_transform"] = True
@@ -4043,9 +4094,7 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError(
-                "Mutlilevel index not yet supported " "in Pandas on Ray"
-            )
+            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -4053,33 +4102,33 @@ class DataFrame(object):
         return self._create_dataframe_from_manager(new_manager)
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.truncate, before=before, after=after, axis=axis, copy=copy
         )
 
     def tshift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.tshift, periods=periods, freq=freq, axis=axis
         )
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.tz_convert, tz, axis=axis, level=level, copy=copy
         )
 
     def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.tz_localize,
+            tz,
+            axis=axis,
+            level=level,
+            copy=copy,
+            ambiguous=ambiguous,
         )
 
     def unstack(self, level=-1, fill_value=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.unstack, level=level, fill_value=fill_value
         )
 
     def update(
@@ -4101,8 +4150,7 @@ class DataFrame(object):
         if raise_conflict:
             raise NotImplementedError(
                 "raise_conflict parameter not yet supported. "
-                "To contribute to Pandas on Ray, please visit "
-                "github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
@@ -4173,9 +4221,7 @@ class DataFrame(object):
         if isinstance(other, pandas.Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
-            raise NotImplementedError(
-                "Multilevel Index not yet supported on " "Pandas on Ray."
-            )
+            raise NotImplementedError("Multilevel Index not yet supported on Modin")
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         cond = cond(self) if callable(cond) else cond
 
@@ -4183,7 +4229,7 @@ class DataFrame(object):
             if not hasattr(cond, "shape"):
                 cond = np.asanyarray(cond)
             if cond.shape != self.shape:
-                raise ValueError("Array conditional must be same shape as " "self")
+                raise ValueError("Array conditional must be same shape as self")
             cond = DataFrame(cond, index=self.index, columns=self.columns)
         if isinstance(other, DataFrame):
             other = other._data_manager
@@ -4201,9 +4247,8 @@ class DataFrame(object):
             return DataFrame(data_manager=data_manager)
 
     def xs(self, key, axis=0, level=None, drop_level=True):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
     def __getitem__(self, key):
@@ -4232,14 +4277,12 @@ class DataFrame(object):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please"
-                "visit github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
             # return self._getitem_frame(key)
         elif is_mi_columns:
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please"
-                "visit github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
             # return self._getitem_multilevel(key)
         else:
@@ -4252,7 +4295,7 @@ class DataFrame(object):
         if com.is_bool_indexer(key):
             if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
-                    "Boolean Series key will be reindexed to match " "DataFrame index.",
+                    "Boolean Series key will be reindexed to match DataFrame index.",
                     PendingDeprecationWarning,
                     stacklevel=3,
                 )
@@ -4295,8 +4338,7 @@ class DataFrame(object):
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             raise NotImplementedError(
-                "To contribute to Pandas on Ray, please visit "
-                "github.com/modin-project/modin."
+                "To contribute to Modin, please visit github.com/modin-project/modin."
             )
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
@@ -4314,22 +4356,13 @@ class DataFrame(object):
         return len(self.index)
 
     def __unicode__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__unicode__)
 
     def __invert__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__invert__)
 
     def __hash__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__hash__)
 
     def __iter__(self):
         """Iterate over the columns
@@ -4369,9 +4402,8 @@ class DataFrame(object):
         return self.abs()
 
     def __round__(self, decimals=0):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        return self._default_to_pandas_func(
+            pandas.DataFrame.__round__, decimals=decimals
         )
 
     def __array__(self, dtype=None):
@@ -4383,16 +4415,10 @@ class DataFrame(object):
         return to_pandas(self).__array_wrap__(result, context=context)
 
     def __getstate__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__setstate__, state)
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4408,9 +4434,10 @@ class DataFrame(object):
         self._update_inplace(new_manager=self._data_manager.delitem(key))
 
     def __finalize__(self, other, method=None, **kwargs):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+        if isinstance(other, DataFrame):
+            other = other._data_manager.to_pandas()
+        return self._default_to_pandas_func(
+            pandas.DataFrame.__finalize__, other, method=method, **kwargs
         )
 
     def __copy__(self, deep=True):
@@ -4552,37 +4579,22 @@ class DataFrame(object):
         return DataFrame(data_manager=self._data_manager.negative())
 
     def __sizeof__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.__sizeof__)
 
     @property
     def __doc__(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._data_manager.to_pandas().__doc__
 
     @property
     def blocks(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._data_manager.to_pandas().blocks
 
     @property
     def style(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._data_manager.to_pandas().style
 
     def iat(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._default_to_pandas_func(pandas.DataFrame.iat)
 
     @property
     def loc(self):
@@ -4597,21 +4609,18 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
-        )
+        return self._data_manager.to_pandas().is_copy
 
+    @property
     def at(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+            "To contribute to Modin, please visit github.com/modin-project/modin."
         )
 
+    @property
     def ix(self, axis=None):
         raise NotImplementedError(
-            "To contribute to Pandas on Ray, please visit "
-            "github.com/modin-project/modin."
+            "To contribute to Modin, please visit github.com/modin-project/modin."
         )
 
     @property
@@ -4662,3 +4671,12 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
+
+    def _default_to_pandas_func(self, op, *args, **kwargs):
+        """Helper method to use default pandas function"""
+        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        result = op(self._data_manager.to_pandas(), *args, **kwargs)
+        if isinstance(result, pandas.DataFrame):
+            return DataFrame(result)
+        else:
+            return result
