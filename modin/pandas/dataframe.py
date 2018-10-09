@@ -632,7 +632,7 @@ class DataFrame(object):
         broadcast_axis=None,
     ):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.align,
             other,
@@ -935,7 +935,7 @@ class DataFrame(object):
 
     def combine(self, other, func, fill_value=None, overwrite=True):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.combine,
             other,
@@ -946,7 +946,7 @@ class DataFrame(object):
 
     def combine_first(self, other):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(pandas.DataFrame.combine_first, other=other)
 
     def compound(self, axis=None, skipna=None, level=None):
@@ -981,7 +981,7 @@ class DataFrame(object):
 
     def corrwith(self, other, axis=0, drop=False):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.corrwith, other, axis=axis, drop=drop
         )
@@ -1154,7 +1154,7 @@ class DataFrame(object):
 
     def dot(self, other):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(pandas.DataFrame.dot, other)
 
     def drop(
@@ -2150,7 +2150,7 @@ class DataFrame(object):
         raise_on_error=None,
     ):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.mask,
             cond,
@@ -2880,7 +2880,7 @@ class DataFrame(object):
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.reindex_like,
             other,
@@ -4435,7 +4435,7 @@ class DataFrame(object):
 
     def __finalize__(self, other, method=None, **kwargs):
         if isinstance(other, DataFrame):
-            other = other.to_pandas()
+            other = other._data_manager.to_pandas()
         return self._default_to_pandas_func(
             pandas.DataFrame.__finalize__, other, method=method, **kwargs
         )
