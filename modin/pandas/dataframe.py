@@ -663,8 +663,7 @@ class DataFrame(object):
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
         if result.empty:
-            return pandas.Series([], index=pandas.Index([], dtype='object'),
-                    dtype=bool)
+            return pandas.Series([], index=pandas.Index([], dtype="object"), dtype=bool)
         if axis is not None:
             return result
         else:

@@ -1097,9 +1097,7 @@ class PandasDataManager(object):
         Return:
             Pandas series containing the reduced data.
         """
-        result = self.data.map_across_full_axis(axis, func).to_pandas(
-            True
-        )
+        result = self.data.map_across_full_axis(axis, func).to_pandas(True)
         if not axis:
             result.index = self.columns
         else:
