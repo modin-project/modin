@@ -1097,7 +1097,9 @@ class PandasDataManager(object):
         Return:
             Pandas series containing the reduced data.
         """
-        result = self.data.map_across_full_axis(axis, func).to_pandas(True)
+        result = self.data.map_across_full_axis(axis, func).to_pandas(
+            self._is_transposed
+        )
         if not axis:
             result.index = self.columns
         else:
@@ -1112,6 +1114,7 @@ class PandasDataManager(object):
         """
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(pandas.DataFrame.all, **kwargs)
+        self._is_transposed = False
         return self.full_axis_reduce(func, axis)
 
     def any(self, **kwargs):
