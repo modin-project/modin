@@ -8,6 +8,7 @@ import pandas
 from pandas.compat import string_types
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
+    _get_dtype_from_object,
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
@@ -2358,6 +2359,10 @@ class PandasDataManager(object):
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             partition = partition.copy()
+            for col in range(len(col_internal_indices)):
+                for row in range(len(row_internal_indices)):
+                    if _get_dtype_from_object(item[row][col]) != partition.dtypes[col]:
+                        partition[col] = partition[col].astype(object)
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
 
@@ -2368,6 +2373,7 @@ class PandasDataManager(object):
             mutate=True,
             item_to_distribute=broadcasted_items,
         )
+        self._dtype_cache = None
         self.data = mutated_blk_partitions
 
     def global_idx_to_numeric_idx(self, axis, indices):
