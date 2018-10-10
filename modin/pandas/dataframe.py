@@ -662,6 +662,9 @@ class DataFrame(object):
         result = self._data_manager.all(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
+        if result.empty:
+            return pandas.Series([], index=pandas.Index([], dtype='object'),
+                    dtype=bool)
         if axis is not None:
             return result
         else:
