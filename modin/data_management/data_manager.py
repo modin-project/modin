@@ -1113,9 +1113,24 @@ class PandasDataManager(object):
             Pandas Series containing boolean values.
         """
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.all, **kwargs)
-        self._is_transposed = False
-        return self.full_axis_reduce(func, axis)
+        bool_only = kwargs.get("bool_only", None)
+        index = self.index if axis else self.columns
+
+        if bool_only:
+            not_bool = []
+            for index, dtype in zip(index, self.dtypes):
+                if dtype != bool:
+                    not_bool.append(index)
+
+            if axis:
+                data_manager = self.drop(index=not_bool)
+            else:
+                data_manager = self.drop(columns=not_bool)
+        else:
+            data_manager = self
+
+        func = data_manager._prepare_method(pandas.DataFrame.all, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     def any(self, **kwargs):
         """Returns whether any element is true over the requested axis.
