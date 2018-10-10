@@ -904,6 +904,9 @@ class DataFrame(object):
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
         # validate inputs
+        if axis is not None:
+            axis = pandas.DataFrame()._get_axis_number(axis)
+
         if is_list_like(lower) or is_list_like(upper):
             if axis is None:
                 raise ValueError("Must specify axis =0 or 1")
