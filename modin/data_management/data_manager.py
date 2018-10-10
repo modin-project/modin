@@ -1328,10 +1328,10 @@ class PandasDataManager(object):
         return self.full_axis_reduce(func, 1)
 
     def var(self, **kwargs):
-        """Returns varience of each column or row.
+        """Returns variance of each column or row.
 
         Returns:
-            Series containing the varience of each column or row.
+            Series containing the variance of each column or row.
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
