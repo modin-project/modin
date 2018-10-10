@@ -650,7 +650,6 @@ class DataFrame(object):
             axis = pandas.DataFrame()._get_axis_number(axis)
         else:
             axis = None
-
         result = self._data_manager.all_any(
             func=pandas.DataFrame.all,
             axis=axis,
@@ -664,7 +663,7 @@ class DataFrame(object):
         else:
             return result.all()
 
-    def any(self, axis=None, bool_only=None, skipna=None, level=None, **kwargs):
+    def any(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether any elements are True over requested axis
 
         Note:
@@ -675,7 +674,6 @@ class DataFrame(object):
             axis = pandas.DataFrame()._get_axis_number(axis)
         else:
             axis = None
-
         result = self._data_manager.all_any(
             func=pandas.DataFrame.any,
             axis=axis,

@@ -1124,7 +1124,6 @@ class PandasDataManager(object):
                 data_manager = self.drop(columns=not_bool)
         else:
             data_manager = self
-
         func = data_manager._prepare_method(func, **kwargs)
         return data_manager.full_axis_reduce(func, axis)
 
