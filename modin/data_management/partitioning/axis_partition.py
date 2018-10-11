@@ -143,7 +143,7 @@ class RayRowPartition(RayAxisPartition):
     axis = 1
 
 
-def split_result_of_axis_func_pandas(axis, num_splits, result):
+def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
     """Split the Pandas result evenly based on the provided number of splits.
 
     Args:
@@ -155,6 +155,14 @@ def split_result_of_axis_func_pandas(axis, num_splits, result):
     Returns:
         A list of Pandas DataFrames.
     """
+    if length_list is not None:
+        length_list = [0] + length_list
+        import numpy as np
+        sums = np.cumsum(length_list)
+        if axis == 0 or type(result) is pandas.Series:
+            return [result.iloc[sums[i]: sums[i + 1]] for i in range(len(sums) - 1)]
+        else:
+            return [result.iloc[:, sums[i]: sums[i + 1]] for i in range(len(sums) - 1)]
     # We do this to restore block partitioning
     if axis == 0 or type(result) is pandas.Series:
         chunksize = compute_chunksize(len(result), num_splits)
@@ -186,7 +194,7 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
-    return split_result_of_axis_func_pandas(axis, num_splits, result)
+    return split_result_of_axis_func_pandas(axis, num_splits, result, [len(part) for part in partitions])
 
 
 @ray.remote
