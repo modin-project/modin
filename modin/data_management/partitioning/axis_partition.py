@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import pandas
 import ray
 
@@ -156,9 +157,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         A list of Pandas DataFrames.
     """
     if length_list is not None:
-        length_list = [0] + length_list
-        import numpy as np
-
+        length_list.insert(0, 0)
         sums = np.cumsum(length_list)
         if axis == 0 or type(result) is pandas.Series:
             return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
