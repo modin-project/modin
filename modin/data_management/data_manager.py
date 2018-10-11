@@ -1104,11 +1104,27 @@ class PandasDataManager(object):
             result.index = self.index
         return result
 
-    def all_any(self, func, **kwargs):
+    def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
 
         Return:
-            Pandas Series containing boolean values.
+            Pandas Series containing boolean values or boolean.
+        """
+        return self._process_all_any(pandas.DataFrame.all, **kwargs)
+
+    def any(self, **kwargs):
+        """Returns whether any the elements are true, potentially over an axis.
+
+        Return:
+            Pandas Series containing boolean values or boolean.
+        """
+        return self._process_all_any(pandas.DataFrame.any, **kwargs)
+
+    def _process_all_any(self, func, **kwargs):
+        """Calculates if any or all the values are true.
+
+        Return:
+            Pandas Series containing boolean values or boolean.
         """
         axis = kwargs.get("axis", 0)
         bool_only = kwargs.get("bool_only", None)
