@@ -156,7 +156,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     Returns:
         A list of Pandas DataFrames.
     """
-    if length_list is not None and type(result) is not pandas.Series:
+    if length_list is not None:
         length_list.insert(0, 0)
         sums = np.cumsum(length_list)
         if axis == 0:
@@ -194,7 +194,7 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
-    if num_splits != len(partitions):
+    if num_splits != len(partitions) or isinstance(result, pandas.Series):
         lengths = None
     else:
         if axis == 0:
