@@ -438,7 +438,7 @@ class BlockPartitions(object):
                 )
             df_columns = [
                 pandas.concat([part for part in col], axis=axis)
-                for col in np.array(retrieved_objects).T
+                for col in zip(*retrieved_objects)
             ]
             if len(df_columns) == 0:
                 return pandas.DataFrame()
