@@ -156,10 +156,10 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     Returns:
         A list of Pandas DataFrames.
     """
-    if length_list is not None:
+    if length_list is not None and type(result) is not pandas.Series:
         length_list.insert(0, 0)
         sums = np.cumsum(length_list)
-        if axis == 0 or type(result) is pandas.Series:
+        if axis == 0:
             return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
         else:
             return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
@@ -194,9 +194,18 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
-    return split_result_of_axis_func_pandas(
-        axis, num_splits, result, [len(part) for part in partitions]
-    )
+    if num_splits != len(partitions):
+        lengths = None
+    else:
+        if axis == 0:
+            lengths = [len(part) for part in partitions]
+            if sum(lengths) != len(result):
+                lengths = None
+        else:
+            lengths = [len(part.columns) for part in partitions]
+            if sum(lengths) != len(result.columns):
+                lengths = None
+    return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
 
 
 @ray.remote
