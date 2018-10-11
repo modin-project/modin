@@ -152,6 +152,8 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         num_splits: The number of even splits to create.
         result: The result of the computation. This should be a Pandas
             DataFrame.
+        length_list: The list of lengths to split this DataFrame into. This is used to
+            return the DataFrame to its original partitioning schema.
 
     Returns:
         A list of Pandas DataFrames.
