@@ -425,7 +425,15 @@ class BlockPartitions(object):
                 for part in row
             ):
                 axis = 0
-                retrieved_objects = np.array(retrieved_objects).T
+                retrieved_objects = np.array(retrieved_objects)
+                index = retrieved_objects[0][0].index
+                trans = True
+                for i in range(1, len(retrieved_objects[0])-1):
+                    part = retrieved_objects[0][i]
+                    if len(part.index) != 0 and (len(part.index) != len(index) or any(part.index != index)):
+                        trans = False
+                if trans:
+                    retrieved_objects = retrieved_objects.T
             elif all(
                 isinstance(part, pandas.DataFrame)
                 for row in retrieved_objects
