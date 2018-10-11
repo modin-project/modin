@@ -424,26 +424,26 @@ class BlockPartitions(object):
                 for row in retrieved_objects
                 for part in row
             ):
-                axis = 1
+                axis = 0
                 retrieved_objects = np.array(retrieved_objects).T
             elif all(
                 isinstance(part, pandas.DataFrame)
                 for row in retrieved_objects
                 for part in row
             ):
-                axis = 0
+                axis = 1
             else:
                 raise ValueError(
                     "Some partitions contain Series and some contain DataFrames"
                 )
-            df_columns = [
-                pandas.concat([part for part in col], axis=axis)
-                for col in zip(*retrieved_objects)
+            df_rows = [
+                pandas.concat([part for part in row], axis=axis)
+                for row in retrieved_objects
             ]
-            if len(df_columns) == 0:
+            if len(df_rows) == 0:
                 return pandas.DataFrame()
             else:
-                return pandas.concat(df_columns, axis=1)
+                return pandas.concat(df_rows)
 
     @classmethod
     def from_pandas(cls, df):
@@ -551,7 +551,7 @@ class BlockPartitions(object):
             cumulative_column_widths = np.array(self.block_widths).cumsum()
             block_idx = int(np.digitize(index, cumulative_column_widths))
             if block_idx == len(cumulative_column_widths):
-                block_idx = np.argmax(cumulative_column_widths)
+                block_idx -= 1
             # Compute the internal index based on the previous lengths. This
             # is a global index, so we must subtract the lengths first.
             internal_idx = (
