@@ -1116,21 +1116,40 @@ class PandasDataManager(object):
         """Returns whether all the elements are true, potentially over an axis.
 
         Return:
-            Pandas Series containing boolean values.
+            Pandas Series containing boolean values or boolean.
         """
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.all, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        return self._process_all_any(pandas.DataFrame.all, **kwargs)
 
     def any(self, **kwargs):
-        """Returns whether any element is true over the requested axis.
+        """Returns whether any the elements are true, potentially over an axis.
 
         Return:
-            Pandas Series containing boolean values.
+            Pandas Series containing boolean values or boolean.
+        """
+        return self._process_all_any(pandas.DataFrame.any, **kwargs)
+
+    def _process_all_any(self, func, **kwargs):
+        """Calculates if any or all the values are true.
+
+        Return:
+            Pandas Series containing boolean values or boolean.
         """
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.any, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        bool_only = kwargs.get("bool_only", None)
+        index = self.index if axis else self.columns
+        if bool_only:
+            not_bool = []
+            for index, dtype in zip(index, self.dtypes):
+                if dtype != bool:
+                    not_bool.append(index)
+            if axis:
+                data_manager = self.drop(index=not_bool)
+            else:
+                data_manager = self.drop(columns=not_bool)
+        else:
+            data_manager = self
+        func = data_manager._prepare_method(func, **kwargs)
+        return data_manager.full_axis_reduce(func, axis)
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.

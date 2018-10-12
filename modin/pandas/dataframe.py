@@ -658,7 +658,6 @@ class DataFrame(object):
             axis = pandas.DataFrame()._get_axis_number(axis)
         else:
             axis = None
-
         result = self._data_manager.all(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
@@ -667,18 +666,24 @@ class DataFrame(object):
         else:
             return result.all()
 
-    def any(self, axis=None, bool_only=None, skipna=None, level=None, **kwargs):
+    def any(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether any elements are True over requested axis
 
         Note:
             If axis=None or axis=0, this call applies on the column partitions,
                 otherwise operates on row partitions
         """
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
-        return self._data_manager.any(
+        if axis is not None:
+            axis = pandas.DataFrame()._get_axis_number(axis)
+        else:
+            axis = None
+        result = self._data_manager.any(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
+        if axis is not None:
+            return result
+        else:
+            return result.any()
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=None):
         """Append another DataFrame/list/Series to this one.
