@@ -3570,24 +3570,22 @@ class DataFrame(object):
             broadcast_value_dict = {col: self[col] for col in by}
             broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
             new_index = broadcast_values.sort_values(
-                by=by, axis=axis, ascending=ascending, kind=kind
+                by=by, axis=axis, ascending=ascending, kind=kind, na_position=na_position
             ).index
-            return self.reindex(index=new_index)
+            return self.reindex(index=new_index, copy=not inplace)
         else:
             broadcast_value_list = [
                 to_pandas(self[row :: len(self.index)]) for row in by
             ]
             index_builder = list(zip(broadcast_value_list, by))
-
             broadcast_values = pandas.concat(
                 [row for row, idx in index_builder], copy=False
             )
             broadcast_values.columns = self.columns
             new_columns = broadcast_values.sort_values(
-                by=by, axis=axis, ascending=ascending, kind=kind
+                by=by, axis=axis, ascending=ascending, kind=kind, na_position=na_position
             ).columns
-
-            return self.reindex(columns=new_columns)
+            return self.reindex(columns=new_columns, copy=not inplace)
 
     def sortlevel(
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
