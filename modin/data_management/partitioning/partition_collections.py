@@ -425,6 +425,9 @@ class BlockPartitions(object):
                 for part in row
             ):
                 axis = 0
+                # We take the transpose here so that the results from the same
+                # partition will be concated together first before results
+                # from different partitions.
                 retrieved_objects = np.array(retrieved_objects).T
             elif all(
                 isinstance(part, pandas.DataFrame)
