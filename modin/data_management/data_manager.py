@@ -1103,8 +1103,8 @@ class PandasDataManager(object):
         Return:
             Pandas series containing the reduced data.
         """
-        # We XOR with axis because if we are doing an operation over the columns 
-        # (i.e. along the rows), we want to take the transpose so that the 
+        # We XOR with axis because if we are doing an operation over the columns
+        # (i.e. along the rows), we want to take the transpose so that the
         # results from the same parition will be concated together first.
         # We need this here because if the operations is over the columns,
         # map_across_full_axis does not transpose the result before returning.
