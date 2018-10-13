@@ -3709,7 +3709,9 @@ class DataFrame(object):
             if level is not None:
                 raise ValueError("unable to simultaneously sort by and level")
             return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
-        new_manager = self._data_manager.sort_index(axis=axis, ascending=ascending, kind=kind, na_position=na_position)
+        new_manager = self._data_manager.sort_index(
+            axis=axis, ascending=ascending, kind=kind, na_position=na_position
+        )
         if inplace:
             self._update_inplace(new_manager=new_manager)
         else:

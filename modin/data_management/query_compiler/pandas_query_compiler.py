@@ -1873,14 +1873,13 @@ class PandasQueryCompiler(object):
         """
         axis = kwargs.pop("axis", 0)
         index = self.columns if axis else self.index
-        
+
         def sort_index_builder(df, **kwargs):
             if axis:
                 df.columns = index
             else:
                 df.index = index
             return df.sort_index(axis=axis, **kwargs)
-            # return df
 
         func = self._prepare_method(sort_index_builder, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
@@ -1890,7 +1889,9 @@ class PandasQueryCompiler(object):
         else:
             new_index = pandas.Series(self.index).sort_values(**kwargs)
             new_columns = self.columns
-        return self.__constructor__(new_data, new_index, new_columns, self.dtypes.copy())
+        return self.__constructor__(
+            new_data, new_index, new_columns, self.dtypes.copy()
+        )
 
     # END Map across rows/columns
 
