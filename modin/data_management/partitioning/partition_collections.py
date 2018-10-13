@@ -397,7 +397,7 @@ class BlockPartitions(object):
             A new BlockPartitions object, the type of object that called this.
         """
         cls = type(self)
-        return cls(self.partitions.T)
+        return cls(self.partitions.T).map_across_blocks(pandas.DataFrame.transpose)
 
     def to_pandas(self, is_transposed=False):
         """Convert this object into a Pandas DataFrame from the partitions.
