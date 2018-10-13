@@ -946,8 +946,20 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+        if numeric_only == False and not all(is_numeric_dtype(dtype) for dtype in
+                self.dtypes) and axis:
+            found = False
+            for d in self.dtypes:
+                if d == np.dtype("datetime64[ns]") or d == np.dtype("timedelta64[ns]"):
+                    found = True
+            if not found:
+                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.min, **kwargs)
+        def min_func(df, **kwargs):
+            if not df.empty:
+                return df.min(**kwargs)
+        func = self._prepare_method(min_func, **kwargs)
         return self.full_reduce(axis, func, numeric_only=numeric_only)
 
     def prod(self, **kwargs):
