@@ -2358,10 +2358,6 @@ class DataFrame(object):
             DataFrame: The mode of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
-
-        if not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-
         return DataFrame(
             data_manager=self._data_manager.mode(axis=axis, numeric_only=numeric_only)
         )
