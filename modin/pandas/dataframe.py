@@ -2197,8 +2197,11 @@ class DataFrame(object):
             The mean of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        if numeric_only == False and axis:
-            if all(not (is_numeric_dtype(t) or t == np.dtype("datetime64[ns]")) for t in self.dtypes):
+        if numeric_only is not None and not numeric_only and axis:
+            if all(
+                not (is_numeric_dtype(t) or t == np.dtype("datetime64[ns]"))
+                for t in self.dtypes
+            ):
                 raise TypeError("No numeric data types to take mean")
         elif numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_or_datetime_only=True)
@@ -4685,8 +4688,12 @@ class DataFrame(object):
             if numeric_only or numeric_or_datetime_only:
                 if numeric_only and not is_numeric_dtype(t):
                     raise TypeError("{0} is not a numeric data type".format(t))
-                if numeric_or_datetime_only and not (is_numeric_dtype(t) or t == np.dtype("datetime64[ns]")):
-                    raise TypeError("{0} is not a numeric or datetime data type".format(t))
+                if numeric_or_datetime_only and not (
+                    is_numeric_dtype(t) or t == np.dtype("datetime64[ns]")
+                ):
+                    raise TypeError(
+                        "{0} is not a numeric or datetime data type".format(t)
+                    )
             elif t != dtype:
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
