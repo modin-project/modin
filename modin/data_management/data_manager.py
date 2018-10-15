@@ -949,23 +949,15 @@ class PandasDataManager(object):
         numeric_only = True if axis else kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.min, **kwargs)
         return self.full_reduce(axis, func, numeric_only=numeric_only)
+ 
+    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+        """Calculates the sum or product of the DataFrame.
 
-    def prod(self, **kwargs):
-        """Returns the product of each numerical column or row.
-
+        Args:
+            func: Pandas func to apply to DataFrame.
+            ignore_axis: Whether to ignore axis when raising TypeError
         Return:
-            Pandas series with the product of each numerical column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.prod, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
-
-    def sum(self, **kwargs):
-        """Returns the sum of each numerical column or row.
-
-        Return:
-            Pandas series with the sum of each numerical column or row.
+            Pandas Series with sum or prod of DataFrame.
         """
         axis = kwargs.get("axis", 0)
         numeric_only = kwargs.get("numeric_only", None)
@@ -989,7 +981,7 @@ class PandasDataManager(object):
         # numeric_only is False because if it is None, it will default to True
         # if the operation fails with mixed dtypes.
         if (
-            axis
+            (axis or ignore_axis)
             and numeric_only is False
             and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
         ):
@@ -999,7 +991,7 @@ class PandasDataManager(object):
                 and dtype != np.dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
-                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+                raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
         numeric_only = True if axis else kwargs.get("numeric_only", False)
 
@@ -1010,11 +1002,11 @@ class PandasDataManager(object):
             data_manager = self
         new_index = data_manager.index if axis else data_manager.columns
 
-        def sum_builder(df, **kwargs):
+        def sum_prod_builder(df, **kwargs):
             if not df.empty:
-                return pandas.DataFrame.sum(df, **kwargs)
+                return func(df, **kwargs)
 
-        map_func = self._prepare_method(sum_builder, **kwargs)
+        map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
         if all(
             dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
@@ -1029,6 +1021,23 @@ class PandasDataManager(object):
             )
         else:
             return self.full_axis_reduce(map_func, axis, new_index)
+
+
+    def prod(self, **kwargs):
+        """Returns the product of each numerical column or row.
+
+        Return:
+            Pandas series with the product of each numerical column or row.
+        """
+        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
+
+    def sum(self, **kwargs):
+        """Returns the sum of each numerical column or row.
+
+        Return:
+            Pandas series with the sum of each numerical column or row.
+        """
+        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
 
     # END Full Reduce operations
 
