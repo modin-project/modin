@@ -969,9 +969,17 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
+        min_count = kwargs.pop("min_count", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        result = self.full_reduce(axis, func, numeric_only=numeric_only)
+        counts = self.count(axis=axis, numeric_only=numeric_only)
+        for i, count in counts.items():
+            if count < min_count:
+                result[i] = np.nan
+            elif np.isnan(result[i]):
+                result[i] = 0
+        return result
 
     # END Full Reduce operations
 

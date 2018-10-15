@@ -398,6 +398,12 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
+        if numeric_only is not None and not numeric_only:
+            if not any(is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t) for t in self.dtypes):
+                raise TypeError("No numeric data types to sum over")
+            if not axis and any(t == np.dtype("timedelta64[ns]") for t in self.dtypes):
+                raise TypeError("Cannot sum over Timestamps")
+
         return self._data_manager.sum(
             axis=axis,
             skipna=skipna,
@@ -4675,13 +4681,20 @@ class DataFrame(object):
                     )
         return other
 
-    def _validate_dtypes(self, numeric_only=False):
+    def _validate_dtypes(self, numeric_only=False, numeric_or_datetime_only=False):
         """Helper method to check that all the dtypes are the same"""
         dtype = self.dtypes[0]
         for t in self.dtypes:
-            if numeric_only and not is_numeric_dtype(t):
-                raise TypeError("{0} is not a numeric data type".format(t))
-            elif not numeric_only and t != dtype:
+            if numeric_only or numeric_or_datetime_only:
+                if numeric_only and not is_numeric_dtype(t):
+                    raise TypeError("{0} is not a numeric data type".format(t))
+                if numeric_or_datetime_only and not (
+                    is_numeric_dtype(t) or t == np.dtype("datetime64[ns]")
+                ):
+                    raise TypeError(
+                        "{0} is not a numeric or datetime data type".format(t)
+                    )
+            elif t != dtype:
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
