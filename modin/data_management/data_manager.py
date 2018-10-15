@@ -50,7 +50,9 @@ class PandasDataManager(object):
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0, is_transposed=self._is_transposed)
+            self._dtype_cache = self.data.full_reduce(
+                map_func, dtype_builder, 0, is_transposed=self._is_transposed
+            )
             self._dtype_cache.index = self.columns
         return self._dtype_cache
 
@@ -428,7 +430,7 @@ class PandasDataManager(object):
             lambda l, r: inter_data_op_builder(l, r, self_cols, other_cols, func),
             reindexed_other,
             self._is_transposed,
-            other._is_transposed
+            other._is_transposed,
         )
         return self.__constructor__(new_data, joined_index, new_columns)
 
@@ -727,7 +729,10 @@ class PandasDataManager(object):
                 other._is_transposed,
             )
             final_pass = reindexed_self.inter_data_operation(
-                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass, self_is_transposed=self._is_transposed
+                1,
+                lambda l, r: where_builder_second_pass(l, r, **kwargs),
+                first_pass,
+                self_is_transposed=self._is_transposed,
             )
             return self.__constructor__(final_pass, self.index, self.columns)
         else:
@@ -1087,7 +1092,11 @@ class PandasDataManager(object):
                 return df.astype(block_dtypes)
 
             new_data = new_data.apply_func_to_select_indices(
-                0, astype, dtype_indices[dtype], keep_remaining=True, is_transposed=self._is_transposed
+                0,
+                astype,
+                dtype_indices[dtype],
+                keep_remaining=True,
+                is_transposed=self._is_transposed,
             )
 
         return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
@@ -1109,7 +1118,9 @@ class PandasDataManager(object):
         Return:
             Pandas series containing the reduced data.
         """
-        result = self.data.map_across_full_axis(axis, func, self._is_transposed).to_pandas()
+        result = self.data.map_across_full_axis(
+            axis, func, self._is_transposed
+        ).to_pandas()
         if not axis:
             result.index = self.columns
         else:
@@ -1659,7 +1670,11 @@ class PandasDataManager(object):
                 return df.fillna(value=func_dict, **kwargs)
 
             new_data = self.data.apply_func_to_select_indices(
-                axis, fillna_dict_builder, value, keep_remaining=True, is_transposed=self._is_transposed
+                axis,
+                fillna_dict_builder,
+                value,
+                keep_remaining=True,
+                is_transposed=self._is_transposed,
             )
             return self.__constructor__(new_data, self.index, self.columns)
         else:
@@ -1734,7 +1749,7 @@ class PandasDataManager(object):
         Returns:
             BlockPartitions containing the result of mapping func over axis on indices.
         """
-        result = self.data.apply_func_to_select_indices_along_full_axis(
+        return self.data.apply_func_to_select_indices_along_full_axis(
             axis, func, indices, keep_remaining, is_transposed=self._is_transposed
         )
 
@@ -1991,7 +2006,11 @@ class PandasDataManager(object):
             return df.iloc[:, internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            0, getitem, numeric_indices, keep_remaining=False, is_transposed=self._is_transposed
+            0,
+            getitem,
+            numeric_indices,
+            keep_remaining=False,
+            is_transposed=self._is_transposed,
         )
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
@@ -2015,7 +2034,11 @@ class PandasDataManager(object):
             return df.iloc[internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            1, getitem, numeric_indices, keep_remaining=False, is_transposed=self._is_transposed
+            1,
+            getitem,
+            numeric_indices,
+            keep_remaining=False,
+            is_transposed=self._is_transposed,
         )
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
@@ -2049,7 +2072,11 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.index.get_indexer_for(index))
             new_data = self.data.apply_func_to_select_indices(
-                1, delitem, numeric_indices, keep_remaining=True, is_transposed=self._is_transposed
+                1,
+                delitem,
+                numeric_indices,
+                keep_remaining=True,
+                is_transposed=self._is_transposed,
             )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
@@ -2068,7 +2095,11 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.columns.get_indexer_for(columns))
             new_data = new_data.apply_func_to_select_indices(
-                0, delitem, numeric_indices, keep_remaining=True, is_transposed=self._is_transposed
+                0,
+                delitem,
+                numeric_indices,
+                keep_remaining=True,
+                is_transposed=self._is_transposed,
             )
             # We can't use self.columns.drop with duplicate keys because in Pandas
             # it throws an error.
@@ -2207,7 +2238,11 @@ class PandasDataManager(object):
             return df.apply(func_dict, *args, **kwargs)
 
         result_data = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, dict_apply_builder, func, keep_remaining=False, is_transposed=self._is_transposed
+            axis,
+            dict_apply_builder,
+            func,
+            keep_remaining=False,
+            is_transposed=self._is_transposed,
         )
         full_result = self._post_process_apply(result_data, axis)
         # The columns can get weird because we did not broadcast them to the

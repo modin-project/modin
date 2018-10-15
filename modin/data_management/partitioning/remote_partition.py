@@ -188,7 +188,10 @@ class RayRemotePartition(RemotePartition):
             return oid_obj
 
         oid = deploy_ray_func.remote(
-            call_queue_closure, oid, is_transposed=is_transposed, kwargs={"call_queues": self.call_queue}
+            call_queue_closure,
+            oid,
+            is_transposed=is_transposed,
+            kwargs={"call_queues": self.call_queue},
         )
         self.call_queue = []
 

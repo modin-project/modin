@@ -225,7 +225,10 @@ class BlockPartitions(object):
         preprocessed_map_func = self.preprocess_func(map_func)
         new_partitions = np.array(
             [
-                [part.apply(preprocessed_map_func, is_transposed=is_transposed) for part in row_of_parts]
+                [
+                    part.apply(preprocessed_map_func, is_transposed=is_transposed)
+                    for part in row_of_parts
+                ]
                 for row_of_parts in self.partitions
             ]
         )
@@ -278,7 +281,10 @@ class BlockPartitions(object):
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
         result_blocks = np.array(
-            [part.apply(preprocessed_map_func, num_splits, is_transposed) for part in partitions]
+            [
+                part.apply(preprocessed_map_func, num_splits, is_transposed)
+                for part in partitions
+            ]
         )
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D numpy array to return
@@ -614,7 +620,9 @@ class BlockPartitions(object):
                 partitions_dict[part_idx].append(internal_idx)
         return partitions_dict
 
-    def _apply_func_to_list_of_partitions(self, func, partitions, is_transposed=False, **kwargs):
+    def _apply_func_to_list_of_partitions(
+        self, func, partitions, is_transposed=False, **kwargs
+    ):
         """Applies a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
@@ -627,9 +635,13 @@ class BlockPartitions(object):
             A list of RemotePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        return [obj.apply(preprocessed_func, is_transposed, **kwargs) for obj in partitions]
+        return [
+            obj.apply(preprocessed_func, is_transposed, **kwargs) for obj in partitions
+        ]
 
-    def apply_func_to_select_indices(self, axis, func, indices, is_transposed=False, keep_remaining=False):
+    def apply_func_to_select_indices(
+        self, axis, func, indices, is_transposed=False, keep_remaining=False
+    ):
         """Applies a function to select indices.
 
         Note: Your internal function must take a kwarg `internal_indices` for
@@ -678,7 +690,7 @@ class BlockPartitions(object):
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in partitions_dict
                     ]
@@ -686,7 +698,12 @@ class BlockPartitions(object):
             else:
                 result = np.array(
                     [
-                        np.array([part.apply(lambda df: df, is_transposed=is_transposed) for part in partitions_for_apply[i]])
+                        np.array(
+                            [
+                                part.apply(lambda df: df, is_transposed=is_transposed)
+                                for part in partitions_for_apply[i]
+                            ]
+                        )
                         if i not in partitions_dict
                         else self._apply_func_to_list_of_partitions(
                             func,
@@ -694,7 +711,7 @@ class BlockPartitions(object):
                             func_dict={
                                 idx: dict_indices[i] for idx in partitions_dict[i]
                             },
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -711,7 +728,7 @@ class BlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             internal_indices=partitions_dict[i],
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in partitions_dict
                     ]
@@ -721,13 +738,18 @@ class BlockPartitions(object):
                 # remaining (non-updated) blocks in their original position.
                 result = np.array(
                     [
-                        np.array([part.apply(lambda df: df, is_transposed=is_transposed) for part in partitions_for_apply[i]])
+                        np.array(
+                            [
+                                part.apply(lambda df: df, is_transposed=is_transposed)
+                                for part in partitions_for_apply[i]
+                            ]
+                        )
                         if i not in partitions_dict
                         else self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[i],
                             internal_indices=partitions_dict[i],
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -789,7 +811,7 @@ class BlockPartitions(object):
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in partitions_dict
                     ]
@@ -797,7 +819,12 @@ class BlockPartitions(object):
             else:
                 result = np.array(
                     [
-                        np.array([part.apply(lambda df: df, is_transposed=is_transposed) for part in partitions_for_remaining[i]])
+                        np.array(
+                            [
+                                part.apply(lambda df: df, is_transposed=is_transposed)
+                                for part in partitions_for_remaining[i]
+                            ]
+                        )
                         if i not in partitions_dict
                         else self._apply_func_to_list_of_partitions(
                             preprocessed_func,
@@ -805,7 +832,7 @@ class BlockPartitions(object):
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
-                            is_transposed=is_transposed
+                            is_transposed=is_transposed,
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -816,7 +843,9 @@ class BlockPartitions(object):
                 result = np.array(
                     [
                         partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i], self_is_transposed=is_transposed
+                            preprocessed_func,
+                            internal_indices=partitions_dict[i],
+                            self_is_transposed=is_transposed,
                         )
                         for i in partitions_dict
                     ]
@@ -825,10 +854,17 @@ class BlockPartitions(object):
                 # See notes in `apply_func_to_select_indices`
                 result = np.array(
                     [
-                        np.array([part.apply(lambda df: df, is_transposed=is_transposed) for part in partitions_for_remaining[i]])
+                        np.array(
+                            [
+                                part.apply(lambda df: df, is_transposed=is_transposed)
+                                for part in partitions_for_remaining[i]
+                            ]
+                        )
                         if i not in partitions_dict
                         else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i], self_is_transposed=is_transposed
+                            preprocessed_func,
+                            internal_indices=partitions_dict[i],
+                            self_is_transposed=is_transposed,
                         )
                         for i in range(len(partitions_for_remaining))
                     ]
@@ -907,7 +943,9 @@ class BlockPartitions(object):
             partition_copy = partition_copy[row_idx][:, column_idx]
         return cls(partition_copy)
 
-    def inter_data_operation(self, axis, func, other, self_is_transposed=False, other_is_transposed=False):
+    def inter_data_operation(
+        self, axis, func, other, self_is_transposed=False, other_is_transposed=False
+    ):
         """Apply a function that requires two BlockPartitions objects.
 
         Args:
@@ -931,9 +969,9 @@ class BlockPartitions(object):
                 partitions[i].apply(
                     func,
                     num_splits=cls._compute_num_partitions(),
-                    self_is_transposed = self_is_transposed,
+                    self_is_transposed=self_is_transposed,
                     other_axis_partition=other_partitions[i],
-                    other_is_transposed = other_is_transposed
+                    other_is_transposed=other_is_transposed,
                 )
                 for i in range(len(partitions))
             ]

@@ -29,7 +29,15 @@ class AxisPartition(object):
         The only abstract method needed to implement is the `apply` method.
     """
 
-    def apply(self, func, num_splits=None, self_is_transposed=False, other_axis_partition=None, other_is_transposed=False, **kwargs):
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        self_is_transposed=False,
+        other_axis_partition=None,
+        other_is_transposed=False,
+        **kwargs
+    ):
         """Applies a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
@@ -71,7 +79,15 @@ class RayAxisPartition(AxisPartition):
         # Unwrap from RemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, self_is_transposed=False, other_axis_partition=None, other_is_transposed=False, **kwargs):
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        self_is_transposed=False,
+        other_axis_partition=None,
+        other_is_transposed=False,
+        **kwargs
+    ):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -92,7 +108,15 @@ class RayAxisPartition(AxisPartition):
             return [
                 RayRemotePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions._submit(
-                    args=(self.axis, func, num_splits, len(self.list_of_blocks), self_is_transposed, other_is_transposed, kwargs)
+                    args=(
+                        self.axis,
+                        func,
+                        num_splits,
+                        len(self.list_of_blocks),
+                        self_is_transposed,
+                        other_is_transposed,
+                        kwargs,
+                    )
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
                     num_return_vals=num_splits,
                 )
@@ -214,7 +238,14 @@ def deploy_ray_axis_func(axis, func, num_splits, is_transposed, kwargs, *partiti
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-    axis, func, num_splits, len_of_left, self_is_transposed, other_is_transposed, kwargs, *partitions
+    axis,
+    func,
+    num_splits,
+    len_of_left,
+    self_is_transposed,
+    other_is_transposed,
+    kwargs,
+    *partitions
 ):
     """Deploy a function along a full axis between two data sets in Ray.
 
