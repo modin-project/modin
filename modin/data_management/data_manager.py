@@ -977,8 +977,7 @@ class PandasDataManager(object):
         if (
             not axis
             and numeric_only is False
-            and any(dtype == np.dtype("datetime64[ns]") for dtype in
-                self.dtypes)
+            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
         ):
             raise TypeError("Cannot add Timestamp Types")
 
@@ -1018,16 +1017,16 @@ class PandasDataManager(object):
         map_func = self._prepare_method(sum_builder, **kwargs)
 
         if all(
-            dtype == np.dtype("datetime64[ns]")
-            or dtype == np.dtype("timedelta64[ns]")
+            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
             for dtype in self.dtypes
         ):
             return self.full_axis_reduce(map_func, axis)
         elif min_count == 0:
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
-            return pandas.Series([np.nan] * len(new_index),
-                    index=new_index, dtype=np.dtype('object'))
+            return pandas.Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
         else:
             return self.full_axis_reduce(map_func, axis, new_index)
 
@@ -1175,9 +1174,13 @@ class PandasDataManager(object):
         if result.empty:
             return result
         if not axis:
-            result.index = alternate_index if alternate_index is not None else self.columns
+            result.index = (
+                alternate_index if alternate_index is not None else self.columns
+            )
         else:
-            result.index = alternate_index if alternate_index is not None else self.index
+            result.index = (
+                alternate_index if alternate_index is not None else self.index
+            )
         return result
 
     def all(self, **kwargs):
