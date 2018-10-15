@@ -29,7 +29,7 @@ class AxisPartition(object):
         The only abstract method needed to implement is the `apply` method.
     """
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, is_transposed=False, other_axis_partition=None, **kwargs):
         """Applies a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
@@ -71,7 +71,7 @@ class RayAxisPartition(AxisPartition):
         # Unwrap from RemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, is_transposed=False, other_axis_partition=None, **kwargs):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -98,8 +98,10 @@ class RayAxisPartition(AxisPartition):
                 )
             ]
 
-        args = [self.axis, func, num_splits, kwargs]
+        args = [self.axis, func, num_splits, is_transposed, kwargs]
         args.extend(self.list_of_blocks)
+        for item in self.list_of_blocks:
+            print(item)
         return [
             RayRemotePartition(obj)
             for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)
@@ -180,7 +182,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 
 @ray.remote
-def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_ray_axis_func(axis, func, num_splits, is_transposed, kwargs, *partitions):
     """Deploy a function along a full axis in Ray.
 
     Args:
@@ -194,6 +196,12 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     Returns:
         A list of Pandas DataFrames.
     """
+    if is_transposed:
+        for part in partitions:
+            print(part)
+        partitions = [df.T for df in partitions]
+        for part in partitions:
+            print(part)
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if num_splits != len(partitions) or isinstance(result, pandas.Series):

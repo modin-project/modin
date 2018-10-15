@@ -150,7 +150,7 @@ class PandasDataManager(object):
         if self._is_transposed:
 
             def helper(df, internal_indices=[]):
-                return pandas_func(df.T, **kwargs)
+                return pandas_func(df, **kwargs)
 
         else:
 
@@ -1466,7 +1466,7 @@ class PandasDataManager(object):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
     def map_across_full_axis(self, axis, func):
-        return self.data.map_across_full_axis(axis, func)
+        return self.data.map_across_full_axis(axis, func, self._is_transposed)
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
@@ -2103,11 +2103,13 @@ class PandasDataManager(object):
         def insert(df, internal_indices=[]):
             internal_idx = internal_indices[0]
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
+            df.columns = [i for i in range(len(df.columns))]
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
-            0, insert, loc, keep_remaining=True
+            0, insert, loc, keep_remaining=True, is_transposed=self._is_transposed
         )
+        self._is_transposed ^= 1
         new_columns = self.columns.insert(loc, column)
 
         return self.__constructor__(new_data, self.index, new_columns)

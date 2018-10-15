@@ -397,7 +397,7 @@ class BlockPartitions(object):
             A new BlockPartitions object, the type of object that called this.
         """
         cls = type(self)
-        return cls(self.partitions.T).map_across_blocks(pandas.DataFrame.transpose)
+        return cls(self.partitions.T)
 
     def to_pandas(self, is_transposed=False):
         """Convert this object into a Pandas DataFrame from the partitions.
@@ -443,6 +443,8 @@ class BlockPartitions(object):
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
             ]
+            for row in df_rows:
+                print(row)
             if len(df_rows) == 0:
                 return pandas.DataFrame()
             else:
@@ -602,7 +604,7 @@ class BlockPartitions(object):
                 partitions_dict[part_idx].append(internal_idx)
         return partitions_dict
 
-    def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
+    def _apply_func_to_list_of_partitions(self, func, partitions, is_transposed=False, **kwargs):
         """Applies a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
@@ -615,7 +617,7 @@ class BlockPartitions(object):
             A list of RemotePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+        return [obj.apply(preprocessed_func, is_transposed, **kwargs) for obj in partitions]
 
     def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False):
         """Applies a function to select indices.
@@ -719,7 +721,7 @@ class BlockPartitions(object):
         return cls(result.T) if not axis else cls(result)
 
     def apply_func_to_select_indices_along_full_axis(
-        self, axis, func, indices, keep_remaining=False
+        self, axis, func, indices, keep_remaining=False, is_transposed=False
     ):
         """Applies a function to a select subset of full columns/rows.
 
@@ -807,10 +809,10 @@ class BlockPartitions(object):
                 # See notes in `apply_func_to_select_indices`
                 result = np.array(
                     [
-                        partitions_for_remaining[i]
+                        np.array([part.apply(lambda df: df, is_transposed=is_transposed) for part in partitions_for_remaining[i]])
                         if i not in partitions_dict
                         else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i]
+                            preprocessed_func, internal_indices=partitions_dict[i], is_transposed=is_transposed
                         )
                         for i in range(len(partitions_for_remaining))
                     ]

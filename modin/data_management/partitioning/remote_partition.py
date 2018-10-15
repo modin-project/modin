@@ -33,7 +33,7 @@ class RemotePartition(object):
         """
         raise NotImplementedError("Must be implemented in child class")
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, is_transposed, **kwargs):
         """Apply some callable function to the data in this partition.
 
         Note: It is up to the implementation how kwargs are handled. They are
@@ -159,7 +159,7 @@ class RayRemotePartition(RemotePartition):
 
         return ray.get(self.oid)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, is_transposed=False, **kwargs):
         """Apply a function to the object stored in this partition.
 
         Note: It does not matter if func is callable or an ObjectID. Ray will
@@ -188,7 +188,7 @@ class RayRemotePartition(RemotePartition):
             return oid_obj
 
         oid = deploy_ray_func.remote(
-            call_queue_closure, oid, kwargs={"call_queues": self.call_queue}
+            call_queue_closure, oid, is_transposed=is_transposed, kwargs={"call_queues": self.call_queue}
         )
         self.call_queue = []
 
@@ -263,7 +263,7 @@ def width_fn_pandas(df):
 
 
 @ray.remote
-def deploy_ray_func(func, partition, kwargs):
+def deploy_ray_func(func, partition, is_transposed, kwargs):
     """Deploy a function to a partition in Ray.
 
     Args:
@@ -274,6 +274,8 @@ def deploy_ray_func(func, partition, kwargs):
     Returns:
         The result of the function.
     """
+    if is_transposed:
+        partition = partition.T
     try:
         return func(partition, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate
