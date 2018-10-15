@@ -967,11 +967,69 @@ class PandasDataManager(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+        min_count = kwargs.get("min_count", 0)
+
+        # We cannot add datetime types, so if we are summing a column with
+        # dtype datetime64 and cannot ignore non-numeric types, we must throw a
+        # TypeError.
+        if (
+            not axis
+            and numeric_only is False
+            and any(dtype == np.dtype("datetime64[ns]") for dtype in
+                self.dtypes)
+        ):
+            raise TypeError("Cannot add Timestamp Types")
+
+        # If our DataFrame has both numeric and non-numeric dtypes then
+        # operations between these types do not make sense and we must raise a
+        # TypeError. The exception to this rule is when there are datetime and
+        # timedelta objects, in which case we proceed with the comparison
+        # without ignoring any non-numeric types. We must check explicitly if
+        # numeric_only is False because if it is None, it will default to True
+        # if the operation fails with mixed dtypes.
+        if (
+            axis
+            and numeric_only is False
+            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+        ):
+            # check if there are columns with dtypes datetime or timedelta
+            if all(
+                dtype != np.dtype("datetime64[ns]")
+                and dtype != np.dtype("timedelta64[ns]")
+                for dtype in self.dtypes
+            ):
+                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+
+        reduce_index = self.columns if axis else self.index
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+        else:
+            data_manager = self
+        new_index = data_manager.index if axis else data_manager.columns
+
+        def sum_builder(df, **kwargs):
+            if not df.empty:
+                return pandas.DataFrame.sum(df, **kwargs)
+
+        map_func = self._prepare_method(sum_builder, **kwargs)
+
+        if all(
+            dtype == np.dtype("datetime64[ns]")
+            or dtype == np.dtype("timedelta64[ns]")
+            for dtype in self.dtypes
+        ):
+            return self.full_axis_reduce(map_func, axis)
+        elif min_count == 0:
+            return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+        elif min_count > len(reduce_index):
+            return pandas.Series([np.nan] * len(new_index),
+                    index=new_index, dtype=np.dtype('object'))
+        else:
+            return self.full_axis_reduce(map_func, axis, new_index)
 
     # END Full Reduce operations
 
@@ -1094,11 +1152,14 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce(self, func, axis):
+    def full_axis_reduce(self, func, axis, alternate_index=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
+            axis: axis to apply the function to.
+            alternate_index: If the resulting series should have an index
+                different from the current data_manager's index or columns.
 
         Return:
             Pandas series containing the reduced data.
@@ -1111,10 +1172,12 @@ class PandasDataManager(object):
         result = self.data.map_across_full_axis(axis, func).to_pandas(
             self._is_transposed ^ axis
         )
+        if result.empty:
+            return result
         if not axis:
-            result.index = self.columns
+            result.index = alternate_index if alternate_index is not None else self.columns
         else:
-            result.index = self.index
+            result.index = alternate_index if alternate_index is not None else self.index
         return result
 
     def all(self, **kwargs):
