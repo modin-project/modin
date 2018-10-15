@@ -455,8 +455,6 @@ class BlockPartitions(object):
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
             ]
-            for row in df_rows:
-                print(row)
             if len(df_rows) == 0:
                 return pandas.DataFrame()
             else:

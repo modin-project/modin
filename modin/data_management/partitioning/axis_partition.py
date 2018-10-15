@@ -100,8 +100,6 @@ class RayAxisPartition(AxisPartition):
 
         args = [self.axis, func, num_splits, self_is_transposed, kwargs]
         args.extend(self.list_of_blocks)
-        for item in self.list_of_blocks:
-            print(item)
         return [
             RayRemotePartition(obj)
             for obj in deploy_ray_axis_func._submit(args, num_return_vals=num_splits)
@@ -197,11 +195,7 @@ def deploy_ray_axis_func(axis, func, num_splits, is_transposed, kwargs, *partiti
         A list of Pandas DataFrames.
     """
     if is_transposed:
-        for part in partitions:
-            print(part)
         partitions = [df.T for df in partitions]
-        for part in partitions:
-            print(part)
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if num_splits != len(partitions) or isinstance(result, pandas.Series):
