@@ -949,7 +949,7 @@ class PandasDataManager(object):
         numeric_only = True if axis else kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.min, **kwargs)
         return self.full_reduce(axis, func, numeric_only=numeric_only)
- 
+
     def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
         """Calculates the sum or product of the DataFrame.
 
@@ -1021,7 +1021,6 @@ class PandasDataManager(object):
             )
         else:
             return self.full_axis_reduce(map_func, axis, new_index)
-
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
