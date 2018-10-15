@@ -32,6 +32,7 @@ class PandasDataManager(object):
         self.data = block_partitions_object
         self.index = index
         self.columns = columns
+        self._is_transposed = 0
         if dtypes is not None:
             self._dtype_cache = dtypes
 
@@ -49,7 +50,7 @@ class PandasDataManager(object):
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0, is_transposed=self._is_transposed)
             self._dtype_cache.index = self.columns
         return self._dtype_cache
 
@@ -426,6 +427,8 @@ class PandasDataManager(object):
             1,
             lambda l, r: inter_data_op_builder(l, r, self_cols, other_cols, func),
             reindexed_other,
+            self._is_transposed,
+            other._is_transposed
         )
         return self.__constructor__(new_data, joined_index, new_columns)
 
@@ -720,9 +723,11 @@ class PandasDataManager(object):
                 1,
                 lambda l, r: where_builder_first_pass(l, r, **kwargs),
                 reindexed_other,
+                cond._is_transposed,
+                other._is_transposed,
             )
             final_pass = reindexed_self.inter_data_operation(
-                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass
+                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass, self_is_transposed=self._is_transposed
             )
             return self.__constructor__(final_pass, self.index, self.columns)
         else:
@@ -745,6 +750,8 @@ class PandasDataManager(object):
                 axis,
                 lambda l, r: where_builder_series(l, r, other, **kwargs),
                 reindexed_cond,
+                self._is_transposed,
+                False,
             )
             return self.__constructor__(new_data, self.index, self.columns)
 
@@ -890,10 +897,8 @@ class PandasDataManager(object):
             data_manager = self
         if reduce_func is None:
             reduce_func = map_func
-        # The XOR here will ensure that we reduce over the correct axis that
-        # exists on the internal partitions. We flip the axis
         result = data_manager.data.full_reduce(
-            map_func, reduce_func, axis ^ self._is_transposed
+            map_func, reduce_func, axis, is_transposed=self._is_transposed
         )
         if result.shape == (0,):
             return result
@@ -978,9 +983,10 @@ class PandasDataManager(object):
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     def map_partitions(self, func, new_dtypes=None):
-        return self.__constructor__(
+        result = self.__constructor__(
             self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
         )
+        return result
 
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
@@ -1081,7 +1087,7 @@ class PandasDataManager(object):
                 return df.astype(block_dtypes)
 
             new_data = new_data.apply_func_to_select_indices(
-                0, astype, dtype_indices[dtype], keep_remaining=True
+                0, astype, dtype_indices[dtype], keep_remaining=True, is_transposed=self._is_transposed
             )
 
         return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
@@ -1103,14 +1109,7 @@ class PandasDataManager(object):
         Return:
             Pandas series containing the reduced data.
         """
-        # We XOR with axis because if we are doing an operation over the columns
-        # (i.e. along the rows), we want to take the transpose so that the
-        # results from the same parition will be concated together first.
-        # We need this here because if the operations is over the columns,
-        # map_across_full_axis does not transpose the result before returning.
-        result = self.data.map_across_full_axis(axis, func).to_pandas(
-            self._is_transposed ^ axis
-        )
+        result = self.data.map_across_full_axis(axis, func, self._is_transposed).to_pandas()
         if not axis:
             result.index = self.columns
         else:
@@ -1396,10 +1395,10 @@ class PandasDataManager(object):
         old_index = self.index if axis else self.columns
         numeric_indices = [i for i, name in enumerate(old_index) if name in index]
         result = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, numeric_indices
+            axis, func, numeric_indices, is_transposed=self._is_transposed
         )
         if pandas_result:
-            result = result.to_pandas(self._is_transposed)
+            result = result.to_pandas(is_transposed=False)
             result.index = index
         return result
 
@@ -1660,7 +1659,7 @@ class PandasDataManager(object):
                 return df.fillna(value=func_dict, **kwargs)
 
             new_data = self.data.apply_func_to_select_indices(
-                axis, fillna_dict_builder, value, keep_remaining=True
+                axis, fillna_dict_builder, value, keep_remaining=True, is_transposed=self._is_transposed
             )
             return self.__constructor__(new_data, self.index, self.columns)
         else:
@@ -1735,8 +1734,8 @@ class PandasDataManager(object):
         Returns:
             BlockPartitions containing the result of mapping func over axis on indices.
         """
-        return self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, indices, keep_remaining
+        result = self.data.apply_func_to_select_indices_along_full_axis(
+            axis, func, indices, keep_remaining, is_transposed=self._is_transposed
         )
 
     def quantile_for_list_of_values(self, **kwargs):
@@ -1992,7 +1991,7 @@ class PandasDataManager(object):
             return df.iloc[:, internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            0, getitem, numeric_indices, keep_remaining=False
+            0, getitem, numeric_indices, keep_remaining=False, is_transposed=self._is_transposed
         )
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
@@ -2016,7 +2015,7 @@ class PandasDataManager(object):
             return df.iloc[internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            1, getitem, numeric_indices, keep_remaining=False
+            1, getitem, numeric_indices, keep_remaining=False, is_transposed=self._is_transposed
         )
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
@@ -2050,7 +2049,7 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.index.get_indexer_for(index))
             new_data = self.data.apply_func_to_select_indices(
-                1, delitem, numeric_indices, keep_remaining=True
+                1, delitem, numeric_indices, keep_remaining=True, is_transposed=self._is_transposed
             )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
@@ -2069,7 +2068,7 @@ class PandasDataManager(object):
 
             numeric_indices = list(self.columns.get_indexer_for(columns))
             new_data = new_data.apply_func_to_select_indices(
-                0, delitem, numeric_indices, keep_remaining=True
+                0, delitem, numeric_indices, keep_remaining=True, is_transposed=self._is_transposed
             )
             # We can't use self.columns.drop with duplicate keys because in Pandas
             # it throws an error.
@@ -2109,7 +2108,6 @@ class PandasDataManager(object):
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
             0, insert, loc, keep_remaining=True, is_transposed=self._is_transposed
         )
-        self._is_transposed ^= 1
         new_columns = self.columns.insert(loc, column)
 
         return self.__constructor__(new_data, self.index, new_columns)
@@ -2209,7 +2207,7 @@ class PandasDataManager(object):
             return df.apply(func_dict, *args, **kwargs)
 
         result_data = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, dict_apply_builder, func, keep_remaining=False
+            axis, dict_apply_builder, func, keep_remaining=False, is_transposed=self._is_transposed
         )
         full_result = self._post_process_apply(result_data, axis)
         # The columns can get weird because we did not broadcast them to the

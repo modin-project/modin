@@ -29,7 +29,7 @@ class AxisPartition(object):
         The only abstract method needed to implement is the `apply` method.
     """
 
-    def apply(self, func, num_splits=None, is_transposed=False, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, self_is_transposed=False, other_axis_partition=None, other_is_transposed=False, **kwargs):
         """Applies a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
@@ -71,7 +71,7 @@ class RayAxisPartition(AxisPartition):
         # Unwrap from RemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, is_transposed=False, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, self_is_transposed=False, other_axis_partition=None, other_is_transposed=False, **kwargs):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -92,13 +92,13 @@ class RayAxisPartition(AxisPartition):
             return [
                 RayRemotePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions._submit(
-                    args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
+                    args=(self.axis, func, num_splits, len(self.list_of_blocks), self_is_transposed, other_is_transposed, kwargs)
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
                     num_return_vals=num_splits,
                 )
             ]
 
-        args = [self.axis, func, num_splits, is_transposed, kwargs]
+        args = [self.axis, func, num_splits, self_is_transposed, kwargs]
         args.extend(self.list_of_blocks)
         for item in self.list_of_blocks:
             print(item)
@@ -220,7 +220,7 @@ def deploy_ray_axis_func(axis, func, num_splits, is_transposed, kwargs, *partiti
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-    axis, func, num_splits, len_of_left, kwargs, *partitions
+    axis, func, num_splits, len_of_left, self_is_transposed, other_is_transposed, kwargs, *partitions
 ):
     """Deploy a function along a full axis between two data sets in Ray.
 
@@ -238,8 +238,16 @@ def deploy_ray_func_between_two_axis_partitions(
     Returns:
         A list of Pandas DataFrames.
     """
-    lt_frame = pandas.concat(list(partitions[:len_of_left]), axis=axis, copy=False)
-    rt_frame = pandas.concat(list(partitions[len_of_left:]), axis=axis, copy=False)
+    if self_is_transposed:
+        lt_partitions = [df.T for df in partitions[:len_of_left]]
+    else:
+        lt_partitions = [df for df in partitions[:len_of_left]]
+    if other_is_transposed:
+        rt_partitions = [df.T for df in partitions[len_of_left:]]
+    else:
+        rt_partitions = [df for df in partitions[len_of_left:]]
+    lt_frame = pandas.concat(lt_partitions, axis=axis, copy=False)
+    rt_frame = pandas.concat(rt_partitions, axis=axis, copy=False)
 
     result = func(lt_frame, rt_frame, **kwargs)
     return split_result_of_axis_func_pandas(axis, num_splits, result)
