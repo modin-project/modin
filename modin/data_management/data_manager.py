@@ -935,7 +935,6 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        kwargs["numeric_only"] = True
         return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
@@ -1012,8 +1011,18 @@ class PandasDataManager(object):
             dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
             for dtype in self.dtypes
         ):
-            return self.full_axis_reduce(map_func, axis)
+            if numeric_only is None:
+                new_index = [
+                    col
+                    for col, dtype in zip(self.columns, self.dtypes)
+                    if dtype == np.dtype("timedelta64[ns]")
+                ]
+                return self.full_axis_reduce(map_func, axis, new_index)
+            else:
+                return self.full_axis_reduce(map_func, axis)
         elif min_count == 0:
+            if numeric_only is None:
+                numeric_only = True
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
             return pandas.Series(
