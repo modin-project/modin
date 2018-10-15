@@ -399,7 +399,10 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
         if numeric_only is not None and not numeric_only:
-            if not any(is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t) for t in self.dtypes):
+            if not any(
+                is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t)
+                for t in self.dtypes
+            ):
                 raise TypeError("No numeric data types to sum over")
             if not axis and any(t == np.dtype("timedelta64[ns]") for t in self.dtypes):
                 raise TypeError("Cannot sum over Timestamps")
