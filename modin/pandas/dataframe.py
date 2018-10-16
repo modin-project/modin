@@ -4696,8 +4696,7 @@ class DataFrame(object):
         if (
             not axis
             and numeric_only is False
-            and any(dtype == np.dtype("datetime64[ns]") for dtype in
-                self.dtypes)
+            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
         ):
             raise TypeError("Cannot add Timestamp Types")
 
