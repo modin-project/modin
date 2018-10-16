@@ -370,9 +370,9 @@ class DataFrame(object):
             )
 
             if all(obj in self for obj in by) and mismatch:
-                raise NotImplementedError(
-                    "Groupby with lists of columns not yet supported."
-                )
+                # In the future, we will need to add logic to handle this, but for now
+                # we default to pandas in this case.
+                pass
             elif mismatch:
                 raise KeyError(next(x for x in by if x not in self))
 
