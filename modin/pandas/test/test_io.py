@@ -26,8 +26,8 @@ SMALL_ROW_SIZE = 2000
 
 
 @pytest.fixture
-def modin_df_equals_pandas(modin_df, pandas_df):
-    return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
+def ray_df_equals_pandas(ray_df, pandas_df):
+    return to_pandas(ray_df).sort_index().equals(pandas_df.sort_index())
 
 
 @pytest.fixture
@@ -281,8 +281,8 @@ def test_from_parquet():
     setup_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
-    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_parquet_file()
 
@@ -291,8 +291,8 @@ def test_from_parquet_with_columns():
     setup_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    ray_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_parquet_file()
 
@@ -301,9 +301,9 @@ def test_from_csv():
     setup_csv_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+    ray_df = pd.read_csv(TEST_CSV_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_csv_file()
 
@@ -316,35 +316,35 @@ def test_from_csv_chunksize():
     rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
     pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
 
-    for modin_df, pd_df in zip(rdf_reader, pd_reader):
-        assert modin_df_equals_pandas(modin_df, pd_df)
+    for ray_df, pd_df in zip(rdf_reader, pd_reader):
+        assert ray_df_equals_pandas(ray_df, pd_df)
 
     # Tests that get_chunk works correctly
     rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
     pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
 
-    modin_df = rdf_reader.get_chunk(1)
+    ray_df = rdf_reader.get_chunk(1)
     pd_df = pd_reader.get_chunk(1)
 
-    assert modin_df_equals_pandas(modin_df, pd_df)
+    assert ray_df_equals_pandas(ray_df, pd_df)
 
     # Tests that read works correctly
     rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
     pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
 
-    modin_df = rdf_reader.read()
+    ray_df = rdf_reader.read()
     pd_df = pd_reader.read()
 
-    assert modin_df_equals_pandas(modin_df, pd_df)
+    assert ray_df_equals_pandas(ray_df, pd_df)
 
 
 def test_from_json():
     setup_json_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME)
-    modin_df = pd.read_json(TEST_JSON_FILENAME)
+    ray_df = pd.read_json(TEST_JSON_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_json_file()
 
@@ -353,9 +353,9 @@ def test_from_html():
     setup_html_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_html(TEST_HTML_FILENAME)[0]
-    modin_df = pd.read_html(TEST_HTML_FILENAME)
+    ray_df = pd.read_html(TEST_HTML_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_html_file()
 
@@ -365,18 +365,18 @@ def test_from_clipboard():
     setup_clipboard(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_clipboard()
-    modin_df = pd.read_clipboard()
+    ray_df = pd.read_clipboard()
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
 
 def test_from_excel():
     setup_excel_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
-    modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
+    ray_df = pd.read_excel(TEST_EXCEL_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_excel_file()
 
@@ -386,9 +386,9 @@ def test_from_feather():
     setup_feather_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_feather(TEST_FEATHER_FILENAME)
-    modin_df = pd.read_feather(TEST_FEATHER_FILENAME)
+    ray_df = pd.read_feather(TEST_FEATHER_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_feather_file()
 
@@ -398,9 +398,9 @@ def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="test")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="test")
+    ray_df = pd.read_hdf(TEST_HDF_FILENAME, key="test")
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_hdf_file()
 
@@ -409,9 +409,9 @@ def test_from_msgpack():
     setup_msgpack_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_msgpack(TEST_MSGPACK_FILENAME)
-    modin_df = pd.read_msgpack(TEST_MSGPACK_FILENAME)
+    ray_df = pd.read_msgpack(TEST_MSGPACK_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_msgpack_file()
 
@@ -420,9 +420,9 @@ def test_from_stata():
     setup_stata_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_stata(TEST_STATA_FILENAME)
-    modin_df = pd.read_stata(TEST_STATA_FILENAME)
+    ray_df = pd.read_stata(TEST_STATA_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_stata_file()
 
@@ -431,9 +431,9 @@ def test_from_pickle():
     setup_pickle_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_pickle(TEST_PICKLE_FILENAME)
-    modin_df = pd.read_pickle(TEST_PICKLE_FILENAME)
+    ray_df = pd.read_pickle(TEST_PICKLE_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_pickle_file()
 
@@ -443,9 +443,9 @@ def test_from_sql():
     setup_sql_file(conn, True)
 
     pandas_df = pandas.read_sql("select * from test", conn)
-    modin_df = pd.read_sql("select * from test", conn)
+    ray_df = pd.read_sql("select * from test", conn)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_sql_file()
 
@@ -453,44 +453,44 @@ def test_from_sql():
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
 def test_from_sas():
     pandas_df = pandas.read_sas(TEST_SAS_FILENAME)
-    modin_df = pd.read_sas(TEST_SAS_FILENAME)
+    ray_df = pd.read_sas(TEST_SAS_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
 
 def test_from_csv_delimiter():
     setup_csv_file(SMALL_ROW_SIZE, delimiter="|")
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+    ray_df = pd.read_csv(TEST_CSV_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert ray_df_equals_pandas(ray_df, pandas_df)
 
     teardown_csv_file()
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_to_clipboard():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
-    modin_df.to_clipboard()
-    modin_as_clip = pandas.read_clipboard()
+    ray_df.to_clipboard()
+    ray_as_clip = pandas.read_clipboard()
 
     pandas_df.to_clipboard()
     pandas_as_clip = pandas.read_clipboard()
 
-    assert modin_as_clip.equals(pandas_as_clip)
+    assert ray_as_clip.equals(pandas_as_clip)
 
 
 def test_to_csv():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
     TEST_CSV_pandas_FILENAME = "test_pandas.csv"
 
-    modin_df.to_csv(TEST_CSV_DF_FILENAME)
+    ray_df.to_csv(TEST_CSV_DF_FILENAME)
     pandas_df.to_csv(TEST_CSV_pandas_FILENAME)
 
     assert test_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
@@ -501,31 +501,31 @@ def test_to_csv():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_dense():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
 
     with pytest.raises(NotImplementedError):
-        modin_df.to_dense()
+        ray_df.to_dense()
 
 
 def test_to_dict():
-    modin_df = create_test_ray_dataframe()
-    assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
+    ray_df = create_test_ray_dataframe()
+    assert ray_df.to_dict() == to_pandas(ray_df).to_dict()
 
 
 def test_to_excel():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_EXCEL_DF_FILENAME = "test_df.xlsx"
     TEST_EXCEL_pandas_FILENAME = "test_pandas.xlsx"
 
-    modin_writer = pandas.ExcelWriter(TEST_EXCEL_DF_FILENAME)
+    ray_writer = pandas.ExcelWriter(TEST_EXCEL_DF_FILENAME)
     pandas_writer = pandas.ExcelWriter(TEST_EXCEL_pandas_FILENAME)
 
-    modin_df.to_excel(modin_writer)
+    ray_df.to_excel(ray_writer)
     pandas_df.to_excel(pandas_writer)
 
-    modin_writer.save()
+    ray_writer.save()
     pandas_writer.save()
 
     assert test_files_eq(TEST_EXCEL_DF_FILENAME, TEST_EXCEL_pandas_FILENAME)
@@ -535,13 +535,13 @@ def test_to_excel():
 
 
 def test_to_feather():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_FEATHER_DF_FILENAME = "test_df.feather"
     TEST_FEATHER_pandas_FILENAME = "test_pandas.feather"
 
-    modin_df.to_feather(TEST_FEATHER_DF_FILENAME)
+    ray_df.to_feather(TEST_FEATHER_DF_FILENAME)
     pandas_df.to_feather(TEST_FEATHER_pandas_FILENAME)
 
     assert test_files_eq(TEST_FEATHER_DF_FILENAME, TEST_FEATHER_pandas_FILENAME)
@@ -551,20 +551,20 @@ def test_to_feather():
 
 
 def test_to_gbq():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
     # Because we default to pandas, we can just test the equality of the two frames.
-    assert to_pandas(modin_df).equals(pandas_df)
+    assert to_pandas(ray_df).equals(pandas_df)
 
 
 def test_to_html():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_HTML_DF_FILENAME = "test_df.html"
     TEST_HTML_pandas_FILENAME = "test_pandas.html"
 
-    modin_df.to_html(TEST_HTML_DF_FILENAME)
+    ray_df.to_html(TEST_HTML_DF_FILENAME)
     pandas_df.to_html(TEST_HTML_pandas_FILENAME)
 
     assert test_files_eq(TEST_HTML_DF_FILENAME, TEST_HTML_pandas_FILENAME)
@@ -574,13 +574,13 @@ def test_to_html():
 
 
 def test_to_json():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_JSON_DF_FILENAME = "test_df.json"
     TEST_JSON_pandas_FILENAME = "test_pandas.json"
 
-    modin_df.to_json(TEST_JSON_DF_FILENAME)
+    ray_df.to_json(TEST_JSON_DF_FILENAME)
     pandas_df.to_json(TEST_JSON_pandas_FILENAME)
 
     assert test_files_eq(TEST_JSON_DF_FILENAME, TEST_JSON_pandas_FILENAME)
@@ -590,18 +590,18 @@ def test_to_json():
 
 
 def test_to_latex():
-    modin_df = create_test_ray_dataframe()
-    assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
+    ray_df = create_test_ray_dataframe()
+    assert ray_df.to_latex() == to_pandas(ray_df).to_latex()
 
 
 def test_to_msgpack():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_MSGPACK_DF_FILENAME = "test_df.msgpack"
     TEST_MSGPACK_pandas_FILENAME = "test_pandas.msgpack"
 
-    modin_df.to_msgpack(TEST_MSGPACK_DF_FILENAME)
+    ray_df.to_msgpack(TEST_MSGPACK_DF_FILENAME)
     pandas_df.to_msgpack(TEST_MSGPACK_pandas_FILENAME)
 
     assert test_files_eq(TEST_MSGPACK_DF_FILENAME, TEST_MSGPACK_pandas_FILENAME)
@@ -611,20 +611,20 @@ def test_to_msgpack():
 
 
 def test_to_panel():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
 
     with pytest.raises(NotImplementedError):
-        modin_df.to_panel()
+        ray_df.to_panel()
 
 
 def test_to_parquet():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PARQUET_DF_FILENAME = "test_df.parquet"
     TEST_PARQUET_pandas_FILENAME = "test_pandas.parquet"
 
-    modin_df.to_parquet(TEST_PARQUET_DF_FILENAME)
+    ray_df.to_parquet(TEST_PARQUET_DF_FILENAME)
     pandas_df.to_parquet(TEST_PARQUET_pandas_FILENAME)
 
     assert test_files_eq(TEST_PARQUET_DF_FILENAME, TEST_PARQUET_pandas_FILENAME)
@@ -635,20 +635,20 @@ def test_to_parquet():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_period():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
 
     with pytest.raises(NotImplementedError):
-        modin_df.to_period()
+        ray_df.to_period()
 
 
 def test_to_pickle():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PICKLE_DF_FILENAME = "test_df.pkl"
     TEST_PICKLE_pandas_FILENAME = "test_pandas.pkl"
 
-    modin_df.to_pickle(TEST_PICKLE_DF_FILENAME)
+    ray_df.to_pickle(TEST_PICKLE_DF_FILENAME)
     pandas_df.to_pickle(TEST_PICKLE_pandas_FILENAME)
 
     assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
@@ -658,13 +658,13 @@ def test_to_pickle():
 
 
 def test_to_sql():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_SQL_DF_FILENAME = "test_df.sql"
     TEST_SQL_pandas_FILENAME = "test_pandas.sql"
 
-    modin_df.to_pickle(TEST_SQL_DF_FILENAME)
+    ray_df.to_pickle(TEST_SQL_DF_FILENAME)
     pandas_df.to_pickle(TEST_SQL_pandas_FILENAME)
 
     assert test_files_eq(TEST_SQL_DF_FILENAME, TEST_SQL_pandas_FILENAME)
@@ -674,13 +674,13 @@ def test_to_sql():
 
 
 def test_to_stata():
-    modin_df = create_test_ray_dataframe()
+    ray_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_STATA_DF_FILENAME = "test_df.stata"
     TEST_STATA_pandas_FILENAME = "test_pandas.stata"
 
-    modin_df.to_stata(TEST_STATA_DF_FILENAME)
+    ray_df.to_stata(TEST_STATA_DF_FILENAME)
     pandas_df.to_stata(TEST_STATA_pandas_FILENAME)
 
     assert test_files_eq(TEST_STATA_DF_FILENAME, TEST_STATA_pandas_FILENAME)
