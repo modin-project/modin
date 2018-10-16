@@ -2623,6 +2623,7 @@ class DataFrame(object):
             margins_name=margins_name,
         )
 
+    @property
     def plot(
         self,
         x=None,
@@ -2656,38 +2657,7 @@ class DataFrame(object):
         sort_columns=False,
         **kwargs
     ):
-        return to_pandas(self).plot(
-            x=x,
-            y=y,
-            kind=kind,
-            ax=ax,
-            subplots=subplots,
-            sharex=sharex,
-            sharey=sharey,
-            layout=layout,
-            figsize=figsize,
-            use_index=use_index,
-            title=title,
-            grid=grid,
-            legend=legend,
-            style=style,
-            logx=logx,
-            logy=logy,
-            loglog=loglog,
-            xticks=xticks,
-            yticks=yticks,
-            xlim=xlim,
-            ylim=ylim,
-            rot=rot,
-            fontsize=fontsize,
-            colormap=colormap,
-            table=table,
-            yerr=yerr,
-            xerr=xerr,
-            secondary_y=secondary_y,
-            sort_columns=sort_columns,
-            **kwargs
-        )
+        return to_pandas(self).plot
 
     def pop(self, item):
         """Pops an item from this DataFrame and returns it.
