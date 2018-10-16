@@ -32,7 +32,6 @@ class PandasDataManager(object):
         self.data = block_partitions_object
         self.index = index
         self.columns = columns
-        self._is_transposed = 0
         if dtypes is not None:
             self._dtype_cache = dtypes
 
@@ -150,15 +149,8 @@ class PandasDataManager(object):
         Returns
             Helper function which handles potential transpose.
         """
-        if self._is_transposed:
-
-            def helper(df, internal_indices=[]):
-                return pandas_func(df, **kwargs)
-
-        else:
-
-            def helper(df, internal_indices=[]):
-                return pandas_func(df, **kwargs)
+        def helper(df, internal_indices=[]):
+            return pandas_func(df, **kwargs)
 
         return helper
 
