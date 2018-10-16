@@ -2125,7 +2125,7 @@ class PandasDataManager(object):
         def insert(df, internal_indices=[]):
             internal_idx = internal_indices[0]
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
-            df.columns = [i for i in range(len(df.columns))]
+            df.columns = pandas.RangeIndex(len(df.columns))
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
