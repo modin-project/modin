@@ -193,6 +193,8 @@ class PandasDataManager(object):
             # If over rows and no numeric columns, return this
             if axis:
                 result = pandas.Series([np.nan for _ in self.index])
+            else:
+                result = pandas.Series([0 for _ in self.index])
         else:
             data_manager = self.drop(columns=nonnumeric)
         return result, data_manager
@@ -791,12 +793,16 @@ class PandasDataManager(object):
         # partitions.
         def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
             if axis:
+                while len(df.columns) < len(old_labels):
+                    df[len(df.columns)] = np.nan
                 df.columns = old_labels
                 new_df = df.reindex(columns=new_labels, **kwargs)
                 # reset the internal columns back to a RangeIndex
                 new_df.columns = pandas.RangeIndex(len(new_df.columns))
                 return new_df
             else:
+                while len(df.index) < len(old_labels):
+                    df.loc[len(df.index)] = np.nan
                 df.index = old_labels
                 new_df = df.reindex(index=new_labels, **kwargs)
                 # reset the internal index back to a RangeIndex
@@ -906,6 +912,46 @@ class PandasDataManager(object):
             result.index = data_manager.index
         return result
 
+    def _process_min_max(self, func, **kwargs):
+        """Calculates the min or max of the DataFrame.
+
+        Return:
+           Pandas series containing the min or max values from each column or
+           row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+
+        # If our DataFrame has both numeric and non-numeric dtypes then
+        # comparisons between these types do not make sense and we must raise a
+        # TypeError. The exception to this rule is when there are datetime and
+        # timedelta objects, in which case we proceed with the comparison
+        # without ignoring any non-numeric types. We must check explicitly if
+        # numeric_only is False because if it is None, it will default to True
+        # if the operation fails with mixed dtypes.
+        if (
+            axis
+            and numeric_only is False
+            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+        ):
+            # check if there are columns with dtypes datetime or timedelta
+            if all(
+                dtype != np.dtype("datetime64[ns]")
+                and dtype != np.dtype("timedelta64[ns]")
+                for dtype in self.dtypes
+            ):
+                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+
+        numeric_only = True if axis else kwargs.get("numeric_only", False)
+
+        def min_max_builder(df, **kwargs):
+            if not df.empty:
+                return func(df, **kwargs)
+
+        map_func = self._prepare_method(min_max_builder, **kwargs)
+        return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
@@ -924,11 +970,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the maximum values from each column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.max, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        return self._process_min_max(pandas.DataFrame.max, **kwargs)
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -938,7 +980,6 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        kwargs["numeric_only"] = True
         return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
@@ -947,11 +988,59 @@ class PandasDataManager(object):
         Return:
             Pandas series with the minimum value from each column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
+        return self._process_min_max(pandas.DataFrame.min, **kwargs)
+
+    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+        """Calculates the sum or product of the DataFrame.
+
+        Args:
+            func: Pandas func to apply to DataFrame.
+            ignore_axis: Whether to ignore axis when raising TypeError
+        Return:
+            Pandas Series with sum or prod of DataFrame.
+        """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+        min_count = kwargs.get("min_count", 0)
+
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.min, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+
+        reduce_index = self.columns if axis else self.index
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+        else:
+            data_manager = self
+        new_index = data_manager.index if axis else data_manager.columns
+
+        def sum_prod_builder(df, **kwargs):
+            if not df.empty:
+                return func(df, **kwargs)
+
+        map_func = self._prepare_method(sum_prod_builder, **kwargs)
+
+        if all(
+            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
+            for dtype in self.dtypes
+        ):
+            if numeric_only is None:
+                new_index = [
+                    col
+                    for col, dtype in zip(self.columns, self.dtypes)
+                    if dtype == np.dtype("timedelta64[ns]")
+                ]
+                return self.full_axis_reduce(map_func, axis, new_index)
+            else:
+                return self.full_axis_reduce(map_func, axis)
+        elif min_count == 0:
+            if numeric_only is None:
+                numeric_only = True
+            return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+        elif min_count > len(reduce_index):
+            return pandas.Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        else:
+            return self.full_axis_reduce(map_func, axis, new_index)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -959,10 +1048,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.prod, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -970,11 +1056,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
 
     # END Full Reduce operations
 
@@ -1105,22 +1187,36 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce(self, func, axis):
+    def full_axis_reduce(self, func, axis, alternate_index=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
+            axis: axis to apply the function to.
+            alternate_index: If the resulting series should have an index
+                different from the current data_manager's index or columns.
 
         Return:
             Pandas series containing the reduced data.
         """
-        result = self.data.map_across_full_axis(
-            axis, func, self._is_transposed
-        ).to_pandas()
+        # We XOR with axis because if we are doing an operation over the columns
+        # (i.e. along the rows), we want to take the transpose so that the
+        # results from the same parition will be concated together first.
+        # We need this here because if the operations is over the columns,
+        # map_across_full_axis does not transpose the result before returning.
+        result = self.data.map_across_full_axis(axis, func).to_pandas(
+            self._is_transposed ^ axis
+        )
+        if result.empty:
+            return result
         if not axis:
-            result.index = self.columns
+            result.index = (
+                alternate_index if alternate_index is not None else self.columns
+            )
         else:
-            result.index = self.index
+            result.index = (
+                alternate_index if alternate_index is not None else self.index
+            )
         return result
 
     def all(self, **kwargs):
@@ -1617,31 +1713,35 @@ class PandasDataManager(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
 
-        counts = (
-            self.__constructor__(new_data, self.index, self.columns)
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return self.from_pandas(
+                    pandas.DataFrame(index=data_manager.index), type(self.data)
+                )
+        else:
+            data_manager = self
+
+        max_count = (
+            self.__constructor__(new_data, data_manager.index, data_manager.columns)
             .notnull()
             .sum(axis=axis)
-        )
-        max_count = counts.max()
+        ).max()
 
-        new_index = pandas.RangeIndex(max_count) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
+        new_index = pandas.RangeIndex(max_count) if not axis else data_manager.index
+        new_columns = data_manager.columns if not axis else pandas.RangeIndex(max_count)
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
         final_labels = new_index if not axis else new_columns
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
-        final_data = self.__constructor__(
-            new_data, new_index, new_columns
-        ).map_across_full_axis(
-            axis, lambda df: df.reindex(axis=axis, labels=final_labels)
-        )
         return self.__constructor__(
-            final_data, new_index, new_columns, self._dtype_cache
-        )
+            new_data, new_index, new_columns, data_manager._dtype_cache
+        ).reindex(axis=axis, labels=final_labels)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.

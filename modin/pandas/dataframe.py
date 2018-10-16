@@ -318,6 +318,10 @@ class DataFrame(object):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
 
         return DataFrame(data_manager=self._data_manager.applymap(func))
 
@@ -397,6 +401,7 @@ class DataFrame(object):
             The sum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=False)
 
         return self._data_manager.sum(
             axis=axis,
@@ -759,6 +764,10 @@ class DataFrame(object):
             Series or DataFrame, depending on func.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
 
         if isinstance(func, string_types):
             if axis == 1:
@@ -2197,8 +2206,8 @@ class DataFrame(object):
             The mean of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
+        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=False)
+
         return self._data_manager.mean(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2452,6 +2461,7 @@ class DataFrame(object):
         Returns:
             nunique : Series
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         return self._data_manager.nunique(axis=axis, dropna=dropna)
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
@@ -2628,6 +2638,7 @@ class DataFrame(object):
             prod : Series or DataFrame (if level specified)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
         return self._data_manager.prod(
             axis=axis,
             skipna=skipna,
@@ -2741,6 +2752,10 @@ class DataFrame(object):
         Returns:
             A new DataFrame if inplace=False
         """
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_manager = self._data_manager.query(expr, **kwargs)
@@ -4685,6 +4700,38 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
+
+    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
+        """Raises TypeErrors for sum, prod, and mean where necessary"""
+        # We cannot add datetime types, so if we are summing a column with
+        # dtype datetime64 and cannot ignore non-numeric types, we must throw a
+        # TypeError.
+        if (
+            not axis
+            and numeric_only is False
+            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
+        ):
+            raise TypeError("Cannot add Timestamp Types")
+
+        # If our DataFrame has both numeric and non-numeric dtypes then
+        # operations between these types do not make sense and we must raise a
+        # TypeError. The exception to this rule is when there are datetime and
+        # timedelta objects, in which case we proceed with the comparison
+        # without ignoring any non-numeric types. We must check explicitly if
+        # numeric_only is False because if it is None, it will default to True
+        # if the operation fails with mixed dtypes.
+        if (
+            (axis or ignore_axis)
+            and numeric_only is False
+            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+        ):
+            # check if there are columns with dtypes datetime or timedelta
+            if all(
+                dtype != np.dtype("datetime64[ns]")
+                and dtype != np.dtype("timedelta64[ns]")
+                for dtype in self.dtypes
+            ):
+                raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
     def _default_to_pandas_func(self, op, *args, **kwargs):
         """Helper method to use default pandas function"""
