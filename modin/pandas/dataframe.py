@@ -2452,6 +2452,7 @@ class DataFrame(object):
         Returns:
             nunique : Series
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         return self._data_manager.nunique(axis=axis, dropna=dropna)
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
