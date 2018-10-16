@@ -1809,6 +1809,17 @@ class DataFrame(object):
         Returns:
             Prints the summary of a DataFrame and returns None.
         """
+        # We will default to pandas because it will be faster than doing two passes
+        # over the data
+        return self._default_to_pandas_func(
+            pandas.DataFrame.info,
+            verbose=verbose,
+            buf=buf,
+            max_cols=max_cols,
+            memory_usage=memory_usage,
+            null_counts=null_counts
+        )
+
         index = self.index
         columns = self.columns
         dtypes = self.dtypes
