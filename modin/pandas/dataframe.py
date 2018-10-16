@@ -318,8 +318,10 @@ class DataFrame(object):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        warnings.warn("User-defined function verification with DataFrame dtypes is still under
-                development. Should be fully functional in a future release.", UserWarning)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
 
         return DataFrame(data_manager=self._data_manager.applymap(func))
 
@@ -563,8 +565,10 @@ class DataFrame(object):
         return self.aggregate(func, axis, *args, **kwargs)
 
     def aggregate(self, func, axis=0, *args, **kwargs):
-        warnings.warn("User-defined function verification with DataFrame dtypes is still under
-                development. Should be fully functional in a future release.", UserWarning)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
         axis = pandas.DataFrame()._get_axis_number(axis)
 
         result = None
@@ -763,8 +767,10 @@ class DataFrame(object):
             Series or DataFrame, depending on func.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
-        warnings.warn("User-defined function verification with DataFrame dtypes is still under
-                development. Should be fully functional in a future release.", UserWarning)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
 
         if isinstance(func, string_types):
             if axis == 1:
@@ -2747,8 +2753,10 @@ class DataFrame(object):
         Returns:
             A new DataFrame if inplace=False
         """
-        warnings.warn("User-defined function verification with DataFrame dtypes is still under
-                development. Should be fully functional in a future release.", UserWarning)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_manager = self._data_manager.query(expr, **kwargs)
@@ -4094,8 +4102,10 @@ class DataFrame(object):
         return self._default_to_pandas_func(pandas.DataFrame.to_xarray)
 
     def transform(self, func, *args, **kwargs):
-        warnings.warn("User-defined function verification with DataFrame dtypes is still under
-                development. Should be fully functional in a future release.", UserWarning)
+        warnings.warn(
+            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            UserWarning,
+        )
         kwargs["is_transform"] = True
         result = self.agg(func, *args, **kwargs)
         try:
