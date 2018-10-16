@@ -1,6 +1,9 @@
 sudo: required
 
 language: generic
+cache:
+  directories:
+    - $HOME/.cache/pip
 
 matrix:
   include:
