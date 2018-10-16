@@ -2359,10 +2359,14 @@ class PandasDataManager(object):
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             partition = partition.copy()
-            for col in range(len(col_internal_indices)):
-                for row in range(len(row_internal_indices)):
-                    if _get_dtype_from_object(item[row][col]) != partition.dtypes[col]:
-                        partition[col] = partition[col].astype(object)
+            df_item = pandas.DataFrame(item)
+            for i in range(len(df_item.dtypes)):
+                if df_item.dtypes[i] != partition.dtypes[col_internal_indices[i]]:
+                    partition[col] = partition[col].astype(object)
+            # for col in range(len(col_internal_indices)):
+            #     for row in range(len(row_internal_indices)):
+            #         if _get_dtype_from_object(item[row][col]) != partition.dtypes[col]:
+            #             partition[col] = partition[col].astype(object)
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
 
