@@ -197,6 +197,8 @@ class PandasDataManager(object):
             # If over rows and no numeric columns, return this
             if axis:
                 result = pandas.Series([np.nan for _ in self.index])
+            else:
+                result = pandas.Series([0 for _ in self.index])
         else:
             data_manager = self.drop(columns=nonnumeric)
         return result, data_manager
@@ -1622,7 +1624,7 @@ class PandasDataManager(object):
         if numeric_only:
             result, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
-                return self.__constructor__([], data_manager.index, [], [])
+                return self.from_pandas(pandas.DataFrame(index=data_manager.index), type(self.data))
         else:
             data_manager = self
 
