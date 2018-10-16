@@ -2360,13 +2360,9 @@ class PandasDataManager(object):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             partition = partition.copy()
             df_item = pandas.DataFrame(item)
-            for i in range(len(df_item.dtypes)):
-                if df_item.dtypes[i] != partition.dtypes[col_internal_indices[i]]:
+            for col in range(len(df_item.dtypes)):
+                if df_item.dtypes[col] != partition.dtypes[col_internal_indices[col]]:
                     partition[col] = partition[col].astype(object)
-            # for col in range(len(col_internal_indices)):
-            #     for row in range(len(row_internal_indices)):
-            #         if _get_dtype_from_object(item[row][col]) != partition.dtypes[col]:
-            #             partition[col] = partition[col].astype(object)
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
 
