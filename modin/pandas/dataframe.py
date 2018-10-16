@@ -565,10 +565,6 @@ class DataFrame(object):
         return self.aggregate(func, axis, *args, **kwargs)
 
     def aggregate(self, func, axis=0, *args, **kwargs):
-        warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
-            UserWarning,
-        )
         axis = pandas.DataFrame()._get_axis_number(axis)
 
         result = None
@@ -4102,10 +4098,6 @@ class DataFrame(object):
         return self._default_to_pandas_func(pandas.DataFrame.to_xarray)
 
     def transform(self, func, *args, **kwargs):
-        warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
-            UserWarning,
-        )
         kwargs["is_transform"] = True
         result = self.agg(func, *args, **kwargs)
         try:
