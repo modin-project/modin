@@ -977,7 +977,6 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        kwargs["numeric_only"] = True
         return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
@@ -988,16 +987,65 @@ class PandasDataManager(object):
         """
         return self._process_min_max(pandas.DataFrame.min, **kwargs)
 
+    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+        """Calculates the sum or product of the DataFrame.
+
+        Args:
+            func: Pandas func to apply to DataFrame.
+            ignore_axis: Whether to ignore axis when raising TypeError
+        Return:
+            Pandas Series with sum or prod of DataFrame.
+        """
+        axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+        min_count = kwargs.get("min_count", 0)
+
+        numeric_only = True if axis else kwargs.get("numeric_only", False)
+
+        reduce_index = self.columns if axis else self.index
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+        else:
+            data_manager = self
+        new_index = data_manager.index if axis else data_manager.columns
+
+        def sum_prod_builder(df, **kwargs):
+            if not df.empty:
+                return func(df, **kwargs)
+
+        map_func = self._prepare_method(sum_prod_builder, **kwargs)
+
+        if all(
+            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
+            for dtype in self.dtypes
+        ):
+            if numeric_only is None:
+                new_index = [
+                    col
+                    for col, dtype in zip(self.columns, self.dtypes)
+                    if dtype == np.dtype("timedelta64[ns]")
+                ]
+                return self.full_axis_reduce(map_func, axis, new_index)
+            else:
+                return self.full_axis_reduce(map_func, axis)
+        elif min_count == 0:
+            if numeric_only is None:
+                numeric_only = True
+            return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+        elif min_count > len(reduce_index):
+            return pandas.Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        else:
+            return self.full_axis_reduce(map_func, axis, new_index)
+
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
 
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.prod, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -1005,11 +1053,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
 
     # END Full Reduce operations
 
@@ -1132,11 +1176,14 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce(self, func, axis):
+    def full_axis_reduce(self, func, axis, alternate_index=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
+            axis: axis to apply the function to.
+            alternate_index: If the resulting series should have an index
+                different from the current data_manager's index or columns.
 
         Return:
             Pandas series containing the reduced data.
@@ -1149,10 +1196,16 @@ class PandasDataManager(object):
         result = self.data.map_across_full_axis(axis, func).to_pandas(
             self._is_transposed ^ axis
         )
+        if result.empty:
+            return result
         if not axis:
-            result.index = self.columns
+            result.index = (
+                alternate_index if alternate_index is not None else self.columns
+            )
         else:
-            result.index = self.index
+            result.index = (
+                alternate_index if alternate_index is not None else self.index
+            )
         return result
 
     def all(self, **kwargs):
