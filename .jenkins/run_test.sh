@@ -1,4 +1,4 @@
-set -ex
+set -x
 
 pip install awscli pytest-html
 
