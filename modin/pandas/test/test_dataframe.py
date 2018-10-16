@@ -13,6 +13,8 @@ import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
 
+pd.DEFAULT_NPARTITIONS = 4
+
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 

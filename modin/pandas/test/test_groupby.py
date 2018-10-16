@@ -9,6 +9,8 @@ import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
+pd.DEFAULT_NPARTITIONS = 4
+
 PY2 = False
 if sys.version_info.major < 3:
     PY2 = True
