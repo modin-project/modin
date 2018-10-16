@@ -989,7 +989,7 @@ class PandasDataManager(object):
     # These operations are operations that apply a function to every partition.
     def map_partitions(self, func, new_dtypes=None):
         result = self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
+            self.data.map_across_blocks(func, is_transposed=self._is_transposed), self.index, self.columns, new_dtypes
         )
         return result
 
