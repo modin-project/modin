@@ -18,10 +18,21 @@ def _git_version():
 
     cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    try:
-        git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
-        rev_string = git_revision.strip().decode()
-    except OSError:
+    # Check that this is a git repo first.
+    if (
+        subprocess.call(
+            ["git", "-C", "./", "status"],
+            stderr=subprocess.STDOUT,
+            stdout=open(os.devnull, "w"),
+        )
+        == 0
+    ):
+        try:
+            git_revision = _execute_cmd_in_temp_env(["git", "rev-parse", "HEAD"])
+            rev_string = git_revision.strip().decode()
+        except OSError:
+            rev_string = "Unknown"
+    else:
         rev_string = "Unknown"
     os.chdir(cwd)
     return rev_string
@@ -41,7 +52,7 @@ def get_partition_format():
 
 
 __git_revision__ = _git_version()
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 
