@@ -554,7 +554,15 @@ class DataFrame(object):
             A new DataFrame with the applied addition.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.add,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
 
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.add(
@@ -593,8 +601,8 @@ class DataFrame(object):
 
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
-            raise NotImplementedError(
-                "To contribute to Modin, please visit github.com/modin-project/modin."
+            return self._default_to_pandas_func(
+                pandas.DataFrame.agg, arg, *args, **kwargs
             )
         elif is_list_like(arg) or callable(arg):
             return self.apply(arg, axis=_axis, args=args, **kwargs)
@@ -619,7 +627,9 @@ class DataFrame(object):
 
         f = getattr(np, func, None)
         if f is not None:
-            raise NotImplementedError("Numpy aggregates not yet supported.")
+            return self._default_to_pandas_func(
+                pandas.DataFrame.agg, func, *args, **kwargs
+            )
 
         raise ValueError("{} is an unknown string function".format(func))
 
@@ -1148,7 +1158,15 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.div,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.div(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1200,7 +1218,16 @@ class DataFrame(object):
         """
         # TODO implement level
         if level is not None:
-            raise NotImplementedError("Level not yet supported for drop")
+            return self._default_to_pandas_func(
+                pandas.DataFrame.drop,
+                labels=labels,
+                axis=axis,
+                index=index,
+                columns=columns,
+                level=level,
+                inplace=inplace,
+                errors=errors,
+            )
 
         inplace = validate_bool_kwarg(inplace, "inplace")
         if labels is not None:
@@ -1287,7 +1314,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.eq, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.eq(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1448,10 +1479,21 @@ class DataFrame(object):
             filled: DataFrame
         """
         # TODO implement value passed as DataFrame
-        if isinstance(value, pandas.DataFrame):
-            raise NotImplementedError(
-                "Passing a DataFrame as the value for fillna is not yet supported."
+        if isinstance(value, pandas.DataFrame) or isinstance(value, pandas.Series):
+            result = self._default_to_pandas_func(
+                pandas.DataFrame.fillna,
+                value=value,
+                method=method,
+                axis=axis,
+                inplace=False,
+                limit=limit,
+                downcast=downcast,
+                **kwargs
             )
+            if inplace:
+                self._update_inplace(result._data_manager)
+            else:
+                return result
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
@@ -1470,8 +1512,6 @@ class DataFrame(object):
                 expecting=expecting, method=method
             )
             raise ValueError(msg)
-        if isinstance(value, pandas.Series):
-            raise NotImplementedError("value as a Series not yet supported.")
 
         new_manager = self._data_manager.fillna(
             value=value,
@@ -1556,7 +1596,15 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.floordiv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -1634,7 +1682,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.ge, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ge(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -1696,7 +1748,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.gt, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.gt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2033,7 +2089,17 @@ class DataFrame(object):
         """
 
         if on is not None:
-            raise NotImplementedError("Not yet.")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.join,
+                other,
+                on=on,
+                how=how,
+                lsuffix=lsuffix,
+                rsuffix=rsuffix,
+                sort=sort,
+            )
         if isinstance(other, pandas.Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
@@ -2123,7 +2189,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.le, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.le(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2145,7 +2215,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.lt, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.lt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2313,8 +2387,22 @@ class DataFrame(object):
                 "{}".format(type(right))
             )
         if left_index is False or right_index is False:
-            raise NotImplementedError(
-                "To contribute to Modin, please visit github.com/modin-project/modin."
+            if isinstance(right, DataFrame):
+                right = right._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.merge,
+                right,
+                how=how,
+                on=on,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                sort=sort,
+                suffixes=suffixes,
+                copy=copy,
+                indicator=indicator,
+                validate=validate,
             )
         if left_index and right_index:
             return self.join(
@@ -2349,7 +2437,15 @@ class DataFrame(object):
             A new DataFrame with the Mod applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.mod,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2384,7 +2480,15 @@ class DataFrame(object):
             A new DataFrame with the Multiply applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.mul,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2417,7 +2521,11 @@ class DataFrame(object):
             A new DataFrame filled with Booleans.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.ne, other, axis=axis, level=level
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.ne(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
@@ -2608,7 +2716,15 @@ class DataFrame(object):
             A new DataFrame with the Pow applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.pow,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
 
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.pow(
@@ -2823,7 +2939,15 @@ class DataFrame(object):
             A new DataFrame with the rdiv applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.rdiv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -2844,9 +2968,18 @@ class DataFrame(object):
         tolerance=None,
     ):
         if level is not None:
-            raise NotImplementedError(
-                "Multilevel Index not Implemented. "
-                "To contribute to Modin, please visit github.com/modin-project/modin."
+            return self._default_to_pandas_func(
+                pandas.DataFrame.reindex,
+                labels=labels,
+                index=index,
+                columns=columns,
+                axis=axis,
+                method=method,
+                copy=copy,
+                level=level,
+                fill_value=fill_value,
+                limit=limit,
+                tolerance=tolerance,
             )
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis == 0 and labels is not None:
@@ -3068,10 +3201,21 @@ class DataFrame(object):
         Returns:
             A new DataFrame if inplace is False, None otherwise.
         """
+        inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
         if level is not None:
-            raise NotImplementedError("Level not yet supported!")
-        inplace = validate_bool_kwarg(inplace, "inplace")
+            result = self._default_to_pandas_func(
+                pandas.DataFrame.reset_index,
+                level=level,
+                drop=drop,
+                inplace=inplace,
+                col_level=col_level,
+                col_fill=col_fill,
+            )
+            if inplace:
+                self._update_inplace(result._data_manager)
+            else:
+                return result
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
@@ -3141,7 +3285,15 @@ class DataFrame(object):
             A new DataFrame with the Pow applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.rpow,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3162,7 +3314,15 @@ class DataFrame(object):
              A new DataFrame with the subtraciont applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.rsub,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3539,7 +3699,20 @@ class DataFrame(object):
             A sorted DataFrame
         """
         if level is not None:
-            raise NotImplementedError("Multilevel index not yet implemented.")
+            result = self._default_to_pandas_func(
+                pandas.DataFrame.sort_index,
+                axis=axis,
+                level=level,
+                ascending=ascending,
+                inplace=False,
+                kind=kind,
+                na_position=na_position,
+                sort_remaining=sort_remaining,
+            )
+            if inplace:
+                self._update_inplace(result._data_manager)
+            else:
+                return result
         if by is not None:
             warnings.warn(
                 "by argument to sort_index is deprecated, "
@@ -3674,7 +3847,15 @@ class DataFrame(object):
              A new DataFrame with the subtraciont applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.sub,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -4123,7 +4304,15 @@ class DataFrame(object):
             A new DataFrame with the Divide applied.
         """
         if level is not None:
-            raise NotImplementedError("Mutlilevel index not yet supported in Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.truediv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
         other = self._validate_other(other, axis)
         new_manager = self._data_manager.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -4177,9 +4366,13 @@ class DataFrame(object):
             None
         """
         if raise_conflict:
-            raise NotImplementedError(
-                "raise_conflict parameter not yet supported. "
-                "To contribute to Modin, please visit github.com/modin-project/modin."
+            return self._default_to_pandas_func(
+                pandas.DataFrame.update,
+                other,
+                join=join,
+                overwrite=overwrite,
+                filter_func=filter_func,
+                raise_conflict=raise_conflict,
             )
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
@@ -4250,7 +4443,25 @@ class DataFrame(object):
         if isinstance(other, pandas.Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
-            raise NotImplementedError("Multilevel Index not yet supported on Modin")
+            if isinstance(other, DataFrame):
+                other = other._data_manager.to_pandas()
+            if isinstance(cond, DataFrame):
+                cond = cond._data_manager.to_pandas()
+            result = self._default_to_pandas_func(
+                pandas.DataFrame.where,
+                cond,
+                other=other,
+                inplace=False,
+                axis=axis,
+                level=level,
+                errors=errors,
+                try_cast=try_cast,
+                raise_on_error=raise_on_error,
+            )
+            if inplace:
+                return self._update_inplace(result._data_manager)
+            else:
+                return result
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         cond = cond(self) if callable(cond) else cond
 
@@ -4305,14 +4516,10 @@ class DataFrame(object):
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
-            raise NotImplementedError(
-                "To contribute to Modin, please visit github.com/modin-project/modin."
-            )
+            return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
             # return self._getitem_frame(key)
         elif is_mi_columns:
-            raise NotImplementedError(
-                "To contribute to Modin, please visit github.com/modin-project/modin."
-            )
+            return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
             # return self._getitem_multilevel(key)
         else:
             return self._getitem_column(key)
@@ -4366,8 +4573,8 @@ class DataFrame(object):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            raise NotImplementedError(
-                "To contribute to Modin, please visit github.com/modin-project/modin."
+            return self._default_to_pandas_func(
+                pandas.DataFrame.__setitem__, key, value
             )
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
