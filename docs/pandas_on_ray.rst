@@ -1,76 +1,64 @@
 Pandas on Ray
 =============
 
-Pandas on Ray is an early stage DataFrame library that wraps Pandas and
-transparently distributes the data and computation. The user does not need to
-know how many cores their system has, nor do they need to specify how to
-distribute the data. In fact, users can continue using their previous Pandas
-notebooks while experiencing a considerable speedup from Pandas on Ray, even
-on a single machine. Only a modification of the import statement is needed, as
-we demonstrate below. Once you’ve changed your import statement, you’re ready
-to use Pandas on Ray just like you would Pandas.
+Pandas on Ray is the component of Modin that runs on the Ray execution Framework.
+Currently, the in-memory format for Pandas on Ray is a pandas DataFrame on each
+partition. There are a number of Ray-specific optimizations we perform, which are
+explained below. Currently, Ray is the only execution framework supported on Modin.
+There are additional optimizations we can do on the pandas in-memory format. Those are
+also explained below.
 
-.. code-block:: python
+Ray-specific optimizations
+--------------------------
 
-  # import pandas as pd
-  import modin.pandas as pd
+Ray_ is a high-performance task-parallel execution framework with Python and Java APIs.
+It uses the plasma store and serialization formats of `Apache Arrow`_.
 
-Currently, we have part of the Pandas API implemented and are working toward
-full functional parity with Pandas.
+Normally, in order to start a Ray cluster, a user would have to use some of Ray's
+command line tools or call ``ray.init``. Modin will automatically call ``ray.init`` for
+users who are running on a single node. Otherwise a Ray cluster must be setup before
+calling ``import modin.pandas as pd``. More about running Modin in a cluster can be
+found in the `using Modin`_ documentation.
 
-Using Pandas on Ray on a Single Node
-------------------------------------
+**Serialization of tasks and parameters**
 
-In order to use the most up-to-date version of Pandas on Ray, please follow
-the instructions on the `installation page`_
+The optimization that improves the performance the most is the pre-serialization of the
+tasks and parameters. This is primarily applicable to map operations. We have designed
+the system such that there is a single remote function that accepts a serialized
+function as a parameter and applies it to a partition. The operation will be serialized
+separately for each partition if we do not call ``ray.put`` on it first. The
+``BlockPartitions`` abstract class exposes a unified way to preprocess functions. The
+primary purpose of the preprocess abstraction is to allow for optimizations such as
+this.
 
-Once you import the library, you should see something similar to the following
-output:
+**Memory Management**
 
-.. code-block:: text
+The second optimization we perform is related to how Ray and Arrow handle memory.
+Historically, pandas has used a significant amount of memory, and tends to create copies
+even for some simple computations. The plasma store in Arrow is immutable, which can
+cause problems for certain workloads, as objects that are no longer in scope for the
+Python application can be kept around and consume memory in Arrow. To resolve this
+issue, we free memory once the reference count for that memory goes to zero. This
+component is still experimental, but we plan to keep iterating on it to make Modin as
+memory efficient as possible.
 
-  >>> import modin.pandas as pd
+Pandas-specific optimizations
+-----------------------------
 
-  Waiting for redis server at 127.0.0.1:14618 to respond...
-  Waiting for redis server at 127.0.0.1:31410 to respond...
-  Starting local scheduler with the following resources: {'CPU': 4, 'GPU': 0}.
+Pandas on Ray can take advantage of some of the properties of pandas in order to
+optimize for both memory footprint and runtime.
 
-  ======================================================================
-  View the web UI at http://localhost:8889/notebooks/ray_ui36796.ipynb?token=ac25867d62c4ae87941bc5a0ecd5f517dbf80bd8e9b04218
-  ======================================================================
+**Indexing**
 
-Once you have executed  ``import modin.pandas as pd``, you're ready to begin
-running your pandas pipeline as you were before.
+Internally, since each partition contains a pandas DataFrame, the indexing information
+for both rows and columns would be duplicated for every partition. Because we use block
+partitions layout, it would be replicated as many times as there were blocks. To avoid
+this issue, we use a ``pandas.RangeIndex`` internally, which has a fixed memory cost.
 
-APIs Supported
---------------
+This optimization is also used to determine which columns or rows were dropped during a
+``dropna`` or other similar operation. We use the ``pandas.RangeIndex`` internal to the
+partitions to communicate the missing values back to the external ``Index``.
 
-Please note, the API is not yet complete. For some methods, you may see the
-following:
-
-.. code-block:: text
-
-  NotImplementedError: To contribute to Modin, please visit github.com/modin-project/modin.
-
-We have compiled a list of currently supported methods `here`_.
-
-If you would like to request a particular method be implemented, feel free to
-`open an issue`_. Before you open an issue please make sure that someone else
-has not already requested that functionality.
-
-Using Pandas on Ray on a Cluster
---------------------------------
-
-Currently, we do not yet support running Pandas on Ray on a cluster. Coming
-Soon!
-
-Examples
---------
-You can find an example on our recent `blog post`_ or on the
-`Jupyter Notebook`_ that we used to create the blog post.
-
-.. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
-.. _`here`: http://modin.readthedocs.io/en/latest/pandas_supported.html
-.. _`open an issue`: http://github.com/modin-project/modin/issues
-.. _`blog post`: http://rise.cs.berkeley.edu/blog/pandas-on-ray
-.. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
+.. _Ray: https://github.com/ray-project/ray
+.. _using Modin: using_modin.html
+.. _Apache Arrow: https://arrow.apache.org
