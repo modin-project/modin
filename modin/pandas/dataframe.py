@@ -1813,6 +1813,7 @@ class DataFrame(object):
         # over the data
         buf = sys.stdout if not buf else buf
         import io
+
         with io.StringIO() as tmp_buf:
             self._default_to_pandas_func(
                 pandas.DataFrame.info,
@@ -1823,7 +1824,9 @@ class DataFrame(object):
                 null_counts=null_counts,
             )
             result = tmp_buf.getvalue()
-            result = result.replace("pandas.core.frame.DataFrame", "modin.pandas.dataframe.DataFrame")
+            result = result.replace(
+                "pandas.core.frame.DataFrame", "modin.pandas.dataframe.DataFrame"
+            )
             buf.write(result)
         return None
 
