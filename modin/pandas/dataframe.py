@@ -1811,14 +1811,21 @@ class DataFrame(object):
         """
         # We will default to pandas because it will be faster than doing two passes
         # over the data
-        return self._default_to_pandas_func(
-            pandas.DataFrame.info,
-            verbose=verbose,
-            buf=buf,
-            max_cols=max_cols,
-            memory_usage=memory_usage,
-            null_counts=null_counts,
-        )
+        buf = sys.stdout if not buf else buf
+        import io
+        with io.StringIO() as tmp_buf:
+            self._default_to_pandas_func(
+                pandas.DataFrame.info,
+                verbose=verbose,
+                buf=tmp_buf,
+                max_cols=max_cols,
+                memory_usage=memory_usage,
+                null_counts=null_counts,
+            )
+            result = tmp_buf.getvalue()
+            result = result.replace("pandas.core.frame.DataFrame", "modin.pandas.dataframe.DataFrame")
+            buf.write(result)
+        return None
 
         index = self.index
         columns = self.columns
