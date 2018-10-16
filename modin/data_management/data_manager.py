@@ -1624,7 +1624,9 @@ class PandasDataManager(object):
         if numeric_only:
             result, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
-                return self.from_pandas(pandas.DataFrame(index=data_manager.index), type(self.data))
+                return self.from_pandas(
+                    pandas.DataFrame(index=data_manager.index), type(self.data)
+                )
         else:
             data_manager = self
 
@@ -1643,7 +1645,7 @@ class PandasDataManager(object):
         # the underlying implementation.
         return self.__constructor__(
             new_data, new_index, new_columns, data_manager._dtype_cache
-            ).reindex(axis=axis, labels=final_labels)
+        ).reindex(axis=axis, labels=final_labels)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
