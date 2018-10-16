@@ -15,14 +15,6 @@ matrix:
       dist: trusty
       env: PYTHON=3.6
 
-    - os: osx
-      osx_image: xcode7
-      env: PYTHON=2.7
-
-    - os: osx
-      osx_image: xcode7
-      env: PYTHON=3.6
-
     - os: linux
       dist: trusty
       env: LINT=1
