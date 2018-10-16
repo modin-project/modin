@@ -1817,7 +1817,7 @@ class DataFrame(object):
             buf=buf,
             max_cols=max_cols,
             memory_usage=memory_usage,
-            null_counts=null_counts
+            null_counts=null_counts,
         )
 
         index = self.index
