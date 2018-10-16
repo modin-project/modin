@@ -197,6 +197,8 @@ class PandasDataManager(object):
             # If over rows and no numeric columns, return this
             if axis:
                 result = pandas.Series([np.nan for _ in self.index])
+            else:
+                result = pandas.Series([0 for _ in self.index])
         else:
             data_manager = self.drop(columns=nonnumeric)
         return result, data_manager
@@ -786,12 +788,16 @@ class PandasDataManager(object):
         # partitions.
         def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
             if axis:
+                while len(df.columns) < len(old_labels):
+                    df[len(df.columns)] = np.nan
                 df.columns = old_labels
                 new_df = df.reindex(columns=new_labels, **kwargs)
                 # reset the internal columns back to a RangeIndex
                 new_df.columns = pandas.RangeIndex(len(new_df.columns))
                 return new_df
             else:
+                while len(df.index) < len(old_labels):
+                    df.loc[len(df.index)] = np.nan
                 df.index = old_labels
                 new_df = df.reindex(index=new_labels, **kwargs)
                 # reset the internal index back to a RangeIndex
@@ -1643,31 +1649,35 @@ class PandasDataManager(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
 
-        counts = (
-            self.__constructor__(new_data, self.index, self.columns)
+        if numeric_only:
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return self.from_pandas(
+                    pandas.DataFrame(index=data_manager.index), type(self.data)
+                )
+        else:
+            data_manager = self
+
+        max_count = (
+            self.__constructor__(new_data, data_manager.index, data_manager.columns)
             .notnull()
             .sum(axis=axis)
-        )
-        max_count = counts.max()
+        ).max()
 
-        new_index = pandas.RangeIndex(max_count) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
+        new_index = pandas.RangeIndex(max_count) if not axis else data_manager.index
+        new_columns = data_manager.columns if not axis else pandas.RangeIndex(max_count)
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
         final_labels = new_index if not axis else new_columns
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
-        final_data = self.__constructor__(
-            new_data, new_index, new_columns
-        ).map_across_full_axis(
-            axis, lambda df: df.reindex(axis=axis, labels=final_labels)
-        )
         return self.__constructor__(
-            final_data, new_index, new_columns, self._dtype_cache
-        )
+            new_data, new_index, new_columns, data_manager._dtype_cache
+        ).reindex(axis=axis, labels=final_labels)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
