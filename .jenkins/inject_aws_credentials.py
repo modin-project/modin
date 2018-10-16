@@ -1,6 +1,6 @@
 import os
 
-os.makedirs('~/.aws', exists_ok=True)
+os.makedirs('~/.aws', exist_ok=True)
 
 with open('~/.aws/credentials', 'w') as f:
 	f.write(f"""
