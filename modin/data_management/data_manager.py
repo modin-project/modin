@@ -642,9 +642,10 @@ class PandasDataManager(object):
         Returns:
             New DataManager with subtracted data and new index.
         """
+
         def sub_builder(df, other, **kwargs):
             axis = kwargs.get("axis", 0)
-            index = kwargs.pop('index')
+            index = kwargs.pop("index")
             if axis == 0:
                 old_index = df.index
                 df.index = index
@@ -654,8 +655,8 @@ class PandasDataManager(object):
             return df
 
         func = sub_builder
-        kwargs['axis'] = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
-        kwargs['index'] = self.index
+        kwargs["axis"] = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
+        kwargs["index"] = self.index
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def truediv(self, other, **kwargs):
