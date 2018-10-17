@@ -643,16 +643,18 @@ class PandasDataManager(object):
             New DataManager with subtracted data and new index.
         """
         def sub_builder(df, other, **kwargs):
-            old_index = df.index
-            print(df)
-            df.index = kwargs.pop('index')
+            axis = kwargs.get("axis", 0)
+            index = kwargs.pop('index')
+            if axis == 0:
+                old_index = df.index
+                df.index = index
             df = df.sub(other, **kwargs)
-            df.index = old_index
+            if axis == 0:
+                df.index = old_index
             return df
 
         func = sub_builder
-        axis = pandas.DataFrame()._get_axis_number(kwargs.pop("axis", 0))
-        kwargs["axis"] = axis
+        kwargs['axis'] = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
         kwargs['index'] = self.index
         return self._inter_df_op_handler(func, other, **kwargs)
 
