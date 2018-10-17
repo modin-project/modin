@@ -40,7 +40,8 @@ def merge(
     """Database style join, where common columns in "on" are merged.
 
     Args:
-        right: The DataFrame to merge against.
+        left: DataFrame.
+        right: DataFrame.
         how: What type of join to use.
         on: The common column name(s) to join on. If None, and left_on and
             right_on  are also None, will default to all commonly named
