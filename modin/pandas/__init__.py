@@ -56,11 +56,7 @@ from .io import (
     read_sql,
 )
 from .reshape import get_dummies
-from .general import (
-    isna, 
-    merge,
-    pivot_table,
-)
+from .general import isna, merge, pivot_table
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"

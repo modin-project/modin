@@ -3,9 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-from pandas.core.dtypes.common import is_list_like
 
 from .dataframe import DataFrame
+
 
 def isna(obj):
     """
@@ -21,8 +21,9 @@ def isna(obj):
     else:
         return pandas.isna(obj)
 
+
 def merge(
-    self,
+    left,
     right,
     how="inner",
     on=None,
@@ -58,26 +59,26 @@ def merge(
     Returns:
          A merged Dataframe
         """
-        if not isinstance(left, DataFrame):
-            raise ValueError(
-                "can not merge DataFrame with instance of type "
-                "{}".format(type(right))
-            )
-
-        return left.merge(
-            right,
-            how=how,
-            on=on,
-            left_on=left_on,
-            right_on=right_on,
-            left_index=left_index,
-            right_index=right_index,
-            sort=sort,
-            suffixes=suffixes,
-            copy=copy,
-            indicator=indicator,
-            validate=validate,
+    if not isinstance(left, DataFrame):
+        raise ValueError(
+            "can not merge DataFrame with instance of type {}".format(type(right))
         )
+
+    return left.merge(
+        right,
+        how=how,
+        on=on,
+        left_on=left_on,
+        right_on=right_on,
+        left_index=left_index,
+        right_index=right_index,
+        sort=sort,
+        suffixes=suffixes,
+        copy=copy,
+        indicator=indicator,
+        validate=validate,
+    )
+
 
 def pivot_table(
     data,
@@ -90,19 +91,18 @@ def pivot_table(
     dropna=True,
     margins_name="All",
 ):
-        if not isinstance(data, DataFrame):
-            raise ValueError(
-                "can not create pivot table with instance of type "
-                "{}".format(type(right))
-            )
-
-        return data.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggfunc,
-            fill_value=fill_value,
-            margins=margins,
-            dropna=dropna,
-            margins_name=margins_name,
+    if not isinstance(data, DataFrame):
+        raise ValueError(
+            "can not create pivot table with instance of type {}".format(type(data))
         )
+
+    return data.pivot_table(
+        values=values,
+        index=index,
+        columns=columns,
+        aggfunc=aggfunc,
+        fill_value=fill_value,
+        margins=margins,
+        dropna=dropna,
+        margins_name=margins_name,
+    )
