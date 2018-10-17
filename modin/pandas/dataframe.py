@@ -3830,7 +3830,7 @@ class DataFrame(object):
 
         Args:
             other: The object to use to apply the subtraction to this.
-            axis: THe axis to apply the subtraction over.
+            axis: The axis to apply the subtraction over.
             level: Mutlilevel index level to subtract over.
             fill_value: The value to fill NaNs with.
 

@@ -642,7 +642,18 @@ class PandasDataManager(object):
         Returns:
             New DataManager with subtracted data and new index.
         """
-        func = pandas.DataFrame.sub
+        def sub_builder(df, other, **kwargs):
+            old_index = df.index
+            print(df)
+            df.index = kwargs.pop('index')
+            df = df.sub(other, **kwargs)
+            df.index = old_index
+            return df
+
+        func = sub_builder
+        axis = pandas.DataFrame()._get_axis_number(kwargs.pop("axis", 0))
+        kwargs["axis"] = axis
+        kwargs['index'] = self.index
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def truediv(self, other, **kwargs):
@@ -764,7 +775,7 @@ class PandasDataManager(object):
         Returns:
             New DataManager with updated data and new index.
         """
-        if isinstance(scalar, list):
+        if isinstance(scalar, (list, pandas.Series)):
             new_data = self.map_across_full_axis(axis, func)
             return self.__constructor__(new_data, self.index, self.columns)
         else:
