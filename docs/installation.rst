@@ -14,6 +14,18 @@ Modin can be installed with pip.
 
   pip install modin
 
+Installing from the GitHub master branch
+----------------------------------------
+
+If you'd like to try Modin using the most recent updates from the master branch, you can
+also use `pip`.
+
+.. code-block:: bash
+
+  pip install git+https://github.com/modin-project/modin
+
+This will install directly from the repo without you having to clone it! Please be aware
+that these changes have not made it into a release and may not be completely stable.
 
 Dependencies
 ------------
