@@ -2210,7 +2210,10 @@ class PandasDataManager(object):
 
         def insert(df, internal_indices=[]):
             internal_idx = internal_indices[0]
+            old_index = df.index
+            df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
+            df.index = old_index
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
