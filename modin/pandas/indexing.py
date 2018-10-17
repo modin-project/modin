@@ -111,7 +111,9 @@ def _is_enlargement(locator, global_index):
         and not is_slice(locator)
         and len(locator) > 0
         and not is_boolean_array(locator)
+        and (isinstance(locator, type(global_index[0])) and locator not in global_index)
     ):
+        print(locator)
         n_diff_elems = len(pandas.Index(locator).difference(global_index))
         is_enlargement_boolean = n_diff_elems > 0
         return is_enlargement_boolean
@@ -274,6 +276,10 @@ class _LocIndexer(_LocationIndexerBase):
         return ndim
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
+        if isinstance(row_loc, list) and len(row_loc) == 1:
+            print(isinstance(self.dm.index.values[0], np.datetime64))
+            if isinstance(self.dm.index.values[0], np.datetime64) and type(row_loc[0]) != np.datetime64:
+                row_loc = [pandas.to_datetime(row_loc[0])]
         row_lookup = self.dm.index.to_series().loc[row_loc].index
         col_lookup = self.dm.columns.to_series().loc[col_loc].index
         return row_lookup, col_lookup
