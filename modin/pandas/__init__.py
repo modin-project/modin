@@ -16,6 +16,7 @@ from pandas import (
     match,
     Panel,
     date_range,
+    period_range,
     Index,
     MultiIndex,
     CategoricalIndex,
@@ -55,6 +56,7 @@ from .io import (
     read_sql,
 )
 from .reshape import get_dummies
+from .general import isna, merge, pivot_table
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -101,12 +103,16 @@ __all__ = [
     "match",
     "to_datetime",
     "get_dummies",
+    "isna",
+    "merge",
+    "pivot_table",
     "Panel",
     "date_range",
     "Index",
     "MultiIndex",
     "Series",
     "bdate_range",
+    "period_range",
     "DatetimeIndex",
     "to_timedelta",
     "set_eng_float_format",

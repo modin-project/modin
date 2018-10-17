@@ -3549,6 +3549,7 @@ def test___div__():
     test_inter_df_math("__div__", simple=True)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_at():
     ray_df = create_test_dataframe()
 

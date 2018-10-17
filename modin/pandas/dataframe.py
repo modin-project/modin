@@ -4820,8 +4820,11 @@ class DataFrame(object):
     def style(self):
         return self._data_manager.to_pandas().style
 
+    @property
     def iat(self, axis=None):
-        return self._default_to_pandas_func(pandas.DataFrame.iat)
+        from .indexing import _iLocIndexer
+
+        return _iLocIndexer(self)
 
     @property
     def loc(self):
@@ -4840,9 +4843,9 @@ class DataFrame(object):
 
     @property
     def at(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit github.com/modin-project/modin."
-        )
+        from .indexing import _LocIndexer
+
+        return _LocIndexer(self)
 
     @property
     def ix(self, axis=None):
