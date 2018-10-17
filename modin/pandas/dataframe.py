@@ -3830,7 +3830,7 @@ class DataFrame(object):
 
         Args:
             other: The object to use to apply the subtraction to this.
-            axis: THe axis to apply the subtraction over.
+            axis: The axis to apply the subtraction over.
             level: Mutlilevel index level to subtract over.
             fill_value: The value to fill NaNs with.
 
@@ -4507,8 +4507,7 @@ class DataFrame(object):
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
-            return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
-            # return self._getitem_frame(key)
+            return self.where(key)
         elif is_mi_columns:
             return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
             # return self._getitem_multilevel(key)
