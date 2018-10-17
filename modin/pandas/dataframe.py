@@ -4507,10 +4507,7 @@ class DataFrame(object):
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
-            return self._default_to_pandas_func(
-                pandas.DataFrame.__getitem__, key.values
-            )
-            # return self._getitem_frame(key)
+            return self.where(key)
         elif is_mi_columns:
             return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
             # return self._getitem_multilevel(key)
