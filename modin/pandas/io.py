@@ -78,7 +78,7 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
     new_manager = PandasQueryCompiler(
         PandasOnRayBlockPartitions(remote_partitions), index, columns
     )
-    df = DataFrame(data_manager=new_manager)
+    df = DataFrame(query_compiler=new_manager)
     return df
 
 
@@ -196,7 +196,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
     new_manager = PandasQueryCompiler(
         PandasOnRayBlockPartitions(np.array(partition_ids)), new_index, column_names
     )
-    df = DataFrame(data_manager=new_manager)
+    df = DataFrame(query_compiler=new_manager)
 
     if skipfooter:
         df = df.drop(df.index[-skipfooter:])
