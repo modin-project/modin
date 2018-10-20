@@ -2286,6 +2286,8 @@ class DataFrame(object):
             The max of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes_min_max(axis, numeric_only)
+
         return self._data_manager.max(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -2441,6 +2443,8 @@ class DataFrame(object):
             The min of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        self._validate_dtypes_min_max(axis, numeric_only)
+
         return self._data_manager.min(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -4900,6 +4904,27 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
+
+    def _validate_dtypes_min_max(self, axis, numeric_only):
+        # If our DataFrame has both numeric and non-numeric dtypes then
+        # comparisons between these types do not make sense and we must raise a
+        # TypeError. The exception to this rule is when there are datetime and
+        # timedelta objects, in which case we proceed with the comparison
+        # without ignoring any non-numeric types. We must check explicitly if
+        # numeric_only is False because if it is None, it will default to True
+        # if the operation fails with mixed dtypes.
+        if (
+            axis
+            and numeric_only is False
+            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+        ):
+            # check if there are columns with dtypes datetime or timedelta
+            if all(
+                dtype != np.dtype("datetime64[ns]")
+                and dtype != np.dtype("timedelta64[ns]")
+                for dtype in self.dtypes
+            ):
+                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """Raises TypeErrors for sum, prod, and mean where necessary"""
