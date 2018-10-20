@@ -380,7 +380,7 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
-        if isinstance(self._by, list):
+        if all(obj in self._df for obj in self._by):
             return self._default_to_pandas(f, **kwargs)
 
         new_manager = self._data_manager.groupby_agg(
