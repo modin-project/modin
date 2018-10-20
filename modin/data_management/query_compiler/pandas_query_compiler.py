@@ -449,7 +449,7 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with new data and index.
         """
-        axis = kwargs.get("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
 
         if isinstance(other, type(self)):
             return self.inter_manager_operations(
@@ -469,7 +469,6 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with added data and new index.
         """
-        # TODO: need to write a prepare_function for inter_df operations
         func = pandas.DataFrame.add
         return self._inter_df_op_handler(func, other, **kwargs)
 
@@ -650,21 +649,7 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with subtracted data and new index.
         """
-
-        def sub_builder(df, other, **kwargs):
-            axis = kwargs.get("axis", 0)
-            index = kwargs.pop("index")
-            if axis == 0:
-                old_index = df.index
-                df.index = index
-            df = df.sub(other, **kwargs)
-            if axis == 0:
-                df.index = old_index
-            return df
-
-        func = sub_builder
-        kwargs["axis"] = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
-        kwargs["index"] = self.index
+        func = pandas.DataFrame.sub
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def truediv(self, other, **kwargs):
@@ -786,7 +771,7 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with updated data and new index.
         """
-        if isinstance(scalar, (list, pandas.Series)):
+        if isinstance(scalar, (list, np.ndarray, pandas.Series)):
             new_data = self.map_across_full_axis(axis, func)
             return self.__constructor__(new_data, self.index, self.columns)
         else:

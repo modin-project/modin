@@ -561,7 +561,7 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
 
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.add(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1172,7 +1172,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.div(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1610,7 +1610,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2476,7 +2476,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2521,7 +2521,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2727,8 +2727,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.pow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2950,7 +2949,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3296,7 +3295,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3325,7 +3324,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3858,7 +3857,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -4315,7 +4314,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -4883,12 +4882,20 @@ class DataFrame(object):
         else:
             self._update_inplace(new_manager=new_manager)
 
-    def _validate_other(self, other, axis):
+    def _validate_other(self, other, axis, numeric_only=False):
         """Helper method to check validity of other in inter-df operations"""
         axis = pandas.DataFrame()._get_axis_number(axis)
+        if numeric_only:
+            self._validate_dtypes(numeric_only=True)
         if isinstance(other, DataFrame):
+            if numeric_only:
+                other._validate_dtypes(numeric_only=True)
             return other._query_compiler
         elif is_list_like(other):
+            if numeric_only:
+                for val in other:
+                    if not is_numeric_dtype(type(val)):
+                        raise TypeError("{} is not a numeric data type".format(val))
             if axis == 0:
                 if len(other) != len(self.index):
                     raise ValueError(
