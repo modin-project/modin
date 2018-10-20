@@ -7,6 +7,8 @@ import pandas
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
+pd.DEFAULT_NPARTITIONS = 4
+
 
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):

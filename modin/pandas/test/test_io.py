@@ -10,6 +10,8 @@ import modin.pandas as pd
 import os
 import sqlite3
 
+pd.DEFAULT_NPARTITIONS = 4
+
 TEST_PARQUET_FILENAME = "test.parquet"
 TEST_CSV_FILENAME = "test.csv"
 TEST_JSON_FILENAME = "test.json"
