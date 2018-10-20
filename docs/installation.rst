@@ -36,8 +36,8 @@ will allow you to use Linux commands on your Windows machine.
 One of our dependencies is Ray_. Ray is not yet supported natively on Windows, so in
 order to install it you need to use the WSL if you are on Windows.
 
-Once you've done installed WSL and you run the WSL application, you can install Modin
-just like you would on Linux or Mac:
+Once you've installed WSL, you can install Modin in the WSL bash shell just like you
+would on Linux or Mac:
 
 .. code-block:: bash
 
