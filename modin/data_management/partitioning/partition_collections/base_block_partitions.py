@@ -5,18 +5,18 @@ from __future__ import print_function
 from typing import Tuple
 
 import numpy as np
-import ray
 import pandas
 
-from .remote_partition import RayRemotePartition
-from .axis_partition import RayColumnPartition, RayRowPartition
-from .utils import compute_chunksize, _get_nan_block_id
+from modin.data_management.partitioning.utils import (
+    compute_chunksize,
+    _get_nan_block_id,
+)
 
 
-class BlockPartitions(object):
-    """Abstract Class that manages a set of `RemotePartition` objects, and
+class BaseBlockPartitions(object):
+    """Abstract Class that manages a set of `BaseRemotePartition` objects, and
         structures them into a 2D numpy array. This object will interact with
-        each of these objects through the `RemotePartition` API.
+        each of these objects through the `BaseRemotePartition` API.
 
     Note: See the Abstract Methods and Fields section immediately below this
         for a list of requirements for subclassing this object.
@@ -38,7 +38,7 @@ class BlockPartitions(object):
         raise NotImplementedError("Must be implemented in children classes")
 
     # Partition class is the class to use for storing each partition. It must
-    # extend the `RemotePartition` class.
+    # extend the `BaseRemotePartition` class.
     _partition_class = None
     # Whether or not we have already filtered out the empty partitions.
     _filtered_empties = False
@@ -66,12 +66,12 @@ class BlockPartitions(object):
     partitions = property(_get_partitions, _set_partitions)
 
     def preprocess_func(self, map_func):
-        """Preprocess a function to be applied to `RemotePartition` objects.
+        """Preprocess a function to be applied to `BaseRemotePartition` objects.
 
-        Note: If your `RemotePartition` objects assume that a function provided
+        Note: If your `BaseRemotePartition` objects assume that a function provided
             is serialized or wrapped or in some other format, this is the place
             to add that logic. It is possible that this can also just return
-            `map_func` if the `apply` method of the `RemotePartition` object
+            `map_func` if the `apply` method of the `BaseRemotePartition` object
             you are using does not require any modification to a given
             function.
 
@@ -81,30 +81,30 @@ class BlockPartitions(object):
         Returns
             The preprocessed version of the `map_func` provided. Note: This
             does not require any specific format, only that the
-            `RemotePartition.apply` method will recognize it (For the subclass
+            `BaseRemotePartition.apply` method will recognize it (For the subclass
             being used).
         """
         return self._partition_class.preprocess_func(map_func)
 
     @property
     def column_partitions(self):
-        """A list of `AxisPartition` objects, represents column partitions.
+        """A list of `BaseAxisPartition` objects, represents column partitions.
 
-        Note: Each value in this list will an `AxisPartition` object.
-            `AxisPartition` is located in the `remote_partition.py` file.
+        Note: Each value in this list will an `BaseAxisPartition` object.
+            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
 
-        Returns a list of `AxisPartition` objects.
+        Returns a list of `BaseAxisPartition` objects.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
     @property
     def row_partitions(self):
-        """A list of `AxisPartition` objects.
+        """A list of `BaseAxisPartition` objects.
 
-        Note: Each value in this list will be an `AxisPartition` object.
-            `AxisPartition` is located in the `remote_partition.py` file.
+        Note: Each value in this list will be an `BaseAxisPartition` object.
+            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
 
-        Returns a list of `AxisPartition` objects.
+        Returns a list of `BaseAxisPartition` objects.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -217,7 +217,7 @@ class BlockPartitions(object):
             map_func: The function to apply.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         # For the subclasses, because we never return this abstract type
         cls = type(self)
@@ -256,7 +256,7 @@ class BlockPartitions(object):
             map_func: The function to apply.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         # Since we are already splitting the DataFrame back up after an
@@ -285,7 +285,7 @@ class BlockPartitions(object):
                 from the bottom of the object
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         # These are the partitions that we will extract over
@@ -369,10 +369,10 @@ class BlockPartitions(object):
         Args:
             axis: The axis to concatenate to.
             other_blocks: the other blocks to be concatenated. This is a
-                BlockPartitions object.
+                BaseBlockPartitions object.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         if type(other_blocks) is list:
@@ -385,7 +385,7 @@ class BlockPartitions(object):
         """Create a copy of this object.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         return cls(self.partitions.copy())
@@ -394,7 +394,7 @@ class BlockPartitions(object):
         """Transpose the blocks stored in this object.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         return cls(self.partitions.T)
@@ -530,7 +530,7 @@ class BlockPartitions(object):
 
         :return:
         """
-        from ...pandas import DEFAULT_NPARTITIONS
+        from ....pandas import DEFAULT_NPARTITIONS
 
         return DEFAULT_NPARTITIONS
 
@@ -612,7 +612,7 @@ class BlockPartitions(object):
             partitions: The list of partitions
 
         Returns:
-            A list of RemotePartition objects.
+            A list of BaseRemotePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
@@ -633,7 +633,7 @@ class BlockPartitions(object):
                 keep only the results.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         # Handling dictionaries has to be done differently, but we still want
@@ -739,7 +739,7 @@ class BlockPartitions(object):
                 keep only the results.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         if isinstance(indices, dict):
@@ -890,15 +890,15 @@ class BlockPartitions(object):
         return cls(partition_copy)
 
     def inter_data_operation(self, axis, func, other):
-        """Apply a function that requires two BlockPartitions objects.
+        """Apply a function that requires two BaseBlockPartitions objects.
 
         Args:
             axis: The axis to apply the function over (0 - rows, 1 - columns)
             func: The function to apply
-            other: The other BlockPartitions object to apply func to.
+            other: The other BaseBlockPartitions object to apply func to.
 
         Returns:
-            A new BlockPartitions object, the type of object that called this.
+            A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
         if axis:
@@ -928,7 +928,7 @@ class BlockPartitions(object):
             shuffle_func:
 
         Returns:
-             A new BlockPartitions object, the type of object that called this.
+             A new BaseBlockPartitions object, the type of object that called this.
         """
         cls = type(self)
 
@@ -978,68 +978,3 @@ class BlockPartitions(object):
             new_chunk = block_partitions_cls(np.array([nan_oids_lst]).T)
             data = self.concat(axis=1, other_blocks=new_chunk)
         return data
-
-
-class RayBlockPartitions(BlockPartitions):
-    """This method implements the interface in `BlockPartitions`."""
-
-    # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = RayRemotePartition
-
-    def __init__(self, partitions):
-        self.partitions = partitions
-
-    # We override these for performance reasons.
-    # Lengths of the blocks
-    _lengths_cache = None
-
-    # These are set up as properties so that we only use them when we need
-    # them. We also do not want to trigger this computation on object creation.
-    @property
-    def block_lengths(self):
-        """Gets the lengths of the blocks.
-
-        Note: This works with the property structure `_lengths_cache` to avoid
-            having to recompute these values each time they are needed.
-        """
-        if self._lengths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same length in a
-            # row of blocks.
-            self._lengths_cache = (
-                ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
-                if len(self._partitions_cache.T) > 0
-                else []
-            )
-        return self._lengths_cache
-
-    # Widths of the blocks
-    _widths_cache = None
-
-    @property
-    def block_widths(self):
-        """Gets the widths of the blocks.
-
-        Note: This works with the property structure `_widths_cache` to avoid
-            having to recompute these values each time they are needed.
-        """
-        if self._widths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same width in a
-            # column of blocks.
-            self._widths_cache = (
-                ray.get([obj.width().oid for obj in self._partitions_cache[0]])
-                if len(self._partitions_cache) > 0
-                else []
-            )
-        return self._widths_cache
-
-    @property
-    def column_partitions(self):
-        """A list of `RayColumnPartition` objects."""
-        return [RayColumnPartition(col) for col in self.partitions.T]
-
-    @property
-    def row_partitions(self):
-        """A list of `RayRowPartition` objects."""
-        return [RayRowPartition(row) for row in self.partitions]

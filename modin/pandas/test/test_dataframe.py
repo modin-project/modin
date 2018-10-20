@@ -957,7 +957,8 @@ def test_copy(ray_df):
 
     assert new_ray_df is not ray_df
     assert np.array_equal(
-        new_ray_df._data_manager.data.partitions, ray_df._data_manager.data.partitions
+        new_ray_df._query_compiler.data.partitions,
+        ray_df._query_compiler.data.partitions,
     )
 
 

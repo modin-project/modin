@@ -71,4 +71,4 @@ def to_datetime(
         infer_datetime_format=infer_datetime_format,
         origin=origin,
     )
-    return arg._data_manager.to_datetime()
+    return arg._query_compiler.to_datetime()

@@ -88,8 +88,8 @@ def concat(
         for obj in objs
     ]
     df = objs[0]
-    objs = [obj._data_manager for obj in objs]
-    new_manager = df._data_manager.concat(
+    objs = [obj._query_compiler for obj in objs]
+    new_manager = df._query_compiler.concat(
         axis,
         objs[1:],
         join=join,
@@ -102,4 +102,4 @@ def concat(
         copy=True,
         sort=False,
     )
-    return DataFrame(data_manager=new_manager)
+    return DataFrame(query_compiler=new_manager)

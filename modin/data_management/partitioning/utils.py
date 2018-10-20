@@ -17,7 +17,7 @@ def _get_nan_block_id(partition_class, n_row=1, n_col=1, transpose=False):
     """A memory efficient way to get a block of NaNs.
 
     Args:
-        partition_class (RemotePartition): The class to use to put the object
+        partition_class (BaseRemotePartition): The class to use to put the object
             in the remote format.
         n_row(int): The number of rows.
         n_col(int): The number of columns.

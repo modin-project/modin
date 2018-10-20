@@ -16,12 +16,14 @@ import numpy as np
 
 from .dataframe import DataFrame
 from .utils import from_pandas
-from ..data_management.partitioning.partition_collections import RayBlockPartitions
-from ..data_management.partitioning.remote_partition import RayRemotePartition
+from ..data_management.partitioning.partition_collections import (
+    PandasOnRayBlockPartitions,
+)
+from ..data_management.partitioning.remote_partition import PandasOnRayRemotePartition
 from ..data_management.partitioning.axis_partition import (
     split_result_of_axis_func_pandas,
 )
-from ..data_management.data_manager import PandasDataManager
+from modin.data_management.query_compiler import PandasQueryCompiler
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
@@ -53,7 +55,7 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
         columns = [
             name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
         ]
-    num_splits = min(len(columns), RayBlockPartitions._compute_num_partitions())
+    num_splits = min(len(columns), PandasOnRayBlockPartitions._compute_num_partitions())
     # Each item in this list will be a column of original df
     # partitioned to smaller pieces along rows.
     # We need to transpose the oids array to fit our schema.
@@ -66,12 +68,15 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
         ]
     ).T
     remote_partitions = np.array(
-        [[RayRemotePartition(obj) for obj in row] for row in blk_partitions[:-1]]
+        [
+            [PandasOnRayRemotePartition(obj) for obj in row]
+            for row in blk_partitions[:-1]
+        ]
     )
     index_len = ray.get(blk_partitions[-1][0])
     index = pandas.RangeIndex(index_len)
-    new_manager = PandasDataManager(
-        RayBlockPartitions(remote_partitions), index, columns
+    new_manager = PandasQueryCompiler(
+        PandasOnRayBlockPartitions(remote_partitions), index, columns
     )
     df = DataFrame(data_manager=new_manager)
     return df
@@ -155,7 +160,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         index_ids = []
         total_bytes = os.path.getsize(filepath)
         # Max number of partitions available
-        num_parts = RayBlockPartitions._compute_num_partitions()
+        num_parts = PandasOnRayBlockPartitions._compute_num_partitions()
         # This is the number of splits for the columns
         num_splits = min(len(column_names), num_parts)
         # This is the chunksize each partition will read
@@ -176,7 +181,9 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
                 ),
                 num_return_vals=num_splits + 1,
             )
-            partition_ids.append([RayRemotePartition(obj) for obj in partition_id[:-1]])
+            partition_ids.append(
+                [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+            )
             index_ids.append(partition_id[-1])
 
     index_col = kwargs.get("index_col", None)
@@ -186,8 +193,8 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         new_index_ids = get_index.remote([empty_pd_df.index.name], *index_ids)
         new_index = ray.get(new_index_ids)
 
-    new_manager = PandasDataManager(
-        RayBlockPartitions(np.array(partition_ids)), new_index, column_names
+    new_manager = PandasQueryCompiler(
+        PandasOnRayBlockPartitions(np.array(partition_ids)), new_index, column_names
     )
     df = DataFrame(data_manager=new_manager)
 

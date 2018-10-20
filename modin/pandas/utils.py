@@ -15,7 +15,7 @@ def from_pandas(df):
     """
     from .dataframe import DataFrame
 
-    return DataFrame(data_manager=BaseFactory.from_pandas(df))
+    return DataFrame(query_compiler=BaseFactory.from_pandas(df))
 
 
 def to_pandas(df):
@@ -25,7 +25,7 @@ def to_pandas(df):
     Returns:
         A new pandas DataFrame.
     """
-    return df._data_manager.to_pandas()
+    return df._query_compiler.to_pandas()
 
 
 def _inherit_docstrings(parent, excluded=[]):
