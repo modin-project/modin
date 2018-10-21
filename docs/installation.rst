@@ -27,6 +27,26 @@ also use `pip`.
 This will install directly from the repo without you having to clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
 
+Windows
+-------
+
+For installation on Windows, we recommend using Windows Subsystem for Linux (WSL_). This
+will allow you to use Linux commands on your Windows machine.
+
+One of our dependencies is Ray_. Ray is not yet supported natively on Windows, so in
+order to install it you need to use the WSL if you are on Windows.
+
+Once you've installed WSL, you can install Modin in the WSL bash shell just like you
+would on Linux or Mac:
+
+.. code-block:: bash
+
+    pip install modin
+
+Once you've done this, Modin will be installed. However, it is important to note that
+you must execute `python`, `ipython` and `jupyter` from the WSL application.
+
+
 Dependencies
 ------------
 
@@ -65,5 +85,6 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
   pip install -e .
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
+.. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _contributing: contributing.html
