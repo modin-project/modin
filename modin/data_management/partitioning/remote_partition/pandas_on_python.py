@@ -14,6 +14,7 @@ class PandasOnPythonRemotePartition(object):
         Note: These objects are treated as immutable by `BaseBlockPartitions`
         subclasses. There is no logic for updating inplace.
     """
+
     def __init__(self, data):
         self.data = data
         self.call_queue = []
@@ -26,7 +27,7 @@ class PandasOnPythonRemotePartition(object):
         Returns:
             The object that was `put`.
         """
-        return self.data
+        return self.data.copy()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -46,8 +47,11 @@ class PandasOnPythonRemotePartition(object):
 
         def call_queue_closure(data, call_queues):
             for func, kwargs in call_queues:
-                data = func(data.copy(), **kwargs)
-                print(data)
+                try:
+                    data = func(data.copy(), **kwargs)
+                except Exception as e:
+                    self.call_queue = []
+                    raise e
             return data
 
         new_data = call_queue_closure(self.data, self.call_queue)

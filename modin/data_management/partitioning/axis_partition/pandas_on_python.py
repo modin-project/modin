@@ -35,15 +35,19 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
             return [
                 PandasOnPythonRemotePartition(obj)
                 for obj in deploy_python_func_between_two_axis_partitions(
-                    self.axis, func, num_splits, len(self.list_of_blocks), kwargs,
-                           *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks))
+                    self.axis,
+                    func,
+                    num_splits,
+                    len(self.list_of_blocks),
+                    kwargs,
+                    *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
+                )
             ]
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            PandasOnPythonRemotePartition(obj)
-            for obj in deploy_python_axis_func(*args)
+            PandasOnPythonRemotePartition(obj) for obj in deploy_python_axis_func(*args)
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -62,7 +66,7 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            PandasOnPythonRemotePartition(obj)
+            PandasOnPythonRemotePartition(obj.copy())
             for obj in deploy_python_axis_func(args)
         ]
 
@@ -112,7 +116,10 @@ def deploy_python_axis_func(axis, func, num_splits, kwargs, *partitions):
             lengths = [len(part.columns) for part in partitions]
             if sum(lengths) != len(result.columns):
                 lengths = None
-    return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+    return [
+        df.copy()
+        for df in split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+    ]
 
 
 def deploy_python_func_between_two_axis_partitions(
@@ -138,7 +145,9 @@ def deploy_python_func_between_two_axis_partitions(
     rt_frame = pandas.concat(list(partitions[len_of_left:]), axis=axis, copy=False)
 
     result = func(lt_frame, rt_frame, **kwargs)
-    return split_result_of_axis_func_pandas(axis, num_splits, result)
+    return [
+        df.copy() for df in split_result_of_axis_func_pandas(axis, num_splits, result)
+    ]
 
 
 def deploy_python_shuffle_func(axis, func, numsplits, kwargs, *partitions):
