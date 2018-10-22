@@ -13,6 +13,7 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
+    is_object_dtype,
 )
 from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer, convert_to_index_sliceable
@@ -550,6 +551,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the applied addition.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -560,8 +562,16 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-
-        other = self._validate_other(other, axis, numeric_only=True)
+        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.add(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3314,6 +3324,7 @@ class DataFrame(object):
         Returns:
              A new DataFrame with the subtraciont applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3324,7 +3335,16 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, numeric_only=True)
+        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3847,6 +3867,7 @@ class DataFrame(object):
         Returns:
              A new DataFrame with the subtraciont applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3857,7 +3878,16 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, numeric_only=True)
+        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
