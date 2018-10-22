@@ -319,6 +319,8 @@ class BaseBlockPartitions(object):
                     if axis == 0
                     else (slice(None), slice(-remaining, None))
                 )
+                print(slice_obj)
+                print(n)
                 func = self.preprocess_func(lambda df: df.iloc[slice_obj])
                 # We use idx + 1 here because the loop is not inclusive, and we
                 # need to iterate through idx.
@@ -347,6 +349,8 @@ class BaseBlockPartitions(object):
                 slice_obj = (
                     slice(remaining) if axis == 0 else (slice(None), slice(remaining))
                 )
+                print(slice_obj)
+                print(n)
                 func = self.preprocess_func(lambda df: df.iloc[slice_obj])
                 # See note above about idx + 1
                 result = np.array(

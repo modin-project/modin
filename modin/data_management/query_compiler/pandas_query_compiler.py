@@ -89,9 +89,13 @@ class PandasQueryCompiler(object):
     def _set_columns(self, new_columns):
         if self._columns_cache is None:
             self._columns_cache = _ensure_index(new_columns)
+            if self._dtype_cache is not None:
+                self._dtype_cache.index = new_columns
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
+            if self._dtype_cache is not None:
+                self._dtype_cache.index = new_columns
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
@@ -208,14 +212,20 @@ class PandasQueryCompiler(object):
     # Metadata modification methods
     def add_prefix(self, prefix):
         new_column_names = self.columns.map(lambda x: str(prefix) + str(x))
+        new_dtype_cache = self._dtype_cache.copy()
+        if new_dtype_cache is not None:
+            new_dtype_cache.index = new_column_names
         return self.__constructor__(
-            self.data, self.index, new_column_names, self._dtype_cache
+            self.data, self.index, new_column_names, new_dtype_cache
         )
 
     def add_suffix(self, suffix):
         new_column_names = self.columns.map(lambda x: str(x) + str(suffix))
+        new_dtype_cache = self._dtype_cache.copy()
+        if new_dtype_cache is not None:
+            new_dtype_cache.index = new_column_names
         return self.__constructor__(
-            self.data, self.index, new_column_names, self._dtype_cache
+            self.data, self.index, new_column_names, new_dtype_cache
         )
 
     # END Metadata modification methods
@@ -2132,6 +2142,7 @@ class PandasQueryCompiler(object):
         else:
 
             def delitem(df, internal_indices=[]):
+                # print(df, internal_indices)
                 return df.drop(index=df.index[internal_indices])
 
             numeric_indices = list(self.index.get_indexer_for(index))
@@ -2151,6 +2162,7 @@ class PandasQueryCompiler(object):
         else:
 
             def delitem(df, internal_indices=[]):
+                # print(df, internal_indices)
                 return df.drop(columns=df.columns[internal_indices])
 
             numeric_indices = list(self.columns.get_indexer_for(columns))
@@ -2164,6 +2176,7 @@ class PandasQueryCompiler(object):
                 for i in range(len(self.columns))
                 if i not in numeric_indices
             ]
+            print(self.dtypes)
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
@@ -2187,7 +2200,7 @@ class PandasQueryCompiler(object):
         """
 
         def insert(df, internal_indices=[]):
-            internal_idx = internal_indices[0]
+            internal_idx = int(internal_indices[0])
             old_index = df.index
             df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)

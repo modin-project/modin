@@ -8,6 +8,7 @@ from .. import __execution_engine__ as execution_engine
 from .. import __partition_format__ as partition_format
 from modin.data_management.query_compiler import PandasQueryCompiler
 from .partitioning.partition_collections import PandasOnRayBlockPartitions
+from .partitioning.partition_collections import PandasOnPythonBlockPartitions
 
 
 class BaseFactory(object):
@@ -33,3 +34,9 @@ class PandasOnRayFactory(BaseFactory):
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = PandasOnRayBlockPartitions
+
+
+class PandasOnPythonFactory(BaseFactory):
+
+    data_mgr_cls = PandasQueryCompiler
+    block_partitions_cls = PandasOnPythonBlockPartitions
