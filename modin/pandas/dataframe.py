@@ -2755,7 +2755,7 @@ class DataFrame(object):
                 elif is_list_like(other):
                     if any(x < 0 for x in other):
                         raise ValueError("Integers to negative integer powers are not allowed.")
-                elif x < 0:
+                elif other < 0:
                     raise ValueError("Integers to negative integer powers are not allowed.")
         new_manager = self._query_compiler.pow(
             other=other, axis=axis, level=level, fill_value=fill_value
@@ -3327,22 +3327,8 @@ class DataFrame(object):
         old_other = other
         other = self._validate_other(other, axis, check_dtype=True)
         # Check to make sure integers are not raised to negative integer powers
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
-        for i in range(len(other_dtypes)):
-            if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
-                if isinstance(other, type(self._data_manager)):
-                    if old_other.iloc[:, i].lt(0).any():
-                        raise ValueError("Integers to negative integer powers are not allowed.")
-                elif is_list_like(other):
-                    if any(x < 0 for x in other):
-                        raise ValueError("Integers to negative integer powers are not allowed.")
-                elif x < 0:
-                    raise ValueError("Integers to negative integer powers are not allowed.")
+        if is_integer_dtype(type(other)) and other < 0 and is_integer_dtype(self.dtypes[i]):
+                raise ValueError("Integers to negative integer powers are not allowed.")
         new_manager = self._query_compiler.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3374,12 +3360,7 @@ class DataFrame(object):
             )
         other = self._validate_other(other, axis)
         # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
         if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
             raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.rsub(
