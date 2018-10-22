@@ -14,6 +14,7 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
+    is_integer_dtype,
 )
 from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer, convert_to_index_sliceable
@@ -2737,7 +2738,25 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
+        old_other = other
         other = self._validate_other(other, axis, check_dtype=True)
+        # Check to make sure integers are not raised to negative integer powers
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        for i in range(len(other_dtypes)):
+            if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
+                if isinstance(other, type(self._data_manager)):
+                    if old_other.iloc[:, i].lt(0).any():
+                        raise ValueError("Integers to negative integer powers are not allowed.")
+                elif is_list_like(other):
+                    if any(x < 0 for x in other):
+                        raise ValueError("Integers to negative integer powers are not allowed.")
+                elif x < 0:
+                    raise ValueError("Integers to negative integer powers are not allowed.")
         new_manager = self._query_compiler.pow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3305,7 +3324,25 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
+        old_other = other
         other = self._validate_other(other, axis, check_dtype=True)
+        # Check to make sure integers are not raised to negative integer powers
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        for i in range(len(other_dtypes)):
+            if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
+                if isinstance(other, type(self._data_manager)):
+                    if old_other.iloc[:, i].lt(0).any():
+                        raise ValueError("Integers to negative integer powers are not allowed.")
+                elif is_list_like(other):
+                    if any(x < 0 for x in other):
+                        raise ValueError("Integers to negative integer powers are not allowed.")
+                elif x < 0:
+                    raise ValueError("Integers to negative integer powers are not allowed.")
         new_manager = self._query_compiler.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
