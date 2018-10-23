@@ -533,7 +533,6 @@ class DataFrame(object):
         new_manager = self._query_compiler.dropna(
             axis=axis, how=how, thresh=thresh, subset=subset
         )
-
         if not inplace:
             return DataFrame(query_compiler=new_manager)
         else:
