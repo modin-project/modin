@@ -1702,7 +1702,15 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.ge, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.ge(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -1768,7 +1776,15 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.gt, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.gt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -2230,7 +2246,15 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.le, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.le(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -2256,7 +2280,15 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.lt, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
+        # Because we can add objects, we have to do dtype checking here.
+        if isinstance(other, type(self._data_manager)):
+            other_dtypes = other.dtypes
+        elif is_list_like(other):
+            other_dtypes = [type(x) for x in other]
+        else:
+            other_dtypes = [type(other) for _ in range(len(self.index) if axis else len(self.columns))]
+        if not all((is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_datetime_or_timedelta_dtype(self_dtype) and is_datetime_or_timedelta_dtype(other_dtype)) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            raise TypeError("Cannot non-numeric dtypes or both dtypes are not objects")
         new_manager = self._query_compiler.lt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
