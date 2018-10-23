@@ -2750,8 +2750,10 @@ class DataFrame(object):
         for i in range(len(other_dtypes)):
             if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
                 if isinstance(other, type(self._data_manager)):
-                    if old_other.iloc[:, i].lt(0).any():
-                        raise ValueError("Integers to negative integer powers are not allowed.")
+                    continue
+                    # TODO: Come back to this when we have an efficient way to preprocess data
+                    # if old_other.iloc[:, i].lt(0).any():
+                    #     raise ValueError("Integers to negative integer powers are not allowed.")
                 elif is_list_like(other):
                     if any(x < 0 for x in other):
                         raise ValueError("Integers to negative integer powers are not allowed.")
