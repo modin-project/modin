@@ -5060,7 +5060,7 @@ class DataFrame(object):
             other_dtypes = [type(x) for x in other]
             if check_dtype and not all(
                 is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
-                for self_dtype, other_dtype in zip(self.dtypes, other.dtypes)
+                for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
             ):
                 raise TypeError("Cannot do operation on non-numeric dtypes")
             if axis == 0:
