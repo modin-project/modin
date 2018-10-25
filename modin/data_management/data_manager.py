@@ -1058,10 +1058,7 @@ class PandasDataManager(object):
 
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
-        new_dtypes = pandas.Series(
-            [np.dtype("float64") for _ in self.columns], index=self.columns
-        )
-        return self.map_partitions(func, new_dtypes=new_dtypes)
+        return self.map_partitions(func, new_dtypes=self.dtypes.copy())
 
     def applymap(self, func):
         remote_func = self._prepare_method(pandas.DataFrame.applymap, func=func)

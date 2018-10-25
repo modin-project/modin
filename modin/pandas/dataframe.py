@@ -418,10 +418,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the applied absolute value.
         """
-        for t in self.dtypes:
-            if np.dtype("O") == t:
-                # TODO Give a more accurate error to Pandas
-                raise TypeError("bad operand type for abs():", "str")
+        self._validate_dtypes(numeric_only=True)
 
         return DataFrame(data_manager=self._data_manager.abs())
 
