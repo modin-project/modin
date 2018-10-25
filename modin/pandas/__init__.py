@@ -62,9 +62,11 @@ from .general import isna, merge, pivot_table
 __pandas_version__ = "0.23.4"
 
 if pandas.__version__ != __pandas_version__:
-    raise ImportError("The pandas version installed does not match the required pandas "
-                      "version in Modin. Please install pandas {} to use "
-                      "Modin.".format(__pandas_version__))
+    raise ImportError(
+        "The pandas version installed does not match the required pandas "
+        "version in Modin. Please install pandas {} to use "
+        "Modin.".format(__pandas_version__)
+    )
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
