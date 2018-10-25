@@ -1808,8 +1808,12 @@ class PandasQueryCompiler(object):
         else:
             data_manager = self
         new_data = self.map_across_full_axis(axis, func)
-        new_dtypes = pandas.Series([np.float64 for _ in data_manager.columns], index=data_manager.columns)
-        return self.__constructor__(new_data, data_manager.index, data_manager.columns, new_dtypes)
+        new_dtypes = pandas.Series(
+            [np.float64 for _ in data_manager.columns], index=data_manager.columns
+        )
+        return self.__constructor__(
+            new_data, data_manager.index, data_manager.columns, new_dtypes
+        )
 
     # END Map across rows/columns
 
