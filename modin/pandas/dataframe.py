@@ -670,6 +670,8 @@ class DataFrame(object):
         if axis is not None:
             axis = pandas.DataFrame()._get_axis_number(axis)
         else:
+            if bool_only:
+                raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             axis = None
         result = self._query_compiler.all(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -689,6 +691,8 @@ class DataFrame(object):
         if axis is not None:
             axis = pandas.DataFrame()._get_axis_number(axis)
         else:
+            if bool_only:
+                raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             axis = None
         result = self._query_compiler.any(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
