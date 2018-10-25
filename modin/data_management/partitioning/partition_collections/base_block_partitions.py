@@ -40,6 +40,10 @@ class BaseBlockPartitions(object):
     # Partition class is the class to use for storing each partition. It must
     # extend the `BaseRemotePartition` class.
     _partition_class = None
+    # Column partitions class is the class to use to create the column partitions.
+    _column_partitions_class = None
+    # Row partitions class is the class to use to create row partitions.
+    _row_partition_class = None
     # Whether or not we have already filtered out the empty partitions.
     _filtered_empties = False
 
@@ -982,3 +986,14 @@ class BaseBlockPartitions(object):
             new_chunk = block_partitions_cls(np.array([nan_oids_lst]).T)
             data = self.concat(axis=1, other_blocks=new_chunk)
         return data
+
+    @property
+    def column_partitions(self):
+        """A list of `PandasOnRayColumnPartition` objects."""
+        return [self._column_partitions_class(col) for col in self.partitions.T]
+
+    @property
+    def row_partitions(self):
+        """A list of `PandasOnRayRowPartition` objects."""
+        return [self._row_partition_class(row) for row in self.partitions]
+

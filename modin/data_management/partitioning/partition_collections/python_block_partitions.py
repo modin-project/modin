@@ -3,11 +3,13 @@ from ..axis_partition import PandasOnPythonColumnPartition, PandasOnPythonRowPar
 from ..remote_partition import PandasOnPythonRemotePartition
 
 
-class PandasOnPythonBlockPartitions(BaseBlockPartitions):
+class PythonBlockPartitions(BaseBlockPartitions):
     """This method implements the interface in `BaseBlockPartitions`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnPythonRemotePartition
+    _column_partitions_class = PandasOnPythonColumnPartition
+    _row_partition_class = PandasOnPythonRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions
@@ -15,6 +17,8 @@ class PandasOnPythonBlockPartitions(BaseBlockPartitions):
     # We override these for performance reasons.
     # Lengths of the blocks
     _lengths_cache = None
+    # Widths of the blocks
+    _widths_cache = None
 
     # These are set up as properties so that we only use them when we need
     # them. We also do not want to trigger this computation on object creation.
@@ -36,9 +40,6 @@ class PandasOnPythonBlockPartitions(BaseBlockPartitions):
             )
         return self._lengths_cache
 
-    # Widths of the blocks
-    _widths_cache = None
-
     @property
     def block_widths(self):
         """Gets the widths of the blocks.
@@ -56,13 +57,3 @@ class PandasOnPythonBlockPartitions(BaseBlockPartitions):
                 else []
             )
         return self._widths_cache
-
-    @property
-    def column_partitions(self):
-        """A list of `PandasOnRayColumnPartition` objects."""
-        return [PandasOnPythonColumnPartition(col) for col in self.partitions.T]
-
-    @property
-    def row_partitions(self):
-        """A list of `PandasOnRayRowPartition` objects."""
-        return [PandasOnPythonRowPartition(row) for row in self.partitions]

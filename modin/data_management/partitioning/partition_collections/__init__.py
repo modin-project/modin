@@ -1,9 +1,9 @@
 from .base_block_partitions import BaseBlockPartitions
-from .pandas_on_ray import PandasOnRayBlockPartitions
-from .pandas_on_python import PandasOnPythonBlockPartitions
+from .ray_block_partitions import RayBlockPartitions
+from .python_block_partitions import PythonBlockPartitions
 
 __all__ = [
     "BaseBlockPartitions",
-    "PandasOnRayBlockPartitions",
-    "PandasOnPythonBlockPartitions",
+    "RayBlockPartitions",
+    "PythonBlockPartitions",
 ]

@@ -17,7 +17,7 @@ import numpy as np
 from .dataframe import DataFrame
 from .utils import from_pandas
 from ..data_management.partitioning.partition_collections import (
-    PandasOnRayBlockPartitions,
+    RayBlockPartitions,
 )
 from ..data_management.partitioning.remote_partition import PandasOnRayRemotePartition
 from ..data_management.partitioning.axis_partition import (
@@ -55,7 +55,7 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
         columns = [
             name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
         ]
-    num_splits = min(len(columns), PandasOnRayBlockPartitions._compute_num_partitions())
+    num_splits = min(len(columns), RayBlockPartitions._compute_num_partitions())
     # Each item in this list will be a column of original df
     # partitioned to smaller pieces along rows.
     # We need to transpose the oids array to fit our schema.
@@ -76,7 +76,7 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
     index_len = ray.get(blk_partitions[-1][0])
     index = pandas.RangeIndex(index_len)
     new_manager = PandasQueryCompiler(
-        PandasOnRayBlockPartitions(remote_partitions), index, columns
+        RayBlockPartitions(remote_partitions), index, columns
     )
     df = DataFrame(query_compiler=new_manager)
     return df
@@ -160,7 +160,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         index_ids = []
         total_bytes = os.path.getsize(filepath)
         # Max number of partitions available
-        num_parts = PandasOnRayBlockPartitions._compute_num_partitions()
+        num_parts = RayBlockPartitions._compute_num_partitions()
         # This is the number of splits for the columns
         num_splits = min(len(column_names), num_parts)
         # This is the chunksize each partition will read
@@ -194,7 +194,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         new_index = ray.get(new_index_ids)
 
     new_manager = PandasQueryCompiler(
-        PandasOnRayBlockPartitions(np.array(partition_ids)), new_index, column_names
+        RayBlockPartitions(np.array(partition_ids)), new_index, column_names
     )
     df = DataFrame(query_compiler=new_manager)
 
