@@ -7,4 +7,4 @@ RUN pip install -q pytest feather-format lxml openpyxl xlrd numpy matplotlib
 COPY . .
 RUN pip install -e .
 
-ENTRYPOINT ["bash", ".jenkins/run_test.sh"]
+ENTRYPOINT ["bash", ".jenkins/build-tests/run_test.sh"]
