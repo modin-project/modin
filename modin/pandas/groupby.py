@@ -24,9 +24,9 @@ class DataFrameGroupBy(object):
 
         self._axis = axis
         self._df = df
-        self._data_manager = df._data_manager
-        self._index = self._data_manager.index
-        self._columns = self._data_manager.columns
+        self._query_compiler = df._query_compiler
+        self._index = self._query_compiler.index
+        self._columns = self._query_compiler.columns
         self._by = by
         self._level = level
         self._kwargs = {
@@ -82,7 +82,7 @@ class DataFrameGroupBy(object):
                 (
                     k,
                     DataFrame(
-                        data_manager=self._data_manager.getitem_row_array(
+                        query_compiler=self._query_compiler.getitem_row_array(
                             self._index_grouped[k]
                         )
                     ),
@@ -94,7 +94,7 @@ class DataFrameGroupBy(object):
                 (
                     k,
                     DataFrame(
-                        data_manager=self._data_manager.getitem_column_array(
+                        query_compiler=self._query_compiler.getitem_column_array(
                             self._index_grouped[k]
                         )
                     ),
@@ -383,10 +383,10 @@ class DataFrameGroupBy(object):
         if all(obj in self._df for obj in self._by):
             return self._default_to_pandas(f, **kwargs)
 
-        new_manager = self._data_manager.groupby_agg(
+        new_manager = self._query_compiler.groupby_agg(
             self._by, self._axis, f, self._kwargs, kwargs
         )
-        return DataFrame(data_manager=new_manager)
+        return DataFrame(query_compiler=new_manager)
 
     def _default_to_pandas(self, f, **kwargs):
         """Defailts the execution of this function to pandas.

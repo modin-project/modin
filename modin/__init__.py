@@ -43,7 +43,11 @@ def get_execution_engine():
     # backing the DataFrame, there will have to be some changed logic here to
     # decide these things. In the meantime, we will use the currently supported
     # execution engine + backing (Pandas + Ray).
-    return "Ray"
+    if "MODIN_ENGINE" in os.environ:
+        engine = os.environ["MODIN_ENGINE"]
+    else:
+        engine = "Ray" if "MODIN_DEBUG" not in os.environ else "Python"
+    return engine
 
 
 def get_partition_format():

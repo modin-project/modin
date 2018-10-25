@@ -27,7 +27,7 @@ tasks and parameters. This is primarily applicable to map operations. We have de
 the system such that there is a single remote function that accepts a serialized
 function as a parameter and applies it to a partition. The operation will be serialized
 separately for each partition if we do not call ``ray.put`` on it first. The
-``BlockPartitions`` abstract class exposes a unified way to preprocess functions. The
+``BaseBlockPartitions`` abstract class exposes a unified way to preprocess functions. The
 primary purpose of the preprocess abstraction is to allow for optimizations such as
 this.
 

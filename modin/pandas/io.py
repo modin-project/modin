@@ -17,11 +17,11 @@ import numpy as np
 from .dataframe import DataFrame
 from .utils import from_pandas
 from ..data_management.partitioning.partition_collections import RayBlockPartitions
-from ..data_management.partitioning.remote_partition import RayRemotePartition
+from ..data_management.partitioning.remote_partition import PandasOnRayRemotePartition
 from ..data_management.partitioning.axis_partition import (
     split_result_of_axis_func_pandas,
 )
-from ..data_management.data_manager import PandasDataManager
+from modin.data_management.query_compiler import PandasQueryCompiler
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
@@ -66,14 +66,17 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
         ]
     ).T
     remote_partitions = np.array(
-        [[RayRemotePartition(obj) for obj in row] for row in blk_partitions[:-1]]
+        [
+            [PandasOnRayRemotePartition(obj) for obj in row]
+            for row in blk_partitions[:-1]
+        ]
     )
     index_len = ray.get(blk_partitions[-1][0])
     index = pandas.RangeIndex(index_len)
-    new_manager = PandasDataManager(
+    new_manager = PandasQueryCompiler(
         RayBlockPartitions(remote_partitions), index, columns
     )
-    df = DataFrame(data_manager=new_manager)
+    df = DataFrame(query_compiler=new_manager)
     return df
 
 
@@ -176,7 +179,9 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
                 ),
                 num_return_vals=num_splits + 1,
             )
-            partition_ids.append([RayRemotePartition(obj) for obj in partition_id[:-1]])
+            partition_ids.append(
+                [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+            )
             index_ids.append(partition_id[-1])
 
     index_col = kwargs.get("index_col", None)
@@ -186,10 +191,10 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
         new_index_ids = get_index.remote([empty_pd_df.index.name], *index_ids)
         new_index = ray.get(new_index_ids)
 
-    new_manager = PandasDataManager(
+    new_manager = PandasQueryCompiler(
         RayBlockPartitions(np.array(partition_ids)), new_index, column_names
     )
-    df = DataFrame(data_manager=new_manager)
+    df = DataFrame(query_compiler=new_manager)
 
     if skipfooter:
         df = df.drop(df.index[-skipfooter:])

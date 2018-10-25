@@ -144,7 +144,7 @@ class _LocationIndexerBase(object):
     """
 
     def __init__(self, ray_df: DataFrame):
-        self.dm = ray_df._data_manager
+        self.dm = ray_df._query_compiler
         self.is_view = hasattr(self.dm, "is_view")
 
         self.row_scaler = False
@@ -159,7 +159,7 @@ class _LocationIndexerBase(object):
             dm_view = self.dm.view(row_lookup, col_lookup)
 
         if ndim == 2:
-            return DataFrame(data_manager=dm_view)
+            return DataFrame(query_compiler=dm_view)
         elif ndim == 0:
             return dm_view.squeeze(ndim=0)
         else:
