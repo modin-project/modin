@@ -2917,6 +2917,8 @@ class DataFrame(object):
             A new DataFrame
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+        if axis == 1 and numeric_only is False:
+            self._validate_dtypes(numeric_only=True)
         return DataFrame(
             query_compiler=self._query_compiler.rank(
                 axis=axis,

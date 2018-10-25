@@ -1799,15 +1799,17 @@ class PandasQueryCompiler(object):
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.rank, **kwargs)
-        new_data = self.map_across_full_axis(axis, func)
-        # Since we assume no knowledge of internal state, we get the columns
-        # from the internal partitions.
         if numeric_only:
-            new_columns = self.compute_index(1, new_data, True)
+            result, data_manager = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return self.from_pandas(
+                    pandas.DataFrame(index=data_manager.index), type(self.data)
+                )
         else:
-            new_columns = self.columns
-        new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
-        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
+            data_manager = self
+        new_data = self.map_across_full_axis(axis, func)
+        new_dtypes = pandas.Series([np.float64 for _ in data_manager.columns], index=data_manager.columns)
+        return self.__constructor__(new_data, data_manager.index, data_manager.columns, new_dtypes)
 
     # END Map across rows/columns
 
