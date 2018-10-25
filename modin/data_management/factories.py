@@ -33,7 +33,7 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     data_mgr_cls = PandasQueryCompiler
-    block_partitions_cls = PandasOnRayBlockPartitions
+    block_partitions_cls = RayBlockPartitions
 
 
 class PandasOnPythonFactory(BaseFactory):
