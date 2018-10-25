@@ -1803,7 +1803,7 @@ class PandasQueryCompiler(object):
             result, data_manager = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return self.from_pandas(
-                    pandas.DataFrame(index=data_manager.index), type(self.data)
+                    pandas.DataFrame(index=self.index), type(self.data)
                 )
         else:
             data_manager = self
