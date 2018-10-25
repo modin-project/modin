@@ -2425,7 +2425,7 @@ def test_nlargest():
     ray_df = create_test_dataframe()
 
     with pytest.raises(NotImplementedError):
-        ray_df.largest(None, None)
+        ray_df.nlargest(None, None)
 
 
 @pytest.fixture

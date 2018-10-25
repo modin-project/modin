@@ -3826,7 +3826,6 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        #return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
         new_data_manager = self._data_manager.squeeze(axis);
         if (isinstance(new_data_manager, pandas.Series) or new_data_manager.data.shape == ()):
             return new_data_manager
