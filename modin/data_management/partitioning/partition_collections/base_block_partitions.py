@@ -90,19 +90,10 @@ class BaseBlockPartitions(object):
         """
         return self._partition_class.preprocess_func(map_func)
 
+    # END Abstract Methods
+
     @property
     def column_partitions(self):
-        """A list of `BaseAxisPartition` objects, represents column partitions.
-
-        Note: Each value in this list will an `BaseAxisPartition` object.
-            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
-
-        Returns a list of `BaseAxisPartition` objects.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    @property
-    def row_partitions(self):
         """A list of `BaseAxisPartition` objects.
 
         Note: Each value in this list will be an `BaseAxisPartition` object.
@@ -110,9 +101,18 @@ class BaseBlockPartitions(object):
 
         Returns a list of `BaseAxisPartition` objects.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        return [self._column_partitions_class(col) for col in self.partitions.T]
 
-    # END Abstract Methods
+    @property
+    def row_partitions(self):
+        """A list of `BaseAxisPartition` objects, represents column partitions.
+
+        Note: Each value in this list will an `BaseAxisPartition` object.
+            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
+
+        Returns a list of `BaseAxisPartition` objects.
+        """
+        return [self._row_partition_class(row) for row in self.partitions]
 
     # Lengths of the blocks
     _lengths_cache = None
@@ -986,14 +986,3 @@ class BaseBlockPartitions(object):
             new_chunk = block_partitions_cls(np.array([nan_oids_lst]).T)
             data = self.concat(axis=1, other_blocks=new_chunk)
         return data
-
-    @property
-    def column_partitions(self):
-        """A list of `PandasOnRayColumnPartition` objects."""
-        return [self._column_partitions_class(col) for col in self.partitions.T]
-
-    @property
-    def row_partitions(self):
-        """A list of `PandasOnRayRowPartition` objects."""
-        return [self._row_partition_class(row) for row in self.partitions]
-

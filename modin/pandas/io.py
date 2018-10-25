@@ -16,9 +16,7 @@ import numpy as np
 
 from .dataframe import DataFrame
 from .utils import from_pandas
-from ..data_management.partitioning.partition_collections import (
-    RayBlockPartitions,
-)
+from ..data_management.partitioning.partition_collections import RayBlockPartitions
 from ..data_management.partitioning.remote_partition import PandasOnRayRemotePartition
 from ..data_management.partitioning.axis_partition import (
     split_result_of_axis_func_pandas,
