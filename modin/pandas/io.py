@@ -23,7 +23,7 @@ from ..data_management.partitioning.axis_partition import (
 )
 from ..data_management.data_manager import PandasDataManager
 
-PQ_INDEX_REGEX = re.compile("__index_level_\d+__")
+PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
 # Parquet
