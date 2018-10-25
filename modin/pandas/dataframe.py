@@ -4918,7 +4918,15 @@ class DataFrame(object):
         else:
             self._update_inplace(new_manager=new_manager)
 
-    def _validate_other(self, other, axis, numeric_only=False, numeric_or_time_only=False, numeric_or_object_only=False, comparison_dtypes_only=False):
+    def _validate_other(
+        self,
+        other,
+        axis,
+        numeric_only=False,
+        numeric_or_time_only=False,
+        numeric_or_object_only=False,
+        comparison_dtypes_only=False,
+    ):
         """Helper method to check validity of other in inter-df operations"""
         axis = pandas.DataFrame()._get_axis_number(axis)
         result = other
@@ -4947,7 +4955,10 @@ class DataFrame(object):
 
         # Do dtype checking
         if numeric_only:
-            if not all(is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+            if not all(
+                is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
+                for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
+            ):
                 raise TypeError("Cannot do operation on non-numeric dtypes")
         elif numeric_or_object_only:
             if not all(
@@ -4966,7 +4977,9 @@ class DataFrame(object):
                 or is_dtype_equal(self_dtype, other_dtype)
                 for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
             ):
-                raise TypeError("Cannot do operation non-numeric objects with numeric objects")
+                raise TypeError(
+                    "Cannot do operation non-numeric objects with numeric objects"
+                )
         elif numeric_or_time_only:
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
@@ -4976,7 +4989,9 @@ class DataFrame(object):
                 )
                 for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
             ):
-                raise TypeError("Cannot do operation non-numeric objects with numeric objects")
+                raise TypeError(
+                    "Cannot do operation non-numeric objects with numeric objects"
+                )
 
         return result
 
