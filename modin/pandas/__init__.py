@@ -4,6 +4,7 @@ from __future__ import print_function
 
 # TODO: In the future `set_option` or similar needs to run on every node
 # in order to keep all pandas instances across nodes consistent
+import pandas
 from pandas import (
     eval,
     unique,
@@ -57,6 +58,13 @@ from .io import (
 )
 from .reshape import get_dummies
 from .general import isna, merge, pivot_table
+
+__pandas_version__ = "0.23.4"
+
+if pandas.__version__ != __pandas_version__:
+    raise ImportError("The pandas version installed does not match the required pandas "
+                      "version in Modin. Please install pandas {} to use "
+                      "Modin.".format(__pandas_version__))
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -126,3 +134,5 @@ __all__ = [
     "__git_revision__",
     "__version__",
 ]
+
+del pandas
