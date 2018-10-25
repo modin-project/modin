@@ -467,7 +467,8 @@ def test_mixed_dtype_dataframe():
     test_describe(ray_df, pandas_df)
 
     # TODO Reolve once Pandas-20962 is resolved.
-    test_rank(ray_df, pandas_df)
+    if PY3:
+        test_rank(ray_df, pandas_df)
 
     test_all(ray_df, pandas_df)
     test_any(ray_df, pandas_df)
