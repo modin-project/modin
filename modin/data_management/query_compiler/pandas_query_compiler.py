@@ -2499,15 +2499,23 @@ class PandasQueryCompiler(object):
         )
 
     def squeeze(self, ndim=0, axis=None):
-        squeezed = self.data.to_pandas().squeeze()
-        if ndim == 1:
-            squeezed = pandas.Series(squeezed)
-            scaler_axis = self.index if axis == 0 else self.columns
-            non_scaler_axis = self.index if axis == 1 else self.columns
-
-            squeezed.name = scaler_axis[0]
-            squeezed.index = non_scaler_axis
-        return squeezed
+        #Checking if 2D DataFrame. If so, return without squeeze
+        if (self.data.shape[0] > 1 and self.data.shape[1] > 1):  
+            return self.copy()
+        else:
+            squeezed = self.data.to_pandas().squeeze()
+            #Check if scalar. If so, return scalar
+            if (squeezed.shape == ()):
+                return squeezed
+            #If not scalar, squeeze has returned a Series. 
+            #Format series, give appropriate labels and return.
+            else: 
+                squeezed = pandas.Series(squeezed)
+                scaler_axis = self.columns if axis == None or axis == 0 else self.index
+                non_scaler_axis = self.index if axis == None or axis == 0 else self.columns
+                squeezed.name = scaler_axis[0]
+                squeezed.index = non_scaler_axis
+                return squeezed
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):

@@ -2557,6 +2557,7 @@ class DataFrame(object):
         return self._default_to_pandas_func(
             pandas.DataFrame.nlargest, n, columns, keep=keep
         )
+        
 
     def notna(self):
         """Perform notna across the DataFrame.
@@ -3825,7 +3826,12 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
+        #return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
+        new_data_manager = self._data_manager.squeeze(axis);
+        if (isinstance(new_data_manager, pandas.Series) or new_data_manager.data.shape == ()):
+            return new_data_manager
+        else:
+            return DataFrame(data_manager=new_data_manager)
 
     def stack(self, level=-1, dropna=True):
         return self._default_to_pandas_func(

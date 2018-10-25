@@ -2425,7 +2425,7 @@ def test_nlargest():
     ray_df = create_test_dataframe()
 
     with pytest.raises(NotImplementedError):
-        ray_df.nlargest(None, None)
+        ray_df.largest(None, None)
 
 
 @pytest.fixture
@@ -3071,12 +3071,20 @@ def test_sortlevel():
         ray_df.sortlevel()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_squeeze():
-    ray_df = create_test_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        ray_df.squeeze()
+    frame_data = {"col1": [0, 1, 2, 3], "col2": [4, 5, 6, 7], "col3": [8, 9, 10, 11], "col4": [12, 13, 14, 15], "col5": [0, 0, 0, 0],}
+    frame_data_2 = { "col1": [0, 1, 2, 3] }
+    frame_data_3 = { "col1": [2] }
+    #Different data for different cases
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+    pandas_df_2 = pandas.DataFrame(frame_data_2)
+    ray_df_2 = pd.DataFrame(frame_data_2)
+    pandas_df_3 = pandas.DataFrame(frame_data_3)
+    ray_df_3 = pd.DataFrame(frame_data_3)
+    assert ray_df.squeeze().equals(pandas_df.squeeze())
+    assert ray_df_2.squeeze().equals(pandas_df_2.squeeze())
+    assert ray_df_3.squeeze() == (pandas_df_3.squeeze()) # == used because np.int64 expected
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
