@@ -562,23 +562,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot add non-numeric dtypes")
+        other = self._validate_other(other, axis, numeric_or_object_only=True)
         new_manager = self._query_compiler.add(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1189,7 +1173,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.div(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1627,7 +1611,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1709,27 +1693,7 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.ge, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            or is_dtype_equal(self_dtype, other_dtype)
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot compare non-numeric objects with numeric objects")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.ge(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -1795,27 +1759,7 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.gt, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            or is_dtype_equal(self_dtype, other_dtype)
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot compare non-numeric objects with numeric objects")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.gt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -2277,27 +2221,7 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.le, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            or is_dtype_equal(self_dtype, other_dtype)
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot compare non-numeric objects with numeric objects")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.le(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -2323,27 +2247,7 @@ class DataFrame(object):
             return self._default_to_pandas_func(
                 pandas.DataFrame.lt, other, axis=axis, level=level
             )
-        other = self._validate_other(other, axis)
-        # # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            or is_dtype_equal(self_dtype, other_dtype)
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot compare non-numeric objects with numeric objects")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.lt(other=other, axis=axis, level=level)
         return self._create_dataframe_from_manager(new_manager)
 
@@ -2573,7 +2477,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2618,7 +2522,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2824,7 +2728,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         # Check to make sure integers are not raised to negative integer powers
         if isinstance(other, type(self._data_manager)):
             other_dtypes = other.dtypes
@@ -3072,7 +2976,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3418,7 +3322,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         # Check to make sure integers are not raised to negative integer powers
         if (
             is_integer_dtype(type(other))
@@ -3455,20 +3359,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        other_dtypes = [
-            type(other) for _ in range(len(self.index) if axis else len(self.columns))
-        ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot subtract non-numeric dtypes")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -4002,26 +3893,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis)
-        # Because we can add objects, we have to do dtype checking here.
-        if isinstance(other, type(self._data_manager)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-        ):
-            raise TypeError("Cannot subtract non-numeric dtypes")
+        other = self._validate_other(other, axis, numeric_or_time_only=True)
         new_manager = self._query_compiler.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -4478,7 +4350,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, check_dtype=True)
+        other = self._validate_other(other, axis, numeric_only=True)
         new_manager = self._query_compiler.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -5046,23 +4918,15 @@ class DataFrame(object):
         else:
             self._update_inplace(new_manager=new_manager)
 
-    def _validate_other(self, other, axis, check_dtype=False):
+    def _validate_other(self, other, axis, numeric_only=False, numeric_or_time_only=False, numeric_or_object_only=False):
         """Helper method to check validity of other in inter-df operations"""
         axis = pandas.DataFrame()._get_axis_number(axis)
+        result = other
         if isinstance(other, DataFrame):
-            if check_dtype and not all(
-                is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
-                for self_dtype, other_dtype in zip(self.dtypes, other.dtypes)
-            ):
-                raise TypeError("Cannot do operation on non-numeric dtypes")
+            other_dtypes = other.dtypes
             return other._query_compiler
         elif is_list_like(other):
             other_dtypes = [type(x) for x in other]
-            if check_dtype and not all(
-                is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
-                for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
-            ):
-                raise TypeError("Cannot do operation on non-numeric dtypes")
             if axis == 0:
                 if len(other) != len(self.index):
                     raise ValueError(
@@ -5080,12 +4944,27 @@ class DataFrame(object):
                 type(other)
                 for _ in range(len(self.index) if axis else len(self.columns))
             ]
-            if check_dtype and not all(
-                is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
+        if numeric_only:
+            if not all(is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype) for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)):
+                raise TypeError("Cannot do operation on non-numeric dtypes")
+        elif numeric_or_object_only:
+            if not all(
+                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
+                or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
                 for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
             ):
-                raise TypeError("Cannot do operation on non-numeric dtypes")
-        return other
+                raise TypeError("Cannot add non-numeric dtypes")
+        elif numeric_or_time_only:
+            if not all(
+                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
+                or (
+                    is_datetime_or_timedelta_dtype(self_dtype)
+                    and is_datetime_or_timedelta_dtype(other_dtype)
+                )
+                or is_dtype_equal(self_dtype, other_dtype)
+                for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
+            ):
+                raise TypeError("Cannot compare non-numeric objects with numeric objects")
 
     def _validate_dtypes(self, numeric_only=False):
         """Helper method to check that all the dtypes are the same"""
