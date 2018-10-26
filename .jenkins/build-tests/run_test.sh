@@ -1,7 +1,6 @@
 set -x
 
-pip install awscli pytest-html
-python .jenkins/inject_aws_credentials.py
+source activate py3
 
 python -c "import ray; ray.init()"
 pytest --html=test_dataframe.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_dataframe.py

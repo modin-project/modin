@@ -1,7 +1,6 @@
 set -x
 
-pip install awscli
-python .jenkins/inject_aws_credentials.py
+source activate py3
 
 # wget http://noaa-ghcn-pds.s3.amazonaws.com/csv/2017.csv
 python -c "import ray; ray.init()"
@@ -11,5 +10,4 @@ sha_tag=`git rev-parse --verify --short HEAD`
 # save the results to S3
 # aws s3 cp .benchmark/*/*.json s3://modin-jenkins-performance-result/${sha_tag}/
 
-# delete the .benchmarks directory
 rm -rf .benchmarks
