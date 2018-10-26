@@ -3180,9 +3180,6 @@ class DataFrame(object):
 
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        # if isinstance(to_replace, pandas.Series):
-        #     raise NotImplementedError("value as a Series not yet supported.")
-
         if (isinstance(to_replace, list) and isinstance(value, list)):
             if (len(to_replace) != len(value)):
                 raise ValueError("Replacement lists must match in length. Expecting %d got %d" % (len(to_replace), len(value)))
