@@ -1105,9 +1105,6 @@ class PandasQueryCompiler(object):
 
     def replace(self, **kwargs):
 
-        # If dictionary isn't specific to certian columns, call Normally
-        # elsewise needs more complex logic
-
         to_replace = kwargs.get("to_replace")
 
         # if to_replace is dict of dicts
@@ -1157,9 +1154,6 @@ class PandasQueryCompiler(object):
         if (isinstance(to_replace, list) and isinstance(value, list)):
             to_replace = kwargs.pop("to_replace")
             value = kwargs.pop("value")
-
-            # func_prepared = self._prepare_method(lambda df: df.replace(to_replace, value, **kwargs))
-            # handle error checking
 
             def replace_list_builder(df):
                 # check if to_replace dtypes exist within the partition
