@@ -4840,16 +4840,7 @@ class DataFrame(object):
         Returns:
             A modified DataFrame where every element is the negation of before
         """
-        for t in self.dtypes:
-            if not (
-                is_bool_dtype(t)
-                or is_numeric_dtype(t)
-                or is_datetime_or_timedelta_dtype(t)
-            ):
-                raise TypeError(
-                    "Unary negative expects numeric dtype, not {}".format(t)
-                )
-
+        self._validate_dtypes(numeric_only=True)
         return DataFrame(query_compiler=self._query_compiler.negative())
 
     def __sizeof__(self):
