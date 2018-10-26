@@ -4932,7 +4932,7 @@ class DataFrame(object):
         result = other
         if isinstance(other, DataFrame):
             other_dtypes = other.dtypes
-            return other._query_compiler
+            result = other._query_compiler
         elif is_list_like(other):
             other_dtypes = [type(x) for x in other]
             if axis == 0:
