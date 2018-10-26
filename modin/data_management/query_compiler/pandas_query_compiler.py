@@ -11,6 +11,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_bool_dtype,
 )
 from pandas.core.index import _ensure_index
 
@@ -1213,21 +1214,42 @@ class PandasQueryCompiler(object):
             Pandas Series containing boolean values or boolean.
         """
         axis = kwargs.get("axis", 0)
+        axis_none = True if axis is None else False
+        axis = 0 if axis is None else axis
+        kwargs["axis"] = axis
         bool_only = kwargs.get("bool_only", None)
-        index = self.index if axis else self.columns
+        kwargs["bool_only"] = False if bool_only is None else bool_only
+
+        not_bool_col = []
+        numeric_col_count = 0
+        for col, dtype in zip(self.columns, self.dtypes):
+            if not is_bool_dtype(dtype):
+                not_bool_col.append(col)
+            numeric_col_count += 1 if is_numeric_dtype(dtype) else 0
+
         if bool_only:
-            not_bool = []
-            for index, dtype in zip(index, self.dtypes):
-                if dtype != bool:
-                    not_bool.append(index)
-            if axis:
-                query_compiler = self.drop(index=not_bool)
-            else:
-                query_compiler = self.drop(columns=not_bool)
+            if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
+                return pandas.Series(dtype=bool)
+            query_compiler = self.drop(columns=not_bool_col)
         else:
+            if (
+                bool_only is False
+                and axis_none
+                and len(not_bool_col) == len(self.columns)
+                and numeric_col_count != len(self.columns)
+            ):
+                if func == pandas.DataFrame.all:
+                    return self.getitem_single_key(self.columns[-1])[self.index[-1]]
+                elif func == pandas.DataFrame.any:
+                    return self.getitem_single_key(self.columns[0])[self.index[0]]
             query_compiler = self
-        func = query_compiler._prepare_method(func, **kwargs)
-        return query_compiler.full_axis_reduce(func, axis)
+
+        builder_func = query_compiler._prepare_method(func, **kwargs)
+        result = query_compiler.full_axis_reduce(builder_func, axis)
+        if axis_none:
+            return func(result)
+        else:
+            return result
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
