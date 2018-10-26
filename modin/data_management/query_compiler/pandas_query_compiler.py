@@ -201,7 +201,7 @@ class PandasQueryCompiler(object):
             if axis:
                 result = pandas.Series([np.nan for _ in self.index])
             else:
-                result = pandas.Series([0 for _ in self.index])
+                result = pandas.Series()
         else:
             query_compiler = self.drop(columns=nonnumeric)
         return result, query_compiler

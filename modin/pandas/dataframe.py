@@ -402,7 +402,7 @@ class DataFrame(object):
             The sum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=False)
+        self._validate_dtypes_numeric_functions(axis, numeric_only, ignore_axis=False)
 
         return self._query_compiler.sum(
             axis=axis,
@@ -2299,7 +2299,7 @@ class DataFrame(object):
             The mean of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=False)
+        self._validate_dtypes_numeric_functions(axis, numeric_only, ignore_axis=False)
 
         return self._query_compiler.mean(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
@@ -2316,8 +2316,7 @@ class DataFrame(object):
             The median of the DataFrame. (Pandas series)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
+        self._validate_dtypes_numeric_functions(axis, numeric_only, ignore_axis=True)
 
         return self._query_compiler.median(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
@@ -2772,7 +2771,7 @@ class DataFrame(object):
             prod : Series or DataFrame (if level specified)
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        self._validate_dtypes_numeric_functions(axis, numeric_only, ignore_axis=True)
         return self._query_compiler.prod(
             axis=axis,
             skipna=skipna,
@@ -5008,9 +5007,9 @@ class DataFrame(object):
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
-    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
-        """Raises TypeErrors for sum, prod, and mean where necessary"""
-        # We cannot add datetime types, so if we are summing a column with
+    def _validate_dtypes_numeric_functions(self, axis, numeric_only, ignore_axis=False):
+        """Raises TypeErrors for numeric functions where necessary"""
+        # We cannot compare datetime types, so if we are summing a column with
         # dtype datetime64 and cannot ignore non-numeric types, we must throw a
         # TypeError.
         if (
@@ -5018,7 +5017,7 @@ class DataFrame(object):
             and numeric_only is False
             and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
         ):
-            raise TypeError("Cannot add Timestamp Types")
+            raise TypeError("Cannot compare Timestamp Types")
 
         # If our DataFrame has both numeric and non-numeric dtypes then
         # operations between these types do not make sense and we must raise a
