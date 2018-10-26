@@ -1014,9 +1014,17 @@ class DataFrame(object):
             The count, in a Series (or DataFrame if level is specified).
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        return self._query_compiler.count(
+        result = self._query_compiler.count(
             axis=axis, level=level, numeric_only=numeric_only
         )
+        result = result.fillna(0)
+        if (result == 0).sum() == len(result):
+            if axis:
+                return result.astype(int)
+            else:
+                return pandas.Series(dtype=int)
+        else:
+            return result
 
     def cov(self, min_periods=None):
         return self._default_to_pandas_func(
