@@ -1,23 +1,18 @@
-# add stuff from test_modin.py
-import pytest
 import numpy as np
-import pandas
 import modin.pandas as pd
-import os
-from modin.pandas.utils import to_pandas
 
 frame_data = {
     "col1": [0, 1, 2, 3],
     "col2": [4, 5, 6, 7],
     "col3": [8, 9, 0, 1],
-    "col4": [2, 4, 5, 6]
+    "col4": [2, 4, 5, 6],
 }
 
 nan_data = {
     "col1": [np.nan, 1, 2, 3],
     "col2": [4, 5, 6, np.nan],
     "col3": [8, 9, np.nan, 1],
-    "col4": [2, np.nan, 5, np.nan]
+    "col4": [2, np.nan, 5, np.nan],
 }
 
 frame_data2 = {"col5": [0], "col6": [1]}
@@ -32,26 +27,39 @@ ray_df = pd.DataFrame(frame_data)
 #     result = benchmark(pd.read_csv, path)
 #     print(result)
 
+
 def test_sum(benchmark):
     # ray_df = pd.DataFrame(frame_data)
     result = benchmark(pd.DataFrame.sum, ray_df)
+    return result
+
 
 def test_fillna(benchmark):
     result = benchmark(pd.DataFrame.fillna, ray_df, 0)
+    return result
+
 
 def test_add(benchmark):
     result = benchmark(pd.DataFrame.add, ray_df, 1)
-    
+    return result
+
+
 def test_add_df(benchmark):
     result = benchmark(pd.DataFrame.add, ray_df, ray_df)
+    return result
+
 
 def test_describe(benchmark):
     result = benchmark(pd.DataFrame.describe, ray_df)
+    return result
+
 
 def test_isna(benchmark):
     result = benchmark(pd.DataFrame.isna, ray_df)
+    return result
 
-#groupby
-#join
-#concat
-#nlargest
+
+# groupby
+# join
+# concat
+# nlargest
