@@ -9,7 +9,7 @@ pytest --html=test_io.html --self-contained-html --disable-pytest-warnings modin
 pytest --html=test_groupby.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_groupby.py
 
 sha_tag=`git rev-parse --verify --short HEAD`
-aws s3 cp test_dataframe.html s3://modin-jenkins-result/${sha_tag}/
-aws s3 cp test_concat.html s3://modin-jenkins-result/${sha_tag}/
-aws s3 cp test_io.html s3://modin-jenkins-result/${sha_tag}/
-aws s3 cp test_groupby.html s3://modin-jenkins-result/${sha_tag}/
+aws s3 cp test_dataframe.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
+aws s3 cp test_concat.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
+aws s3 cp test_io.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
+aws s3 cp test_groupby.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
