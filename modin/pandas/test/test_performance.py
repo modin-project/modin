@@ -22,12 +22,9 @@ nan_data = {
 
 frame_data2 = {"col5": [0], "col6": [1]}
 
-# ray_df = pd.read_csv("~/2017.csv")
-# ray_df = pd.read_csv("~/Downloads/201710k.csv")
+# ray_df = pd.read_csv("PATH-TO-2017.csv")
 # drop_cols = ["Unnamed: " + str(n) for n in [0,4,5,7]]
-# print(ray_df.columns)
 # ray_df = ray_df.drop(columns=drop_cols)
-# ray_df = pd.read_csv("~/Downloads/googleplaystore.csv")
 ray_df = pd.DataFrame(frame_data)
 
 # def test_read_csv(benchmark):
@@ -53,6 +50,7 @@ def test_describe(benchmark):
 
 def test_isna(benchmark):
     result = benchmark(pd.DataFrame.isna, ray_df)
+
 #groupby
 #join
 #concat

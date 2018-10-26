@@ -3,6 +3,7 @@ set -x
 pip install awscli
 python .jenkins/inject_aws_credentials.py
 
+# wget http://noaa-ghcn-pds.s3.amazonaws.com/csv/2017.csv
 python -c "import ray; ray.init()"
 pytest --benchmark-autosave --disable-pytest-warnings modin/pandas/test/test_performance.py
 
