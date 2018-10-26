@@ -1216,10 +1216,9 @@ class PandasQueryCompiler(object):
         axis = kwargs.get("axis", 0)
         axis_none = True if axis is None else False
         axis = 0 if axis is None else axis
-        kwargs['axis'] = axis
+        kwargs["axis"] = axis
         bool_only = kwargs.get("bool_only", None)
-        bool_none = True if bool_only is None else False
-        kwargs['bool_only'] = False if bool_only is None else bool_only
+        kwargs["bool_only"] = False if bool_only is None else bool_only
 
         not_bool_col = []
         numeric_col_count = 0
@@ -1233,7 +1232,12 @@ class PandasQueryCompiler(object):
                 return pandas.Series(dtype=bool)
             query_compiler = self.drop(columns=not_bool_col)
         else:
-            if bool_only is False and axis_none and len(not_bool_col) == len(self.columns) and numeric_col_count != len(self.columns):
+            if (
+                bool_only is False
+                and axis_none
+                and len(not_bool_col) == len(self.columns)
+                and numeric_col_count != len(self.columns)
+            ):
                 if func_name == "all":
                     return self.getitem_single_key(self.columns[-1])[self.index[-1]]
                 elif func_name == "any":
