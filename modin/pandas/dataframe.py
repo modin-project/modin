@@ -931,9 +931,9 @@ class DataFrame(object):
         axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
 
         # any np.nan bounds are treated as None
-        if lower and np.any(np.isnan(lower)):
+        if lower is not None and np.any(np.isnan(lower)):
             lower = None
-        if upper and np.any(np.isnan(upper)):
+        if upper is not None and np.any(np.isnan(upper)):
             upper = None
 
         new_manager = self._query_compiler.clip(
