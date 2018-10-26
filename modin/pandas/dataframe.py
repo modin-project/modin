@@ -3826,11 +3826,11 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        new_data_manager = self._data_manager.squeeze(axis);
-        if (isinstance(new_data_manager, pandas.Series) or new_data_manager.data.shape == ()):
-            return new_data_manager
+        new_query_compiler = self._query_compiler.squeeze(axis);
+        if (isinstance(new_query_compiler, pandas.Series) or new_query_compiler.data.shape == ()):
+            return new_query_compiler
         else:
-            return DataFrame(data_manager=new_data_manager)
+            return DataFrame(query_compiler=new_query_compiler)
 
     def stack(self, level=-1, dropna=True):
         return self._default_to_pandas_func(
