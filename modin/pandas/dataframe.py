@@ -921,25 +921,22 @@ class DataFrame(object):
         # validate inputs
         if axis is not None:
             axis = pandas.DataFrame()._get_axis_number(axis)
-
+        self._validate_dtypes(numeric_only=True)
         if is_list_like(lower) or is_list_like(upper):
             if axis is None:
-                raise ValueError("Must specify axis =0 or 1")
+                raise ValueError("Must specify axis = 0 or 1")
             self._validate_other(lower, axis)
             self._validate_other(upper, axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
-
         # any np.nan bounds are treated as None
         if lower is not None and np.any(np.isnan(lower)):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
-
         new_manager = self._query_compiler.clip(
             lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
         )
-
         if inplace:
             self._update_inplace(new_manager=new_manager)
         else:
