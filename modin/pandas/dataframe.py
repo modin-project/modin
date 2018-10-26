@@ -8,7 +8,6 @@ from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle a
 import pandas.core.common as com
 from pandas.core.dtypes.common import (
     _get_dtype_from_object,
-    is_bool_dtype,
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
