@@ -2839,6 +2839,7 @@ def test_reorder_levels():
         ray_df.reorder_levels(None)
 
 
+@pytest.fixture
 def test_replace_inplace():
     test_frame = TestData().tsframe
     test_frame['A'][:5] = np.nan
@@ -2865,6 +2866,7 @@ def test_replace_inplace():
     assert(ray_df_equals(test_frame2, test_frame.fillna(0)))
 
 
+@pytest.fixture
 def test_replace_mixed():
     mf = TestData().mixed_frame
     mixed_frame = TestData().mixed_frame
@@ -2927,6 +2929,7 @@ def test_replace_mixed():
     assert(ray_df_equals(result, expected))
 
 
+@pytest.fixture
 def test_replace_simple_nested_dict_with_nonexistent_value():
     df = pd.DataFrame({'col': range(1, 5)})
     expected = pd.DataFrame({'col': ['a', 2, 3, 'b']})
@@ -2938,6 +2941,7 @@ def test_replace_simple_nested_dict_with_nonexistent_value():
     assert(ray_df_equals(result, expected))
 
 
+@pytest.fixture
 def test_replace_input_formats_listlike():
     # both dicts
     to_rep = {'A': np.nan, 'B': 0, 'C': ''}
@@ -2981,6 +2985,49 @@ def test_replace_input_formats_listlike():
     pytest.raises(ValueError, df.replace, to_rep, values[1:])
 
 
+@pytest.fixture
+def test_replace_datetime():
+    d = {'fname':
+         {'out_augmented_AUG_2011.json': pd.Timestamp('2011-08'),
+          'out_augmented_JAN_2011.json': pd.Timestamp('2011-01'),
+          'out_augmented_MAY_2012.json': pd.Timestamp('2012-05'),
+          'out_augmented_SUBSIDY_WEEK.json': pd.Timestamp('2011-04'),
+          'out_augmented_AUG_2012.json': pd.Timestamp('2012-08'),
+          'out_augmented_MAY_2011.json': pd.Timestamp('2011-05'),
+          'out_augmented_SEP_2013.json': pd.Timestamp('2013-09')}}
+
+    df = pd.DataFrame(['out_augmented_AUG_2012.json',
+                       'out_augmented_SEP_2013.json',
+                       'out_augmented_SUBSIDY_WEEK.json',
+                       'out_augmented_MAY_2012.json',
+                       'out_augmented_MAY_2011.json',
+                       'out_augmented_AUG_2011.json',
+                       'out_augmented_JAN_2011.json'], columns=['fname'])
+    assert set(df.fname.values) == set(d['fname'].keys())
+    expected = pd.DataFrame({'fname': [d['fname'][k]
+                                       for k in df.fname.values]})
+    result = df.replace(d)
+    assert(ray_df_equals(result, expected))
+
+
+@pytest.fixture
+def test_regex_replace_list_to_scalar():
+    mix = {'a': range(4), 'b': list('ab..'), 'c': ['a', 'b', np.nan, 'd']}
+    df = pd.DataFrame(mix)
+    expec = pd.DataFrame({'a': mix['a'], 'b': np.array([np.nan] * 4),
+                          'c': [np.nan, np.nan, np.nan, 'd']})
+
+    res = df.replace([r'\s*\.\s*', 'a|b'], np.nan, regex=True)
+    res2 = df.copy()
+    res3 = df.copy()
+    res2.replace([r'\s*\.\s*', 'a|b'], np.nan, regex=True, inplace=True)
+    res3.replace(regex=[r'\s*\.\s*', 'a|b'], value=np.nan, inplace=True)
+    assert(ray_df_equals(res, expec))
+    assert(ray_df_equals(res2, expec))
+    assert(ray_df_equals(res3, expec))
+
+
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_resample():
     ray_df = create_test_dataframe()
 

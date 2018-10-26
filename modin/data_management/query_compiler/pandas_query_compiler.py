@@ -1190,23 +1190,9 @@ class PandasQueryCompiler(object):
 
                 return df.replace(new_to_replace, new_value, **kwargs)
 
-                return df.replace(to_replace, value, **kwargs)
-
-            # func = self._prepare_method(replace_list_builder, **kwargs)
-            #
-            # return self.map_partitions(func, self._dtype_cache)
-
-            # new_data = self.data.apply_func_to_select_indices(
-            #     0, replace_list_builder, value, keep_remaining=True
-            # )
             new_data = self.map_across_full_axis(1, replace_list_builder)
 
             return self.__constructor__(new_data, self.index, self.columns)
-            #
-            # new_data = self.map_across_full_axis(0, replace_list_builder)
-            #
-            # # When the function is list-like, the function names become the index
-            # return self.__constructor__(new_data, self.index, self.columns)
 
         # if dictionary keys are column names
         if isinstance(value, dict):
