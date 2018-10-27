@@ -1007,23 +1007,11 @@ class PandasQueryCompiler(object):
         Return:
             Pandas Series with sum or prod of DataFrame.
         """
-
-        # kwargs["new_index"] = new_index
-        # func = self._prepare_method(sum_level_builder, **kwargs)
-        # new_data = self.map_across_full_axis(axis, func)
-        # new_index = self.compute_index(axis, new_data, compute_diff=False)
-        # if not axis:
-        #     return self.__constructor__(
-        #         new_data, new_index, self.columns, self._dtype_cache
-        #     )
-        # return self.__constructor__(
-        #     new_data, self.index, new_index, self._dtype_cache
-        # )
-
-
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", None) if not axis else True
-        min_count = kwargs.get("min_count", 1)
+        level = kwargs.get("level", None)
+        min_count = kwargs.get("min_count", 0)
+        numeric_only = True if axis else kwargs.get("numeric_only", False)
+
         reduce_index = self.columns if axis else self.index
 
         if numeric_only:
@@ -1034,25 +1022,81 @@ class PandasQueryCompiler(object):
 
         def sum_prod_builder(df, **kwargs):
             if not df.empty:
-                # axis = kwargs.get("axis", 0)
-                # if not axis:
-                #     df.index = kwargs.get("new_index", None)
-                # else:
-                #     df.columns = kwargs.get("new_index", None)
-                return func(df, **kwargs)
-            else:
-                return pandas.DataFrame([])
+                axis = kwargs.get("axis", 0)
+                level = kwargs.get("level", None)
+                if level:
+                    if not axis:
+                        df.index = kwargs.get("reduce_index", None)
+                    else:
+                        df.columns = kwargs.get("reduce_index", None)
+                kwargs.pop("reduce_index", None)
+                result = func(df, **kwargs)
+                return result
 
+        kwargs["reduce_index"] = reduce_index
         map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
-        if min_count == 1:
-            return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+        if all(
+                dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
+                for dtype in self.dtypes
+        ):
+            if numeric_only is None:
+                new_index = [
+                    col
+                    for col, dtype in zip(self.columns, self.dtypes)
+                    if dtype == np.dtype("timedelta64[ns]")
+                ]
+                if level:
+                    result = self.map_across_full_axis(axis, map_func)
+                    new_index = self.compute_index(axis, result, compute_diff=False)
+                else:
+                    result = self.full_axis_reduce(map_func, axis, new_index)
+            else:
+                if level:
+                    result = self.map_across_full_axis(axis, map_func)
+                    new_index = self.compute_index(axis, result, compute_diff=False)
+                else:
+                    result = self.full_axis_reduce(map_func, axis)
+        elif min_count == 0:
+            if numeric_only is None:
+                numeric_only = True
+            if level:
+                result = self.map_across_full_axis(axis, map_func)
+                new_index = self.compute_index(axis, result, compute_diff=False)
+            else:
+                result = self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
-            return pandas.Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
-            )
+            if level:
+                result = self.map_across_full_axis(axis, map_func)
+                new_index = self.compute_index(axis, result, compute_diff=False)
+                if axis:
+                    result.columns = pandas.RangeIndex(result.shape[1])
+                    return self.from_pandas(pandas.DataFrame(np.nan, index=self.index, columns=new_index), type(result))
+                result.index = pandas.RangeIndex(result.shape[0])
+                return self.from_pandas(pandas.DataFrame(np.nan, index=new_index, columns=self.columns), type(result))
+            else:
+                return pandas.Series(
+                    [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                )
         else:
-            return self.full_axis_reduce(map_func, axis)
+            if level:
+                result = self.map_across_full_axis(axis, map_func)
+                new_index = self.compute_index(axis, result, compute_diff=False)
+            else:
+                result = self.full_axis_reduce(map_func, axis, new_index)
+
+        if not level:
+            return result
+        if axis:
+            result.columns = pandas.RangeIndex(result.shape[1])
+            return self.__constructor__(
+                result, self.index, new_index, self._dtype_cache
+            )
+        result.index = pandas.RangeIndex(result.shape[0])
+        return self.__constructor__(
+                result, new_index, self.columns, self._dtype_cache
+            )
+
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -1069,41 +1113,6 @@ class PandasQueryCompiler(object):
             Pandas series with the sum of each numerical column or row.
         """
         return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
-
-        # # Pandas default is 0 (though not mentioned in docs)
-        # level = kwargs.get("level", None)
-        # axis = kwargs.get("axis", 0)
-        # numeric_only = True if axis else kwargs.get("numeric_only", False)
-        # if level is None:
-        #     func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        #     return self.full_reduce(axis, func, numeric_only=numeric_only)
-        # else:
-        #
-        #     def sum_level_builder(df, **kwargs):
-        #         axis = kwargs.get("axis", 0)
-        #         level = kwargs.get("level", None)
-        #         if not axis:
-        #             df.index = kwargs.get("new_index", None)
-        #         else:
-        #             df.columns = kwargs.get("new_index", None)
-        #         return df.sum(axis=axis, level=level)
-        #
-        #     if not axis:
-        #         new_index = self.index
-        #     else:
-        #         new_index = self.columns
-        #
-        #     kwargs["new_index"] = new_index
-        #     func = self._prepare_method(sum_level_builder, **kwargs)
-        #     new_data = self.map_across_full_axis(axis, func)
-        #     new_index = self.compute_index(axis, new_data, compute_diff=False)
-        #     if not axis:
-        #         return self.__constructor__(
-        #             new_data, new_index, self.columns, self._dtype_cache
-        #         )
-        #     return self.__constructor__(
-        #         new_data, self.index, new_index, self._dtype_cache
-        #     )
 
     # END Full Reduce operations
 

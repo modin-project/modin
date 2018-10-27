@@ -2758,7 +2758,8 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
-        return self._query_compiler.prod(
+
+        result = self._query_compiler.prod(
             axis=axis,
             skipna=skipna,
             level=level,
@@ -2766,6 +2767,9 @@ class DataFrame(object):
             min_count=min_count,
             **kwargs
         )
+        if not level:
+            return result
+        return self._create_dataframe_from_manager(new_manager=result)
 
     def product(
         self,
