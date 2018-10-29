@@ -1140,7 +1140,10 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
         length = len(self.index) if axis else len(self.columns)
         for t in self.dtypes:
-            if is_bool_dtype(t) or (is_object_dtype(t) and ((abs(periods) < length and not axis) or periods == 0)):
+            if is_bool_dtype(t) or (
+                is_object_dtype(t)
+                and ((abs(periods) < length and not axis) or periods == 0)
+            ):
                 raise TypeError("unsupported operand '-' for type '{}'".format(t))
         return DataFrame(
             query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
