@@ -14,6 +14,7 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
     is_integer_dtype,
+    is_bool_dtype,
 )
 from pandas.core.index import _ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer, convert_to_index_sliceable
@@ -1137,6 +1138,10 @@ class DataFrame(object):
             DataFrame with the diff applied
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+        length = len(self.index) if axis else len(self.columns)
+        for t in self.dtypes:
+            if is_bool_dtype(t) or (is_object_dtype(t) and ((abs(periods) < length and not axis) or periods == 0)):
+                raise TypeError("unsupported operand '-' for type '{}'".format(t))
         return DataFrame(
             query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
         )
