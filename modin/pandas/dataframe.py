@@ -1090,7 +1090,12 @@ class DataFrame(object):
             The cumulative sum of the DataFrame.
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-        self._validate_dtypes(numeric_only=True)
+        dtype = self.dtypes[0]
+        # Checks to make sure that all dtypes are of the same category as the first
+        if axis and not all((is_numeric_dtype(dtype) and is_numeric_dtype(t)) or (dtype == np.dtype("timedelta64[ns]") and t == np.dtype("timedelta64[np]") or (is_object_dtype(dtype) and is_object_dtype(t)) for t in self.dtypes):
+            raise TypeError("Cannot compare numeric and non-numeric types")
+        elif not axis and any(t == np.dtype("datetime64[ns]") for t in self.dtypes):
+            raise TypeError("Cannot add TimeStamps")
         return DataFrame(
             query_compiler=self._query_compiler.cumsum(
                 axis=axis, skipna=skipna, **kwargs
@@ -4980,9 +4985,10 @@ class DataFrame(object):
         """Helper method to check that all the dtypes are the same"""
         dtype = self.dtypes[0]
         for t in self.dtypes:
-            if numeric_only and not is_numeric_dtype(t):
-                raise TypeError("{0} is not a numeric data type".format(t))
-            elif not numeric_only and t != dtype:
+            if numeric_only:
+                if not is_numeric_dtype(t):
+                    raise TypeError("{0} is not a numeric data type".format(t))
+            elif t != dtype:
                 raise TypeError(
                     "Cannot compare type '{0}' with type '{1}'".format(t, dtype)
                 )
