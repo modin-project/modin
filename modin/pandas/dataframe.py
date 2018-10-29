@@ -1092,7 +1092,15 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         dtype = self.dtypes[0]
         # Checks to make sure that all dtypes are of the same category as the first
-        if axis and not all((is_numeric_dtype(dtype) and is_numeric_dtype(t)) or (dtype == np.dtype("timedelta64[ns]") and t == np.dtype("timedelta64[np]") or (is_object_dtype(dtype) and is_object_dtype(t)) for t in self.dtypes):
+        if axis and not all(
+            (is_numeric_dtype(dtype) and is_numeric_dtype(t))
+            or (
+                dtype == np.dtype("timedelta64[ns]")
+                and t == np.dtype("timedelta64[np]")
+            )
+            or (is_object_dtype(dtype) and is_object_dtype(t))
+            for t in self.dtypes
+        ):
             raise TypeError("Cannot compare numeric and non-numeric types")
         elif not axis and any(t == np.dtype("datetime64[ns]") for t in self.dtypes):
             raise TypeError("Cannot add TimeStamps")
