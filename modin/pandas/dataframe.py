@@ -2477,7 +2477,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, numeric_only=True)
+        other = self._validate_other(other, axis, numeric_or_object_only=True)
         new_manager = self._query_compiler.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2522,7 +2522,7 @@ class DataFrame(object):
                 level=level,
                 fill_value=fill_value,
             )
-        other = self._validate_other(other, axis, numeric_only=True)
+        other = self._validate_other(other, axis, self_numeric_or_object_other_numeric=True)
         new_manager = self._query_compiler.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3256,10 +3256,60 @@ class DataFrame(object):
             return DataFrame(query_compiler=new_manager)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
-        return self.floordiv(other, axis, level, fill_value)
+        """Floordiv this DataFrame against another DataFrame/Series/scalar.
+
+        Args:
+            other: The object to use to apply the floordiv against this.
+            axis: The axis to floordiv over.
+            level: The Multilevel index level to apply floordiv over.
+            fill_value: The value to fill NaNs with.
+
+        Returns:
+            A new DataFrame with the rfloordiv applied.
+        """
+        if level is not None:
+            if isinstance(other, DataFrame):
+                other = other._query_compiler.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.rfloordiv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
+        other = self._validate_other(other, axis, numeric_only=True)
+        new_manager = self._query_compiler.rfloordiv(
+            other=other, axis=axis, level=level, fill_value=fill_value
+        )
+        return self._create_dataframe_from_manager(new_manager)
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
-        return self.mod(other, axis, level, fill_value)
+        """Mod this DataFrame against another DataFrame/Series/scalar.
+
+        Args:
+            other: The object to use to apply the floordiv against this.
+            axis: The axis to floordiv over.
+            level: The Multilevel index level to apply floordiv over.
+            fill_value: The value to fill NaNs with.
+
+        Returns:
+            A new DataFrame with the rmod applied.
+        """
+        if level is not None:
+            if isinstance(other, DataFrame):
+                other = other._query_compiler.to_pandas()
+            return self._default_to_pandas_func(
+                pandas.DataFrame.rmod,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
+        other = self._validate_other(other, axis, numeric_only=True)
+        new_manager = self._query_compiler.rmod(
+            other=other, axis=axis, level=level, fill_value=fill_value
+        )
+        return self._create_dataframe_from_manager(new_manager)
 
     def rmul(self, other, axis="columns", level=None, fill_value=None):
         return self.mul(other, axis, level, fill_value)
@@ -4926,6 +4976,7 @@ class DataFrame(object):
         numeric_or_time_only=False,
         numeric_or_object_only=False,
         comparison_dtypes_only=False,
+        self_numeric_or_object_other_numeric=False,
     ):
         """Helper method to check validity of other in inter-df operations"""
         axis = pandas.DataFrame()._get_axis_number(axis)
@@ -4992,6 +5043,12 @@ class DataFrame(object):
                 raise TypeError(
                     "Cannot do operation non-numeric objects with numeric objects"
                 )
+        elif self_numeric_or_object_other_numeric:
+            if not all(
+                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)) or (is_object_dtype(self_dtype) and is_integer_dtype(other_dtype))
+                for self_dtype, other_dtype in zip(self.dtypes, other_dtypes)
+            ):
+                raise TypeError("Cannot do operation on non-numeric dtypes")
 
         return result
 

@@ -616,6 +616,30 @@ class PandasQueryCompiler(object):
         func = pandas.DataFrame.rdiv
         return self._inter_df_op_handler(func, other, **kwargs)
 
+    def rfloordiv(self, other, **kwargs):
+        """Floor divides other object (manager or scalar) with this manager.
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with divided data and new index.
+        """
+        func = pandas.DataFrame.rfloordiv
+        return self._inter_df_op_handler(func, other, **kwargs)
+
+    def rmod(self, other, **kwargs):
+        """Modulo other object (manager or scalar) with this manager.
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with divided data and new index.
+        """
+        func = pandas.DataFrame.rmod
+        return self._inter_df_op_handler(func, other, **kwargs)
+
     def rpow(self, other, **kwargs):
         """Exponential power of other object (manager or scalar) to this manager.
 
