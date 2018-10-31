@@ -61,16 +61,18 @@ class DataFrameGroupBy(object):
     def _index_grouped(self):
         if self._index_grouped_cache is None:
             if self._is_multi_by:
-                # Because we are doing a collect (or to_pandas) here and then groupby,
-                # we end up using pandas implementation. Add the warning so the user is
+                # Because we are doing a collect (to_pandas) here and then groupby, we
+                # end up using pandas implementation. Add the warning so the user is
                 # aware.
                 warnings.warn("Defaulting to Pandas implementation", UserWarning)
                 if self._axis == 0:
                     self._index_grouped_cache = {
                         k: v.index
-                        for k, v in pandas.concat(
-                            [self._df[col] for col in self._by], axis=1
-                        ).groupby(by=self._by)
+                        for k, v in self._df._query_compiler.getitem_column_array(
+                            self._by
+                        )
+                        .to_pandas()
+                        .groupby(by=self._by)
                     }
                 else:
                     self._index_grouped_cache = {
