@@ -37,7 +37,7 @@ import threading
 import os
 import ray
 
-from .. import __git_revision__, __version__
+from .. import __version__
 from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
