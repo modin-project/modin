@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 
 def get_execution_engine():
