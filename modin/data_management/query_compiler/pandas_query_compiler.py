@@ -201,7 +201,7 @@ class PandasQueryCompiler(object):
             if axis:
                 result = pandas.Series([np.nan for _ in self.index])
             else:
-                result = pandas.Series()
+                result = pandas.Series([0 for _ in self.index])
         else:
             query_compiler = self.drop(columns=nonnumeric)
         return result, query_compiler
@@ -1351,7 +1351,7 @@ class PandasQueryCompiler(object):
         axis = kwargs.get("axis", 0)
         result, query_compiler = self.numeric_function_clean_dataframe(axis)
         if result is not None:
-            return result
+            return result if axis else pandas.Series()
         func = self._prepare_method(pandas.DataFrame.median, **kwargs)
         return query_compiler.full_axis_reduce(func, axis)
 
