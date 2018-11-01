@@ -2842,189 +2842,229 @@ def test_reorder_levels():
 @pytest.fixture
 def test_replace_inplace():
     test_frame = TestData().tsframe
-    test_frame['A'][:5] = np.nan
-    test_frame['A'][-5:] = np.nan
+    test_frame["A"][:5] = np.nan
+    test_frame["A"][-5:] = np.nan
 
     test_frame = pd.DataFrame(test_frame)
 
     test_frame2 = test_frame.copy()
     test_frame2.replace(np.nan, 0, inplace=True)
-    assert(ray_df_equals(test_frame2, test_frame.fillna(0)))
+    assert ray_df_equals(test_frame2, test_frame.fillna(0))
 
     # mixed type
     mf = TestData().mixed_frame
-    mf.iloc[5:20, mf.columns.get_loc('foo')] = np.nan
-    mf.iloc[-10:, mf.columns.get_loc('A')] = np.nan
+    mf.iloc[5:20, mf.columns.get_loc("foo")] = np.nan
+    mf.iloc[-10:, mf.columns.get_loc("A")] = np.nan
     mf = pd.DataFrame(mf)
 
     expected = pd.DataFrame(mf).fillna(value=0)
     result = pd.DataFrame(mf).replace(np.nan, 0)
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
     test_frame2 = test_frame.copy()
     test_frame2.replace([np.nan], [0], inplace=True)
-    assert(ray_df_equals(test_frame2, test_frame.fillna(0)))
+    assert ray_df_equals(test_frame2, test_frame.fillna(0))
 
 
 @pytest.fixture
 def test_replace_mixed():
     mf = TestData().mixed_frame
     mixed_frame = TestData().mixed_frame
-    mf.iloc[5:20, mf.columns.get_loc('foo')] = np.nan
-    mf.iloc[-10:, mf.columns.get_loc('A')] = np.nan
+    mf.iloc[5:20, mf.columns.get_loc("foo")] = np.nan
+    mf.iloc[-10:, mf.columns.get_loc("A")] = np.nan
 
     result = mixed_frame.replace(np.nan, -18)
     expected = mixed_frame.fillna(value=-18)
-    assert(result.equals(expected))
-    assert(result.replace(-18, np.nan).equals(mixed_frame))
+    assert result.equals(expected)
+    assert result.replace(-18, np.nan).equals(mixed_frame)
 
     result = mixed_frame.replace(np.nan, -1e8)
     expected = mixed_frame.fillna(value=-1e8)
-    assert(result.equals(expected))
-    assert(result.replace(-1e8, np.nan).equals(mixed_frame))
+    assert result.equals(expected)
+    assert result.replace(-1e8, np.nan).equals(mixed_frame)
 
     # int block upcasting
-    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
-                       'B': pd.Series([0, 1], dtype='int64')})
-    expected = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
-                             'B': pd.Series([0.5, 1], dtype='float64')})
+    df = pd.DataFrame(
+        {
+            "A": pd.Series([1.0, 2.0], dtype="float64"),
+            "B": pd.Series([0, 1], dtype="int64"),
+        }
+    )
+    expected = pd.DataFrame(
+        {
+            "A": pd.Series([1.0, 2.0], dtype="float64"),
+            "B": pd.Series([0.5, 1], dtype="float64"),
+        }
+    )
     result = df.replace(0, 0.5)
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
     df.replace(0, 0.5, inplace=True)
-    assert(ray_df_equals(df, expected))
+    assert ray_df_equals(df, expected)
 
     # int block splitting
-    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
-                       'B': pd.Series([0, 1], dtype='int64'),
-                       'C': pd.Series([1, 2], dtype='int64')})
-    expected = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
-                             'B': pd.Series([0.5, 1], dtype='float64'),
-                             'C': pd.Series([1, 2], dtype='int64')})
+    df = pd.DataFrame(
+        {
+            "A": pd.Series([1.0, 2.0], dtype="float64"),
+            "B": pd.Series([0, 1], dtype="int64"),
+            "C": pd.Series([1, 2], dtype="int64"),
+        }
+    )
+    expected = pd.DataFrame(
+        {
+            "A": pd.Series([1.0, 2.0], dtype="float64"),
+            "B": pd.Series([0.5, 1], dtype="float64"),
+            "C": pd.Series([1, 2], dtype="int64"),
+        }
+    )
     result = df.replace(0, 0.5)
     # assert(result.equals(expected))
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
     # to object block upcasting
-    df = pd.DataFrame({'A': pd.Series([1.0, 2.0], dtype='float64'),
-                       'B': pd.Series([0, 1], dtype='int64')})
-    expected = pd.DataFrame({'A': pd.Series([1, 'foo'], dtype='object'),
-                             'B': pd.Series([0, 1], dtype='int64')})
-    result = df.replace(2, 'foo')
-    assert(ray_df_equals(result, expected))
+    df = pd.DataFrame(
+        {
+            "A": pd.Series([1.0, 2.0], dtype="float64"),
+            "B": pd.Series([0, 1], dtype="int64"),
+        }
+    )
+    expected = pd.DataFrame(
+        {
+            "A": pd.Series([1, "foo"], dtype="object"),
+            "B": pd.Series([0, 1], dtype="int64"),
+        }
+    )
+    result = df.replace(2, "foo")
+    assert ray_df_equals(result, expected)
 
-    expected = pd.DataFrame({'A': pd.Series(['foo', 'bar'], dtype='object'),
-                             'B': pd.Series([0, 'foo'], dtype='object')})
-    result = df.replace([1, 2], ['foo', 'bar'])
-    assert(ray_df_equals(result, expected))
+    expected = pd.DataFrame(
+        {
+            "A": pd.Series(["foo", "bar"], dtype="object"),
+            "B": pd.Series([0, "foo"], dtype="object"),
+        }
+    )
+    result = df.replace([1, 2], ["foo", "bar"])
+    assert ray_df_equals(result, expected)
 
     # test case from
-    df = pd.DataFrame({'A': pd.Series([3, 0], dtype='int64'),
-                       'B': pd.Series([0, 3], dtype='int64')})
+    df = pd.DataFrame(
+        {"A": pd.Series([3, 0], dtype="int64"), "B": pd.Series([0, 3], dtype="int64")}
+    )
     result = df.replace(3, df.mean().to_dict())
-    expected = df.copy().astype('float64')
+    expected = df.copy().astype("float64")
     m = df.mean()
     expected.iloc[0, 0] = m[0]
     expected.iloc[1, 1] = m[1]
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
 
 @pytest.fixture
 def test_replace_simple_nested_dict_with_nonexistent_value():
-    df = pd.DataFrame({'col': range(1, 5)})
-    expected = pd.DataFrame({'col': ['a', 2, 3, 'b']})
+    df = pd.DataFrame({"col": range(1, 5)})
+    expected = pd.DataFrame({"col": ["a", 2, 3, "b"]})
 
-    result = df.replace({'col': {-1: '-', 1: 'a', 4: 'b'}})
-    assert(ray_df_equals(result, expected))
+    result = df.replace({"col": {-1: "-", 1: "a", 4: "b"}})
+    assert ray_df_equals(result, expected)
 
-    result = df.replace({-1: '-', 1: 'a', 4: 'b'})
-    assert(ray_df_equals(result, expected))
+    result = df.replace({-1: "-", 1: "a", 4: "b"})
+    assert ray_df_equals(result, expected)
 
 
 @pytest.fixture
 def test_replace_input_formats_listlike():
     # both dicts
-    to_rep = {'A': np.nan, 'B': 0, 'C': ''}
-    values = {'A': 0, 'B': -1, 'C': 'missing'}
-    df = pd.DataFrame({'A': [np.nan, 0, np.inf], 'B': [0, 2, 5],
-                       'C': ['', 'asdf', 'fd']})
+    to_rep = {"A": np.nan, "B": 0, "C": ""}
+    values = {"A": 0, "B": -1, "C": "missing"}
+    df = pd.DataFrame(
+        {"A": [np.nan, 0, np.inf], "B": [0, 2, 5], "C": ["", "asdf", "fd"]}
+    )
     filled = df.replace(to_rep, values)
     expected = {}
     for k, v in pandas.compat.iteritems(df):
         expected[k] = v.replace(to_rep[k], values[k])
     # assert(filled.equals(pd.DataFrame(expected)))
-    assert(ray_df_equals(filled, pd.DataFrame(expected)))
+    assert ray_df_equals(filled, pd.DataFrame(expected))
 
     result = df.replace([0, 2, 5], [5, 2, 0])
-    expected = pd.DataFrame({'A': [np.nan, 5, np.inf], 'B': [5, 2, 0],
-                             'C': ['', 'asdf', 'fd']})
+    expected = pd.DataFrame(
+        {"A": [np.nan, 5, np.inf], "B": [5, 2, 0], "C": ["", "asdf", "fd"]}
+    )
     # ray_df_equals(result, expected)
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
     # scalar to dict
-    values = {'A': 0, 'B': -1, 'C': 'missing'}
-    df = pd.DataFrame({'A': [np.nan, 0, np.nan], 'B': [0, 2, 5],
-                       'C': ['', 'asdf', 'fd']})
+    values = {"A": 0, "B": -1, "C": "missing"}
+    df = pd.DataFrame(
+        {"A": [np.nan, 0, np.nan], "B": [0, 2, 5], "C": ["", "asdf", "fd"]}
+    )
     filled = df.replace(np.nan, values)
     expected = {}
     for k, v in pandas.compat.iteritems(df):
         expected[k] = v.replace(np.nan, values[k])
     # assert(filled.equals(pd.DataFrame(expected)))
-    assert(ray_df_equals(filled, pd.DataFrame(expected)))
+    assert ray_df_equals(filled, pd.DataFrame(expected))
 
     # list to list
-    to_rep = [np.nan, 0, '']
-    values = [-2, -1, 'missing']
+    to_rep = [np.nan, 0, ""]
+    values = [-2, -1, "missing"]
     result = df.replace(to_rep, values)
     expected = df.copy()
     for i in range(len(to_rep)):
         expected.replace(to_rep[i], values[i], inplace=True)
     # assert(result.equals(expected))
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
     pytest.raises(ValueError, df.replace, to_rep, values[1:])
 
 
 @pytest.fixture
 def test_replace_datetime():
-    d = {'fname':
-         {'out_augmented_AUG_2011.json': pd.Timestamp('2011-08'),
-          'out_augmented_JAN_2011.json': pd.Timestamp('2011-01'),
-          'out_augmented_MAY_2012.json': pd.Timestamp('2012-05'),
-          'out_augmented_SUBSIDY_WEEK.json': pd.Timestamp('2011-04'),
-          'out_augmented_AUG_2012.json': pd.Timestamp('2012-08'),
-          'out_augmented_MAY_2011.json': pd.Timestamp('2011-05'),
-          'out_augmented_SEP_2013.json': pd.Timestamp('2013-09')}}
+    d = {
+        "fname": {
+            "out_augmented_AUG_2011.json": pd.Timestamp("2011-08"),
+            "out_augmented_JAN_2011.json": pd.Timestamp("2011-01"),
+            "out_augmented_MAY_2012.json": pd.Timestamp("2012-05"),
+            "out_augmented_SUBSIDY_WEEK.json": pd.Timestamp("2011-04"),
+            "out_augmented_AUG_2012.json": pd.Timestamp("2012-08"),
+            "out_augmented_MAY_2011.json": pd.Timestamp("2011-05"),
+            "out_augmented_SEP_2013.json": pd.Timestamp("2013-09"),
+        }
+    }
 
-    df = pd.DataFrame(['out_augmented_AUG_2012.json',
-                       'out_augmented_SEP_2013.json',
-                       'out_augmented_SUBSIDY_WEEK.json',
-                       'out_augmented_MAY_2012.json',
-                       'out_augmented_MAY_2011.json',
-                       'out_augmented_AUG_2011.json',
-                       'out_augmented_JAN_2011.json'], columns=['fname'])
-    assert set(df.fname.values) == set(d['fname'].keys())
-    expected = pd.DataFrame({'fname': [d['fname'][k]
-                                       for k in df.fname.values]})
+    df = pd.DataFrame(
+        [
+            "out_augmented_AUG_2012.json",
+            "out_augmented_SEP_2013.json",
+            "out_augmented_SUBSIDY_WEEK.json",
+            "out_augmented_MAY_2012.json",
+            "out_augmented_MAY_2011.json",
+            "out_augmented_AUG_2011.json",
+            "out_augmented_JAN_2011.json",
+        ],
+        columns=["fname"],
+    )
+    assert set(df.fname.values) == set(d["fname"].keys())
+    expected = pd.DataFrame({"fname": [d["fname"][k] for k in df.fname.values]})
     result = df.replace(d)
-    assert(ray_df_equals(result, expected))
+    assert ray_df_equals(result, expected)
 
 
 @pytest.fixture
 def test_regex_replace_list_to_scalar():
-    mix = {'a': range(4), 'b': list('ab..'), 'c': ['a', 'b', np.nan, 'd']}
+    mix = {"a": range(4), "b": list("ab.."), "c": ["a", "b", np.nan, "d"]}
     df = pd.DataFrame(mix)
-    expec = pd.DataFrame({'a': mix['a'], 'b': np.array([np.nan] * 4),
-                          'c': [np.nan, np.nan, np.nan, 'd']})
+    expec = pd.DataFrame(
+        {"a": mix["a"], "b": np.array([np.nan] * 4), "c": [np.nan, np.nan, np.nan, "d"]}
+    )
 
-    res = df.replace([r'\s*\.\s*', 'a|b'], np.nan, regex=True)
+    res = df.replace([r"\s*\.\s*", "a|b"], np.nan, regex=True)
     res2 = df.copy()
     res3 = df.copy()
-    res2.replace([r'\s*\.\s*', 'a|b'], np.nan, regex=True, inplace=True)
-    res3.replace(regex=[r'\s*\.\s*', 'a|b'], value=np.nan, inplace=True)
-    assert(ray_df_equals(res, expec))
-    assert(ray_df_equals(res2, expec))
-    assert(ray_df_equals(res3, expec))
+    res2.replace([r"\s*\.\s*", "a|b"], np.nan, regex=True, inplace=True)
+    res3.replace(regex=[r"\s*\.\s*", "a|b"], value=np.nan, inplace=True)
+    assert ray_df_equals(res, expec)
+    assert ray_df_equals(res2, expec)
+    assert ray_df_equals(res3, expec)
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")

@@ -3151,7 +3151,7 @@ class DataFrame(object):
         inplace=False,
         limit=None,
         regex=False,
-        method=None
+        method=None,
     ):
         """Replace values given in to_replace with value.
 
@@ -3180,9 +3180,12 @@ class DataFrame(object):
 
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if (isinstance(to_replace, list) and isinstance(value, list)):
-            if (len(to_replace) != len(value)):
-                raise ValueError("Replacement lists must match in length. Expecting %d got %d" % (len(to_replace), len(value)))
+        if isinstance(to_replace, list) and isinstance(value, list):
+            if len(to_replace) != len(value):
+                raise ValueError(
+                    "Replacement lists must match in length. Expecting %d got %d"
+                    % (len(to_replace), len(value))
+                )
 
         new_manager = self._query_compiler.replace(
             to_replace=to_replace,
@@ -3190,7 +3193,7 @@ class DataFrame(object):
             inplace=False,
             limit=limit,
             regex=regex,
-            method=method
+            method=method,
         )
 
         if inplace:

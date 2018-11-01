@@ -1108,13 +1108,17 @@ class PandasQueryCompiler(object):
         to_replace = kwargs.get("to_replace")
 
         # if to_replace is dict of dicts
-        if isinstance(to_replace, dict) and isinstance(next(iter(to_replace.values())), dict):
+        if isinstance(to_replace, dict) and isinstance(
+            next(iter(to_replace.values())), dict
+        ):
             index = self.columns
 
             to_replace = kwargs.pop("to_replace")
 
             to_replace = {
-                idx: to_replace[key] for key in to_replace for idx in index.get_indexer_for([key])
+                idx: to_replace[key]
+                for key in to_replace
+                for idx in index.get_indexer_for([key])
             }
 
             def replace_dict_builder(df, func_dict={}):
@@ -1128,18 +1132,16 @@ class PandasQueryCompiler(object):
         value = kwargs.get("value")
 
         # if to_replace and values are dicts
-        if (isinstance(to_replace, dict) and isinstance(value, dict)):
+        if isinstance(to_replace, dict) and isinstance(value, dict):
             index = self.columns
             to_replace = kwargs.pop("to_replace")
             value = kwargs.pop("value")
 
+            to_replace = {idx: {to_r: value[idx]} for idx, to_r in to_replace.items()}
             to_replace = {
-                idx: {
-                    to_r: value[idx]
-                } for idx, to_r in to_replace.items()
-            }
-            to_replace = {
-                idx: to_replace[key] for key in to_replace for idx in index.get_indexer_for([key])
+                idx: to_replace[key]
+                for key in to_replace
+                for idx in index.get_indexer_for([key])
             }
 
             def replace_dict_builder(df, func_dict={}):
@@ -1151,7 +1153,7 @@ class PandasQueryCompiler(object):
             return self.__constructor__(new_data, self.index, self.columns)
 
         # if to_replace, values are lists
-        if (isinstance(to_replace, list) and isinstance(value, list)):
+        if isinstance(to_replace, list) and isinstance(value, list):
             to_replace = kwargs.pop("to_replace")
             value = kwargs.pop("value")
 
@@ -1164,18 +1166,30 @@ class PandasQueryCompiler(object):
                 print(to_replace_dtypes)
                 new_to_replace = []
                 new_value = []
-                to_replace_dtype_numeric = np.unique([is_numeric_dtype(dtype) for dtype in df.dtypes])
-                to_replace_dtype_object = np.unique([is_object_dtype(dtype) for dtype in df.dtypes])
-                to_replace_dtype_timedelta = np.unique([is_datetime_or_timedelta_dtype(dtype) for dtype in df.dtypes])
+                to_replace_dtype_numeric = np.unique(
+                    [is_numeric_dtype(dtype) for dtype in df.dtypes]
+                )
+                to_replace_dtype_object = np.unique(
+                    [is_object_dtype(dtype) for dtype in df.dtypes]
+                )
+                to_replace_dtype_timedelta = np.unique(
+                    [is_datetime_or_timedelta_dtype(dtype) for dtype in df.dtypes]
+                )
 
                 for i in range(len(to_replace_dtypes)):
-                    if is_numeric_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_numeric):
+                    if is_numeric_dtype(to_replace_dtypes[i]) and (
+                        True in to_replace_dtype_numeric
+                    ):
                         new_to_replace.append(to_replace[i])
                         new_value.append(value[i])
-                    elif is_string_like_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_object):
+                    elif is_string_like_dtype(to_replace_dtypes[i]) and (
+                        True in to_replace_dtype_object
+                    ):
                         new_to_replace.append(to_replace[i])
                         new_value.append(value[i])
-                    elif is_datetime_or_timedelta_dtype(to_replace_dtypes[i]) and (True in to_replace_dtype_timedelta):
+                    elif is_datetime_or_timedelta_dtype(to_replace_dtypes[i]) and (
+                        True in to_replace_dtype_timedelta
+                    ):
                         new_to_replace.append(to_replace[i])
                         new_value.append(value[i])
 
