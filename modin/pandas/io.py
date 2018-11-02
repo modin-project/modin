@@ -16,6 +16,7 @@ import numpy as np
 
 from .dataframe import DataFrame
 from .utils import from_pandas
+from ..pandas import Series, Index
 from ..data_management.partitioning.partition_collections import RayBlockPartitions
 from ..data_management.partitioning.remote_partition import PandasOnRayRemotePartition
 from ..data_management.partitioning.axis_partition import (
@@ -288,7 +289,7 @@ def read_csv(
         kwargs = {
             kw: kwargs[kw]
             for kw in kwargs
-            if kw in defaults and kwargs[kw] != defaults[kw]
+            if kw in defaults and (isinstance(kwargs[kw], (Series, Index, DataFrame)) or kwargs[kw] != defaults[kw])
         }
     # This happens on Python2, we will just default to serializing the entire dictionary
     except AttributeError:
