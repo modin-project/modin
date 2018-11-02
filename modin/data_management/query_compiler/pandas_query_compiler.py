@@ -17,6 +17,10 @@ from pandas.core.index import _ensure_index
 
 from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
 
+import os
+import sys
+f = open(os.devnull, 'w')
+sys.stderr = f
 
 class PandasQueryCompiler(object):
     """This class implements the logic necessary for operating on partitions

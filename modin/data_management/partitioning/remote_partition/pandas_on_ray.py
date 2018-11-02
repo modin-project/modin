@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pandas
 import ray
+from ray.worker import RayGetError, RayTaskError
 
 from .base_remote_partition import BaseRemotePartition
 from .utils import length_fn_pandas, width_fn_pandas
@@ -22,10 +23,14 @@ class PandasOnRayRemotePartition(BaseRemotePartition):
         Returns:
             The object from the plasma store.
         """
-        if len(self.call_queue):
-            return self.apply(lambda x: x).get()
-
-        return ray.get(self.oid)
+        try:
+            if len(self.call_queue):
+                return self.apply(lambda x: x).get()
+            return ray.get(self.oid)
+        except RayGetError as e:
+            raise
+        except Exception:
+            raise
 
     def apply(self, func, **kwargs):
         """Apply a function to the object stored in this partition.
