@@ -9,5 +9,5 @@
 	```
 	BaseAxisPartition -> PandasOnRayAxisPartition -> {PandasOnRayColumnPartition, PandasOnRayRowPartition}
 	```
-	- `BaseAxisPartition` is a high level view onto BaseBlockPartitions' data. It is sometimes more
-	   convenient to operate on `BaseAxisPartition'
+	- `BaseAxisPartition` is a high level view onto BaseBlockPartitions' data. It is more
+	   convenient to operate on `BaseAxisPartition` sometimes.
