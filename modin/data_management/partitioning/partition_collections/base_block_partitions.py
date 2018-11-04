@@ -420,9 +420,7 @@ class BaseBlockPartitions(object):
         if is_transposed:
             return self.transpose().to_pandas(False).T
         else:
-            retrieved_objects = [
-                [obj.to_pandas() for obj in part] for part in self.partitions
-            ]
+            retrieved_objects = [[obj.to_pandas() for obj in part] for part in self.partitions]
             if all(
                 isinstance(part, pandas.Series)
                 for row in retrieved_objects

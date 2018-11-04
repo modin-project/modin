@@ -9,6 +9,11 @@ from ray.worker import RayGetError, RayTaskError
 from .base_remote_partition import BaseRemotePartition
 from .utils import length_fn_pandas, width_fn_pandas
 
+import os
+import sys
+f = open(os.devnull, 'w')
+sys.stderr = f
+
 
 class PandasOnRayRemotePartition(BaseRemotePartition):
     def __init__(self, object_id):
@@ -27,9 +32,8 @@ class PandasOnRayRemotePartition(BaseRemotePartition):
             if len(self.call_queue):
                 return self.apply(lambda x: x).get()
             return ray.get(self.oid)
-        except RayGetError as e:
-            raise
-        except Exception:
+        except RayGetError:
+            # TODO: Parse and return actual error
             raise
 
     def apply(self, func, **kwargs):
