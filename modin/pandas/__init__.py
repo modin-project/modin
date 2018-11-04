@@ -55,6 +55,7 @@ from .io import (
     read_sas,
     read_pickle,
     read_sql,
+    read_gbq,
 )
 from .reshape import get_dummies
 from .general import isna, merge, pivot_table
@@ -101,6 +102,7 @@ __all__ = [
     "read_sas",
     "read_pickle",
     "read_sql",
+    "read_gbq",
     "concat",
     "eval",
     "unique",

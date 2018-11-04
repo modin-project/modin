@@ -383,6 +383,33 @@ def read_json(
     return ray_frame
 
 
+def read_gbq(
+    query,
+    project_id=None,
+    index_col=None,
+    col_order=None,
+    reauth=False,
+    verbose=None,
+    private_key=None,
+    dialect="legacy",
+    **kwargs
+):
+    warnings.warn("Defaulting to Pandas implementation", UserWarning)
+    port_frame = pandas.read_gbq(
+        query,
+        project_id=project_id,
+        index_col=index_col,
+        col_order=col_order,
+        reauth=reauth,
+        verbose=verbose,
+        private_key=private_key,
+        dialect=dialect,
+        **kwargs
+    )
+    ray_frame = from_pandas(port_frame)
+    return ray_frame
+
+
 def read_html(
     io,
     match=".+",
