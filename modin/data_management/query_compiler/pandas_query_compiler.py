@@ -2500,19 +2500,25 @@ class PandasQueryCompiler(object):
 
     def squeeze(self, ndim=0, axis=None):
         #Checking if 2D DataFrame. If so, return without squeeze
+        #to_squeeze = self.data.to_pandas() #Differences in functionality if I have it here vs line 2485
         if (self.data.shape[0] > 1 and self.data.shape[1] > 1):  
             return self.copy()
         else:
-            squeezed = self.data.to_pandas().squeeze()
-            #Check if scalar. If so, return scalar
-            if (squeezed.shape == ()):
+            to_squeeze = self.data.to_pandas()
+            #Different scalar cases
+            if (to_squeeze.shape[0] == 1 and to_squeeze.shape[1] == 1):
+                return to_squeeze.values[0][0]
+            axis = 0 if self.data.shape[1] > 1 else 1
+            squeezed = to_squeeze.squeeze(axis)
+            if ((not hasattr(squeezed, 'shape')) or squeezed.shape == ()):
                 return squeezed
-            #If not scalar, squeeze has returned a Series. 
-            #Format series, give appropriate labels and return.
-            else: 
+            elif (squeezed.shape == (1,)):
+                return squeezed[0]
+            else:
+                #Format series, give appropriate labels and return.
                 squeezed = pandas.Series(squeezed)
-                scaler_axis = self.columns if axis == None or axis == 0 else self.index
-                non_scaler_axis = self.index if axis == None or axis == 0 else self.columns
+                scaler_axis = self.columns if axis == 1 else self.index
+                non_scaler_axis = self.index if axis == 1 else self.columns
                 squeezed.name = scaler_axis[0]
                 squeezed.index = non_scaler_axis
                 return squeezed

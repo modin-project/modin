@@ -3827,7 +3827,8 @@ class DataFrame(object):
 
     def squeeze(self, axis=None):
         new_query_compiler = self._query_compiler.squeeze(axis);
-        if (isinstance(new_query_compiler, pandas.Series) or new_query_compiler.data.shape == ()):
+        if (isinstance(new_query_compiler, pandas.Series) or (not hasattr(new_query_compiler.data, 'shape')) 
+            or new_query_compiler.data.shape == ()):
             return new_query_compiler
         else:
             return DataFrame(query_compiler=new_query_compiler)
