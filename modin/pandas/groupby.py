@@ -6,6 +6,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
+import warnings
 
 from .utils import _inherit_docstrings
 
@@ -28,6 +29,8 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
+        # This tells us whether or not there are multiple columns/rows in the groupby
+        self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
         self._kwargs = {
             "sort": sort,
@@ -57,10 +60,32 @@ class DataFrameGroupBy(object):
     @property
     def _index_grouped(self):
         if self._index_grouped_cache is None:
-            if self._axis == 0:
-                self._index_grouped_cache = self._index.groupby(self._by)
+            if self._is_multi_by:
+                # Because we are doing a collect (to_pandas) here and then groupby, we
+                # end up using pandas implementation. Add the warning so the user is
+                # aware.
+                warnings.warn("Defaulting to Pandas implementation", UserWarning)
+                if self._axis == 0:
+                    self._index_grouped_cache = {
+                        k: v.index
+                        for k, v in self._df._query_compiler.getitem_column_array(
+                            self._by
+                        )
+                        .to_pandas()
+                        .groupby(by=self._by)
+                    }
+                else:
+                    self._index_grouped_cache = {
+                        k: v.index
+                        for k, v in self._df._query_compiler.getitem_row_array(self._by)
+                        .to_pandas()
+                        .groupby(by=self._by)
+                    }
             else:
-                self._index_grouped_cache = self._columns.groupby(self._by)
+                if self._axis == 0:
+                    self._index_grouped_cache = self._index.groupby(self._by)
+                else:
+                    self._index_grouped_cache = self._columns.groupby(self._by)
         return self._index_grouped_cache
 
     _keys_and_values_cache = None
@@ -380,7 +405,7 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
-        if all(obj in self._df for obj in self._by):
+        if self._is_multi_by:
             return self._default_to_pandas(f, **kwargs)
 
         new_manager = self._query_compiler.groupby_agg(
