@@ -54,15 +54,18 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
             name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
         ]
     num_splits = min(len(columns), RayBlockPartitions._compute_num_partitions())
-    # Each item in this list will be a column of original df
+    num_cpus = int(ray.global_state.available_resources()['CPU'])
+    # Each item in this list will be a list of column names of the original df
+    col_partitions = [columns[i:i + num_cpus] for i in range(0, len(columns), num_cpus)]
+    # Each item in this list will be a list of columns of original df
     # partitioned to smaller pieces along rows.
     # We need to transpose the oids array to fit our schema.
     blk_partitions = np.array(
         [
-            _read_parquet_column._submit(
-                args=(path, col, num_splits, kwargs), num_return_vals=num_splits + 1
+            _read_parquet_columns._submit(
+                args=(path, cols, num_splits, kwargs), num_return_vals=num_splits + 1
             )
-            for col in columns
+            for cols in col_partitions
         ]
     ).T
     remote_partitions = np.array(
@@ -637,12 +640,12 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
 
 
 @ray.remote
-def _read_parquet_column(path, column, num_splits, kwargs):
+def _read_parquet_columns(path, columns, num_splits, kwargs):
     """Use a Ray task to read a column from Parquet into a Pandas DataFrame.
 
     Args:
         path: The path of the Parquet file.
-        column: The column name to read.
+        columns: The list of column names to read.
         num_splits: The number of partitions to split the column into.
 
     Returns:
@@ -653,6 +656,7 @@ def _read_parquet_column(path, column, num_splits, kwargs):
     """
     import pyarrow.parquet as pq
 
-    df = pq.read_pandas(path, columns=[column], **kwargs).to_pandas()
+    df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
     # Append the length of the index here to build it externally
     return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
+
