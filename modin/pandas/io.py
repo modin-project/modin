@@ -53,13 +53,17 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
         columns = [
             name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
         ]
-    num_splits = min(len(columns), RayBlockPartitions._compute_num_partitions())
-    num_cpus = int(ray.global_state.available_resources()['CPU'])
+    num_partitions = RayBlockPartitions._compute_num_partitions()
+    num_splits = min(len(columns), num_partitions)
     # Each item in this list will be a list of column names of the original df
-    column_splits = len(columns) // num_cpus if len(columns) % num_cpus == 0 \
-        else len(columns) // num_cpus + 1
-    col_partitions = [columns[i:i + column_splits]
-                      for i in range(0, len(columns), column_splits)]
+    column_splits = (
+        len(columns) // num_partitions
+        if len(columns) % num_partitions == 0
+        else len(columns) // num_partitions + 1
+    )
+    col_partitions = [
+        columns[i : i + column_splits] for i in range(0, len(columns), column_splits)
+    ]
     # Each item in this list will be a list of columns of original df
     # partitioned to smaller pieces along rows.
     # We need to transpose the oids array to fit our schema.
