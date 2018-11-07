@@ -659,4 +659,3 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
     df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
     # Append the length of the index here to build it externally
     return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
-
