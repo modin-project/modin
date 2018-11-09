@@ -3391,14 +3391,12 @@ class DataFrame(object):
         Returns:
             A new Dataframe
         """
-
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
-        if axis == 0:
-            axis_labels = self.index
+        if axis:
+            axis_labels = self.columns
             axis_length = len(axis_labels)
         else:
-            axis_labels = self.column
+            axis_labels = self.index
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
@@ -3492,8 +3490,8 @@ class DataFrame(object):
             samples = np.random.choice(
                 a=axis_labels, size=n, replace=replace, p=weights
             )
-        if axis == 1:
-            query_compiler = self._query_compiler.getitem_col_array(samples)
+        if axis:
+            query_compiler = self._query_compiler.getitem_column_array(samples)
             return DataFrame(query_compiler=query_compiler)
         else:
             query_compiler = self._query_compiler.getitem_row_array(samples)
