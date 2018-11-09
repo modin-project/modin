@@ -73,7 +73,7 @@ of which can be found in `Ray's documentation`_.
 .. code-block:: python
 
    import ray
-   ray.init(<kwargs>)
+   ray.init()
    import modin.pandas as pd
 
 Modin will automatically connect to the Ray instance that is already running. This way,
@@ -101,6 +101,24 @@ the number of bytes will set the maximum size of the plasma store.
 
 **Warning: Make sure you have enough space in your disk for however many bytes you**
 **request for your DataFrame**
+
+Reducing or limiting the resources Modin can use
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+By default, Modin will use all of the resources available on your machine. It is
+possible, however, to limit the amount of resources Modin uses if you wish to free up
+resources for another task or user. Here is how you would limit the number of CPUs Modin
+used:
+
+.. code-block:: python
+
+   import ray
+   ray.init(num_cpus=4)
+   import modin.pandas as pd
+
+Specifying ``num_cpus`` limits the number of processors that Modin uses. You may also
+specify more processors than you have available on your machine, however this will not
+improve the performance (and might end up hurting the performance of the system).
 
 Examples
 --------
