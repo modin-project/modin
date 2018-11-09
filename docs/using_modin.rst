@@ -48,7 +48,7 @@ Please note, the API is not yet complete. For some methods, you may see the foll
 
 .. code-block:: text
 
-  NotImplementedError: To contribute to Pandas on Ray, please visit github.com/modin-project/modin.
+  NotImplementedError: To contribute to Modin, please visit github.com/modin-project/modin.
 
 We have compiled a list of `currently supported methods`_.
 
@@ -62,6 +62,46 @@ Using Modin on a Cluster
 Modin can be run on a cluster, but the setup process is quite complex. We are working on
 a solution to make Modin run on a cluster with a simple setup. More on this coming soon!
 
+Advanced usage (experimental)
+-----------------------------
+
+In some cases, it may be useful to customize your Ray environment. Below, we have listed
+a few ways you can solve common problems in data management with Modin by customizing
+your Ray environment. It is possible to use any of Ray's initialization parameters, all
+of which can be found in `Ray's documentation`_.
+
+.. code-block:: python
+
+   import ray
+   ray.init(<kwargs>)
+   import modin.pandas as pd
+
+Modin will automatically connect to the Ray instance that is already running. This way,
+you can customize your Ray environment for use in Modin!
+
+Exceeding memory (Out of core pandas)
+"""""""""""""""""""""""""""""""""""""
+
+If you are working with very large files or would like to exceed your memory, you may
+change the primary location of the DataFrame. If you would like to exceed memory, you
+can use your disk as backup for the memory. This API is experimental in the context of
+Modin. Please let us know what you think!
+
+Here is how you can exceed memory by using your disk:
+
+.. code-block:: python
+
+   import ray
+   num_bytes = 2**40 # Make sure you have disk space to do this!
+   ray.init(plasma_directory="/tmp", object_store_memory=num_bytes)
+   import modin.pandas as pd
+
+Setting ``plasma_directory="/tmp"`` uses your disk for storing the DataFrame and setting
+the number of bytes will set the maximum size of the plasma store.
+
+**Warning: Make sure you have enough space in your disk for however many bytes you**
+**request for your DataFrame**
+
 Examples
 --------
 You can find an example on our recent `blog post`_ or on the `Jupyter Notebook`_ that we
@@ -70,5 +110,6 @@ used to create the blog post.
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
+.. _Ray's documentation: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: http://rise.cs.berkeley.edu/blog/pandas-on-ray-lessons-learned
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
