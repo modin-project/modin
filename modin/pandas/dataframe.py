@@ -2557,7 +2557,6 @@ class DataFrame(object):
         return self._default_to_pandas_func(
             pandas.DataFrame.nlargest, n, columns, keep=keep
         )
-        
 
     def notna(self):
         """Perform notna across the DataFrame.
@@ -3826,10 +3825,13 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        if (self._query_compiler.data.shape[0] == 1 and self._query_compiler.data.shape[1] == 1):
-             return self._query_compiler.squeeze(2, axis);
-        elif (1 in self._query_compiler.data.shape):
-            return self._query_compiler.squeeze(1, axis);
+        if (
+            self._query_compiler.data.shape[0] == 1
+            and self._query_compiler.data.shape[1] == 1
+        ):
+            return self._query_compiler.squeeze(2, axis)
+        elif 1 in self._query_compiler.data.shape:
+            return self._query_compiler.squeeze(1, axis)
         else:
             return self.copy()
 

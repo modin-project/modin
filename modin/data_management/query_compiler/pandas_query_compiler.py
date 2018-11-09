@@ -16,7 +16,6 @@ from pandas.core.dtypes.common import (
 from pandas.core.index import _ensure_index
 
 from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
-from modin.pandas import dataframe
 
 
 class PandasQueryCompiler(object):
@@ -2502,7 +2501,7 @@ class PandasQueryCompiler(object):
     def squeeze(self, ndim=0, axis=None):
         to_squeeze = self.data.to_pandas()
         if ndim == 1:
-            if (axis is None):
+            if axis is None:
                 axis = 0 if self.data.shape[1] > 1 else 1
             squeezed = to_squeeze.squeeze(axis)
             squeezed = pandas.Series(squeezed)
