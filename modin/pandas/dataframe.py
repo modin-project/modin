@@ -3826,12 +3826,12 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        new_query_compiler = self._query_compiler.squeeze(axis);
-        if (isinstance(new_query_compiler, pandas.Series) or (not hasattr(new_query_compiler.data, 'shape')) 
-            or new_query_compiler.data.shape == ()):
-            return new_query_compiler
+        if (self._query_compiler.data.shape[0] == 1 and self._query_compiler.data.shape[1] == 1):
+             return self._query_compiler.squeeze(2, axis);
+        elif (1 in self._query_compiler.data.shape):
+            return self._query_compiler.squeeze(1, axis);
         else:
-            return DataFrame(query_compiler=new_query_compiler)
+            return self.copy()
 
     def stack(self, level=-1, dropna=True):
         return self._default_to_pandas_func(

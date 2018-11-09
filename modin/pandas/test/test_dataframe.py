@@ -3094,6 +3094,8 @@ def test_squeeze():
     assert ray_df_4.squeeze().equals(pandas_df_4.squeeze())
     assert ray_df_5.squeeze().equals(pandas_df_5.squeeze())
 
+    
+
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
@@ -3587,12 +3589,12 @@ def test_ix():
 @pytest.fixture
 def test_iloc(ray_df, pd_df):
     # Scaler
-    assert ray_df.iloc[0, 1] == pd_df.iloc[0, 1]
+    assert ray_df.iloc[0, 1] == pd_df.iloc[0, 1] #nw
 
     # Series
     assert ray_df.iloc[0].equals(pd_df.iloc[0])
     assert ray_df.iloc[1:, 0].equals(pd_df.iloc[1:, 0])
-    assert ray_df.iloc[1:2, 0].equals(pd_df.iloc[1:2, 0])
+    assert ray_df.iloc[1:2, 0].equals(pd_df.iloc[1:2, 0]) #nw
 
     # DataFrame
     assert ray_df_equals_pandas(ray_df.iloc[[1, 2]], pd_df.iloc[[1, 2]])

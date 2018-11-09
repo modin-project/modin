@@ -16,6 +16,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.index import _ensure_index
 
 from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
+from modin.pandas import dataframe
 
 
 class PandasQueryCompiler(object):
@@ -2499,29 +2500,19 @@ class PandasQueryCompiler(object):
         )
 
     def squeeze(self, ndim=0, axis=None):
-        #Checking if 2D DataFrame. If so, return without squeeze
-        #to_squeeze = self.data.to_pandas() #Differences in functionality if I have it here vs line 2485
-        if (self.data.shape[0] > 1 and self.data.shape[1] > 1):  
-            return self.copy()
-        else:
-            to_squeeze = self.data.to_pandas()
-            #Different scalar cases
-            if (to_squeeze.shape[0] == 1 and to_squeeze.shape[1] == 1):
-                return to_squeeze.values[0][0]
-            axis = 0 if self.data.shape[1] > 1 else 1
+        to_squeeze = self.data.to_pandas()
+        if ndim == 1:
+            if (axis is None):
+                axis = 0 if self.data.shape[1] > 1 else 1
             squeezed = to_squeeze.squeeze(axis)
-            if ((not hasattr(squeezed, 'shape')) or squeezed.shape == ()):
-                return squeezed
-            elif (squeezed.shape == (1,)):
-                return squeezed[0]
-            else:
-                #Format series, give appropriate labels and return.
-                squeezed = pandas.Series(squeezed)
-                scaler_axis = self.columns if axis == 1 else self.index
-                non_scaler_axis = self.index if axis == 1 else self.columns
-                squeezed.name = scaler_axis[0]
-                squeezed.index = non_scaler_axis
-                return squeezed
+            squeezed = pandas.Series(squeezed)
+            scaler_axis = self.columns if axis == 1 else self.index
+            non_scaler_axis = self.index if axis == 1 else self.columns
+            squeezed.name = scaler_axis[0]
+            squeezed.index = non_scaler_axis
+            return squeezed
+        else:
+            return to_squeeze.values[0][0]
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
