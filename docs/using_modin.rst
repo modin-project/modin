@@ -87,7 +87,8 @@ change the primary location of the DataFrame. If you would like to exceed memory
 can use your disk as backup for the memory. This API is experimental in the context of
 Modin. Please let us know what you think!
 
-Here is how you can exceed memory by using your disk:
+Instead of limiting the size of your DataFrame to the amount of memory you have, you can
+back your memory with disk:
 
 .. code-block:: python
 
@@ -98,6 +99,9 @@ Here is how you can exceed memory by using your disk:
 
 Setting ``plasma_directory="/tmp"`` uses your disk for storing the DataFrame and setting
 the number of bytes will set the maximum size of the plasma store.
+
+Note: This will impact performance for most operations. This should be used when you are
+trying to use very large datasets.
 
 **Warning: Make sure you have enough space in your disk for however many bytes you**
 **request for your DataFrame**
