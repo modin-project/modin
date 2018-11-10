@@ -8,6 +8,6 @@ pytest --benchmark-autosave --disable-pytest-warnings modin/pandas/test/test_per
 
 sha_tag=`git rev-parse --verify --short HEAD`
 # save the results to S3
-aws s3 cp .benchmarks/*/*.json s3://modin-jenkins-result/${sha_tag}-perf/ --acl public-read
+aws s3 cp .benchmarks/*/*.json s3://modin-jenkins-result/${sha_tag}-perf-${BUCKET_SUFFIX}/ --acl public-read
 
 rm -rf .benchmarks
