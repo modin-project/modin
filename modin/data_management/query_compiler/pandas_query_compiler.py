@@ -980,6 +980,8 @@ class PandasQueryCompiler(object):
                     return False
                 return True
 
+            # Iterate through the sums to check that we can divide them. If not, then
+            # drop the record. This matches pandas behavior.
             return pandas.Series(
                 {
                     idx: sums[idx] / counts[idx]
