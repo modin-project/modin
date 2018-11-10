@@ -2,7 +2,7 @@ FROM python:3.6.6-stretch
 
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
-RUN pip install -q awscli pytest pytest-benchmark feather-format lxml openpyxl xlrd numpy matplotlib
+RUN pip install -q awscli pytest pytest-benchmark feather-format lxml openpyxl xlrd numpy matplotlib subprocess
 
 COPY . .
 RUN pip install -e .
