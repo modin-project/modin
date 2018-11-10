@@ -983,12 +983,10 @@ class PandasQueryCompiler(object):
             Pandas Series with sum or prod of DataFrame.
         """
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", None)
-        min_count = kwargs.get("min_count", 0)
-
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-
+        numeric_only = kwargs.get("numeric_only", None) if not axis else True
+        min_count = kwargs.get("min_count", 1)
         reduce_index = self.columns if axis else self.index
+
         if numeric_only:
             result, query_compiler = self.numeric_function_clean_dataframe(axis)
         else:
@@ -998,23 +996,12 @@ class PandasQueryCompiler(object):
         def sum_prod_builder(df, **kwargs):
             if not df.empty:
                 return func(df, **kwargs)
+            else:
+                return pandas.DataFrame([])
 
         map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
-        if all(
-            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
-            for dtype in self.dtypes
-        ):
-            if numeric_only is None:
-                new_index = [
-                    col
-                    for col, dtype in zip(self.columns, self.dtypes)
-                    if dtype == np.dtype("timedelta64[ns]")
-                ]
-                return self.full_axis_reduce(map_func, axis, new_index)
-            else:
-                return self.full_axis_reduce(map_func, axis)
-        elif min_count == 0:
+        if min_count == 1:
             if numeric_only is None:
                 numeric_only = True
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
@@ -1023,7 +1010,7 @@ class PandasQueryCompiler(object):
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
         else:
-            return self.full_axis_reduce(map_func, axis, new_index)
+            return self.full_axis_reduce(map_func, axis)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
