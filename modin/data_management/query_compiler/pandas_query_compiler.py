@@ -963,7 +963,30 @@ class PandasQueryCompiler(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
+        sums = self.sum(**kwargs)
+        counts = self.count(axis=axis, numeric_only=kwargs.get("numeric_only", None))
+        try:
+            # If we need to drop any columns, it will throw a TypeError
+            return sums.divide(counts)
+        # In the case that a TypeError is thrown, we need to iterate through, similar to
+        # how pandas does and do the division only on things that can be divided.
+        # NOTE: We will only hit this condition if numeric_only is not True.
+        except TypeError:
+
+            def can_divide(l, r):
+                try:
+                    pandas.Series([l]).divide(r)
+                except TypeError:
+                    return False
+                return True
+
+            return pandas.Series(
+                {
+                    idx: sums[idx] / counts[idx]
+                    for idx in sums.index
+                    if can_divide(sums[idx], counts[idx])
+                }
+            )
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -973,7 +996,7 @@ class PandasQueryCompiler(object):
         """
         return self._process_min_max(pandas.DataFrame.min, **kwargs)
 
-    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+    def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
 
         Args:
@@ -986,7 +1009,7 @@ class PandasQueryCompiler(object):
         numeric_only = kwargs.get("numeric_only", None) if not axis else True
         min_count = kwargs.get("min_count", 1)
         reduce_index = self.columns if axis else self.index
-        print(numeric_only)
+
         if numeric_only:
             result, query_compiler = self.numeric_function_clean_dataframe(axis)
         else:
@@ -1016,7 +1039,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -1024,7 +1047,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
 
     # END Full Reduce operations
 
