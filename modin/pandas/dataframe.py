@@ -3825,16 +3825,16 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        #Checks for 1x1 DF, passes into squeeze with approproate ndim 
+        # Checks for 1x1 DF, passes into squeeze with approproate ndim
         if (
             self._query_compiler.data.shape[0] == 1
             and self._query_compiler.data.shape[1] == 1
         ):
             return self._query_compiler.squeeze(2, axis)
-        #Checks for 1xN or Nx1 DF, passes into squeeze with appropriate ndim
+        # Checks for 1xN or Nx1 DF, passes into squeeze with appropriate ndim
         elif 1 in self._query_compiler.data.shape:
             return self._query_compiler.squeeze(1, axis)
-        #NxN DF, don't need to pass into squeeze
+        # NxN DF, don't need to pass into squeeze
         else:
             return self.copy()
 

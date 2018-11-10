@@ -3089,13 +3089,15 @@ def test_squeeze():
     assert ray_df_equals_pandas(ray_df, pandas_df)
     pandas_df_2 = pandas.DataFrame(frame_data_2).squeeze()
     ray_df_2 = pd.DataFrame(frame_data_2).squeeze()
-    assert ray_df_2.equals(pandas_df_2) #Using .equals for Series comparison since Series is not in Modin
+    assert ray_df_2.equals(
+        pandas_df_2
+    )  # Using .equals for Series comparison since Series is not in Modin
     pandas_df_3 = pandas.DataFrame(frame_data_3).squeeze()
     ray_df_3 = pd.DataFrame(frame_data_3).squeeze()
     assert ray_df_3.equals(pandas_df_3)
     pandas_df_4 = pandas.DataFrame(frame_data_4).squeeze()
     ray_df_4 = pd.DataFrame(frame_data_4).squeeze()
-    assert ray_df_4 == pandas_df_4 #Using == for primitive comparison
+    assert ray_df_4 == pandas_df_4  # Using == for primitive comparison
     pandas_df_5 = pandas.DataFrame(frame_data_5).squeeze()
     ray_df_5 = pd.DataFrame(frame_data_5).squeeze()
     assert ray_df_5 == pandas_df_5
