@@ -84,6 +84,7 @@ def test_int_dataframe():
 
     filter_by = {"items": ["col1", "col5"], "regex": "4$|3$", "like": "col"}
 
+    assert False
     test_sample(ray_df, pandas_df)
     test_filter(ray_df, pandas_df, filter_by)
     test_index(ray_df, pandas_df)
