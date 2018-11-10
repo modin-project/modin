@@ -1,4 +1,4 @@
-set -ex
+# set -ex
 
 source activate py3
 
