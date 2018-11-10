@@ -162,3 +162,6 @@ fabric.properties
 tags
 cscope.files
 cscope.out
+
+# PYTest Benchmarks
+.benchmarks/

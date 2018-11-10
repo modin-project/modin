@@ -5,6 +5,8 @@ from __future__ import print_function
 import pytest
 import modin.pandas as pd
 
+pd.DEFAULT_NPARTITIONS = 4
+
 
 @pytest.fixture
 def create_test_series():

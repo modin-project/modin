@@ -9,6 +9,8 @@ import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
+pd.DEFAULT_NPARTITIONS = 4
+
 PY2 = False
 if sys.version_info.major < 3:
     PY2 = True
@@ -376,16 +378,16 @@ def test_skew(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.skew(), pandas_groupby.skew())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_ffill(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.ffill()
+    return
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_sem(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.sem()
+    return
 
 
 @pytest.fixture
@@ -403,10 +405,10 @@ def test_min(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.min(), pandas_groupby.min())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_idxmax(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_df_equals_pandas(ray_groupby.idxmax(), pandas_groupby.idxmax())
+    return
 
 
 @pytest.fixture
@@ -421,10 +423,10 @@ def test_cumsum(ray_groupby, pandas_groupby, axis=0):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_pct_change(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.pct_change()
+    return
 
 
 @pytest.fixture
@@ -444,16 +446,16 @@ def test_dtypes(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.dtypes, pandas_groupby.dtypes)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_first(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.first()
+    return
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_backfill(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.backfill()
+    return
 
 
 @pytest.fixture
@@ -463,16 +465,16 @@ def test_cummin(ray_groupby, pandas_groupby, axis=0):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_bfill(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.bfill()
+    return
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_idxmin(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_df_equals_pandas(ray_groupby.idxmin(), pandas_groupby.idxmin())
+    return
 
 
 @pytest.fixture
@@ -495,16 +497,16 @@ def test_agg(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.agg(func), pandas_groupby.agg(func))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_last(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.last()
+    return
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_mad(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.mad()
+    return
 
 
 @pytest.fixture
@@ -547,10 +549,10 @@ def test_median(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.median(), pandas_groupby.median())
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_head(ray_groupby, pandas_groupby, n):
-    with pytest.raises(NotImplementedError):
-        ray_df_equals_pandas(ray_groupby.head(n=n), pandas_groupby.head(n=n))
+    return
 
 
 @pytest.fixture
@@ -561,10 +563,10 @@ def test_cumprod(ray_groupby, pandas_groupby, axis=0):
     )
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_cov(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.cov()
+    return
 
 
 @pytest.fixture
@@ -572,10 +574,10 @@ def test_transform(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.transform(func), pandas_groupby.transform(func))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_corr(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.corr()
+    return
 
 
 @pytest.fixture
@@ -595,10 +597,10 @@ def test_pipe(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.pipe(func), pandas_groupby.pipe(func))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_tail(ray_groupby, pandas_groupby, n):
-    with pytest.raises(NotImplementedError):
-        ray_df_equals_pandas(ray_groupby.tail(n=n), pandas_groupby.tail(n=n))
+    return
 
 
 @pytest.fixture
@@ -606,7 +608,7 @@ def test_quantile(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.quantile(q=0.4), pandas_groupby.quantile(q=0.4))
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_take(ray_groupby, pandas_groupby):
-    with pytest.raises(NotImplementedError):
-        ray_groupby.take(indices=[1])
+    return

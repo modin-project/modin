@@ -35,7 +35,7 @@ def get_dummies(
     if sparse:
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
-            "To contribute to Pandas on Ray, please visit "
+            "To contribute to Modin, please visit "
             "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):
@@ -53,11 +53,11 @@ def get_dummies(
     elif is_list_like(data):
         df = DataFrame(data)
 
-    new_manager = df._data_manager.get_dummies(
+    new_manager = df._query_compiler.get_dummies(
         columns,
         prefix=prefix,
         prefix_sep=prefix_sep,
         dummy_na=dummy_na,
         drop_first=drop_first,
     )
-    return DataFrame(data_manager=new_manager)
+    return DataFrame(query_compiler=new_manager)

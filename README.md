@@ -5,8 +5,7 @@
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest"></a>
 <a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi%20package-0.1.2-blue.svg"></a>
-<a href="https://github.com/ambv/black"><img alt="" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.2.2-blue.svg"></a>
 </p>
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -47,7 +46,7 @@ you would pandas.
 
 #### Faster pandas, even on your laptop
 
-<img align="right" style="display:inline;" height="350" width="300" src="docs/img/read_csv_benchmark.png"></a>
+<img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/blob/master/docs/img/read_csv_benchmark.png?raw=true"></a>
 
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
 transparently distributes the data and computation so that all you need to do is
@@ -76,6 +75,7 @@ datasets in the 1KB range. With Modin, because of its light-weight, robust, and 
 nature, you get a fast DataFrame at 1KB and 1TB+.
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
+
 
 ### More information and Getting Involved
 

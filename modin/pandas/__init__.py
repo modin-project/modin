@@ -4,6 +4,7 @@ from __future__ import print_function
 
 # TODO: In the future `set_option` or similar needs to run on every node
 # in order to keep all pandas instances across nodes consistent
+import pandas
 from pandas import (
     eval,
     unique,
@@ -16,6 +17,7 @@ from pandas import (
     match,
     Panel,
     date_range,
+    period_range,
     Index,
     MultiIndex,
     CategoricalIndex,
@@ -35,7 +37,7 @@ import threading
 import os
 import ray
 
-from .. import __git_revision__, __version__
+from .. import __version__
 from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
@@ -53,8 +55,19 @@ from .io import (
     read_sas,
     read_pickle,
     read_sql,
+    read_gbq,
 )
 from .reshape import get_dummies
+from .general import isna, merge, pivot_table
+
+__pandas_version__ = "0.23.4"
+
+if pandas.__version__ != __pandas_version__:
+    raise ImportError(
+        "The pandas version installed does not match the required pandas "
+        "version in Modin. Please install pandas {} to use "
+        "Modin.".format(__pandas_version__)
+    )
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -89,6 +102,7 @@ __all__ = [
     "read_sas",
     "read_pickle",
     "read_sql",
+    "read_gbq",
     "concat",
     "eval",
     "unique",
@@ -101,12 +115,16 @@ __all__ = [
     "match",
     "to_datetime",
     "get_dummies",
+    "isna",
+    "merge",
+    "pivot_table",
     "Panel",
     "date_range",
     "Index",
     "MultiIndex",
     "Series",
     "bdate_range",
+    "period_range",
     "DatetimeIndex",
     "to_timedelta",
     "set_eng_float_format",
@@ -120,3 +138,5 @@ __all__ = [
     "__git_revision__",
     "__version__",
 ]
+
+del pandas

@@ -10,6 +10,8 @@ import modin.pandas as pd
 import os
 import sqlite3
 
+pd.DEFAULT_NPARTITIONS = 4
+
 TEST_PARQUET_FILENAME = "test.parquet"
 TEST_CSV_FILENAME = "test.csv"
 TEST_JSON_FILENAME = "test.json"
@@ -499,6 +501,7 @@ def test_to_csv():
     teardown_test_file(TEST_CSV_DF_FILENAME)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_dense():
     ray_df = create_test_ray_dataframe()
 
@@ -632,6 +635,7 @@ def test_to_parquet():
     teardown_test_file(TEST_PARQUET_DF_FILENAME)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_period():
     ray_df = create_test_ray_dataframe()
 

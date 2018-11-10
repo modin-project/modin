@@ -11,24 +11,25 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_bool_dtype,
 )
 from pandas.core.index import _ensure_index
 
-from .partitioning.partition_collections import BlockPartitions
+from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
 
 
-class PandasDataManager(object):
+class PandasQueryCompiler(object):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(
         self,
-        block_partitions_object: BlockPartitions,
+        block_partitions_object: BaseBlockPartitions,
         index: pandas.Index,
         columns: pandas.Index,
         dtypes=None,
     ):
-        assert isinstance(block_partitions_object, BlockPartitions)
+        assert isinstance(block_partitions_object, BaseBlockPartitions)
         self.data = block_partitions_object
         self.index = index
         self.columns = columns
@@ -50,6 +51,8 @@ class PandasDataManager(object):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
             self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache.index = self.columns
+        elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache.index = self.columns
         return self._dtype_cache
 
@@ -159,7 +162,7 @@ class PandasDataManager(object):
 
         return helper
 
-    def numeric_columns(self):
+    def numeric_columns(self, include_bool=True):
         """Returns the numeric columns of the Manager.
 
         Returns:
@@ -167,7 +170,9 @@ class PandasDataManager(object):
         """
         columns = []
         for col, dtype in zip(self.columns, self.dtypes):
-            if is_numeric_dtype(dtype):
+            if is_numeric_dtype(dtype) and (
+                include_bool or (not include_bool and dtype != np.bool_)
+            ):
                 columns.append(col)
         return columns
 
@@ -181,10 +186,10 @@ class PandasDataManager(object):
             Tuple with return value(if any), indices to apply func to & cleaned Manager.
         """
         result = None
-        data_manager = self
+        query_compiler = self
         # If no numeric columns and over columns, then return empty Series
         if not axis and len(self.index) == 0:
-            result = pandas.Series(dtype=np.float64)
+            result = pandas.Series(dtype=np.int64)
 
         nonnumeric = [
             col
@@ -193,24 +198,33 @@ class PandasDataManager(object):
         ]
         if len(nonnumeric) == len(self.columns):
             # If over rows and no numeric columns, return this
-            result = pandas.Series([np.NaN for _ in self.index])
+            if axis:
+                result = pandas.Series([np.nan for _ in self.index])
+            else:
+                result = pandas.Series([0 for _ in self.index])
         else:
-            data_manager = self.drop(columns=nonnumeric)
-        return result, data_manager
+            query_compiler = self.drop(columns=nonnumeric)
+        return result, query_compiler
 
     # END Internal methods
 
     # Metadata modification methods
     def add_prefix(self, prefix):
         new_column_names = self.columns.map(lambda x: str(prefix) + str(x))
+        new_dtype_cache = self._dtype_cache.copy()
+        if new_dtype_cache is not None:
+            new_dtype_cache.index = new_column_names
         return self.__constructor__(
-            self.data, self.index, new_column_names, self._dtype_cache
+            self.data, self.index, new_column_names, new_dtype_cache
         )
 
     def add_suffix(self, suffix):
         new_column_names = self.columns.map(lambda x: str(x) + str(suffix))
+        new_dtype_cache = self._dtype_cache.copy()
+        if new_dtype_cache is not None:
+            new_dtype_cache.index = new_column_names
         return self.__constructor__(
-            self.data, self.index, new_column_names, self._dtype_cache
+            self.data, self.index, new_column_names, new_dtype_cache
         )
 
     # END Metadata modification methods
@@ -270,7 +284,7 @@ class PandasDataManager(object):
         if isinstance(other, list):
             return self._join_list_of_managers(other, **kwargs)
         else:
-            return self._join_data_manager(other, **kwargs)
+            return self._join_query_compiler(other, **kwargs)
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -297,7 +311,7 @@ class PandasDataManager(object):
 
         # Concatenating two managers requires aligning their indices. After the
         # indices are aligned, it should just be a simple concatenation of the
-        # `BlockPartitions` objects. This should not require remote compute.
+        # `BaseBlockPartitions` objects. This should not require remote compute.
         joined_axis = self._join_index_objects(
             axis,
             [other.columns if axis == 0 else other.index for other in others],
@@ -328,7 +342,7 @@ class PandasDataManager(object):
             new_columns = self.columns.append([other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
-    def _join_data_manager(self, other, **kwargs):
+    def _join_query_compiler(self, other, **kwargs):
         assert isinstance(
             other, type(self)
         ), "This method is for data manager objects only"
@@ -436,7 +450,7 @@ class PandasDataManager(object):
         Returns:
             New DataManager with new data and index.
         """
-        axis = kwargs.get("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
 
         if isinstance(other, type(self)):
             return self.inter_manager_operations(
@@ -456,7 +470,6 @@ class PandasDataManager(object):
         Returns:
             New DataManager with added data and new index.
         """
-        # TODO: need to write a prepare_function for inter_df operations
         func = pandas.DataFrame.add
         return self._inter_df_op_handler(func, other, **kwargs)
 
@@ -654,10 +667,14 @@ class PandasDataManager(object):
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def clip(self, lower, upper, **kwargs):
-        kwargs["lower"] = lower
         kwargs["upper"] = upper
+        kwargs["lower"] = lower
+        axis = kwargs.get("axis", 0)
         func = self._prepare_method(pandas.DataFrame.clip, **kwargs)
-        return self.scalar_operations(kwargs.get("axis", 0), lower or upper, func)
+        if is_list_like(lower) or is_list_like(upper):
+            df = self.map_across_full_axis(axis, func)
+            return self.__constructor__(df, self.index, self.columns)
+        return self.scalar_operations(axis, lower or upper, func)
 
     def update(self, other, **kwargs):
         """Uses other manager to update corresponding values in this manager.
@@ -755,7 +772,7 @@ class PandasDataManager(object):
         Returns:
             New DataManager with updated data and new index.
         """
-        if isinstance(scalar, list):
+        if isinstance(scalar, (list, np.ndarray, pandas.Series)):
             new_data = self.map_across_full_axis(axis, func)
             return self.__constructor__(new_data, self.index, self.columns)
         else:
@@ -779,12 +796,16 @@ class PandasDataManager(object):
         # partitions.
         def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
             if axis:
+                while len(df.columns) < len(old_labels):
+                    df[len(df.columns)] = np.nan
                 df.columns = old_labels
                 new_df = df.reindex(columns=new_labels, **kwargs)
                 # reset the internal columns back to a RangeIndex
                 new_df.columns = pandas.RangeIndex(len(new_df.columns))
                 return new_df
             else:
+                while len(df.index) < len(old_labels):
+                    df.loc[len(df.index)] = np.nan
                 df.index = old_labels
                 new_df = df.reindex(index=new_labels, **kwargs)
                 # reset the internal index back to a RangeIndex
@@ -876,23 +897,43 @@ class PandasDataManager(object):
             Returns Pandas Series containing the results from map_func and reduce_func.
         """
         if numeric_only:
-            result, data_manager = self.numeric_function_clean_dataframe(axis)
+            result, query_compiler = self.numeric_function_clean_dataframe(axis)
             if result is not None:
                 return result
         else:
-            data_manager = self
+            query_compiler = self
         if reduce_func is None:
             reduce_func = map_func
         # The XOR here will ensure that we reduce over the correct axis that
         # exists on the internal partitions. We flip the axis
-        result = data_manager.data.full_reduce(
+        result = query_compiler.data.full_reduce(
             map_func, reduce_func, axis ^ self._is_transposed
         )
-        if not axis:
-            result.index = data_manager.columns
+        if result.shape == (0,):
+            return result
+        elif not axis:
+            result.index = query_compiler.columns
         else:
-            result.index = data_manager.index
+            result.index = query_compiler.index
         return result
+
+    def _process_min_max(self, func, **kwargs):
+        """Calculates the min or max of the DataFrame.
+
+        Return:
+           Pandas series containing the min or max values from each column or
+           row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        numeric_only = True if axis else kwargs.get("numeric_only", False)
+
+        def min_max_builder(df, **kwargs):
+            if not df.empty:
+                return func(df, **kwargs)
+
+        map_func = self._prepare_method(min_max_builder, **kwargs)
+        return self.full_reduce(axis, map_func, numeric_only=numeric_only)
 
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
@@ -912,11 +953,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the maximum values from each column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.max, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        return self._process_min_max(pandas.DataFrame.max, **kwargs)
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -926,8 +963,7 @@ class PandasDataManager(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.mean, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -935,11 +971,59 @@ class PandasDataManager(object):
         Return:
             Pandas series with the minimum value from each column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
+        return self._process_min_max(pandas.DataFrame.min, **kwargs)
+
+    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+        """Calculates the sum or product of the DataFrame.
+
+        Args:
+            func: Pandas func to apply to DataFrame.
+            ignore_axis: Whether to ignore axis when raising TypeError
+        Return:
+            Pandas Series with sum or prod of DataFrame.
+        """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", None)
+        min_count = kwargs.get("min_count", 0)
+
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.min, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+
+        reduce_index = self.columns if axis else self.index
+        if numeric_only:
+            result, query_compiler = self.numeric_function_clean_dataframe(axis)
+        else:
+            query_compiler = self
+        new_index = query_compiler.index if axis else query_compiler.columns
+
+        def sum_prod_builder(df, **kwargs):
+            if not df.empty:
+                return func(df, **kwargs)
+
+        map_func = self._prepare_method(sum_prod_builder, **kwargs)
+
+        if all(
+            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
+            for dtype in self.dtypes
+        ):
+            if numeric_only is None:
+                new_index = [
+                    col
+                    for col, dtype in zip(self.columns, self.dtypes)
+                    if dtype == np.dtype("timedelta64[ns]")
+                ]
+                return self.full_axis_reduce(map_func, axis, new_index)
+            else:
+                return self.full_axis_reduce(map_func, axis)
+        elif min_count == 0:
+            if numeric_only is None:
+                numeric_only = True
+            return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+        elif min_count > len(reduce_index):
+            return pandas.Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        else:
+            return self.full_axis_reduce(map_func, axis, new_index)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -947,10 +1031,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.prod, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=True)
+        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -958,11 +1039,7 @@ class PandasDataManager(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.sum, **kwargs)
-        return self.full_reduce(axis, func, numeric_only=numeric_only)
+        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
 
     # END Full Reduce operations
 
@@ -975,10 +1052,7 @@ class PandasDataManager(object):
 
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
-        new_dtypes = pandas.Series(
-            [np.dtype("float64") for _ in self.columns], index=self.columns
-        )
-        return self.map_partitions(func, new_dtypes=new_dtypes)
+        return self.map_partitions(func, new_dtypes=self.dtypes.copy())
 
     def applymap(self, func):
         remote_func = self._prepare_method(pandas.DataFrame.applymap, func=func)
@@ -1085,43 +1159,97 @@ class PandasDataManager(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce(self, func, axis):
+    def full_axis_reduce(self, func, axis, alternate_index=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
+            axis: axis to apply the function to.
+            alternate_index: If the resulting series should have an index
+                different from the current query_compiler's index or columns.
 
         Return:
             Pandas series containing the reduced data.
         """
+        # We XOR with axis because if we are doing an operation over the columns
+        # (i.e. along the rows), we want to take the transpose so that the
+        # results from the same parition will be concated together first.
+        # We need this here because if the operations is over the columns,
+        # map_across_full_axis does not transpose the result before returning.
         result = self.data.map_across_full_axis(axis, func).to_pandas(
-            self._is_transposed
+            self._is_transposed ^ axis
         )
+        if result.empty:
+            return result
         if not axis:
-            result.index = self.columns
+            result.index = (
+                alternate_index if alternate_index is not None else self.columns
+            )
         else:
-            result.index = self.index
+            result.index = (
+                alternate_index if alternate_index is not None else self.index
+            )
         return result
 
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
 
         Return:
-            Pandas Series containing boolean values.
+            Pandas Series containing boolean values or boolean.
         """
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.all, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        return self._process_all_any(pandas.DataFrame.all, **kwargs)
 
     def any(self, **kwargs):
-        """Returns whether any element is true over the requested axis.
+        """Returns whether any the elements are true, potentially over an axis.
 
         Return:
-            Pandas Series containing boolean values.
+            Pandas Series containing boolean values or boolean.
+        """
+        return self._process_all_any(pandas.DataFrame.any, **kwargs)
+
+    def _process_all_any(self, func, **kwargs):
+        """Calculates if any or all the values are true.
+
+        Return:
+            Pandas Series containing boolean values or boolean.
         """
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.any, **kwargs)
-        return self.full_axis_reduce(func, axis)
+        axis_none = True if axis is None else False
+        axis = 0 if axis is None else axis
+        kwargs["axis"] = axis
+        bool_only = kwargs.get("bool_only", None)
+        kwargs["bool_only"] = False if bool_only is None else bool_only
+
+        not_bool_col = []
+        numeric_col_count = 0
+        for col, dtype in zip(self.columns, self.dtypes):
+            if not is_bool_dtype(dtype):
+                not_bool_col.append(col)
+            numeric_col_count += 1 if is_numeric_dtype(dtype) else 0
+
+        if bool_only:
+            if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
+                return pandas.Series(dtype=bool)
+            query_compiler = self.drop(columns=not_bool_col)
+        else:
+            if (
+                bool_only is False
+                and axis_none
+                and len(not_bool_col) == len(self.columns)
+                and numeric_col_count != len(self.columns)
+            ):
+                if func == pandas.DataFrame.all:
+                    return self.getitem_single_key(self.columns[-1])[self.index[-1]]
+                elif func == pandas.DataFrame.any:
+                    return self.getitem_single_key(self.columns[0])[self.index[0]]
+            query_compiler = self
+
+        builder_func = query_compiler._prepare_method(func, **kwargs)
+        result = query_compiler.full_axis_reduce(builder_func, axis)
+        if axis_none:
+            return func(result)
+        else:
+            return result
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
@@ -1213,6 +1341,20 @@ class PandasDataManager(object):
 
         return self.index[first_result.max()]
 
+    def median(self, **kwargs):
+        """Returns median of each column or row.
+
+        Returns:
+            Series containing the median of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, query_compiler = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.median, **kwargs)
+        return query_compiler.full_axis_reduce(func, axis)
+
     def memory_usage(self, **kwargs):
         """Returns the memory usage of each column.
 
@@ -1237,6 +1379,62 @@ class PandasDataManager(object):
         func = self._prepare_method(pandas.DataFrame.nunique, **kwargs)
         return self.full_axis_reduce(func, axis)
 
+    def quantile_for_single_value(self, **kwargs):
+        """Returns quantile of each column or row.
+
+        Returns:
+            Series containing the quantile of each column or row.
+        """
+        axis = kwargs.get("axis", 0)
+        q = kwargs.get("q", 0.5)
+        numeric_only = kwargs.get("numeric_only", True)
+        assert type(q) is float
+        if numeric_only:
+            result, query_compiler = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return result
+        else:
+            query_compiler = self
+
+        def quantile_builder(df, **kwargs):
+            try:
+                return pandas.DataFrame.quantile(df, **kwargs)
+            except ValueError:
+                return pandas.Series()
+
+        func = self._prepare_method(quantile_builder, **kwargs)
+        result = query_compiler.full_axis_reduce(func, axis)
+        result.name = q
+        return result
+
+    def skew(self, **kwargs):
+        """Returns skew of each column or row.
+
+        Returns:
+            Series containing the skew of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, query_compiler = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.skew, **kwargs)
+        return query_compiler.full_axis_reduce(func, axis)
+
+    def std(self, **kwargs):
+        """Returns standard deviation of each column or row.
+
+        Returns:
+            Series containing the standard deviation of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, query_compiler = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = self._prepare_method(pandas.DataFrame.std, **kwargs)
+        return query_compiler.full_axis_reduce(func, axis)
+
     def to_datetime(self, **kwargs):
         """Converts the Manager to a Series of DateTime objects.
 
@@ -1251,6 +1449,20 @@ class PandasDataManager(object):
 
         func = self._prepare_method(to_datetime_builder, **kwargs)
         return self.full_axis_reduce(func, 1)
+
+    def var(self, **kwargs):
+        """Returns variance of each column or row.
+
+        Returns:
+            Series containing the variance of each column or row.
+        """
+        # Pandas default is 0 (though not mentioned in docs)
+        axis = kwargs.get("axis", 0)
+        result, query_compiler = self.numeric_function_clean_dataframe(axis)
+        if result is not None:
+            return result
+        func = query_compiler._prepare_method(pandas.DataFrame.var, **kwargs)
+        return query_compiler.full_axis_reduce(func, axis)
 
     # END Column/Row partitions reduce operations
 
@@ -1273,7 +1485,7 @@ class PandasDataManager(object):
             pandas_result: Return the result as a Pandas Series instead of raw data.
 
         Returns:
-            Either a Pandas Series with index or BlockPartitions object.
+            Either a Pandas Series with index or BaseBlockPartitions object.
         """
         # Convert indices to numeric indices
         old_index = self.index if axis else self.columns
@@ -1292,15 +1504,36 @@ class PandasDataManager(object):
         Returns:
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
-        # Only describe numeric if there are numeric
+        # Only describe numeric if there are numeric columns
         # Otherwise, describe all
-        columns_for_describe = self.numeric_columns()
-        if len(columns_for_describe) != 0 and "object" in kwargs["exclude"]:
+        new_columns = self.numeric_columns(include_bool=False)
+        if len(new_columns) != 0:
             numeric = True
+            exclude = kwargs.get("exclude", None)
+            if is_list_like(exclude):
+                exclude.append([np.timedelta64, np.datetime64])
+            else:
+                exclude = [exclude, np.timedelta64, np.datetime64]
+            kwargs["exclude"] = exclude
         else:
             numeric = False
-            # If no numeric dtypes, then do all
-            columns_for_describe = self.columns
+            # If only timedelta and datetime objects, only do the timedelta
+            # columns
+            if all(
+                (
+                    dtype
+                    for dtype in self.dtypes
+                    if dtype == np.datetime64 or dtype == np.timedelta64
+                )
+            ):
+                new_columns = [
+                    self.columns[i]
+                    for i in range(len(self.columns))
+                    if self.dtypes[i] != np.dtype("datetime64[ns]")
+                ]
+            else:
+                # Describe all columns
+                new_columns = self.columns
 
         def describe_builder(df, **kwargs):
             return pandas.DataFrame.describe(df, **kwargs)
@@ -1308,9 +1541,8 @@ class PandasDataManager(object):
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
         new_data = self.full_axis_reduce_along_select_indices(
-            func, 0, columns_for_describe, False
+            func, 0, new_columns, False
         )
-        new_columns = columns_for_describe
         new_index = self.compute_index(0, new_data, False)
         if numeric:
             new_dtypes = pandas.Series(
@@ -1321,103 +1553,6 @@ class PandasDataManager(object):
                 [np.object for _ in new_columns], index=new_columns
             )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
-
-    def median(self, **kwargs):
-        """Returns median of each column or row.
-
-        Returns:
-            Series containing the median of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def median_builder(df, **kwargs):
-            return pandas.DataFrame.median(df, **kwargs)
-
-        func = self._prepare_method(median_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def skew(self, **kwargs):
-        """Returns skew of each column or row.
-
-        Returns:
-            Series containing the skew of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def skew_builder(df, **kwargs):
-            return pandas.DataFrame.skew(df, **kwargs)
-
-        func = self._prepare_method(skew_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def std(self, **kwargs):
-        """Returns standard deviation of each column or row.
-
-        Returns:
-            Series containing the standard deviation of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        def std_builder(df, **kwargs):
-            return pandas.DataFrame.std(df, **kwargs)
-
-        func = self._prepare_method(std_builder, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def var(self, **kwargs):
-        """Returns varience of each column or row.
-
-        Returns:
-            Series containing the varience of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        result, data_manager = self.numeric_function_clean_dataframe(axis)
-        if result is not None:
-            return result
-
-        func = data_manager._prepare_method(pandas.DataFrame.var, **kwargs)
-        return data_manager.full_axis_reduce(func, axis)
-
-    def quantile_for_single_value(self, **kwargs):
-        """Returns quantile of each column or row.
-
-        Returns:
-            Series containing the quantile of each column or row.
-        """
-        axis = kwargs.get("axis", 0)
-        q = kwargs.get("q", 0.5)
-        numeric_only = kwargs.get("numeric_only", True)
-        assert type(q) is float
-        if numeric_only:
-            result, data_manager = self.numeric_function_clean_dataframe(axis)
-            if result is not None:
-                return result
-        else:
-            data_manager = self
-
-        def quantile_builder(df, **kwargs):
-            try:
-                return pandas.DataFrame.quantile(df, **kwargs)
-            except ValueError:
-                return pandas.Series()
-
-        func = self._prepare_method(quantile_builder, **kwargs)
-        result = data_manager.full_axis_reduce(func, axis)
-        result.name = q
-        return result
 
     # END Column/Row partitions reduce operations over select indices
 
@@ -1571,31 +1706,37 @@ class PandasDataManager(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
+        numeric_only = kwargs.get("numeric_only", False)
         func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
 
-        counts = (
-            self.__constructor__(new_data, self.index, self.columns)
+        if numeric_only:
+            result, query_compiler = self.numeric_function_clean_dataframe(axis)
+            if result is not None:
+                return self.from_pandas(
+                    pandas.DataFrame(index=query_compiler.index), type(self.data)
+                )
+        else:
+            query_compiler = self
+
+        max_count = (
+            self.__constructor__(new_data, query_compiler.index, query_compiler.columns)
             .notnull()
             .sum(axis=axis)
-        )
-        max_count = counts.max()
+        ).max()
 
-        new_index = pandas.RangeIndex(max_count) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(max_count)
+        new_index = pandas.RangeIndex(max_count) if not axis else query_compiler.index
+        new_columns = (
+            query_compiler.columns if not axis else pandas.RangeIndex(max_count)
+        )
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
         final_labels = new_index if not axis else new_columns
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
-        final_data = self.__constructor__(
-            new_data, new_index, new_columns
-        ).map_across_full_axis(
-            axis, lambda df: df.reindex(axis=axis, labels=final_labels)
-        )
         return self.__constructor__(
-            final_data, new_index, new_columns, self._dtype_cache
-        )
+            new_data, new_index, new_columns, query_compiler._dtype_cache
+        ).reindex(axis=axis, labels=final_labels)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -1693,7 +1834,7 @@ class PandasDataManager(object):
             keep_remaining: True if keep indices where function was not applied.
 
         Returns:
-            BlockPartitions containing the result of mapping func over axis on indices.
+            BaseBlockPartitions containing the result of mapping func over axis on indices.
         """
         return self.data.apply_func_to_select_indices_along_full_axis(
             axis, func, indices, keep_remaining
@@ -1727,13 +1868,13 @@ class PandasDataManager(object):
                 for col, dtype in zip(self.columns, self.dtypes)
                 if not is_numeric_dtype(dtype)
             ]
-            data_manager = self.drop(columns=nonnumeric)
-            new_columns = data_manager.index
-            numeric_indices = list(data_manager.index.get_indexer_for(new_columns))
-            data_manager = data_manager.transpose()
+            query_compiler = self.drop(columns=nonnumeric)
+            new_columns = query_compiler.index
+            numeric_indices = list(query_compiler.index.get_indexer_for(new_columns))
+            query_compiler = query_compiler.transpose()
             kwargs.pop("axis")
         else:
-            data_manager = self
+            query_compiler = self
             numeric_indices = list(self.columns.get_indexer_for(new_columns))
 
         def quantile_builder(df, internal_indices=[], **kwargs):
@@ -1741,7 +1882,7 @@ class PandasDataManager(object):
 
         func = self._prepare_method(quantile_builder, **kwargs)
         q_index = pandas.Float64Index(q)
-        new_data = data_manager.map_across_full_axis_select_indices(
+        new_data = query_compiler.map_across_full_axis_select_indices(
             0, func, numeric_indices
         )
         return self.__constructor__(new_data, q_index, new_columns)
@@ -1761,6 +1902,8 @@ class PandasDataManager(object):
         # We grab the front if it is transposed and flag as transposed so that
         # we are not physically updating the data from this manager. This
         # allows the implementation to stay modular and reduces data copying.
+        if n < 0:
+            n = max(0, len(self.index) + n)
         if self._is_transposed:
             # Transpose the blocks back to their original orientation first to
             # ensure that we extract the correct data on each node. The index
@@ -1789,17 +1932,23 @@ class PandasDataManager(object):
             DataManager containing the last n rows of the original DataManager.
         """
         # See head for an explanation of the transposed behavior
+        if n < 0:
+            n = max(0, len(self.index) + n)
+        if n == 0:
+            index = pandas.Index([])
+        else:
+            index = self.index[-n:]
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(1, -n).transpose(),
-                self.index[-n:],
+                index,
                 self.columns,
                 self._dtype_cache,
             )
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
+                self.data.take(0, -n), index, self.columns, self._dtype_cache
             )
 
         return result
@@ -1877,8 +2026,15 @@ class PandasDataManager(object):
             Pandas DataFrame of the DataManager.
         """
         df = self.data.to_pandas(is_transposed=self._is_transposed)
-        df.index = self.index
-        df.columns = self.columns
+        if df.empty:
+            dtype_dict = {
+                col_name: pandas.Series(dtype=self.dtypes[col_name])
+                for col_name in self.columns
+            }
+            df = pandas.DataFrame(dtype_dict, self.index)
+        else:
+            df.index = self.index
+            df.columns = self.columns
         return df
 
     @classmethod
@@ -2046,8 +2202,11 @@ class PandasDataManager(object):
         """
 
         def insert(df, internal_indices=[]):
-            internal_idx = internal_indices[0]
+            internal_idx = int(internal_indices[0])
+            old_index = df.index
+            df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
+            df.index = old_index
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
@@ -2085,7 +2244,7 @@ class PandasDataManager(object):
         """Recompute the index after applying function.
 
         Args:
-            result_data: a BlockPartitions object.
+            result_data: a BaseBlockPartitions object.
             axis: Target axis along which function was applied.
 
         Returns:
@@ -2222,7 +2381,7 @@ class PandasDataManager(object):
             repartition_func: The function used to repartition data.
 
         Returns:
-            A `BlockPartitions` object.
+            A `BaseBlockPartitions` object.
         """
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
@@ -2330,7 +2489,7 @@ class PandasDataManager(object):
             index_map_series = index_map_series.reindex(index)
         if columns is not None:
             column_map_series = column_map_series.reindex(columns)
-        return PandasDataManagerView(
+        return PandasQueryCompilerView(
             self.data,
             index_map_series.index,
             column_map_series.index,
@@ -2407,7 +2566,7 @@ class PandasDataManager(object):
         return self.__constructor__(new_data, concated_index, concated_columns)
 
 
-class PandasDataManagerView(PandasDataManager):
+class PandasQueryCompilerView(PandasQueryCompiler):
     """
     This class represent a view of the PandasDataManager
 
@@ -2417,7 +2576,7 @@ class PandasDataManagerView(PandasDataManager):
 
     def __init__(
         self,
-        block_partitions_object: BlockPartitions,
+        block_partitions_object: BaseBlockPartitions,
         index: pandas.Index,
         columns: pandas.Index,
         dtypes=None,
@@ -2440,13 +2599,13 @@ class PandasDataManagerView(PandasDataManager):
         self.columns_map = columns_map_series
         self.is_view = True
 
-        PandasDataManager.__init__(
+        PandasQueryCompiler.__init__(
             self, block_partitions_object, index, columns, dtypes
         )
 
     def __constructor__(
         self,
-        block_partitions_object: BlockPartitions,
+        block_partitions_object: BaseBlockPartitions,
         index: pandas.Index,
         columns: pandas.Index,
         dtypes=None,
@@ -2462,11 +2621,11 @@ class PandasDataManagerView(PandasDataManager):
             new_columns_map,
         )
 
-    def _get_data(self) -> BlockPartitions:
+    def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
 
         Returns:
-            A BlockPartitions object.
+            A BaseBlockPartitions object.
         """
 
         def iloc(partition, row_internal_indices, col_internal_indices):

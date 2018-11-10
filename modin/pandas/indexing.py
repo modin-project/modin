@@ -111,6 +111,7 @@ def _is_enlargement(locator, global_index):
         and not is_slice(locator)
         and len(locator) > 0
         and not is_boolean_array(locator)
+        and (isinstance(locator, type(global_index[0])) and locator not in global_index)
     ):
         n_diff_elems = len(pandas.Index(locator).difference(global_index))
         is_enlargement_boolean = n_diff_elems > 0
@@ -143,7 +144,7 @@ class _LocationIndexerBase(object):
     """
 
     def __init__(self, ray_df: DataFrame):
-        self.dm = ray_df._data_manager
+        self.dm = ray_df._query_compiler
         self.is_view = hasattr(self.dm, "is_view")
 
         self.row_scaler = False
@@ -158,7 +159,7 @@ class _LocationIndexerBase(object):
             dm_view = self.dm.view(row_lookup, col_lookup)
 
         if ndim == 2:
-            return DataFrame(data_manager=dm_view)
+            return DataFrame(query_compiler=dm_view)
         elif ndim == 0:
             return dm_view.squeeze(ndim=0)
         else:
@@ -274,6 +275,12 @@ class _LocIndexer(_LocationIndexerBase):
         return ndim
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
+        if isinstance(row_loc, list) and len(row_loc) == 1:
+            if (
+                isinstance(self.dm.index.values[0], np.datetime64)
+                and type(row_loc[0]) != np.datetime64
+            ):
+                row_loc = [pandas.to_datetime(row_loc[0])]
         row_lookup = self.dm.index.to_series().loc[row_loc].index
         col_lookup = self.dm.columns.to_series().loc[col_loc].index
         return row_lookup, col_lookup
