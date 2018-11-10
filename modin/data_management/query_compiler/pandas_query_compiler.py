@@ -137,6 +137,26 @@ class PandasQueryCompiler(object):
         )
         return index_obj[new_indices] if compute_diff else new_indices
 
+    def compute_multilevel_index(self, idx, levels):
+        """Computes the multilevel index after operations
+
+            Returns:
+                A new pandas.Index object or pandas.MultiIndex object
+        """
+        levels = [levels] if not is_list_like(levels) else levels
+        if any(idx.names):
+            all_levels = {idx.names[i]: i for i in range(len(idx.names))}
+        else:
+            all_levels = {i: i for i in range(idx.nlevels)}
+        numeric_levels = [all_levels.get(l) for l in levels]
+        if numeric_levels[0] is None:
+            all_levels = {i: i for i in range(idx.nlevels)}
+            numeric_levels = [all_levels.get(l) for l in levels]
+        if len(numeric_levels) == 1:
+            return pandas.Index(idx.levels[numeric_levels[0]], name=idx.names[numeric_levels[0]])
+        return pandas.MultiIndex.from_product([idx.levels[i] for i in sorted(numeric_levels)])
+
+
     # END Index and columns objects
 
     # Internal methods
@@ -926,14 +946,48 @@ class PandasQueryCompiler(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
+        level = kwargs.get("level", None)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
+
+        reduce_index = self.columns if axis else self.index
 
         def min_max_builder(df, **kwargs):
             if not df.empty:
-                return func(df, **kwargs)
+                axis = kwargs.get("axis", 0)
+                level = kwargs.get("level", None)
+                if level is not None:
+                    if not axis:
+                        df.index = kwargs.get("reduce_index", None)
+                    else:
+                        df.columns = kwargs.get("reduce_index", None)
+                kwargs.pop("reduce_index", None)
+                result = func(df, **kwargs)
+                if level is not None:
+                    if not axis:
+                        result.index = pandas.RangeIndex(result.shape[0])
+                    else:
+                        result.columns = pandas.RangeIndex(result.shape[1])
+                return result
 
+        kwargs["reduce_index"] = reduce_index
         map_func = self._prepare_method(min_max_builder, **kwargs)
-        return self.full_reduce(axis, map_func, numeric_only=numeric_only)
+
+        if level is not None:
+            result = self.map_across_full_axis(axis, map_func)
+        else:
+            result = self.full_reduce(axis, map_func, numeric_only=numeric_only)
+
+        if level is None:
+            return result
+
+        new_index = self.compute_multilevel_index(reduce_index, level)
+        if axis:
+            return self.__constructor__(
+                result, self.index, new_index
+            )
+        return self.__constructor__(
+            result, new_index, self.columns
+        )
 
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
@@ -1024,13 +1078,18 @@ class PandasQueryCompiler(object):
             if not df.empty:
                 axis = kwargs.get("axis", 0)
                 level = kwargs.get("level", None)
-                if level:
+                if level is not None:
                     if not axis:
                         df.index = kwargs.get("reduce_index", None)
                     else:
                         df.columns = kwargs.get("reduce_index", None)
                 kwargs.pop("reduce_index", None)
                 result = func(df, **kwargs)
+                if level is not None:
+                    if not axis:
+                        result.index = pandas.RangeIndex(result.shape[0])
+                    else:
+                        result.columns = pandas.RangeIndex(result.shape[1])
                 return result
 
         kwargs["reduce_index"] = reduce_index
@@ -1046,55 +1105,47 @@ class PandasQueryCompiler(object):
                     for col, dtype in zip(self.columns, self.dtypes)
                     if dtype == np.dtype("timedelta64[ns]")
                 ]
-                if level:
+                if level is not None:
                     result = self.map_across_full_axis(axis, map_func)
-                    new_index = self.compute_index(axis, result, compute_diff=False)
                 else:
                     result = self.full_axis_reduce(map_func, axis, new_index)
             else:
-                if level:
+                if level is not None:
                     result = self.map_across_full_axis(axis, map_func)
-                    new_index = self.compute_index(axis, result, compute_diff=False)
                 else:
                     result = self.full_axis_reduce(map_func, axis)
         elif min_count == 0:
             if numeric_only is None:
                 numeric_only = True
-            if level:
+            if level is not None:
                 result = self.map_across_full_axis(axis, map_func)
-                new_index = self.compute_index(axis, result, compute_diff=False)
             else:
                 result = self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
-            if level:
+            if level is not None:
                 result = self.map_across_full_axis(axis, map_func)
-                new_index = self.compute_index(axis, result, compute_diff=False)
                 if axis:
-                    result.columns = pandas.RangeIndex(result.shape[1])
                     return self.from_pandas(pandas.DataFrame(np.nan, index=self.index, columns=new_index), type(result))
-                result.index = pandas.RangeIndex(result.shape[0])
                 return self.from_pandas(pandas.DataFrame(np.nan, index=new_index, columns=self.columns), type(result))
             else:
                 return pandas.Series(
                     [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
                 )
         else:
-            if level:
+            if level is not None:
                 result = self.map_across_full_axis(axis, map_func)
-                new_index = self.compute_index(axis, result, compute_diff=False)
             else:
                 result = self.full_axis_reduce(map_func, axis, new_index)
 
-        if not level:
+        if level is None:
             return result
+        new_index = self.compute_multilevel_index(reduce_index, level)
         if axis:
-            result.columns = pandas.RangeIndex(result.shape[1])
             return self.__constructor__(
-                result, self.index, new_index, self._dtype_cache
+                result, self.index, new_index
             )
-        result.index = pandas.RangeIndex(result.shape[0])
         return self.__constructor__(
-                result, new_index, self.columns, self._dtype_cache
+                result, new_index, self.columns
             )
 
 
@@ -1291,7 +1342,7 @@ class PandasQueryCompiler(object):
         axis = 0 if axis is None else axis
         kwargs["axis"] = axis
         bool_only = kwargs.get("bool_only", None)
-        kwargs["bool_only"] = False if bool_only is None else bool_only
+        level = kwargs.get("level", None)
 
         not_bool_col = []
         numeric_col_count = 0
@@ -1300,7 +1351,31 @@ class PandasQueryCompiler(object):
                 not_bool_col.append(col)
             numeric_col_count += 1 if is_numeric_dtype(dtype) else 0
 
+        reduce_index = self.columns if axis else self.index
+        if level is not None:
+            kwargs["reduce_index"] = reduce_index
+
+        def all_any_builder(df, **kwargs):
+            axis = kwargs.get("axis", 0)
+            level = kwargs.get("level", None)
+            if level is not None:
+                if not axis:
+                    df.index = kwargs.get("reduce_index", None)
+                else:
+                    df.columns = kwargs.get("reduce_index", None)
+            kwargs.pop("reduce_index", None)
+            result = func(df, **kwargs)
+            if level is not None:
+                if not axis:
+                    result.index = pandas.RangeIndex(result.shape[0])
+                else:
+                    result.columns = pandas.RangeIndex(result.shape[1])
+            return result
+
         if bool_only:
+            if level is not None:
+                raise NotImplementedError("Option bool_only is not "
+                                          "implemented with option level.")
             if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
                 return pandas.Series(dtype=bool)
             if len(not_bool_col) == len(self.columns):
@@ -1309,7 +1384,7 @@ class PandasQueryCompiler(object):
                 query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
-                bool_only is False
+                not bool_only
                 and axis_none
                 and len(not_bool_col) == len(self.columns)
                 and numeric_col_count != len(self.columns)
@@ -1320,12 +1395,26 @@ class PandasQueryCompiler(object):
                     return self.getitem_single_key(self.columns[0])[self.index[0]]
             query_compiler = self
 
-        builder_func = query_compiler._prepare_method(func, **kwargs)
-        result = query_compiler.full_axis_reduce(builder_func, axis)
+        builder_func = query_compiler._prepare_method(all_any_builder, **kwargs)
+
+        if level is not None:
+            result = query_compiler.map_across_full_axis(axis, builder_func)
+        else:
+            result = query_compiler.full_axis_reduce(builder_func, axis)
+
         if axis_none:
             return func(result)
-        else:
+        elif level is None:
             return result
+        else:
+            new_index = self.compute_multilevel_index(reduce_index, level)
+            if axis:
+                return self.__constructor__(
+                    result, self.index, new_index
+                )
+            return self.__constructor__(
+                result, new_index, self.columns
+            )
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.

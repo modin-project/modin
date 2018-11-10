@@ -663,9 +663,12 @@ class DataFrame(object):
         else:
             if bool_only:
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
-        return self._query_compiler.all(
+        result = self._query_compiler.all(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
+        if level is None:
+            return result
+        return self._create_dataframe_from_manager(new_manager=result)
 
     def any(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether any elements are True over requested axis
@@ -679,9 +682,12 @@ class DataFrame(object):
         else:
             if bool_only:
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
-        return self._query_compiler.any(
+        result = self._query_compiler.any(
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
+        if level is None:
+            return result
+        return self._create_dataframe_from_manager(new_manager=result)
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=None):
         """Append another DataFrame/list/Series to this one.
