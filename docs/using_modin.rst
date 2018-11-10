@@ -67,8 +67,8 @@ Advanced usage (experimental)
 
 In some cases, it may be useful to customize your Ray environment. Below, we have listed
 a few ways you can solve common problems in data management with Modin by customizing
-your Ray environment. It is possible to use any of Ray's initialization parameters, all
-of which can be found in `Ray's documentation`_.
+your Ray environment. It is possible to use any of Ray's initialization parameters,
+which are all found in `Ray's documentation`_.
 
 .. code-block:: python
 
@@ -98,7 +98,7 @@ back your memory with disk:
    import modin.pandas as pd
 
 Setting ``plasma_directory="/tmp"`` uses your disk for storing the DataFrame and setting
-the number of bytes will set the maximum size of the plasma store.
+``object_store_memory`` sets the maximum size of the plasma store.
 
 Note: This will impact performance for most operations. This should be used when you are
 trying to use very large datasets.
@@ -110,9 +110,8 @@ Reducing or limiting the resources Modin can use
 """"""""""""""""""""""""""""""""""""""""""""""""
 
 By default, Modin will use all of the resources available on your machine. It is
-possible, however, to limit the amount of resources Modin uses if you wish to free up
-resources for another task or user. Here is how you would limit the number of CPUs Modin
-used:
+possible, however, to limit the amount of resources Modin uses to free resources for
+another task or user. Here is how you would limit the number of CPUs Modin used:
 
 .. code-block:: python
 
