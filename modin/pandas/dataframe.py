@@ -499,23 +499,20 @@ class DataFrame(object):
 
         if is_list_like(axis):
             axis = [pandas.DataFrame()._get_axis_number(ax) for ax in axis]
-
             result = self
 
             for ax in axis:
-                new_query_compiler = result.dropna(
+                result = result.dropna(
                     axis=ax, how=how, thresh=thresh, subset=subset
                 )
-            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
-
-        axis = pandas.DataFrame()._get_axis_number(axis)
+            return self._create_dataframe_from_compiler(result._query_compiler, inplace)
 
         if how is not None and how not in ["any", "all"]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
-
         if subset is not None:
+            axis = pandas.DataFrame()._get_axis_number(axis)
             if axis == 1:
                 indices = self.index.get_indexer_for(subset)
                 check = indices == -1
@@ -526,7 +523,6 @@ class DataFrame(object):
                 check = indices == -1
                 if check.any():
                     raise KeyError(list(np.compress(check, subset)))
-
         new_query_compiler = self._query_compiler.dropna(
             axis=axis, how=how, thresh=thresh, subset=subset
         )
@@ -1469,7 +1465,7 @@ class DataFrame(object):
                 limit=limit,
                 downcast=downcast,
                 **kwargs
-            )
+            )._query_compiler
             return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
@@ -4858,6 +4854,8 @@ class DataFrame(object):
 
     def _create_dataframe_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
+        assert isinstance(new_query_compiler, type(self._query_compiler)), \
+            "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return DataFrame(query_compiler=new_query_compiler)
         else:
