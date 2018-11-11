@@ -502,9 +502,7 @@ class DataFrame(object):
             result = self
 
             for ax in axis:
-                result = result.dropna(
-                    axis=ax, how=how, thresh=thresh, subset=subset
-                )
+                result = result.dropna(axis=ax, how=how, thresh=thresh, subset=subset)
             return self._create_dataframe_from_compiler(result._query_compiler, inplace)
 
         if how is not None and how not in ["any", "all"]:
@@ -4854,8 +4852,9 @@ class DataFrame(object):
 
     def _create_dataframe_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
-        assert isinstance(new_query_compiler, type(self._query_compiler)), \
-            "Invalid Query Compiler object: {}".format(type(new_query_compiler))
+        assert isinstance(
+            new_query_compiler, type(self._query_compiler)
+        ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return DataFrame(query_compiler=new_query_compiler)
         else:
