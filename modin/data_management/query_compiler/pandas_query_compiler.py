@@ -1240,7 +1240,10 @@ class PandasQueryCompiler(object):
         if bool_only:
             if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
                 return pandas.Series(dtype=bool)
-            query_compiler = self.drop(columns=not_bool_col)
+            if len(not_bool_col) == len(self.columns):
+                query_compiler = self
+            else:
+                query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False
