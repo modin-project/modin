@@ -16,4 +16,4 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==0.23.4", "ray==0.5.3", "typing"])
+    install_requires=["pandas==0.23.4", "ray==0.5.3"])
