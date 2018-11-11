@@ -119,7 +119,7 @@ class DataFrame(object):
     def __repr__(self):
         # In the future, we can have this be configurable, just like Pandas.
         num_rows = 60
-        num_cols = 20
+        num_cols = 30
 
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
