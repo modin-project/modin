@@ -135,7 +135,6 @@ __all__ = [
     "NaT",
     "PeriodIndex",
     "Categorical",
-    "__git_revision__",
     "__version__",
 ]
 
