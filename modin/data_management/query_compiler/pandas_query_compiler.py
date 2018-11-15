@@ -2211,7 +2211,7 @@ class PandasQueryCompiler(object):
             value: Dtype object values to insert.
 
         Returns:
-            A new PandasDataManager with new data inserted.
+            A new PandasQueryCompiler with new data inserted.
         """
 
         def insert(df, internal_indices=[]):
@@ -2242,7 +2242,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
@@ -2253,7 +2253,7 @@ class PandasQueryCompiler(object):
         else:
             pass
 
-    def _post_process_apply(self, result_data, axis, try_scale=True):
+    def _post_process_apply(self, result_data, axis):
         """Recompute the index after applying function.
 
         Args:
@@ -2261,24 +2261,14 @@ class PandasQueryCompiler(object):
             axis: Target axis along which function was applied.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
-        if try_scale:
-            try:
-                index = self.compute_index(0, result_data, True)
-            except IndexError:
-                index = self.compute_index(0, result_data, False)
-            try:
-                columns = self.compute_index(1, result_data, True)
-            except IndexError:
-                columns = self.compute_index(1, result_data, False)
+        if not axis:
+            index = self.compute_index(0, result_data, False)
+            columns = self.columns
         else:
-            if not axis:
-                index = self.compute_index(0, result_data, False)
-                columns = self.columns
-            else:
-                index = self.index
-                columns = self.compute_index(1, result_data, False)
+            index = self.index
+            columns = self.compute_index(1, result_data, False)
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
         # this logic here.
@@ -2309,7 +2299,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if "axis" not in kwargs:
             kwargs["axis"] = axis
@@ -2343,7 +2333,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
         new_data = self.map_across_full_axis(axis, func_prepared)
@@ -2359,7 +2349,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
 
         def callable_apply_builder(df, func, axis, index, *args, **kwargs):
