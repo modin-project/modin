@@ -54,4 +54,4 @@ else
 fi
 
 pip install -r requirements.txt
-pip install -q pytest feather-format lxml openpyxl xlrd numpy matplotlib
+pip install -q pytest==3.93 feather-format lxml openpyxl xlrd numpy matplotlib
