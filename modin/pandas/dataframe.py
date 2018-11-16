@@ -3791,7 +3791,18 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
+        # Checks for 1x1 DF, passes into squeeze with approproate ndim
+        if (
+            self._query_compiler.data.shape[0] == 1
+            and self._query_compiler.data.shape[1] == 1
+        ):
+            return self._query_compiler.squeeze(0, axis)
+        # Checks for 1xN or Nx1 DF, passes into squeeze with appropriate ndim
+        elif 1 in self._query_compiler.data.shape:
+            return self._query_compiler.squeeze(1, axis)
+        # NxN DF, don't need to pass into squeeze
+        else:
+            return self.copy()
 
     def stack(self, level=-1, dropna=True):
         return self._default_to_pandas_func(
