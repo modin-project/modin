@@ -3830,7 +3830,7 @@ class DataFrame(object):
             self._query_compiler.data.shape[0] == 1
             and self._query_compiler.data.shape[1] == 1
         ):
-            return self._query_compiler.squeeze(2, axis)
+            return self._query_compiler.squeeze(0, axis)
         # Checks for 1xN or Nx1 DF, passes into squeeze with appropriate ndim
         elif 1 in self._query_compiler.data.shape:
             return self._query_compiler.squeeze(1, axis)
