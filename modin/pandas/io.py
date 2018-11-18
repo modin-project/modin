@@ -525,12 +525,13 @@ def read_hdf(path_or_buf, key=None, mode="r", columns=None):
         else len(columns) // num_partitions + 1
     )
     col_partitions = [
-        columns[i: i + column_splits] for i in range(0, len(columns), column_splits)
+        columns[i : i + column_splits] for i in range(0, len(columns), column_splits)
     ]
     blk_partitions = np.array(
         [
             _read_hdf_columns._submit(
-                args=(path_or_buf, cols, num_splits, key, mode), num_return_vals=num_splits + 1
+                args=(path_or_buf, cols, num_splits, key, mode),
+                num_return_vals=num_splits + 1,
             )
             for cols in col_partitions
         ]
