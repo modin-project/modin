@@ -963,7 +963,32 @@ class PandasQueryCompiler(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
+        sums = self.sum(**kwargs)
+        counts = self.count(axis=axis, numeric_only=kwargs.get("numeric_only", None))
+        try:
+            # If we need to drop any columns, it will throw a TypeError
+            return sums.divide(counts)
+        # In the case that a TypeError is thrown, we need to iterate through, similar to
+        # how pandas does and do the division only on things that can be divided.
+        # NOTE: We will only hit this condition if numeric_only is not True.
+        except TypeError:
+
+            def can_divide(l, r):
+                try:
+                    pandas.Series([l]).divide(r)
+                except TypeError:
+                    return False
+                return True
+
+            # Iterate through the sums to check that we can divide them. If not, then
+            # drop the record. This matches pandas behavior.
+            return pandas.Series(
+                {
+                    idx: sums[idx] / counts[idx]
+                    for idx in sums.index
+                    if can_divide(sums[idx], counts[idx])
+                }
+            )
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -973,7 +998,7 @@ class PandasQueryCompiler(object):
         """
         return self._process_min_max(pandas.DataFrame.min, **kwargs)
 
-    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+    def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
 
         Args:
@@ -983,12 +1008,10 @@ class PandasQueryCompiler(object):
             Pandas Series with sum or prod of DataFrame.
         """
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", None)
-        min_count = kwargs.get("min_count", 0)
-
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-
+        numeric_only = kwargs.get("numeric_only", None) if not axis else True
+        min_count = kwargs.get("min_count", 1)
         reduce_index = self.columns if axis else self.index
+
         if numeric_only:
             result, query_compiler = self.numeric_function_clean_dataframe(axis)
         else:
@@ -998,32 +1021,19 @@ class PandasQueryCompiler(object):
         def sum_prod_builder(df, **kwargs):
             if not df.empty:
                 return func(df, **kwargs)
+            else:
+                return pandas.DataFrame([])
 
         map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
-        if all(
-            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
-            for dtype in self.dtypes
-        ):
-            if numeric_only is None:
-                new_index = [
-                    col
-                    for col, dtype in zip(self.columns, self.dtypes)
-                    if dtype == np.dtype("timedelta64[ns]")
-                ]
-                return self.full_axis_reduce(map_func, axis, new_index)
-            else:
-                return self.full_axis_reduce(map_func, axis)
-        elif min_count == 0:
-            if numeric_only is None:
-                numeric_only = True
+        if min_count == 1:
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
             return pandas.Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
         else:
-            return self.full_axis_reduce(map_func, axis, new_index)
+            return self.full_axis_reduce(map_func, axis)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -1031,7 +1041,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -1039,7 +1049,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
 
     # END Full Reduce operations
 
@@ -1230,7 +1240,10 @@ class PandasQueryCompiler(object):
         if bool_only:
             if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
                 return pandas.Series(dtype=bool)
-            query_compiler = self.drop(columns=not_bool_col)
+            if len(not_bool_col) == len(self.columns):
+                query_compiler = self
+            else:
+                query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False
@@ -2499,15 +2512,20 @@ class PandasQueryCompiler(object):
         )
 
     def squeeze(self, ndim=0, axis=None):
-        squeezed = self.data.to_pandas().squeeze()
+        to_squeeze = self.data.to_pandas()
+        # This is the case for 1xN or Nx1 DF - Need to call squeeze
         if ndim == 1:
-            squeezed = pandas.Series(squeezed)
-            scaler_axis = self.index if axis == 0 else self.columns
-            non_scaler_axis = self.index if axis == 1 else self.columns
-
+            if axis is None:
+                axis = 0 if self.data.shape[1] > 1 else 1
+            squeezed = pandas.Series(to_squeeze.squeeze(axis))
+            scaler_axis = self.columns if axis else self.index
+            non_scaler_axis = self.index if axis else self.columns
             squeezed.name = scaler_axis[0]
             squeezed.index = non_scaler_axis
-        return squeezed
+            return squeezed
+        # This is the case for a 1x1 DF - We don't need to squeeze
+        else:
+            return to_squeeze.values[0][0]
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):

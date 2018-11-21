@@ -79,6 +79,7 @@ try:
             include_webui=False,
             redirect_worker_output=True,
             use_raylet=True,
+            ignore_reinit_error=True,
         )
 except AssertionError:
     pass
@@ -135,7 +136,6 @@ __all__ = [
     "NaT",
     "PeriodIndex",
     "Categorical",
-    "__git_revision__",
     "__version__",
 ]
 
