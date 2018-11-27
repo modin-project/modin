@@ -24,24 +24,26 @@ Currently, we support ~71% of the pandas API. The exact methods we have implemen
 listed below.
 
 We have taken a community-driven approach to implementing new methods. We did a `study
-on pandas usage`_ to learn what the most-used APIs are. We currently support **93%** of
-the pandas API based on our study on pandas usage, and are actively expanding the API.
+on pandas usage`_ to learn what the most-used APIs are. Modin currently supports **93%**
+of the pandas API based on our study of pandas usage, and we are actively expanding the
+API.
 
 Defaulting to pandas
 --------------------
 
-The remaining unimplemented methods default to pandas. This is done to allow workloads
-that use some of the methods that are not yet implemented to continue using Modin. Here
-is a diagram of how we convert to pandas and perform the operation:
+The remaining unimplemented methods default to pandas. This allows users to continue
+using Modin even though their workloads contain function not yet implemented in Modin.
+Here is a diagram of how we convert to pandas and perform the operation:
 
 .. image:: img/convert_to_pandas.png
    :align: center
 
 We first convert to a pandas DataFrame, then perform the operation. There is a
-performance penalty to going from a partitioned Modin DataFrame to pandas because of the
-communication cost and single-threaded nature of pandas. Once the pandas operation has
-completed, we convert the DataFrame back into a partitioned Modin DataFrame. This way,
-future operations will be optimized.
+performance penalty for going from a partitioned Modin DataFrame to pandas because of
+the communication cost and single-threaded nature of pandas. Once the pandas operation
+has completed, we convert the DataFrame back into a partitioned Modin DataFrame. This
+way, operations performed after something defaults to pandas will be optimized with
+Modin.
 
 DataFrame
 ---------
