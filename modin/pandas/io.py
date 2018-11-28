@@ -368,7 +368,7 @@ def _read(filepath_or_buffer, **kwargs):
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     # TODO: replace this by reading lines from file.
-    if kwargs.get("nrows", None) is not None:
+    if kwargs.get("nrows") is not None:
         warnings.warn("Defaulting to Pandas implementation.", UserWarning)
         return _read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
     else:
