@@ -32,7 +32,7 @@ Defaulting to pandas
 --------------------
 
 The remaining unimplemented methods default to pandas. This allows users to continue
-using Modin even though their workloads contain function not yet implemented in Modin.
+using Modin even though their workloads contain functions not yet implemented in Modin.
 Here is a diagram of how we convert to pandas and perform the operation:
 
 .. image:: img/convert_to_pandas.png
