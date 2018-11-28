@@ -317,6 +317,7 @@ def _read(filepath_or_buffer, **kwargs):
         }
     # This happens on Python2, we will just default to serializing the entire dictionary
     except AttributeError:
+        filtered_kwargs = kwargs
         # We suppress the error and delete the kwargs not needed in the remote function.
         del filtered_kwargs["filepath_or_buffer"]
         del filtered_kwargs["frame"]
