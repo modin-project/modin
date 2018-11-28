@@ -287,8 +287,7 @@ def _make_parser_func(sep):
         memory_map=False,
         float_precision=None,
     ):
-        frame = inspect.currentframe()
-        _, _, _, kwargs = inspect.getargvalues(frame)
+        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
         return _read(**kwargs)
 
     return parser_func
