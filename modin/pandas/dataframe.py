@@ -414,7 +414,7 @@ class DataFrame(object):
         )
         if level is None:
             return result
-        return self._create_dataframe_from_manager(new_manager=result)
+        return self._create_dataframe_from_compiler(new_query_compiler=result)
 
     def abs(self):
         """Apply an absolute value function to all numeric columns.
@@ -668,7 +668,7 @@ class DataFrame(object):
         )
         if level is None:
             return result
-        return self._create_dataframe_from_manager(new_manager=result)
+        return self._create_dataframe_from_compiler(new_query_compiler=result)
 
     def any(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
         """Return whether any elements are True over requested axis
@@ -687,7 +687,7 @@ class DataFrame(object):
         )
         if level is None:
             return result
-        return self._create_dataframe_from_manager(new_manager=result)
+        return self._create_dataframe_from_compiler(new_query_compiler=result)
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=None):
         """Append another DataFrame/list/Series to this one.
@@ -2775,7 +2775,7 @@ class DataFrame(object):
         )
         if not level:
             return result
-        return self._create_dataframe_from_manager(new_manager=result)
+        return self._create_dataframe_from_compiler(new_query_compiler=result)
 
     def product(
         self,
