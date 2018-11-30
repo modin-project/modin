@@ -467,7 +467,7 @@ class BaseBlockPartitions(object):
         # Each chunk must have a RangeIndex that spans its length and width
         # according to our invariant.
         def chunk_builder(i, j):
-            chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize]
+            chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
             chunk.index = pandas.RangeIndex(len(chunk.index))
             chunk.columns = pandas.RangeIndex(len(chunk.columns))
             return put_func(chunk)
