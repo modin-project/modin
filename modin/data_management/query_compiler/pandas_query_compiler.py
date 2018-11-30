@@ -2265,9 +2265,15 @@ class PandasQueryCompiler(object):
         """
         if not axis:
             index = self.compute_index(0, result_data, False)
-            columns = self.columns
+            try:
+                columns = self.compute_index(1, result_data, True)
+            except IndexError:
+                columns = self.compute_index(1, result_data, False)
         else:
-            index = self.index
+            try:
+                index = self.compute_index(0, result_data, True)
+            except IndexError:
+                index = self.compute_index(0, result_data, False)
             columns = self.compute_index(1, result_data, False)
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
