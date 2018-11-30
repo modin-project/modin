@@ -289,7 +289,10 @@ def read_csv(
         kwargs = {
             kw: kwargs[kw]
             for kw in kwargs
-            if kw in defaults and (isinstance(kwargs[kw], (Series, Index, DataFrame)) or kwargs[kw] != defaults[kw])
+            if kw in defaults
+            and not isinstance(
+                kwargs[kw], type(defaults[kw]) and kwargs[kw] != defaults[kw]
+            )
         }
     # This happens on Python2, we will just default to serializing the entire dictionary
     except AttributeError:
