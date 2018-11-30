@@ -8,6 +8,7 @@ from .pandas_on_python import (
     PandasOnPythonColumnPartition,
     PandasOnPythonRowPartition,
 )
+from .dask import DaskAxisPartition, DaskColumnPartition, DaskRowPartition
 from .utils import split_result_of_axis_func_pandas
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "PandasOnPythonAxisPartition",
     "PandasOnPythonColumnPartition",
     "PandasOnPythonRowPartition",
+    "DaskAxisPartition", "DaskColumnPartition", "DaskRowPartition",
     "split_result_of_axis_func_pandas",
 ]
