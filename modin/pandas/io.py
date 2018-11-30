@@ -313,7 +313,9 @@ def _read(filepath_or_buffer, **kwargs):
         filtered_kwargs = {
             kw: kwargs[kw]
             for kw in kwargs
-            if kw in defaults and kwargs[kw] != defaults[kw]
+            if kw in defaults
+            and not isinstance(kwargs[kw], type(defaults[kw]))
+            and kwargs[kw] != defaults[kw]
         }
     # This happens on Python2, we will just default to serializing the entire dictionary
     except AttributeError:
