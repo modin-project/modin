@@ -450,6 +450,7 @@ class BaseBlockPartitions(object):
             df_rows = [
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
+                if not all(part.empty for part in row)
             ]
             if len(df_rows) == 0:
                 return pandas.DataFrame()
