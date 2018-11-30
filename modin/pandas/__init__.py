@@ -36,6 +36,7 @@ from pandas import (
 import threading
 import os
 import ray
+import sys
 
 from .. import __version__
 from .concat import concat
@@ -77,12 +78,18 @@ os.environ["OMP_NUM_THREADS"] = "1"
 if execution_engine == "Ray":
     try:
         if threading.current_thread().name == "MainThread":
+            # Plasma can only enable huge_pages on Linux
+            if sys.platform == "linux" or sys.platform == "linux2":
+                huge_pages = True
+            else:
+                huge_pages = False
             ray.init(
                 redirect_output=True,
                 include_webui=False,
                 redirect_worker_output=True,
                 use_raylet=True,
                 ignore_reinit_error=True,
+                huge_pages=huge_pages,
             )
     except AssertionError:
         pass
