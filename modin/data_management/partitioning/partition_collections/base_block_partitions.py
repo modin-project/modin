@@ -447,15 +447,14 @@ class BaseBlockPartitions(object):
                 raise ValueError(
                     "Some partitions contain Series and some contain DataFrames"
                 )
-            df_rows = []
-            for row in retrieved_objects:
-                df_row = [part for part in row]
-                if not all(part.empty for part in df_row):
-                    df_rows.append(pandas.concat(df_row, axis=axis))
+            df_rows = [
+                pandas.concat([part for part in row], axis=axis)
+                for row in retrieved_objects
+                if not all(part.empty for part in row)
+            ]
             if len(df_rows) == 0:
                 return pandas.DataFrame()
             else:
-                print(pandas.concat(df_rows))
                 return pandas.concat(df_rows)
 
     @classmethod
