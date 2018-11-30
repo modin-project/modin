@@ -9,6 +9,7 @@ from .. import __partition_format__ as partition_format
 from modin.data_management.query_compiler import PandasQueryCompiler
 from .partitioning.partition_collections import RayBlockPartitions
 from .partitioning.partition_collections import PythonBlockPartitions
+from .partitioning.partition_collections import DaskBlockPartitions
 
 
 class BaseFactory(object):
@@ -40,3 +41,9 @@ class PandasOnPythonFactory(BaseFactory):
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions
+
+
+class PandasOnDaskFactory(BaseFactory):
+
+    data_mgr_cls = PandasQueryCompiler
+    block_partitions_cls = DaskBlockPartitions
