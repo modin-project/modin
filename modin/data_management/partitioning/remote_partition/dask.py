@@ -5,7 +5,6 @@ from .utils import length_fn_pandas, width_fn_pandas
 
 
 class DaskRemotePartition(BaseRemotePartition):
-
     def get(self):
         """Return the object wrapped by this one to the original format.
 

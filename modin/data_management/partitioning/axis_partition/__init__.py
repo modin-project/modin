@@ -18,6 +18,8 @@ __all__ = [
     "PandasOnPythonAxisPartition",
     "PandasOnPythonColumnPartition",
     "PandasOnPythonRowPartition",
-    "DaskAxisPartition", "DaskColumnPartition", "DaskRowPartition",
+    "DaskAxisPartition",
+    "DaskColumnPartition",
+    "DaskRowPartition",
     "split_result_of_axis_func_pandas",
 ]

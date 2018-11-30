@@ -88,7 +88,9 @@ if execution_engine == "Ray":
     except AssertionError:
         pass
 elif execution_engine == "Dask":
-    raise ImportError("Please add the code to initialize Dask in modin/pandas/__init__.py")
+    raise ImportError(
+        "Please add the code to initialize Dask in modin/pandas/__init__.py"
+    )
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
