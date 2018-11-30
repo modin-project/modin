@@ -4,7 +4,7 @@ from ..remote_partition import DaskRemotePartition
 
 
 class DaskBlockPartitions(BaseBlockPartitions):
-    """This method implements the interface in `BaseBlockPartitions`."""
+    """This class implements the interface in `BaseBlockPartitions`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = DaskRemotePartition
