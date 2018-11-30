@@ -62,7 +62,6 @@ from .reshape import get_dummies
 from .general import isna, merge, pivot_table
 from .. import __execution_engine__ as execution_engine
 
-
 __pandas_version__ = "0.23.4"
 
 if pandas.__version__ != __pandas_version__:
