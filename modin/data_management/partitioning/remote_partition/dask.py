@@ -15,7 +15,7 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             The object that was `put`.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError("Implement me!")
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
