@@ -35,6 +35,7 @@ from pandas import (
 )
 import threading
 import os
+import sys
 import ray
 
 from .. import __version__
@@ -79,11 +80,39 @@ num_cpus = 1
 if execution_engine == "Ray":
     try:
         if threading.current_thread().name == "MainThread":
+            plasma_directory = None
+            object_store_memory = None
+            if (
+                "MODIN_OUT_OF_CORE" in os.environ
+                and os.environ["MODIN_OUT_OF_CORE"] == "True"
+            ):
+                if sys.platform == "linux" or sys.platform == "linux2":
+                    plasma_directory = "/tmp"
+                    if "MODIN_MEMORY" in os.environ:
+                        object_store_memory = os.environ["MODIN_MEMORY"]
+                    else:
+                        try:
+                            from psutil import virtual_memory
+                        except ModuleNotFoundError:
+                            raise ImportError(
+                                "To use Modin out of core, please install psutil: `pip install psutil`"
+                            )
+                        mem_bytes = virtual_memory().total
+                        # Default to 8x memory for out of core
+                        object_store_memory = 8 * mem_bytes
+                else:
+                    print(
+                        "WARNING: MODIN_OUT_OF_CORE not yet supported on OSX. Starting Modin without out-of-core support..."
+                    )
+            elif "MODIN_MEMORY" in os.environ:
+                object_store_memory = os.environ["MODIN_MEMORY"]
             ray.init(
                 redirect_output=True,
                 include_webui=False,
                 redirect_worker_output=True,
                 ignore_reinit_error=True,
+                plasma_directory=plasma_directory,
+                object_store_memory=object_store_memory,
             )
             num_cpus = ray.global_state.cluster_resources()["CPU"]
     except AssertionError:
