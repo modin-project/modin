@@ -74,9 +74,16 @@ def deploy_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
-    # XXX pandas_on_ray.py is slightly different here
-    if num_splits != len(partitions) or isinstance(result, pandas.Series):
+    # XXX pandas_on_python.py is slightly different here but that implementation seems wrong as
+    # uncovered by test_var
+    if isinstance(result, pandas.Series):
+        return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
+    if num_splits != len(partitions):
         lengths = None
+
+#    if num_splits != len(partitions) or isinstance(result, pandas.Series):
+#        import pdb; pdb.set_trace()
+#        lengths = None
     else:
         if axis == 0:
             lengths = [len(part) for part in partitions]
