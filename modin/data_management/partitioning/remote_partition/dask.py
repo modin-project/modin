@@ -20,7 +20,11 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             The object that was `put`.
         """
-        return self.dask_obj.compute()
+        
+        delayed_call = self.delayed_call
+        self.delayed_call = self.dask_obj
+
+        return self.delayed_call.compute()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -37,7 +41,10 @@ class DaskRemotePartition(BaseRemotePartition):
              applied to it.
         """
         # applies the func lazily
-        return self.__class__(self.dask_obj, (func, kwargs))
+
+        delayed_call = self.delayed_call
+        self.delayed_call = self.dask_obj
+        return self.__class__(dask.delayed(func)(delayed_call, **kwargs))
 
     def add_to_apply_calls(self, func, **kwargs):
         """Add the function to the apply function call stack.
