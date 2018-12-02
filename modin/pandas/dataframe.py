@@ -755,7 +755,7 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
         warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
+            "User-defined function verification with DataFrame dtypes is still under development. This will be implemented in a future release.",
             UserWarning,
         )
 
