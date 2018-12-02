@@ -17,8 +17,7 @@ from modin.data_management.query_compiler import PandasQueryCompiler
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
-# Parquet
-def read_parquet(**kwargs):
+def read_parquet(path, engine, columns, **kwargs):
     """Load a parquet object from the file path, returning a DataFrame.
        Ray DataFrame only supports pyarrow engine for now.
 
@@ -33,10 +32,7 @@ def read_parquet(**kwargs):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
     """
-    return _read_parquet_pandas_on_ray(**kwargs)
 
-
-def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
     from pyarrow.parquet import ParquetFile
 
     if not columns:
@@ -99,26 +95,5 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
     import pyarrow.parquet as pq
 
     df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
-    # Append the length of the index here to build it externally
-    return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
-
-
-@ray.remote
-def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
-    """Use a Ray task to read a column from HDF5 into a Pandas DataFrame.
-
-    Args:
-        path: The path of the HDF5 file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
-
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-
-    df = pandas.read_hdf(path_or_buf, key, mode, columns=columns)
     # Append the length of the index here to build it externally
     return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
