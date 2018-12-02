@@ -2253,7 +2253,7 @@ class PandasQueryCompiler(object):
         else:
             pass
 
-    def _post_process_apply(self, result_data, axis):
+    def _post_process_apply(self, result_data, axis, try_scale=True):
         """Recompute the index after applying function.
 
         Args:
@@ -2263,18 +2263,32 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasQueryCompiler.
         """
-        if not axis:
-            index = self.compute_index(0, result_data, False)
-            try:
-                columns = self.compute_index(1, result_data, True)
+        if try_scale:
+            try: 
+                updated_index = self.compute_index(0, result_data, True)
             except IndexError:
-                columns = self.compute_index(1, result_data, False)
+                updated_index = self.compute_index(0, result_data, False)
+            try: 
+                updated_columns = self.compute_index(1, result_data, True)
+            except IndexError:
+                updated_columns = self.compute_index(1, result_data, False)
         else:
-            try:
-                index = self.compute_index(0, result_data, True)
-            except IndexError:
-                index = self.compute_index(0, result_data, False)
-            columns = self.compute_index(1, result_data, False)
+            updated_index = self.compute_index(0, result_data, False)
+            updated_columns = self.compute_index(1, result_data, False)
+        if not axis:
+            index = updated_index
+            old_columns = self.columns
+            if len(updated_columns) != len(old_columns):
+                columns = updated_columns
+            else:
+                columns = old_columns
+        else:
+            old_index = self.index
+            if len(updated_index) != len(old_index):
+                index = updaetd_index
+            else:
+                index = old_index
+            columns = updated_columns
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
         # this logic here.
