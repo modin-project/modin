@@ -69,7 +69,7 @@ def _read_parquet_pandas_on_ray(path, engine, columns, **kwargs):
     # We need to transpose the oids array to fit our schema.
     blk_partitions = np.array(
         [
-            _read_parquet_columns._submit(
+            _read_parquet_columns._remote(
                 args=(path, cols, num_splits, kwargs), num_return_vals=num_splits + 1
             )
             for cols in col_partitions
@@ -178,7 +178,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
             start = f.tell()
             f.seek(chunk_size, os.SEEK_CUR)
             f.readline()  # Read a whole number of lines
-            partition_id = _read_csv_with_offset_pandas_on_ray._submit(
+            partition_id = _read_csv_with_offset_pandas_on_ray._remote(
                 args=(
                     filepath,
                     num_splits,
@@ -552,7 +552,7 @@ def read_hdf(path_or_buf, key=None, mode="r", columns=None):
     ]
     blk_partitions = np.array(
         [
-            _read_hdf_columns._submit(
+            _read_hdf_columns._remote(
                 args=(path_or_buf, cols, num_splits, key, mode),
                 num_return_vals=num_splits + 1,
             )
