@@ -2264,11 +2264,11 @@ class PandasQueryCompiler(object):
             A new PandasQueryCompiler.
         """
         if try_scale:
-            try: 
+            try:
                 updated_index = self.compute_index(0, result_data, True)
             except IndexError:
                 updated_index = self.compute_index(0, result_data, False)
-            try: 
+            try:
                 updated_columns = self.compute_index(1, result_data, True)
             except IndexError:
                 updated_columns = self.compute_index(1, result_data, False)
@@ -2285,7 +2285,7 @@ class PandasQueryCompiler(object):
         else:
             old_index = self.index
             if len(updated_index) != len(old_index):
-                index = updaetd_index
+                index = updated_index
             else:
                 index = old_index
             columns = updated_columns
