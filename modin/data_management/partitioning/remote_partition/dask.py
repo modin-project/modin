@@ -6,8 +6,9 @@ from .utils import length_fn_pandas, width_fn_pandas
 
 
 class DaskRemotePartition(BaseRemotePartition):
-    def __init__(self, dask_obj):
+    def __init__(self, dask_obj, func = None):
         self.dask_obj = dask_obj
+        self.delayed_call = (dask_obj if func is None else dask.delayed(func[0])(dask_obj, **func[1]))
 
     def get(self):
         """Return the object wrapped by this one to the original format.
@@ -44,7 +45,7 @@ class DaskRemotePartition(BaseRemotePartition):
         This function will be executed when apply is called. It will be executed
         in the order inserted; apply's func operates the last and return
         """
-        self.dask_obj = dask.delayed(func)(self.dask_obj, **kwargs)
+        self.delayed_call = dask.delayed(func)(self.delayed_call, **kwargs)
         return self
 
     def to_pandas(self):
