@@ -1049,7 +1049,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs).fillna(0)
 
     # END Full Reduce operations
 
