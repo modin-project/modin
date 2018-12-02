@@ -132,5 +132,5 @@ used to create the blog post.
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
 .. _Ray's documentation: https://ray.readthedocs.io/en/latest/api.html
-.. _`blog post`: http://rise.cs.berkeley.edu/blog/pandas-on-ray-lessons-learned
+.. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/ 
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
