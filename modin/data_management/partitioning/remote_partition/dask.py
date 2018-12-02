@@ -37,7 +37,7 @@ class DaskRemotePartition(BaseRemotePartition):
              applied to it.
         """
         # applies the func lazily
-        return self.__class__(dask.delayed(func)(self.dask_obj, **kwargs))
+        return self.__class__(self.dask_obj, (func, kwargs))
 
     def add_to_apply_calls(self, func, **kwargs):
         """Add the function to the apply function call stack.
