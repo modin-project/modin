@@ -6,10 +6,6 @@ import sys
 
 from .. import __execution_engine__ as execution_engine
 from .. import __partition_format__ as partition_format
-from modin.data_management.query_compiler import PandasQueryCompiler
-from modin.data_management.io import pandas_on_ray as io_pandas_on_ray
-from .partitioning.partition_collections import RayBlockPartitions
-from .partitioning.partition_collections import PythonBlockPartitions
 
 
 class BaseFactory(object):
@@ -41,12 +37,19 @@ class BaseFactory(object):
 
 class PandasOnRayFactory(BaseFactory):
 
+    from modin.data_management.io import pandas_on_ray as io_pandas_on_ray
+    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import RayBlockPartitions
+
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = RayBlockPartitions
     io_module = io_pandas_on_ray
 
 
 class PandasOnPythonFactory(BaseFactory):
+
+    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import PythonBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions

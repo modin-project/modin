@@ -29,18 +29,12 @@ PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 # Parquet
 def read_parquet(path, engine="auto", columns=None, **kwargs):
     """Load a parquet object from the file path, returning a DataFrame.
-       Ray DataFrame only supports pyarrow engine for now.
 
     Args:
         path: The filepath of the parquet file.
               We only support local files for now.
-        engine: Ray only support pyarrow reader.
-                This argument doesn't do anything for now.
+        engine: This argument doesn't do anything for now.
         kwargs: Pass into parquet's read_pandas function.
-
-    Notes:
-        ParquetFile API is used. Please refer to the documentation here
-        https://arrow.apache.org/docs/python/parquet.html
     """
     from ..data_management.factories import BaseFactory
     return DataFrame(query_compiler=BaseFactory.read_parquet(path=path, columns=columns, engine=engine, **kwargs))
