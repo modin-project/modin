@@ -5,6 +5,7 @@ from .axis_partition import BaseAxisPartition
 from ...partitioning.remote_partition import DaskRemotePartition
 from .utils import split_result_of_axis_func_pandas
 
+
 class DaskAxisPartition(BaseAxisPartition):
     """Dask implementation for Column and Row partitions"""
 
@@ -33,8 +34,16 @@ class DaskAxisPartition(BaseAxisPartition):
             return [
                 DaskRemotePartition(dask.delayed(obj))
                 for obj in deploy_func_between_two_axis_partitions(
-                        self.axis, func, num_splits, len(self.list_of_blocks), kwargs,
-                        *dask.compute(*tuple(self.list_of_blocks + other_axis_partition.list_of_blocks))
+                    self.axis,
+                    func,
+                    num_splits,
+                    len(self.list_of_blocks),
+                    kwargs,
+                    *dask.compute(
+                        *tuple(
+                            self.list_of_blocks + other_axis_partition.list_of_blocks
+                        )
+                    )
                 )
             ]
 
@@ -42,9 +51,9 @@ class DaskAxisPartition(BaseAxisPartition):
 
         args.extend(dask.compute(*self.list_of_blocks))
         return [
-            DaskRemotePartition(dask.delayed(obj))
-            for obj in deploy_axis_func(*args)
+            DaskRemotePartition(dask.delayed(obj)) for obj in deploy_axis_func(*args)
         ]
+
 
 class DaskColumnPartition(DaskAxisPartition):
     """Dask implementation for Column partitions"""
@@ -81,9 +90,9 @@ def deploy_axis_func(axis, func, num_splits, kwargs, *partitions):
     if num_splits != len(partitions):
         lengths = None
 
-#    if num_splits != len(partitions) or isinstance(result, pandas.Series):
-#        import pdb; pdb.set_trace()
-#        lengths = None
+    #    if num_splits != len(partitions) or isinstance(result, pandas.Series):
+    #        import pdb; pdb.set_trace()
+    #        lengths = None
     else:
         if axis == 0:
             lengths = [len(part) for part in partitions]
@@ -97,6 +106,7 @@ def deploy_axis_func(axis, func, num_splits, kwargs, *partitions):
         df.copy()
         for df in split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
     ]
+
 
 def deploy_func_between_two_axis_partitions(
     axis, func, num_splits, len_of_left, kwargs, *partitions

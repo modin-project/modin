@@ -6,9 +6,11 @@ from .utils import length_fn_pandas, width_fn_pandas
 
 
 class DaskRemotePartition(BaseRemotePartition):
-    def __init__(self, dask_obj, func = None):
+    def __init__(self, dask_obj, func=None):
         self.dask_obj = dask_obj
-        self.delayed_call = (dask_obj if func is None else dask.delayed(func[0])(dask_obj, **func[1]))
+        self.delayed_call = (
+            dask_obj if func is None else dask.delayed(func[0])(dask_obj, **func[1])
+        )
 
     def get(self):
         """Return the object wrapped by this one to the original format.
@@ -20,10 +22,7 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             The object that was `put`.
         """
-        
-        delayed_call = self.delayed_call
         self.delayed_call = self.dask_obj
-
         return self.delayed_call.compute()
 
     def apply(self, func, **kwargs):
@@ -41,7 +40,6 @@ class DaskRemotePartition(BaseRemotePartition):
              applied to it.
         """
         # applies the func lazily
-
         delayed_call = self.delayed_call
         self.delayed_call = self.dask_obj
         return self.__class__(dask.delayed(func)(delayed_call, **kwargs))
