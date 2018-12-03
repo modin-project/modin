@@ -56,7 +56,7 @@ def read_parquet(path, engine, columns, **kwargs):
     # We need to transpose the oids array to fit our schema.
     blk_partitions = np.array(
         [
-            _read_parquet_columns._submit(
+            _read_parquet_columns._remote(
                 args=(path, cols, num_splits, kwargs), num_return_vals=num_splits + 1
             )
             for cols in col_partitions

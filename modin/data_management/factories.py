@@ -53,3 +53,12 @@ class PandasOnPythonFactory(BaseFactory):
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions
+
+
+class PandasOnDaskFactory(BaseFactory):
+
+    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import DaskBlockPartitions
+
+    data_mgr_cls = PandasQueryCompiler
+    block_partitions_cls = DaskBlockPartitions

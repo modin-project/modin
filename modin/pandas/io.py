@@ -128,7 +128,7 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
             start = f.tell()
             f.seek(chunk_size, os.SEEK_CUR)
             f.readline()  # Read a whole number of lines
-            partition_id = _read_csv_with_offset_pandas_on_ray._submit(
+            partition_id = _read_csv_with_offset_pandas_on_ray._remote(
                 args=(
                     filepath,
                     num_splits,
@@ -176,63 +176,80 @@ def _read_csv_from_pandas(filepath_or_buffer, kwargs):
     return pd_obj
 
 
-def read_csv(
-    filepath_or_buffer,
-    sep=",",
-    delimiter=None,
-    header="infer",
-    names=None,
-    index_col=None,
-    usecols=None,
-    squeeze=False,
-    prefix=None,
-    mangle_dupe_cols=True,
-    dtype=None,
-    engine=None,
-    converters=None,
-    true_values=None,
-    false_values=None,
-    skipinitialspace=False,
-    skiprows=None,
-    nrows=None,
-    na_values=None,
-    keep_default_na=True,
-    na_filter=True,
-    verbose=False,
-    skip_blank_lines=True,
-    parse_dates=False,
-    infer_datetime_format=False,
-    keep_date_col=False,
-    date_parser=None,
-    dayfirst=False,
-    iterator=False,
-    chunksize=None,
-    compression="infer",
-    thousands=None,
-    decimal=b".",
-    lineterminator=None,
-    quotechar='"',
-    quoting=0,
-    escapechar=None,
-    comment=None,
-    encoding=None,
-    dialect=None,
-    tupleize_cols=None,
-    error_bad_lines=True,
-    warn_bad_lines=True,
-    skipfooter=0,
-    doublequote=True,
-    delim_whitespace=False,
-    low_memory=True,
-    memory_map=False,
-    float_precision=None,
-):
+def _make_parser_func(sep):
+    """Creates a parser function from the given sep.
+
+    Args:
+        sep: The separator default to use for the parser.
+
+    Returns:
+        A function object.
+    """
+
+    def parser_func(
+        filepath_or_buffer,
+        sep=sep,
+        delimiter=None,
+        header="infer",
+        names=None,
+        index_col=None,
+        usecols=None,
+        squeeze=False,
+        prefix=None,
+        mangle_dupe_cols=True,
+        dtype=None,
+        engine=None,
+        converters=None,
+        true_values=None,
+        false_values=None,
+        skipinitialspace=False,
+        skiprows=None,
+        nrows=None,
+        na_values=None,
+        keep_default_na=True,
+        na_filter=True,
+        verbose=False,
+        skip_blank_lines=True,
+        parse_dates=False,
+        infer_datetime_format=False,
+        keep_date_col=False,
+        date_parser=None,
+        dayfirst=False,
+        iterator=False,
+        chunksize=None,
+        compression="infer",
+        thousands=None,
+        decimal=b".",
+        lineterminator=None,
+        quotechar='"',
+        quoting=0,
+        escapechar=None,
+        comment=None,
+        encoding=None,
+        dialect=None,
+        tupleize_cols=None,
+        error_bad_lines=True,
+        warn_bad_lines=True,
+        skipfooter=0,
+        doublequote=True,
+        delim_whitespace=False,
+        low_memory=True,
+        memory_map=False,
+        float_precision=None,
+    ):
+        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+        return _read(**kwargs)
+
+    return parser_func
+
+
+def _read(filepath_or_buffer, **kwargs):
     """Read csv file from local disk.
     Args:
-        filepath:
+        filepath_or_buffer:
               The filepath of the csv file.
               We only support local files for now.
-        kwargs: Keyword arguments in pandas::from_csv
+        kwargs: Keyword arguments in pandas.read_csv
     """
     # The intention of the inspection code is to reduce the amount of
     # communication we have to do between processes and nodes. We take a quick
@@ -240,21 +257,19 @@ def read_csv(
     # don't have to serialize and send them to the workers. Because the
     # arguments list is so long, this does end up saving time based on the
     # number of nodes in the cluster.
-    frame = inspect.currentframe()
-    _, _, _, kwargs = inspect.getargvalues(frame)
     try:
         args, _, _, defaults, _, _, _ = inspect.getfullargspec(read_csv)
         defaults = dict(zip(args[1:], defaults))
-        kwargs = {
+        filtered_kwargs = {
             kw: kwargs[kw]
             for kw in kwargs
-            if kw in defaults and kwargs[kw] != defaults[kw]
+            if kw in defaults
+            and not isinstance(kwargs[kw], type(defaults[kw]))
+            and kwargs[kw] != defaults[kw]
         }
     # This happens on Python2, we will just default to serializing the entire dictionary
     except AttributeError:
-        # We suppress the error and delete the kwargs not needed in the remote function.
-        del kwargs["filepath_or_buffer"]
-        del kwargs["frame"]
+        filtered_kwargs = kwargs
 
     if isinstance(filepath_or_buffer, str):
         if not os.path.exists(filepath_or_buffer):
@@ -262,7 +277,7 @@ def read_csv(
                 "File not found on disk. Defaulting to Pandas implementation.",
                 UserWarning,
             )
-            return _read_csv_from_pandas(filepath_or_buffer, kwargs)
+            return _read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
     elif not isinstance(filepath_or_buffer, py.path.local):
         read_from_pandas = True
         # Pandas read_csv supports pathlib.Path
@@ -278,17 +293,21 @@ def read_csv(
                 "Reading from buffer. Defaulting to Pandas implementation.", UserWarning
             )
             return _read_csv_from_pandas(filepath_or_buffer, kwargs)
-    if _infer_compression(filepath_or_buffer, compression) is not None:
+    if _infer_compression(filepath_or_buffer, kwargs.get("compression")) is not None:
         warnings.warn(
             "Compression detected. Defaulting to Pandas implementation.", UserWarning
         )
-        return _read_csv_from_pandas(filepath_or_buffer, kwargs)
+        return _read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
+
+    chunksize = kwargs.get("chunksize")
     if chunksize is not None:
         warnings.warn(
             "Reading chunks from a file. Defaulting to Pandas implementation.",
             UserWarning,
         )
-        return _read_csv_from_pandas(filepath_or_buffer, kwargs)
+        return _read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
+
+    skiprows = kwargs.get("skiprows")
     if skiprows is not None and not isinstance(skiprows, int):
         warnings.warn(
             (
@@ -299,11 +318,15 @@ def read_csv(
         )
         return _read_csv_from_pandas(filepath_or_buffer, kwargs)
     # TODO: replace this by reading lines from file.
-    if nrows is not None:
+    if kwargs.get("nrows") is not None:
         warnings.warn("Defaulting to Pandas implementation.", UserWarning)
-        return _read_csv_from_pandas(filepath_or_buffer, kwargs)
+        return _read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
     else:
-        return _read_csv_from_file_pandas_on_ray(filepath_or_buffer, kwargs)
+        return _read_csv_from_file_pandas_on_ray(filepath_or_buffer, filtered_kwargs)
+
+
+read_table = _make_parser_func(sep="\t")
+read_csv = _make_parser_func(sep=",")
 
 
 def read_json(
@@ -479,7 +502,7 @@ def read_hdf(path_or_buf, key=None, mode="r", columns=None):
     ]
     blk_partitions = np.array(
         [
-            _read_hdf_columns._submit(
+            _read_hdf_columns._remote(
                 args=(path_or_buf, cols, num_splits, key, mode),
                 num_return_vals=num_splits + 1,
             )

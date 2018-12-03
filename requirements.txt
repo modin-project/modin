@@ -1,5 +1,4 @@
 pandas==0.23.4
-redis==2.10.6
-ray==0.5.3
+ray==0.6.0
 strip_hints
 typing
