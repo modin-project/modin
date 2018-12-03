@@ -37,8 +37,8 @@ class BaseFactory(object):
 
 class PandasOnRayFactory(BaseFactory):
 
-    from modin.data_management.io import pandas_on_ray as io_pandas_on_ray
-    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .io import pandas_on_ray as io_pandas_on_ray
+    from .query_compiler import PandasQueryCompiler
     from .partitioning.partition_collections import RayBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
@@ -48,7 +48,7 @@ class PandasOnRayFactory(BaseFactory):
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .query_compiler import PandasQueryCompiler
     from .partitioning.partition_collections import PythonBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
@@ -57,7 +57,7 @@ class PandasOnPythonFactory(BaseFactory):
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.data_management.query_compiler import PandasQueryCompiler
+    from .query_compiler import PandasQueryCompiler
     from .partitioning.partition_collections import DaskBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
