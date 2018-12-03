@@ -83,7 +83,6 @@ if execution_engine == "Ray":
                 redirect_output=True,
                 include_webui=False,
                 redirect_worker_output=True,
-                use_raylet=True,
                 ignore_reinit_error=True,
             )
             num_cpus = ray.global_state.cluster_resources()["CPU"]
