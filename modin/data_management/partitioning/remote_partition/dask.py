@@ -1,5 +1,4 @@
 import pandas
-import dask.dataframe
 
 from .base_remote_partition import BaseRemotePartition
 from .utils import length_fn_pandas, width_fn_pandas
