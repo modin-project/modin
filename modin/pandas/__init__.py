@@ -36,6 +36,7 @@ from pandas import (
 import threading
 import os
 import ray
+from . import dask_client
 
 from .. import __version__
 from .concat import concat
@@ -73,6 +74,7 @@ if pandas.__version__ != __pandas_version__:
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
+num_cpus = 1
 
 if execution_engine == "Ray":
     try:
@@ -83,16 +85,20 @@ if execution_engine == "Ray":
                 redirect_worker_output=True,
                 ignore_reinit_error=True,
             )
+            num_cpus = ray.global_state.cluster_resources()["CPU"]
     except AssertionError:
         pass
 elif execution_engine == "Dask":
-    raise ImportError(
-        "Please add the code to initialize Dask in modin/pandas/__init__.py"
-    )
+    try:
+        if threading.current_thread().name == "MainThread":
+            # initialize the dask client
+            client = dask_client.get_client()
+            num_cpus = sum(client.ncores().values())
+    except AssertionError:
+        pass
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
-num_cpus = ray.global_state.cluster_resources()["CPU"]
 DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
 __all__ = [

@@ -1,10 +1,17 @@
 import pandas
+import dask
 
 from .base_remote_partition import BaseRemotePartition
 from .utils import length_fn_pandas, width_fn_pandas
 
 
 class DaskRemotePartition(BaseRemotePartition):
+    def __init__(self, dask_obj, func=None):
+        self.dask_obj = dask_obj
+        self.delayed_call = (
+            dask_obj if func is None else dask.delayed(func[0])(dask_obj, **func[1])
+        )
+
     def get(self):
         """Return the object wrapped by this one to the original format.
 
@@ -15,7 +22,8 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             The object that was `put`.
         """
-        raise NotImplementedError("Implement me!")
+        self.delayed_call = self.dask_obj
+        return self.delayed_call.compute()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -31,7 +39,10 @@ class DaskRemotePartition(BaseRemotePartition):
              A new `BaseRemotePartition` containing the object that has had `func`
              applied to it.
         """
-        raise NotImplementedError("Implement me!")
+        # applies the func lazily
+        delayed_call = self.delayed_call
+        self.delayed_call = self.dask_obj
+        return self.__class__(dask.delayed(func)(delayed_call, **kwargs))
 
     def add_to_apply_calls(self, func, **kwargs):
         """Add the function to the apply function call stack.
@@ -39,18 +50,18 @@ class DaskRemotePartition(BaseRemotePartition):
         This function will be executed when apply is called. It will be executed
         in the order inserted; apply's func operates the last and return
         """
-        raise NotImplementedError("Implement me!")
+        self.delayed_call = dask.delayed(func)(self.delayed_call, **kwargs)
+        return self
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
 
-        Note: If the underlying object is a Pandas DataFrame, this will likely
-            only need to call `get`
+        Assumes the underlying object is a Pandas DataFrame and simply calls `get`
 
         Returns:
             A Pandas DataFrame.
         """
-        raise NotImplementedError("Implement me!")
+        return self.get()
 
     @classmethod
     def put(cls, obj):
@@ -62,7 +73,8 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             A `RemotePartitions` object.
         """
-        raise NotImplementedError("Implement me!")
+        # simply wrap the input object by dask.delayed
+        return cls(dask.delayed(obj))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -79,7 +91,8 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             An object that can be accepted by `apply`.
         """
-        raise NotImplementedError("Implement me!")
+        # seems that dask does not need any pre-processing
+        return func
 
     @classmethod
     def length_extraction_fn(cls):
