@@ -14,7 +14,9 @@ try:
     @lru_cache()
     def get_client():
         return _get_client()
+
+
 # Python2 does not support lru_cache
 # TODO add a way to cache in Python2
-except AttributeError:
+except (AttributeError, ImportError):
     get_client = _get_client()
