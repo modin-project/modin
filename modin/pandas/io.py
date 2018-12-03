@@ -37,7 +37,12 @@ def read_parquet(path, engine="auto", columns=None, **kwargs):
         kwargs: Pass into parquet's read_pandas function.
     """
     from ..data_management.factories import BaseFactory
-    return DataFrame(query_compiler=BaseFactory.read_parquet(path=path, columns=columns, engine=engine, **kwargs))
+
+    return DataFrame(
+        query_compiler=BaseFactory.read_parquet(
+            path=path, columns=columns, engine=engine, **kwargs
+        )
+    )
 
 
 # CSV
