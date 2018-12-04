@@ -2277,22 +2277,21 @@ class PandasQueryCompiler(object):
             internal_columns = self.compute_index(1, result_data, False)
         if not axis:
             index = internal_index
-            old_columns = self.columns
             # We check if the two columns are the same length because if
             # they are the same length, `self.columns` is the correct index.
             # However, if the operation resulted in a different number of columns,
             # we must use the derived columns from `self.compute_index()`.
-            if len(internal_columns) != len(old_columns):
+            if len(internal_columns) != len(self.columns):
                 columns = internal_columns
             else:
-                columns = old_columns
+                columns = self.columns
         else:
             old_index = self.index
             # See above explaination for checking the lengths of columns
-            if len(internal_index) != len(old_index):
+            if len(internal_index) != len(self.index):
                 index = internal_index
             else:
-                index = old_index
+                index = self.index
             columns = internal_columns
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
