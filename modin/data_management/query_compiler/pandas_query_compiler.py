@@ -2211,7 +2211,7 @@ class PandasQueryCompiler(object):
             value: Dtype object values to insert.
 
         Returns:
-            A new PandasDataManager with new data inserted.
+            A new PandasQueryCompiler with new data inserted.
         """
 
         def insert(df, internal_indices=[]):
@@ -2242,7 +2242,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
@@ -2261,24 +2261,37 @@ class PandasQueryCompiler(object):
             axis: Target axis along which function was applied.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if try_scale:
             try:
-                index = self.compute_index(0, result_data, True)
+                internal_index = self.compute_index(0, result_data, True)
             except IndexError:
-                index = self.compute_index(0, result_data, False)
+                internal_index = self.compute_index(0, result_data, False)
             try:
-                columns = self.compute_index(1, result_data, True)
+                internal_columns = self.compute_index(1, result_data, True)
             except IndexError:
-                columns = self.compute_index(1, result_data, False)
+                internal_columns = self.compute_index(1, result_data, False)
         else:
-            if not axis:
-                index = self.compute_index(0, result_data, False)
+            internal_index = self.compute_index(0, result_data, False)
+            internal_columns = self.compute_index(1, result_data, False)
+        if not axis:
+            index = internal_index
+            # We check if the two columns are the same length because if
+            # they are the same length, `self.columns` is the correct index.
+            # However, if the operation resulted in a different number of columns,
+            # we must use the derived columns from `self.compute_index()`.
+            if len(internal_columns) != len(self.columns):
+                columns = internal_columns
+            else:
                 columns = self.columns
+        else:
+            # See above explaination for checking the lengths of columns
+            if len(internal_index) != len(self.index):
+                index = internal_index
             else:
                 index = self.index
-                columns = self.compute_index(1, result_data, False)
+            columns = internal_columns
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
         # this logic here.
@@ -2309,7 +2322,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if "axis" not in kwargs:
             kwargs["axis"] = axis
@@ -2343,7 +2356,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
         new_data = self.map_across_full_axis(axis, func_prepared)
@@ -2359,7 +2372,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
 
         def callable_apply_builder(df, func, axis, index, *args, **kwargs):
