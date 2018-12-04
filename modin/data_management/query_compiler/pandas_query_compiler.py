@@ -2590,6 +2590,9 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     In particular, the following constraints are broken:
     - (len(self.index), len(self.columns)) != self.data.shape
+    
+    Note:
+        The constraint will be satisfied when we get the data
     """
 
     def __init__(
