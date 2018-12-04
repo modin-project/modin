@@ -2286,7 +2286,6 @@ class PandasQueryCompiler(object):
             else:
                 columns = self.columns
         else:
-            old_index = self.index
             # See above explaination for checking the lengths of columns
             if len(internal_index) != len(self.index):
                 index = internal_index
