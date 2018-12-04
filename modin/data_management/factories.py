@@ -6,10 +6,6 @@ import sys
 
 from .. import __execution_engine__ as execution_engine
 from .. import __partition_format__ as partition_format
-from modin.data_management.query_compiler import PandasQueryCompiler
-from .partitioning.partition_collections import RayBlockPartitions
-from .partitioning.partition_collections import PythonBlockPartitions
-from .partitioning.partition_collections import DaskBlockPartitions
 
 
 class BaseFactory(object):
@@ -30,20 +26,39 @@ class BaseFactory(object):
     def _from_pandas(cls, df):
         return cls.data_mgr_cls.from_pandas(df, cls.block_partitions_cls)
 
+    @classmethod
+    def read_parquet(cls, **kwargs):
+        return cls._determine_engine()._read_parquet(**kwargs)
+
+    @classmethod
+    def _read_parquet(cls, **kwargs):
+        return cls.io_module.read_parquet(**kwargs)
+
 
 class PandasOnRayFactory(BaseFactory):
 
+    from .io import pandas_on_ray as io_pandas_on_ray
+    from .query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import RayBlockPartitions
+
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = RayBlockPartitions
+    io_module = io_pandas_on_ray
 
 
 class PandasOnPythonFactory(BaseFactory):
+
+    from .query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import PythonBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions
 
 
 class PandasOnDaskFactory(BaseFactory):
+
+    from .query_compiler import PandasQueryCompiler
+    from .partitioning.partition_collections import DaskBlockPartitions
 
     data_mgr_cls = PandasQueryCompiler
     block_partitions_cls = DaskBlockPartitions
