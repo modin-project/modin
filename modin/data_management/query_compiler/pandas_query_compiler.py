@@ -2278,12 +2278,18 @@ class PandasQueryCompiler(object):
         if not axis:
             index = updated_index
             old_columns = self.columns
+            # We check if the two columns are the same length because if
+            # they are the same length, then the old columns will work fine.
+            # However, if the column lengths are changed, the old columns will
+            # not work and we will have to use the updated columns that we derived
+            # from self.compute_index
             if len(updated_columns) != len(old_columns):
                 columns = updated_columns
             else:
                 columns = old_columns
         else:
             old_index = self.index
+            # See above explaination for checking the lengths of columns
             if len(updated_index) != len(old_index):
                 index = updated_index
             else:
