@@ -76,7 +76,8 @@ if pandas.__version__ != __pandas_version__:
 os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
 
-if execution_engine == "Ray":
+execution_engine = execution_engine.lower()
+if execution_engine == "ray":
     try:
         if threading.current_thread().name == "MainThread":
             ray.init(
@@ -88,7 +89,7 @@ if execution_engine == "Ray":
             num_cpus = ray.global_state.cluster_resources()["CPU"]
     except AssertionError:
         pass
-elif execution_engine == "Dask":
+elif execution_engine == "dask":
     try:
         if threading.current_thread().name == "MainThread":
             # initialize the dask client
@@ -96,7 +97,7 @@ elif execution_engine == "Dask":
             num_cpus = sum(client.ncores().values())
     except AssertionError:
         pass
-elif execution_engine != "Python":
+elif execution_engine != "python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
 DEFAULT_NPARTITIONS = max(4, int(num_cpus))
