@@ -20,14 +20,17 @@ class PandasOnPythonRemotePartition(object):
         self.call_queue = []
 
     def get(self):
-        """Return the data.
+        """Flushes the call_queue and returns the data.
 
         Note: Since this object is a simple wrapper, just return the data.
 
         Returns:
             The object that was `put`.
         """
-        return self.data.copy()
+        if self.call_queue:
+            return self.apply(lambda df: df).data
+        else:
+            return self.data.copy()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -46,13 +49,14 @@ class PandasOnPythonRemotePartition(object):
         self.call_queue.append((func, kwargs))
 
         def call_queue_closure(data, call_queues):
+            result = data.copy()
             for func, kwargs in call_queues:
                 try:
-                    data = func(data.copy(), **kwargs)
+                    result = func(result, **kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
-            return data
+            return result
 
         new_data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
@@ -76,7 +80,10 @@ class PandasOnPythonRemotePartition(object):
         Returns:
             A Pandas DataFrame.
         """
-        return self.data
+        dataframe = self.get()
+        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
+
+        return dataframe
 
     @classmethod
     def put(cls, obj):
