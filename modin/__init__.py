@@ -7,7 +7,8 @@ def get_execution_engine():
     # decide these things. In the meantime, we will use the currently supported
     # execution engine + backing (Pandas + Ray).
     if "MODIN_ENGINE" in os.environ:
-        engine = os.environ["MODIN_ENGINE"]
+        # .title allows variants like ray, RAY, Ray
+        engine = os.environ["MODIN_ENGINE"].title()
     else:
         engine = "Ray" if "MODIN_DEBUG" not in os.environ else "Python"
     return engine
