@@ -96,7 +96,7 @@ elif execution_engine == "Dask":
             num_cpus = sum(client.ncores().values())
     except AssertionError:
         pass
-elif execution_engine != "python":
+elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
 DEFAULT_NPARTITIONS = max(4, int(num_cpus))
