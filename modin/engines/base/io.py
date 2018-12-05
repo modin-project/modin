@@ -28,6 +28,7 @@ class BaseIO(object):
             ParquetFile API is used. Please refer to the documentation here
             https://arrow.apache.org/docs/python/parquet.html
         """
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_parquet(path, engine, columns, **kwargs))
 
     @classmethod
@@ -133,6 +134,7 @@ class BaseIO(object):
             "memory_map": memory_map,
             "float_precision": float_precision,
             }
+        print("WARNING: Defaulting to pandas implementation")
         return cls._read(**kwargs)
 
     @classmethod
@@ -172,6 +174,7 @@ class BaseIO(object):
         chunksize=None,
         compression="infer",
     ):
+        print("WARNING: Defaulting to pandas implementation")
         kwargs = {"path_or_buf": path_or_buf,
             "orient": orient,
             "typ": typ,
@@ -202,6 +205,7 @@ class BaseIO(object):
         dialect="legacy",
         **kwargs
     ):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_gbq(query, project_id=project_id, index_col=index_col, col_order=col_order, reauth=reauth, verbose=verbose, private_key=private_key, dialect=dialect, **kwargs))
 
     @classmethod
@@ -223,6 +227,7 @@ class BaseIO(object):
         na_values=None,
         keep_default_na=True,
     ):
+        print("WARNING: Defaulting to pandas implementation")
         kwargs = {"io": io,
             "match": match,
             "flavor": flavor,
@@ -243,6 +248,7 @@ class BaseIO(object):
 
     @classmethod
     def read_clipboard(cls, sep=r"\s+"):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_clipboard(sep=sep))
 
     @classmethod
@@ -267,6 +273,7 @@ class BaseIO(object):
         engine=None,
         squeeze=False,
     ):
+        print("WARNING: Defaulting to pandas implementation")
         kwargs = {"io": io,
             "sheet_name": sheet_name,
             "header": header,
@@ -290,14 +297,17 @@ class BaseIO(object):
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_hdf(path_or_buf, key=key, mode=mode, columns=columns))
 
     @classmethod
     def read_feather(cls, path, nthreads=1):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_feather(path, nthreads))
 
     @classmethod
     def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator))
 
     @classmethod
@@ -315,6 +325,7 @@ class BaseIO(object):
         chunksize=None,
         iterator=False,
     ):
+        print("WARNING: Defaulting to pandas implementation")
         kwargs = {"filepath_or_buffer": filepath_or_buffer,
             "convert_dates": convert_dates,
             "convert_categoricals": convert_categoricals,
@@ -339,10 +350,12 @@ class BaseIO(object):
         chunksize=None,
         iterator=False,
     ):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_sas(filepath_or_buffer, format=format, index=index, encoding=encoding, chunksize=chunksize, iterator=iterator))
 
     @classmethod
     def read_pickle(cls, path, compression="infer"):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_pickle(path, compression=compression))
 
     @classmethod
@@ -357,4 +370,5 @@ class BaseIO(object):
         columns=None,
         chunksize=None,
     ):
+        print("WARNING: Defaulting to pandas implementation")
         return cls.from_pandas(pandas.read_sql(sql, con, index_col=index_col, coerce_float=coerce_float, params=params, parse_dates=parse_dates, columns=columns, chunksize=chunksize))
