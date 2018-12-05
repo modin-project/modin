@@ -7,10 +7,7 @@ from typing import Tuple
 import numpy as np
 import pandas
 
-from modin.data_management.partitioning.utils import (
-    compute_chunksize,
-    _get_nan_block_id,
-)
+from modin.data_management.utils import compute_chunksize, _get_nan_block_id
 
 
 class BaseBlockPartitions(object):
@@ -539,7 +536,7 @@ class BaseBlockPartitions(object):
 
         :return:
         """
-        from ....pandas import DEFAULT_NPARTITIONS
+        from ...pandas import DEFAULT_NPARTITIONS
 
         return DEFAULT_NPARTITIONS
 

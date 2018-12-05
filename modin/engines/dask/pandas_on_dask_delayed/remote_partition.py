@@ -1,8 +1,8 @@
 import pandas
 import dask
 
-from .base_remote_partition import BaseRemotePartition
-from .utils import length_fn_pandas, width_fn_pandas
+from modin.engines.base.remote_partition import BaseRemotePartition
+from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 
 class DaskRemotePartition(BaseRemotePartition):

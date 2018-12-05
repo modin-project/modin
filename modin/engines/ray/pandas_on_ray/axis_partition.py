@@ -5,9 +5,9 @@ from __future__ import print_function
 import pandas
 import ray
 
-from .axis_partition import BaseAxisPartition
-from ...partitioning.remote_partition import PandasOnRayRemotePartition
-from .utils import split_result_of_axis_func_pandas
+from modin.engines.base.axis_partition import BaseAxisPartition
+from modin.data_management.utils import split_result_of_axis_func_pandas
+from .remote_partition import PandasOnRayRemotePartition
 
 
 class PandasOnRayAxisPartition(BaseAxisPartition):
