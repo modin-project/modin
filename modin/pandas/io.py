@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import inspect
+import pandas
 import re
 
 from .dataframe import DataFrame
@@ -104,7 +105,15 @@ def _read(**kwargs):
               We only support local files for now.
         kwargs: Keyword arguments in pandas.read_csv
     """
-    return DataFrame(query_compiler=BaseFactory.read_csv(**kwargs))
+    pd_obj = BaseFactory.read_csv(**kwargs)
+    # This happens when `read_csv` returns a TextFileReader object for iterating through
+    if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+        reader = pd_obj.read
+        pd_obj.read = lambda *args, **kwargs: DataFrame(
+            query_compiler=reader(*args, **kwargs)
+        )
+        return pd_obj
+    return DataFrame(query_compiler=pd_obj)
 
 
 read_table = _make_parser_func(sep="\t")
