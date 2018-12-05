@@ -7,7 +7,6 @@ from pandas.io.common import _infer_compression
 
 
 class BaseIO(object):
-
     @classmethod
     def from_pandas(cls, df):
         return cls.query_compiler_cls.from_pandas(df, cls.block_partitions_cls)
@@ -84,7 +83,8 @@ class BaseIO(object):
         memory_map=False,
         float_precision=None,
     ):
-        kwargs = {"filepath_or_buffer": filepath_or_buffer,
+        kwargs = {
+            "filepath_or_buffer": filepath_or_buffer,
             "sep": sep,
             "delimiter": delimiter,
             "header": header,
@@ -133,7 +133,7 @@ class BaseIO(object):
             "low_memory": low_memory,
             "memory_map": memory_map,
             "float_precision": float_precision,
-            }
+        }
         print("WARNING: Defaulting to pandas implementation")
         return cls._read(**kwargs)
 
@@ -153,7 +153,9 @@ class BaseIO(object):
             # Overwriting the read method should return a ray DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
-            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(pd_read(*args, **kwargs))
+            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
+                pd_read(*args, **kwargs)
+            )
         return pd_obj
 
     @classmethod
@@ -175,7 +177,8 @@ class BaseIO(object):
         compression="infer",
     ):
         print("WARNING: Defaulting to pandas implementation")
-        kwargs = {"path_or_buf": path_or_buf,
+        kwargs = {
+            "path_or_buf": path_or_buf,
             "orient": orient,
             "typ": typ,
             "dtype": dtype,
@@ -189,7 +192,7 @@ class BaseIO(object):
             "lines": lines,
             "chunksize": chunksize,
             "compression": compression,
-            }
+        }
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
@@ -206,7 +209,19 @@ class BaseIO(object):
         **kwargs
     ):
         print("WARNING: Defaulting to pandas implementation")
-        return cls.from_pandas(pandas.read_gbq(query, project_id=project_id, index_col=index_col, col_order=col_order, reauth=reauth, verbose=verbose, private_key=private_key, dialect=dialect, **kwargs))
+        return cls.from_pandas(
+            pandas.read_gbq(
+                query,
+                project_id=project_id,
+                index_col=index_col,
+                col_order=col_order,
+                reauth=reauth,
+                verbose=verbose,
+                private_key=private_key,
+                dialect=dialect,
+                **kwargs
+            )
+        )
 
     @classmethod
     def read_html(
@@ -228,7 +243,8 @@ class BaseIO(object):
         keep_default_na=True,
     ):
         print("WARNING: Defaulting to pandas implementation")
-        kwargs = {"io": io,
+        kwargs = {
+            "io": io,
             "match": match,
             "flavor": flavor,
             "header": header,
@@ -243,7 +259,7 @@ class BaseIO(object):
             "converters": converters,
             "na_values": na_values,
             "keep_default_na": keep_default_na,
-            }
+        }
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
@@ -274,7 +290,8 @@ class BaseIO(object):
         squeeze=False,
     ):
         print("WARNING: Defaulting to pandas implementation")
-        kwargs = {"io": io,
+        kwargs = {
+            "io": io,
             "sheet_name": sheet_name,
             "header": header,
             "skiprows": skiprows,
@@ -292,13 +309,15 @@ class BaseIO(object):
             "false_values": false_values,
             "engine": engine,
             "squeeze": squeeze,
-            }
+        }
         return cls.from_pandas(pandas.read_excel(**kwargs))
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
         print("WARNING: Defaulting to pandas implementation")
-        return cls.from_pandas(pandas.read_hdf(path_or_buf, key=key, mode=mode, columns=columns))
+        return cls.from_pandas(
+            pandas.read_hdf(path_or_buf, key=key, mode=mode, columns=columns)
+        )
 
     @classmethod
     def read_feather(cls, path, nthreads=1):
@@ -308,7 +327,9 @@ class BaseIO(object):
     @classmethod
     def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False):
         print("WARNING: Defaulting to pandas implementation")
-        return cls.from_pandas(pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator))
+        return cls.from_pandas(
+            pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator)
+        )
 
     @classmethod
     def read_stata(
@@ -326,7 +347,8 @@ class BaseIO(object):
         iterator=False,
     ):
         print("WARNING: Defaulting to pandas implementation")
-        kwargs = {"filepath_or_buffer": filepath_or_buffer,
+        kwargs = {
+            "filepath_or_buffer": filepath_or_buffer,
             "convert_dates": convert_dates,
             "convert_categoricals": convert_categoricals,
             "encoding": encoding,
@@ -337,7 +359,7 @@ class BaseIO(object):
             "order_categoricals": order_categoricals,
             "chunksize": chunksize,
             "iterator": iterator,
-            }
+        }
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
     @classmethod
@@ -351,7 +373,16 @@ class BaseIO(object):
         iterator=False,
     ):
         print("WARNING: Defaulting to pandas implementation")
-        return cls.from_pandas(pandas.read_sas(filepath_or_buffer, format=format, index=index, encoding=encoding, chunksize=chunksize, iterator=iterator))
+        return cls.from_pandas(
+            pandas.read_sas(
+                filepath_or_buffer,
+                format=format,
+                index=index,
+                encoding=encoding,
+                chunksize=chunksize,
+                iterator=iterator,
+            )
+        )
 
     @classmethod
     def read_pickle(cls, path, compression="infer"):
@@ -371,4 +402,15 @@ class BaseIO(object):
         chunksize=None,
     ):
         print("WARNING: Defaulting to pandas implementation")
-        return cls.from_pandas(pandas.read_sql(sql, con, index_col=index_col, coerce_float=coerce_float, params=params, parse_dates=parse_dates, columns=columns, chunksize=chunksize))
+        return cls.from_pandas(
+            pandas.read_sql(
+                sql,
+                con,
+                index_col=index_col,
+                coerce_float=coerce_float,
+                params=params,
+                parse_dates=parse_dates,
+                columns=columns,
+                chunksize=chunksize,
+            )
+        )

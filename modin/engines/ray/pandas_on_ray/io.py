@@ -50,7 +50,9 @@ class PandasOnRayIO(BaseIO):
         if not columns:
             pf = ParquetFile(path)
             columns = [
-                name for name in pf.metadata.schema.names if not PQ_INDEX_REGEX.match(name)
+                name
+                for name in pf.metadata.schema.names
+                if not PQ_INDEX_REGEX.match(name)
             ]
         num_partitions = RayBlockPartitions._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
@@ -61,7 +63,8 @@ class PandasOnRayIO(BaseIO):
             else len(columns) // num_partitions + 1
         )
         col_partitions = [
-            columns[i : i + column_splits] for i in range(0, len(columns), column_splits)
+            columns[i : i + column_splits]
+            for i in range(0, len(columns), column_splits)
         ]
         # Each item in this list will be a list of columns of original df
         # partitioned to smaller pieces along rows.
@@ -69,7 +72,8 @@ class PandasOnRayIO(BaseIO):
         blk_partitions = np.array(
             [
                 _read_parquet_columns._remote(
-                    args=(path, cols, num_splits, kwargs), num_return_vals=num_splits + 1
+                    args=(path, cols, num_splits, kwargs),
+                    num_return_vals=num_splits + 1,
                 )
                 for cols in col_partitions
             ]
@@ -221,7 +225,9 @@ class PandasOnRayIO(BaseIO):
             # Overwriting the read method should return a ray DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
-            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(pd_read(*args, **kwargs))
+            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
+                pd_read(*args, **kwargs)
+            )
         return pd_obj
 
     @classmethod
@@ -277,7 +283,8 @@ class PandasOnRayIO(BaseIO):
         memory_map=False,
         float_precision=None,
     ):
-        kwargs = {"filepath_or_buffer": filepath_or_buffer,
+        kwargs = {
+            "filepath_or_buffer": filepath_or_buffer,
             "sep": sep,
             "delimiter": delimiter,
             "header": header,
@@ -326,7 +333,7 @@ class PandasOnRayIO(BaseIO):
             "low_memory": low_memory,
             "memory_map": memory_map,
             "float_precision": float_precision,
-            }
+        }
         return cls._read(**kwargs)
 
     @classmethod
@@ -377,12 +384,17 @@ class PandasOnRayIO(BaseIO):
                 pass
             if read_from_pandas:
                 warnings.warn(
-                    "Reading from buffer. Defaulting to Pandas implementation.", UserWarning
+                    "Reading from buffer. Defaulting to Pandas implementation.",
+                    UserWarning,
                 )
                 return cls._read_csv_from_pandas(filepath_or_buffer, kwargs)
-        if _infer_compression(filepath_or_buffer, kwargs.get("compression")) is not None:
+        if (
+            _infer_compression(filepath_or_buffer, kwargs.get("compression"))
+            is not None
+        ):
             warnings.warn(
-                "Compression detected. Defaulting to Pandas implementation.", UserWarning
+                "Compression detected. Defaulting to Pandas implementation.",
+                UserWarning,
             )
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
@@ -409,7 +421,9 @@ class PandasOnRayIO(BaseIO):
             warnings.warn("Defaulting to Pandas implementation.", UserWarning)
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            return cls._read_csv_from_file_pandas_on_ray(filepath_or_buffer, filtered_kwargs)
+            return cls._read_csv_from_file_pandas_on_ray(
+                filepath_or_buffer, filtered_kwargs
+            )
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
@@ -426,7 +440,8 @@ class PandasOnRayIO(BaseIO):
             else len(columns) // num_partitions + 1
         )
         col_partitions = [
-            columns[i : i + column_splits] for i in range(0, len(columns), column_splits)
+            columns[i : i + column_splits]
+            for i in range(0, len(columns), column_splits)
         ]
         blk_partitions = np.array(
             [
