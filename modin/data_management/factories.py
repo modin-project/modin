@@ -21,7 +21,7 @@ class BaseFactory(object):
         raise NotImplementedError("Implement in children classes!")
 
     @property
-    def io_module(self):
+    def io_cls(self):
         """The module where the I/O functionality exists."""
         raise NotImplementedError("Implement in children classes!")
 
@@ -48,7 +48,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_parquet(cls, **kwargs):
-        return cls.io_module.read_parquet(**kwargs)
+        return cls.io_cls.read_parquet(**kwargs)
 
     @classmethod
     def read_csv(cls, **kwargs):
@@ -56,7 +56,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_csv(cls, **kwargs):
-        return cls.io_module.read_csv(**kwargs)
+        return cls.io_cls.read_csv(**kwargs)
 
     @classmethod
     def read_json(cls, **kwargs):
@@ -64,7 +64,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_json(cls, **kwargs):
-        return cls.io_module.read_json(**kwargs)
+        return cls.io_cls.read_json(**kwargs)
 
     @classmethod
     def read_gbq(cls, **kwargs):
@@ -72,7 +72,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_gbq(cls, **kwargs):
-        return cls.io_module.read_gbq(**kwargs)
+        return cls.io_cls.read_gbq(**kwargs)
 
     @classmethod
     def read_html(cls, **kwargs):
@@ -80,7 +80,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_html(cls, **kwargs):
-        return cls.io_module.read_html(**kwargs)
+        return cls.io_cls.read_html(**kwargs)
 
     @classmethod
     def read_clipboard(cls, **kwargs):
@@ -88,7 +88,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_clipboard(cls, **kwargs):
-        return cls.io_module.read_clipboard(**kwargs)
+        return cls.io_cls.read_clipboard(**kwargs)
 
     @classmethod
     def read_excel(cls, **kwargs):
@@ -96,7 +96,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_excel(cls, **kwargs):
-        return cls.io_module.read_excel(**kwargs)
+        return cls.io_cls.read_excel(**kwargs)
 
     @classmethod
     def read_hdf(cls, **kwargs):
@@ -104,7 +104,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_hdf(cls, **kwargs):
-        return cls.io_module.read_hdf(**kwargs)
+        return cls.io_cls.read_hdf(**kwargs)
 
     @classmethod
     def read_feather(cls, **kwargs):
@@ -112,7 +112,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_feather(cls, **kwargs):
-        return cls.io_module.read_feather(**kwargs)
+        return cls.io_cls.read_feather(**kwargs)
 
     @classmethod
     def read_msgpack(cls, **kwargs):
@@ -120,7 +120,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_msgpack(cls, **kwargs):
-        return cls.io_module.read_msgpack(**kwargs)
+        return cls.io_cls.read_msgpack(**kwargs)
 
     @classmethod
     def read_stata(cls, **kwargs):
@@ -128,7 +128,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_stata(cls, **kwargs):
-        return cls.io_module.read_stata(**kwargs)
+        return cls.io_cls.read_stata(**kwargs)
 
     @classmethod
     def read_sas(cls, **kwargs):
@@ -136,7 +136,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_sas(cls, **kwargs):
-        return cls.io_module.read_sas(**kwargs)
+        return cls.io_cls.read_sas(**kwargs)
 
     @classmethod
     def read_pickle(cls, **kwargs):
@@ -144,7 +144,7 @@ class BaseFactory(object):
 
     @classmethod
     def _read_pickle(cls, **kwargs):
-        return cls.io_module.read_pickle(**kwargs)
+        return cls.io_cls.read_pickle(**kwargs)
 
     @classmethod
     def read_sql(cls, **kwargs):
@@ -152,17 +152,17 @@ class BaseFactory(object):
 
     @classmethod
     def _read_sql(cls, **kwargs):
-        return cls.io_module.read_sql(**kwargs)
+        return cls.io_cls.read_sql(**kwargs)
 
 
 class PandasOnRayFactory(BaseFactory):
 
-    from modin.engines.ray.pandas_on_ray import io
+    from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
     from modin.engines.ray.pandas_on_ray.block_partitions import RayBlockPartitions
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = RayBlockPartitions
-    io_module = io
+    io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
@@ -170,9 +170,11 @@ class PandasOnPythonFactory(BaseFactory):
     from modin.engines.python.pandas_on_python.block_partitions import (
         PythonBlockPartitions,
     )
+    from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions
+    io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
@@ -180,6 +182,8 @@ class PandasOnDaskFactory(BaseFactory):
     from modin.engines.dask.pandas_on_dask_delayed.block_partitions import (
         DaskBlockPartitions,
     )
+    from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = DaskBlockPartitions
+    io_cls = PandasOnDaskIO
