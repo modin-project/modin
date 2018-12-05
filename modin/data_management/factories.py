@@ -10,7 +10,6 @@ from .. import __partition_format__ as partition_format
 
 
 class BaseFactory(object):
-
     @property
     def query_compiler_cls(self):
         """The Query Compiler class for this factory."""
@@ -168,7 +167,9 @@ class PandasOnRayFactory(BaseFactory):
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.engines.python.pandas_on_python.block_partitions import PythonBlockPartitions
+    from modin.engines.python.pandas_on_python.block_partitions import (
+        PythonBlockPartitions,
+    )
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = PythonBlockPartitions
@@ -176,7 +177,9 @@ class PandasOnPythonFactory(BaseFactory):
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.engines.dask.pandas_on_dask_delayed.block_partitions import DaskBlockPartitions
+    from modin.engines.dask.pandas_on_dask_delayed.block_partitions import (
+        DaskBlockPartitions,
+    )
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = DaskBlockPartitions

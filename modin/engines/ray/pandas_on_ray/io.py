@@ -202,7 +202,9 @@ def _read_csv_from_file_pandas_on_ray(filepath, kwargs={}):
     )
 
     if skipfooter:
-        new_query_compiler = new_query_compiler.drop(new_query_compiler.index[-skipfooter:])
+        new_query_compiler = new_query_compiler.drop(
+            new_query_compiler.index[-skipfooter:]
+        )
     if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
         return new_query_compiler[new_query_compiler.columns[0]]
     return new_query_compiler
