@@ -1,17 +1,15 @@
-import ray
-
-from .base_block_partitions import BaseBlockPartitions
-from ..axis_partition import PandasOnRayColumnPartition, PandasOnRayRowPartition
-from ..remote_partition import PandasOnRayRemotePartition
+from modin.engines.base.block_partitions import BaseBlockPartitions
+from .axis_partition import PandasOnPythonColumnPartition, PandasOnPythonRowPartition
+from .remote_partition import PandasOnPythonRemotePartition
 
 
-class RayBlockPartitions(BaseBlockPartitions):
+class PythonBlockPartitions(BaseBlockPartitions):
     """This method implements the interface in `BaseBlockPartitions`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = PandasOnRayRemotePartition
-    _column_partitions_class = PandasOnRayColumnPartition
-    _row_partition_class = PandasOnRayRowPartition
+    _partition_class = PandasOnPythonRemotePartition
+    _column_partitions_class = PandasOnPythonColumnPartition
+    _row_partition_class = PandasOnPythonRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions
@@ -36,7 +34,7 @@ class RayBlockPartitions(BaseBlockPartitions):
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
             self._lengths_cache = (
-                ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
+                [obj.length() for obj in self._partitions_cache.T[0]]
                 if len(self._partitions_cache.T) > 0
                 else []
             )
@@ -54,7 +52,7 @@ class RayBlockPartitions(BaseBlockPartitions):
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
             self._widths_cache = (
-                ray.get([obj.width().oid for obj in self._partitions_cache[0]])
+                [obj.width() for obj in self._partitions_cache[0]]
                 if len(self._partitions_cache) > 0
                 else []
             )

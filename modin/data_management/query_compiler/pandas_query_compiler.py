@@ -15,7 +15,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.index import _ensure_index
 
-from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
+from modin.engines.base.block_partitions import BaseBlockPartitions
 
 
 class PandasQueryCompiler(object):

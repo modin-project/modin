@@ -1,6 +1,6 @@
-from .base_block_partitions import BaseBlockPartitions
-from ..axis_partition import DaskColumnPartition, DaskRowPartition
-from ..remote_partition import DaskRemotePartition
+from modin.engines.base.block_partitions import BaseBlockPartitions
+from .axis_partition import DaskColumnPartition, DaskRowPartition
+from .remote_partition import DaskRemotePartition
 
 
 class DaskBlockPartitions(BaseBlockPartitions):
