@@ -465,6 +465,61 @@ class PandasOnRayIO(BaseIO):
         )
         return new_query_compiler
 
+    @classmethod
+    def read_feather(cls, path, nthreads=1, columns=None):
+        """Read a pandas.DataFrame from Feather format.
+           Ray DataFrame only supports pyarrow engine for now.
+
+        Args:
+            path: The filepath of the feather file.
+                  We only support local files for now.
+            nthreads: since we use pyarrow reader then this does nothing.
+                multi threading is set to True by default
+            columns: not supported by pandas api, but can be passed here to read only specific columns
+
+        Notes:
+            pyarrow feather is used. Please refer to the documentation here
+            https://arrow.apache.org/docs/python/api.html#feather-format
+        """
+        if not columns:
+            from pyarrow.feather import FeatherReader
+
+            fr = FeatherReader(path)
+            columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
+
+        num_partitions = RayBlockPartitions._compute_num_partitions()
+        num_splits = min(len(columns), num_partitions)
+        # Each item in this list will be a list of column names of the original df
+        column_splits = (
+            len(columns) // num_partitions
+            if len(columns) % num_partitions == 0
+            else len(columns) // num_partitions + 1
+        )
+        col_partitions = [
+            columns[i : i + column_splits]
+            for i in range(0, len(columns), column_splits)
+        ]
+        blk_partitions = np.array(
+            [
+                _read_feather_columns._remote(
+                    args=(path, cols, num_splits), num_return_vals=num_splits + 1
+                )
+                for cols in col_partitions
+            ]
+        ).T
+        remote_partitions = np.array(
+            [
+                [PandasOnRayRemotePartition(obj) for obj in row]
+                for row in blk_partitions[:-1]
+            ]
+        )
+        index_len = ray.get(blk_partitions[-1][0])
+        index = pandas.RangeIndex(index_len)
+        new_query_compiler = PandasQueryCompiler(
+            RayBlockPartitions(remote_partitions), index, columns
+        )
+        return new_query_compiler
+
 
 @ray.remote
 def get_index(index_name, *partition_indices):
@@ -510,7 +565,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
 
 @ray.remote
 def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
-    """Use a Ray task to read a column from HDF5 into a Pandas DataFrame.
+    """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
     Args:
         path: The path of the HDF5 file.
@@ -531,7 +586,7 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
 
 @ray.remote
 def _read_parquet_columns(path, columns, num_splits, kwargs):
-    """Use a Ray task to read a column from Parquet into a Pandas DataFrame.
+    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
     Args:
         path: The path of the Parquet file.
@@ -547,5 +602,27 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
     import pyarrow.parquet as pq
 
     df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
+    # Append the length of the index here to build it externally
+    return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
+
+
+@ray.remote
+def _read_feather_columns(path, columns, num_splits):
+    """Use a Ray task to read columns from Feather into a Pandas DataFrame.
+
+    Args:
+        path: The path of the Feather file.
+        columns: The list of column names to read.
+        num_splits: The number of partitions to split the column into.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element. If there is not `index_col` set, then we just return the length.
+            This is used to determine the total length of the DataFrame to build a
+            default Index.
+    """
+    from pyarrow import feather
+
+    df = feather.read_feather(path, columns=columns)
     # Append the length of the index here to build it externally
     return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
