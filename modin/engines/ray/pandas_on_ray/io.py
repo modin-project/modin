@@ -565,7 +565,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
 
 @ray.remote
 def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
-    """Use a Ray task to read a column from HDF5 into a Pandas DataFrame.
+    """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
     Args:
         path: The path of the HDF5 file.
@@ -586,7 +586,7 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
 
 @ray.remote
 def _read_parquet_columns(path, columns, num_splits, kwargs):
-    """Use a Ray task to read a column from Parquet into a Pandas DataFrame.
+    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
     Args:
         path: The path of the Parquet file.
@@ -608,10 +608,10 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
 
 @ray.remote
 def _read_feather_columns(path, columns, num_splits):
-    """Use a Ray task to read a column from HDF5 into a Pandas DataFrame.
+    """Use a Ray task to read columns from Feather into a Pandas DataFrame.
 
     Args:
-        path: The path of the HDF5 file.
+        path: The path of the Feather file.
         columns: The list of column names to read.
         num_splits: The number of partitions to split the column into.
 
