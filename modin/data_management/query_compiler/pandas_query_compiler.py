@@ -2644,12 +2644,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         columns: pandas.Index,
         dtypes=None,
     ):
-        return PandasQueryCompiler(
-            block_partitions_object,
-            index,
-            columns,
-            dtypes,
-        )
+        return PandasQueryCompiler(block_partitions_object, index, columns, dtypes)
 
     def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
