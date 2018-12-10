@@ -32,7 +32,6 @@ from pandas import (
     NaT,
     PeriodIndex,
     Categorical,
-    options,
 )
 import threading
 import os
@@ -153,7 +152,6 @@ __all__ = [
     "PeriodIndex",
     "Categorical",
     "__version__",
-    "options",
 ]
 
 del pandas
