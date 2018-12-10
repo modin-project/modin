@@ -483,6 +483,7 @@ class PandasOnRayIO(BaseIO):
         """
         if not columns:
             from pyarrow.feather import FeatherReader
+
             fr = FeatherReader(path)
             columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
 
@@ -501,8 +502,7 @@ class PandasOnRayIO(BaseIO):
         blk_partitions = np.array(
             [
                 _read_feather_columns._remote(
-                    args=(path, cols, num_splits),
-                    num_return_vals=num_splits + 1,
+                    args=(path, cols, num_splits), num_return_vals=num_splits + 1
                 )
                 for cols in col_partitions
             ]
