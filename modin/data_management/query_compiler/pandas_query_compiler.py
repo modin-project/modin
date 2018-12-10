@@ -2644,15 +2644,11 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         columns: pandas.Index,
         dtypes=None,
     ):
-        new_index_map = self.index_map.reindex(index)
-        new_columns_map = self.columns_map.reindex(columns)
-        return type(self)(
+        return PandasQueryCompiler(
             block_partitions_object,
             index,
             columns,
             dtypes,
-            new_index_map,
-            new_columns_map,
         )
 
     def _get_data(self) -> BaseBlockPartitions:
