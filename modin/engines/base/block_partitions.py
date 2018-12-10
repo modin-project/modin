@@ -557,6 +557,10 @@ class BaseBlockPartitions(object):
             A tuple containing (block index and internal index).
         """
         if not axis:
+            assert not index > sum(self.block_widths), (
+                "Internal error: Please email dev@modin.org with the traceback of "
+                "this error."
+            )
             cumulative_column_widths = np.array(self.block_widths).cumsum()
             block_idx = int(np.digitize(index, cumulative_column_widths))
             if block_idx == len(cumulative_column_widths):
@@ -570,6 +574,10 @@ class BaseBlockPartitions(object):
             )
             return block_idx, internal_idx
         else:
+            assert not index > sum(self.block_lengths), (
+                "Internal error: Please email dev@modin.org with the traceback of "
+                "this error."
+            )
             cumulative_row_lengths = np.array(self.block_lengths).cumsum()
             block_idx = int(np.digitize(index, cumulative_row_lengths))
             # See note above about internal index
