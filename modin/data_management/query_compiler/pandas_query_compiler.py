@@ -2660,7 +2660,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             func=iloc,
             row_indices=self.index_map.values,
             col_indices=self.columns_map.values,
-            lazy=True,
+            lazy=False,
             keep_remaining=False,
         )
         return masked_data
