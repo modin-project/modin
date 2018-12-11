@@ -7,6 +7,7 @@ from typing import Tuple
 import numpy as np
 import pandas
 
+from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize, _get_nan_block_id
 
 
@@ -441,9 +442,7 @@ class BaseBlockPartitions(object):
             ):
                 axis = 1
             else:
-                raise ValueError(
-                    "Some partitions contain Series and some contain DataFrames"
-                )
+                ErrorMessage.catch_bugs_and_request_email(True)
             df_rows = [
                 pandas.concat([part for part in row], axis=axis)
                 for row in retrieved_objects
@@ -491,7 +490,7 @@ class BaseBlockPartitions(object):
         Returns:
             A Pandas Index object.
         """
-        assert callable(index_func), "Must tell this function how to extract index"
+        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         if axis == 0:
             func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
@@ -557,10 +556,7 @@ class BaseBlockPartitions(object):
             A tuple containing (block index and internal index).
         """
         if not axis:
-            assert not index > sum(self.block_widths), (
-                "Internal error: Please email dev@modin.org with the traceback of "
-                "this error."
-            )
+            ErrorMessage.catch_bugs_and_request_email(index > sum(self.block_widths))
             cumulative_column_widths = np.array(self.block_widths).cumsum()
             block_idx = int(np.digitize(index, cumulative_column_widths))
             if block_idx == len(cumulative_column_widths):
@@ -574,10 +570,7 @@ class BaseBlockPartitions(object):
             )
             return block_idx, internal_idx
         else:
-            assert not index > sum(self.block_lengths), (
-                "Internal error: Please email dev@modin.org with the traceback of "
-                "this error."
-            )
+            ErrorMessage.catch_bugs_and_request_email(index > sum(self.block_lengths))
             cumulative_row_lengths = np.array(self.block_lengths).cumsum()
             block_idx = int(np.digitize(index, cumulative_row_lengths))
             # See note above about internal index

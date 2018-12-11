@@ -11,9 +11,9 @@ import os
 import py
 import ray
 import re
-import warnings
 import numpy as np
 
+from modin.error_message import ErrorMessage
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.data_management.query_compiler import PandasQueryCompiler
 from modin.engines.base.io import BaseIO
@@ -367,10 +367,7 @@ class PandasOnRayIO(BaseIO):
 
         if isinstance(filepath_or_buffer, str):
             if not os.path.exists(filepath_or_buffer):
-                warnings.warn(
-                    "File not found on disk. Defaulting to Pandas implementation.",
-                    UserWarning,
-                )
+                ErrorMessage.default_to_pandas("File not found on disk")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         elif not isinstance(filepath_or_buffer, py.path.local):
             read_from_pandas = True
@@ -383,42 +380,27 @@ class PandasOnRayIO(BaseIO):
             except ImportError:
                 pass
             if read_from_pandas:
-                warnings.warn(
-                    "Reading from buffer. Defaulting to Pandas implementation.",
-                    UserWarning,
-                )
+                ErrorMessage.default_to_pandas("Reading from buffer.")
                 return cls._read_csv_from_pandas(filepath_or_buffer, kwargs)
         if (
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
-            warnings.warn(
-                "Compression detected. Defaulting to Pandas implementation.",
-                UserWarning,
-            )
+            ErrorMessage.default_to_pandas("Compression detected.")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
-            warnings.warn(
-                "Reading chunks from a file. Defaulting to Pandas implementation.",
-                UserWarning,
-            )
+            ErrorMessage.default_to_pandas("Reading chunks from a file.")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
-            warnings.warn(
-                (
-                    "Defaulting to Pandas implementation. To speed up "
-                    "read_csv through the Modin implementation, "
-                    "comment the rows to skip instead."
-                )
-            )
+            ErrorMessage.default_to_pandas("skiprows parameter not optimized yet.")
             return cls._read_csv_from_pandas(filepath_or_buffer, kwargs)
         # TODO: replace this by reading lines from file.
         if kwargs.get("nrows") is not None:
-            warnings.warn("Defaulting to Pandas implementation.", UserWarning)
+            ErrorMessage.default_to_pandas()
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
             return cls._read_csv_from_file_pandas_on_ray(

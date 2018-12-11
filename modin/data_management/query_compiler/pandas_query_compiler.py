@@ -15,6 +15,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.index import _ensure_index
 
+from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
 
 
@@ -2046,6 +2047,9 @@ class PandasQueryCompiler(object):
             }
             df = pandas.DataFrame(dtype_dict, self.index)
         else:
+            ErrorMessage.catch_bugs_and_request_email(
+                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
+            )
             df.index = self.index
             df.columns = self.columns
         return df
