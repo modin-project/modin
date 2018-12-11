@@ -89,11 +89,13 @@ if execution_engine == "Ray":
         pass
 elif execution_engine == "Dask":
     from distributed.client import _get_global_client
+
     if threading.current_thread().name == "MainThread":
         # initialize the dask client
         client = _get_global_client()
         if client is None:
             from distributed import Client
+
             client = Client()
         num_cpus = sum(client.ncores().values())
 elif execution_engine != "Python":
