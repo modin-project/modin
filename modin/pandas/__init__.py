@@ -36,7 +36,6 @@ from pandas import (
 import threading
 import os
 import ray
-from . import dask_client
 
 from .. import __version__
 from .concat import concat
@@ -89,13 +88,14 @@ if execution_engine == "Ray":
     except AssertionError:
         pass
 elif execution_engine == "Dask":
-    try:
-        if threading.current_thread().name == "MainThread":
-            # initialize the dask client
-            client = dask_client.get_client()
-            num_cpus = sum(client.ncores().values())
-    except AssertionError:
-        pass
+    from distributed.client import _get_global_client
+    if threading.current_thread().name == "MainThread":
+        # initialize the dask client
+        client = _get_global_client()
+        if client is None:
+            from distributed import Client
+            client = Client()
+        num_cpus = sum(client.ncores().values())
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
