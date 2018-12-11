@@ -304,9 +304,7 @@ class BaseBlockPartitions(object):
             partitions = self.partitions.T
             bin_lengths = self.block_widths
         if n < 0:
-            reversed_bins = bin_lengths
-            reversed_bins.reverse()
-            length_bins = np.cumsum(reversed_bins)
+            length_bins = np.cumsum(bin_lengths[::-1])
             n *= -1
             idx = int(np.digitize(n, length_bins))
             if idx > 0:
