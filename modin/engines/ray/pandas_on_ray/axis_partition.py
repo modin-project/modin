@@ -32,6 +32,8 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
+        assert len(self.list_of_blocks)
+
         if other_axis_partition is not None:
             return [
                 PandasOnRayRemotePartition(obj)
@@ -103,6 +105,8 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     Returns:
         A list of Pandas DataFrames.
     """
+    if not len(partitions):
+        raise ValueError(partitions, func)
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if isinstance(result, pandas.Series):

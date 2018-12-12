@@ -55,13 +55,17 @@ class BaseBlockPartitions(object):
     _filtered_empties = False
 
     def _get_partitions(self):
+        print(self.block_lengths)
+        print(self.block_widths)
+        print(np.array(self._partitions_cache))
         if not self._filtered_empties:
             self._partitions_cache = np.array(
                 [
                     [
                         self._partitions_cache[i][j]
                         for j in range(len(self._partitions_cache[i]))
-                        if self.block_lengths[i] != 0 or self.block_widths[j] != 0
+                        if self.block_lengths[i] != 0
+                           and self.block_widths[j] != 0
                     ]
                     for i in range(len(self._partitions_cache))
                 ]
@@ -137,11 +141,10 @@ class BaseBlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
+            print(self._partitions_cache)
             self._lengths_cache = np.array(
-                [obj.length().get() for obj in self._partitions_cache.T[0]]
-                if len(self._partitions_cache.T) > 0
-                else []
-            )
+                obj.length().get() for obj in self._partitions_cache.T[0]) \
+                if len(self._partitions_cache.T) > 0 else np.array()
         return self._lengths_cache
 
     # Widths of the blocks
@@ -272,7 +275,7 @@ class BaseBlockPartitions(object):
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
         result_blocks = np.array(
-            [part.apply(preprocessed_map_func, num_splits) for part in partitions]
+            [part.apply(preprocessed_map_func, num_splits) for part in partitions if len(part.list_of_blocks)]
         )
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D numpy array to return
@@ -620,7 +623,7 @@ class BaseBlockPartitions(object):
             A list of BaseRemotePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+        return np.array(obj.apply(preprocessed_func, **kwargs) for obj in partitions)
 
     def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False):
         """Applies a function to select indices.
@@ -656,6 +659,8 @@ class BaseBlockPartitions(object):
             partitions_for_apply = self.partitions.T
         else:
             partitions_for_apply = self.partitions
+
+        print(partitions_for_apply)
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must

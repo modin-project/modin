@@ -2082,9 +2082,8 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasDataManager.
         """
-        numeric_index = self.columns.get_indexer_for([key])
         new_data = self.getitem_column_array([key])
-        if len(numeric_index) > 1:
+        if len(self.columns.get_indexer_for([key])) > 1:
             return new_data
         else:
             # This is the case that we are returning a single Series.
@@ -2304,15 +2303,18 @@ class PandasQueryCompiler(object):
             if (
                 not axis
                 and len(series_result) == len(self.columns)
-                and len(index) != len(series_result)
+                # and len(index) != len(series_result)
             ):
                 index = self.columns
             elif (
                 axis
                 and len(series_result) == len(self.index)
-                and len(index) != len(series_result)
+                # and len(index) != len(series_result)
             ):
                 index = self.index
+            # else:
+            #     print(len(index))
+            #     print(len(series_result))
 
             series_result.index = index
             return series_result
