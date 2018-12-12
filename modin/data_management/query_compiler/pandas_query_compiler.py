@@ -2300,21 +2300,10 @@ class PandasQueryCompiler(object):
         # this logic here.
         if len(columns) == 0:
             series_result = result_data.to_pandas(False)
-            if (
-                not axis
-                and len(series_result) == len(self.columns)
-                # and len(index) != len(series_result)
-            ):
+            if not axis and len(series_result) == len(self.columns):
                 index = self.columns
-            elif (
-                axis
-                and len(series_result) == len(self.index)
-                # and len(index) != len(series_result)
-            ):
+            elif axis and len(series_result) == len(self.index):
                 index = self.index
-            # else:
-            #     print(len(index))
-            #     print(len(series_result))
 
             series_result.index = index
             return series_result

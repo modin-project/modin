@@ -55,19 +55,19 @@ class BaseBlockPartitions(object):
     _filtered_empties = False
 
     def _get_partitions(self):
-        print(self.block_lengths)
-        print(self.block_widths)
-        print(np.array(self._partitions_cache))
         if not self._filtered_empties:
             self._partitions_cache = np.array(
                 [
-                    [
-                        self._partitions_cache[i][j]
-                        for j in range(len(self._partitions_cache[i]))
-                        if self.block_lengths[i] != 0
-                           and self.block_widths[j] != 0
+                    row
+                    for row in [
+                        [
+                            self._partitions_cache[i][j]
+                            for j in range(len(self._partitions_cache[i]))
+                            if self.block_lengths[i] != 0 and self.block_widths[j] != 0
+                        ]
+                        for i in range(len(self._partitions_cache))
                     ]
-                    for i in range(len(self._partitions_cache))
+                    if len(row)
                 ]
             )
             self._remove_empty_blocks()
@@ -141,10 +141,11 @@ class BaseBlockPartitions(object):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
-            print(self._partitions_cache)
             self._lengths_cache = np.array(
-                obj.length().get() for obj in self._partitions_cache.T[0]) \
-                if len(self._partitions_cache.T) > 0 else np.array()
+                [obj.length().get() for obj in self._partitions_cache.T[0]]
+                if len(self._partitions_cache.T) > 0
+                else []
+            )
         return self._lengths_cache
 
     # Widths of the blocks
@@ -275,7 +276,7 @@ class BaseBlockPartitions(object):
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
         result_blocks = np.array(
-            [part.apply(preprocessed_map_func, num_splits) for part in partitions if len(part.list_of_blocks)]
+            [part.apply(preprocessed_map_func, num_splits) for part in partitions]
         )
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D numpy array to return
@@ -495,7 +496,11 @@ class BaseBlockPartitions(object):
         if axis == 0:
             func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
-            new_indices = [idx.apply(func).get() for idx in self.partitions.T[0]]
+            new_indices = (
+                [idx.apply(func).get() for idx in self.partitions.T[0]]
+                if len(self.partitions.T)
+                else []
+            )
             # This is important because sometimes we have resized the data. The new
             # sizes will not be valid if we are trying to compute the index on a
             # new object that has a different length.
@@ -505,13 +510,17 @@ class BaseBlockPartitions(object):
                 cumulative_block_lengths = np.array(self.block_lengths).cumsum()
         else:
             func = self.preprocess_func(index_func)
-            new_indices = [idx.apply(func).get() for idx in self.partitions[0]]
+            new_indices = (
+                [idx.apply(func).get() for idx in self.partitions[0]]
+                if len(self.partitions)
+                else []
+            )
 
             if old_blocks is not None:
                 cumulative_block_lengths = np.array(old_blocks.block_widths).cumsum()
             else:
                 cumulative_block_lengths = np.array(self.block_widths).cumsum()
-        full_indices = new_indices[0]
+        full_indices = new_indices[0] if len(new_indices) else new_indices
         if old_blocks is not None:
             for i in range(len(new_indices)):
                 # If the length is 0 there is nothing to append.
@@ -623,7 +632,7 @@ class BaseBlockPartitions(object):
             A list of BaseRemotePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        return np.array(obj.apply(preprocessed_func, **kwargs) for obj in partitions)
+        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False):
         """Applies a function to select indices.
@@ -660,7 +669,6 @@ class BaseBlockPartitions(object):
         else:
             partitions_for_apply = self.partitions
 
-        print(partitions_for_apply)
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must

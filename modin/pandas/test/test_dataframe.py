@@ -27,8 +27,9 @@ else:
 
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):
-    return to_pandas(ray_df).equals(pandas_df) or \
-           to_pandas(ray_df).eq(pandas_df).all(axis=None)
+    return to_pandas(ray_df).equals(pandas_df) or to_pandas(ray_df).eq(pandas_df).all(
+        axis=None
+    )
 
 
 @pytest.fixture
@@ -109,7 +110,7 @@ def test_int_dataframe():
     test_keys(ray_df, pandas_df)
     test_transpose(ray_df, pandas_df)
     test_round(ray_df, pandas_df)
-    # test_query(ray_df, pandas_df, query_funcs)
+    test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
     test_var(ray_df, pandas_df)
@@ -286,7 +287,7 @@ def test_float_dataframe():
     test_keys(ray_df, pandas_df)
     test_transpose(ray_df, pandas_df)
     test_round(ray_df, pandas_df)
-    # test_query(ray_df, pandas_df, query_funcs)
+    test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
     test_var(ray_df, pandas_df)
@@ -453,7 +454,7 @@ def test_mixed_dtype_dataframe():
     test_keys(ray_df, pandas_df)
     test_transpose(ray_df, pandas_df)
     test_round(ray_df, pandas_df)
-    # test_query(ray_df, pandas_df, query_funcs)
+    test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
     test_var(ray_df, pandas_df)
@@ -616,7 +617,7 @@ def test_nan_dataframe():
     test_keys(ray_df, pandas_df)
     test_transpose(ray_df, pandas_df)
     test_round(ray_df, pandas_df)
-    # test_query(ray_df, pandas_df, query_funcs)
+    test_query(ray_df, pandas_df, query_funcs)
 
     test_mean(ray_df, pandas_df)
     test_var(ray_df, pandas_df)
@@ -1075,8 +1076,9 @@ def test_apply(ray_df, pandas_df, func, axis):
     if isinstance(ray_result, pd.DataFrame):
         assert ray_df_equals_pandas(ray_result, pandas_result)
     else:
-        assert ray_result.equals(pandas_result) or \
-               ray_result.eq(pandas_result).all(axis=None)
+        assert ray_result.equals(pandas_result) or ray_result.eq(pandas_result).all(
+            axis=None
+        )
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
