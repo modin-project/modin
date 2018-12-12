@@ -58,12 +58,16 @@ class BaseBlockPartitions(object):
         if not self._filtered_empties:
             self._partitions_cache = np.array(
                 [
-                    [
-                        self._partitions_cache[i][j]
-                        for j in range(len(self._partitions_cache[i]))
-                        if self.block_lengths[i] != 0 or self.block_widths[j] != 0
+                    row
+                    for row in [
+                        [
+                            self._partitions_cache[i][j]
+                            for j in range(len(self._partitions_cache[i]))
+                            if self.block_lengths[i] != 0 and self.block_widths[j] != 0
+                        ]
+                        for i in range(len(self._partitions_cache))
                     ]
-                    for i in range(len(self._partitions_cache))
+                    if len(row)
                 ]
             )
             self._remove_empty_blocks()
@@ -492,7 +496,11 @@ class BaseBlockPartitions(object):
         if axis == 0:
             func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
-            new_indices = [idx.apply(func).get() for idx in self.partitions.T[0]]
+            new_indices = (
+                [idx.apply(func).get() for idx in self.partitions.T[0]]
+                if len(self.partitions.T)
+                else []
+            )
             # This is important because sometimes we have resized the data. The new
             # sizes will not be valid if we are trying to compute the index on a
             # new object that has a different length.
@@ -502,13 +510,17 @@ class BaseBlockPartitions(object):
                 cumulative_block_lengths = np.array(self.block_lengths).cumsum()
         else:
             func = self.preprocess_func(index_func)
-            new_indices = [idx.apply(func).get() for idx in self.partitions[0]]
+            new_indices = (
+                [idx.apply(func).get() for idx in self.partitions[0]]
+                if len(self.partitions)
+                else []
+            )
 
             if old_blocks is not None:
                 cumulative_block_lengths = np.array(old_blocks.block_widths).cumsum()
             else:
                 cumulative_block_lengths = np.array(self.block_widths).cumsum()
-        full_indices = new_indices[0]
+        full_indices = new_indices[0] if len(new_indices) else new_indices
         if old_blocks is not None:
             for i in range(len(new_indices)):
                 # If the length is 0 there is nothing to append.

@@ -1495,18 +1495,17 @@ def test_dropna(ray_df, pd_df):
 
 @pytest.fixture
 def test_dropna_inplace(ray_df, pd_df):
-    ray_df = ray_df.copy()
-    pd_df = pd_df.copy()
+    ray_df_cp = ray_df.copy()
+    pd_df_cp = pd_df.copy()
+    ray_df_cp.dropna(thresh=2, inplace=True)
+    pd_df_cp.dropna(thresh=2, inplace=True)
+    assert ray_df_equals_pandas(ray_df_cp, pd_df_cp)
 
-    ray_df.dropna(thresh=2, inplace=True)
-    pd_df.dropna(thresh=2, inplace=True)
-
-    assert ray_df_equals_pandas(ray_df, pd_df)
-
-    ray_df.dropna(axis=1, how="any", inplace=True)
-    pd_df.dropna(axis=1, how="any", inplace=True)
-
-    assert ray_df_equals_pandas(ray_df, pd_df)
+    ray_df_cp = ray_df.copy()
+    pd_df_cp = pd_df.copy()
+    ray_df_cp.dropna(axis=1, how="any", inplace=True)
+    pd_df_cp.dropna(axis=1, how="any", inplace=True)
+    assert ray_df_equals_pandas(ray_df_cp, pd_df_cp)
 
 
 @pytest.fixture
