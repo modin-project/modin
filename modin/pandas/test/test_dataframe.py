@@ -27,9 +27,7 @@ else:
 
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):
-    return to_pandas(ray_df).equals(pandas_df) or to_pandas(ray_df).eq(pandas_df).all(
-        axis=None
-    )
+    return to_pandas(ray_df).equals(pandas_df)
 
 
 @pytest.fixture
@@ -1076,9 +1074,7 @@ def test_apply(ray_df, pandas_df, func, axis):
     if isinstance(ray_result, pd.DataFrame):
         assert ray_df_equals_pandas(ray_result, pandas_result)
     else:
-        assert ray_result.equals(pandas_result) or ray_result.eq(pandas_result).all(
-            axis=None
-        )
+        assert ray_result.equals(pandas_result)
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")

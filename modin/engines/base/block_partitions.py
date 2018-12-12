@@ -668,7 +668,6 @@ class BaseBlockPartitions(object):
             partitions_for_apply = self.partitions.T
         else:
             partitions_for_apply = self.partitions
-
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
