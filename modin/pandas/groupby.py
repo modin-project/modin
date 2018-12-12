@@ -6,8 +6,8 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
-import warnings
 
+from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
 
 
@@ -64,7 +64,7 @@ class DataFrameGroupBy(object):
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
                 # aware.
-                warnings.warn("Defaulting to Pandas implementation", UserWarning)
+                ErrorMessage.default_to_pandas()
                 if self._axis == 0:
                     self._index_grouped_cache = {
                         k: v.index

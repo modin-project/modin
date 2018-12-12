@@ -26,6 +26,7 @@ import re
 import sys
 import warnings
 
+from modin.error_message import ErrorMessage
 from .utils import from_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 
@@ -200,11 +201,11 @@ class DataFrame(object):
             raise ValueError("expr cannot be an empty string")
 
         if isinstance(expr, str) and "@" in expr:
-            raise NotImplementedError("Local variables not yet supported in eval.")
+            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
-                raise NotImplementedError("'Not' nodes are not implemented.")
+                ErrorMessage.not_implemented("'Not' nodes are not implemented.")
 
     @property
     def size(self):
@@ -4846,9 +4847,7 @@ class DataFrame(object):
 
     @property
     def ix(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit github.com/modin-project/modin."
-        )
+        raise ErrorMessage.not_implemented("ix is not implemented.")
 
     @property
     def iloc(self):
@@ -5014,7 +5013,7 @@ class DataFrame(object):
 
     def _default_to_pandas_func(self, op, *args, **kwargs):
         """Helper method to use default pandas function"""
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        ErrorMessage.default_to_pandas()
         result = op(self._query_compiler.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.DataFrame):
             return DataFrame(result)
