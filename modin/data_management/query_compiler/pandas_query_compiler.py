@@ -838,6 +838,7 @@ class PandasQueryCompiler(object):
         new_index = pandas.RangeIndex(len(self.index))
         if not drop:
             if isinstance(self.index, pandas.MultiIndex):
+                # TODO (devin-petersohn) ensure partitioning is properly aligned
                 new_column_names = pandas.Index(self.index.names)
                 new_columns = new_column_names.append(self.columns)
                 index_data = pandas.DataFrame(list(zip(*self.index))).T
