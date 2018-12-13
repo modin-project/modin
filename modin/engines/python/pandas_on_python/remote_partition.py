@@ -137,7 +137,7 @@ class PandasOnPythonRemotePartition(object):
 
     def length(self):
         if self._length_cache is None:
-            self._length_cache = type(self).width_extraction_fn()(self.data)
+            self._length_cache = type(self).length_extraction_fn()(self.data)
         return self._length_cache
 
     def width(self):

@@ -578,7 +578,6 @@ class BaseBlockPartitions(object):
                 if not block_idx
                 else index - cumulative_column_widths[block_idx - 1]
             )
-            return block_idx, internal_idx
         else:
             ErrorMessage.catch_bugs_and_request_email(index > sum(self.block_lengths))
             cumulative_row_lengths = np.array(self.block_lengths).cumsum()
@@ -589,7 +588,7 @@ class BaseBlockPartitions(object):
                 if not block_idx
                 else index - cumulative_row_lengths[block_idx - 1]
             )
-            return block_idx, internal_idx
+        return block_idx, internal_idx
 
     def _get_dict_of_block_index(self, axis, indices):
         """Convert indices to a dict of block index to internal index mapping.
