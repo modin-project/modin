@@ -28,3 +28,10 @@ class ErrorMessage(object):
                 "Please email bugs@modin.org with the traceback and command that "
                 "caused this error."
             )
+
+    @classmethod
+    def non_verified_udf(cls):
+        print(
+            "User-defined function verification is still under development in Modin. "
+            "The function provided is not verified."
+        )

@@ -422,7 +422,7 @@ class DataFrameGroupBy(object):
         Returns:
              A new Modin DataFrame with the result of the pandas function.
         """
-        return self._df._default_to_pandas_func(
+        return self._df._default_to_pandas(
             lambda df: f(df.groupby(by=self._by, axis=self._axis, **self._kwargs)),
             **kwargs
         )
