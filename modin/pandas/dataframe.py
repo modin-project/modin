@@ -3210,7 +3210,11 @@ class DataFrame(object):
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
-        if not drop and all(n in self.columns for n in ["level_0", "index"]):
+        if (
+            not drop
+            and not isinstance(self.index, pandas.MultiIndex)
+            and all(n in self.columns for n in ["level_0", "index"])
+        ):
             raise ValueError("cannot insert level_0, already exists")
         new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
