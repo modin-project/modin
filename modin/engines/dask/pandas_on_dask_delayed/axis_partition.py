@@ -47,10 +47,8 @@ class DaskAxisPartition(BaseAxisPartition):
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
-                    *dask.compute(
-                        *tuple(
-                            self.list_of_blocks + other_axis_partition.list_of_blocks
-                        )
+                    *tuple(
+                        self.list_of_blocks + other_axis_partition.list_of_blocks
                     )
                 )
             ]
