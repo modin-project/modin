@@ -45,7 +45,8 @@ class DaskBlockPartitions(BaseBlockPartitions):
             return self.transpose().to_pandas(False).T
         else:
             retrieved_objects = [
-                list(dask.compute(*[obj.dask_obj for obj in part])) for part in self.partitions
+                list(dask.compute(*[obj.dask_obj for obj in part]))
+                for part in self.partitions
             ]
             if all(
                 isinstance(part, pandas.Series)

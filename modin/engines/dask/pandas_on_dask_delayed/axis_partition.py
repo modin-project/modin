@@ -41,15 +41,15 @@ class DaskAxisPartition(BaseAxisPartition):
         if other_axis_partition is not None:
             return [
                 DaskRemotePartition(obj)
-                for obj in dask.delayed(deploy_func_between_two_axis_partitions, nout=num_splits)(
+                for obj in dask.delayed(
+                    deploy_func_between_two_axis_partitions, nout=num_splits
+                )(
                     self.axis,
                     func,
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
-                    *tuple(
-                        self.list_of_blocks + other_axis_partition.list_of_blocks
-                    )
+                    *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
                 )
             ]
 
