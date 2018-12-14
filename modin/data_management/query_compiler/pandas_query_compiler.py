@@ -837,10 +837,18 @@ class PandasQueryCompiler(object):
         drop = kwargs.get("drop", False)
         new_index = pandas.RangeIndex(len(self.index))
         if not drop:
-            new_column_name = "index" if "index" not in self.columns else "level_0"
-            new_columns = self.columns.insert(0, new_column_name)
-            result = self.insert(0, new_column_name, self.index)
-            return self.__constructor__(result.data, new_index, new_columns)
+            if isinstance(self.index, pandas.MultiIndex):
+                # TODO (devin-petersohn) ensure partitioning is properly aligned
+                new_column_names = pandas.Index(self.index.names)
+                new_columns = new_column_names.append(self.columns)
+                index_data = pandas.DataFrame(list(zip(*self.index))).T
+                result = self.data.from_pandas(index_data).concat(1, self.data)
+                return self.__constructor__(result, new_index, new_columns)
+            else:
+                new_column_name = "index" if "index" not in self.columns else "level_0"
+                new_columns = self.columns.insert(0, new_column_name)
+                result = self.insert(0, new_column_name, self.index)
+                return self.__constructor__(result.data, new_index, new_columns)
         else:
             # The copies here are to ensure that we do not give references to
             # this object for the purposes of updates.

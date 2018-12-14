@@ -3651,3 +3651,14 @@ def test_get_dummies():
     ray_df = pd.DataFrame(frame_data)
     pd_df = pandas.DataFrame(frame_data)
     assert ray_df_equals_pandas(pd.get_dummies(ray_df), pandas.get_dummies(pd_df))
+
+
+def test_reset_index_with_multi_index():
+    frame_data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 6))
+    md_df = pd.DataFrame(frame_data).add_prefix("col")
+    pd_df = pandas.DataFrame(frame_data).add_prefix("col")
+
+    md_cols = md_df.groupby(["col1", "col2"]).count().reset_index().columns
+    pd_cols = pd_df.groupby(["col1", "col2"]).count().reset_index().columns
+
+    assert md_cols.equals(pd_cols)
