@@ -33,15 +33,19 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
             num_splits = len(self.list_of_blocks)
 
         if other_axis_partition is not None:
-            return self._wrap_partitions(deploy_ray_func_between_two_axis_partitions._remote(
+            return self._wrap_partitions(
+                deploy_ray_func_between_two_axis_partitions._remote(
                     args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
                     num_return_vals=num_splits,
-                ))
+                )
+            )
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(deploy_ray_axis_func._remote(args, num_return_vals=num_splits))
+        return self._wrap_partitions(
+            deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+        )
 
     def shuffle(self, func, num_splits=None, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
@@ -58,7 +62,9 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(deploy_ray_axis_func._remote(args, num_return_vals=num_splits))
+        return self._wrap_partitions(
+            deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+        )
 
     def _wrap_partitions(self, partitions):
         if isinstance(partitions, ray.ObjectID):

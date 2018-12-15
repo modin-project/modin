@@ -457,7 +457,7 @@ class BaseBlockPartitions(object):
 
     @classmethod
     def from_pandas(cls, df):
-        min_block_size = 2**12
+        min_block_size = 2 ** 12
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         mem_usage = df.memory_usage().sum()
@@ -468,12 +468,19 @@ class BaseBlockPartitions(object):
             col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
 
             import math
+
             mem_usage_chunksize = math.sqrt(mem_usage // min_block_size)
             row_chunksize = max(row_chunksize, len(df) // int(mem_usage_chunksize))
             # adjust mem_usage_chunksize for non-perfect square roots to have better
             # partitioning
-            mem_usage_chunksize = mem_usage_chunksize if mem_usage_chunksize - int(mem_usage_chunksize) == 0 else mem_usage_chunksize + 1
-            col_chunksize = max(col_chunksize, len(df.columns) // int(mem_usage_chunksize))
+            mem_usage_chunksize = (
+                mem_usage_chunksize
+                if mem_usage_chunksize - int(mem_usage_chunksize) == 0
+                else mem_usage_chunksize + 1
+            )
+            col_chunksize = max(
+                col_chunksize, len(df.columns) // int(mem_usage_chunksize)
+            )
 
             # Each chunk must have a RangeIndex that spans its length and width
             # according to our invariant.
@@ -685,6 +692,7 @@ class BaseBlockPartitions(object):
         # possible here. Functions that use this in the dictionary format must
         # accept a keyword argument `func_dict`.
         if dict_indices is not None:
+
             def local_to_global_idx(partition_id, local_idx):
                 if partition_id == 0:
                     return local_idx
@@ -701,7 +709,9 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[local_to_global_idx(i, idx)] for idx in partitions_dict[i] if idx >= 0
+                                idx: dict_indices[local_to_global_idx(i, idx)]
+                                for idx in partitions_dict[i]
+                                if idx >= 0
                             },
                         )
                         for i in partitions_dict
@@ -716,7 +726,9 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[local_to_global_idx(i, idx)] for idx in partitions_dict[i] if idx >= 0
+                                idx: dict_indices[local_to_global_idx(i, idx)]
+                                for idx in partitions_dict[i]
+                                if idx >= 0
                             },
                         )
                         for i in range(len(partitions_for_apply))
