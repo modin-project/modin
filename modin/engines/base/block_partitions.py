@@ -5,6 +5,7 @@ from __future__ import print_function
 from typing import Tuple
 
 import numpy as np
+import math
 import pandas
 
 from modin.error_message import ErrorMessage
@@ -466,8 +467,6 @@ class BaseBlockPartitions(object):
         else:
             row_chunksize = max(1, compute_chunksize(len(df), num_splits))
             col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
-
-            import math
 
             mem_usage_chunksize = math.sqrt(mem_usage // min_block_size)
             row_chunksize = max(row_chunksize, len(df) // int(mem_usage_chunksize))
