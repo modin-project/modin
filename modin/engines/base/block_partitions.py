@@ -457,23 +457,36 @@ class BaseBlockPartitions(object):
 
     @classmethod
     def from_pandas(cls, df):
+        min_block_size = 2**12
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
-        row_chunksize = max(1, compute_chunksize(len(df), num_splits))
-        col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
+        mem_usage = df.memory_usage().sum()
+        if mem_usage <= min_block_size:
+            parts = [[put_func(df)]]
+        else:
+            row_chunksize = max(1, compute_chunksize(len(df), num_splits))
+            col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
 
-        # Each chunk must have a RangeIndex that spans its length and width
-        # according to our invariant.
-        def chunk_builder(i, j):
-            chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
-            chunk.index = pandas.RangeIndex(len(chunk.index))
-            chunk.columns = pandas.RangeIndex(len(chunk.columns))
-            return put_func(chunk)
+            import math
+            mem_usage_chunksize = math.sqrt(mem_usage // min_block_size)
+            row_chunksize = max(row_chunksize, len(df) // int(mem_usage_chunksize))
+            # adjust mem_usage_chunksize for non-perfect square roots to have better
+            # partitioning
+            mem_usage_chunksize = mem_usage_chunksize if mem_usage_chunksize - int(mem_usage_chunksize) == 0 else mem_usage_chunksize + 1
+            col_chunksize = max(col_chunksize, len(df.columns) // int(mem_usage_chunksize))
 
-        parts = [
-            [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
-            for i in range(0, len(df), row_chunksize)
-        ]
+            # Each chunk must have a RangeIndex that spans its length and width
+            # according to our invariant.
+            def chunk_builder(i, j):
+                chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
+                chunk.index = pandas.RangeIndex(len(chunk.index))
+                chunk.columns = pandas.RangeIndex(len(chunk.columns))
+                return put_func(chunk)
+
+            parts = [
+                [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
+                for i in range(0, len(df), row_chunksize)
+            ]
         return cls(np.array(parts))
 
     def get_indices(self, axis=0, index_func=None, old_blocks=None):
@@ -679,7 +692,7 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[idx] for idx in partitions_dict[i]
+                                idx: dict_indices[idx] for idx in partitions_dict[i] if idx >= 0
                             },
                         )
                         for i in partitions_dict
@@ -694,7 +707,7 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[i] for idx in partitions_dict[i]
+                                idx: dict_indices[idx] for idx in partitions_dict[i] if idx >= 0
                             },
                         )
                         for i in range(len(partitions_for_apply))

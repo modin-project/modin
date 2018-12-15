@@ -691,6 +691,8 @@ class PandasQueryCompiler(object):
         ), "Must have the same DataManager subclass to perform this operation"
 
         def update_builder(df, other, **kwargs):
+            # This is because of a requirement in Arrow
+            df = df.copy()
             df.update(other, **kwargs)
             return df
 
@@ -1782,6 +1784,9 @@ class PandasQueryCompiler(object):
             }
 
             def fillna_dict_builder(df, func_dict={}):
+                # We do this to ensure that no matter the state of the columns we get
+                # the correct ones.
+                func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 
             new_data = self.data.apply_func_to_select_indices(
@@ -1834,7 +1839,7 @@ class PandasQueryCompiler(object):
         # Since we assume no knowledge of internal state, we get the columns
         # from the internal partitions.
         if numeric_only:
-            new_columns = self.compute_index(1, new_data, True)
+            new_columns = self.columns[[i for i in range(len(self.dtypes)) if is_numeric_dtype(self.dtypes[i])]] # self.compute_index(1, new_data, True)
         else:
             new_columns = self.columns
         new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
