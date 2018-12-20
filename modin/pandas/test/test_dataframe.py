@@ -993,7 +993,9 @@ def test_get(ray_df, pandas_df, key):
 
 @pytest.fixture
 def test_get_dtype_counts(ray_df, pandas_df):
-    assert ray_df.get_dtype_counts().equals(pandas_df.get_dtype_counts())
+    ray_result = ray_df.get_dtype_counts().sort_index()
+    pandas_result = pandas_df.get_dtype_counts().sort_index()
+    assert ray_result.equals(pandas_result)
 
 
 @pytest.fixture
