@@ -105,7 +105,9 @@ def deploy_python_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
-    if num_splits != len(partitions) or isinstance(result, pandas.Series):
+    if isinstance(result, pandas.Series):
+        return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
+    if num_splits != len(partitions):
         lengths = None
     else:
         if axis == 0:
