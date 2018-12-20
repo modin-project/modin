@@ -1672,7 +1672,6 @@ class DataFrame(object):
         """
         result = self.dtypes.value_counts()
         result.index = result.index.map(lambda x: str(x))
-        result = result.sort_index()
         return result
 
     def get_ftype_counts(self):
