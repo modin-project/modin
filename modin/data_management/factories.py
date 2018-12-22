@@ -227,3 +227,14 @@ class PandasOnDaskFactory(BaseFactory):
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = DaskBlockPartitions
     io_cls = PandasOnDaskIO
+
+
+class GandivaOnRayFactory(BaseFactory):
+
+    from modin.engines.ray.gandiva_on_ray.block_partitions import RayBlockPartitions
+    from modin.engines.ray.gandiva_on_ray.io import GandivaOnRayIO
+    from modin.data_management.query_compiler import GandivaQueryCompiler
+
+    query_compiler_cls = GandivaQueryCompiler
+    block_partitions_cls = RayBlockPartitions
+    io_cls = GandivaOnRayIO
