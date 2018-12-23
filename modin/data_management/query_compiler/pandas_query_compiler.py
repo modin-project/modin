@@ -1731,15 +1731,19 @@ class PandasQueryCompiler(object):
 
         def mode_builder(df, **kwargs):
             result = df.mode(**kwargs)
-            # We return a dataframe with the same shape as the input to ensure 
+            # We return a dataframe with the same shape as the input to ensure
             # that all the partitions will be the same shape
             if not axis and len(df) != len(result):
                 # Pad columns
-                append_values = pandas.DataFrame(columns=result.columns, index=range(len(result), len(df)))
+                append_values = pandas.DataFrame(
+                    columns=result.columns, index=range(len(result), len(df))
+                )
                 result = pandas.concat([result, append_values], ignore_index=True)
             elif axis:
                 # Pad rows
-                append_vals = pandas.DataFrame(columns=range(len(result.columns), len(df)), index=result.index)
+                append_vals = pandas.DataFrame(
+                    columns=range(len(result.columns), len(df)), index=result.index
+                )
                 result = pandas.concat([result, append_vals], axis=1)
             return result
 
