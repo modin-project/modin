@@ -1729,36 +1729,32 @@ class PandasQueryCompiler(object):
         """
         axis = kwargs.get("axis", 0)
         numeric_only = kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
+        
+        def mode_builder(df, **kwargs):
+            result = df.mode(**kwargs)
+            # We return a dataframe with the same shape as the input to ensure that all the partitions will be the same shape
+            if not axis and len(df) != len(result):
+                # Pad columns
+                result = pandas.concat([result] + [pandas.DataFrame({col: [np.NaN] for col in result.columns}) for _ in range(len(df) - len(result))], ignore_index=True)
+            elif axis:
+                # Pad rows
+                while len(df.columns) != len(result.columns):
+                    result[len(result.columns)] = np.NaN
+            return result
+
+        func = self._prepare_method(mode_builder, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
-
-        if numeric_only:
-            result, query_compiler = self.numeric_function_clean_dataframe(axis)
-            if result is not None:
-                return self.from_pandas(
-                    pandas.DataFrame(index=query_compiler.index), type(self.data)
-                )
-        else:
-            query_compiler = self
-
-        max_count = (
-            self.__constructor__(new_data, query_compiler.index, query_compiler.columns)
-            .notnull()
-            .sum(axis=axis)
-        ).max()
-
-        new_index = pandas.RangeIndex(max_count) if not axis else query_compiler.index
-        new_columns = (
-            query_compiler.columns if not axis else pandas.RangeIndex(max_count)
-        )
+        max_count = self.__constructor__(new_data, self.index, self.columns).count(axis=axis).max()
+        new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
+        new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
         # We have to reindex the DataFrame so that all of the partitions are
         # matching in shape. The next steps ensure this happens.
         final_labels = new_index if not axis else new_columns
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
         return self.__constructor__(
-            new_data, new_index, new_columns, query_compiler._dtype_cache
-        ).reindex(axis=axis, labels=final_labels)
+            new_data, new_index, new_columns, self._dtype_cache
+        ).reindex(axis=axis, labels=final_labels).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
