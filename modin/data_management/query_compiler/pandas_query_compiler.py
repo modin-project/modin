@@ -1728,8 +1728,7 @@ class PandasQueryCompiler(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", False)
-        
+
         def mode_builder(df, **kwargs):
             result = df.mode(**kwargs)
             # We return a dataframe with the same shape as the input to ensure that all the partitions will be the same shape
@@ -1744,7 +1743,6 @@ class PandasQueryCompiler(object):
 
         func = self._prepare_method(mode_builder, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
-        max_count = self.__constructor__(new_data, self.index, self.columns).count(axis=axis).max()
         new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
         new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
         # We have to reindex the DataFrame so that all of the partitions are
