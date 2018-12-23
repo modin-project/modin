@@ -1731,21 +1731,16 @@ class PandasQueryCompiler(object):
 
         def mode_builder(df, **kwargs):
             result = df.mode(**kwargs)
-            # We return a dataframe with the same shape as the input to ensure that all the partitions will be the same shape
+            # We return a dataframe with the same shape as the input to ensure 
+            # that all the partitions will be the same shape
             if not axis and len(df) != len(result):
                 # Pad columns
-                result = pandas.concat(
-                    [result]
-                    + [
-                        pandas.DataFrame({col: [np.NaN] for col in result.columns})
-                        for _ in range(len(df) - len(result))
-                    ],
-                    ignore_index=True,
-                )
+                append_values = pandas.DataFrame(columns=result.columns, index=range(len(result), len(df)))
+                result = pandas.concat([result, append_values], ignore_index=True)
             elif axis:
                 # Pad rows
-                while len(df.columns) != len(result.columns):
-                    result[len(result.columns)] = np.NaN
+                append_vals = pandas.DataFrame(columns=range(len(result.columns), len(df)), index=result.index)
+                result = pandas.concat([result, append_vals], axis=1)
             return result
 
         func = self._prepare_method(mode_builder, **kwargs)
