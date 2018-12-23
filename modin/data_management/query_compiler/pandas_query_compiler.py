@@ -1734,7 +1734,14 @@ class PandasQueryCompiler(object):
             # We return a dataframe with the same shape as the input to ensure that all the partitions will be the same shape
             if not axis and len(df) != len(result):
                 # Pad columns
-                result = pandas.concat([result] + [pandas.DataFrame({col: [np.NaN] for col in result.columns}) for _ in range(len(df) - len(result))], ignore_index=True)
+                result = pandas.concat(
+                    [result]
+                    + [
+                        pandas.DataFrame({col: [np.NaN] for col in result.columns})
+                        for _ in range(len(df) - len(result))
+                    ],
+                    ignore_index=True,
+                )
             elif axis:
                 # Pad rows
                 while len(df.columns) != len(result.columns):
@@ -1750,9 +1757,11 @@ class PandasQueryCompiler(object):
         final_labels = new_index if not axis else new_columns
         # We build these intermediate objects to avoid depending directly on
         # the underlying implementation.
-        return self.__constructor__(
-            new_data, new_index, new_columns, self._dtype_cache
-        ).reindex(axis=axis, labels=final_labels).dropna(axis=axis, how="all")
+        return (
+            self.__constructor__(new_data, new_index, new_columns, self._dtype_cache)
+            .reindex(axis=axis, labels=final_labels)
+            .dropna(axis=axis, how="all")
+        )
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
