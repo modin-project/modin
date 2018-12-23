@@ -353,13 +353,13 @@ class PandasOnRayIO(BaseIO):
         # number of nodes in the cluster.
         try:
             args, _, _, defaults, _, _, _ = inspect.getfullargspec(cls.read_csv)
-            defaults = dict(zip(args[1:], defaults))
+            defaults = dict(zip(args[2:], defaults))
             filtered_kwargs = {
                 kw: kwargs[kw]
                 for kw in kwargs
                 if kw in defaults
                 and not isinstance(kwargs[kw], type(defaults[kw]))
-                and kwargs[kw] != defaults[kw]
+                or kwargs[kw] != defaults[kw]
             }
         # This happens on Python2, we will just default to serializing the entire dictionary
         except AttributeError:
