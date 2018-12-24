@@ -97,7 +97,7 @@ def concat(
         new_idx = pandas.MultiIndex.from_tuples(tuples)
     else:
         new_idx = None
-    new_manager = df._query_compiler.concat(
+    new_query_compiler = df._query_compiler.concat(
         axis,
         objs[1:],
         join=join,
@@ -110,7 +110,7 @@ def concat(
         copy=True,
         sort=False,
     )
-    result_df = DataFrame(query_compiler=new_manager)
+    result_df = DataFrame(query_compiler=new_query_compiler)
     if new_idx is not None:
         if axis == 0:
             result_df.index = new_idx
