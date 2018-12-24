@@ -20,10 +20,14 @@ def concat(
     sort=None,
     copy=True,
 ):
-    if isinstance(objs, (pandas.Series, DataFrame, compat.string_types, pandas.DataFrame)):
-        raise TypeError('first argument must be an iterable of pandas '
-                        'objects, you passed an object of type '
-                        '"{name}"'.format(name=type(objs).__name__))
+    if isinstance(
+        objs, (pandas.Series, DataFrame, compat.string_types, pandas.DataFrame)
+    ):
+        raise TypeError(
+            "first argument must be an iterable of pandas "
+            "objects, you passed an object of type "
+            '"{name}"'.format(name=type(objs).__name__)
+        )
     objs = list(objs)
     if len(objs) == 0:
         raise ValueError("No objects to concatenate")
@@ -91,7 +95,10 @@ def concat(
     objs = [obj._query_compiler for obj in objs]
     if keys is not None:
         objs = [objs[i] for i in range(min(len(objs), len(keys)))]
-        new_idx_labels = {keys[i]: objs[i].index if axis == 0 else objs[i].columns for i in range(len(objs))}
+        new_idx_labels = {
+            keys[i]: objs[i].index if axis == 0 else objs[i].columns
+            for i in range(len(objs))
+        }
         print(new_idx_labels)
         tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
         new_idx = pandas.MultiIndex.from_tuples(tuples)
