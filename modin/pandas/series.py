@@ -3,10 +3,10 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-
+import inspect
 import numpy as np
 
-from .utils import _inherit_docstrings
+# from .utils import _inherit_docstrings
 
 
 def na_op():
@@ -15,7 +15,162 @@ def na_op():
     raise NotImplementedError("Not Yet implemented.")
 
 
-@_inherit_docstrings(pandas.Series, excluded=[pandas.Series, pandas.Series.__init__])
+class SeriesView(object):
+    def __init__(self, series, parent_df=None, loc=None):
+        self.series = series
+        assert type(series) is pandas.Series
+        self.parent_df = parent_df
+        self._loc = loc
+
+    def __repr__(self):
+        return repr(self.series)
+
+    def __str__(self):
+        return str(self.series)
+
+    def __comparisons__(self, func):
+        def compare_func(other):
+            if hasattr(other, "series"):
+                other = other.series
+            return getattr(self.series, func)(other)
+
+        return compare_func
+
+    def __eq__(self, other):
+        return self.__comparisons__("__eq__")(other)
+
+    def __ge__(self, other):
+        return self.__comparisons__("__ge__")(other)
+
+    def __gt__(self, other):
+        return self.__comparisons__("__gt__")(other)
+
+    def __le__(self, other):
+        return self.__comparisons__("__le__")(other)
+
+    def __lt__(self, other):
+        return self.__comparisons__("__lt__")(other)
+
+    def __ne__(self, other):
+        return self.__comparisons__("__ne__")(other)
+
+    def __arithmetic_op__(self, func):
+        def arithemtic_op(other):
+            if hasattr(other, "series"):
+                other = other.series
+            return getattr(self.series, func)(other)
+
+        return arithemtic_op
+
+    def __add__(self, other):
+        return self.__arithmetic_op__("__add__")(other)
+
+    def __mul__(self, other):
+        return self.__arithmetic_op__("__mul__")(other)
+
+    def __sub__(self, other):
+        return self.__arithmetic_op__("__sub__")(other)
+
+    def __truediv__(self, other):
+        return self.__arithmetic_op__("__truediv__")(other)
+
+    def __floordiv__(self, other):
+        return self.__arithmetic_op__("__floordiv__")(other)
+
+    def __mod__(self, other):
+        return self.__arithmetic_op__("__mod__")(other)
+
+    def __pow__(self, other):
+        return self.__arithmetic_op__("__pow__")(other)
+
+    def __radd__(self, other):
+        return self.__arithmetic_op__("__radd__")(other)
+
+    def __rmul__(self, other):
+        return self.__arithmetic_op__("__rmul__")(other)
+
+    def __rsub__(self, other):
+        return self.__arithmetic_op__("__rsub__")(other)
+
+    def __rtruediv__(self, other):
+        return self.__arithmetic_op__("__rtruediv__")(other)
+
+    def __rfloordiv__(self, other):
+        return self.__arithmetic_op__("__rfloordiv__")(other)
+
+    def __rmod__(self, other):
+        return self.__arithmetic_op__("__rmod__")(other)
+
+    def __rpow__(self, other):
+        return self.__arithmetic_op__("__rpow__")(other)
+
+    def __iadd__(self, other):
+        return self.__arithmetic_op__("__iadd__")(other)
+
+    def __imul__(self, other):
+        return self.__arithmetic_op__("__imul__")(other)
+
+    def __isub__(self, other):
+        return self.__arithmetic_op__("__isub__")(other)
+
+    def __itruediv__(self, other):
+        return self.__arithmetic_op__("__itruediv__")(other)
+
+    def __ifloordiv__(self, other):
+        return self.__arithmetic_op__("__ifloordiv__")(other)
+
+    def __imod__(self, other):
+        return self.__arithmetic_op__("__imod__")(other)
+
+    def __ipow__(self, other):
+        return self.__arithmetic_op__("__ipow__")(other)
+
+    def __neg__(self, other):
+        return self.__arithmetic_op__("__neg__")(other)
+
+    def __iter__(self):
+        return self.series.__iter__()
+
+    def __len__(self):
+        return self.series.__len__()
+
+    def __getattribute__(self, item):
+        default_behaviors = [
+            "__init__",
+            "series",
+            "parent_df",
+            "_loc",
+            "__arithmetic_op__",
+            "__comparisons__",
+        ]
+        if item not in default_behaviors:
+            method = self.series.__getattribute__(item)
+            if (
+                callable(method)
+                and "inplace" in str(inspect.signature(method))
+                and self.parent_df is not None
+            ):
+
+                def inplace_handler(*args, **kwargs):
+                    if kwargs.get("inplace", False):
+                        prev_len = len(self.series)
+                        self.series.__getattribute__(item)(*args, **kwargs)
+                        if prev_len == len(self.series):
+                            self.parent_df[self._loc] = self.series
+                        else:
+                            self.parent_df.reindex(index=self.series.index, copy=False)
+                        return None
+                    else:
+                        return self.series.__getattribute__(item)(*args, **kwargs)
+
+                method = inplace_handler
+            return method
+        elif item not in default_behaviors:
+            return pandas.Series.__getattribute__(self.series, item)
+        else:
+            return object.__getattribute__(self, item)
+
+
 class Series(object):
     def __init__(self, series_oids):
         """Constructor for a Series object.

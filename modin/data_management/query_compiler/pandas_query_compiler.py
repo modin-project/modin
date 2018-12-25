@@ -2226,6 +2226,7 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+        value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
