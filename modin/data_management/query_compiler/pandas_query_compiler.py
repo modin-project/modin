@@ -1529,7 +1529,6 @@ class PandasQueryCompiler(object):
         # Only describe numeric if there are numeric columns
         # Otherwise, describe all
         new_columns = self.numeric_columns(include_bool=False)
-
         if len(new_columns) != 0:
             numeric = True
             exclude = kwargs.get("exclude", None)
