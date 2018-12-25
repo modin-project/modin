@@ -175,15 +175,32 @@ class _LocationIndexerBase(object):
                 broadcast-able to the product of the lookup tables.
         """
         to_shape = (len(row_lookup), len(col_lookup))
-        item = self._broadcast_item(item, to_shape)
+        item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
         self._write_items(row_lookup, col_lookup, item)
 
-    def _broadcast_item(self, item, to_shape):
+    def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
         """Use numpy to broadcast or reshape item.
 
         Notes:
             - Numpy is memory efficient, there shouldn't be performance issue.
         """
+        # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+        # the target the user is trying to overwrite. This
+        if isinstance(item, (pandas.Series, pandas.DataFrame, DataFrame)):
+            if not all(idx in item.index for idx in row_lookup):
+                raise ValueError(
+                    "Must have equal len keys and value when setting with "
+                    "an iterable"
+                )
+            if hasattr(item, "columns"):
+                if not all(idx in item.columns for idx in col_lookup):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting "
+                        "with an iterable"
+                    )
+                item = item.reindex(index=row_lookup, columns=col_lookup)
+            else:
+                item = item.reindex(index=row_lookup)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
@@ -193,10 +210,8 @@ class _LocationIndexerBase(object):
         except ValueError:
             from_shape = np.array(item).shape
             raise ValueError(
-                "could not broadcast input array from \
-                shape {from_shape} into shape {to_shape}".format(
-                    from_shape=from_shape, to_shape=to_shape
-                )
+                "could not broadcast input array from shape {from_shape} into shape "
+                "{to_shape}".format(from_shape=from_shape, to_shape=to_shape)
             )
 
     def _write_items(self, row_lookup, col_lookup, item):
