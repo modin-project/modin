@@ -4845,8 +4845,9 @@ class DataFrame(object):
 
     def _create_dataframe_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
-        assert isinstance(
-            new_query_compiler, type(self._query_compiler)
+        assert (
+            isinstance(new_query_compiler, type(self._query_compiler))
+            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return DataFrame(query_compiler=new_query_compiler)
