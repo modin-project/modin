@@ -1533,9 +1533,9 @@ class PandasQueryCompiler(object):
             numeric = True
             exclude = kwargs.get("exclude", None)
             if is_list_like(exclude):
-                exclude.append([np.timedelta64, np.datetime64])
+                exclude.append([np.timedelta64, np.datetime64, np.object, np.bool])
             else:
-                exclude = [exclude, np.timedelta64, np.datetime64]
+                exclude = [exclude, np.timedelta64, np.datetime64, np.object, np.bool]
             kwargs["exclude"] = exclude
         else:
             numeric = False
