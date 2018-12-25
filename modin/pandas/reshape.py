@@ -62,5 +62,19 @@ def get_dummies(
     )
     return DataFrame(query_compiler=new_manager)
 
-def melt(frame, id_vars=None, value_vars=None, var_name=None, value_name='value', col_level=None):
-    return frame.melt(id_vars=id_vars, value_vars=value_vars, var_name=var_name, value_name=value_name, col_level=col_level)
+
+def melt(
+    frame,
+    id_vars=None,
+    value_vars=None,
+    var_name=None,
+    value_name="value",
+    col_level=None,
+):
+    return frame.melt(
+        id_vars=id_vars,
+        value_vars=value_vars,
+        var_name=var_name,
+        value_name=value_name,
+        col_level=col_level,
+    )
