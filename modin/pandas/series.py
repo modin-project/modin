@@ -30,7 +30,9 @@ class SeriesView(object):
 
     """
 
-    def __init__(self, series, parent_df=None, loc=None):
+    def __init__(self, *args, series=None, parent_df=None, loc=None, **kwargs):
+        if series is None:
+            series = pandas.Series(*args, **kwargs)
         self.series = series
         assert type(series) is pandas.Series
         self.parent_df = parent_df
@@ -164,6 +166,7 @@ class SeriesView(object):
             "_loc",
             "__arithmetic_op__",
             "__comparisons__",
+            "__class__",
         ]
         if item not in default_behaviors:
             method = self.series.__getattribute__(item)

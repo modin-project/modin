@@ -21,7 +21,7 @@ from pandas import (
     Index,
     MultiIndex,
     CategoricalIndex,
-    Series,
+    # Series,
     bdate_range,
     DatetimeIndex,
     Timedelta,
@@ -60,6 +60,7 @@ from .io import (
 )
 from .reshape import get_dummies, melt
 from .general import isna, merge, pivot_table
+from .series import SeriesView as Series
 from .. import __execution_engine__ as execution_engine
 
 __pandas_version__ = "0.23.4"
