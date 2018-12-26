@@ -220,7 +220,7 @@ class SeriesView(object):
 
                 # We replace the method with `inplace_handler` for inplace operations
                 method = inplace_handler
-            else:
+            elif callable(method):
 
                 def other_handler(*args, **kwargs):
                     """Replaces the method's args and kwargs with the Series object.
