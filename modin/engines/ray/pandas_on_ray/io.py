@@ -511,6 +511,16 @@ def get_index(index_name, *partition_indices):
 
 
 def _split_result_for_readers(axis, num_splits, df):
+    """Splits the DataFrame read into smaller DataFrames and handles all edge cases.
+
+    Args:
+        axis: Which axis to split over.
+        num_splits: The number of splits to create.
+        df: The DataFrame after it has been read.
+
+    Returns:
+        A list of pandas DataFrames.
+    """
     splits = split_result_of_axis_func_pandas(axis, num_splits, df)
     if not isinstance(splits, list):
         splits = [splits]
