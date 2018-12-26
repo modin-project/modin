@@ -510,6 +510,12 @@ def get_index(index_name, *partition_indices):
     return index
 
 
+def _split_result_for_readers(axis, num_splits, df):
+    splits = split_result_of_axis_func_pandas(axis, num_splits, df)
+    if not isinstance(splits, list):
+        splits = [splits]
+    return splits
+
 @ray.remote
 def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, header):
     """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
@@ -542,7 +548,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
         # We will use the lengths to build the index if we are not given an
         # `index_col`.
         index = len(pandas_df)
-    return split_result_of_axis_func_pandas(1, num_splits, pandas_df) + [index]
+    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
 
 
 @ray.remote
@@ -563,7 +569,7 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
 
     df = pandas.read_hdf(path_or_buf, key, mode, columns=columns)
     # Append the length of the index here to build it externally
-    return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
+    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
 
 @ray.remote
@@ -585,7 +591,7 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
 
     df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
     # Append the length of the index here to build it externally
-    return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
+    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
 
 @ray.remote
@@ -607,4 +613,4 @@ def _read_feather_columns(path, columns, num_splits):
 
     df = feather.read_feather(path, columns=columns)
     # Append the length of the index here to build it externally
-    return split_result_of_axis_func_pandas(0, num_splits, df) + [len(df.index)]
+    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
