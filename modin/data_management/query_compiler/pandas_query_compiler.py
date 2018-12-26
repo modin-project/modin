@@ -2226,6 +2226,7 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+        # TODO Make this more efficient
         value = list(value)
 
         def insert(df, internal_indices=[]):
