@@ -234,10 +234,8 @@ class SeriesView(object):
                     Returns the result of `__getattribute__` from the Series this wraps.
                     """
                     args = tuple(
-                        [
-                            arg if not isinstance(arg, SeriesView) else arg.series
-                            for arg in args
-                        ]
+                        arg if not isinstance(arg, SeriesView) else arg.series
+                        for arg in args
                     )
                     kwargs = {
                         kw: arg if not isinstance(arg, SeriesView) else arg.series
