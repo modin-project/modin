@@ -30,9 +30,7 @@ class SeriesView(object):
 
     """
 
-    def __init__(self, *args, series=None, parent_df=None, loc=None, **kwargs):
-        if series is None:
-            series = pandas.Series(*args, **kwargs)
+    def __init__(self, series=None, parent_df=None, loc=None):
         self.series = series
         assert type(series) is pandas.Series
         self.parent_df = parent_df
