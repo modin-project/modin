@@ -5,7 +5,6 @@ from __future__ import print_function
 from typing import Tuple
 
 import numpy as np
-import math
 import pandas
 
 from modin.error_message import ErrorMessage
