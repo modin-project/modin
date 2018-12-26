@@ -1839,9 +1839,7 @@ class PandasQueryCompiler(object):
         # Since we assume no knowledge of internal state, we get the columns
         # from the internal partitions.
         if numeric_only:
-            new_columns = self.columns[
-                [i for i in range(len(self.dtypes)) if is_numeric_dtype(self.dtypes[i])]
-            ]  # self.compute_index(1, new_data, True)
+            new_columns = self.compute_index(1, new_data, True)
         else:
             new_columns = self.columns
         new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
