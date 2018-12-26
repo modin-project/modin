@@ -11,6 +11,7 @@ from pandas.tests.frame.common import TestData
 import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
+from modin.pandas.series import SeriesView
 from numpy.testing import assert_array_equal
 import sys
 
@@ -1608,7 +1609,7 @@ def test_eval_df_use_case():
     tmp_pandas = df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
     tmp_ray = ray_df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
 
-    assert isinstance(tmp_ray, pandas.Series)
+    assert isinstance(tmp_ray, (pandas.Series, SeriesView))
     assert ray_series_equals_pandas(tmp_ray, tmp_pandas)
 
     # Test not inplace assignments
@@ -3300,7 +3301,7 @@ def test_xs():
 @pytest.fixture
 def test___getitem__(ray_df, pd_df):
     ray_col = ray_df.__getitem__("col1")
-    assert isinstance(ray_col, pandas.Series)
+    assert isinstance(ray_col, (pandas.Series, SeriesView))
 
     pd_col = pd_df["col1"]
     assert pd_col.equals(ray_col)
@@ -3310,13 +3311,13 @@ def test___getattr__():
     df = create_test_dataframe()
 
     col = df.__getattr__("col1")
-    assert isinstance(col, pandas.Series)
+    assert isinstance(col, (pandas.Series, SeriesView))
 
     col = getattr(df, "col1")
-    assert isinstance(col, pandas.Series)
+    assert isinstance(col, (pandas.Series, SeriesView))
 
     col = df.col1
-    assert isinstance(col, pandas.Series)
+    assert isinstance(col, (pandas.Series, SeriesView))
 
     # Check that lookup in column doesn't override other attributes
     df2 = df.rename(index=str, columns={"col5": "columns"})

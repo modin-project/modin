@@ -16,6 +16,19 @@ def na_op():
 
 
 class SeriesView(object):
+    """A wrapper class for pandas Series.
+
+    Note: The main use of this class is to help us implement inplace operations that
+        propagate their changes back to the DataFrame that a Series belongs to. We are
+        only need to use this object when `__getitem__` returns a pandas Series, or when
+        `loc`/`iloc` return a Series as well.
+
+    Important: This is not needed to replace every Series in Modin. For example, when an
+        operation on a Series returns a new Series, it does not need to return an object
+        of this class. It can return a Series because the new object does not have a
+        DataFrame that it is associated with.
+
+    """
     def __init__(self, series, parent_df=None, loc=None):
         self.series = series
         assert type(series) is pandas.Series
@@ -134,6 +147,14 @@ class SeriesView(object):
     def __len__(self):
         return self.series.__len__()
 
+    def __getitem__(self, item):
+        return self.series.__getitem__(item)
+
+    def __setitem__(self, key, value):
+        return_val = self.series.__setitem__(key, value)
+        self.parent_df[self._loc] = self.series
+        return return_val
+
     def __getattribute__(self, item):
         default_behaviors = [
             "__init__",
@@ -152,6 +173,34 @@ class SeriesView(object):
             ):
 
                 def inplace_handler(*args, **kwargs):
+                    """Replaces the default behavior of methods with inplace kwarg.
+
+                    Note: This method will modify the DataFrame this Series is attached
+                        to when `inplace` is True. Instead of rewriting or overriding
+                        every method that uses `inplace`, we use this handler.
+
+                        This handler will first check that the keyword argument passed
+                        for `inplace` is True, if not then it will just return the
+                        result of the operation requested.
+
+                        If `inplace` is True, do the operation, keeping track of the
+                        previous length. This is because operations like `dropna` still
+                        propagate back to the DataFrame that holds the Series.
+
+                        If the length did not change, we propagate the inplace changes
+                        of the operation back to the original DataFrame with
+                        `__setitem__`.
+
+                        If the length changed, we just need to do a `reindex` on the
+                        parent DataFrame. This will propagate the inplace operation
+                        (e.g. `dropna`) back to the parent DataFrame.
+
+                        See notes in SeriesView class about when it is okay to return a
+                        pandas Series vs a SeriesView.
+
+                    Returns:
+                        If `inplace` is True: None, else: A new Series.
+                    """
                     if kwargs.get("inplace", False):
                         prev_len = len(self.series)
                         self.series.__getattribute__(item)(*args, **kwargs)
@@ -163,10 +212,9 @@ class SeriesView(object):
                     else:
                         return self.series.__getattribute__(item)(*args, **kwargs)
 
+                # We replace the method with `inplace_handler` for inplace operations
                 method = inplace_handler
             return method
-        elif item not in default_behaviors:
-            return pandas.Series.__getattribute__(self.series, item)
         else:
             return object.__getattribute__(self, item)
 
