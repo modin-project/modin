@@ -167,11 +167,16 @@ class SeriesView(object):
         ]
         if item not in default_behaviors:
             method = self.series.__getattribute__(item)
-            if (
-                callable(method)
-                and "inplace" in str(inspect.signature(method))
-                and self.parent_df is not None
-            ):
+            try:
+                has_inplace_param = callable(method) and "inplace" in str(
+                    inspect.signature(method)
+                )
+            # This will occur on Python2
+            except AttributeError:
+                has_inplace_param = callable(method) and "inplace" in str(
+                    inspect.getargspec(method)
+                )
+            if callable(method) and has_inplace_param and self.parent_df is not None:
 
                 def inplace_handler(*args, **kwargs):
                     """Replaces the default behavior of methods with inplace kwarg.
@@ -215,6 +220,31 @@ class SeriesView(object):
 
                 # We replace the method with `inplace_handler` for inplace operations
                 method = inplace_handler
+            else:
+
+                def other_handler(*args, **kwargs):
+                    """Replaces the method's args and kwargs with the Series object.
+
+                    Note: This method is needed because sometimes operations like
+                        `df['col0'].equals(df['col1'])` do not return the correct value.
+                        This mostly has occurred in Python2, but overriding of the
+                        method will make the behavior more deterministic for all calls.
+
+                    Returns the result of `__getattribute__` from the Series this wraps.
+                    """
+                    args = tuple(
+                        [
+                            arg if not isinstance(arg, SeriesView) else arg.series
+                            for arg in args
+                        ]
+                    )
+                    kwargs = {
+                        kw: arg if not isinstance(arg, SeriesView) else arg.series
+                        for kw, arg in kwargs.items()
+                    }
+                    return self.series.__getattribute__(item)(*args, **kwargs)
+
+                method = other_handler
             return method
         else:
             return object.__getattribute__(self, item)
