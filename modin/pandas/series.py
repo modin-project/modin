@@ -247,6 +247,9 @@ class SeriesView(object):
 
                 method = other_handler
             return method
+        # We need to do this hack for equality checking.
+        elif item == "__class__":
+            return self.series.__class__
         else:
             return object.__getattribute__(self, item)
 

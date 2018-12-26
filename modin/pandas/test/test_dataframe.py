@@ -3304,7 +3304,7 @@ def test___getitem__(ray_df, pd_df):
     assert isinstance(ray_col, (pandas.Series, SeriesView))
 
     pd_col = pd_df["col1"]
-    assert ray_col.equals(pd_col)
+    assert pd_col.equals(ray_col)
 
 
 def test___getattr__():
