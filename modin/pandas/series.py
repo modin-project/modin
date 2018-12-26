@@ -29,6 +29,7 @@ class SeriesView(object):
         DataFrame that it is associated with.
 
     """
+
     def __init__(self, series, parent_df=None, loc=None):
         self.series = series
         assert type(series) is pandas.Series
