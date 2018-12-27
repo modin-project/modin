@@ -11,6 +11,7 @@ from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
+from .series import SeriesView
 
 """Indexing Helper Class works as follows:
 
@@ -144,6 +145,7 @@ class _LocationIndexerBase(object):
     """
 
     def __init__(self, ray_df: DataFrame):
+        self.df = ray_df
         self.qc = ray_df._query_compiler
         self.is_view = hasattr(self.qc, "is_view")
 
@@ -164,7 +166,11 @@ class _LocationIndexerBase(object):
             return qc_view.squeeze(ndim=0)
         else:
             single_axis = 1 if self.col_scaler else 0
-            return qc_view.squeeze(ndim=1, axis=single_axis)
+            return SeriesView(
+                qc_view.squeeze(ndim=1, axis=single_axis),
+                self.df,
+                (row_lookup, col_lookup),
+            )
 
     def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """

@@ -29,6 +29,7 @@ import warnings
 from modin.error_message import ErrorMessage
 from .utils import from_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
+from .series import SeriesView
 
 
 @_inherit_docstrings(
@@ -4508,7 +4509,9 @@ class DataFrame(object):
             return self._getitem_column(key)
 
     def _getitem_column(self, key):
-        return self._query_compiler.getitem_single_key(key)
+        return SeriesView(
+            self._query_compiler.getitem_single_key(key), self, (slice(None), key)
+        )
 
     def _getitem_array(self, key):
         if com.is_bool_indexer(key):
