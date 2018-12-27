@@ -14,7 +14,6 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
 )
 from pandas.core.index import _ensure_index
-from pandas.core.base import DataError
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
@@ -2227,8 +2226,6 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
-        # TODO Make this more efficient
-        value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
