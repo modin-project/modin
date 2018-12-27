@@ -166,7 +166,11 @@ class _LocationIndexerBase(object):
             return qc_view.squeeze(ndim=0)
         else:
             single_axis = 1 if self.col_scaler else 0
-            return SeriesView(qc_view.squeeze(ndim=1, axis=single_axis), self.df, (row_lookup, col_lookup))
+            return SeriesView(
+                qc_view.squeeze(ndim=1, axis=single_axis),
+                self.df,
+                (row_lookup, col_lookup),
+            )
 
     def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """

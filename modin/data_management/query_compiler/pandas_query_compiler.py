@@ -2227,7 +2227,7 @@ class PandasQueryCompiler(object):
             A new PandasQueryCompiler with new data inserted.
         """
         if is_list_like(value):
-            if hasattr(value,"index"):
+            if hasattr(value, "index"):
                 value = value.reindex(self.index)
             value = list(value)
 
