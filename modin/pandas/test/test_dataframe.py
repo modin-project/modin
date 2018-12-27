@@ -3665,3 +3665,22 @@ def test_reset_index_with_multi_index():
     pd_cols = pd_df.groupby(["col1", "col2"]).count().reset_index().columns
 
     assert md_cols.equals(pd_cols)
+
+
+def test_inplace_series_ops():
+    frame_data = {
+        "col1": [1, 2, 3, np.nan],
+        "col2": [4, 5, np.nan, 7],
+        "col3": [8, np.nan, 10, 11],
+        "col4": [np.nan, 13, 14, 15],
+    }
+
+    pandas_df = pandas.DataFrame(frame_data)
+    ray_df = pd.DataFrame(frame_data)
+    pandas_df["col1"].dropna(inplace=True)
+    ray_df["col1"].dropna(inplace=True)
+    ray_df_equals_pandas(ray_df, pandas_df)
+
+    pandas_df["col4"].fillna(0, inplace=True)
+    ray_df["col4"].fillna(0, inplace=True)
+    ray_df_equals_pandas(ray_df, pandas_df)
