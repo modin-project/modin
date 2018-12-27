@@ -672,6 +672,16 @@ class BaseBlockPartitions(object):
         # possible here. Functions that use this in the dictionary format must
         # accept a keyword argument `func_dict`.
         if dict_indices is not None:
+
+            def local_to_global_idx(partition_id, local_idx):
+                if partition_id == 0:
+                    return local_idx
+                if axis == 0:
+                    cumulative_axis = np.cumsum(self.block_widths)
+                else:
+                    cumulative_axis = np.cumsum(self.block_lengths)
+                return cumulative_axis[partition_id - 1] + local_idx
+
             if not keep_remaining:
                 result = np.array(
                     [
@@ -679,7 +689,9 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[idx] for idx in partitions_dict[i]
+                                idx: dict_indices[local_to_global_idx(i, idx)]
+                                for idx in partitions_dict[i]
+                                if idx >= 0
                             },
                         )
                         for i in partitions_dict
@@ -694,7 +706,9 @@ class BaseBlockPartitions(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[i] for idx in partitions_dict[i]
+                                idx: dict_indices[local_to_global_idx(i, idx)]
+                                for idx in partitions_dict[i]
+                                if idx >= 0
                             },
                         )
                         for i in range(len(partitions_for_apply))

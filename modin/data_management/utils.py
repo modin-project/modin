@@ -50,6 +50,8 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     Returns:
         A list of Pandas DataFrames.
     """
+    if num_splits == 1:
+        return result
     if length_list is not None:
         length_list.insert(0, 0)
         sums = np.cumsum(length_list)
@@ -72,12 +74,12 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 
 def length_fn_pandas(df):
-    assert isinstance(df, (pandas.DataFrame, pandas.Series))
+    assert isinstance(df, (pandas.DataFrame, pandas.Series)), "{}".format(df)
     return len(df)
 
 
 def width_fn_pandas(df):
-    assert isinstance(df, (pandas.DataFrame, pandas.Series))
+    assert isinstance(df, (pandas.DataFrame, pandas.Series)), "{}".format((df))
     if isinstance(df, pandas.DataFrame):
         return len(df.columns)
     else:
