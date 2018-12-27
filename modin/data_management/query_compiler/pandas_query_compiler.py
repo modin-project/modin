@@ -2226,6 +2226,10 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+        if is_list_like(value):
+            if hasattr(value,"index"):
+                value = value.reindex(self.index)
+            value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
