@@ -34,6 +34,7 @@ class SeriesView(object):
     def __init__(self, series, parent_df, loc):
         assert type(series) is pandas.Series
         from .dataframe import DataFrame
+
         assert type(parent_df) is DataFrame
         assert type(loc) is tuple
         self.series = series
