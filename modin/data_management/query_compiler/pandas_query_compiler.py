@@ -14,6 +14,7 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
 )
 from pandas.core.index import _ensure_index
+from pandas.core.base import DataError
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
@@ -2425,7 +2426,14 @@ class PandasQueryCompiler(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
+            grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+            try:
+                return agg_func(grouped_df, **agg_args)
+            # This happens when the partition is filled with non-numeric data and a
+            # numeric operation is done. We need to build the index here to avoid issues
+            # with extracting the index.
+            except DataError:
+                return pandas.DataFrame(index=grouped_df.count().index)
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
