@@ -4509,7 +4509,7 @@ class DataFrame(object):
             return self._getitem_column(key)
 
     def _getitem_column(self, key):
-        return SeriesView(self._query_compiler.getitem_single_key(key), self, key)
+        return SeriesView(self._query_compiler.getitem_single_key(key), self, (slice(None), key))
 
     def _getitem_array(self, key):
         if com.is_bool_indexer(key):

@@ -30,9 +30,9 @@ class SeriesView(object):
 
     """
 
-    def __init__(self, series=None, parent_df=None, loc=None):
-        self.series = series
+    def __init__(self, series, parent_df, loc):
         assert type(series) is pandas.Series
+        self.series = series
         self.parent_df = parent_df
         self._loc = loc
 
@@ -153,7 +153,7 @@ class SeriesView(object):
 
     def __setitem__(self, key, value):
         return_val = self.series.__setitem__(key, value)
-        self.parent_df[self._loc] = self.series
+        self.parent_df.loc[self._loc] = self.series
         return return_val
 
     def __getattribute__(self, item):
@@ -212,7 +212,7 @@ class SeriesView(object):
                         prev_len = len(self.series)
                         self.series.__getattribute__(item)(*args, **kwargs)
                         if prev_len == len(self.series):
-                            self.parent_df[self._loc] = self.series
+                            self.parent_df.loc[self._loc] = self.series
                         else:
                             self.parent_df.reindex(index=self.series.index, copy=False)
                         return None
