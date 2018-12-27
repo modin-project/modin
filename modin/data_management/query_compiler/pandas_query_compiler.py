@@ -2428,12 +2428,7 @@ class PandasQueryCompiler(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
-            try:
-                return agg_func(grouped_df, **agg_args)
-            # This happens when the 
-            except DataError:
-                return pandas.DataFrame(index=grouped_df.count().index)
+            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
