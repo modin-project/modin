@@ -14,11 +14,11 @@ test_data = {
     # "empty_data": {},
     # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []}, 
     "int_data": {
-        "col3": [0, 1, 2, 3],
-        "col4": [4, 5, 6, 7],
-        "col5": [8, 9, 10, 11],
-        "col1": [12, 13, 14, 15],
-        "col2": [0, 0, 0, 0],
+        "col3": [0, 1, 2, 3, 4, 5, 6, 7],
+        "col4": [8, 9, 10, 11, 12, 13, 14, 15],
+        "col5": [16, 17, 18, 19, 20, 21, 22, 23],
+        "col1": [24, 25, 26, 27, 28, 29, 30, 31],
+        "col2": [32, 33, 34, 35, 36, 37, 38, 39],
     },
     "float_data": {
         "col3": [0.0, 1.0, 2.0, 3.0],
@@ -45,39 +45,39 @@ test_data = {
         "col1": [8.0, 9.4, 10.1, 11.3],
         "col2": ["a", "b", "c", "d"],
     },
-    "datetime_timedelta_data": {
-        "col3": [
-            np.datetime64("2010"),
-            np.datetime64("2011"),
-            np.datetime64("2011-06-15T00:00"),
-            np.datetime64("2009-01-01"),
-        ],
-        "col4": [
-            np.datetime64("2010"),
-            np.datetime64("2011"),
-            np.datetime64("2011-06-15T00:00"),
-            np.datetime64("2009-01-01"),
-        ],
-        "col1": [
-            np.timedelta64(1, "M"),
-            np.timedelta64(2, "D"),
-            np.timedelta64(3, "Y"),
-            np.timedelta64(20, "D"),
-        ],
-        "col2": [
-            np.timedelta64(1, "M"),
-            np.timedelta64(2, "D"),
-            np.timedelta64(3, "Y"),
-            np.timedelta64(20, "D"),
-        ],
-    },
-    "all_data": {
-        "col3": 1.0,
-        "col4": np.datetime64("2011-06-15T00:00"),
-        "col5": np.array([3] * 4, dtype="int32"),
-        "col1": "foo",
-        "col2": True,
-    },
+    # "datetime_timedelta_data": {
+    #     "col3": [
+    #         np.datetime64("2010"),
+    #         np.datetime64("2011"),
+    #         np.datetime64("2011-06-15T00:00"),
+    #         np.datetime64("2009-01-01"),
+    #     ],
+    #     "col4": [
+    #         np.datetime64("2010"),
+    #         np.datetime64("2011"),
+    #         np.datetime64("2011-06-15T00:00"),
+    #         np.datetime64("2009-01-01"),
+    #     ],
+    #     "col1": [
+    #         np.timedelta64(1, "M"),
+    #         np.timedelta64(2, "D"),
+    #         np.timedelta64(3, "Y"),
+    #         np.timedelta64(20, "D"),
+    #     ],
+    #     "col2": [
+    #         np.timedelta64(1, "M"),
+    #         np.timedelta64(2, "D"),
+    #         np.timedelta64(3, "Y"),
+    #         np.timedelta64(20, "D"),
+    #     ],
+    # },
+    # "all_data": {
+    #     "col3": 1.0,
+    #     "col4": np.datetime64("2011-06-15T00:00"),
+    #     "col5": np.array([3] * 4, dtype="int32"),
+    #     "col1": "foo",
+    #     "col2": True,
+    # },
     "100x100": {"col{}".format((i-50)%100+1): random_state.randint(RAND_LOW, RAND_HIGH, size=(100)) for i in range(100)},
 }
 

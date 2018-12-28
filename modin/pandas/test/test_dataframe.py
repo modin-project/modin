@@ -2571,47 +2571,46 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with pytest.raises(NotImplementedError):
-            # Defaults
-            modin_result = modin_df.merge(modin_df2, how=how)
-            pandas_result = pandas_df.merge(pandas_df2, how=how)
-            df_equals(modin_result, pandas_result)
+        # Defaults
+        modin_result = modin_df.merge(modin_df2, how=how)
+        pandas_result = pandas_df.merge(pandas_df2, how=how)
+        df_equals(modin_result, pandas_result)
 
-            # left_on and right_index
-            modin_result = modin_df.merge(
-                modin_df2, how=how, left_on="col1", right_index=True
-            )
-            pandas_result = pandas_df.merge(
-                pandas_df2, how=how, left_on="col1", right_index=True
-            )
-            df_equals(modin_result, pandas_result)
+        # left_on and right_index
+        modin_result = modin_df.merge(
+            modin_df2, how=how, left_on="col1", right_index=True
+        )
+        pandas_result = pandas_df.merge(
+            pandas_df2, how=how, left_on="col1", right_index=True
+        )
+        df_equals(modin_result, pandas_result)
 
-            # left_index and right_on
-            modin_result = modin_df.merge(
-                modin_df2, how=how, left_index=True, right_on="col1"
-            )
-            pandas_result = pandas_df.merge(
-                pandas_df2, how=how, left_index=True, right_on="col1"
-            )
-            df_equals(modin_result, pandas_result)
+        # left_index and right_on
+        modin_result = modin_df.merge(
+            modin_df2, how=how, left_index=True, right_on="col1"
+        )
+        pandas_result = pandas_df.merge(
+            pandas_df2, how=how, left_index=True, right_on="col1"
+        )
+        df_equals(modin_result, pandas_result)
 
-            # left_on and right_on col1
-            modin_result = modin_df.merge(
-                modin_df2, how=how, left_on="col1", right_on="col1"
-            )
-            pandas_result = pandas_df.merge(
-                pandas_df2, how=how, left_on="col1", right_on="col1"
-            )
-            df_equals(modin_result, pandas_result)
+        # left_on and right_on col1
+        modin_result = modin_df.merge(
+            modin_df2, how=how, left_on="col1", right_on="col1"
+        )
+        pandas_result = pandas_df.merge(
+            pandas_df2, how=how, left_on="col1", right_on="col1"
+        )
+        df_equals(modin_result, pandas_result)
 
-            # left_on and right_on col2
-            modin_result = modin_df.merge(
-                modin_df2, how=how, left_on="col2", right_on="col2"
-            )
-            pandas_result = pandas_df.merge(
-                pandas_df2, how=how, left_on="col2", right_on="col2"
-            )
-            df_equals(modin_result, pandas_result)
+        # left_on and right_on col2
+        modin_result = modin_df.merge(
+            modin_df2, how=how, left_on="col2", right_on="col2"
+        )
+        pandas_result = pandas_df.merge(
+            pandas_df2, how=how, left_on="col2", right_on="col2"
+        )
+        df_equals(modin_result, pandas_result)
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -3809,12 +3808,13 @@ def test_transpose(data):
 
     df_equals(modin_df.T, pandas_df.T)
     df_equals(modin_df.transpose(), pandas_df.transpose())
+    # Uncomment below once #165 is merged
     # Test for map across full axis for select indices
-    df_equals(modin_df.T.reset_index(), pandas_df.T.reset_index())
+    # df_equals(modin_df.T.dropna(), pandas_df.T.dropna())
     # Test for map across full axis
-    df_equals(modin_df.T.nunique(), pandas_df.T.nunique())
+    # df_equals(modin_df.T.nunique(), pandas_df.T.nunique())
     # Test for map across blocks
-    df_equals(modin_df.T.notna(), pandas_df.T.notna())
+    # df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
