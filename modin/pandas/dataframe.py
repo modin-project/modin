@@ -503,12 +503,12 @@ class DataFrame(object):
                 result = result.dropna(axis=ax, how=how, thresh=thresh, subset=subset)
             return self._create_dataframe_from_compiler(result._query_compiler, inplace)
 
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if how is not None and how not in ["any", "all"]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
         if subset is not None:
-            axis = pandas.DataFrame()._get_axis_number(axis)
             if axis == 1:
                 indices = self.index.get_indexer_for(subset)
                 check = indices == -1
