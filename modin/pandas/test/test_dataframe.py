@@ -1567,7 +1567,7 @@ def test_eval_df_use_case():
     tmp_pandas = df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
     tmp_modin = modin_df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
 
-    assert isinstance(tmp_modin, pandas.Series, SeriesView)
+    assert isinstance(tmp_modin, (pandas.Series, SeriesView))
     df_equals(tmp_modin, tmp_pandas)
 
     # Test not inplace assignments
