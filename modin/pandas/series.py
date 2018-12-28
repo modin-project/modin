@@ -182,7 +182,15 @@ class SeriesView(object):
                 has_inplace_param = callable(method) and "inplace" in str(
                     inspect.getargspec(method)
                 )
-            if callable(method) and has_inplace_param and self.parent_df is not None:
+            # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
+            # pandas they are equivalent to classes. They are verified here because they
+            # cannot be overridden with the functions below. This generally solves the
+            # problem where the instance property is callable, but the class property is
+            # not.
+            needs_override = callable(method) and callable(
+                getattr(type(self.series), item)
+            )
+            if needs_override and has_inplace_param and self.parent_df is not None:
 
                 def inplace_handler(*args, **kwargs):
                     """Replaces the default behavior of methods with inplace kwarg.
@@ -226,7 +234,7 @@ class SeriesView(object):
 
                 # We replace the method with `inplace_handler` for inplace operations
                 method = inplace_handler
-            elif callable(method):
+            elif needs_override:
 
                 def other_handler(*args, **kwargs):
                     """Replaces the method's args and kwargs with the Series object.
