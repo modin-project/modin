@@ -1,4 +1,4 @@
-<h1 align="center">Modin</h1>
+<a href="https://modin.org"><img alt="" src="https://github.com/modin-project/modin/blob/master/docs/img/MODIN_ver2.png?raw=true"></a>
 <h3 align="center">Scale your pandas workflows by changing one line of code</h3>
 
 <p align="center">
