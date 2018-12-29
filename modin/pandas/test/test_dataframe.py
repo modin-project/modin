@@ -4268,31 +4268,33 @@ def test___repr__():
     assert repr(pandas_df) == repr(modin_df)
 
 
-def test_reset_index_with_multi_index():
-    frame_data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 6))
-    md_df = pd.DataFrame(frame_data).add_prefix("col")
-    pd_df = pandas.DataFrame(frame_data).add_prefix("col")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reset_index_with_multi_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
 
-    md_cols = md_df.groupby(["col1", "col2"]).count().reset_index().columns
-    pd_cols = pd_df.groupby(["col1", "col2"]).count().reset_index().columns
+    if len(modin_df.columns) > len(pandas_df.columns):
+        col0 = modin_df.columns[0]
+        col1 = modin_df.columns[1]
+        modin_cols = modin_df.groupby([col0, col1]).count().reset_index().columns
+        pandas_cols = pandas_df.groupby([col0, col1]).count().reset_index().columns
 
-    assert md_cols.equals(pd_cols)
+        assert modin_cols.equals(pandas_cols)
 
 
-def test_inplace_series_ops():
-    frame_data = {
-        "col1": [1, 2, 3, np.nan],
-        "col2": [4, 5, np.nan, 7],
-        "col3": [8, np.nan, 10, 11],
-        "col4": [np.nan, 13, 14, 15],
-    }
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_inplace_series_ops(data):
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
 
-    pandas_df = pandas.DataFrame(frame_data)
-    ray_df = pd.DataFrame(frame_data)
-    pandas_df["col1"].dropna(inplace=True)
-    ray_df["col1"].dropna(inplace=True)
-    ray_df_equals_pandas(ray_df, pandas_df)
 
-    pandas_df["col4"].fillna(0, inplace=True)
-    ray_df["col4"].fillna(0, inplace=True)
-    ray_df_equals_pandas(ray_df, pandas_df)
+    if len(modin_df.columns) > len(pandas_df.columns):
+        col0 = modin_df.columns[0]
+        col1 = modin_df.columns[1]
+        pandas_df[col1].dropna(inplace=True)
+        modin_df[col1].dropna(inplace=True)
+        df_equals(modin_df, pandas_df)
+
+        pandas_df[col0].fillna(0, inplace=True)
+        modin_df[col0].fillna(0, inplace=True)
+        df_equals(modin_df, pandas_df)
