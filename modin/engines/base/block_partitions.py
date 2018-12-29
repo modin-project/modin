@@ -603,7 +603,8 @@ class BaseBlockPartitions(object):
             indices: A list of global indices to convert.
 
         Returns
-            A dictionary of {block index: list of local indices}.
+            For unordered: a dictionary of {block index: list of local indices}.
+            For ordered: a list of tuples mapping block index: list of local indices.
         """
         # Get the internal index and create a dictionary so we only have to
         # travel to each partition once.
@@ -611,17 +612,26 @@ class BaseBlockPartitions(object):
             self._get_blocks_containing_index(axis, i) for i in indices
         ]
 
+        # In ordered, we have to maintain the order of the list of indices provided.
+        # This means that we need to return a list instead of a dictionary.
         if ordered:
             # In ordered, the partitions dict is a list of tuples
             partitions_dict = []
+            # This variable is used to store the most recent partition that we added to
+            # the partitions_dict. This allows us to only visit a partition once when we
+            # have multiple values that will be operated on in that partition.
             last_part = -1
             for part_idx, internal_idx in all_partitions_and_idx:
                 if part_idx == last_part:
+                    # We append to the list, which is the value part of the tuple.
                     partitions_dict[-1][-1].append(internal_idx)
                 else:
+                    # This is where we add new values.
                     partitions_dict.append((part_idx, [internal_idx]))
                 last_part = part_idx
         else:
+            # For unordered, we can just return a dictionary mapping partition to the
+            # list of indices being operated on.
             partitions_dict = {}
             for part_idx, internal_idx in all_partitions_and_idx:
                 if part_idx not in partitions_dict:
