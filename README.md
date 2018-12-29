@@ -1,4 +1,4 @@
-<a href="https://modin.readthedocs.io"><img alt="" src="https://github.com/modin-project/modin/blob/e327b611b117540b03418177b4372004856bedc6/docs/img/MODIN_ver2.png?raw=true"></a>
+<p align="center"><a href="https://modin.readthedocs.io"><img width=400 alt="" src="https://github.com/modin-project/modin/blob/e327b611b117540b03418177b4372004856bedc6/docs/img/MODIN_ver2.png?raw=true"></a></p>
 <h3 align="center">Scale your pandas workflows by changing one line of code</h3>
 
 <p align="center">
