@@ -1745,7 +1745,8 @@ class PandasQueryCompiler(object):
             elif axis and len(df.columns) != len(result.columns):
                 # Pad rows
                 append_vals = pandas.DataFrame(
-                    columns=range(len(result.columns), len(df.columns)), index=result.index
+                    columns=range(len(result.columns), len(df.columns)),
+                    index=result.index,
                 )
                 result = pandas.concat([result, append_vals], axis=1)
             return result
@@ -1755,7 +1756,9 @@ class PandasQueryCompiler(object):
 
         new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
         new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
-        return self.__constructor__(new_data, new_index, new_columns, self._dtype_cache).dropna(axis=axis, how="all")
+        return self.__constructor__(
+            new_data, new_index, new_columns, self._dtype_cache
+        ).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
