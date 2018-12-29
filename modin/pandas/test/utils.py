@@ -39,12 +39,12 @@ test_data = {
         "col1": [np.NaN, np.NaN, np.NaN, 5],
         "col2": [6, np.NaN, np.NaN, 10],
     },
-    "int_float_object_data": {
-        "col3": [1, 2, 3, 4],
-        "col4": [4, 5, 6, 7],
-        "col1": [8.0, 9.4, 10.1, 11.3],
-        "col2": ["a", "b", "c", "d"],
-    },
+    # "int_float_object_data": {
+    #     "col3": [1, 2, 3, 4],
+    #     "col4": [4, 5, 6, 7],
+    #     "col1": [8.0, 9.4, 10.1, 11.3],
+    #     "col2": ["a", "b", "c", "d"],
+    # },
     # "datetime_timedelta_data": {
     #     "col3": [
     #         np.datetime64("2010"),
