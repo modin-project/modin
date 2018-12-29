@@ -590,7 +590,7 @@ class BaseBlockPartitions(object):
             )
         return block_idx, internal_idx
 
-    def _get_dict_of_block_index(self, axis, indices):
+    def _get_dict_of_block_index(self, axis, indices, ordered=False):
         """Convert indices to a dict of block index to internal index mapping.
 
         Note: See `_get_blocks_containing_index` for primary usage. This method
@@ -610,12 +610,24 @@ class BaseBlockPartitions(object):
         all_partitions_and_idx = [
             self._get_blocks_containing_index(axis, i) for i in indices
         ]
-        partitions_dict = {}
-        for part_idx, internal_idx in all_partitions_and_idx:
-            if part_idx not in partitions_dict:
-                partitions_dict[part_idx] = [internal_idx]
-            else:
-                partitions_dict[part_idx].append(internal_idx)
+
+        if ordered:
+            # In ordered, the partitions dict is a list of tuples
+            partitions_dict = []
+            last_part = -1
+            for part_idx, internal_idx in all_partitions_and_idx:
+                if part_idx == last_part:
+                    partitions_dict[-1][-1].append(internal_idx)
+                else:
+                    partitions_dict.append((part_idx, [internal_idx]))
+                last_part = part_idx
+        else:
+            partitions_dict = {}
+            for part_idx, internal_idx in all_partitions_and_idx:
+                if part_idx not in partitions_dict:
+                    partitions_dict[part_idx] = [internal_idx]
+                else:
+                    partitions_dict[part_idx].append(internal_idx)
         return partitions_dict
 
     def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
@@ -662,7 +674,9 @@ class BaseBlockPartitions(object):
             dict_indices = None
         if not isinstance(indices, list):
             indices = [indices]
-        partitions_dict = self._get_dict_of_block_index(axis, indices)
+        partitions_dict = self._get_dict_of_block_index(
+            axis, indices, ordered=not keep_remaining
+        )
         if not axis:
             partitions_for_apply = self.partitions.T
         else:
@@ -687,14 +701,14 @@ class BaseBlockPartitions(object):
                     [
                         self._apply_func_to_list_of_partitions(
                             func,
-                            partitions_for_apply[i],
+                            partitions_for_apply[o_idx],
                             func_dict={
-                                idx: dict_indices[local_to_global_idx(i, idx)]
-                                for idx in partitions_dict[i]
-                                if idx >= 0
+                                i_idx: dict_indices[local_to_global_idx(o_idx, i_idx)]
+                                for i_idx in list_to_apply
+                                if i_idx >= 0
                             },
                         )
-                        for i in partitions_dict
+                        for o_idx, list_to_apply in partitions_dict
                     ]
                 )
             else:
@@ -724,10 +738,10 @@ class BaseBlockPartitions(object):
                     [
                         self._apply_func_to_list_of_partitions(
                             func,
-                            partitions_for_apply[i],
-                            internal_indices=partitions_dict[i],
+                            partitions_for_apply[idx],
+                            internal_indices=list_to_apply,
                         )
-                        for i in partitions_dict
+                        for idx, list_to_apply in partitions_dict
                     ]
                 )
             else:
