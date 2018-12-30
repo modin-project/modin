@@ -4533,6 +4533,12 @@ class DataFrame(object):
             key = self.index[key]
             return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
         else:
+            if any(k not in self.columns for k in key):
+                raise KeyError(
+                    "{} not index".format(
+                        str([k for k in key if k not in self.columns]).replace(",", "")
+                    )
+                )
             return DataFrame(
                 query_compiler=self._query_compiler.getitem_column_array(key)
             )
