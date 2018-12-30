@@ -3347,7 +3347,15 @@ def test_set_axis(data, axis):
 
     modin_df_copy = modin_df.copy()
     modin_df.set_axis(labels, axis=axis, inplace=True)
-    assert not df_equals(modin_df, modin_df_copy)
+
+    # Check that the copy and original are different
+    try:
+        df_equals(modin_df, modin_df_copy)
+    except AssertionError:
+        assert True
+    else:
+        assert False
+
     pandas_df.set_axis(labels, axis=axis, inplace=True)
     df_equals(modin_df, pandas_df)
 
