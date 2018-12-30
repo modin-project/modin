@@ -3379,7 +3379,15 @@ def test_set_index(request, data, drop, append):
 
         modin_df_copy = modin_df.copy()
         modin_df.set_index(key, drop=drop, append=append, inplace=True)
-        assert not df_equals(modin_df, modin_df_copy)
+
+        # Check that the copy and original are different
+        try:
+            df_equals(modin_df, modin_df_copy)
+        except AssertionError:
+            assert True
+        else:
+            assert False
+
         pandas_df.set_index(key, drop=drop, append=append, inplace=True)
         df_equals(modin_df, pandas_df)
 
