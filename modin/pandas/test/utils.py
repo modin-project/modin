@@ -236,7 +236,10 @@ def df_equals(df1, df2):
             return False
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
-        assert_frame_equal(df1.sort_index(axis=1), df2.sort_index(axis=1), check_dtype=False, check_datetimelike_compat=True, check_index_type=False)
+        try:
+            assert_frame_equal(df1.sort_index(axis=1), df2.sort_index(axis=1), check_dtype=False, check_datetimelike_compat=True, check_index_type=False)
+        except:
+            assert_frame_equal(df1, df2, check_dtype=False, check_datetimelike_compat=True, check_index_type=False)
     elif isinstance(df1, types_for_almost_equals) and isinstance(df2, types_for_almost_equals):
         assert_almost_equal(df1, df2, check_dtype=False, check_series_type=False)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
