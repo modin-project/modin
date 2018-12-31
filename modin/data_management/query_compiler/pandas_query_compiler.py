@@ -630,6 +630,18 @@ class PandasQueryCompiler(object):
         """
         func = pandas.DataFrame.rfloordiv
         return self._inter_df_op_handler(func, other, **kwargs)
+      
+    def rmod(self, other, **kwargs):
+        """Mods this manager with other object (manager or scalar).
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with mod data and index.
+        """
+        func = pandas.DataFrame.rmod
+        return self._inter_df_op_handler(func, other, **kwargs)
 
     def rpow(self, other, **kwargs):
         """Exponential power of other object (manager or scalar) to this manager.
@@ -1754,28 +1766,23 @@ class PandasQueryCompiler(object):
                     columns=result.columns, index=range(len(result), len(df))
                 )
                 result = pandas.concat([result, append_values], ignore_index=True)
-            elif axis:
+            elif axis and len(df.columns) != len(result.columns):
                 # Pad rows
                 append_vals = pandas.DataFrame(
-                    columns=range(len(result.columns), len(df)), index=result.index
+                    columns=range(len(result.columns), len(df.columns)),
+                    index=result.index,
                 )
                 result = pandas.concat([result, append_vals], axis=1)
             return result
 
         func = self._prepare_method(mode_builder, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
+
         new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
         new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
-        # We have to reindex the DataFrame so that all of the partitions are
-        # matching in shape. The next steps ensure this happens.
-        final_labels = new_index if not axis else new_columns
-        # We build these intermediate objects to avoid depending directly on
-        # the underlying implementation.
-        return (
-            self.__constructor__(new_data, new_index, new_columns, self._dtype_cache)
-            .reindex(axis=axis, labels=final_labels)
-            .dropna(axis=axis, how="all")
-        )
+        return self.__constructor__(
+            new_data, new_index, new_columns, self._dtype_cache
+        ).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
