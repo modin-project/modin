@@ -3197,7 +3197,21 @@ class DataFrame(object):
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
-        return self.floordiv(other, axis, level, fill_value)
+        if level is not None:
+            if isinstance(other, DataFrame):
+                other = other._query_compiler.to_pandas()
+            return self._default_to_pandas(
+                pandas.DataFrame.rfloordiv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
+        other = self._validate_other(other, axis, numeric_only=True)
+        new_query_compiler = self._query_compiler.rfloordiv(
+            other=other, axis=axis, level=level, fill_value=fill_value
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
         """Mod this DataFrame against another DataFrame/Series/scalar.
