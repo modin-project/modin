@@ -630,7 +630,7 @@ class PandasQueryCompiler(object):
         """
         func = pandas.DataFrame.rfloordiv
         return self._inter_df_op_handler(func, other, **kwargs)
-      
+
     def rmod(self, other, **kwargs):
         """Mods this manager with other object (manager or scalar).
 
