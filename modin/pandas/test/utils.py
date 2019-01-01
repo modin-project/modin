@@ -5,7 +5,7 @@ import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 
 random_state = np.random.RandomState(seed=42)
-RAND_LOW = -100
+RAND_LOW = 0
 RAND_HIGH = 100
 
 # Input data and functions for the tests
