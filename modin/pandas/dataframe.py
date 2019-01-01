@@ -2682,32 +2682,6 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        # Check to make sure integers are not raised to negative integer powers
-        if isinstance(other, type(self._query_compiler)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        for i in range(len(other_dtypes)):
-            if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
-                if isinstance(other, type(self._query_compiler)):
-                    continue
-                    # TODO: Come back to this when we have an efficient way to preprocess data
-                    # if old_other.iloc[:, i].lt(0).any():
-                    #     raise ValueError("Integers to negative integer powers are not allowed.")
-                elif is_list_like(other):
-                    if any(x < 0 for x in other):
-                        raise ValueError(
-                            "Integers to negative integer powers are not allowed."
-                        )
-                elif other < 0:
-                    raise ValueError(
-                        "Integers to negative integer powers are not allowed."
-                    )
         new_query_compiler = self._query_compiler.pow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
