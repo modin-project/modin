@@ -496,9 +496,13 @@ class BaseBlockPartitions(object):
         if axis == 0:
             func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
+            # Note: We use _partitions_cache in the context of this function to make
+            # sure that none of the partitions are modified or filtered out before we
+            # get the index information.
+            # DO NOT CHANGE TO self.partitions under any circumstance.
             new_indices = (
-                [idx.apply(func).get() for idx in self.partitions.T[0]]
-                if len(self.partitions.T)
+                [idx.apply(func).get() for idx in self._partitions_cache.T[0]]
+                if len(self._partitions_cache.T)
                 else []
             )
             # This is important because sometimes we have resized the data. The new
@@ -511,8 +515,8 @@ class BaseBlockPartitions(object):
         else:
             func = self.preprocess_func(index_func)
             new_indices = (
-                [idx.apply(func).get() for idx in self.partitions[0]]
-                if len(self.partitions)
+                [idx.apply(func).get() for idx in self._partitions_cache[0]]
+                if len(self._partitions_cache)
                 else []
             )
 
