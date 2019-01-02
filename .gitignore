@@ -168,3 +168,6 @@ cscope.out
 
 # Dask workspace
 dask-worker-space/
+
+# VSCode
+.vscode/

@@ -1,4 +1,5 @@
-set -ex
+set -e
+set -x
 
 sha_tag=`git rev-parse --verify --short HEAD`
 docker build -t modin-project/test:$sha_tag -f .jenkins/build-tests/Dockerfile .

@@ -1,15 +1,39 @@
 set -x
 
+# How does it work?
+# - This script will run all tests in the TESTS array, assuming the
+#   pytest python file is name with prefix test_; and then it will
+#   upload the html result to s3 bucket.
+# - `any_test_failed` variable is updated if any of the test does not
+#   exit normally. This script will exit with status code from this variable.
+
+sha_tag=$(git rev-parse --verify --short HEAD)
 source activate py3
 
 python -c "import ray; ray.init()"
-pytest --html=test_dataframe.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_dataframe.py
-pytest --html=test_concat.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_concat.py
-pytest --html=test_io.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_io.py
-pytest --html=test_groupby.html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_groupby.py
 
-sha_tag=`git rev-parse --verify --short HEAD`
-aws s3 cp test_dataframe.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
-aws s3 cp test_concat.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
-aws s3 cp test_io.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
-aws s3 cp test_groupby.html s3://modin-jenkins-result/${sha_tag}/ --acl public-read
+any_test_failed=0
+
+TESTS=("dataframe" "concat" "io" "groupby")
+TESTS_FAILED=()
+
+test_and_upload_result() {
+    test_name=$1
+    pytest --html=test_"$test_name".html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_"$test_name".py
+    test_status=$?
+
+    aws s3 cp test_"$test_name".html s3://modin-jenkins-result/"$sha_tag"/ --acl public-read
+
+    if [ $test_status -ne 0 ]; then
+        any_test_failed=$test_status
+        TESTS_FAILED+=("$test_name")
+    fi;
+}
+
+for test in "${TESTS[@]}"; do
+    test_and_upload_result $test
+done
+
+python post_comments.py --sha "$sha_tag" --tests "${TESTS_FAILED[@]}"
+
+exit $any_test_failed
