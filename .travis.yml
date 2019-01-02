@@ -7,7 +7,7 @@ cache:
 
 matrix:
   include:
-      - os: linux
+    - os: linux
       dist: trusty
       env:
         - PYTHON=2.7
