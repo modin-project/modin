@@ -2297,7 +2297,7 @@ class PandasQueryCompiler(object):
             old_index = df.index
             df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
-            df.columns = pd.RangeIndex(len(df.columns))
+            df.columns = pandas.RangeIndex(len(df.columns))
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
