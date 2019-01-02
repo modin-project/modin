@@ -173,24 +173,25 @@ class SeriesView(object):
         ]
         if item not in default_behaviors:
             method = self.series.__getattribute__(item)
-            try:
-                has_inplace_param = callable(method) and "inplace" in str(
-                    inspect.signature(method)
-                )
-            # This will occur on Python2
-            except AttributeError:
-                has_inplace_param = callable(method) and "inplace" in str(
-                    inspect.getargspec(method)
-                )
             # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
             # pandas they are equivalent to classes. They are verified here because they
             # cannot be overridden with the functions below. This generally solves the
             # problem where the instance property is callable, but the class property is
             # not.
-            needs_override = callable(method) and callable(
+            is_callable = callable(method) and callable(
                 getattr(type(self.series), item)
             )
-            if needs_override and has_inplace_param and self.parent_df is not None:
+            try:
+                has_inplace_param = is_callable and "inplace" in str(
+                    inspect.signature(method)
+                )
+            # This will occur on Python2
+            except AttributeError:
+                has_inplace_param = is_callable and "inplace" in str(
+                    inspect.getargspec(method)
+                )
+
+            if is_callable and has_inplace_param and self.parent_df is not None:
 
                 def inplace_handler(*args, **kwargs):
                     """Replaces the default behavior of methods with inplace kwarg.
