@@ -12,7 +12,7 @@ RAND_HIGH = 100
 # The test data that we will test our code against
 test_data = {
     # "empty_data": {},
-    # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []}, 
+    # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
     "int_data": {
         "col3": [0, 1, 2, 3, 4, 5, 6, 7],
         "col4": [8, 9, 10, 11, 12, 13, 14, 15],
@@ -78,7 +78,12 @@ test_data = {
     #     "col1": "foo",
     #     "col2": True,
     # },
-    "100x100": {"col{}".format((i-50)%100+1): random_state.randint(RAND_LOW, RAND_HIGH, size=(100)) for i in range(100)},
+    "100x100": {
+        "col{}".format((i - 50) % 100 + 1): random_state.randint(
+            RAND_LOW, RAND_HIGH, size=(100)
+        )
+        for i in range(100)
+    },
 }
 
 test_data_values = list(test_data.values())
@@ -91,12 +96,10 @@ numeric_dfs = [
     "float_data",
     "sparse_nan_data",
     "dense_nan_data",
-    "100x100"
+    "100x100",
 ]
 
-no_numeric_dfs = [
-        "datetime_timedelta_data"
-        ]
+no_numeric_dfs = ["datetime_timedelta_data"]
 
 # Test functions for applymap
 test_func = {
@@ -237,10 +240,24 @@ def df_equals(df1, df2):
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         try:
-            assert_frame_equal(df1.sort_index(axis=1), df2.sort_index(axis=1), check_dtype=False, check_datetimelike_compat=True, check_index_type=False)
-        except:
-            assert_frame_equal(df1, df2, check_dtype=False, check_datetimelike_compat=True, check_index_type=False)
-    elif isinstance(df1, types_for_almost_equals) and isinstance(df2, types_for_almost_equals):
+            assert_frame_equal(
+                df1.sort_index(axis=1),
+                df2.sort_index(axis=1),
+                check_dtype=False,
+                check_datetimelike_compat=True,
+                check_index_type=False,
+            )
+        except Exception:
+            assert_frame_equal(
+                df1,
+                df2,
+                check_dtype=False,
+                check_datetimelike_compat=True,
+                check_index_type=False,
+            )
+    elif isinstance(df1, types_for_almost_equals) and isinstance(
+        df2, types_for_almost_equals
+    ):
         assert_almost_equal(df1, df2, check_dtype=False)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_almost_equal(df1, df2, check_dtype=False, check_series_type=False)
@@ -248,7 +265,12 @@ def df_equals(df1, df2):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
             df_equals(g1[1], g2[1])
-    elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series) and df1.empty and df2.empty:
+    elif (
+        isinstance(df1, pandas.Series)
+        and isinstance(df2, pandas.Series)
+        and df1.empty
+        and df2.empty
+    ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
     else:
