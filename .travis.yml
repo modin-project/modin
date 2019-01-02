@@ -7,6 +7,18 @@ cache:
 
 matrix:
   include:
+      - os: linux
+      dist: trusty
+      env:
+        - PYTHON=2.7
+        - MODIN_ENGINE=ray
+
+    - os: linux
+      dist: trusty
+      env:
+        - PYTHON=3.6
+        - MODIN_ENGINE=ray
+
     - os: linux
       dist: trusty
       env: 
@@ -23,7 +35,6 @@ matrix:
       dist: trusty
       env: 
         - LINT=1
-        - MODIN_DEBUG=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check modin/

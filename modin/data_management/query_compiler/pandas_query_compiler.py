@@ -1243,7 +1243,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        return self._process_all_any(pandas.DataFrame.all, **kwargs)
+        return self._process_all_any(lambda df, **kwargs: df.all(**kwargs), **kwargs)
 
     def any(self, **kwargs):
         """Returns whether any the elements are true, potentially over an axis.
@@ -1251,7 +1251,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        return self._process_all_any(pandas.DataFrame.any, **kwargs)
+        return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
 
     def _process_all_any(self, func, **kwargs):
         """Calculates if any or all the values are true.
