@@ -34,6 +34,6 @@ for test in "${TESTS[@]}"; do
     test_and_upload_result $test
 done
 
-python post_comments.py --sha "$sha_tag" --tests "${TESTS_FAILED[@]}"
+python .jenkins/build-tests/post_comments.py --sha "$sha_tag" --tests "${TESTS_FAILED[@]}"
 
 exit $any_test_failed
