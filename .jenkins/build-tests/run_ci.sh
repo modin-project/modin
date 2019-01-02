@@ -7,4 +7,5 @@ docker run --rm --shm-size=1g \
 	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
 	-e GITHUB_TOKEN=${GITHUB_TOKEN} \
+	-e ghprbPullId=${ghprbPullId} \
 	modin-project/test:$sha_tag
