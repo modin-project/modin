@@ -3686,6 +3686,7 @@ class DataFrame(object):
         Returns:
             A sorted DataFrame
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if level is not None:
             new_query_compiler = self._default_to_pandas(
                 pandas.DataFrame.sort_index,
@@ -3708,14 +3709,13 @@ class DataFrame(object):
             if level is not None:
                 raise ValueError("unable to simultaneously sort by and level")
             return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
-        axis = pandas.DataFrame()._get_axis_number(axis)
-        if not axis:
-            new_index = self.index.sort_values(ascending=ascending)
-            new_columns = None
+        new_query_compiler = self._query_compiler.sort_index(
+            axis=axis, ascending=ascending, kind=kind, na_position=na_position
+        )
+        if inplace:
+            self._update_inplace(new_query_compiler=new_query_compiler)
         else:
-            new_index = None
-            new_columns = self.columns.sort_values(ascending=ascending)
-        return self.reindex(index=new_index, columns=new_columns)
+            return DataFrame(query_compiler=new_query_compiler)
 
     def sort_values(
         self,

@@ -1865,6 +1865,42 @@ class PandasQueryCompiler(object):
         new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
         return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
 
+    def sort_index(self, **kwargs):
+        """Sorts the data with respect to either the columns or the indices.
+
+        Returns:
+            DataManager containing the data sorted by columns or indices.
+        """
+        axis = kwargs.pop("axis", 0)
+        index = self.columns if axis else self.index
+
+        # sort_index can have ascending be None and behaves as if it is False.
+        # sort_values cannot have ascending be None. Thus, the following logic is to
+        # convert the ascending argument to one that works with sort_values
+        ascending = kwargs.pop("ascending", True)
+        if ascending is None:
+            ascending = False
+        kwargs["ascending"] = ascending
+
+        def sort_index_builder(df, **kwargs):
+            if axis:
+                df.columns = index
+            else:
+                df.index = index
+            return df.sort_index(axis=axis, **kwargs)
+
+        func = self._prepare_method(sort_index_builder, **kwargs)
+        new_data = self.map_across_full_axis(axis, func)
+        if axis:
+            new_columns = pandas.Series(self.columns).sort_values(**kwargs)
+            new_index = self.index
+        else:
+            new_index = pandas.Series(self.index).sort_values(**kwargs)
+            new_columns = self.columns
+        return self.__constructor__(
+            new_data, new_index, new_columns, self.dtypes.copy()
+        )
+
     # END Map across rows/columns
 
     # Map across rows/columns
@@ -2261,6 +2297,7 @@ class PandasQueryCompiler(object):
             old_index = df.index
             df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
+            df.columns = pandas.RangeIndex(len(df.columns))
             df.index = old_index
             return df
 
