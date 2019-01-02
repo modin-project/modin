@@ -2154,7 +2154,7 @@ def test_iloc(request, data):
 
     if not name_contains(request.node.name, ["empty_data"]):
         # Scaler
-        assert modin_df.iloc[0, 1] == pandas_df.iloc[0, 1]
+        np.testing.assert_equal(modin_df.iloc[0, 1], pandas_df.iloc[0, 1])
 
         # Series
         df_equals(modin_df.iloc[0], pandas_df.iloc[0])
