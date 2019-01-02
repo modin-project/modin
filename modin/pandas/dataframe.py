@@ -387,7 +387,7 @@ class DataFrame(object):
         skipna=True,
         level=None,
         numeric_only=None,
-        min_count=1,
+        min_count=0,
         **kwargs
     ):
         """Perform a sum across the DataFrame.

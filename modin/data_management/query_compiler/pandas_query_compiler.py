@@ -1045,7 +1045,7 @@ class PandasQueryCompiler(object):
         """
         axis = kwargs.get("axis", 0)
         numeric_only = kwargs.get("numeric_only", None) if not axis else True
-        min_count = kwargs.get("min_count", 1)
+        min_count = kwargs.get("min_count", 0)
         reduce_index = self.columns if axis else self.index
 
         if numeric_only:
@@ -1062,7 +1062,7 @@ class PandasQueryCompiler(object):
 
         map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
-        if min_count == 1:
+        if min_count <= 1:
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
             return pandas.Series(
