@@ -1874,13 +1874,13 @@ class PandasQueryCompiler(object):
         axis = kwargs.pop("axis", 0)
         index = self.columns if axis else self.index
 
-        # sort_index can have ascending be None and behaves as if it is False. 
+        # sort_index can have ascending be None and behaves as if it is False.
         # sort_values cannot have ascending be None. Thus, the following logic is to
         # convert the ascending argument to one that works with sort_values
         ascending = kwargs.pop("ascending", True)
         if ascending is None:
             ascending = False
-        kwargs['ascending'] = ascending
+        kwargs["ascending"] = ascending
 
         def sort_index_builder(df, **kwargs):
             if axis:
@@ -2298,6 +2298,7 @@ class PandasQueryCompiler(object):
             df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
             df.columns = pandas.RangeIndex(len(df.columns))
+            df.index = old_index
             return df
 
         new_data = self.data.apply_func_to_select_indices_along_full_axis(
