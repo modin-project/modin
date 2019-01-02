@@ -3709,13 +3709,13 @@ class DataFrame(object):
             if level is not None:
                 raise ValueError("unable to simultaneously sort by and level")
             return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
-        new_manager = self._data_manager.sort_index(
+        new_query_compiler = self._query_compiler.sort_index(
             axis=axis, ascending=ascending, kind=kind, na_position=na_position
         )
         if inplace:
-            self._update_inplace(new_manager=new_manager)
+            self._update_inplace(new_query_compiler=new_query_compiler)
         else:
-            return DataFrame(data_manager=new_manager)
+            return DataFrame(query_compiler=new_query_compiler)
 
     def sort_values(
         self,
