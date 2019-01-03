@@ -58,7 +58,7 @@ from .io import (
     read_gbq,
     read_table,
 )
-from .reshape import get_dummies, melt
+from .reshape import get_dummies, melt, crosstab
 from .general import isna, merge, pivot_table
 from .. import __execution_engine__ as execution_engine
 
@@ -155,6 +155,7 @@ __all__ = [
     "Categorical",
     "__version__",
     "melt",
+    "crosstab",
 ]
 
 del pandas
