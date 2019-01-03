@@ -1080,14 +1080,14 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if exclude is None:
-            exclude = "object"
-        elif "object" not in include:
-            exclude = (
-                ([exclude] + ["object"])
-                if isinstance(exclude, str)
-                else list(exclude) + ["object"]
-            )
+        if include is not None:
+            if not is_list_like(include):
+                include = [include]
+            include = [np.dtype(i) for i in include]
+        if exclude is not None:
+            if not is_list_like(include):
+                exclude = [exclude]
+            exclude = [np.dtype(e) for e in exclude]
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
         return DataFrame(
