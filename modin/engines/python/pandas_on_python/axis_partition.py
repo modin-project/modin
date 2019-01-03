@@ -14,7 +14,14 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs
+    ):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -44,7 +51,7 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
                 )
             ]
 
-        args = [self.axis, func, num_splits, kwargs]
+        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
         return [
             PandasOnPythonRemotePartition(obj) for obj in deploy_python_axis_func(*args)
@@ -89,7 +96,9 @@ class PandasOnPythonRowPartition(PandasOnPythonAxisPartition):
     axis = 1
 
 
-def deploy_python_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_python_axis_func(
+    axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+):
     """Deploy a function along a full axis in Ray.
 
     Args:
@@ -107,7 +116,7 @@ def deploy_python_axis_func(axis, func, num_splits, kwargs, *partitions):
     result = func(dataframe, **kwargs)
     if isinstance(result, pandas.Series):
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
-    if num_splits != len(partitions):
+    if num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
     else:
         if axis == 0:

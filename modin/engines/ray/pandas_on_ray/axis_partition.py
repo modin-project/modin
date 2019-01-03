@@ -15,7 +15,14 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs
+    ):
         """Applies func to the object in the plasma store.
 
         See notes in Parent class about this method.
@@ -25,6 +32,12 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
             num_splits: The number of times to split the result object.
             other_axis_partition: Another `PandasOnRayAxisPartition` object to apply to
                 func with this one.
+            maintain_partitioning: Whether or not to keep the partitioning in the same
+                orientation as it was previously. This is important because we may be
+                operating on an individual AxisPartition and not touching the rest.
+                In this case, we have to return the partitioning to its previous
+                orientation (the lengths will remain the same). This is ignored between
+                two axis partitions.
 
         Returns:
             A list of `RayRemotePartition` objects.
@@ -41,7 +54,7 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
                 )
             )
 
-        args = [self.axis, func, num_splits, kwargs]
+        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
@@ -92,7 +105,9 @@ class PandasOnRayRowPartition(PandasOnRayAxisPartition):
 
 
 @ray.remote
-def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_ray_axis_func(
+    axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+):
     """Deploy a function along a full axis in Ray.
 
     Args:
@@ -101,6 +116,8 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
         num_splits: The number of splits to return
             (see `split_result_of_axis_func_pandas`)
         kwargs: A dictionary of keyword arguments.
+        maintain_partitioning: If True, keep the old partitioning if possible.
+            If False, create a new partition layout.
         partitions: All partitions that make up the full axis (row or column)
 
     Returns:
@@ -112,7 +129,10 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
         if num_splits == 1:
             return result
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
-    if num_splits != len(partitions):
+    # We set lengths to None so we don't use the old lengths for the resulting partition
+    # layout. This is done if the number of splits is changing or we are told not to
+    # keep the old partitioning.
+    if num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
     else:
         if axis == 0:
