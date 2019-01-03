@@ -1082,11 +1082,11 @@ class DataFrame(object):
         """
         if include is not None:
             if not is_list_like(include):
-                raise ValueError("PANDAS ERROR")
+                include = [include]
             include = [np.dtype(i) for i in include]
         if exclude is not None:
             if not is_list_like(include):
-                raise ValueError("PANDAS ERROR")
+                exclude = [exclude]
             exclude = [np.dtype(e) for e in exclude]
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
