@@ -26,12 +26,6 @@ else:
     PY2 = False
 
 
-def test_must_fail():
-    # will be removed.
-    print("testing for PR #355")
-    1/0
-    assert False
-
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):
     return to_pandas(ray_df).equals(pandas_df)
