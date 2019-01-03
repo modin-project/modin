@@ -13,7 +13,14 @@ class DaskAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [b.dask_obj for b in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs
+    ):
         """Applies func to the object.
 
         See notes in Parent class about this method.
@@ -47,7 +54,7 @@ class DaskAxisPartition(BaseAxisPartition):
                 )
             ]
 
-        args = [self.axis, func, num_splits, kwargs]
+        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
 
         args.extend(dask.compute(*self.list_of_blocks))
         return [
@@ -67,7 +74,9 @@ class DaskRowPartition(DaskAxisPartition):
     axis = 1
 
 
-def deploy_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_axis_func(
+    axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+):
     """Deploy a function along a full axis
 
     Args:
@@ -87,7 +96,7 @@ def deploy_axis_func(axis, func, num_splits, kwargs, *partitions):
     # uncovered by test_var
     if isinstance(result, pandas.Series):
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
-    if num_splits != len(partitions):
+    if num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
 
     #    if num_splits != len(partitions) or isinstance(result, pandas.Series):

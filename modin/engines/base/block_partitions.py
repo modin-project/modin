@@ -278,7 +278,7 @@ class BaseBlockPartitions(object):
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
-        # load-blanace the data as well.
+        # load-balance the data as well.
         result_blocks = np.array(
             [
                 part.apply(
