@@ -1593,7 +1593,10 @@ class PandasQueryCompiler(object):
                 new_columns = self.columns
 
         def describe_builder(df, **kwargs):
-            return pandas.DataFrame.describe(df, **kwargs)
+            try:
+                return pandas.DataFrame.describe(df, **kwargs)
+            except ValueError:
+                return pandas.DataFrame(index=df.index)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
