@@ -1559,10 +1559,18 @@ class PandasQueryCompiler(object):
         if len(new_columns) != 0:
             numeric = True
             exclude = kwargs.get("exclude", None)
+            include = kwargs.get("include", None)
+            # This is done to check against the default dtypes with 'in'.
+            # We don't change `include` in kwargs, so we can just use this for the
+            # check.
+            if include is None:
+                include = []
+            default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
+            add_to_excludes = [e for e in default_excludes if e not in include]
             if is_list_like(exclude):
-                exclude.append([np.timedelta64, np.datetime64, np.object, np.bool])
+                exclude.append(add_to_excludes)
             else:
-                exclude = [exclude, np.timedelta64, np.datetime64, np.object, np.bool]
+                exclude = add_to_excludes
             kwargs["exclude"] = exclude
         else:
             numeric = False
