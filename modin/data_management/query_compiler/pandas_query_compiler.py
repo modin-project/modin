@@ -2289,6 +2289,7 @@ class PandasQueryCompiler(object):
         """
         if is_list_like(value):
             from modin.pandas.series import SeriesView
+
             if isinstance(value, (pandas.Series, SeriesView)):
                 value = value.reindex(self.index)
             value = list(value)
