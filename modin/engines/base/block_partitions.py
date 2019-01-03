@@ -275,8 +275,19 @@ class BaseBlockPartitions(object):
         num_splits = self._compute_num_partitions()
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
+        # For mapping across the entire axis, we don't maintain partitioning because we
+        # may want to line to partitioning up with another BlockPartitions object. Since
+        # we don't need to maintain the partitioning, this gives us the opportunity to
+        # load-blanace the data as well.
         result_blocks = np.array(
-            [part.apply(preprocessed_map_func, num_splits) for part in partitions]
+            [
+                part.apply(
+                    preprocessed_map_func,
+                    num_splits=num_splits,
+                    maintain_partitioning=False,
+                )
+                for part in partitions
+            ]
         )
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D numpy array to return
