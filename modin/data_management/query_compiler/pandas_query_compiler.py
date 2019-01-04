@@ -1675,12 +1675,19 @@ class PandasQueryCompiler(object):
             if how == "any":
                 thresh = {ax: 1 for ax in axis}
             else:
-                thresh = {ax: len(self.index if ax == 0 else self.columns) for ax in axis}
+                thresh = {
+                    ax: len(self.index if ax == 0 else self.columns) for ax in axis
+                }
         else:
             thresh = {ax: thresh for ax in axis}
         # Count the number of NA values and specify which are higher than thresh.
         drop_values = {
-            ax: getattr(compute_na, "index" if ax == 0 else "columns")[len(self.index if ax == 0 else self.columns) - compute_na.count(axis=ax ^ 1) >= thresh[ax]] for ax in axis
+            ax: getattr(compute_na, "index" if ax == 0 else "columns")[
+                len(self.index if ax == 0 else self.columns)
+                - compute_na.count(axis=ax ^ 1)
+                >= thresh[ax]
+            ]
+            for ax in axis
         }
         if 0 not in drop_values:
             drop_values[0] = None
