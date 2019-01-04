@@ -1669,50 +1669,24 @@ class PandasQueryCompiler(object):
                 compute_na = self.getitem_row_array(subset)
         else:
             compute_na = self
-
         if not isinstance(axis, list):
             axis = [axis]
-        # We are building this dictionary first to determine which columns
-        # and rows to drop. This way we do not drop some columns before we
-        # know which rows need to be dropped.
-        if thresh is not None:
-            # Count the number of NA values and specify which are higher than
-            # thresh.
-            drop_values = {
-                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1) > thresh for ax in axis
-            }
+        if thresh is None:
+            if how == "any":
+                thresh = {ax: 1 for ax in axis}
+            else:
+                thresh = {ax: len(self.index if ax == 0 else self.columns) for ax in axis}
         else:
-            drop_values = {
-                ax ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1) for ax in axis
-            }
-
+            thresh = {ax: thresh for ax in axis}
+        # Count the number of NA values and specify which are higher than thresh.
+        drop_values = {
+            ax: getattr(compute_na, "index" if ax == 0 else "columns")[len(self.index if ax == 0 else self.columns) - compute_na.count(axis=ax ^ 1) >= thresh[ax]] for ax in axis
+        }
         if 0 not in drop_values:
             drop_values[0] = None
-
         if 1 not in drop_values:
             drop_values[1] = None
-
-            rm_from_index = (
-                [obj for obj in compute_na.index[drop_values[1]]]
-                if drop_values[1] is not None
-                else None
-            )
-            rm_from_columns = (
-                [obj for obj in compute_na.columns[drop_values[0]]]
-                if drop_values[0] is not None
-                else None
-            )
-        else:
-            rm_from_index = (
-                compute_na.index[drop_values[1]] if drop_values[1] is not None else None
-            )
-            rm_from_columns = (
-                compute_na.columns[drop_values[0]]
-                if drop_values[0] is not None
-                else None
-            )
-
-        return self.drop(index=rm_from_index, columns=rm_from_columns)
+        return compute_na.drop(index=drop_values[0], columns=drop_values[1])
 
     def eval(self, expr, **kwargs):
         """Returns a new DataManager with expr evaluated on columns.
@@ -2253,11 +2227,7 @@ class PandasQueryCompiler(object):
             )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
-            new_index = [
-                self.index[i]
-                for i in range(len(self.index))
-                if i not in numeric_indices
-            ]
+            new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
             new_dtypes = self.dtypes
@@ -2270,13 +2240,8 @@ class PandasQueryCompiler(object):
             new_data = new_data.apply_func_to_select_indices(
                 0, delitem, numeric_indices, keep_remaining=True
             )
-            # We can't use self.columns.drop with duplicate keys because in Pandas
-            # it throws an error.
-            new_columns = [
-                self.columns[i]
-                for i in range(len(self.columns))
-                if i not in numeric_indices
-            ]
+
+            new_columns = self.columns[~self.columns.isin(columns)]
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
