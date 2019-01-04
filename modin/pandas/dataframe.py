@@ -5023,4 +5023,16 @@ class DataFrame(object):
         if isinstance(result, pandas.DataFrame):
             return DataFrame(result)
         else:
-            return result
+            try:
+                if len(result) == 2 and isinstance(result[0], pandas.DataFrame):
+                    # Some operations split the DataFrame into two (e.g. align). We need to wrap
+                    # both of the returned results
+                    if isinstance(result[1], pandas.DataFrame):
+                        second = DataFrame(result[1])
+                    else:
+                        second = result[1]
+                    return DataFrame(result[0]), second
+                else:
+                    return result
+            except TypeError:
+                return result
