@@ -181,8 +181,13 @@ class SeriesView(object):
             # cannot be overridden with the functions below. This generally solves the
             # problem where the instance property is callable, but the class property is
             # not.
-            is_callable = callable(method) and callable(
-                getattr(type(self.series), item)
+            # The isclass check is to ensure that we return the correct type. Some of
+            # the objects that are called result in classes being returned, and we don't
+            # want to override with our own function.
+            is_callable = (
+                callable(method)
+                and callable(getattr(type(self.series), item))
+                and not inspect.isclass(getattr(type(self.series), item))
             )
             try:
                 has_inplace_param = is_callable and "inplace" in str(
