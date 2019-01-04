@@ -688,6 +688,8 @@ class BaseBlockPartitions(object):
         Returns:
             A new BaseBlockPartitions object, the type of object that called this.
         """
+        if self.partitions.size == 0:
+            return np.array([[]])
         # Handling dictionaries has to be done differently, but we still want
         # to figure out the partitions that need to be applied to, so we will
         # store the dictionary in a separate variable and assign `indices` to
@@ -811,6 +813,8 @@ class BaseBlockPartitions(object):
         Returns:
             A new BaseBlockPartitions object, the type of object that called this.
         """
+        if self.partitions.size == 0:
+            return np.array([[]])
         if isinstance(indices, dict):
             dict_indices = indices
             indices = list(indices.keys())
