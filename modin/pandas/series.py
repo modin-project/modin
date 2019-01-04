@@ -147,6 +147,9 @@ class SeriesView(object):
     def __neg__(self, other):
         return self.__arithmetic_op__("__neg__")(other)
 
+    def __abs__(self):
+        return self.series.abs()
+
     def __iter__(self):
         return self.series.__iter__()
 
