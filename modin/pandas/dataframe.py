@@ -356,9 +356,11 @@ class DataFrame(object):
             A new DataFrame resulting from the groupby.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+        idx_name = ""
         if callable(by):
             by = by(self.index)
         elif isinstance(by, string_types):
+            idx_name = by
             by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
             if isinstance(by, pandas.Series):
@@ -378,7 +380,7 @@ class DataFrame(object):
         from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
-            self, by, axis, level, as_index, sort, group_keys, squeeze, **kwargs
+            self, by, axis, level, as_index, sort, group_keys, squeeze, idx_name, **kwargs
         )
 
     def sum(
