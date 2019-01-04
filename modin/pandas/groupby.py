@@ -21,7 +21,17 @@ from .utils import _inherit_docstrings
 )
 class DataFrameGroupBy(object):
     def __init__(
-        self, df, by, axis, level, as_index, sort, group_keys, squeeze, idx_name, **kwargs
+        self,
+        df,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        idx_name,
+        **kwargs
     ):
 
         self._axis = axis
@@ -143,7 +153,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs), numeric=True)
+        return self._apply_agg_function(
+            lambda df: df.mean(*args, **kwargs), numeric=True
+        )
 
     def any(self):
         return self._apply_agg_function(lambda df: df.any())
@@ -419,7 +431,11 @@ class DataFrameGroupBy(object):
         else:
             new_columns = self._df.columns
         if numeric:
-            new_columns = [col for col in new_columns if np.issubdtype(self._df.dtypes[col], np.number)]
+            new_columns = [
+                col
+                for col in new_columns
+                if np.issubdtype(self._df.dtypes[col], np.number)
+            ]
         new_manager.columns = new_columns
         return DataFrame(query_compiler=new_manager)
 

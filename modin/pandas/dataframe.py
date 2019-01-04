@@ -380,7 +380,16 @@ class DataFrame(object):
         from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
-            self, by, axis, level, as_index, sort, group_keys, squeeze, idx_name, **kwargs
+            self,
+            by,
+            axis,
+            level,
+            as_index,
+            sort,
+            group_keys,
+            squeeze,
+            idx_name,
+            **kwargs
         )
 
     def sum(
