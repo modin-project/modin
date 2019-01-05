@@ -428,9 +428,13 @@ class DataFrameGroupBy(object):
         if self._idx_name != "":
             new_manager.index.name = self._idx_name
             new_columns = self._df.columns.drop(self._idx_name)
-        else:
+        # We preserve columns only if the grouped axis is the index
+        elif self._axis == 0:
             new_columns = self._df.columns
-        if numeric:
+        # We just keep everything the same if it is column groups
+        else:
+            new_columns = new_manager.columns
+        if numeric and self._axis == 0:
             new_columns = [
                 col
                 for col in new_columns
