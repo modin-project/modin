@@ -6,6 +6,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
+import numpy as np
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
@@ -20,7 +21,17 @@ from .utils import _inherit_docstrings
 )
 class DataFrameGroupBy(object):
     def __init__(
-        self, df, by, axis, level, as_index, sort, group_keys, squeeze, **kwargs
+        self,
+        df,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        idx_name,
+        **kwargs
     ):
 
         self._axis = axis
@@ -32,6 +43,7 @@ class DataFrameGroupBy(object):
         # This tells us whether or not there are multiple columns/rows in the groupby
         self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
+        self._idx_name = idx_name
         self._kwargs = {
             "sort": sort,
             "as_index": as_index,
@@ -141,7 +153,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.mean(*args, **kwargs), numeric=True
+        )
 
     def any(self):
         return self._apply_agg_function(lambda df: df.any())
@@ -281,7 +295,7 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.size())
 
     def sum(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.sum(**kwargs))
+        return self._apply_agg_function(lambda df: df.sum(**kwargs), numeric=True)
 
     def __unicode__(self):
         return self._default_to_pandas(lambda df: df.__unicode__())
@@ -332,7 +346,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.median(**kwargs))
+        return self._apply_agg_function(lambda df: df.median(**kwargs), numeric=True)
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
@@ -393,7 +407,7 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
-    def _apply_agg_function(self, f, **kwargs):
+    def _apply_agg_function(self, f, numeric=False, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
         Args:
@@ -411,6 +425,22 @@ class DataFrameGroupBy(object):
         new_manager = self._query_compiler.groupby_agg(
             self._by, self._axis, f, self._kwargs, kwargs
         )
+        if self._idx_name != "":
+            new_manager.index.name = self._idx_name
+            new_columns = self._df.columns.drop(self._idx_name)
+        # We preserve columns only if the grouped axis is the index
+        elif self._axis == 0:
+            new_columns = self._df.columns
+        # We just keep everything the same if it is column groups
+        else:
+            new_columns = new_manager.columns
+        if numeric and self._axis == 0:
+            new_columns = [
+                col
+                for col in new_columns
+                if np.issubdtype(self._df.dtypes[col], np.number)
+            ]
+        new_manager.columns = new_columns
         return DataFrame(query_compiler=new_manager)
 
     def _default_to_pandas(self, f, **kwargs):
