@@ -1652,7 +1652,6 @@ class PandasQueryCompiler(object):
 
     def dropna(self, **kwargs):
         """Returns a new DataManager with null values dropped along given axis.
-
         Return:
             a new DataManager
         """
@@ -2253,11 +2252,7 @@ class PandasQueryCompiler(object):
             )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
-            new_index = [
-                self.index[i]
-                for i in range(len(self.index))
-                if i not in numeric_indices
-            ]
+            new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
             new_dtypes = self.dtypes
@@ -2270,13 +2265,8 @@ class PandasQueryCompiler(object):
             new_data = new_data.apply_func_to_select_indices(
                 0, delitem, numeric_indices, keep_remaining=True
             )
-            # We can't use self.columns.drop with duplicate keys because in Pandas
-            # it throws an error.
-            new_columns = [
-                self.columns[i]
-                for i in range(len(self.columns))
-                if i not in numeric_indices
-            ]
+
+            new_columns = self.columns[~self.columns.isin(columns)]
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
