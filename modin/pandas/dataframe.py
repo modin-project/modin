@@ -5035,7 +5035,11 @@ class DataFrame(object):
             return DataFrame(result)
         else:
             try:
-                if len(result) == 2 and isinstance(result[0], pandas.DataFrame):
+                if (
+                    isinstance(result, (list, tuple))
+                    and len(result) == 2
+                    and isinstance(result[0], pandas.DataFrame)
+                ):
                     # Some operations split the DataFrame into two (e.g. align). We need to wrap
                     # both of the returned results
                     if isinstance(result[1], pandas.DataFrame):
