@@ -1740,7 +1740,6 @@ class DataFrame(object):
 
     def hist(
         self,
-        data,
         column=None,
         by=None,
         grid=True,
@@ -1758,7 +1757,6 @@ class DataFrame(object):
     ):
         return self._default_to_pandas(
             pandas.DataFrame.hist,
-            data,
             column=column,
             by=by,
             grid=grid,
