@@ -1665,7 +1665,7 @@ class PandasQueryCompiler(object):
             if not axis:
                 compute_na = self.getitem_column_array(subset)
             else:
-                compute_na = self.getitem_row_array(subset)
+                compute_na = self.getitem_row_array(self.index.get_indexer_for(subset))
         else:
             compute_na = self
 
@@ -2202,23 +2202,23 @@ class PandasQueryCompiler(object):
         """Get row data for target labels.
 
         Args:
-            key: Target labels by which to retrieve data.
+            key: Target numeric indices by which to retrieve data.
 
         Returns:
             A new PandasDataManager.
         """
         # Convert to list for type checking
-        numeric_indices = list(self.index.get_indexer_for(key))
+        key = list(key)
 
         def getitem(df, internal_indices=[]):
             return df.iloc[internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            1, getitem, numeric_indices, keep_remaining=False
+            1, getitem, key, keep_remaining=False
         )
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
-        new_index = self.index[numeric_indices]
+        new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
 
     # END __getitem__ methods

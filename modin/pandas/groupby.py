@@ -89,7 +89,9 @@ class DataFrameGroupBy(object):
                 else:
                     self._index_grouped_cache = {
                         k: v.index
-                        for k, v in self._df._query_compiler.getitem_row_array(self._by)
+                        for k, v in self._df._query_compiler.getitem_row_array(
+                            self._index.get_indexer_for(self._by)
+                        )
                         .to_pandas()
                         .groupby(by=self._by)
                     }
@@ -120,7 +122,7 @@ class DataFrameGroupBy(object):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            self._index_grouped[k]
+                            self._index.get_indexer_for(self._index_grouped[k])
                         )
                     ),
                 )
