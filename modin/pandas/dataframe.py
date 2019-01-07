@@ -3369,7 +3369,8 @@ class DataFrame(object):
             axis_labels = self.columns
             axis_length = len(axis_labels)
         else:
-            axis_labels = self.index
+            # Getting rows requires indices instead of labels. RangeIndex provides this.
+            axis_labels = pandas.RangeIndex(len(self.index))
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
@@ -4550,9 +4551,10 @@ class DataFrame(object):
                     )
                 )
             key = check_bool_indexer(self.index, key)
-            # We convert here because the query_compiler assumes it is a list of
-            # indices. This greatly decreases the complexity of the code.
-            key = self.index[key]
+            # We convert to a RangeIndex because getitem_row_array is expecting a list
+            # of indices, and RangeIndex will give us the exact indices of each boolean
+            # requested.
+            key = pandas.RangeIndex(len(self.index))[key]
             return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
         else:
             if any(k not in self.columns for k in key):
@@ -4566,9 +4568,10 @@ class DataFrame(object):
             )
 
     def _getitem_slice(self, key):
-        # We convert here because the query_compiler assumes it is a list of
-        # indices. This greatly decreases the complexity of the code.
-        key = self.index[key]
+        # We convert to a RangeIndex because getitem_row_array is expecting a list
+        # of indices, and RangeIndex will give us the exact indices of each boolean
+        # requested.
+        key = pandas.RangeIndex(len(self.index))[key]
         return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
 
     def __getattr__(self, key):
