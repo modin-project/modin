@@ -59,7 +59,7 @@ from .io import (
     read_table,
 )
 from .reshape import get_dummies, melt, crosstab
-from .general import isna, merge, pivot_table
+from .general import isna, isnull, merge, pivot_table
 from .plotting import Plotting as plotting
 from .. import __execution_engine__ as execution_engine
 
@@ -135,6 +135,7 @@ __all__ = [
     "to_datetime",
     "get_dummies",
     "isna",
+    "isnull",
     "merge",
     "pivot_table",
     "Panel",
