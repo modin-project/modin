@@ -2712,7 +2712,6 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
         self.index_map = index_map_series
         self.columns_map = columns_map_series
-        self.is_view = True
 
         PandasQueryCompiler.__init__(
             self, block_partitions_object, index, columns, dtypes

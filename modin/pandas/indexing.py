@@ -147,18 +147,13 @@ class _LocationIndexerBase(object):
     def __init__(self, ray_df: DataFrame):
         self.df = ray_df
         self.qc = ray_df._query_compiler
-        self.is_view = hasattr(self.qc, "is_view")
-
         self.row_scaler = False
         self.col_scaler = False
 
     def __getitem__(
         self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
     ):
-        if self.is_view:
-            qc_view = self.qc.__constructor__(self.qc.data, row_lookup, col_lookup)
-        else:
-            qc_view = self.qc.view(row_lookup, col_lookup)
+        qc_view = self.qc.view(row_lookup, col_lookup)
 
         if ndim == 2:
             return DataFrame(query_compiler=qc_view)
