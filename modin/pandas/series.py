@@ -47,6 +47,9 @@ class SeriesView(object):
     def __str__(self):
         return str(self.series)
 
+    def __dir__(self):
+        return self.series.__dir__()
+
     def __comparisons__(self, func):
         def compare_func(other):
             if hasattr(other, "series"):
