@@ -3371,8 +3371,8 @@ class DataFrame(object):
             axis_labels = self.columns
             axis_length = len(axis_labels)
         else:
-            # Getting rows requires indices instead of labels
-            axis_labels = range(len(self.index))
+            # Getting rows requires indices instead of labels. RangeIndex provides this.
+            axis_labels = pandas.RangeIndex(len(self.index))
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
