@@ -2718,6 +2718,27 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             self, block_partitions_object, index, columns, dtypes
         )
 
+    _dtype_cache = None
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    def _get_dtype(self):
+        """Override the parent on this to avoid getting the wrong dtypes"""
+        if self._dtype_cache is None:
+            map_func = self._prepare_method(lambda df: df.dtypes)
+
+            def dtype_builder(df):
+                return df.apply(lambda row: find_common_type(row.values), axis=0)
+
+            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache.index = self.columns
+        elif not self._dtype_cache.index.equals(self.columns):
+            self._dtype_cache = self._dtype_cache.reindex(self.columns)
+        return self._dtype_cache
+
+    dtypes = property(_get_dtype, _set_dtype)
+
     def __constructor__(
         self,
         block_partitions_object: BaseBlockPartitions,
