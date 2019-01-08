@@ -1,7 +1,7 @@
 Using Modin
 ===========
 
-Modin is an early stage DataFrame library that wraps pandas and transparently
+Modin is an early stage `DataFrame`_ library that wraps `pandas`_ and transparently
 distributes the data and computation, accelerating your pandas workflows with one line
 of code change. The user does not need to know how many cores their system has, nor do
 they need to specify how to distribute the data. In fact, users can continue using their
@@ -128,9 +128,11 @@ Examples
 You can find an example on our recent `blog post`_ or on the `Jupyter Notebook`_ that we
 used to create the blog post.
 
+.. _`DataFrame`: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
+.. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
 .. _Ray's documentation: https://ray.readthedocs.io/en/latest/api.html
-.. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/ 
+.. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
