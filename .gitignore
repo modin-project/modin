@@ -165,3 +165,6 @@ cscope.out
 
 # PYTest Benchmarks
 .benchmarks/
+
+# Dask workspace
+dask-worker-space/

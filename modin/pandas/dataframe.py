@@ -26,8 +26,10 @@ import re
 import sys
 import warnings
 
+from modin.error_message import ErrorMessage
 from .utils import from_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
+from .series import SeriesView
 
 
 @_inherit_docstrings(
@@ -57,7 +59,7 @@ class DataFrame(object):
                 If None, infer
             copy (boolean): Copy data from inputs.
                 Only affects DataFrame / 2d ndarray input.
-            query_compiler: A manager object to manage distributed computation.
+            query_compiler: A query compiler object to manage distributed computation.
         """
         if isinstance(data, DataFrame):
             self._query_compiler = data._query_compiler
@@ -119,7 +121,7 @@ class DataFrame(object):
     def __repr__(self):
         # In the future, we can have this be configurable, just like Pandas.
         num_rows = 60
-        num_cols = 20
+        num_cols = 30
 
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
@@ -200,11 +202,11 @@ class DataFrame(object):
             raise ValueError("expr cannot be an empty string")
 
         if isinstance(expr, str) and "@" in expr:
-            raise NotImplementedError("Local variables not yet supported in eval.")
+            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
-                raise NotImplementedError("'Not' nodes are not implemented.")
+                ErrorMessage.not_implemented("'Not' nodes are not implemented.")
 
     @property
     def size(self):
@@ -285,15 +287,15 @@ class DataFrame(object):
         """
         return len(self.index), len(self.columns)
 
-    def _update_inplace(self, new_manager):
+    def _update_inplace(self, new_query_compiler):
         """Updates the current DataFrame inplace.
 
         Args:
-            new_manager: The new DataManager to use to manage the data
+            new_query_compiler: The new QueryCompiler to use to manage the data
         """
-        old_manager = self._query_compiler
-        self._query_compiler = new_manager
-        old_manager.free()
+        old_query_compiler = self._query_compiler
+        self._query_compiler = new_query_compiler
+        old_query_compiler.free()
 
     def add_prefix(self, prefix):
         """Add a prefix to each of the column names.
@@ -319,11 +321,7 @@ class DataFrame(object):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
-            UserWarning,
-        )
-
+        ErrorMessage.non_verified_udf()
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
     def copy(self, deep=True):
@@ -358,9 +356,11 @@ class DataFrame(object):
             A new DataFrame resulting from the groupby.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
+        idx_name = ""
         if callable(by):
             by = by(self.index)
         elif isinstance(by, string_types):
+            idx_name = by
             by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
             if isinstance(by, pandas.Series):
@@ -380,7 +380,16 @@ class DataFrame(object):
         from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
-            self, by, axis, level, as_index, sort, group_keys, squeeze, **kwargs
+            self,
+            by,
+            axis,
+            level,
+            as_index,
+            sort,
+            group_keys,
+            squeeze,
+            idx_name,
+            **kwargs
         )
 
     def sum(
@@ -389,7 +398,7 @@ class DataFrame(object):
         skipna=True,
         level=None,
         numeric_only=None,
-        min_count=1,
+        min_count=0,
         **kwargs
     ):
         """Perform a sum across the DataFrame.
@@ -499,24 +508,17 @@ class DataFrame(object):
 
         if is_list_like(axis):
             axis = [pandas.DataFrame()._get_axis_number(ax) for ax in axis]
-
             result = self
 
             for ax in axis:
                 result = result.dropna(axis=ax, how=how, thresh=thresh, subset=subset)
-            if not inplace:
-                return result
-
-            self._update_inplace(new_manager=result._query_compiler)
-            return
+            return self._create_dataframe_from_compiler(result._query_compiler, inplace)
 
         axis = pandas.DataFrame()._get_axis_number(axis)
-
         if how is not None and how not in ["any", "all"]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
-
         if subset is not None:
             if axis == 1:
                 indices = self.index.get_indexer_for(subset)
@@ -528,14 +530,10 @@ class DataFrame(object):
                 check = indices == -1
                 if check.any():
                     raise KeyError(list(np.compress(check, subset)))
-
-        new_manager = self._query_compiler.dropna(
+        new_query_compiler = self._query_compiler.dropna(
             axis=axis, how=how, thresh=thresh, subset=subset
         )
-        if not inplace:
-            return DataFrame(query_compiler=new_manager)
-        else:
-            self._update_inplace(new_manager=new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def add(self, other, axis="columns", level=None, fill_value=None):
         """Add this DataFrame to another or a scalar/list.
@@ -554,7 +552,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.add,
                 other,
                 axis=axis,
@@ -562,10 +560,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
-        new_manager = self._query_compiler.add(
+        new_query_compiler = self._query_compiler.add(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def agg(self, func, axis=0, *args, **kwargs):
         return self.aggregate(func, axis, *args, **kwargs)
@@ -598,9 +596,7 @@ class DataFrame(object):
 
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
-            return self._default_to_pandas_func(
-                pandas.DataFrame.agg, arg, *args, **kwargs
-            )
+            return self._default_to_pandas(pandas.DataFrame.agg, arg, *args, **kwargs)
         elif is_list_like(arg) or callable(arg):
             return self.apply(arg, axis=_axis, args=args, **kwargs)
         else:
@@ -624,9 +620,7 @@ class DataFrame(object):
 
         f = getattr(np, func, None)
         if f is not None:
-            return self._default_to_pandas_func(
-                pandas.DataFrame.agg, func, *args, **kwargs
-            )
+            return self._default_to_pandas(pandas.DataFrame.agg, func, *args, **kwargs)
 
         raise ValueError("{} is an unknown string function".format(func))
 
@@ -645,7 +639,7 @@ class DataFrame(object):
     ):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.align,
             other,
             join=join,
@@ -765,10 +759,7 @@ class DataFrame(object):
             Series or DataFrame, depending on func.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
-        warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
-            UserWarning,
-        )
+        ErrorMessage.non_verified_udf()
 
         if isinstance(func, string_types):
             if axis == 1:
@@ -801,7 +792,7 @@ class DataFrame(object):
         return DataFrame(query_compiler=query_compiler)
 
     def as_blocks(self, copy=True):
-        return self._default_to_pandas_func(pandas.DataFrame.as_blocks, copy=copy)
+        return self._default_to_pandas(pandas.DataFrame.as_blocks, copy=copy)
 
     def as_matrix(self, columns=None):
         """Convert the frame to its Numpy-array representation.
@@ -817,7 +808,7 @@ class DataFrame(object):
         return to_pandas(self).as_matrix(columns)
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.asfreq,
             freq,
             method=method,
@@ -827,10 +818,10 @@ class DataFrame(object):
         )
 
     def asof(self, where, subset=None):
-        return self._default_to_pandas_func(pandas.DataFrame.asof, where, subset=subset)
+        return self._default_to_pandas(pandas.DataFrame.asof, where, subset=subset)
 
     def assign(self, **kwargs):
-        return self._default_to_pandas_func(pandas.DataFrame.assign, **kwargs)
+        return self._default_to_pandas(pandas.DataFrame.assign, **kwargs)
 
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
@@ -847,16 +838,13 @@ class DataFrame(object):
                 col_dtypes[column] = dtype
 
         new_query_compiler = self._query_compiler.astype(col_dtypes, **kwargs)
-        if copy:
-            return DataFrame(query_compiler=new_query_compiler)
-        else:
-            self._update_inplace(new_query_compiler)
+        return self._create_dataframe_from_compiler(new_query_compiler, not copy)
 
     def at_time(self, time, asof=False):
-        return self._default_to_pandas_func(pandas.DataFrame.at_time, time, asof=asof)
+        return self._default_to_pandas(pandas.DataFrame.at_time, time, asof=asof)
 
     def between_time(self, start_time, end_time, include_start=True, include_end=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.between_time,
             start_time,
             end_time,
@@ -934,13 +922,10 @@ class DataFrame(object):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
-        new_manager = self._query_compiler.clip(
+        new_query_compiler = self._query_compiler.clip(
             lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
         )
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-        else:
-            return DataFrame(query_compiler=new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def clip_lower(self, threshold, axis=None, inplace=False):
         return self.clip(lower=threshold, axis=axis, inplace=inplace)
@@ -951,7 +936,7 @@ class DataFrame(object):
     def combine(self, other, func, fill_value=None, overwrite=True):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.combine,
             other,
             func,
@@ -962,17 +947,15 @@ class DataFrame(object):
     def combine_first(self, other):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(pandas.DataFrame.combine_first, other=other)
+        return self._default_to_pandas(pandas.DataFrame.combine_first, other=other)
 
     def compound(self, axis=None, skipna=None, level=None):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.compound, axis=axis, skipna=skipna, level=level
         )
 
     def consolidate(self, inplace=False):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.consolidate, inplace=inplace
-        )
+        return self._default_to_pandas(pandas.DataFrame.consolidate, inplace=inplace)
 
     def convert_objects(
         self,
@@ -981,7 +964,7 @@ class DataFrame(object):
         convert_timedeltas=True,
         copy=True,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.convert_objects,
             convert_dates=convert_dates,
             convert_numeric=convert_numeric,
@@ -990,14 +973,14 @@ class DataFrame(object):
         )
 
     def corr(self, method="pearson", min_periods=1):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
 
     def corrwith(self, other, axis=0, drop=False):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.corrwith, other, axis=axis, drop=drop
         )
 
@@ -1019,9 +1002,7 @@ class DataFrame(object):
         )
 
     def cov(self, min_periods=None):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.cov, min_periods=min_periods
-        )
+        return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
         """Perform a cumulative maximum across the DataFrame.
@@ -1110,14 +1091,14 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if exclude is None:
-            exclude = "object"
-        elif "object" not in include:
-            exclude = (
-                ([exclude] + ["object"])
-                if isinstance(exclude, str)
-                else list(exclude) + ["object"]
-            )
+        if include is not None:
+            if not is_list_like(include):
+                include = [include]
+            include = [np.dtype(i) for i in include]
+        if exclude is not None:
+            if not is_list_like(include):
+                exclude = [exclude]
+            exclude = [np.dtype(e) for e in exclude]
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
         return DataFrame(
@@ -1156,7 +1137,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.div,
                 other,
                 axis=axis,
@@ -1164,10 +1145,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.div(
+        new_query_compiler = self._query_compiler.div(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def divide(self, other, axis="columns", level=None, fill_value=None):
         """Synonym for div.
@@ -1186,7 +1167,7 @@ class DataFrame(object):
     def dot(self, other):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(pandas.DataFrame.dot, other)
+        return self._default_to_pandas(pandas.DataFrame.dot, other)
 
     def drop(
         self,
@@ -1214,7 +1195,7 @@ class DataFrame(object):
         """
         # TODO implement level
         if level is not None:
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.drop,
                 labels=labels,
                 axis=axis,
@@ -1279,22 +1260,18 @@ class DataFrame(object):
                 if not len(axes["columns"]):
                     axes["columns"] = None
 
-        new_manager = self._query_compiler.drop(
+        new_query_compiler = self._query_compiler.drop(
             index=axes["index"], columns=axes["columns"]
         )
-
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-
-        return DataFrame(query_compiler=new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.drop_duplicates, subset=subset, keep=keep, inplace=inplace
         )
 
     def duplicated(self, subset=None, keep="first"):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.duplicated, subset=subset, keep=keep
         )
 
@@ -1312,12 +1289,14 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.eq, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis)
-        new_manager = self._query_compiler.eq(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.eq(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def equals(self, other):
         """
@@ -1381,15 +1360,12 @@ class DataFrame(object):
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        result = self._query_compiler.eval(expr, **kwargs)
+        new_query_compiler = self._query_compiler.eval(expr, **kwargs)
 
-        if isinstance(result, pandas.Series):
-            return result
+        if isinstance(new_query_compiler, pandas.Series):
+            return new_query_compiler
         else:
-            if inplace:
-                self._update_inplace(new_manager=result)
-            else:
-                return DataFrame(query_compiler=result)
+            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def ewm(
         self,
@@ -1403,7 +1379,7 @@ class DataFrame(object):
         ignore_na=False,
         axis=0,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.ewm,
             com=com,
             span=span,
@@ -1417,7 +1393,7 @@ class DataFrame(object):
         )
 
     def expanding(self, min_periods=1, freq=None, center=False, axis=0):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.expanding,
             min_periods=min_periods,
             freq=freq,
@@ -1476,7 +1452,7 @@ class DataFrame(object):
         """
         # TODO implement value passed as DataFrame
         if isinstance(value, pandas.DataFrame) or isinstance(value, pandas.Series):
-            result = self._default_to_pandas_func(
+            new_query_compiler = self._default_to_pandas(
                 pandas.DataFrame.fillna,
                 value=value,
                 method=method,
@@ -1485,11 +1461,8 @@ class DataFrame(object):
                 limit=limit,
                 downcast=downcast,
                 **kwargs
-            )
-            if inplace:
-                self._update_inplace(result._query_compiler)
-            else:
-                return result
+            )._query_compiler
+            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
@@ -1509,7 +1482,7 @@ class DataFrame(object):
             )
             raise ValueError(msg)
 
-        new_manager = self._query_compiler.fillna(
+        new_query_compiler = self._query_compiler.fillna(
             value=value,
             method=method,
             axis=axis,
@@ -1518,10 +1491,7 @@ class DataFrame(object):
             downcast=downcast,
             **kwargs
         )
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-        else:
-            return DataFrame(query_compiler=new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def filter(self, items=None, like=None, regex=None, axis=None):
         """Subset rows or columns based on their labels
@@ -1569,7 +1539,7 @@ class DataFrame(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
-        return self._default_to_pandas_func(pandas.DataFrame.first, offset)
+        return self._default_to_pandas(pandas.DataFrame.first, offset)
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.
@@ -1594,7 +1564,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.floordiv,
                 other,
                 axis=axis,
@@ -1602,10 +1572,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.floordiv(
+        new_query_compiler = self._query_compiler.floordiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     @classmethod
     def from_csv(
@@ -1634,12 +1604,12 @@ class DataFrame(object):
 
     @classmethod
     def from_dict(cls, data, orient="columns", dtype=None):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        ErrorMessage.default_to_pandas()
         return from_pandas(pandas.DataFrame.from_dict(data, orient=orient, dtype=dtype))
 
     @classmethod
     def from_items(cls, items, columns=None, orient="columns"):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        ErrorMessage.default_to_pandas()
         return from_pandas(
             pandas.DataFrame.from_items(items, columns=columns, orient=orient)
         )
@@ -1654,7 +1624,7 @@ class DataFrame(object):
         coerce_float=False,
         nrows=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        ErrorMessage.default_to_pandas()
         return from_pandas(
             pandas.DataFrame.from_records(
                 data,
@@ -1680,12 +1650,14 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.ge, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis, comparison_dtypes_only=True)
-        new_manager = self._query_compiler.ge(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.ge(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def get(self, key, default=None):
         """Get item from object for given key (DataFrame column, Panel
@@ -1712,8 +1684,6 @@ class DataFrame(object):
         """
         result = self.dtypes.value_counts()
         result.index = result.index.map(lambda x: str(x))
-        result = result.sort_index()
-        result.index = result.index.map(lambda x: np.dtype(getattr(np, x)))
         return result
 
     def get_ftype_counts(self):
@@ -1725,12 +1695,12 @@ class DataFrame(object):
         return self.ftypes.value_counts().sort_index()
 
     def get_value(self, index, col, takeable=False):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.get_value, index, col, takeable=takeable
         )
 
     def get_values(self):
-        return self._default_to_pandas_func(pandas.DataFrame.get_values)
+        return self._default_to_pandas(pandas.DataFrame.get_values)
 
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
@@ -1746,12 +1716,14 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.gt, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis, comparison_dtypes_only=True)
-        new_manager = self._query_compiler.gt(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.gt(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def head(self, n=5):
         """Get the first n rows of the DataFrame.
@@ -1768,7 +1740,6 @@ class DataFrame(object):
 
     def hist(
         self,
-        data,
         column=None,
         by=None,
         grid=True,
@@ -1784,9 +1755,8 @@ class DataFrame(object):
         bins=10,
         **kwargs
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.hist,
-            data,
             column=column,
             by=by,
             grid=grid,
@@ -1834,7 +1804,7 @@ class DataFrame(object):
         return self._query_compiler.idxmin(axis=axis, skipna=skipna)
 
     def infer_objects(self):
-        return self._default_to_pandas_func(pandas.DataFrame.infer_objects)
+        return self._default_to_pandas(pandas.DataFrame.infer_objects)
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -1876,7 +1846,7 @@ class DataFrame(object):
         import io
 
         with io.StringIO() as tmp_buf:
-            self._default_to_pandas_func(
+            self._default_to_pandas(
                 pandas.DataFrame.info,
                 verbose=verbose,
                 buf=tmp_buf,
@@ -1982,8 +1952,8 @@ class DataFrame(object):
             )
         if loc < 0:
             raise ValueError("unbounded slice")
-        new_manager = self._query_compiler.insert(loc, column, value)
-        self._update_inplace(new_manager=new_manager)
+        new_query_compiler = self._query_compiler.insert(loc, column, value)
+        self._update_inplace(new_query_compiler=new_query_compiler)
 
     def interpolate(
         self,
@@ -1995,7 +1965,7 @@ class DataFrame(object):
         downcast=None,
         **kwargs
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.interpolate,
             method=method,
             axis=axis,
@@ -2108,7 +2078,7 @@ class DataFrame(object):
         if on is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.join,
                 other,
                 on=on,
@@ -2164,7 +2134,7 @@ class DataFrame(object):
             )
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.kurt,
             axis=axis,
             skipna=skipna,
@@ -2174,7 +2144,7 @@ class DataFrame(object):
         )
 
     def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.kurtosis,
             axis=axis,
             skipna=skipna,
@@ -2184,7 +2154,7 @@ class DataFrame(object):
         )
 
     def last(self, offset):
-        return self._default_to_pandas_func(pandas.DataFrame.last, offset)
+        return self._default_to_pandas(pandas.DataFrame.last, offset)
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.
@@ -2208,17 +2178,17 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.le, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis, comparison_dtypes_only=True)
-        new_manager = self._query_compiler.le(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.le(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def lookup(self, row_labels, col_labels):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.lookup, row_labels, col_labels
-        )
+        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
 
     def lt(self, other, axis="columns", level=None):
         """Checks element-wise that this is less than other.
@@ -2234,15 +2204,17 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.lt, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis, comparison_dtypes_only=True)
-        new_manager = self._query_compiler.lt(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.lt(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def mad(self, axis=None, skipna=None, level=None):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.mad, axis=axis, skipna=skipna, level=level
         )
 
@@ -2259,7 +2231,7 @@ class DataFrame(object):
     ):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.mask,
             cond,
             other=other,
@@ -2331,7 +2303,7 @@ class DataFrame(object):
         value_name="value",
         col_level=None,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.melt,
             id_vars=id_vars,
             value_vars=value_vars,
@@ -2408,7 +2380,7 @@ class DataFrame(object):
         if left_index is False or right_index is False:
             if isinstance(right, DataFrame):
                 right = right._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.merge,
                 right,
                 how=how,
@@ -2460,7 +2432,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.mod,
                 other,
                 axis=axis,
@@ -2468,10 +2440,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.mod(
+        new_query_compiler = self._query_compiler.mod(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def mode(self, axis=0, numeric_only=False):
         """Perform mode across the DataFrame.
@@ -2505,7 +2477,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.mul,
                 other,
                 axis=axis,
@@ -2513,10 +2485,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.mul(
+        new_query_compiler = self._query_compiler.mul(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def multiply(self, other, axis="columns", level=None, fill_value=None):
         """Synonym for mul.
@@ -2546,17 +2518,17 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.ne, other, axis=axis, level=level
             )
         other = self._validate_other(other, axis)
-        new_manager = self._query_compiler.ne(other=other, axis=axis, level=level)
-        return self._create_dataframe_from_manager(new_manager)
+        new_query_compiler = self._query_compiler.ne(
+            other=other, axis=axis, level=level
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def nlargest(self, n, columns, keep="first"):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.nlargest, n, columns, keep=keep
-        )
+        return self._default_to_pandas(pandas.DataFrame.nlargest, n, columns, keep=keep)
 
     def notna(self):
         """Perform notna across the DataFrame.
@@ -2577,7 +2549,7 @@ class DataFrame(object):
         return DataFrame(query_compiler=self._query_compiler.notnull())
 
     def nsmallest(self, n, columns, keep="first"):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.nsmallest, n, columns, keep=keep
         )
 
@@ -2596,7 +2568,7 @@ class DataFrame(object):
         return self._query_compiler.nunique(axis=axis, dropna=dropna)
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.pct_change,
             periods=periods,
             fill_method=fill_method,
@@ -2619,7 +2591,7 @@ class DataFrame(object):
         return com._pipe(self, func, *args, **kwargs)
 
     def pivot(self, index=None, columns=None, values=None):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.pivot, index=index, columns=columns, values=values
         )
 
@@ -2634,7 +2606,7 @@ class DataFrame(object):
         dropna=True,
         margins_name="All",
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.pivot_table,
             values=values,
             index=index,
@@ -2711,7 +2683,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.pow,
                 other,
                 axis=axis,
@@ -2719,36 +2691,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        # Check to make sure integers are not raised to negative integer powers
-        if isinstance(other, type(self._query_compiler)):
-            other_dtypes = other.dtypes
-        elif is_list_like(other):
-            other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
-            ]
-        for i in range(len(other_dtypes)):
-            if is_integer_dtype(other_dtypes[i]) and is_integer_dtype(self.dtypes[i]):
-                if isinstance(other, type(self._query_compiler)):
-                    continue
-                    # TODO: Come back to this when we have an efficient way to preprocess data
-                    # if old_other.iloc[:, i].lt(0).any():
-                    #     raise ValueError("Integers to negative integer powers are not allowed.")
-                elif is_list_like(other):
-                    if any(x < 0 for x in other):
-                        raise ValueError(
-                            "Integers to negative integer powers are not allowed."
-                        )
-                elif other < 0:
-                    raise ValueError(
-                        "Integers to negative integer powers are not allowed."
-                    )
-        new_manager = self._query_compiler.pow(
+        new_query_compiler = self._query_compiler.pow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def prod(
         self,
@@ -2886,18 +2832,11 @@ class DataFrame(object):
         Returns:
             A new DataFrame if inplace=False
         """
-        warnings.warn(
-            "User-defined function verification with DataFrame dtypes is still under development. Should be fully functional in a future release.",
-            UserWarning,
-        )
+        ErrorMessage.non_verified_udf()
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_manager = self._query_compiler.query(expr, **kwargs)
-
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-        else:
-            return DataFrame(query_compiler=new_manager)
+        new_query_compiler = self._query_compiler.query(expr, **kwargs)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def radd(self, other, axis="columns", level=None, fill_value=None):
         return self.add(other, axis, level, fill_value)
@@ -2959,7 +2898,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.rdiv,
                 other,
                 axis=axis,
@@ -2967,10 +2906,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.rdiv(
+        new_query_compiler = self._query_compiler.rdiv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def reindex(
         self,
@@ -2986,7 +2925,7 @@ class DataFrame(object):
         tolerance=None,
     ):
         if level is not None:
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.reindex,
                 labels=labels,
                 index=index,
@@ -3005,7 +2944,7 @@ class DataFrame(object):
         elif labels is not None:
             columns = labels
         if index is not None:
-            new_manager = self._query_compiler.reindex(
+            new_query_compiler = self._query_compiler.reindex(
                 0,
                 index,
                 method=method,
@@ -3014,9 +2953,9 @@ class DataFrame(object):
                 tolerance=tolerance,
             )
         else:
-            new_manager = self._query_compiler
+            new_query_compiler = self._query_compiler
         if columns is not None:
-            final_manager = new_manager.reindex(
+            final_query_compiler = new_query_compiler.reindex(
                 1,
                 columns,
                 method=method,
@@ -3025,11 +2964,8 @@ class DataFrame(object):
                 tolerance=tolerance,
             )
         else:
-            final_manager = new_manager
-        if copy:
-            return DataFrame(query_compiler=final_manager)
-        else:
-            self._update_inplace(new_manager=final_manager)
+            final_query_compiler = new_query_compiler
+        return self._create_dataframe_from_compiler(final_query_compiler, not copy)
 
     def reindex_axis(
         self,
@@ -3041,7 +2977,7 @@ class DataFrame(object):
         limit=None,
         fill_value=np.nan,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.reindex_axis,
             labels,
             axis=axis,
@@ -3055,7 +2991,7 @@ class DataFrame(object):
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.reindex_like,
             other,
             method=method,
@@ -3140,7 +3076,7 @@ class DataFrame(object):
             return renamed
 
     def reorder_levels(self, order, axis=0):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.reorder_levels, order, axis=axis
         )
 
@@ -3154,7 +3090,7 @@ class DataFrame(object):
         method="pad",
         axis=None,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.replace,
             to_replace=to_replace,
             value=value,
@@ -3181,7 +3117,7 @@ class DataFrame(object):
         on=None,
         level=None,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.resample,
             rule,
             how=how,
@@ -3222,7 +3158,7 @@ class DataFrame(object):
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
         if level is not None:
-            result = self._default_to_pandas_func(
+            new_query_compiler = self._default_to_pandas(
                 pandas.DataFrame.reset_index,
                 level=level,
                 drop=drop,
@@ -3230,26 +3166,63 @@ class DataFrame(object):
                 col_level=col_level,
                 col_fill=col_fill,
             )
-            if inplace:
-                self._update_inplace(result._query_compiler)
-            else:
-                return result
+            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
-        if not drop and all(n in self.columns for n in ["level_0", "index"]):
+        if (
+            not drop
+            and not isinstance(self.index, pandas.MultiIndex)
+            and all(n in self.columns for n in ["level_0", "index"])
+        ):
             raise ValueError("cannot insert level_0, already exists")
-        new_manager = self._query_compiler.reset_index(drop=drop, level=level)
-        if inplace:
-            self._update_inplace(new_manager=new_manager)
-        else:
-            return DataFrame(query_compiler=new_manager)
+        new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
+        return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
-        return self.floordiv(other, axis, level, fill_value)
+        if level is not None:
+            if isinstance(other, DataFrame):
+                other = other._query_compiler.to_pandas()
+            return self._default_to_pandas(
+                pandas.DataFrame.rfloordiv,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
+        other = self._validate_other(other, axis, numeric_only=True)
+        new_query_compiler = self._query_compiler.rfloordiv(
+            other=other, axis=axis, level=level, fill_value=fill_value
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
-        return self.mod(other, axis, level, fill_value)
+        """Mod this DataFrame against another DataFrame/Series/scalar.
+
+        Args:
+            other: The object to use to apply the div against this.
+            axis: The axis to div over.
+            level: The Multilevel index level to apply div over.
+            fill_value: The value to fill NaNs with.
+
+        Returns:
+            A new DataFrame with the rdiv applied.
+        """
+        if level is not None:
+            if isinstance(other, DataFrame):
+                other = other._query_compiler.to_pandas()
+            return self._default_to_pandas(
+                pandas.DataFrame.rmod,
+                other,
+                axis=axis,
+                level=level,
+                fill_value=fill_value,
+            )
+        other = self._validate_other(other, axis, numeric_only=True)
+        new_query_compiler = self._query_compiler.rmod(
+            other=other, axis=axis, level=level, fill_value=fill_value
+        )
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rmul(self, other, axis="columns", level=None, fill_value=None):
         return self.mul(other, axis, level, fill_value)
@@ -3265,7 +3238,7 @@ class DataFrame(object):
         axis=0,
         closed=None,
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.rolling,
             window,
             min_periods=min_periods,
@@ -3305,7 +3278,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.rpow,
                 other,
                 axis=axis,
@@ -3320,11 +3293,11 @@ class DataFrame(object):
             and all(is_integer_dtype(t) for t in self.dtypes)
         ):
             raise ValueError("Integers to negative integer powers are not allowed.")
-        new_manager = self._query_compiler.rpow(
+        new_query_compiler = self._query_compiler.rpow(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
 
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rsub(self, other, axis="columns", level=None, fill_value=None):
         """Subtract a DataFrame/Series/scalar from this DataFrame.
@@ -3342,7 +3315,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.rsub,
                 other,
                 axis=axis,
@@ -3350,10 +3323,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_or_time_only=True)
-        new_manager = self._query_compiler.rsub(
+        new_query_compiler = self._query_compiler.rsub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rtruediv(self, other, axis="columns", level=None, fill_value=None):
         return self.truediv(other, axis, level, fill_value)
@@ -3391,14 +3364,13 @@ class DataFrame(object):
         Returns:
             A new Dataframe
         """
-
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
-
-        if axis == 0:
-            axis_labels = self.index
+        if axis:
+            axis_labels = self.columns
             axis_length = len(axis_labels)
         else:
-            axis_labels = self.column
+            # Getting rows requires indices instead of labels. RangeIndex provides this.
+            axis_labels = pandas.RangeIndex(len(self.index))
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
@@ -3492,15 +3464,15 @@ class DataFrame(object):
             samples = np.random.choice(
                 a=axis_labels, size=n, replace=replace, p=weights
             )
-        if axis == 1:
-            query_compiler = self._query_compiler.getitem_col_array(samples)
+        if axis:
+            query_compiler = self._query_compiler.getitem_column_array(samples)
             return DataFrame(query_compiler=query_compiler)
         else:
             query_compiler = self._query_compiler.getitem_row_array(samples)
             return DataFrame(query_compiler=query_compiler)
 
     def select(self, crit, axis=0):
-        return self._default_to_pandas_func(pandas.DataFrame.select, crit, axis=axis)
+        return self._default_to_pandas(pandas.DataFrame.select, crit, axis=axis)
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -3541,7 +3513,7 @@ class DataFrame(object):
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.sem,
             axis=axis,
             skipna=skipna,
@@ -3663,12 +3635,12 @@ class DataFrame(object):
             return frame
 
     def set_value(self, index, col, value, takeable=False):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.set_values, index, col, value, takeable=takeable
         )
 
     def shift(self, periods=1, freq=None, axis=0):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.shift, periods=periods, freq=freq, axis=axis
         )
 
@@ -3694,7 +3666,7 @@ class DataFrame(object):
         )
 
     def slice_shift(self, periods=1, axis=0):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.slice_shift, periods=periods, axis=axis
         )
 
@@ -3724,8 +3696,9 @@ class DataFrame(object):
         Returns:
             A sorted DataFrame
         """
+        axis = pandas.DataFrame()._get_axis_number(axis)
         if level is not None:
-            result = self._default_to_pandas_func(
+            new_query_compiler = self._default_to_pandas(
                 pandas.DataFrame.sort_index,
                 axis=axis,
                 level=level,
@@ -3735,10 +3708,7 @@ class DataFrame(object):
                 na_position=na_position,
                 sort_remaining=sort_remaining,
             )
-            if inplace:
-                self._update_inplace(result._query_compiler)
-            else:
-                return result
+            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         if by is not None:
             warnings.warn(
                 "by argument to sort_index is deprecated, "
@@ -3749,14 +3719,13 @@ class DataFrame(object):
             if level is not None:
                 raise ValueError("unable to simultaneously sort by and level")
             return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
-        axis = pandas.DataFrame()._get_axis_number(axis)
-        if not axis:
-            new_index = self.index.sort_values(ascending=ascending)
-            new_columns = None
+        new_query_compiler = self._query_compiler.sort_index(
+            axis=axis, ascending=ascending, kind=kind, na_position=na_position
+        )
+        if inplace:
+            self._update_inplace(new_query_compiler=new_query_compiler)
         else:
-            new_index = None
-            new_columns = self.columns.sort_values(ascending=ascending)
-        return self.reindex(index=new_index, columns=new_columns)
+            return DataFrame(query_compiler=new_query_compiler)
 
     def sort_values(
         self,
@@ -3817,7 +3786,7 @@ class DataFrame(object):
     def sortlevel(
         self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
     ):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.sortlevel,
             level=level,
             axis=axis,
@@ -3827,10 +3796,21 @@ class DataFrame(object):
         )
 
     def squeeze(self, axis=None):
-        return self._default_to_pandas_func(pandas.DataFrame.squeeze, axis=axis)
+        # Checks for 1x1 DF, passes into squeeze with approproate ndim
+        if (
+            self._query_compiler.data.shape[0] == 1
+            and self._query_compiler.data.shape[1] == 1
+        ):
+            return self._query_compiler.squeeze(0, axis)
+        # Checks for 1xN or Nx1 DF, passes into squeeze with appropriate ndim
+        elif 1 in self._query_compiler.data.shape:
+            return self._query_compiler.squeeze(1, axis)
+        # NxN DF, don't need to pass into squeeze
+        else:
+            return self.copy()
 
     def stack(self, level=-1, dropna=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.stack, level=level, dropna=dropna
         )
 
@@ -3876,7 +3856,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.sub,
                 other,
                 axis=axis,
@@ -3884,10 +3864,10 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_or_time_only=True)
-        new_manager = self._query_compiler.sub(
+        new_query_compiler = self._query_compiler.sub(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def subtract(self, other, axis="columns", level=None, fill_value=None):
         """Alias for sub.
@@ -3904,14 +3884,12 @@ class DataFrame(object):
         return self.sub(other, axis, level, fill_value)
 
     def swapaxes(self, axis1, axis2, copy=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.swapaxes, axis1, axis2, copy=copy
         )
 
     def swaplevel(self, i=-2, j=-1, axis=0):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.swaplevel, i=i, j=j, axis=axis
-        )
+        return self._default_to_pandas(pandas.DataFrame.swaplevel, i=i, j=j, axis=axis)
 
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.
@@ -3927,7 +3905,7 @@ class DataFrame(object):
         return DataFrame(query_compiler=self._query_compiler.tail(n))
 
     def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.take,
             indices,
             axis=axis,
@@ -3937,8 +3915,9 @@ class DataFrame(object):
         )
 
     def to_clipboard(self, excel=None, sep=None, **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_clipboard(excel=excel, sep=sep, **kwargs)
+        return self._default_to_pandas(
+            pandas.DataFrame.to_clipboard, excel=excel, sep=sep, **kwargs
+        )
 
     def to_csv(
         self,
@@ -3986,15 +3965,15 @@ class DataFrame(object):
             "escapechar": escapechar,
             "decimal": decimal,
         }
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_csv(**kwargs)
+        return self._default_to_pandas(pandas.DataFrame.to_csv, **kwargs)
 
     def to_dense(self):
-        return self._default_to_pandas_func(pandas.DataFrame.to_dense)
+        return self._default_to_pandas(pandas.DataFrame.to_dense)
 
     def to_dict(self, orient="dict", into=dict):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_dict(orient=orient, into=into)
+        return self._default_to_pandas(
+            pandas.DataFrame.to_dict, orient=orient, into=into
+        )
 
     def to_excel(
         self,
@@ -4015,8 +3994,8 @@ class DataFrame(object):
         verbose=True,
         freeze_panes=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_excel(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_excel,
             excel_writer,
             sheet_name,
             na_rep,
@@ -4036,8 +4015,7 @@ class DataFrame(object):
         )
 
     def to_feather(self, fname):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_feather(fname)
+        return self._default_to_pandas(pandas.DataFrame.to_feather, fname)
 
     def to_gbq(
         self,
@@ -4049,8 +4027,8 @@ class DataFrame(object):
         if_exists="fail",
         private_key=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_gbq(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_gbq,
             destination_table,
             project_id,
             chunksize=chunksize,
@@ -4061,8 +4039,9 @@ class DataFrame(object):
         )
 
     def to_hdf(self, path_or_buf, key, **kwargs):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_hdf(path_or_buf, key, **kwargs)
+        return self._default_to_pandas(
+            pandas.DataFrame.to_hdf, path_or_buf, key, **kwargs
+        )
 
     def to_html(
         self,
@@ -4087,8 +4066,8 @@ class DataFrame(object):
         decimal=".",
         border=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_html(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_html,
             buf,
             columns,
             col_space,
@@ -4123,8 +4102,8 @@ class DataFrame(object):
         lines=False,
         compression=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_json(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_json,
             path_or_buf,
             orient,
             date_format,
@@ -4158,8 +4137,8 @@ class DataFrame(object):
         multicolumn_format=None,
         multirow=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_latex(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_latex,
             buf=buf,
             columns=columns,
             col_space=col_space,
@@ -4182,7 +4161,7 @@ class DataFrame(object):
         )
 
     def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_msgpack,
             path_or_buf=path_or_buf,
             encoding=encoding,
@@ -4190,10 +4169,10 @@ class DataFrame(object):
         )
 
     def to_panel(self):
-        return self._default_to_pandas_func(pandas.DataFrame.to_panel)
+        return self._default_to_pandas(pandas.DataFrame.to_panel)
 
     def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
             fname,
             engine=engine,
@@ -4202,24 +4181,24 @@ class DataFrame(object):
         )
 
     def to_period(self, freq=None, axis=0, copy=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_period, freq=freq, axis=axis, copy=copy
         )
 
     def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_pickle, path, compression=compression, protocol=protocol
         )
 
     def to_records(self, index=True, convert_datetime64=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_records,
             index=index,
             convert_datetime64=convert_datetime64,
         )
 
     def to_sparse(self, fill_value=None, kind="block"):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_sparse, fill_value=fill_value, kind=kind
         )
 
@@ -4235,9 +4214,17 @@ class DataFrame(object):
         chunksize=None,
         dtype=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_sql(
-            name, con, flavor, schema, if_exists, index, index_label, chunksize, dtype
+        return self._default_to_pandas(
+            pandas.DataFrame.to_sql,
+            name,
+            con,
+            flavor,
+            schema,
+            if_exists,
+            index,
+            index_label,
+            chunksize,
+            dtype,
         )
 
     def to_stata(
@@ -4251,8 +4238,8 @@ class DataFrame(object):
         data_label=None,
         variable_labels=None,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_stata(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_stata,
             fname,
             convert_dates,
             write_index,
@@ -4281,8 +4268,8 @@ class DataFrame(object):
         max_cols=None,
         show_dimensions=False,
     ):
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
-        return to_pandas(self).to_string(
+        return self._default_to_pandas(
+            pandas.DataFrame.to_string,
             buf=buf,
             columns=columns,
             col_space=col_space,
@@ -4301,12 +4288,12 @@ class DataFrame(object):
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.to_timestamp, freq=freq, how=how, axis=axis, copy=copy
         )
 
     def to_xarray(self):
-        return self._default_to_pandas_func(pandas.DataFrame.to_xarray)
+        return self._default_to_pandas(pandas.DataFrame.to_xarray)
 
     def transform(self, func, *args, **kwargs):
         kwargs["is_transform"] = True
@@ -4333,7 +4320,7 @@ class DataFrame(object):
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.truediv,
                 other,
                 axis=axis,
@@ -4341,28 +4328,28 @@ class DataFrame(object):
                 fill_value=fill_value,
             )
         other = self._validate_other(other, axis, numeric_only=True)
-        new_manager = self._query_compiler.truediv(
+        new_query_compiler = self._query_compiler.truediv(
             other=other, axis=axis, level=level, fill_value=fill_value
         )
-        return self._create_dataframe_from_manager(new_manager)
+        return self._create_dataframe_from_compiler(new_query_compiler)
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.truncate, before=before, after=after, axis=axis, copy=copy
         )
 
     def tshift(self, periods=1, freq=None, axis=0):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.tshift, periods=periods, freq=freq, axis=axis
         )
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.tz_convert, tz, axis=axis, level=level, copy=copy
         )
 
     def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.tz_localize,
             tz,
             axis=axis,
@@ -4372,7 +4359,7 @@ class DataFrame(object):
         )
 
     def unstack(self, level=-1, fill_value=None):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.unstack, level=level, fill_value=fill_value
         )
 
@@ -4393,7 +4380,7 @@ class DataFrame(object):
             None
         """
         if raise_conflict:
-            return self._default_to_pandas_func(
+            return self._default_to_pandas(
                 pandas.DataFrame.update,
                 other,
                 join=join,
@@ -4410,7 +4397,7 @@ class DataFrame(object):
             filter_func=filter_func,
             raise_conflict=raise_conflict,
         )
-        self._update_inplace(new_manager=query_compiler)
+        self._update_inplace(new_query_compiler=query_compiler)
 
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
@@ -4474,7 +4461,7 @@ class DataFrame(object):
                 other = other._query_compiler.to_pandas()
             if isinstance(cond, DataFrame):
                 cond = cond._query_compiler.to_pandas()
-            result = self._default_to_pandas_func(
+            new_query_compiler = self._default_to_pandas(
                 pandas.DataFrame.where,
                 cond,
                 other=other,
@@ -4485,10 +4472,7 @@ class DataFrame(object):
                 try_cast=try_cast,
                 raise_on_error=raise_on_error,
             )
-            if inplace:
-                return self._update_inplace(result._query_compiler)
-            else:
-                return result
+            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         cond = cond(self) if callable(cond) else cond
 
@@ -4508,13 +4492,10 @@ class DataFrame(object):
         query_compiler = self._query_compiler.where(
             cond._query_compiler, other, axis=axis, level=level
         )
-        if inplace:
-            self._update_inplace(new_manager=query_compiler)
-        else:
-            return DataFrame(query_compiler=query_compiler)
+        return self._create_dataframe_from_compiler(query_compiler, inplace)
 
     def xs(self, key, axis=0, level=None, drop_level=True):
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
@@ -4545,13 +4526,15 @@ class DataFrame(object):
         elif isinstance(key, DataFrame):
             return self.where(key)
         elif is_mi_columns:
-            return self._default_to_pandas_func(pandas.DataFrame.__getitem__, key)
+            return self._default_to_pandas(pandas.DataFrame.__getitem__, key)
             # return self._getitem_multilevel(key)
         else:
             return self._getitem_column(key)
 
     def _getitem_column(self, key):
-        return self._query_compiler.getitem_single_key(key)
+        return SeriesView(
+            self._query_compiler.getitem_single_key(key), self, (slice(None), key)
+        )
 
     def _getitem_array(self, key):
         if com.is_bool_indexer(key):
@@ -4568,19 +4551,27 @@ class DataFrame(object):
                     )
                 )
             key = check_bool_indexer(self.index, key)
-            # We convert here because the query_compiler assumes it is a list of
-            # indices. This greatly decreases the complexity of the code.
-            key = self.index[key]
+            # We convert to a RangeIndex because getitem_row_array is expecting a list
+            # of indices, and RangeIndex will give us the exact indices of each boolean
+            # requested.
+            key = pandas.RangeIndex(len(self.index))[key]
             return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
         else:
+            if any(k not in self.columns for k in key):
+                raise KeyError(
+                    "{} not index".format(
+                        str([k for k in key if k not in self.columns]).replace(",", "")
+                    )
+                )
             return DataFrame(
                 query_compiler=self._query_compiler.getitem_column_array(key)
             )
 
     def _getitem_slice(self, key):
-        # We convert here because the query_compiler assumes it is a list of
-        # indices. This greatly decreases the complexity of the code.
-        key = self.index[key]
+        # We convert to a RangeIndex because getitem_row_array is expecting a list
+        # of indices, and RangeIndex will give us the exact indices of each boolean
+        # requested.
+        key = pandas.RangeIndex(len(self.index))[key]
         return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
 
     def __getattr__(self, key):
@@ -4601,9 +4592,7 @@ class DataFrame(object):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            return self._default_to_pandas_func(
-                pandas.DataFrame.__setitem__, key, value
-            )
+            return self._default_to_pandas(pandas.DataFrame.__setitem__, key, value)
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
         else:
@@ -4620,13 +4609,13 @@ class DataFrame(object):
         return len(self.index)
 
     def __unicode__(self):
-        return self._default_to_pandas_func(pandas.DataFrame.__unicode__)
+        return self._default_to_pandas(pandas.DataFrame.__unicode__)
 
     def __invert__(self):
-        return self._default_to_pandas_func(pandas.DataFrame.__invert__)
+        return self._default_to_pandas(pandas.DataFrame.__invert__)
 
     def __hash__(self):
-        return self._default_to_pandas_func(pandas.DataFrame.__hash__)
+        return self._default_to_pandas(pandas.DataFrame.__hash__)
 
     def __iter__(self):
         """Iterate over the columns
@@ -4666,9 +4655,7 @@ class DataFrame(object):
         return self.abs()
 
     def __round__(self, decimals=0):
-        return self._default_to_pandas_func(
-            pandas.DataFrame.__round__, decimals=decimals
-        )
+        return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
 
     def __array__(self, dtype=None):
         # TODO: This is very inefficient and needs fix, also see as_matrix
@@ -4679,10 +4666,10 @@ class DataFrame(object):
         return to_pandas(self).__array_wrap__(result, context=context)
 
     def __getstate__(self):
-        return self._default_to_pandas_func(pandas.DataFrame.__getstate__)
+        return self._default_to_pandas(pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
-        return self._default_to_pandas_func(pandas.DataFrame.__setstate__, state)
+        return self._default_to_pandas(pandas.DataFrame.__setstate__, state)
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.
@@ -4695,12 +4682,12 @@ class DataFrame(object):
         """
         if key not in self:
             raise KeyError(key)
-        self._update_inplace(new_manager=self._query_compiler.delitem(key))
+        self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
 
     def __finalize__(self, other, method=None, **kwargs):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
-        return self._default_to_pandas_func(
+        return self._default_to_pandas(
             pandas.DataFrame.__finalize__, other, method=method, **kwargs
         )
 
@@ -4834,7 +4821,7 @@ class DataFrame(object):
         return DataFrame(query_compiler=self._query_compiler.negative())
 
     def __sizeof__(self):
-        return self._default_to_pandas_func(pandas.DataFrame.__sizeof__)
+        return self._default_to_pandas(pandas.DataFrame.__sizeof__)
 
     @property
     def __doc__(self):
@@ -4877,9 +4864,7 @@ class DataFrame(object):
 
     @property
     def ix(self, axis=None):
-        raise NotImplementedError(
-            "To contribute to Modin, please visit github.com/modin-project/modin."
-        )
+        raise ErrorMessage.not_implemented("ix is not implemented.")
 
     @property
     def iloc(self):
@@ -4892,12 +4877,16 @@ class DataFrame(object):
 
         return _iLocIndexer(self)
 
-    def _create_dataframe_from_manager(self, new_manager, inplace=False):
+    def _create_dataframe_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
+        assert (
+            isinstance(new_query_compiler, type(self._query_compiler))
+            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
+        ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
-            return DataFrame(query_compiler=new_manager)
+            return DataFrame(query_compiler=new_query_compiler)
         else:
-            self._update_inplace(new_manager=new_manager)
+            self._update_inplace(new_query_compiler=new_query_compiler)
 
     def _validate_other(
         self,
@@ -4912,7 +4901,6 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
         result = other
         if isinstance(other, DataFrame):
-            other_dtypes = other.dtypes
             return other._query_compiler
         elif is_list_like(other):
             other_dtypes = [type(x) for x in other]
@@ -5040,11 +5028,27 @@ class DataFrame(object):
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
-    def _default_to_pandas_func(self, op, *args, **kwargs):
+    def _default_to_pandas(self, op, *args, **kwargs):
         """Helper method to use default pandas function"""
-        warnings.warn("Defaulting to Pandas implementation", UserWarning)
+        ErrorMessage.default_to_pandas()
         result = op(self._query_compiler.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.DataFrame):
             return DataFrame(result)
         else:
-            return result
+            try:
+                if (
+                    isinstance(result, (list, tuple))
+                    and len(result) == 2
+                    and isinstance(result[0], pandas.DataFrame)
+                ):
+                    # Some operations split the DataFrame into two (e.g. align). We need to wrap
+                    # both of the returned results
+                    if isinstance(result[1], pandas.DataFrame):
+                        second = DataFrame(result[1])
+                    else:
+                        second = result[1]
+                    return DataFrame(result[0]), second
+                else:
+                    return result
+            except TypeError:
+                return result

@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-
+from pandas import compat
 from .dataframe import DataFrame
 
 
@@ -17,13 +17,18 @@ def concat(
     levels=None,
     names=None,
     verify_integrity=False,
+    sort=None,
     copy=True,
-    sort=False,
 ):
-    if keys is not None:
-        objs = [objs[k] for k in keys]
-    else:
-        objs = list(objs)
+    if isinstance(
+        objs, (pandas.Series, DataFrame, compat.string_types, pandas.DataFrame)
+    ):
+        raise TypeError(
+            "first argument must be an iterable of pandas "
+            "objects, you passed an object of type "
+            '"{name}"'.format(name=type(objs).__name__)
+        )
+    objs = list(objs)
     if len(objs) == 0:
         raise ValueError("No objects to concatenate")
 
@@ -31,7 +36,6 @@ def concat(
 
     if len(objs) == 0:
         raise ValueError("All objects passed were None")
-
     try:
         type_check = next(
             obj
@@ -61,8 +65,8 @@ def concat(
                 levels,
                 names,
                 verify_integrity,
-                copy,
                 sort,
+                copy,
             )
         )
     if isinstance(objs, dict):
@@ -89,7 +93,18 @@ def concat(
     ]
     df = objs[0]
     objs = [obj._query_compiler for obj in objs]
-    new_manager = df._query_compiler.concat(
+    if keys is not None:
+        objs = [objs[i] for i in range(min(len(objs), len(keys)))]
+        new_idx_labels = {
+            keys[i]: objs[i].index if axis == 0 else objs[i].columns
+            for i in range(len(objs))
+        }
+        print(new_idx_labels)
+        tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
+        new_idx = pandas.MultiIndex.from_tuples(tuples)
+    else:
+        new_idx = None
+    new_query_compiler = df._query_compiler.concat(
         axis,
         objs[1:],
         join=join,
@@ -102,4 +117,10 @@ def concat(
         copy=True,
         sort=False,
     )
-    return DataFrame(query_compiler=new_manager)
+    result_df = DataFrame(query_compiler=new_query_compiler)
+    if new_idx is not None:
+        if axis == 0:
+            result_df.index = new_idx
+        else:
+            result_df.columns = new_idx
+    return result_df

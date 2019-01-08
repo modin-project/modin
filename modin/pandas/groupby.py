@@ -6,7 +6,9 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
+import numpy as np
 
+from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
 
 
@@ -19,7 +21,17 @@ from .utils import _inherit_docstrings
 )
 class DataFrameGroupBy(object):
     def __init__(
-        self, df, by, axis, level, as_index, sort, group_keys, squeeze, **kwargs
+        self,
+        df,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        idx_name,
+        **kwargs
     ):
 
         self._axis = axis
@@ -28,7 +40,10 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
+        # This tells us whether or not there are multiple columns/rows in the groupby
+        self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
+        self._idx_name = idx_name
         self._kwargs = {
             "sort": sort,
             "as_index": as_index,
@@ -57,10 +72,34 @@ class DataFrameGroupBy(object):
     @property
     def _index_grouped(self):
         if self._index_grouped_cache is None:
-            if self._axis == 0:
-                self._index_grouped_cache = self._index.groupby(self._by)
+            if self._is_multi_by:
+                # Because we are doing a collect (to_pandas) here and then groupby, we
+                # end up using pandas implementation. Add the warning so the user is
+                # aware.
+                ErrorMessage.default_to_pandas()
+                if self._axis == 0:
+                    self._index_grouped_cache = {
+                        k: v.index
+                        for k, v in self._df._query_compiler.getitem_column_array(
+                            self._by
+                        )
+                        .to_pandas()
+                        .groupby(by=self._by)
+                    }
+                else:
+                    self._index_grouped_cache = {
+                        k: v.index
+                        for k, v in self._df._query_compiler.getitem_row_array(
+                            self._index.get_indexer_for(self._by)
+                        )
+                        .to_pandas()
+                        .groupby(by=self._by)
+                    }
             else:
-                self._index_grouped_cache = self._columns.groupby(self._by)
+                if self._axis == 0:
+                    self._index_grouped_cache = self._index.groupby(self._by)
+                else:
+                    self._index_grouped_cache = self._columns.groupby(self._by)
         return self._index_grouped_cache
 
     _keys_and_values_cache = None
@@ -83,7 +122,7 @@ class DataFrameGroupBy(object):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            self._index_grouped[k]
+                            self._index.get_indexer_for(self._index_grouped[k])
                         )
                     ),
                 )
@@ -116,7 +155,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.mean(*args, **kwargs), numeric=True
+        )
 
     def any(self):
         return self._apply_agg_function(lambda df: df.any())
@@ -256,7 +297,7 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.size())
 
     def sum(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.sum(**kwargs))
+        return self._apply_agg_function(lambda df: df.sum(**kwargs), numeric=True)
 
     def __unicode__(self):
         return self._default_to_pandas(lambda df: df.__unicode__())
@@ -307,7 +348,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.median(**kwargs))
+        return self._apply_agg_function(lambda df: df.median(**kwargs), numeric=True)
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
@@ -368,7 +409,7 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
-    def _apply_agg_function(self, f, **kwargs):
+    def _apply_agg_function(self, f, numeric=False, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
         Args:
@@ -380,12 +421,28 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
-        if all(obj in self._df for obj in self._by):
+        if self._is_multi_by:
             return self._default_to_pandas(f, **kwargs)
 
         new_manager = self._query_compiler.groupby_agg(
             self._by, self._axis, f, self._kwargs, kwargs
         )
+        if self._idx_name != "":
+            new_manager.index.name = self._idx_name
+            new_columns = self._df.columns.drop(self._idx_name)
+        # We preserve columns only if the grouped axis is the index
+        elif self._axis == 0:
+            new_columns = self._df.columns
+        # We just keep everything the same if it is column groups
+        else:
+            new_columns = new_manager.columns
+        if numeric and self._axis == 0:
+            new_columns = [
+                col
+                for col in new_columns
+                if np.issubdtype(self._df.dtypes[col], np.number)
+            ]
+        new_manager.columns = new_columns
         return DataFrame(query_compiler=new_manager)
 
     def _default_to_pandas(self, f, **kwargs):
@@ -397,7 +454,7 @@ class DataFrameGroupBy(object):
         Returns:
              A new Modin DataFrame with the result of the pandas function.
         """
-        return self._df._default_to_pandas_func(
+        return self._df._default_to_pandas(
             lambda df: f(df.groupby(by=self._by, axis=self._axis, **self._kwargs)),
             **kwargs
         )

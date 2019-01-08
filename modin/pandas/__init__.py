@@ -37,7 +37,7 @@ import threading
 import os
 import ray
 
-from .. import __git_revision__, __version__
+from .. import __version__
 from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
@@ -55,9 +55,13 @@ from .io import (
     read_sas,
     read_pickle,
     read_sql,
+    read_gbq,
+    read_table,
 )
-from .reshape import get_dummies
-from .general import isna, merge, pivot_table
+from .reshape import get_dummies, melt, crosstab
+from .general import isna, isnull, merge, pivot_table
+from .plotting import Plotting as plotting
+from .. import __execution_engine__ as execution_engine
 
 __pandas_version__ = "0.23.4"
 
@@ -70,19 +74,34 @@ if pandas.__version__ != __pandas_version__:
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
+num_cpus = 1
 
-try:
+if execution_engine == "Ray":
+    try:
+        if threading.current_thread().name == "MainThread":
+            ray.init(
+                redirect_output=True,
+                include_webui=False,
+                redirect_worker_output=True,
+                ignore_reinit_error=True,
+            )
+            num_cpus = ray.global_state.cluster_resources()["CPU"]
+    except AssertionError:
+        pass
+elif execution_engine == "Dask":
+    from distributed.client import _get_global_client
+
     if threading.current_thread().name == "MainThread":
-        ray.init(
-            redirect_output=True,
-            include_webui=False,
-            redirect_worker_output=True,
-            use_raylet=True,
-        )
-except AssertionError:
-    pass
+        # initialize the dask client
+        client = _get_global_client()
+        if client is None:
+            from distributed import Client
 
-num_cpus = ray.global_state.cluster_resources()["CPU"]
+            client = Client()
+        num_cpus = sum(client.ncores().values())
+elif execution_engine != "Python":
+    raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
+
 DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
 __all__ = [
@@ -101,6 +120,8 @@ __all__ = [
     "read_sas",
     "read_pickle",
     "read_sql",
+    "read_gbq",
+    "read_table",
     "concat",
     "eval",
     "unique",
@@ -114,6 +135,7 @@ __all__ = [
     "to_datetime",
     "get_dummies",
     "isna",
+    "isnull",
     "merge",
     "pivot_table",
     "Panel",
@@ -133,8 +155,10 @@ __all__ = [
     "NaT",
     "PeriodIndex",
     "Categorical",
-    "__git_revision__",
     "__version__",
+    "melt",
+    "crosstab",
+    "plotting",
 ]
 
 del pandas

@@ -14,8 +14,10 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
 )
 from pandas.core.index import _ensure_index
+from pandas.core.base import DataError
 
-from modin.data_management.partitioning.partition_collections import BaseBlockPartitions
+from modin.error_message import ErrorMessage
+from modin.engines.base.block_partitions import BaseBlockPartitions
 
 
 class PandasQueryCompiler(object):
@@ -617,6 +619,30 @@ class PandasQueryCompiler(object):
         func = pandas.DataFrame.rdiv
         return self._inter_df_op_handler(func, other, **kwargs)
 
+    def rfloordiv(self, other, **kwargs):
+        """Floordivs this manager with other object (manager or scalar).
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with floordiv-ed data and index.
+        """
+        func = pandas.DataFrame.rfloordiv
+        return self._inter_df_op_handler(func, other, **kwargs)
+
+    def rmod(self, other, **kwargs):
+        """Mods this manager with other object (manager or scalar).
+
+        Args:
+            other: The other object (manager or scalar).
+
+        Returns:
+            New DataManager with mod data and index.
+        """
+        func = pandas.DataFrame.rmod
+        return self._inter_df_op_handler(func, other, **kwargs)
+
     def rpow(self, other, **kwargs):
         """Exponential power of other object (manager or scalar) to this manager.
 
@@ -690,6 +716,8 @@ class PandasQueryCompiler(object):
         ), "Must have the same DataManager subclass to perform this operation"
 
         def update_builder(df, other, **kwargs):
+            # This is because of a requirement in Arrow
+            df = df.copy()
             df.update(other, **kwargs)
             return df
 
@@ -836,10 +864,18 @@ class PandasQueryCompiler(object):
         drop = kwargs.get("drop", False)
         new_index = pandas.RangeIndex(len(self.index))
         if not drop:
-            new_column_name = "index" if "index" not in self.columns else "level_0"
-            new_columns = self.columns.insert(0, new_column_name)
-            result = self.insert(0, new_column_name, self.index)
-            return self.__constructor__(result.data, new_index, new_columns)
+            if isinstance(self.index, pandas.MultiIndex):
+                # TODO (devin-petersohn) ensure partitioning is properly aligned
+                new_column_names = pandas.Index(self.index.names)
+                new_columns = new_column_names.append(self.columns)
+                index_data = pandas.DataFrame(list(zip(*self.index))).T
+                result = self.data.from_pandas(index_data).concat(1, self.data)
+                return self.__constructor__(result, new_index, new_columns)
+            else:
+                new_column_name = "index" if "index" not in self.columns else "level_0"
+                new_columns = self.columns.insert(0, new_column_name)
+                result = self.insert(0, new_column_name, self.index)
+                return self.__constructor__(result.data, new_index, new_columns)
         else:
             # The copies here are to ensure that we do not give references to
             # this object for the purposes of updates.
@@ -963,7 +999,32 @@ class PandasQueryCompiler(object):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self.sum(**kwargs).divide(self.count(axis=axis, numeric_only=True))
+        sums = self.sum(**kwargs)
+        counts = self.count(axis=axis, numeric_only=kwargs.get("numeric_only", None))
+        try:
+            # If we need to drop any columns, it will throw a TypeError
+            return sums.divide(counts)
+        # In the case that a TypeError is thrown, we need to iterate through, similar to
+        # how pandas does and do the division only on things that can be divided.
+        # NOTE: We will only hit this condition if numeric_only is not True.
+        except TypeError:
+
+            def can_divide(l, r):
+                try:
+                    pandas.Series([l]).divide(r)
+                except TypeError:
+                    return False
+                return True
+
+            # Iterate through the sums to check that we can divide them. If not, then
+            # drop the record. This matches pandas behavior.
+            return pandas.Series(
+                {
+                    idx: sums[idx] / counts[idx]
+                    for idx in sums.index
+                    if can_divide(sums[idx], counts[idx])
+                }
+            )
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -973,7 +1034,7 @@ class PandasQueryCompiler(object):
         """
         return self._process_min_max(pandas.DataFrame.min, **kwargs)
 
-    def _process_sum_prod(self, func, ignore_axis=False, **kwargs):
+    def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
 
         Args:
@@ -983,12 +1044,10 @@ class PandasQueryCompiler(object):
             Pandas Series with sum or prod of DataFrame.
         """
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", None)
+        numeric_only = kwargs.get("numeric_only", None) if not axis else True
         min_count = kwargs.get("min_count", 0)
-
-        numeric_only = True if axis else kwargs.get("numeric_only", False)
-
         reduce_index = self.columns if axis else self.index
+
         if numeric_only:
             result, query_compiler = self.numeric_function_clean_dataframe(axis)
         else:
@@ -998,32 +1057,19 @@ class PandasQueryCompiler(object):
         def sum_prod_builder(df, **kwargs):
             if not df.empty:
                 return func(df, **kwargs)
+            else:
+                return pandas.DataFrame([])
 
         map_func = self._prepare_method(sum_prod_builder, **kwargs)
 
-        if all(
-            dtype == np.dtype("datetime64[ns]") or dtype == np.dtype("timedelta64[ns]")
-            for dtype in self.dtypes
-        ):
-            if numeric_only is None:
-                new_index = [
-                    col
-                    for col, dtype in zip(self.columns, self.dtypes)
-                    if dtype == np.dtype("timedelta64[ns]")
-                ]
-                return self.full_axis_reduce(map_func, axis, new_index)
-            else:
-                return self.full_axis_reduce(map_func, axis)
-        elif min_count == 0:
-            if numeric_only is None:
-                numeric_only = True
+        if min_count <= 1:
             return self.full_reduce(axis, map_func, numeric_only=numeric_only)
         elif min_count > len(reduce_index):
             return pandas.Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
         else:
-            return self.full_axis_reduce(map_func, axis, new_index)
+            return self.full_axis_reduce(map_func, axis)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -1031,7 +1077,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.prod, ignore_axis=True, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -1039,7 +1085,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        return self._process_sum_prod(pandas.DataFrame.sum, ignore_axis=False, **kwargs)
+        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
 
     # END Full Reduce operations
 
@@ -1197,7 +1243,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        return self._process_all_any(pandas.DataFrame.all, **kwargs)
+        return self._process_all_any(lambda df, **kwargs: df.all(**kwargs), **kwargs)
 
     def any(self, **kwargs):
         """Returns whether any the elements are true, potentially over an axis.
@@ -1205,7 +1251,7 @@ class PandasQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        return self._process_all_any(pandas.DataFrame.any, **kwargs)
+        return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
 
     def _process_all_any(self, func, **kwargs):
         """Calculates if any or all the values are true.
@@ -1230,7 +1276,10 @@ class PandasQueryCompiler(object):
         if bool_only:
             if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
                 return pandas.Series(dtype=bool)
-            query_compiler = self.drop(columns=not_bool_col)
+            if len(not_bool_col) == len(self.columns):
+                query_compiler = self
+            else:
+                query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False
@@ -1510,10 +1559,18 @@ class PandasQueryCompiler(object):
         if len(new_columns) != 0:
             numeric = True
             exclude = kwargs.get("exclude", None)
+            include = kwargs.get("include", None)
+            # This is done to check against the default dtypes with 'in'.
+            # We don't change `include` in kwargs, so we can just use this for the
+            # check.
+            if include is None:
+                include = []
+            default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
+            add_to_excludes = [e for e in default_excludes if e not in include]
             if is_list_like(exclude):
-                exclude.append([np.timedelta64, np.datetime64])
+                exclude.append(add_to_excludes)
             else:
-                exclude = [exclude, np.timedelta64, np.datetime64]
+                exclude = add_to_excludes
             kwargs["exclude"] = exclude
         else:
             numeric = False
@@ -1536,7 +1593,10 @@ class PandasQueryCompiler(object):
                 new_columns = self.columns
 
         def describe_builder(df, **kwargs):
-            return pandas.DataFrame.describe(df, **kwargs)
+            try:
+                return pandas.DataFrame.describe(df, **kwargs)
+            except ValueError:
+                return pandas.DataFrame(index=df.index)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
@@ -1592,7 +1652,6 @@ class PandasQueryCompiler(object):
 
     def dropna(self, **kwargs):
         """Returns a new DataManager with null values dropped along given axis.
-
         Return:
             a new DataManager
         """
@@ -1606,7 +1665,7 @@ class PandasQueryCompiler(object):
             if not axis:
                 compute_na = self.getitem_column_array(subset)
             else:
-                compute_na = self.getitem_row_array(subset)
+                compute_na = self.getitem_row_array(self.index.get_indexer_for(subset))
         else:
             compute_na = self
 
@@ -1706,37 +1765,34 @@ class PandasQueryCompiler(object):
             A new PandasDataManager with modes calculated.
         """
         axis = kwargs.get("axis", 0)
-        numeric_only = kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.mode, **kwargs)
+
+        def mode_builder(df, **kwargs):
+            result = df.mode(**kwargs)
+            # We return a dataframe with the same shape as the input to ensure
+            # that all the partitions will be the same shape
+            if not axis and len(df) != len(result):
+                # Pad columns
+                append_values = pandas.DataFrame(
+                    columns=result.columns, index=range(len(result), len(df))
+                )
+                result = pandas.concat([result, append_values], ignore_index=True)
+            elif axis and len(df.columns) != len(result.columns):
+                # Pad rows
+                append_vals = pandas.DataFrame(
+                    columns=range(len(result.columns), len(df.columns)),
+                    index=result.index,
+                )
+                result = pandas.concat([result, append_vals], axis=1)
+            return result
+
+        func = self._prepare_method(mode_builder, **kwargs)
         new_data = self.map_across_full_axis(axis, func)
 
-        if numeric_only:
-            result, query_compiler = self.numeric_function_clean_dataframe(axis)
-            if result is not None:
-                return self.from_pandas(
-                    pandas.DataFrame(index=query_compiler.index), type(self.data)
-                )
-        else:
-            query_compiler = self
-
-        max_count = (
-            self.__constructor__(new_data, query_compiler.index, query_compiler.columns)
-            .notnull()
-            .sum(axis=axis)
-        ).max()
-
-        new_index = pandas.RangeIndex(max_count) if not axis else query_compiler.index
-        new_columns = (
-            query_compiler.columns if not axis else pandas.RangeIndex(max_count)
-        )
-        # We have to reindex the DataFrame so that all of the partitions are
-        # matching in shape. The next steps ensure this happens.
-        final_labels = new_index if not axis else new_columns
-        # We build these intermediate objects to avoid depending directly on
-        # the underlying implementation.
+        new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
+        new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
         return self.__constructor__(
-            new_data, new_index, new_columns, query_compiler._dtype_cache
-        ).reindex(axis=axis, labels=final_labels)
+            new_data, new_index, new_columns, self._dtype_cache
+        ).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -1758,6 +1814,9 @@ class PandasQueryCompiler(object):
             }
 
             def fillna_dict_builder(df, func_dict={}):
+                # We do this to ensure that no matter the state of the columns we get
+                # the correct ones.
+                func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 
             new_data = self.data.apply_func_to_select_indices(
@@ -1815,6 +1874,42 @@ class PandasQueryCompiler(object):
             new_columns = self.columns
         new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
         return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
+
+    def sort_index(self, **kwargs):
+        """Sorts the data with respect to either the columns or the indices.
+
+        Returns:
+            DataManager containing the data sorted by columns or indices.
+        """
+        axis = kwargs.pop("axis", 0)
+        index = self.columns if axis else self.index
+
+        # sort_index can have ascending be None and behaves as if it is False.
+        # sort_values cannot have ascending be None. Thus, the following logic is to
+        # convert the ascending argument to one that works with sort_values
+        ascending = kwargs.pop("ascending", True)
+        if ascending is None:
+            ascending = False
+        kwargs["ascending"] = ascending
+
+        def sort_index_builder(df, **kwargs):
+            if axis:
+                df.columns = index
+            else:
+                df.index = index
+            return df.sort_index(axis=axis, **kwargs)
+
+        func = self._prepare_method(sort_index_builder, **kwargs)
+        new_data = self.map_across_full_axis(axis, func)
+        if axis:
+            new_columns = pandas.Series(self.columns).sort_values(**kwargs)
+            new_index = self.index
+        else:
+            new_index = pandas.Series(self.index).sort_values(**kwargs)
+            new_columns = self.columns
+        return self.__constructor__(
+            new_data, new_index, new_columns, self.dtypes.copy()
+        )
 
     # END Map across rows/columns
 
@@ -2033,6 +2128,9 @@ class PandasQueryCompiler(object):
             }
             df = pandas.DataFrame(dtype_dict, self.index)
         else:
+            ErrorMessage.catch_bugs_and_request_email(
+                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
+            )
             df.index = self.index
             df.columns = self.columns
         return df
@@ -2065,9 +2163,8 @@ class PandasQueryCompiler(object):
         Returns:
             A new PandasDataManager.
         """
-        numeric_index = self.columns.get_indexer_for([key])
         new_data = self.getitem_column_array([key])
-        if len(numeric_index) > 1:
+        if len(self.columns.get_indexer_for([key])) > 1:
             return new_data
         else:
             # This is the case that we are returning a single Series.
@@ -2105,23 +2202,23 @@ class PandasQueryCompiler(object):
         """Get row data for target labels.
 
         Args:
-            key: Target labels by which to retrieve data.
+            key: Target numeric indices by which to retrieve data.
 
         Returns:
             A new PandasDataManager.
         """
         # Convert to list for type checking
-        numeric_indices = list(self.index.get_indexer_for(key))
+        key = list(key)
 
         def getitem(df, internal_indices=[]):
             return df.iloc[internal_indices]
 
         result = self.data.apply_func_to_select_indices(
-            1, getitem, numeric_indices, keep_remaining=False
+            1, getitem, key, keep_remaining=False
         )
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
-        new_index = self.index[numeric_indices]
+        new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
 
     # END __getitem__ methods
@@ -2155,11 +2252,7 @@ class PandasQueryCompiler(object):
             )
             # We can't use self.index.drop with duplicate keys because in Pandas
             # it throws an error.
-            new_index = [
-                self.index[i]
-                for i in range(len(self.index))
-                if i not in numeric_indices
-            ]
+            new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
             new_dtypes = self.dtypes
@@ -2172,13 +2265,8 @@ class PandasQueryCompiler(object):
             new_data = new_data.apply_func_to_select_indices(
                 0, delitem, numeric_indices, keep_remaining=True
             )
-            # We can't use self.columns.drop with duplicate keys because in Pandas
-            # it throws an error.
-            new_columns = [
-                self.columns[i]
-                for i in range(len(self.columns))
-                if i not in numeric_indices
-            ]
+
+            new_columns = self.columns[~self.columns.isin(columns)]
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
@@ -2198,14 +2286,21 @@ class PandasQueryCompiler(object):
             value: Dtype object values to insert.
 
         Returns:
-            A new PandasDataManager with new data inserted.
+            A new PandasQueryCompiler with new data inserted.
         """
+        if is_list_like(value):
+            from modin.pandas.series import SeriesView
+
+            if isinstance(value, (pandas.Series, SeriesView)):
+                value = value.reindex(self.index)
+            value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
             old_index = df.index
             df.index = pandas.RangeIndex(len(df.index))
             df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
+            df.columns = pandas.RangeIndex(len(df.columns))
             df.index = old_index
             return df
 
@@ -2229,7 +2324,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
@@ -2248,40 +2343,45 @@ class PandasQueryCompiler(object):
             axis: Target axis along which function was applied.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if try_scale:
             try:
-                index = self.compute_index(0, result_data, True)
+                internal_index = self.compute_index(0, result_data, True)
             except IndexError:
-                index = self.compute_index(0, result_data, False)
+                internal_index = self.compute_index(0, result_data, False)
             try:
-                columns = self.compute_index(1, result_data, True)
+                internal_columns = self.compute_index(1, result_data, True)
             except IndexError:
-                columns = self.compute_index(1, result_data, False)
+                internal_columns = self.compute_index(1, result_data, False)
         else:
-            if not axis:
-                index = self.compute_index(0, result_data, False)
+            internal_index = self.compute_index(0, result_data, False)
+            internal_columns = self.compute_index(1, result_data, False)
+        if not axis:
+            index = internal_index
+            # We check if the two columns are the same length because if
+            # they are the same length, `self.columns` is the correct index.
+            # However, if the operation resulted in a different number of columns,
+            # we must use the derived columns from `self.compute_index()`.
+            if len(internal_columns) != len(self.columns):
+                columns = internal_columns
+            else:
                 columns = self.columns
+        else:
+            # See above explaination for checking the lengths of columns
+            if len(internal_index) != len(self.index):
+                index = internal_index
             else:
                 index = self.index
-                columns = self.compute_index(1, result_data, False)
+            columns = internal_columns
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
         # this logic here.
         if len(columns) == 0:
             series_result = result_data.to_pandas(False)
-            if (
-                not axis
-                and len(series_result) == len(self.columns)
-                and len(index) != len(series_result)
-            ):
+            if not axis and len(series_result) == len(self.columns):
                 index = self.columns
-            elif (
-                axis
-                and len(series_result) == len(self.index)
-                and len(index) != len(series_result)
-            ):
+            elif axis and len(series_result) == len(self.index):
                 index = self.index
 
             series_result.index = index
@@ -2296,7 +2396,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         if "axis" not in kwargs:
             kwargs["axis"] = axis
@@ -2330,7 +2430,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
         func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
         new_data = self.map_across_full_axis(axis, func_prepared)
@@ -2346,7 +2446,7 @@ class PandasQueryCompiler(object):
             axis: Target axis to apply the function along.
 
         Returns:
-            A new PandasDataManager.
+            A new PandasQueryCompiler.
         """
 
         def callable_apply_builder(df, func, axis, index, *args, **kwargs):
@@ -2394,7 +2494,14 @@ class PandasQueryCompiler(object):
                 df.index = remote_index
             else:
                 df.columns = remote_index
-            return agg_func(df.groupby(by=by, axis=axis, **groupby_args), **agg_args)
+            grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+            try:
+                return agg_func(grouped_df, **agg_args)
+            # This happens when the partition is filled with non-numeric data and a
+            # numeric operation is done. We need to build the index here to avoid issues
+            # with extracting the index.
+            except DataError:
+                return pandas.DataFrame(index=grouped_df.count().index)
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
@@ -2499,15 +2606,20 @@ class PandasQueryCompiler(object):
         )
 
     def squeeze(self, ndim=0, axis=None):
-        squeezed = self.data.to_pandas().squeeze()
+        to_squeeze = self.data.to_pandas()
+        # This is the case for 1xN or Nx1 DF - Need to call squeeze
         if ndim == 1:
-            squeezed = pandas.Series(squeezed)
-            scaler_axis = self.index if axis == 0 else self.columns
-            non_scaler_axis = self.index if axis == 1 else self.columns
-
+            if axis is None:
+                axis = 0 if self.data.shape[1] > 1 else 1
+            squeezed = pandas.Series(to_squeeze.squeeze(axis))
+            scaler_axis = self.columns if axis else self.index
+            non_scaler_axis = self.index if axis else self.columns
             squeezed.name = scaler_axis[0]
             squeezed.index = non_scaler_axis
-        return squeezed
+            return squeezed
+        # This is the case for a 1x1 DF - We don't need to squeeze
+        else:
+            return to_squeeze.values[0][0]
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
@@ -2572,6 +2684,9 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     In particular, the following constraints are broken:
     - (len(self.index), len(self.columns)) != self.data.shape
+
+    Note:
+        The constraint will be satisfied when we get the data
     """
 
     def __init__(
@@ -2597,11 +2712,31 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
         self.index_map = index_map_series
         self.columns_map = columns_map_series
-        self.is_view = True
 
         PandasQueryCompiler.__init__(
             self, block_partitions_object, index, columns, dtypes
         )
+
+    _dtype_cache = None
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    def _get_dtype(self):
+        """Override the parent on this to avoid getting the wrong dtypes"""
+        if self._dtype_cache is None:
+            map_func = self._prepare_method(lambda df: df.dtypes)
+
+            def dtype_builder(df):
+                return df.apply(lambda row: find_common_type(row.values), axis=0)
+
+            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache.index = self.columns
+        elif not self._dtype_cache.index.equals(self.columns):
+            self._dtype_cache = self._dtype_cache.reindex(self.columns)
+        return self._dtype_cache
+
+    dtypes = property(_get_dtype, _set_dtype)
 
     def __constructor__(
         self,
@@ -2610,16 +2745,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         columns: pandas.Index,
         dtypes=None,
     ):
-        new_index_map = self.index_map.reindex(index)
-        new_columns_map = self.columns_map.reindex(columns)
-        return type(self)(
-            block_partitions_object,
-            index,
-            columns,
-            dtypes,
-            new_index_map,
-            new_columns_map,
-        )
+        return PandasQueryCompiler(block_partitions_object, index, columns, dtypes)
 
     def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
@@ -2635,7 +2761,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             func=iloc,
             row_indices=self.index_map.values,
             col_indices=self.columns_map.values,
-            lazy=True,
+            lazy=False,
             keep_remaining=False,
         )
         return masked_data
