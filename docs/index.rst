@@ -1,5 +1,9 @@
-Modin
-=====
+.. image:: img/MODIN_ver2_hrz.png
+   :width: 400px
+   :alt: modin logo
+   :align: center
+
+====
 
 *Scale your pandas workflows by changing one line of code*
 

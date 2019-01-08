@@ -22,6 +22,9 @@ def isna(obj):
         return pandas.isna(obj)
 
 
+isnull = isna
+
+
 def merge(
     left,
     right,

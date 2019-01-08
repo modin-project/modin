@@ -1,11 +1,12 @@
-<h1 align="center">Modin</h1>
-<h3 align="center">Scale your pandas workflows by changing one line of code</h3>
+<p align="center"><a href="https://modin.readthedocs.io"><img width=77% alt="" src="https://github.com/modin-project/modin/blob/3d6368edf311995ad231ec5342a51cd9e4e3dc20/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
+<h2 align="center">Scale your pandas workflows by changing one line of code</h2>
 
 <p align="center">
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest"></a>
 <a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.2.2-blue.svg"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.2.5-blue.svg"></a>
+<a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white"></a>
 </p>
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -23,12 +24,16 @@ Modin can be installed from PyPI:
 pip install modin
 ```
 
+### Full Documentation
+
+Visit the complete documentation on readthedocs: http://modin.readthedocs.io
+
 ### Scale your pandas workflow by changing a single line of code.
 
 Modin uses **[Ray](https://github.com/ray-project/ray/)** to provide an effortless way
 to speed up your pandas notebooks, scripts, and libraries. Unlike other distributed
-DataFrame libraries, Modin provides seamless integration and compatibility with
-existing pandas code. Even using the DataFrame constructor is identical.
+DataFrame libraries, Modin provides seamless integration and compatibility with existing
+pandas code. Even using the DataFrame constructor is identical.
 
 ```python
 import modin.pandas as pd
@@ -51,8 +56,8 @@ you would pandas.
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
 transparently distributes the data and computation so that all you need to do is
 continue using the pandas API as you were before installing Modin. Unlike other parallel
-DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because it is so
-light-weight, Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
+DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because it is
+so light-weight, Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
 any kind. With Modin, you are able to use all of the CPU cores on your machine. Even in

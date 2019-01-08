@@ -11,6 +11,7 @@ from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
+from .series import SeriesView
 
 """Indexing Helper Class works as follows:
 
@@ -144,27 +145,27 @@ class _LocationIndexerBase(object):
     """
 
     def __init__(self, ray_df: DataFrame):
-        self.dm = ray_df._query_compiler
-        self.is_view = hasattr(self.dm, "is_view")
-
+        self.df = ray_df
+        self.qc = ray_df._query_compiler
         self.row_scaler = False
         self.col_scaler = False
 
     def __getitem__(
         self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
     ):
-        if self.is_view:
-            dm_view = self.dm.__constructor__(self.dm.data, row_lookup, col_lookup)
-        else:
-            dm_view = self.dm.view(row_lookup, col_lookup)
+        qc_view = self.qc.view(row_lookup, col_lookup)
 
         if ndim == 2:
-            return DataFrame(query_compiler=dm_view)
+            return DataFrame(query_compiler=qc_view)
         elif ndim == 0:
-            return dm_view.squeeze(ndim=0)
+            return qc_view.squeeze(ndim=0)
         else:
             single_axis = 1 if self.col_scaler else 0
-            return dm_view.squeeze(ndim=1, axis=single_axis)
+            return SeriesView(
+                qc_view.squeeze(ndim=1, axis=single_axis),
+                self.df,
+                (row_lookup, col_lookup),
+            )
 
     def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """
@@ -175,15 +176,32 @@ class _LocationIndexerBase(object):
                 broadcast-able to the product of the lookup tables.
         """
         to_shape = (len(row_lookup), len(col_lookup))
-        item = self._broadcast_item(item, to_shape)
+        item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
         self._write_items(row_lookup, col_lookup, item)
 
-    def _broadcast_item(self, item, to_shape):
+    def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
         """Use numpy to broadcast or reshape item.
 
         Notes:
             - Numpy is memory efficient, there shouldn't be performance issue.
         """
+        # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+        # the target the user is trying to overwrite. This
+        if isinstance(item, (pandas.Series, pandas.DataFrame, DataFrame)):
+            if not all(idx in item.index for idx in row_lookup):
+                raise ValueError(
+                    "Must have equal len keys and value when setting with "
+                    "an iterable"
+                )
+            if hasattr(item, "columns"):
+                if not all(idx in item.columns for idx in col_lookup):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting "
+                        "with an iterable"
+                    )
+                item = item.reindex(index=row_lookup, columns=col_lookup)
+            else:
+                item = item.reindex(index=row_lookup)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
@@ -193,18 +211,16 @@ class _LocationIndexerBase(object):
         except ValueError:
             from_shape = np.array(item).shape
             raise ValueError(
-                "could not broadcast input array from \
-                shape {from_shape} into shape {to_shape}".format(
-                    from_shape=from_shape, to_shape=to_shape
-                )
+                "could not broadcast input array from shape {from_shape} into shape "
+                "{to_shape}".format(from_shape=from_shape, to_shape=to_shape)
             )
 
     def _write_items(self, row_lookup, col_lookup, item):
         """Perform remote write and replace blocks.
         """
-        row_numeric_idx = self.dm.global_idx_to_numeric_idx("row", row_lookup)
-        col_numeric_idx = self.dm.global_idx_to_numeric_idx("col", col_lookup)
-        self.dm.write_items(row_numeric_idx, col_numeric_idx, item)
+        row_numeric_idx = self.qc.global_idx_to_numeric_idx("row", row_lookup)
+        col_numeric_idx = self.qc.global_idx_to_numeric_idx("col", col_lookup)
+        self.qc.write_items(row_numeric_idx, col_numeric_idx, item)
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -229,13 +245,13 @@ class _LocIndexer(_LocationIndexerBase):
         Returns:
             None
         """
-        if _is_enlargement(row_loc, self.dm.index) or _is_enlargement(
-            col_loc, self.dm.columns
+        if _is_enlargement(row_loc, self.qc.index) or _is_enlargement(
+            col_loc, self.qc.columns
         ):
             _warn_enlargement()
-            self.dm.enlarge_partitions(
-                new_row_labels=self._compute_enlarge_labels(row_loc, self.dm.index),
-                new_col_labels=self._compute_enlarge_labels(col_loc, self.dm.columns),
+            self.qc.enlarge_partitions(
+                new_row_labels=self._compute_enlarge_labels(row_loc, self.qc.index),
+                new_col_labels=self._compute_enlarge_labels(col_loc, self.qc.columns),
             )
 
     def _compute_enlarge_labels(self, locator, base_index):
@@ -277,12 +293,12 @@ class _LocIndexer(_LocationIndexerBase):
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if (
-                isinstance(self.dm.index.values[0], np.datetime64)
+                isinstance(self.qc.index.values[0], np.datetime64)
                 and type(row_loc[0]) != np.datetime64
             ):
                 row_loc = [pandas.to_datetime(row_loc[0])]
-        row_lookup = self.dm.index.to_series().loc[row_loc].index
-        col_lookup = self.dm.columns.to_series().loc[col_loc].index
+        row_lookup = self.qc.index.to_series().loc[row_loc].index
+        col_lookup = self.qc.columns.to_series().loc[col_loc].index
         return row_lookup, col_lookup
 
 
@@ -307,8 +323,8 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
-        row_lookup = self.dm.index.to_series().iloc[row_loc].index
-        col_lookup = self.dm.columns.to_series().iloc[col_loc].index
+        row_lookup = self.qc.index.to_series().iloc[row_loc].index
+        col_lookup = self.qc.columns.to_series().iloc[col_loc].index
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):

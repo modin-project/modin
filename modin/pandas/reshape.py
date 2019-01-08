@@ -6,6 +6,7 @@ import pandas
 from pandas.core.dtypes.common import is_list_like
 
 from .dataframe import DataFrame
+from modin.error_message import ErrorMessage
 
 
 def get_dummies(
@@ -61,3 +62,48 @@ def get_dummies(
         drop_first=drop_first,
     )
     return DataFrame(query_compiler=new_manager)
+
+
+def melt(
+    frame,
+    id_vars=None,
+    value_vars=None,
+    var_name=None,
+    value_name="value",
+    col_level=None,
+):
+    return frame.melt(
+        id_vars=id_vars,
+        value_vars=value_vars,
+        var_name=var_name,
+        value_name=value_name,
+        col_level=col_level,
+    )
+
+
+def crosstab(
+    index,
+    columns,
+    values=None,
+    rownames=None,
+    colnames=None,
+    aggfunc=None,
+    margins=False,
+    margins_name="All",
+    dropna=True,
+    normalize=False,
+):
+    ErrorMessage.default_to_pandas()
+    pandas_crosstab = pandas.crosstab(
+        index,
+        columns,
+        values,
+        rownames,
+        colnames,
+        aggfunc,
+        margins,
+        margins_name,
+        dropna,
+        normalize,
+    )
+    return DataFrame(pandas_crosstab)
