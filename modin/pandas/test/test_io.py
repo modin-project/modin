@@ -7,6 +7,8 @@ import numpy as np
 import pandas
 from modin.pandas.utils import to_pandas
 import modin.pandas as pd
+import pyarrow as pa
+pa.__version__ = "0.11.0"
 import os
 import sqlite3
 
@@ -37,10 +39,9 @@ def setup_parquet_file(row_size, force=False):
     if os.path.exists(TEST_PARQUET_FILENAME) and not force:
         pass
     else:
-        df = pandas.DataFrame(
+        pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_parquet(TEST_PARQUET_FILENAME)
+        ).to_parquet(TEST_PARQUET_FILENAME)
 
 
 @pytest.fixture
