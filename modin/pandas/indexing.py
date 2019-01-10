@@ -236,8 +236,24 @@ class _LocIndexer(_LocationIndexerBase):
 
     def __setitem__(self, key, item):
         row_loc, col_loc, _, __, ___ = _parse_tuple(key)
-        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+        if isinstance(row_loc, list) and len(row_loc) == 1:
+            if row_loc[0] not in self.qc.index:
+                index = self.qc.index.insert(len(self.qc.index), row_loc[0])
+                self.qc = self.qc.reindex(labels=index, axis=0)
+                self.df._update_inplace(new_query_compiler=self.qc)
+
+        if (
+            isinstance(col_loc, list)
+            and len(col_loc) == 1
+            and col_loc[0] not in self.qc.columns
+        ):
+            new_col = pandas.Series(index=self.df.index)
+            new_col[row_loc] = item
+            self.df.insert(loc=len(self.df.columns), column=col_loc[0], value=new_col)
+            self.qc = self.df._query_compiler
+        else:
+            row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+            super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _handle_enlargement(self, row_loc, col_loc):
         """Handle Enlargement (if there is one).
