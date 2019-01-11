@@ -21,5 +21,5 @@ setup(
         "dask": ["dask==1.0.0", "distributed==1.25.0"],
         # can be install by pip install modin[out_of_core]
         "out_of_core": ["psutil==5.4.8"],
-    }
+    },
 )
