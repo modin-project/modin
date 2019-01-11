@@ -8,11 +8,11 @@ import pandas
 from modin.pandas.utils import to_pandas
 import modin.pandas as pd
 import pyarrow as pa
-
-pa.__version__ = "0.11.0"
 import os
 import sqlite3
 
+# needed to resolve ray-project/ray#3744
+pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
 
 TEST_PARQUET_FILENAME = "test.parquet"
