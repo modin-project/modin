@@ -1,18 +1,45 @@
 Installation
 ============
 
-There are a couple of ways to start using Pandas on Ray. Most users will want to
-install with ``pip``, but some users may want to build from the master branch on
-the `GitHub repo`_.
+There are a couple of ways to install Modin. Most users will want to install with
+``pip``, but some users may want to build from the master branch on the `GitHub repo`_.
 
 Installing with pip
 -------------------
 
-Modin can be installed with pip.
+Stable version
+""""""""""""""
+
+Modin can be installed with pip. To install the most stable release run the following:
 
 .. code-block:: bash
 
   pip install modin
+
+Release candidates
+""""""""""""""""""
+
+Before most major releases, we will upload a release candidate to If you would like to
+install a pre-release of Modin, run the following:
+
+.. code-block:: bash
+
+  pip install --pre modin
+
+These pre-releases are uploaded for dependencies and users to test their existing code
+to ensure that it still works. If you find something wrong, please raise an issue_ or
+email the bug reporter: bugs@modin.org.
+
+Installing specific dependnecy sets
+"""""""""""""""""""""""""""""""""""
+
+Modin has a number of specific dependency sets for running Modin on different backends
+or for different functionalities of Modin. Here is a list of dependency sets for Modin:
+
+.. code-block:: bash
+
+  pip install "modin[dask]" # If you want to use the Dask backend
+  pip install "modin[out_of_core]" # If you want to use Modin's `out of core`_ feature
 
 Installing from the GitHub master branch
 ----------------------------------------
@@ -85,6 +112,8 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
   pip install -e .
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
+.. _issue: https://github.com/modin-project/modin/issues
+.. _`out of core`: out_of_core.html
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _contributing: contributing.html
