@@ -1,5 +1,5 @@
-Out of Core in Modin
-====================
+Out of Core in Modin (experimental)
+===================================
 
 If you are working with very large files or would like to exceed your memory, you may
 change the primary location of the DataFrame. If you would like to exceed memory, you
@@ -45,5 +45,22 @@ This limits the amount of memory that Modin can use.
 
 Running an example with out of core
 -----------------------------------
+
+Before you run this, please make sure you follow the instructions listed above.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  import numpy as np
+  frame_data = np.random.randint(0, 100, size=(2**20, 2**8)) # 2GB each
+  df = pd.DataFrame(frame_data).add_prefix("col")
+  big_df = pd.concat([df for _ in range(20)]) # 20x2GB frames
+  print(big_df)
+  nan_big_df = big_df.isna() # The performance here represents a simple map
+  print(big_df.apply(lambda col: col.sum())) # apply along an entire axis (columns in this case)
+
+This example creates a 40GB DataFrame from 20 identical 2GB DataFrames and performs
+various operations on them. Feel free to play around with this code and let us know what
+you think!
 
 .. _`installation page`: installation.html
