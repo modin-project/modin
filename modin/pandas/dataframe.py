@@ -1939,9 +1939,7 @@ class DataFrame(object):
         """
         if isinstance(value, (DataFrame, pandas.DataFrame)):
             if len(value.columns) != 1:
-                raise ValueError(
-                    "Wrong number of items passed 2, placement implies 1"
-                )
+                raise ValueError("Wrong number of items passed 2, placement implies 1")
             value = value.iloc[:, 0]
         if len(self.index) == 0:
             try:
