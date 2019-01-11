@@ -35,7 +35,6 @@ from pandas import (
 )
 import threading
 import os
-import sys
 import ray
 
 from .. import __version__
