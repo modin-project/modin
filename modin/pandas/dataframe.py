@@ -1937,6 +1937,12 @@ class DataFrame(object):
             value (int, Series, or array-like): The values to insert.
             allow_duplicates (bool): Whether to allow duplicate column names.
         """
+        if isinstance(value, (DataFrame, pandas.DataFrame)):
+            if len(value.columns) != 1:
+                raise ValueError(
+                    "Wrong number of items passed 2, placement implies 1"
+                )
+            value = value.iloc[:, 0]
         if len(self.index) == 0:
             try:
                 value = pandas.Series(value)
@@ -1952,12 +1958,6 @@ class DataFrame(object):
                 value, index=new_index, columns=new_columns
             )._query_compiler
         else:
-            if isinstance(value, (DataFrame, pandas.DataFrame)):
-                if len(value.columns) != 1:
-                    raise ValueError(
-                        "Wrong number of items passed 2, placement implies 1"
-                    )
-                value = value.iloc[:, 0]
             if not is_list_like(value):
                 value = np.full(len(self.index), value)
             if len(value) != len(self.index):
