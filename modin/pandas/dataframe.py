@@ -1937,7 +1937,10 @@ class DataFrame(object):
             value (int, Series, or array-like): The values to insert.
             allow_duplicates (bool): Whether to allow duplicate column names.
         """
-
+        if isinstance(value, (DataFrame, pandas.DataFrame)):
+            if len(value.columns) != 1:
+                raise ValueError("Wrong number of items passed 2, placement implies 1")
+            value = value.iloc[:, 0]
         if len(self.index) == 0:
             try:
                 value = pandas.Series(value)
