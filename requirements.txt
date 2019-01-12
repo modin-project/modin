@@ -2,5 +2,6 @@ pandas==0.23.4
 dask[complete]==1.0.0
 distributed==1.25.0
 ray==0.6.1
+psutil==5.4.8
 strip_hints
 typing
