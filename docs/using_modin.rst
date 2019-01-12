@@ -82,29 +82,8 @@ you can customize your Ray environment for use in Modin!
 Exceeding memory (Out of core pandas)
 """""""""""""""""""""""""""""""""""""
 
-If you are working with very large files or would like to exceed your memory, you may
-change the primary location of the DataFrame. If you would like to exceed memory, you
-can use your disk as backup for the memory. This API is experimental in the context of
-Modin. Please let us know what you think!
-
-Instead of limiting the size of your DataFrame to the amount of memory you have, you can
-back your memory with disk:
-
-.. code-block:: python
-
-   import ray
-   num_bytes = 2**40 # Make sure you have disk space to do this!
-   ray.init(plasma_directory="/tmp", object_store_memory=num_bytes)
-   import modin.pandas as pd
-
-Setting ``plasma_directory="/tmp"`` uses your disk for storing the DataFrame and setting
-``object_store_memory`` sets the maximum size of the plasma store.
-
-Note: This will impact performance for most operations. This should be used when you are
-trying to use very large datasets.
-
-**Warning: Make sure you have enough space in your disk for however many bytes you**
-**request for your DataFrame**
+Modin experimentally supports out of core operations. See more on the `out_of_core`_
+page.
 
 Reducing or limiting the resources Modin can use
 """"""""""""""""""""""""""""""""""""""""""""""""
@@ -133,6 +112,7 @@ used to create the blog post.
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
-.. _Ray's documentation: https://ray.readthedocs.io/en/latest/api.html
+.. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
+.. _`out_out_of_core`: out_of_core.html
