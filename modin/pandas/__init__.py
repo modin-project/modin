@@ -88,7 +88,8 @@ def initialize_ray():
             "MODIN_OUT_OF_CORE" in os.environ
             and os.environ["MODIN_OUT_OF_CORE"].title() == "True"
         ):
-            plasma_directory = "/tmp"
+            from tempfile import gettempdir
+            plasma_directory = gettempdir()
             # We may have already set the memory from the environment variable, we don't
             # want to overwrite that value if we have.
             if object_store_memory is None:
@@ -96,7 +97,8 @@ def initialize_ray():
                     from psutil import virtual_memory
                 except ImportError:
                     raise ImportError(
-                        "To use Modin out of core, please install psutil: `pip install psutil`"
+                        "To use Modin out of core, please install modin[out_of_core]: "
+                        "`pip install \"modin[out_of_core]\"`"
                     )
                 # Round down to the nearest Gigabyte.
                 mem_bytes = virtual_memory().total // 10 ** 9 * 10 ** 9
