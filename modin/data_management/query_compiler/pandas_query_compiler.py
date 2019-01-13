@@ -418,8 +418,21 @@ class PandasQueryCompiler(object):
         new_columns = self._join_index_objects(
             0, other.columns, how_to_join, sort=False
         )
-        reindexed_other = other.reindex(0, joined_index).data
-        reindexed_self = self.reindex(0, joined_index).data
+
+        left_old_idx = self.index
+        right_old_idx = other.index
+
+        def reindex_left(df):
+            df.index = left_old_idx
+            return df.reindex(index=joined_index)
+
+        def reindex_right(df):
+            df.index = right_old_idx
+            return df.reindex(index=joined_index)
+
+        reindexed_self, reindexed_other = self.data.copartition_datasets(0, other.data, reindex_left, reindex_right)
+        # reindexed_other = other.reindex(0, joined_index).data
+        # reindexed_self = self.reindex(0, joined_index).data
 
         # THere is an interesting serialization anomaly that happens if we do
         # not use the columns in `inter_data_op_builder` from here (e.g. if we

@@ -256,6 +256,11 @@ class BaseBlockPartitions(object):
         )
         return self.__constructor__(new_partitions)
 
+    def copartition_datasets(self, axis, other, left_func, right_func):
+        new_self = self.map_across_full_axis(axis, left_func)
+        new_other = other.manual_shuffle(axis, right_func, new_self.block_lengths if axis == 0 else new_self.block_widths)
+        return new_self, new_other
+
     def map_across_full_axis(self, axis, map_func):
         """Applies `map_func` to every partition.
 
@@ -284,7 +289,6 @@ class BaseBlockPartitions(object):
                 part.apply(
                     preprocessed_map_func,
                     num_splits=num_splits,
-                    maintain_partitioning=False,
                 )
                 for part in partitions
             ]
@@ -470,13 +474,15 @@ class BaseBlockPartitions(object):
     def from_pandas(cls, df):
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
-        row_chunksize = max(1, compute_chunksize(len(df), num_splits))
-        col_chunksize = max(1, compute_chunksize(len(df.columns), num_splits))
+
+        row_chunksize, col_chunksize = compute_chunksize(df, num_splits, min_block_size=4096)
+        row_chunksize = max(1, row_chunksize)
+        col_chunksize = max(1, col_chunksize)
 
         # Each chunk must have a RangeIndex that spans its length and width
         # according to our invariant.
         def chunk_builder(i, j):
-            chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
+            chunk = df.iloc[i: i + row_chunksize, j: j + col_chunksize].copy()
             chunk.index = pandas.RangeIndex(len(chunk.index))
             chunk.columns = pandas.RangeIndex(len(chunk.columns))
             return put_func(chunk)
@@ -504,8 +510,8 @@ class BaseBlockPartitions(object):
             A Pandas Index object.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
+        func = self.preprocess_func(index_func)
         if axis == 0:
-            func = self.preprocess_func(index_func)
             # We grab the first column of blocks and extract the indices
             # Note: We use _partitions_cache in the context of this function to make
             # sure that none of the partitions are modified or filtered out before we
@@ -524,7 +530,6 @@ class BaseBlockPartitions(object):
             else:
                 cumulative_block_lengths = np.array(self.block_lengths).cumsum()
         else:
-            func = self.preprocess_func(index_func)
             new_indices = (
                 [idx.apply(func).get() for idx in self._partitions_cache[0]]
                 if len(self._partitions_cache)
@@ -992,7 +997,7 @@ class BaseBlockPartitions(object):
         )
         return self.__constructor__(result) if axis else self.__constructor__(result.T)
 
-    def manual_shuffle(self, axis, shuffle_func):
+    def manual_shuffle(self, axis, shuffle_func, lengths):
         """Shuffle the partitions based on the `shuffle_func`.
 
         Args:
@@ -1009,7 +1014,7 @@ class BaseBlockPartitions(object):
         func = self.preprocess_func(shuffle_func)
         result = np.array(
             [
-                part.shuffle(func, num_splits=self._compute_num_partitions())
+                part.shuffle(func, lengths)
                 for part in partitions
             ]
         )

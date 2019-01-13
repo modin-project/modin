@@ -60,7 +60,7 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         )
 
-    def shuffle(self, func, num_splits=None, **kwargs):
+    def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
 
         Extends `BaseAxisPartition.shuffle`.
@@ -70,10 +70,10 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         :param kwargs:
         :return:
         """
-        if num_splits is None:
-            num_splits = len(self.list_of_blocks)
-
-        args = [self.axis, func, num_splits, kwargs]
+        num_splits = len(lengths)
+        kwargs["manual_partition"] = True
+        kwargs["_lengths"] = lengths
+        args = [self.axis, func, num_splits, kwargs, False]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
@@ -123,16 +123,22 @@ def deploy_ray_axis_func(
     Returns:
         A list of Pandas DataFrames.
     """
+    manual_partition = kwargs.pop("manual_partition", False)
+    lengths = kwargs.pop("_lengths", None)
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if isinstance(result, pandas.Series):
         if num_splits == 1:
             return result
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
+
+    if manual_partition:
+        # The split function is expecting a list
+        lengths = list(lengths)
     # We set lengths to None so we don't use the old lengths for the resulting partition
     # layout. This is done if the number of splits is changing or we are told not to
     # keep the old partitioning.
-    if num_splits != len(partitions) or not maintain_partitioning:
+    elif num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
     else:
         if axis == 0:

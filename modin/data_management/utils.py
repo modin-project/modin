@@ -3,14 +3,43 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import math
 import pandas
 
 
-def compute_chunksize(length, num_splits):
-    # We do this to avoid zeros and having an extremely large last partition
-    return (
-        length // num_splits if length % num_splits == 0 else length // num_splits + 1
-    )
+def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
+    if axis is not None:
+        min_block_size /= 2
+    mem_usage = df.memory_usage().sum()
+    if mem_usage <= min_block_size:
+        df = df.copy()
+        df.index = pandas.RangeIndex(len(df.index))
+        df.columns = pandas.RangeIndex(len(df.columns))
+        return df.shape[axis if axis is not None else slice(None)]
+    else:
+        def get_default_chunksize(length):
+            return (
+                length // num_splits if length % num_splits == 0 else length // num_splits + 1
+            )
+        mem_usage_chunksize = math.sqrt(mem_usage // min_block_size)
+
+        if axis == 0 or axis is None:
+            row_chunksize = get_default_chunksize(len(df.index))
+            row_chunksize = max(row_chunksize, len(df) // int(mem_usage_chunksize))
+            if axis == 0:
+                return row_chunksize
+
+        col_chunksize = get_default_chunksize(len(df.columns))
+        # adjust mem_usage_chunksize for non-perfect square roots to have better
+        # partitioning
+        mem_usage_chunksize = mem_usage_chunksize if mem_usage_chunksize - int(
+            mem_usage_chunksize) == 0 else mem_usage_chunksize + 1
+        col_chunksize = max(col_chunksize, len(df.columns) // int(mem_usage_chunksize))
+
+        if axis == 1:
+            return col_chunksize
+
+        return row_chunksize, col_chunksize
 
 
 def _get_nan_block_id(partition_class, n_row=1, n_col=1, transpose=False):
@@ -60,13 +89,12 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         else:
             return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     # We do this to restore block partitioning
+    chunksize = compute_chunksize(result, num_splits, axis=axis)
     if axis == 0 or type(result) is pandas.Series:
-        chunksize = compute_chunksize(len(result), num_splits)
         return [
             result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)
         ]
     else:
-        chunksize = compute_chunksize(len(result.columns), num_splits)
         return [
             result.iloc[:, chunksize * i : chunksize * (i + 1)]
             for i in range(num_splits)
