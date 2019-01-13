@@ -5,39 +5,41 @@ import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 
 random_state = np.random.RandomState(seed=42)
+
+# Size of test dataframes
+NCOLS = 2**8
+NROWS = 2**19
+
+# Range for values for test data
 RAND_LOW = 0
 RAND_HIGH = 100
 
 # Input data and functions for the tests
 # The test data that we will test our code against
 test_data = {
-    # "empty_data": {},
-    # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
+    "empty_data": {},
+    "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
     "int_data": {
-        "col3": [0, 1, 2, 3, 4, 5, 6, 7],
-        "col4": [8, 9, 10, 11, 12, 13, 14, 15],
-        "col5": [16, 17, 18, 19, 20, 21, 22, 23],
-        "col1": [24, 25, 26, 27, 28, 29, 30, 31],
-        "col2": [32, 33, 34, 35, 36, 37, 38, 39],
+        "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.randint(
+            RAND_LOW, RAND_HIGH, size=(NROWS)
+        )
+        for i in range(NCOLS)
     },
     "float_data": {
-        "col3": [0.0, 1.0, 2.0, 3.0],
-        "col4": [4.0, 5.0, 6.0, 7.0],
-        "col5": [8.0, 9.0, 10.0, 11.0],
-        "col1": [12.0, 13.0, 14.0, 15.0],
-        "col2": [0.0, 0.0, 0.0, 0.0],
+        "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.uniform(
+            RAND_LOW, RAND_HIGH, size=(NROWS)
+        )
+        for i in range(NCOLS)
     },
     "sparse_nan_data": {
-        "col3": [1, 2, 3, np.NaN],
-        "col4": [4, 5, np.NaN, 7],
-        "col1": [8, np.NaN, 10, 11],
-        "col2": [np.NaN, 13, 14, 15],
+        "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j != i else np.NaN for j, x in enumerate(random_state.uniform(
+            RAND_LOW, RAND_HIGH, size=(NROWS)))]
+        for i in range(NCOLS)
     },
     "dense_nan_data": {
-        "col3": [np.NaN, 2, np.NaN, 0],
-        "col4": [3, 4, np.NaN, 1],
-        "col1": [np.NaN, np.NaN, np.NaN, 5],
-        "col2": [6, np.NaN, np.NaN, 10],
+        "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j % 4 == 0 else np.NaN for j, x in enumerate(random_state.uniform(
+            RAND_LOW, RAND_HIGH, size=(NROWS)))]
+        for i in range(NCOLS)
     },
     # "int_float_object_data": {
     #     "col3": [1, 2, 3, 4],
