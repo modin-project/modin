@@ -514,7 +514,7 @@ class BaseBlockPartitions(object):
         put_func = cls._partition_class.put
 
         row_chunksize, col_chunksize = compute_chunksize(
-            df, num_splits, min_block_size=4096
+            df, num_splits
         )
         row_chunksize = max(1, row_chunksize)
         col_chunksize = max(1, col_chunksize)
