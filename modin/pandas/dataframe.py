@@ -1958,7 +1958,7 @@ class DataFrame(object):
         else:
             if not is_list_like(value):
                 value = np.full(len(self.index), value)
-            if len(value) != len(self.index):
+            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
@@ -3107,7 +3107,6 @@ class DataFrame(object):
         limit=None,
         regex=False,
         method="pad",
-        axis=None,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.replace,
@@ -3117,7 +3116,6 @@ class DataFrame(object):
             limit=limit,
             regex=regex,
             method=method,
-            axis=axis,
         )
 
     def resample(
