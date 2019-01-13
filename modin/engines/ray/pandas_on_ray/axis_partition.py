@@ -61,16 +61,19 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         )
 
     def shuffle(self, func, lengths, **kwargs):
-        """Shuffle the order of the data in this axis based on the `func`.
+        """Shuffle the order of the data in this axis based on the `lengths`.
 
         Extends `BaseAxisPartition.shuffle`.
 
-        :param func:
-        :param num_splits:
-        :param kwargs:
-        :return:
+        Args:
+            func: The function to apply before splitting.
+            lengths: The list of partition lengths to split the result into.
+
+        Returns:
+            A list of RemotePartition objects split by `lengths`.
         """
         num_splits = len(lengths)
+        # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
         args = [self.axis, func, num_splits, kwargs, False]
@@ -123,8 +126,10 @@ def deploy_ray_axis_func(
     Returns:
         A list of Pandas DataFrames.
     """
+    # Pop these off first because they aren't expected by the function.
     manual_partition = kwargs.pop("manual_partition", False)
     lengths = kwargs.pop("_lengths", None)
+
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if isinstance(result, pandas.Series):

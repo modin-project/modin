@@ -3,39 +3,73 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import math
 import pandas
 
 
+def get_default_chunksize(length, num_splits):
+    """Creates the most equal chunksize possible based on length and number of splits.
+
+    Args:
+        length: The integer length to split (number of rows/columns).
+        num_splits: The integer number of splits.
+
+    Returns:
+        An integer chunksize.
+    """
+    return (
+        length // num_splits if length % num_splits == 0 else length // num_splits + 1
+    )
+
+
 def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
+    """Computes the number of rows and/or columns to include in each partition.
+
+    Args:
+        df: The DataFrame to split.
+        num_splits: The maximum number of splits to separate the DataFrame into.
+        min_block_size: The minimum number of bytes for a single partition.
+        axis: The axis to split. (0: Index, 1: Columns, None: Both)
+
+    Returns:
+         If axis is 1 or 0, returns an integer number of rows/columns to split the
+         DataFrame. If axis is None, return a tuple containing both.
+    """
     if axis is not None:
+        # If we're only chunking one axis, based on the math below we can create
+        # extremely large partitions without this.
+        # TODO: Make the math not require this for single axis
         min_block_size /= 2
+    # We use the memory usage to compute the partitioning.
+    # TODO: Create a filter for computing this, since it may be expensive.
     mem_usage = df.memory_usage().sum()
+
+    # This happens in the case of a small DataFrame
     if mem_usage <= min_block_size:
-        df = df.copy()
-        df.index = pandas.RangeIndex(len(df.index))
-        df.columns = pandas.RangeIndex(len(df.columns))
         return df.shape[axis if axis is not None else slice(None)]
     else:
-        def get_default_chunksize(length):
-            return (
-                length // num_splits if length % num_splits == 0 else length // num_splits + 1
-            )
-        mem_usage_chunksize = math.sqrt(mem_usage // min_block_size)
+        # The chunksize based on the memory usage
+        mem_usage_chunksize = np.sqrt(mem_usage // min_block_size)
 
         if axis == 0 or axis is None:
-            row_chunksize = get_default_chunksize(len(df.index))
-            row_chunksize = max(row_chunksize, len(df) // int(mem_usage_chunksize))
+            row_chunksize = get_default_chunksize(len(df.index), num_splits)
+            row_chunksize = max(
+                1, row_chunksize, len(df.index) // int(mem_usage_chunksize)
+            )
             if axis == 0:
                 return row_chunksize
 
-        col_chunksize = get_default_chunksize(len(df.columns))
+        # We always execute this because we can only get here if axis is 1 or None.
+        col_chunksize = get_default_chunksize(len(df.columns), num_splits)
         # adjust mem_usage_chunksize for non-perfect square roots to have better
         # partitioning
-        mem_usage_chunksize = mem_usage_chunksize if mem_usage_chunksize - int(
-            mem_usage_chunksize) == 0 else mem_usage_chunksize + 1
-        col_chunksize = max(col_chunksize, len(df.columns) // int(mem_usage_chunksize))
-
+        mem_usage_chunksize = (
+            mem_usage_chunksize
+            if mem_usage_chunksize - int(mem_usage_chunksize) == 0
+            else mem_usage_chunksize + 1
+        )
+        col_chunksize = max(
+            1, col_chunksize, len(df.columns) // int(mem_usage_chunksize)
+        )
         if axis == 1:
             return col_chunksize
 

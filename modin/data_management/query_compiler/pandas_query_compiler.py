@@ -419,6 +419,8 @@ class PandasQueryCompiler(object):
             0, other.columns, how_to_join, sort=False
         )
 
+        # We have to set these because otherwise when we perform the functions it may
+        # end up serializing this entire object.
         left_old_idx = self.index
         right_old_idx = other.index
 
@@ -430,9 +432,15 @@ class PandasQueryCompiler(object):
             df.index = right_old_idx
             return df.reindex(index=joined_index)
 
-        reindexed_self, reindexed_other = self.data.copartition_datasets(0, other.data, reindex_left, reindex_right)
-        # reindexed_other = other.reindex(0, joined_index).data
-        # reindexed_self = self.reindex(0, joined_index).data
+        # If we don't need to reindex, don't. It is expensive.
+        if self.index.equals(joined_index):
+            reindex_left = None
+        if other.index.equals(joined_index):
+            reindex_right = None
+
+        reindexed_self, reindexed_other = self.data.copartition_datasets(
+            0, other.data, reindex_left, reindex_right
+        )
 
         # THere is an interesting serialization anomaly that happens if we do
         # not use the columns in `inter_data_op_builder` from here (e.g. if we
