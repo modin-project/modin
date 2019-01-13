@@ -19,28 +19,28 @@ RAND_HIGH = 100
 test_data = {
     "empty_data": {},
     "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
-    "int_data": {
-        "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.randint(
-            RAND_LOW, RAND_HIGH, size=(NROWS)
-        )
-        for i in range(NCOLS)
-    },
-    "float_data": {
-        "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)
-        )
-        for i in range(NCOLS)
-    },
-    "sparse_nan_data": {
-        "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j != i else np.NaN for j, x in enumerate(random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)))]
-        for i in range(NCOLS)
-    },
-    "dense_nan_data": {
-        "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j % 4 == 0 else np.NaN for j, x in enumerate(random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)))]
-        for i in range(NCOLS)
-    },
+    # "int_data": {
+    #     "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.randint(
+    #         RAND_LOW, RAND_HIGH, size=(NROWS)
+    #     )
+    #     for i in range(NCOLS)
+    # },
+    # "float_data": {
+    #     "col{}".format((i - NCOLS/2) % NCOLS + 1): random_state.uniform(
+    #         RAND_LOW, RAND_HIGH, size=(NROWS)
+    #     )
+    #     for i in range(NCOLS)
+    # },
+    # "sparse_nan_data": {
+    #     "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j != i else np.NaN for j, x in enumerate(random_state.uniform(
+    #         RAND_LOW, RAND_HIGH, size=(NROWS)))]
+    #     for i in range(NCOLS)
+    # },
+    # "dense_nan_data": {
+    #     "col{}".format((i - NCOLS/2) % NCOLS + 1): [x if j % 4 == 0 else np.NaN for j, x in enumerate(random_state.uniform(
+    #         RAND_LOW, RAND_HIGH, size=(NROWS)))]
+    #     for i in range(NCOLS)
+    # },
     # "int_float_object_data": {
     #     "col3": [1, 2, 3, 4],
     #     "col4": [4, 5, 6, 7],
