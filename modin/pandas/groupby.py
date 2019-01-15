@@ -35,15 +35,22 @@ class DataFrameGroupBy(object):
     ):
 
         self._axis = axis
-        self._df = df
-        self._query_compiler = df._query_compiler
+        self._idx_name = idx_name
+        # Because pandas takes the grouped column out of the DataFrame, we also do that.
+        # Since we have it as `by`, all we really need to do is drop it from what is
+        # going to be grouped + aggregated.
+        if self._idx_name is not None and self._idx_name in df and as_index:
+            self._df = df.drop(columns=idx_name)
+        else:
+            self._df = df
+        self._query_compiler = self._df._query_compiler
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
         # This tells us whether or not there are multiple columns/rows in the groupby
         self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
-        self._idx_name = idx_name
+        self._as_index = as_index
         self._kwargs = {
             "sort": sort,
             "as_index": as_index,
@@ -294,7 +301,7 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.all(**kwargs))
 
     def size(self):
-        return self._apply_agg_function(lambda df: df.size())
+        return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
 
     def sum(self, **kwargs):
         return self._apply_agg_function(lambda df: df.sum(**kwargs), numeric=True)
@@ -427,11 +434,11 @@ class DataFrameGroupBy(object):
         new_manager = self._query_compiler.groupby_agg(
             self._by, self._axis, f, self._kwargs, kwargs
         )
-        if self._idx_name != "":
+        if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
-            new_columns = self._df.columns.drop(self._idx_name)
+
         # We preserve columns only if the grouped axis is the index
-        elif self._axis == 0:
+        if self._axis == 0:
             new_columns = self._df.columns
         # We just keep everything the same if it is column groups
         else:

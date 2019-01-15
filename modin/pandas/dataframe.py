@@ -356,7 +356,7 @@ class DataFrame(object):
             A new DataFrame resulting from the groupby.
         """
         axis = pandas.DataFrame()._get_axis_number(axis)
-        idx_name = ""
+        idx_name = None
         if callable(by):
             by = by(self.index)
         elif isinstance(by, string_types):
@@ -364,6 +364,7 @@ class DataFrame(object):
             by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
             if isinstance(by, pandas.Series):
+                idx_name = by.name
                 by = by.values.tolist()
 
             mismatch = (
