@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-import inspect
 from modin.error_message import ErrorMessage
 
 
@@ -295,10 +294,31 @@ class BaseIO(object):
         **kwds
     ):
         ErrorMessage.default_to_pandas()
-        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-        kwargs.pop("kwds")
+        kwargs = {
+            "io": io,
+            "sheet_name": sheet_name,
+            "header": header,
+            "skiprows": skiprows,
+            "nrows": nrows,
+            "index_col": index_col,
+            "names": names,
+            "usecols": usecols,
+            "parse_dates": parse_dates,
+            "date_parser": date_parser,
+            "na_values": na_values,
+            "thousands": thousands,
+            "comment": comment,
+            "convert_float": convert_float,
+            "converters": converters,
+            "dtype": dtype,
+            "true_values": true_values,
+            "false_values": false_values,
+            "engine": engine,
+            "squeeze": squeeze,
+            "skipfooter": skipfooter,
+        }
         kwargs = {**kwargs, **kwds}
-        return cls.from_pandas(pandas.read_excel(**kwargs))
+        return cls.from_pandas(pandas.read_excel(**{**kwargs}))
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
