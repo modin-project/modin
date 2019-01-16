@@ -278,13 +278,13 @@ class BaseBlockPartitions(object):
         # This block of code will only shuffle if absolutely necessary. If we do need to
         # shuffle, we use the identity function and then reshuffle.
         if left_func is None:
-            if axis == 0 and np.array_equal(
+            if axis == 0 and not np.array_equal(
                 other.block_lengths, new_self.block_lengths
             ):
                 new_other = other.manual_shuffle(
                     axis, lambda x: x, new_self.block_lengths
                 )
-            elif axis == 1 and np.array_equal(
+            elif axis == 1 and not np.array_equal(
                 other.block_widths, new_self.block_widths
             ):
                 new_other = other.manual_shuffle(
