@@ -318,7 +318,7 @@ class BaseIO(object):
             "skipfooter": skipfooter,
         }
         kwargs = {**kwargs, **kwds}
-        return cls.from_pandas(pandas.read_excel(**{**kwargs}))
+        return cls.from_pandas(pandas.read_excel(**kwargs))
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
