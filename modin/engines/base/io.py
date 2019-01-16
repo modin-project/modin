@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
+import inspect
 from modin.error_message import ErrorMessage
 
 
@@ -273,43 +274,30 @@ class BaseIO(object):
         io,
         sheet_name=0,
         header=0,
-        skiprows=None,
-        index_col=None,
         names=None,
+        index_col=None,
         usecols=None,
-        parse_dates=False,
-        date_parser=None,
-        na_values=None,
-        thousands=None,
-        convert_float=True,
-        converters=None,
+        squeeze=False,
         dtype=None,
+        engine=None,
+        converters=None,
         true_values=None,
         false_values=None,
-        engine=None,
-        squeeze=False,
+        skiprows=None,
+        nrows=None,
+        na_values=None,
+        parse_dates=False,
+        date_parser=None,
+        thousands=None,
+        comment=None,
+        skipfooter=0,
+        convert_float=True,
+        **kwds
     ):
         ErrorMessage.default_to_pandas()
-        kwargs = {
-            "io": io,
-            "sheet_name": sheet_name,
-            "header": header,
-            "skiprows": skiprows,
-            "index_col": index_col,
-            "names": names,
-            "usecols": usecols,
-            "parse_dates": parse_dates,
-            "date_parser": date_parser,
-            "na_values": na_values,
-            "thousands": thousands,
-            "convert_float": convert_float,
-            "converters": converters,
-            "dtype": dtype,
-            "true_values": true_values,
-            "false_values": false_values,
-            "engine": engine,
-            "squeeze": squeeze,
-        }
+        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+        kwargs.pop("kwds")
+        kwargs = {**kwargs, **kwds}
         return cls.from_pandas(pandas.read_excel(**kwargs))
 
     @classmethod
