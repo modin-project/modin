@@ -316,8 +316,8 @@ class BaseIO(object):
             "engine": engine,
             "squeeze": squeeze,
             "skipfooter": skipfooter,
+            "kwds": kwds
         }
-        kwargs = {**kwargs, **kwds}
         return cls.from_pandas(pandas.read_excel(**kwargs))
 
     @classmethod
