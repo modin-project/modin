@@ -173,9 +173,9 @@ class BaseBlockPartitions(object):
         if self._widths_cache is not None:
             self._widths_cache = [width for width in self._widths_cache if width != 0]
         if self._lengths_cache is not None:
-            self._lengths_cache = [
+            self._lengths_cache = np.array([
                 length for length in self._lengths_cache if length != 0
-            ]
+            ])
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -277,7 +277,7 @@ class BaseBlockPartitions(object):
 
         # This block of code will only shuffle if absolutely necessary. If we do need to
         # shuffle, we use the identity function and then reshuffle.
-        if left_func is None:
+        if right_func is None:
             if axis == 0 and not np.array_equal(
                 other.block_lengths, new_self.block_lengths
             ):

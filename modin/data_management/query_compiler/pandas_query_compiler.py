@@ -418,7 +418,6 @@ class PandasQueryCompiler(object):
         new_columns = self._join_index_objects(
             0, other.columns, how_to_join, sort=False
         )
-
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.index
@@ -449,16 +448,20 @@ class PandasQueryCompiler(object):
         self_cols = self.columns
         other_cols = other.columns
 
-        def inter_data_op_builder(left, right, self_cols, other_cols, func):
+        def inter_data_op_builder(left, right, func):
             left.columns = self_cols
             right.columns = other_cols
+            # We reset here to make sure that the internal indexes match. We aligned
+            # them in the previous step, so this step is to prevent mismatches.
+            left.index = pandas.RangeIndex(len(left.index))
+            right.index = pandas.RangeIndex(len(right.index))
             result = func(left, right)
             result.columns = pandas.RangeIndex(len(result.columns))
             return result
 
         new_data = reindexed_self.inter_data_operation(
             1,
-            lambda l, r: inter_data_op_builder(l, r, self_cols, other_cols, func),
+            lambda l, r: inter_data_op_builder(l, r, func),
             reindexed_other,
         )
         return self.__constructor__(new_data, joined_index, new_columns)
