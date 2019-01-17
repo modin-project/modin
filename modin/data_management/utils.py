@@ -53,8 +53,8 @@ def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
         if axis == 0 or axis is None:
             row_chunksize = get_default_chunksize(len(df.index), num_splits)
             row_chunksize = max(
-                1, row_chunksize, len(df.index) // int(mem_usage_chunksize)
-            )
+                1, min(row_chunksize, len(df.index) // int(mem_usage_chunksize)
+            ))
             if axis == 0:
                 return row_chunksize
 
@@ -68,8 +68,8 @@ def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
             else mem_usage_chunksize + 1
         )
         col_chunksize = max(
-            1, col_chunksize, len(df.columns) // int(mem_usage_chunksize)
-        )
+            1, min(col_chunksize, len(df.columns) // int(mem_usage_chunksize)
+        ))
         if axis == 1:
             return col_chunksize
 

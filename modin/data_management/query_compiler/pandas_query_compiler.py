@@ -283,10 +283,9 @@ class PandasQueryCompiler(object):
         Returns:
             Joined objects.
         """
-        if isinstance(other, list):
-            return self._join_list_of_managers(other, **kwargs)
-        else:
-            return self._join_query_compiler(other, **kwargs)
+        if not isinstance(other, list):
+            other = [other]
+        return self._join_list_of_managers(other, **kwargs)
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -310,20 +309,7 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", None)
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
-
-        # Concatenating two managers requires aligning their indices. After the
-        # indices are aligned, it should just be a simple concatenation of the
-        # `BaseBlockPartitions` objects. This should not require remote compute.
-        joined_axis = self._join_index_objects(
-            axis,
-            [other.columns if axis == 0 else other.index for other in others],
-            join,
-            sort=sort,
-        )
-        # Since we are concatenating a list of managers, we will align all of
-        # the indices based on the `joined_axis` computed above.
-        to_append = [other.reindex(axis ^ 1, joined_axis).data for other in others]
-        new_self = self.reindex(axis ^ 1, joined_axis).data
+        new_self, to_append, joined_axis = self.copartition(axis ^ 1, others, join, sort)
         new_data = new_self.concat(axis, to_append)
 
         if axis == 0:
@@ -344,29 +330,6 @@ class PandasQueryCompiler(object):
             new_columns = self.columns.append([other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
-    def _join_query_compiler(self, other, **kwargs):
-        assert isinstance(
-            other, type(self)
-        ), "This method is for data manager objects only"
-
-        # Uses join's default value (though should not revert to default)
-        how = kwargs.get("how", "left")
-        sort = kwargs.get("sort", False)
-        lsuffix = kwargs.get("lsuffix", "")
-        rsuffix = kwargs.get("rsuffix", "")
-        joined_index = self._join_index_objects(1, other.index, how, sort=sort)
-        to_join = other.reindex(0, joined_index).data
-        new_self = self.reindex(0, joined_index).data
-        new_data = new_self.concat(1, to_join)
-        # We are using proxy DataFrame objects to build the columns based on
-        # the `lsuffix` and `rsuffix`.
-        self_proxy = pandas.DataFrame(columns=self.columns)
-        other_proxy = pandas.DataFrame(columns=other.columns)
-        new_columns = self_proxy.join(
-            other_proxy, lsuffix=lsuffix, rsuffix=rsuffix
-        ).columns
-        return self.__constructor__(new_data, joined_index, new_columns)
-
     def _join_list_of_managers(self, others, **kwargs):
         assert isinstance(
             others, list
@@ -379,11 +342,7 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", False)
         lsuffix = kwargs.get("lsuffix", "")
         rsuffix = kwargs.get("rsuffix", "")
-        joined_index = self._join_index_objects(
-            1, [other.index for other in others], how, sort=sort
-        )
-        to_join = [other.reindex(0, joined_index).data for other in others]
-        new_self = self.reindex(0, joined_index).data
+        new_self, to_join, joined_index = self.copartition(0, others, how, sort)
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
         # suffixes.
@@ -395,6 +354,54 @@ class PandasQueryCompiler(object):
         return self.__constructor__(new_data, joined_index, new_columns)
 
     # END Append/Concat/Join
+
+    # Copartition
+    def copartition(self, axis, other, how_to_join, sort):
+        if isinstance(other, type(self)):
+            other = [other]
+
+        index_obj = [o.index for o in other] if axis == 0 else [o.columns for o in other]
+        joined_index = self._join_index_objects(axis ^ 1, index_obj, how_to_join, sort=sort)
+        # We have to set these because otherwise when we perform the functions it may
+        # end up serializing this entire object.
+        left_old_idx = self.index if axis == 0 else self.columns
+        right_old_idxes = index_obj
+
+        # Start with this and we'll repartition the first time, and then not again.
+        reindexed_self = self.data
+        reindexed_other_list = []
+        for i in range(len(other)):
+            # If we don't need to reindex, don't. It is expensive.
+            if left_old_idx.equals(joined_index) or i != 0:
+                reindex_left = None
+            else:
+
+                def reindex_left(df):
+                    if axis == 0:
+                        df.index = left_old_idx
+                        return df.reindex(index=joined_index)
+                    else:
+                        df.columns = left_old_idx
+                        return df.reindex(columns=joined_index)
+
+            if other[i].index.equals(joined_index):
+                reindex_right = None
+            else:
+                right_old_idx = right_old_idxes[i]
+
+                def reindex_right(df):
+                    if axis == 0:
+                        df.index = right_old_idx
+                        return df.reindex(index=joined_index)
+                    else:
+                        df.columns = right_old_idx
+                        return df.reindex(columns=joined_index)
+
+            reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
+                axis, other[i].data, reindex_left, reindex_right
+            )
+            reindexed_other_list.append(reindexed_other)
+        return reindexed_self, reindexed_other_list, joined_index
 
     # Inter-Data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
@@ -411,36 +418,10 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with new data and index.
         """
-        assert isinstance(
-            other, type(self)
-        ), "Must have the same DataManager subclass to perform this operation"
-        joined_index = self._join_index_objects(1, other.index, how_to_join, sort=False)
-        new_columns = self._join_index_objects(
-            0, other.columns, how_to_join, sort=False
-        )
-        # We have to set these because otherwise when we perform the functions it may
-        # end up serializing this entire object.
-        left_old_idx = self.index
-        right_old_idx = other.index
-
-        def reindex_left(df):
-            df.index = left_old_idx
-            return df.reindex(index=joined_index)
-
-        def reindex_right(df):
-            df.index = right_old_idx
-            return df.reindex(index=joined_index)
-
-        # If we don't need to reindex, don't. It is expensive.
-        if self.index.equals(joined_index):
-            reindex_left = None
-        if other.index.equals(joined_index):
-            reindex_right = None
-
-        reindexed_self, reindexed_other = self.data.copartition_datasets(
-            0, other.data, reindex_left, reindex_right
-        )
-
+        reindexed_self, reindexed_other_list, joined_index = self.copartition(0, other, how_to_join, False)
+        # unwrap list returned by `copartition`.
+        reindexed_other = reindexed_other_list[0]
+        new_columns = self._join_index_objects(0, other.columns, how_to_join, sort=False)
         # THere is an interesting serialization anomaly that happens if we do
         # not use the columns in `inter_data_op_builder` from here (e.g. if we
         # pass them in). Passing them in can cause problems, so we will just
