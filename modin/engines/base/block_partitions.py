@@ -173,9 +173,9 @@ class BaseBlockPartitions(object):
         if self._widths_cache is not None:
             self._widths_cache = [width for width in self._widths_cache if width != 0]
         if self._lengths_cache is not None:
-            self._lengths_cache = np.array([
-                length for length in self._lengths_cache if length != 0
-            ])
+            self._lengths_cache = np.array(
+                [length for length in self._lengths_cache if length != 0]
+            )
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -513,9 +513,7 @@ class BaseBlockPartitions(object):
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
 
-        row_chunksize, col_chunksize = compute_chunksize(
-            df, num_splits
-        )
+        row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
         row_chunksize = max(1, row_chunksize)
         col_chunksize = max(1, col_chunksize)
 

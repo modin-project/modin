@@ -460,9 +460,7 @@ class PandasQueryCompiler(object):
             return result
 
         new_data = reindexed_self.inter_data_operation(
-            1,
-            lambda l, r: inter_data_op_builder(l, r, func),
-            reindexed_other,
+            1, lambda l, r: inter_data_op_builder(l, r, func), reindexed_other
         )
         return self.__constructor__(new_data, joined_index, new_columns)
 
