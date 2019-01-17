@@ -6,7 +6,6 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
-import numpy as np
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings

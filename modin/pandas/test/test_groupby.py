@@ -5,6 +5,7 @@ from __future__ import print_function
 import pytest
 import sys
 import pandas
+import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
