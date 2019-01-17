@@ -42,13 +42,21 @@ class DataFrameGroupBy(object):
         # This tells us whether or not there are multiple columns/rows in the groupby
         self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
-        self._as_index = as_index
         self._kwargs = {
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
             "squeeze": squeeze,
         }
+        self._kwargs.update(kwargs)
+
+    @property
+    def _sort(self):
+        return self._kwargs.get("sort")
+
+    @property
+    def _as_index(self):
+        return self._kwargs.get("as_index")
 
     def __getattr__(self, key):
         """Afer regular attribute access, looks up the name in the columns
@@ -101,20 +109,10 @@ class DataFrameGroupBy(object):
                     self._index_grouped_cache = self._columns.groupby(self._by)
         return self._index_grouped_cache
 
-    _keys_and_values_cache = None
-
-    @property
-    def _keys_and_values(self):
-        if self._keys_and_values_cache is None:
-            self._keys_and_values_cache = list(self._index_grouped.items())
-            if self._sort:
-                self._keys_and_values_cache.sort()
-        return self._keys_and_values_cache
-
     @property
     def _iter(self):
         from .dataframe import DataFrame
-
+        group_ids = self._index_grouped.iterkeys()
         if self._axis == 0:
             return (
                 (
@@ -125,7 +123,7 @@ class DataFrameGroupBy(object):
                         )
                     ),
                 )
-                for k, _ in self._keys_and_values
+                for k in (sorted(group_ids) if self._sort else group_ids)
             )
         else:
             return (
@@ -137,7 +135,7 @@ class DataFrameGroupBy(object):
                         )
                     ),
                 )
-                for k, _ in self._keys_and_values
+                for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
     @property
@@ -200,7 +198,7 @@ class DataFrameGroupBy(object):
 
     @property
     def indices(self):
-        return dict(self._keys_and_values)
+        return self._index_grouped
 
     def pct_change(self):
         return self._default_to_pandas(lambda df: df.pct_change())
