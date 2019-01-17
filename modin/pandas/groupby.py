@@ -112,6 +112,7 @@ class DataFrameGroupBy(object):
     @property
     def _iter(self):
         from .dataframe import DataFrame
+
         group_ids = self._index_grouped.iterkeys()
         if self._axis == 0:
             return (
