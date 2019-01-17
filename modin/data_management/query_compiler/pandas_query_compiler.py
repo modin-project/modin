@@ -2368,12 +2368,12 @@ class PandasQueryCompiler(object):
             else:
                 columns = self.columns
         else:
-            # See above explaination for checking the lengths of columns
+            columns = internal_columns
+            # See above explanation for checking the lengths of columns
             if len(internal_index) != len(self.index):
                 index = internal_index
             else:
                 index = self.index
-            columns = internal_columns
         # `apply` and `aggregate` can return a Series or a DataFrame object,
         # and since we need to handle each of those differently, we have to add
         # this logic here.
@@ -2383,7 +2383,6 @@ class PandasQueryCompiler(object):
                 index = self.columns
             elif axis and len(series_result) == len(self.index):
                 index = self.index
-
             series_result.index = index
             return series_result
         return self.__constructor__(result_data, index, columns)
@@ -2492,8 +2491,10 @@ class PandasQueryCompiler(object):
         def groupby_agg_builder(df):
             if not axis:
                 df.index = remote_index
+                df.columns = pandas.RangeIndex(len(df.columns))
             else:
                 df.columns = remote_index
+                df.index = pandas.RangeIndex(len(df.index))
             grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
             try:
                 return agg_func(grouped_df, **agg_args)
@@ -2501,11 +2502,21 @@ class PandasQueryCompiler(object):
             # numeric operation is done. We need to build the index here to avoid issues
             # with extracting the index.
             except DataError:
-                return pandas.DataFrame(index=grouped_df.count().index)
+                return pandas.DataFrame(index=grouped_df.size().index)
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
-        return self._post_process_apply(result_data, axis, try_scale=False)
+        if axis == 0:
+            index = self.compute_index(0, result_data, False)
+            columns = self.compute_index(1, result_data, True)
+        else:
+            index = self.compute_index(0, result_data, True)
+            columns = self.compute_index(1, result_data, False)
+        # If the result is a Series, this is how `compute_index` returns the columns.
+        if len(columns) == 0:
+            return self._post_process_apply(result_data, axis, try_scale=True)
+        else:
+            return self.__constructor__(result_data, index, columns)
 
     # END Manual Partitioning methods
 
