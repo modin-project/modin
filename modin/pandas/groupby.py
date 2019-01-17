@@ -6,6 +6,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
+import sys
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
@@ -113,7 +114,10 @@ class DataFrameGroupBy(object):
     def _iter(self):
         from .dataframe import DataFrame
 
-        group_ids = self._index_grouped.iterkeys()
+        if sys.version_info[0] == 2:
+            group_ids = self._index_grouped.iterkeys()
+        elif sys.version_info[0] == 3:
+            group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (
                 (
