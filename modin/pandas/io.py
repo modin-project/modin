@@ -206,6 +206,8 @@ def read_excel(
     **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.pop('kwds')
+    kwargs.update(kwds)
     return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
 
 
