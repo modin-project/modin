@@ -377,31 +377,39 @@ class PandasQueryCompiler(object):
         reindexed_self = self.data
         reindexed_other_list = []
         for i in range(len(other)):
-            # If we don't need to reindex, don't. It is expensive.
-            if left_old_idx.equals(joined_index) or i != 0:
+
+            def compute_reindex(old_idx):
+                """Create a function based on the old index and axis.
+
+                Args:
+                    old_idx: The old index/columns
+
+                Returns:
+                    A function that will be run in each partition.
+                """
+
+                def reindex_partition(df):
+                    if axis == 0:
+                        df.index = old_idx
+                        new_df = df.reindex(index=joined_index)
+                        new_df.index = pandas.RangeIndex(len(new_df.index))
+                    else:
+                        df.columns = old_idx
+                        new_df = df.reindex(columns=joined_index)
+                        new_df.columns = pandas.RangeIndex(len(new_df.columns))
+                    return new_df
+
+                return reindex_partition
+
+            # TODO: If we don't need to reindex, don't. It is expensive.
+            # The challenge with avoiding reindexing is that we need to make sure that
+            # the internal indices line up (i.e. if a drop or a select was just
+            # performed, the internal indices may not match).
+            if i != 0:
                 reindex_left = None
             else:
-
-                def reindex_left(df):
-                    if axis == 0:
-                        df.index = left_old_idx
-                        return df.reindex(index=joined_index)
-                    else:
-                        df.columns = left_old_idx
-                        return df.reindex(columns=joined_index)
-
-            if other[i].index.equals(joined_index):
-                reindex_right = None
-            else:
-                right_old_idx = right_old_idxes[i]
-
-                def reindex_right(df):
-                    if axis == 0:
-                        df.index = right_old_idx
-                        return df.reindex(index=joined_index)
-                    else:
-                        df.columns = right_old_idx
-                        return df.reindex(columns=joined_index)
+                reindex_left = compute_reindex(left_old_idx)
+            reindex_right = compute_reindex(right_old_idxes[i])
 
             reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
                 axis, other[i].data, reindex_left, reindex_right
