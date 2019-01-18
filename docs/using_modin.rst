@@ -112,11 +112,7 @@ used to create the blog post.
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
-<<<<<<< HEAD
-.. _Ray's documentation: https://ray.readthedocs.io/en/latest/api.html
-=======
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
->>>>>>> 3797edf35a04a0898f67f8f9c6fe4360b2c5373d
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
 .. _`out_out_of_core`: out_of_core.html
