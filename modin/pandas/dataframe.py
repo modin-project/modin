@@ -1931,28 +1931,47 @@ class DataFrame(object):
 
     def insert(self, loc, column, value, allow_duplicates=False):
         """Insert column into DataFrame at specified location.
-
         Args:
             loc (int): Insertion index. Must verify 0 <= loc <= len(columns).
             column (hashable object): Label of the inserted column.
             value (int, Series, or array-like): The values to insert.
             allow_duplicates (bool): Whether to allow duplicate column names.
         """
-        if not is_list_like(value):
-            value = np.full(len(self.index), value)
-        if len(value) != len(self.index):
-            raise ValueError("Length of values does not match length of index")
-        if not allow_duplicates and column in self.columns:
-            raise ValueError("cannot insert {0}, already exists".format(column))
-        if loc > len(self.columns):
-            raise IndexError(
-                "index {0} is out of bounds for axis 0 with size {1}".format(
-                    loc, len(self.columns)
+        if isinstance(value, (DataFrame, pandas.DataFrame)):
+            if len(value.columns) != 1:
+                raise ValueError("Wrong number of items passed 2, placement implies 1")
+            value = value.iloc[:, 0]
+        if len(self.index) == 0:
+            try:
+                value = pandas.Series(value)
+            except (TypeError, ValueError, IndexError):
+                raise ValueError(
+                    "Cannot insert into a DataFrame with no defined index "
+                    "and a value that cannot be converted to a "
+                    "Series"
                 )
-            )
-        if loc < 0:
-            raise ValueError("unbounded slice")
-        new_query_compiler = self._query_compiler.insert(loc, column, value)
+            new_index = value.index.copy()
+            new_columns = self.columns.insert(loc, column)
+            new_query_compiler = DataFrame(
+                value, index=new_index, columns=new_columns
+            )._query_compiler
+        else:
+            if not is_list_like(value):
+                value = np.full(len(self.index), value)
+            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
+                raise ValueError("Length of values does not match length of index")
+            if not allow_duplicates and column in self.columns:
+                raise ValueError("cannot insert {0}, already exists".format(column))
+            if loc > len(self.columns):
+                raise IndexError(
+                    "index {0} is out of bounds for axis 0 with size {1}".format(
+                        loc, len(self.columns)
+                    )
+                )
+            if loc < 0:
+                raise ValueError("unbounded slice")
+            new_query_compiler = self._query_compiler.insert(loc, column, value)
+
         self._update_inplace(new_query_compiler=new_query_compiler)
 
     def interpolate(
@@ -3088,7 +3107,6 @@ class DataFrame(object):
         limit=None,
         regex=False,
         method="pad",
-        axis=None,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.replace,
@@ -3098,7 +3116,6 @@ class DataFrame(object):
             limit=limit,
             regex=regex,
             method=method,
-            axis=axis,
         )
 
     def resample(

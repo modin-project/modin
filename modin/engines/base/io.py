@@ -273,21 +273,25 @@ class BaseIO(object):
         io,
         sheet_name=0,
         header=0,
-        skiprows=None,
-        index_col=None,
         names=None,
+        index_col=None,
         usecols=None,
-        parse_dates=False,
-        date_parser=None,
-        na_values=None,
-        thousands=None,
-        convert_float=True,
-        converters=None,
+        squeeze=False,
         dtype=None,
+        engine=None,
+        converters=None,
         true_values=None,
         false_values=None,
-        engine=None,
-        squeeze=False,
+        skiprows=None,
+        nrows=None,
+        na_values=None,
+        parse_dates=False,
+        date_parser=None,
+        thousands=None,
+        comment=None,
+        skipfooter=0,
+        convert_float=True,
+        **kwds
     ):
         ErrorMessage.default_to_pandas()
         kwargs = {
@@ -295,6 +299,7 @@ class BaseIO(object):
             "sheet_name": sheet_name,
             "header": header,
             "skiprows": skiprows,
+            "nrows": nrows,
             "index_col": index_col,
             "names": names,
             "usecols": usecols,
@@ -302,6 +307,7 @@ class BaseIO(object):
             "date_parser": date_parser,
             "na_values": na_values,
             "thousands": thousands,
+            "comment": comment,
             "convert_float": convert_float,
             "converters": converters,
             "dtype": dtype,
@@ -309,7 +315,9 @@ class BaseIO(object):
             "false_values": false_values,
             "engine": engine,
             "squeeze": squeeze,
+            "skipfooter": skipfooter,
         }
+        kwargs.update(kwds)
         return cls.from_pandas(pandas.read_excel(**kwargs))
 
     @classmethod

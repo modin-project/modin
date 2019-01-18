@@ -76,18 +76,66 @@ if pandas.__version__ != __pandas_version__:
 os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
 
+
+def initialize_ray():
+    """Initializes ray based on environment variables and internal defaults."""
+    if threading.current_thread().name == "MainThread":
+        plasma_directory = None
+        object_store_memory = None
+        if "MODIN_MEMORY" in os.environ:
+            object_store_memory = os.environ["MODIN_MEMORY"]
+        if (
+            "MODIN_OUT_OF_CORE" in os.environ
+            and os.environ["MODIN_OUT_OF_CORE"].title() == "True"
+        ):
+            from tempfile import gettempdir
+
+            plasma_directory = gettempdir()
+            # We may have already set the memory from the environment variable, we don't
+            # want to overwrite that value if we have.
+            if object_store_memory is None:
+                try:
+                    from psutil import virtual_memory
+                except ImportError:
+                    raise ImportError(
+                        "To use Modin out of core, please install modin[out_of_core]: "
+                        '`pip install "modin[out_of_core]"`'
+                    )
+                # Round down to the nearest Gigabyte.
+                mem_bytes = virtual_memory().total // 10 ** 9 * 10 ** 9
+                # Default to 8x memory for out of core
+                object_store_memory = 8 * mem_bytes
+        elif "MODIN_MEMORY" in os.environ:
+            object_store_memory = os.environ["MODIN_MEMORY"]
+        # In case anything failed above, we can still improve the memory for Modin.
+        if object_store_memory is None:
+            # We try to give a little more memory to Modin, but if we can't use psutil,
+            # we'll just use Ray's default
+            try:
+                from psutil import virtual_memory
+
+                # Round down to the nearest Gigabyte.
+                object_store_memory = int(
+                    0.6 * virtual_memory().total // 10 ** 9 * 10 ** 9
+                )
+                # If the memory pool is smaller than 2GB, just use the default in ray.
+                if object_store_memory == 0:
+                    object_store_memory = None
+            except ImportError:
+                pass
+        ray.init(
+            redirect_output=True,
+            include_webui=False,
+            redirect_worker_output=True,
+            ignore_reinit_error=True,
+            plasma_directory=plasma_directory,
+            object_store_memory=object_store_memory,
+        )
+
+
 if execution_engine == "Ray":
-    try:
-        if threading.current_thread().name == "MainThread":
-            ray.init(
-                redirect_output=True,
-                include_webui=False,
-                redirect_worker_output=True,
-                ignore_reinit_error=True,
-            )
-            num_cpus = ray.global_state.cluster_resources()["CPU"]
-    except AssertionError:
-        pass
+    initialize_ray()
+    num_cpus = ray.global_state.cluster_resources()["CPU"]
 elif execution_engine == "Dask":
     from distributed.client import _get_global_client
 
