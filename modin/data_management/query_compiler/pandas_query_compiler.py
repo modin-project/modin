@@ -348,8 +348,11 @@ class PandasQueryCompiler(object):
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
         # suffixes.
+        if len(others) == 1:
+            others_proxy = pandas.DataFrame(columns=others[0].columns)
+        else:
+            others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
         self_proxy = pandas.DataFrame(columns=self.columns)
-        others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
         new_columns = self_proxy.join(
             others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
         ).columns
@@ -769,40 +772,31 @@ class PandasQueryCompiler(object):
             def where_builder_second_pass(df, new_other, **kwargs):
                 return df.where(new_other.eq(True), new_other, **kwargs)
 
-            # We are required to perform this reindexing on everything to
-            # shuffle the data together
-            reindexed_cond = cond.reindex(0, self.index).data
-            reindexed_other = other.reindex(0, self.index).data
-            reindexed_self = self.reindex(0, self.index).data
-
-            first_pass = reindexed_cond.inter_data_operation(
-                1,
-                lambda l, r: where_builder_first_pass(l, r, **kwargs),
-                reindexed_other,
-            )
-            final_pass = reindexed_self.inter_data_operation(
-                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass
-            )
-            return self.__constructor__(final_pass, self.index, self.columns)
+            first_pass = cond.inter_manager_operations(other, "left", where_builder_first_pass)
+            final_pass = self.inter_manager_operations(first_pass, "left", where_builder_second_pass)
+            return self.__constructor__(final_pass.data, self.index, self.columns)
         else:
             axis = kwargs.get("axis", 0)
             # Rather than serializing and passing in the index/columns, we will
             # just change this index to match the internal index.
             if isinstance(other, pandas.Series):
-                other.index = [i for i in range(len(other))]
+                other.index = pandas.RangeIndex(len(other.index))
 
-            def where_builder_series(df, cond, other, **kwargs):
+            def where_builder_series(df, cond):
+                if axis == 0:
+                    df.index = pandas.RangeIndex(len(df.index))
+                    cond.index = pandas.RangeIndex(len(cond.index))
+                else:
+                    df.columns = pandas.RangeIndex(len(df.columns))
+                    cond.columns = pandas.RangeIndex(len(cond.columns))
                 return df.where(cond, other, **kwargs)
 
-            reindexed_self = self.reindex(
-                axis, self.index if not axis else self.columns
-            ).data
-            reindexed_cond = cond.reindex(
-                axis, self.index if not axis else self.columns
-            ).data
+            reindexed_self, reindexed_cond, a = self.copartition(axis, cond, "left", False)
+            # Unwrap from list given by `copartition`
+            reindexed_cond = reindexed_cond[0]
             new_data = reindexed_self.inter_data_operation(
                 axis,
-                lambda l, r: where_builder_series(l, r, other, **kwargs),
+                lambda l, r: where_builder_series(l, r),
                 reindexed_cond,
             )
             return self.__constructor__(new_data, self.index, self.columns)

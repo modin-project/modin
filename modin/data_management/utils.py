@@ -21,72 +21,35 @@ def get_default_chunksize(length, num_splits):
     )
 
 
-def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
+def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
     """Computes the number of rows and/or columns to include in each partition.
 
     Args:
         df: The DataFrame to split.
         num_splits: The maximum number of splits to separate the DataFrame into.
-        min_block_size: The minimum number of bytes for a single partition.
+        default_block_size: Minimum number of rows/columns (default set to 32x32).
         axis: The axis to split. (0: Index, 1: Columns, None: Both)
 
     Returns:
          If axis is 1 or 0, returns an integer number of rows/columns to split the
          DataFrame. If axis is None, return a tuple containing both.
     """
-    if axis is not None:
-        # If we're only chunking one axis, based on the math below we can create
-        # extremely large partitions without this.
-        # TODO: Make the math not require this for single axis
-        min_block_size /= 2
-    # We use the memory usage to compute the partitioning.
-    # TODO: Create a filter for computing this, since it may be expensive.
-    mem_usage = df.memory_usage().sum()
-
-    # This happens in the case of a small DataFrame
-    if mem_usage <= min_block_size:
-        return df.shape[axis if axis is not None else slice(None)]
-    else:
-        # The chunksize based on the memory usage
-        mem_usage_chunksize = np.sqrt(mem_usage // min_block_size)
-        # We can run into some issues with the division if we don't correct for very
-        # small memory chunksizes.
-        if mem_usage_chunksize < 1:
-            mem_usage_chunksize = 1
-        if axis == 0 or axis is None:
-            row_chunksize = get_default_chunksize(len(df.index), num_splits)
-            # If we don't add 1 in the case where the mod is not 0, we end up leaving
-            # out data.
-            row_mem_usage_chunksize = len(df.index) // (
-                int(len(df.index) // mem_usage_chunksize)
-                if len(df.index) % mem_usage_chunksize == 0
-                else int(len(df.index) // mem_usage_chunksize) + 1
-            )
-            # Take the min of the default and the memory-usage chunksize first to avoid a
-            # large amount of small partitions.
-            row_chunksize = max(1, row_chunksize, row_mem_usage_chunksize)
-            if axis == 0:
-                return row_chunksize
-
-        # We always execute this because we can only get here if axis is 1 or None.
-        col_chunksize = get_default_chunksize(len(df.columns), num_splits)
-        # Adjust mem_usage_chunksize for non-perfect square roots to have better
-        # partitioning.
-        if mem_usage_chunksize - int(mem_usage_chunksize) != 0:
-            mem_usage_chunksize += 1
-        # Add 1 when mod is not 0 to avoid leaving out data.
-        col_mem_usage_chunksize = len(df.columns) // (
-            int(len(df.columns) // mem_usage_chunksize)
-            if len(df.columns) % mem_usage_chunksize == 0
-            else int(len(df.columns) // mem_usage_chunksize) + 1
-        )
+    if axis == 0 or axis is None:
+        row_chunksize = get_default_chunksize(len(df.index), num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
         # large amount of small partitions.
-        col_chunksize = max(1, col_chunksize, col_mem_usage_chunksize)
-        if axis == 1:
-            return col_chunksize
+        row_chunksize = max(1, row_chunksize, default_block_size)
+        if axis == 0:
+            return row_chunksize
+    # We always execute this because we can only get here if axis is 1 or None.
+    col_chunksize = get_default_chunksize(len(df.columns), num_splits)
+    # Take the min of the default and the memory-usage chunksize first to avoid a
+    # large amount of small partitions.
+    col_chunksize = max(1, col_chunksize, default_block_size)
+    if axis == 1:
+        return col_chunksize
 
-        return row_chunksize, col_chunksize
+    return row_chunksize, col_chunksize
 
 
 def _get_nan_block_id(partition_class, n_row=1, n_col=1, transpose=False):
