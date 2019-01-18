@@ -49,27 +49,40 @@ def compute_chunksize(df, num_splits, min_block_size=4096, axis=None):
     else:
         # The chunksize based on the memory usage
         mem_usage_chunksize = np.sqrt(mem_usage // min_block_size)
-
+        # We can run into some issues with the division if we don't correct for very
+        # small memory chunksizes.
+        if mem_usage_chunksize < 1:
+            mem_usage_chunksize = 1
         if axis == 0 or axis is None:
             row_chunksize = get_default_chunksize(len(df.index), num_splits)
-            row_chunksize = max(
-                1, min(row_chunksize, len(df.index) // int(mem_usage_chunksize)
-            ))
+            # If we don't add 1 in the case where the mod is not 0, we end up leaving
+            # out data.
+            row_mem_usage_chunksize = len(df.index) // (
+                int(len(df.index) // mem_usage_chunksize)
+                if len(df.index) % mem_usage_chunksize == 0
+                else int(len(df.index) // mem_usage_chunksize) + 1
+            )
+            # Take the min of the default and the memory-usage chunksize first to avoid a
+            # large amount of small partitions.
+            row_chunksize = max(1, row_chunksize, row_mem_usage_chunksize)
             if axis == 0:
                 return row_chunksize
 
         # We always execute this because we can only get here if axis is 1 or None.
         col_chunksize = get_default_chunksize(len(df.columns), num_splits)
-        # adjust mem_usage_chunksize for non-perfect square roots to have better
-        # partitioning
-        mem_usage_chunksize = (
-            mem_usage_chunksize
-            if mem_usage_chunksize - int(mem_usage_chunksize) == 0
-            else mem_usage_chunksize + 1
+        # Adjust mem_usage_chunksize for non-perfect square roots to have better
+        # partitioning.
+        if mem_usage_chunksize - int(mem_usage_chunksize) != 0:
+            mem_usage_chunksize += 1
+        # Add 1 when mod is not 0 to avoid leaving out data.
+        col_mem_usage_chunksize = len(df.columns) // (
+            int(len(df.columns) // mem_usage_chunksize)
+            if len(df.columns) % mem_usage_chunksize == 0
+            else int(len(df.columns) // mem_usage_chunksize) + 1
         )
-        col_chunksize = max(
-            1, min(col_chunksize, len(df.columns) // int(mem_usage_chunksize)
-        ))
+        # Take the min of the default and the memory-usage chunksize first to avoid a
+        # large amount of small partitions.
+        col_chunksize = max(1, col_chunksize, col_mem_usage_chunksize)
         if axis == 1:
             return col_chunksize
 

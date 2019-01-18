@@ -309,7 +309,9 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", None)
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
-        new_self, to_append, joined_axis = self.copartition(axis ^ 1, others, join, sort)
+        new_self, to_append, joined_axis = self.copartition(
+            axis ^ 1, others, join, sort
+        )
         new_data = new_self.concat(axis, to_append)
 
         if axis == 0:
@@ -360,8 +362,12 @@ class PandasQueryCompiler(object):
         if isinstance(other, type(self)):
             other = [other]
 
-        index_obj = [o.index for o in other] if axis == 0 else [o.columns for o in other]
-        joined_index = self._join_index_objects(axis ^ 1, index_obj, how_to_join, sort=sort)
+        index_obj = (
+            [o.index for o in other] if axis == 0 else [o.columns for o in other]
+        )
+        joined_index = self._join_index_objects(
+            axis ^ 1, index_obj, how_to_join, sort=sort
+        )
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.index if axis == 0 else self.columns
@@ -418,10 +424,14 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with new data and index.
         """
-        reindexed_self, reindexed_other_list, joined_index = self.copartition(0, other, how_to_join, False)
+        reindexed_self, reindexed_other_list, joined_index = self.copartition(
+            0, other, how_to_join, False
+        )
         # unwrap list returned by `copartition`.
         reindexed_other = reindexed_other_list[0]
-        new_columns = self._join_index_objects(0, other.columns, how_to_join, sort=False)
+        new_columns = self._join_index_objects(
+            0, other.columns, how_to_join, sort=False
+        )
         # THere is an interesting serialization anomaly that happens if we do
         # not use the columns in `inter_data_op_builder` from here (e.g. if we
         # pass them in). Passing them in can cause problems, so we will just
