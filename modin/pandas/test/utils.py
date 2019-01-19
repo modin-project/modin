@@ -8,7 +8,7 @@ random_state = np.random.RandomState(seed=42)
 
 # Size of test dataframes
 NCOLS = 2**8
-NROWS = 2**10
+NROWS = 2**8
 
 # Range for values for test data
 RAND_LOW = 0
