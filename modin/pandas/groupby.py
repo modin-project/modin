@@ -6,7 +6,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
-import numpy as np
+import sys
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
@@ -33,23 +33,31 @@ class DataFrameGroupBy(object):
         idx_name,
         **kwargs
     ):
-
         self._axis = axis
+        self._idx_name = idx_name
         self._df = df
-        self._query_compiler = df._query_compiler
+        self._query_compiler = self._df._query_compiler
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
         # This tells us whether or not there are multiple columns/rows in the groupby
         self._is_multi_by = all(obj in self._df for obj in self._by)
         self._level = level
-        self._idx_name = idx_name
         self._kwargs = {
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
             "squeeze": squeeze,
         }
+        self._kwargs.update(kwargs)
+
+    @property
+    def _sort(self):
+        return self._kwargs.get("sort")
+
+    @property
+    def _as_index(self):
+        return self._kwargs.get("as_index")
 
     def __getattr__(self, key):
         """Afer regular attribute access, looks up the name in the columns
@@ -102,20 +110,14 @@ class DataFrameGroupBy(object):
                     self._index_grouped_cache = self._columns.groupby(self._by)
         return self._index_grouped_cache
 
-    _keys_and_values_cache = None
-
-    @property
-    def _keys_and_values(self):
-        if self._keys_and_values_cache is None:
-            self._keys_and_values_cache = list(self._index_grouped.items())
-            if self._sort:
-                self._keys_and_values_cache.sort()
-        return self._keys_and_values_cache
-
     @property
     def _iter(self):
         from .dataframe import DataFrame
 
+        if sys.version_info[0] == 2:
+            group_ids = self._index_grouped.iterkeys()
+        elif sys.version_info[0] == 3:
+            group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (
                 (
@@ -126,7 +128,7 @@ class DataFrameGroupBy(object):
                         )
                     ),
                 )
-                for k, _ in self._keys_and_values
+                for k in (sorted(group_ids) if self._sort else group_ids)
             )
         else:
             return (
@@ -138,7 +140,7 @@ class DataFrameGroupBy(object):
                         )
                     ),
                 )
-                for k, _ in self._keys_and_values
+                for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
     @property
@@ -155,9 +157,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(
-            lambda df: df.mean(*args, **kwargs), numeric=True
-        )
+        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
 
     def any(self):
         return self._apply_agg_function(lambda df: df.any())
@@ -203,7 +203,7 @@ class DataFrameGroupBy(object):
 
     @property
     def indices(self):
-        return dict(self._keys_and_values)
+        return self._index_grouped
 
     def pct_change(self):
         return self._default_to_pandas(lambda df: df.pct_change())
@@ -268,8 +268,8 @@ class DataFrameGroupBy(object):
     def mad(self):
         return self._default_to_pandas(lambda df: df.mad())
 
-    def rank(self):
-        return self._apply_agg_function(lambda df: df.rank())
+    def rank(self, **kwargs):
+        return self._apply_agg_function(lambda df: df.rank(**kwargs))
 
     @property
     def corrwith(self):
@@ -294,10 +294,10 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.all(**kwargs))
 
     def size(self):
-        return self._apply_agg_function(lambda df: df.size())
+        return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
 
     def sum(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.sum(**kwargs), numeric=True)
+        return self._apply_agg_function(lambda df: df.sum(**kwargs))
 
     def __unicode__(self):
         return self._default_to_pandas(lambda df: df.__unicode__())
@@ -342,13 +342,13 @@ class DataFrameGroupBy(object):
         )
 
     def nunique(self, dropna=True):
-        return self._apply_agg_function(lambda df: df.nunique(dropna))
+        return self._apply_agg_function(lambda df: df.nunique(dropna), drop=False)
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.median(**kwargs), numeric=True)
+        return self._apply_agg_function(lambda df: df.median(**kwargs))
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
@@ -409,7 +409,7 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
-    def _apply_agg_function(self, f, numeric=False, **kwargs):
+    def _apply_agg_function(self, f, drop=True, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
         Args:
@@ -423,26 +423,18 @@ class DataFrameGroupBy(object):
 
         if self._is_multi_by:
             return self._default_to_pandas(f, **kwargs)
-
-        new_manager = self._query_compiler.groupby_agg(
+        # For aggregations, pandas behavior does this for the result.
+        # For other operations it does not, so we wait until there is an aggregation to
+        # actually perform this operation.
+        if self._idx_name is not None and drop:
+            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        else:
+            groupby_qc = self._query_compiler
+        new_manager = groupby_qc.groupby_agg(
             self._by, self._axis, f, self._kwargs, kwargs
         )
-        if self._idx_name != "":
+        if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
-            new_columns = self._df.columns.drop(self._idx_name)
-        # We preserve columns only if the grouped axis is the index
-        elif self._axis == 0:
-            new_columns = self._df.columns
-        # We just keep everything the same if it is column groups
-        else:
-            new_columns = new_manager.columns
-        if numeric and self._axis == 0:
-            new_columns = [
-                col
-                for col in new_columns
-                if np.issubdtype(self._df.dtypes[col], np.number)
-            ]
-        new_manager.columns = new_columns
         return DataFrame(query_compiler=new_manager)
 
     def _default_to_pandas(self, f, **kwargs):

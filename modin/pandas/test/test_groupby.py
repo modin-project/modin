@@ -19,8 +19,12 @@ if sys.version_info.major < 3:
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):
     assert isinstance(ray_df, pd.DataFrame)
-    assert to_pandas(ray_df).equals(pandas_df) or (
-        all(ray_df.isna().all()) and all(pandas_df.isna().all())
+    # Order may not match here, but pandas behavior can change, so we will be consistent
+    # ourselves in keeping the columns in the order they were in before the groupby
+    assert (
+        to_pandas(ray_df).equals(pandas_df)
+        or (all(ray_df.isna().all()) and all(pandas_df.isna().all()))
+        or to_pandas(ray_df)[list(pandas_df.columns)].equals(pandas_df)
     )
 
 
@@ -51,6 +55,83 @@ def ray_groupby_equals_pandas(ray_groupby, pandas_groupby):
     for g1, g2 in zip(ray_groupby, pandas_groupby):
         assert g1[0] == g2[0]
         ray_df_equals_pandas(g1[1], g2[1])
+
+
+def test_mixed_dtypes_groupby():
+    frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
+    pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
+    # Convert every other column to string
+    for col in pandas_df.iloc[
+        :, [i for i in range(len(pandas_df.columns)) if i % 2 == 0]
+    ]:
+        pandas_df[col] = [str(chr(i)) for i in pandas_df[col]]
+    ray_df = from_pandas(pandas_df)
+
+    n = 1
+
+    ray_groupby = ray_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
+    test_ngroups(ray_groupby, pandas_groupby)
+    test_skew(ray_groupby, pandas_groupby)
+    test_ffill(ray_groupby, pandas_groupby)
+    test_sem(ray_groupby, pandas_groupby)
+    test_mean(ray_groupby, pandas_groupby)
+    test_any(ray_groupby, pandas_groupby)
+    test_min(ray_groupby, pandas_groupby)
+    test_idxmax(ray_groupby, pandas_groupby)
+    test_ndim(ray_groupby, pandas_groupby)
+    test_cumsum(ray_groupby, pandas_groupby)
+    test_pct_change(ray_groupby, pandas_groupby)
+    test_cummax(ray_groupby, pandas_groupby)
+
+    # TODO Add more apply functions
+    apply_functions = [lambda df: df.sum(), min]
+    for func in apply_functions:
+        test_apply(ray_groupby, pandas_groupby, func)
+
+    test_dtypes(ray_groupby, pandas_groupby)
+    test_first(ray_groupby, pandas_groupby)
+    test_backfill(ray_groupby, pandas_groupby)
+    test_cummin(ray_groupby, pandas_groupby)
+    test_bfill(ray_groupby, pandas_groupby)
+    test_idxmin(ray_groupby, pandas_groupby)
+    test_prod(ray_groupby, pandas_groupby)
+    test_std(ray_groupby, pandas_groupby)
+
+    agg_functions = ["min", "max"]
+    for func in agg_functions:
+        test_agg(ray_groupby, pandas_groupby, func)
+        test_aggregate(ray_groupby, pandas_groupby, func)
+
+    test_last(ray_groupby, pandas_groupby)
+    test_mad(ray_groupby, pandas_groupby)
+    test_max(ray_groupby, pandas_groupby)
+    test_var(ray_groupby, pandas_groupby)
+    test_len(ray_groupby, pandas_groupby)
+    test_sum(ray_groupby, pandas_groupby)
+    test_ngroup(ray_groupby, pandas_groupby)
+    test_nunique(ray_groupby, pandas_groupby)
+    test_median(ray_groupby, pandas_groupby)
+    test_head(ray_groupby, pandas_groupby, n)
+    test_cumprod(ray_groupby, pandas_groupby)
+    test_cov(ray_groupby, pandas_groupby)
+
+    transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+    for func in transform_functions:
+        test_transform(ray_groupby, pandas_groupby, func)
+
+    pipe_functions = [lambda dfgb: dfgb.sum()]
+    for func in pipe_functions:
+        test_pipe(ray_groupby, pandas_groupby, func)
+
+    test_corr(ray_groupby, pandas_groupby)
+    test_fillna(ray_groupby, pandas_groupby)
+    test_count(ray_groupby, pandas_groupby)
+    test_tail(ray_groupby, pandas_groupby, n)
+    test_quantile(ray_groupby, pandas_groupby)
+    test_take(ray_groupby, pandas_groupby)
 
 
 def test_simple_row_groupby():
@@ -215,7 +296,6 @@ def test_single_group_row_groupby():
     test_take(ray_groupby, pandas_groupby)
 
 
-@pytest.mark.skip(reason="See Modin issue #21.")
 def test_large_row_groupby():
     pandas_df = pandas.DataFrame(
         np.random.randint(0, 8, size=(100, 4)), columns=list("ABCD")
