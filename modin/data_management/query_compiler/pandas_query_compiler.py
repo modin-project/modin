@@ -2507,17 +2507,36 @@ class PandasQueryCompiler(object):
             if not axis:
                 df.index = remote_index
                 df.columns = pandas.RangeIndex(len(df.columns))
+                # We need to be careful that our internal index doesn't overlap with the
+                # groupby values, otherwise we return an incorrect result. We
+                # temporarily modify the columns so that we don't run into correctness
+                # issues.
+                if all(b in df for b in by):
+                    df = df.add_prefix("_")
             else:
                 df.columns = remote_index
                 df.index = pandas.RangeIndex(len(df.index))
-            grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+
+            def compute_groupby(df):
+                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+                try:
+                    result = agg_func(grouped_df, **agg_args)
+                    # This will set things back if we changed them (see above).
+                    if axis == 0 and not is_numeric_dtype(result.columns.dtype):
+                        result.columns = [int(col[1:]) for col in result]
+                # This happens when the partition is filled with non-numeric data and a
+                # numeric operation is done. We need to build the index here to avoid issues
+                # with extracting the index.
+                except DataError:
+                    result = pandas.DataFrame(index=grouped_df.size().index)
+                return result
+
             try:
-                return agg_func(grouped_df, **agg_args)
-            # This happens when the partition is filled with non-numeric data and a
-            # numeric operation is done. We need to build the index here to avoid issues
-            # with extracting the index.
-            except DataError:
-                return pandas.DataFrame(index=grouped_df.size().index)
+                return compute_groupby(df)
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except ValueError:
+                return compute_groupby(df.copy())
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
@@ -2528,7 +2547,7 @@ class PandasQueryCompiler(object):
             index = self.compute_index(0, result_data, True)
             columns = self.compute_index(1, result_data, False)
         # If the result is a Series, this is how `compute_index` returns the columns.
-        if len(columns) == 0:
+        if len(columns) == 0 and len(index) != 0:
             return self._post_process_apply(result_data, axis, try_scale=True)
         else:
             return self.__constructor__(result_data, index, columns)
