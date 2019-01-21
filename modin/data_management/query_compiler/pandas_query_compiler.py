@@ -379,30 +379,31 @@ class PandasQueryCompiler(object):
         # Start with this and we'll repartition the first time, and then not again.
         reindexed_self = self.data
         reindexed_other_list = []
+
+        def compute_reindex(old_idx):
+            """Create a function based on the old index and axis.
+
+            Args:
+                old_idx: The old index/columns
+
+            Returns:
+                A function that will be run in each partition.
+            """
+
+            def reindex_partition(df):
+                if axis == 0:
+                    df.index = old_idx
+                    new_df = df.reindex(index=joined_index)
+                    new_df.index = pandas.RangeIndex(len(new_df.index))
+                else:
+                    df.columns = old_idx
+                    new_df = df.reindex(columns=joined_index)
+                    new_df.columns = pandas.RangeIndex(len(new_df.columns))
+                return new_df
+
+            return reindex_partition
+
         for i in range(len(other)):
-
-            def compute_reindex(old_idx):
-                """Create a function based on the old index and axis.
-
-                Args:
-                    old_idx: The old index/columns
-
-                Returns:
-                    A function that will be run in each partition.
-                """
-
-                def reindex_partition(df):
-                    if axis == 0:
-                        df.index = old_idx
-                        new_df = df.reindex(index=joined_index)
-                        new_df.index = pandas.RangeIndex(len(new_df.index))
-                    else:
-                        df.columns = old_idx
-                        new_df = df.reindex(columns=joined_index)
-                        new_df.columns = pandas.RangeIndex(len(new_df.columns))
-                    return new_df
-
-                return reindex_partition
 
             # TODO: If we don't need to reindex, don't. It is expensive.
             # The challenge with avoiding reindexing is that we need to make sure that
