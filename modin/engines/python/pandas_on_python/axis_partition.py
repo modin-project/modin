@@ -42,14 +42,16 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
             num_splits = len(self.list_of_blocks)
 
         if other_axis_partition is not None:
-            return self._wrap_partitions(deploy_python_func_between_two_axis_partitions(
+            return self._wrap_partitions(
+                deploy_python_func_between_two_axis_partitions(
                     self.axis,
                     func,
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
                     *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
-                ))
+                )
+            )
         args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(deploy_python_axis_func(*args))

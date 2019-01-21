@@ -772,8 +772,12 @@ class PandasQueryCompiler(object):
             def where_builder_second_pass(df, new_other, **kwargs):
                 return df.where(new_other.eq(True), new_other, **kwargs)
 
-            first_pass = cond.inter_manager_operations(other, "left", where_builder_first_pass)
-            final_pass = self.inter_manager_operations(first_pass, "left", where_builder_second_pass)
+            first_pass = cond.inter_manager_operations(
+                other, "left", where_builder_first_pass
+            )
+            final_pass = self.inter_manager_operations(
+                first_pass, "left", where_builder_second_pass
+            )
             return self.__constructor__(final_pass.data, self.index, self.columns)
         else:
             axis = kwargs.get("axis", 0)
@@ -791,13 +795,13 @@ class PandasQueryCompiler(object):
                     cond.columns = pandas.RangeIndex(len(cond.columns))
                 return df.where(cond, other, **kwargs)
 
-            reindexed_self, reindexed_cond, a = self.copartition(axis, cond, "left", False)
+            reindexed_self, reindexed_cond, a = self.copartition(
+                axis, cond, "left", False
+            )
             # Unwrap from list given by `copartition`
             reindexed_cond = reindexed_cond[0]
             new_data = reindexed_self.inter_data_operation(
-                axis,
-                lambda l, r: where_builder_series(l, r),
-                reindexed_cond,
+                axis, lambda l, r: where_builder_series(l, r), reindexed_cond
             )
             return self.__constructor__(new_data, self.index, self.columns)
 
