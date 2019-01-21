@@ -15,6 +15,9 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
+    partition_type = PandasOnRayRemotePartition
+    instance_type = ray.ObjectID
+
     def apply(
         self,
         func,
@@ -81,12 +84,6 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         return self._wrap_partitions(
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         )
-
-    def _wrap_partitions(self, partitions):
-        if isinstance(partitions, ray.ObjectID):
-            return [PandasOnRayRemotePartition(partitions)]
-        else:
-            return [PandasOnRayRemotePartition(obj) for obj in partitions]
 
 
 class PandasOnRayColumnPartition(PandasOnRayAxisPartition):

@@ -40,7 +40,7 @@ class BaseAxisPartition(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    def shuffle(self, func, num_splits=None, **kwargs):
+    def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
 
         Args:
@@ -52,3 +52,13 @@ class BaseAxisPartition(object):
              A list of `BaseRemotePartition` objects.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
+    # Child classes must have these in order to correctly subclass.
+    instance_type = None
+    partition_type = None
+
+    def _wrap_partitions(self, partitions):
+        if isinstance(partitions, self.instance_type):
+            return [self.partition_type(partitions)]
+        else:
+            return [self.partition_type(obj) for obj in partitions]

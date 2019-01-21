@@ -14,6 +14,9 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
+    partition_type = PandasOnPythonRemotePartition
+    instance_type = pandas.DataFrame
+
     def apply(
         self,
         func,
@@ -39,25 +42,19 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
             num_splits = len(self.list_of_blocks)
 
         if other_axis_partition is not None:
-            return [
-                PandasOnPythonRemotePartition(obj)
-                for obj in deploy_python_func_between_two_axis_partitions(
+            return self._wrap_partitions(deploy_python_func_between_two_axis_partitions(
                     self.axis,
                     func,
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
                     *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
-                )
-            ]
-
+                ))
         args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
-        return [
-            PandasOnPythonRemotePartition(obj) for obj in deploy_python_axis_func(*args)
-        ]
+        return self._wrap_partitions(deploy_python_axis_func(*args))
 
-    def shuffle(self, func, num_splits=None, **kwargs):
+    def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
 
         Extends `BaseAxisPartition.shuffle`.
@@ -67,15 +64,13 @@ class PandasOnPythonAxisPartition(BaseAxisPartition):
         :param kwargs:
         :return:
         """
-        if num_splits is None:
-            num_splits = len(self.list_of_blocks)
-
-        args = [self.axis, func, num_splits, kwargs]
+        num_splits = len(lengths)
+        # We add these to kwargs and will pop them off before performing the operation.
+        kwargs["manual_partition"] = True
+        kwargs["_lengths"] = lengths
+        args = [self.axis, func, num_splits, kwargs, False]
         args.extend(self.list_of_blocks)
-        return [
-            PandasOnPythonRemotePartition(obj.copy())
-            for obj in deploy_python_axis_func(args)
-        ]
+        return self._wrap_partitions(deploy_python_axis_func(*args))
 
 
 class PandasOnPythonColumnPartition(PandasOnPythonAxisPartition):
@@ -112,11 +107,22 @@ def deploy_python_axis_func(
     Returns:
         A list of Pandas DataFrames.
     """
+    # Pop these off first because they aren't expected by the function.
+    manual_partition = kwargs.pop("manual_partition", False)
+    lengths = kwargs.pop("_lengths", None)
+
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
+
     if isinstance(result, pandas.Series):
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
-    if num_splits != len(partitions) or not maintain_partitioning:
+    if manual_partition:
+        # The split function is expecting a list
+        lengths = list(lengths)
+    # We set lengths to None so we don't use the old lengths for the resulting partition
+    # layout. This is done if the number of splits is changing or we are told not to
+    # keep the old partitioning.
+    elif num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
     else:
         if axis == 0:
@@ -127,10 +133,7 @@ def deploy_python_axis_func(
             lengths = [len(part.columns) for part in partitions]
             if sum(lengths) != len(result.columns):
                 lengths = None
-    return [
-        df.copy()
-        for df in split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
-    ]
+    return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
 
 
 def deploy_python_func_between_two_axis_partitions(
