@@ -7,8 +7,8 @@ from modin.pandas.utils import to_pandas
 random_state = np.random.RandomState(seed=42)
 
 # Size of test dataframes
-NCOLS = 2**8
-NROWS = 2**8
+NCOLS = 2 ** 8
+NROWS = 2 ** 8
 
 # Range for values for test data
 RAND_LOW = 0
@@ -20,25 +20,33 @@ test_data = {
     # "empty_data": {},
     # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
     "int_data": {
-        "col{}".format(int((i - NCOLS/2) % NCOLS + 1)): random_state.randint(
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.randint(
             RAND_LOW, RAND_HIGH, size=(NROWS)
         )
         for i in range(NCOLS)
     },
     "float_data": {
-        "col{}".format(int((i - NCOLS/2) % NCOLS + 1)): random_state.uniform(
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.uniform(
             RAND_LOW, RAND_HIGH, size=(NROWS)
         )
         for i in range(NCOLS)
     },
     "sparse_nan_data": {
-        "col{}".format(int((i - NCOLS/2) % NCOLS + 1)): [x if j != i else np.NaN for j, x in enumerate(random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)))]
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            x if j != i else np.NaN
+            for j, x in enumerate(
+                random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
+            )
+        ]
         for i in range(NCOLS)
     },
     "dense_nan_data": {
-        "col{}".format(int((i - NCOLS/2) % NCOLS + 1)): [x if j % 4 == 0 else np.NaN for j, x in enumerate(random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)))]
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            x if j % 4 == 0 else np.NaN
+            for j, x in enumerate(
+                random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
+            )
+        ]
         for i in range(NCOLS)
     },
     # "int_float_object_data": {
