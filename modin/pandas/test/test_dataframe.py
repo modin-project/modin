@@ -2193,6 +2193,7 @@ def test_index(data):
     df_equals(modin_df_cp.index, pandas_df_cp.index)
 
 
+@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_info(request, data):
     modin_df = pd.DataFrame(data)
