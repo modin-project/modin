@@ -4608,6 +4608,21 @@ class DataFrame(object):
                 return self[key]
             raise e
 
+    def __setattr__(self, key, value):
+        # We have to check for this first because we have to be able to set
+        # _query_compiler before we check if the key is in self
+        if key in ["_query_compiler"] or key in self.__dict__:
+            pass
+        elif key in self:
+            self.__setitem__(key, value)
+        elif isinstance(value, pandas.Series):
+            warnings.warn(
+                "Modin doesn't allow columns to be created via a new attribute name - see "
+                "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                UserWarning,
+            )
+        object.__setattr__(self, key, value)
+
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             return self._default_to_pandas(pandas.DataFrame.__setitem__, key, value)
