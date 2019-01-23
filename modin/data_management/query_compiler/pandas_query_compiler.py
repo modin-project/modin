@@ -283,10 +283,9 @@ class PandasQueryCompiler(object):
         Returns:
             Joined objects.
         """
-        if isinstance(other, list):
-            return self._join_list_of_managers(other, **kwargs)
-        else:
-            return self._join_query_compiler(other, **kwargs)
+        if not isinstance(other, list):
+            other = [other]
+        return self._join_list_of_managers(other, **kwargs)
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -310,20 +309,9 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", None)
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
-
-        # Concatenating two managers requires aligning their indices. After the
-        # indices are aligned, it should just be a simple concatenation of the
-        # `BaseBlockPartitions` objects. This should not require remote compute.
-        joined_axis = self._join_index_objects(
-            axis,
-            [other.columns if axis == 0 else other.index for other in others],
-            join,
-            sort=sort,
+        new_self, to_append, joined_axis = self.copartition(
+            axis ^ 1, others, join, sort
         )
-        # Since we are concatenating a list of managers, we will align all of
-        # the indices based on the `joined_axis` computed above.
-        to_append = [other.reindex(axis ^ 1, joined_axis).data for other in others]
-        new_self = self.reindex(axis ^ 1, joined_axis).data
         new_data = new_self.concat(axis, to_append)
 
         if axis == 0:
@@ -344,29 +332,6 @@ class PandasQueryCompiler(object):
             new_columns = self.columns.append([other.columns for other in others])
             return self.__constructor__(new_data, joined_axis, new_columns)
 
-    def _join_query_compiler(self, other, **kwargs):
-        assert isinstance(
-            other, type(self)
-        ), "This method is for data manager objects only"
-
-        # Uses join's default value (though should not revert to default)
-        how = kwargs.get("how", "left")
-        sort = kwargs.get("sort", False)
-        lsuffix = kwargs.get("lsuffix", "")
-        rsuffix = kwargs.get("rsuffix", "")
-        joined_index = self._join_index_objects(1, other.index, how, sort=sort)
-        to_join = other.reindex(0, joined_index).data
-        new_self = self.reindex(0, joined_index).data
-        new_data = new_self.concat(1, to_join)
-        # We are using proxy DataFrame objects to build the columns based on
-        # the `lsuffix` and `rsuffix`.
-        self_proxy = pandas.DataFrame(columns=self.columns)
-        other_proxy = pandas.DataFrame(columns=other.columns)
-        new_columns = self_proxy.join(
-            other_proxy, lsuffix=lsuffix, rsuffix=rsuffix
-        ).columns
-        return self.__constructor__(new_data, joined_index, new_columns)
-
     def _join_list_of_managers(self, others, **kwargs):
         assert isinstance(
             others, list
@@ -379,22 +344,82 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", False)
         lsuffix = kwargs.get("lsuffix", "")
         rsuffix = kwargs.get("rsuffix", "")
-        joined_index = self._join_index_objects(
-            1, [other.index for other in others], how, sort=sort
-        )
-        to_join = [other.reindex(0, joined_index).data for other in others]
-        new_self = self.reindex(0, joined_index).data
+        new_self, to_join, joined_index = self.copartition(0, others, how, sort)
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
         # suffixes.
+        if len(others) == 1:
+            others_proxy = pandas.DataFrame(columns=others[0].columns)
+        else:
+            others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
         self_proxy = pandas.DataFrame(columns=self.columns)
-        others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
         new_columns = self_proxy.join(
             others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
         ).columns
         return self.__constructor__(new_data, joined_index, new_columns)
 
     # END Append/Concat/Join
+
+    # Copartition
+    def copartition(self, axis, other, how_to_join, sort):
+        if isinstance(other, type(self)):
+            other = [other]
+
+        index_obj = (
+            [o.index for o in other] if axis == 0 else [o.columns for o in other]
+        )
+        joined_index = self._join_index_objects(
+            axis ^ 1, index_obj, how_to_join, sort=sort
+        )
+        # We have to set these because otherwise when we perform the functions it may
+        # end up serializing this entire object.
+        left_old_idx = self.index if axis == 0 else self.columns
+        right_old_idxes = index_obj
+
+        # Start with this and we'll repartition the first time, and then not again.
+        reindexed_self = self.data
+        reindexed_other_list = []
+
+        def compute_reindex(old_idx):
+            """Create a function based on the old index and axis.
+
+            Args:
+                old_idx: The old index/columns
+
+            Returns:
+                A function that will be run in each partition.
+            """
+
+            def reindex_partition(df):
+                if axis == 0:
+                    df.index = old_idx
+                    new_df = df.reindex(index=joined_index)
+                    new_df.index = pandas.RangeIndex(len(new_df.index))
+                else:
+                    df.columns = old_idx
+                    new_df = df.reindex(columns=joined_index)
+                    new_df.columns = pandas.RangeIndex(len(new_df.columns))
+                return new_df
+
+            return reindex_partition
+
+        for i in range(len(other)):
+
+            # TODO: If we don't need to reindex, don't. It is expensive.
+            # The challenge with avoiding reindexing is that we need to make sure that
+            # the internal indices line up (i.e. if a drop or a select was just
+            # performed, the internal indices may not match).
+            if i != 0:
+                reindex_left = None
+            else:
+                reindex_left = compute_reindex(left_old_idx)
+            reindex_right = compute_reindex(right_old_idxes[i])
+
+            reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
+                axis, other[i].data, reindex_left, reindex_right
+            )
+            reindexed_other_list.append(reindexed_other)
+        return reindexed_self, reindexed_other_list, joined_index
 
     # Inter-Data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
@@ -411,16 +436,14 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with new data and index.
         """
-        assert isinstance(
-            other, type(self)
-        ), "Must have the same DataManager subclass to perform this operation"
-        joined_index = self._join_index_objects(1, other.index, how_to_join, sort=False)
+        reindexed_self, reindexed_other_list, joined_index = self.copartition(
+            0, other, how_to_join, False
+        )
+        # unwrap list returned by `copartition`.
+        reindexed_other = reindexed_other_list[0]
         new_columns = self._join_index_objects(
             0, other.columns, how_to_join, sort=False
         )
-        reindexed_other = other.reindex(0, joined_index).data
-        reindexed_self = self.reindex(0, joined_index).data
-
         # THere is an interesting serialization anomaly that happens if we do
         # not use the columns in `inter_data_op_builder` from here (e.g. if we
         # pass them in). Passing them in can cause problems, so we will just
@@ -428,17 +451,19 @@ class PandasQueryCompiler(object):
         self_cols = self.columns
         other_cols = other.columns
 
-        def inter_data_op_builder(left, right, self_cols, other_cols, func):
+        def inter_data_op_builder(left, right, func):
             left.columns = self_cols
             right.columns = other_cols
+            # We reset here to make sure that the internal indexes match. We aligned
+            # them in the previous step, so this step is to prevent mismatches.
+            left.index = pandas.RangeIndex(len(left.index))
+            right.index = pandas.RangeIndex(len(right.index))
             result = func(left, right)
             result.columns = pandas.RangeIndex(len(result.columns))
             return result
 
         new_data = reindexed_self.inter_data_operation(
-            1,
-            lambda l, r: inter_data_op_builder(l, r, self_cols, other_cols, func),
-            reindexed_other,
+            1, lambda l, r: inter_data_op_builder(l, r, func), reindexed_other
         )
         return self.__constructor__(new_data, joined_index, new_columns)
 
@@ -748,41 +773,36 @@ class PandasQueryCompiler(object):
             def where_builder_second_pass(df, new_other, **kwargs):
                 return df.where(new_other.eq(True), new_other, **kwargs)
 
-            # We are required to perform this reindexing on everything to
-            # shuffle the data together
-            reindexed_cond = cond.reindex(0, self.index).data
-            reindexed_other = other.reindex(0, self.index).data
-            reindexed_self = self.reindex(0, self.index).data
-
-            first_pass = reindexed_cond.inter_data_operation(
-                1,
-                lambda l, r: where_builder_first_pass(l, r, **kwargs),
-                reindexed_other,
+            first_pass = cond.inter_manager_operations(
+                other, "left", where_builder_first_pass
             )
-            final_pass = reindexed_self.inter_data_operation(
-                1, lambda l, r: where_builder_second_pass(l, r, **kwargs), first_pass
+            final_pass = self.inter_manager_operations(
+                first_pass, "left", where_builder_second_pass
             )
-            return self.__constructor__(final_pass, self.index, self.columns)
+            return self.__constructor__(final_pass.data, self.index, self.columns)
         else:
             axis = kwargs.get("axis", 0)
             # Rather than serializing and passing in the index/columns, we will
             # just change this index to match the internal index.
             if isinstance(other, pandas.Series):
-                other.index = [i for i in range(len(other))]
+                other.index = pandas.RangeIndex(len(other.index))
 
-            def where_builder_series(df, cond, other, **kwargs):
+            def where_builder_series(df, cond):
+                if axis == 0:
+                    df.index = pandas.RangeIndex(len(df.index))
+                    cond.index = pandas.RangeIndex(len(cond.index))
+                else:
+                    df.columns = pandas.RangeIndex(len(df.columns))
+                    cond.columns = pandas.RangeIndex(len(cond.columns))
                 return df.where(cond, other, **kwargs)
 
-            reindexed_self = self.reindex(
-                axis, self.index if not axis else self.columns
-            ).data
-            reindexed_cond = cond.reindex(
-                axis, self.index if not axis else self.columns
-            ).data
+            reindexed_self, reindexed_cond, a = self.copartition(
+                axis, cond, "left", False
+            )
+            # Unwrap from list given by `copartition`
+            reindexed_cond = reindexed_cond[0]
             new_data = reindexed_self.inter_data_operation(
-                axis,
-                lambda l, r: where_builder_series(l, r, other, **kwargs),
-                reindexed_cond,
+                axis, lambda l, r: where_builder_series(l, r), reindexed_cond
             )
             return self.__constructor__(new_data, self.index, self.columns)
 
@@ -2492,17 +2512,36 @@ class PandasQueryCompiler(object):
             if not axis:
                 df.index = remote_index
                 df.columns = pandas.RangeIndex(len(df.columns))
+                # We need to be careful that our internal index doesn't overlap with the
+                # groupby values, otherwise we return an incorrect result. We
+                # temporarily modify the columns so that we don't run into correctness
+                # issues.
+                if all(b in df for b in by):
+                    df = df.add_prefix("_")
             else:
                 df.columns = remote_index
                 df.index = pandas.RangeIndex(len(df.index))
-            grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+
+            def compute_groupby(df):
+                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+                try:
+                    result = agg_func(grouped_df, **agg_args)
+                    # This will set things back if we changed them (see above).
+                    if axis == 0 and not is_numeric_dtype(result.columns.dtype):
+                        result.columns = [int(col[1:]) for col in result]
+                # This happens when the partition is filled with non-numeric data and a
+                # numeric operation is done. We need to build the index here to avoid issues
+                # with extracting the index.
+                except DataError:
+                    result = pandas.DataFrame(index=grouped_df.size().index)
+                return result
+
             try:
-                return agg_func(grouped_df, **agg_args)
-            # This happens when the partition is filled with non-numeric data and a
-            # numeric operation is done. We need to build the index here to avoid issues
-            # with extracting the index.
-            except DataError:
-                return pandas.DataFrame(index=grouped_df.size().index)
+                return compute_groupby(df)
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except ValueError:
+                return compute_groupby(df.copy())
 
         func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
         result_data = self.map_across_full_axis(axis, func_prepared)
@@ -2513,7 +2552,7 @@ class PandasQueryCompiler(object):
             index = self.compute_index(0, result_data, True)
             columns = self.compute_index(1, result_data, False)
         # If the result is a Series, this is how `compute_index` returns the columns.
-        if len(columns) == 0:
+        if len(columns) == 0 and len(index) != 0:
             return self._post_process_apply(result_data, axis, try_scale=True)
         else:
             return self.__constructor__(result_data, index, columns)

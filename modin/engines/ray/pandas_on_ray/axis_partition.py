@@ -15,6 +15,9 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
         # Unwrap from BaseRemotePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
+    partition_type = PandasOnRayRemotePartition
+    instance_type = ray.ObjectID
+
     def apply(
         self,
         func,
@@ -60,30 +63,27 @@ class PandasOnRayAxisPartition(BaseAxisPartition):
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         )
 
-    def shuffle(self, func, num_splits=None, **kwargs):
-        """Shuffle the order of the data in this axis based on the `func`.
+    def shuffle(self, func, lengths, **kwargs):
+        """Shuffle the order of the data in this axis based on the `lengths`.
 
         Extends `BaseAxisPartition.shuffle`.
 
-        :param func:
-        :param num_splits:
-        :param kwargs:
-        :return:
-        """
-        if num_splits is None:
-            num_splits = len(self.list_of_blocks)
+        Args:
+            func: The function to apply before splitting.
+            lengths: The list of partition lengths to split the result into.
 
-        args = [self.axis, func, num_splits, kwargs]
+        Returns:
+            A list of RemotePartition objects split by `lengths`.
+        """
+        num_splits = len(lengths)
+        # We add these to kwargs and will pop them off before performing the operation.
+        kwargs["manual_partition"] = True
+        kwargs["_lengths"] = lengths
+        args = [self.axis, func, num_splits, kwargs, False]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(
             deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         )
-
-    def _wrap_partitions(self, partitions):
-        if isinstance(partitions, ray.ObjectID):
-            return [PandasOnRayRemotePartition(partitions)]
-        else:
-            return [PandasOnRayRemotePartition(obj) for obj in partitions]
 
 
 class PandasOnRayColumnPartition(PandasOnRayAxisPartition):
@@ -123,16 +123,24 @@ def deploy_ray_axis_func(
     Returns:
         A list of Pandas DataFrames.
     """
+    # Pop these off first because they aren't expected by the function.
+    manual_partition = kwargs.pop("manual_partition", False)
+    lengths = kwargs.pop("_lengths", None)
+
     dataframe = pandas.concat(partitions, axis=axis, copy=False)
     result = func(dataframe, **kwargs)
     if isinstance(result, pandas.Series):
         if num_splits == 1:
             return result
         return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
+
+    if manual_partition:
+        # The split function is expecting a list
+        lengths = list(lengths)
     # We set lengths to None so we don't use the old lengths for the resulting partition
     # layout. This is done if the number of splits is changing or we are told not to
     # keep the old partitioning.
-    if num_splits != len(partitions) or not maintain_partitioning:
+    elif num_splits != len(partitions) or not maintain_partitioning:
         lengths = None
     else:
         if axis == 0:
