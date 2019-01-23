@@ -949,20 +949,31 @@ class BaseBlockPartitions(object):
             it must use `row_internal_indices, col_internal_indices` as keyword
             arguments.
         """
+        if keep_remaining:
+            row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
+            col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
+        else:
+            row_partitions_list = self._get_dict_of_block_index(
+                1, row_indices, ordered=True
+            )
+            col_partitions_list = self._get_dict_of_block_index(
+                0, col_indices, ordered=True
+            )
+            result = np.empty(
+                (len(row_partitions_list), len(col_partitions_list)), dtype=type(self)
+            )
+
         if not mutate:
             partition_copy = self.partitions.copy()
         else:
             partition_copy = self.partitions
 
-        operation_mask = np.full(self.partitions.shape, False)
         row_position_counter = 0
-        for row_blk_idx, row_internal_idx in self._get_dict_of_block_index(
-            1, row_indices
-        ).items():
+        for row_idx, row_values in enumerate(row_partitions_list):
+            row_blk_idx, row_internal_idx = row_values
             col_position_counter = 0
-            for col_blk_idx, col_internal_idx in self._get_dict_of_block_index(
-                0, col_indices
-            ).items():
+            for col_idx, col_values in enumerate(col_partitions_list):
+                col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
 
                 if item_to_distribute is not None:
@@ -977,30 +988,31 @@ class BaseBlockPartitions(object):
                     item = {}
 
                 if lazy:
-                    result = remote_part.add_to_apply_calls(
+                    block_result = remote_part.add_to_apply_calls(
                         func,
                         row_internal_indices=row_internal_idx,
                         col_internal_indices=col_internal_idx,
                         **item
                     )
                 else:
-                    result = remote_part.apply(
+                    block_result = remote_part.apply(
                         func,
                         row_internal_indices=row_internal_idx,
                         col_internal_indices=col_internal_idx,
                         **item
                     )
-                partition_copy[row_blk_idx, col_blk_idx] = result
-                operation_mask[row_blk_idx, col_blk_idx] = True
+                if keep_remaining:
+                    partition_copy[row_blk_idx, col_blk_idx] = block_result
+                else:
+                    result[row_idx][col_idx] = block_result
                 col_position_counter += len(col_internal_idx)
 
             row_position_counter += len(row_internal_idx)
 
-        column_idx = np.where(np.any(operation_mask, axis=0))[0]
-        row_idx = np.where(np.any(operation_mask, axis=1))[0]
-        if not keep_remaining:
-            partition_copy = partition_copy[row_idx][:, column_idx]
-        return self.__constructor__(partition_copy)
+        if keep_remaining:
+            return self.__constructor__(partition_copy)
+        else:
+            return self.__constructor__(result)
 
     def inter_data_operation(self, axis, func, other):
         """Apply a function that requires two BaseBlockPartitions objects.

@@ -2443,6 +2443,10 @@ def test_loc(request, data):
         # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
         df_equals(modin_df.loc[1:2, key1:key2], pandas_df.loc[1:2, key1:key2])
 
+        # From issue #421
+        df_equals(modin_df.loc[:, [key2, key1]], pandas_df.loc[:, [key2, key1]])
+        df_equals(modin_df.loc[[2, 1], :], pandas_df.loc[[2, 1], :])
+
         # Write Item
         modin_df_copy = modin_df.copy()
         pandas_df_copy = pandas_df.copy()
