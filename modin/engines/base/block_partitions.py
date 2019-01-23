@@ -913,9 +913,15 @@ class BaseBlockPartitions(object):
             row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
             col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
         else:
-            row_partitions_list = self._get_dict_of_block_index(1, row_indices, ordered=True)
-            col_partitions_list = self._get_dict_of_block_index(0, col_indices, ordered=True)
-            result = np.empty((len(row_partitions_list), len(col_partitions_list)), dtype=type(self))
+            row_partitions_list = self._get_dict_of_block_index(
+                1, row_indices, ordered=True
+            )
+            col_partitions_list = self._get_dict_of_block_index(
+                0, col_indices, ordered=True
+            )
+            result = np.empty(
+                (len(row_partitions_list), len(col_partitions_list)), dtype=type(self)
+            )
 
         if not mutate:
             partition_copy = self.partitions.copy()
@@ -960,7 +966,7 @@ class BaseBlockPartitions(object):
                 else:
                     result[row_idx][col_idx] = block_result
                 col_position_counter += len(col_internal_idx)
-                
+
             row_position_counter += len(row_internal_idx)
 
         if keep_remaining:
