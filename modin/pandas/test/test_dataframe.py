@@ -2444,6 +2444,7 @@ def test_loc(request, data):
 
         # From issue #421
         df_equals(modin_df.loc[:, [key2, key1]], pandas_df.loc[:, [key2, key1]])
+        df_equals(modin_df.loc[[2, 1], :], pandas_df.loc[[2, 1], :])
 
         # Write Item
         modin_df_copy = modin_df.copy()
