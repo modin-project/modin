@@ -422,10 +422,8 @@ class PandasQueryCompiler(object):
 
         for i in range(len(other)):
 
-            # TODO: If we don't need to reindex, don't. It is expensive.
-            # The challenge with avoiding reindexing is that we need to make sure that
-            # the internal indices line up (i.e. if a drop or a select was just
-            # performed, the internal indices may not match).
+            # If the indices are equal we can skip partitioning so long as we are not
+            # forced to repartition. See note above about `force_repartition`.
             if i != 0 or (left_old_idx.equals(joined_index) and not force_repartition):
                 reindex_left = None
             else:
