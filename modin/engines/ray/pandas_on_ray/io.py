@@ -400,7 +400,7 @@ class PandasOnRayIO(BaseIO):
             return cls._read_csv_from_pandas(filepath_or_buffer, kwargs)
         # TODO: replace this by reading lines from file.
         if kwargs.get("nrows") is not None:
-            ErrorMessage.default_to_pandas()
+            ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
             return cls._read_csv_from_file_pandas_on_ray(

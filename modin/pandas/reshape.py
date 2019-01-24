@@ -93,7 +93,7 @@ def crosstab(
     dropna=True,
     normalize=False,
 ):
-    ErrorMessage.default_to_pandas()
+    ErrorMessage.default_to_pandas("`crosstab`")
     pandas_crosstab = pandas.crosstab(
         index,
         columns,
