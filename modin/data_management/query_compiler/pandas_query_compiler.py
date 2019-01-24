@@ -310,7 +310,7 @@ class PandasQueryCompiler(object):
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         new_self, to_append, joined_axis = self.copartition(
-            axis ^ 1, others, join, sort
+            axis ^ 1, others, join, sort, force_repartition=True
         )
         new_data = new_self.concat(axis, to_append)
 
@@ -344,7 +344,9 @@ class PandasQueryCompiler(object):
         sort = kwargs.get("sort", False)
         lsuffix = kwargs.get("lsuffix", "")
         rsuffix = kwargs.get("rsuffix", "")
-        new_self, to_join, joined_index = self.copartition(0, others, how, sort)
+        new_self, to_join, joined_index = self.copartition(
+            0, others, how, sort, force_repartition=True
+        )
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
         # suffixes.
@@ -361,7 +363,22 @@ class PandasQueryCompiler(object):
     # END Append/Concat/Join
 
     # Copartition
-    def copartition(self, axis, other, how_to_join, sort):
+    def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
+        """Copartition two QueryCompiler objects.
+
+        Args:
+            axis: The axis to copartition along.
+            other: The other Query Compiler(s) to copartition against.
+            how_to_join: How to manage joining the index object ("left", "right", etc.)
+            sort: Whether or not to sort the joined index.
+            force_repartition: Whether or not to force the repartitioning. By default,
+                this method will skip repartitioning if it is possible. This is because
+                reindexing is extremely inefficient. Because this method is used to
+                `join` or `append`, it is vital that the internal indices match.
+
+        Returns:
+            A tuple (left query compiler, right query compiler list, joined index).
+        """
         if isinstance(other, type(self)):
             other = [other]
 
@@ -409,11 +426,14 @@ class PandasQueryCompiler(object):
             # The challenge with avoiding reindexing is that we need to make sure that
             # the internal indices line up (i.e. if a drop or a select was just
             # performed, the internal indices may not match).
-            if i != 0:
+            if i != 0 or (left_old_idx.equals(joined_index) and not force_repartition):
                 reindex_left = None
             else:
                 reindex_left = compute_reindex(left_old_idx)
-            reindex_right = compute_reindex(right_old_idxes[i])
+            if right_old_idxes[i].equals(joined_index) and not force_repartition:
+                reindex_right = None
+            else:
+                reindex_right = compute_reindex(right_old_idxes[i])
 
             reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
                 axis, other[i].data, reindex_left, reindex_right
