@@ -23,9 +23,11 @@ class ErrorMessage(object):
             message = "Defaulting to pandas implementation."
 
         if not cls.printed_request_implementation:
-            message = "{}\n"
-            "To request implementation, send an email to "
-            "feature_requests@modin.org.".format(message)
+            message = (
+                "{}\n".format(message)
+                + "To request implementation, send an email to "
+                + "feature_requests@modin.org."
+            )
             cls.printed_request_implementation = True
         warnings.warn(message)
 
