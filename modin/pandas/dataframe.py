@@ -1605,12 +1605,12 @@ class DataFrame(object):
 
     @classmethod
     def from_dict(cls, data, orient="columns", dtype=None):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`from_dict`")
         return from_pandas(pandas.DataFrame.from_dict(data, orient=orient, dtype=dtype))
 
     @classmethod
     def from_items(cls, items, columns=None, orient="columns"):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`from_items`")
         return from_pandas(
             pandas.DataFrame.from_items(items, columns=columns, orient=orient)
         )
@@ -1625,7 +1625,7 @@ class DataFrame(object):
         coerce_float=False,
         nrows=None,
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`from_records`")
         return from_pandas(
             pandas.DataFrame.from_records(
                 data,
@@ -5063,7 +5063,7 @@ class DataFrame(object):
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """Helper method to use default pandas function"""
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`{}`".format(op.__name__))
         result = op(self._query_compiler.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.DataFrame):
             return DataFrame(result)

@@ -27,7 +27,7 @@ class BaseIO(object):
             ParquetFile API is used. Please refer to the documentation here
             https://arrow.apache.org/docs/python/parquet.html
         """
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_parquet`")
         return cls.from_pandas(pandas.read_parquet(path, engine, columns, **kwargs))
 
     @classmethod
@@ -134,7 +134,7 @@ class BaseIO(object):
             "memory_map": memory_map,
             "float_precision": float_precision,
         }
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_csv`")
         return cls._read(**kwargs)
 
     @classmethod
@@ -176,7 +176,7 @@ class BaseIO(object):
         chunksize=None,
         compression="infer",
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_json`")
         kwargs = {
             "path_or_buf": path_or_buf,
             "orient": orient,
@@ -208,7 +208,7 @@ class BaseIO(object):
         dialect="legacy",
         **kwargs
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_gbq`")
         return cls.from_pandas(
             pandas.read_gbq(
                 query,
@@ -242,7 +242,7 @@ class BaseIO(object):
         na_values=None,
         keep_default_na=True,
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_html`")
         kwargs = {
             "io": io,
             "match": match,
@@ -264,7 +264,7 @@ class BaseIO(object):
 
     @classmethod
     def read_clipboard(cls, sep=r"\s+"):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep))
 
     @classmethod
@@ -293,7 +293,7 @@ class BaseIO(object):
         convert_float=True,
         **kwds
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_excel`")
         kwargs = {
             "io": io,
             "sheet_name": sheet_name,
@@ -322,19 +322,19 @@ class BaseIO(object):
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_hdf`")
         return cls.from_pandas(
             pandas.read_hdf(path_or_buf, key=key, mode=mode, columns=columns)
         )
 
     @classmethod
     def read_feather(cls, path, nthreads=1):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_feather`")
         return cls.from_pandas(pandas.read_feather(path, nthreads))
 
     @classmethod
     def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_msgpack`")
         return cls.from_pandas(
             pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator)
         )
@@ -354,7 +354,7 @@ class BaseIO(object):
         chunksize=None,
         iterator=False,
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_stata`")
         kwargs = {
             "filepath_or_buffer": filepath_or_buffer,
             "convert_dates": convert_dates,
@@ -380,7 +380,7 @@ class BaseIO(object):
         chunksize=None,
         iterator=False,
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
             pandas.read_sas(
                 filepath_or_buffer,
@@ -394,7 +394,7 @@ class BaseIO(object):
 
     @classmethod
     def read_pickle(cls, path, compression="infer"):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_pickle`")
         return cls.from_pandas(pandas.read_pickle(path, compression=compression))
 
     @classmethod
@@ -409,7 +409,7 @@ class BaseIO(object):
         columns=None,
         chunksize=None,
     ):
-        ErrorMessage.default_to_pandas()
+        ErrorMessage.default_to_pandas("`read_sql`")
         return cls.from_pandas(
             pandas.read_sql(
                 sql,
