@@ -4,162 +4,128 @@ from __future__ import print_function
 
 import pytest
 import pandas
+import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
+from .utils import df_equals, test_data_keys, test_data_values, random_state, RAND_LOW, RAND_HIGH
 
 pd.DEFAULT_NPARTITIONS = 4
 
 
-@pytest.fixture
-def modin_df_equals_pandas(modin_df, pandas_df):
-    return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+def test_modin_concat(data1, data2):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
 
-
-@pytest.fixture
-def generate_dfs():
-    df = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col4": [12, 13, 14, 15],
-            "col5": [0, 0, 0, 0],
-        }
-    )
-
-    df2 = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col6": [12, 13, 14, 15],
-            "col7": [0, 0, 0, 0],
-        }
-    )
-    return df, df2
-
-
-@pytest.fixture
-def generate_none_dfs():
-    df = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, None, 7],
-            "col3": [8, 9, 10, 11],
-            "col4": [12, 13, 14, 15],
-            "col5": [None, None, None, None],
-        }
-    )
-
-    df2 = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col6": [12, 13, 14, 15],
-            "col7": [0, 0, 0, 0],
-        }
-    )
-    return df, df2
-
-
-@pytest.fixture
-def test_df_concat():
-    df, df2 = generate_dfs()
-
-    assert modin_df_equals_pandas(pd.concat([df, df2]), pandas.concat([df, df2]))
-
-
-def test_ray_concat():
-    df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
-
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2]), pandas.concat([df, df2])
+    df_equals(
+        pd.concat([modin_df1, modin_df2]), pandas.concat([pandas_df1, pandas_df2])
     )
 
 
-def test_ray_concat_with_series():
-    df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
-    pandas_series = pandas.Series([1, 2, 3, 4], name="new_col")
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+def test_modin_concat_with_series(data1, data2):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
 
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2, pandas_series], axis=0),
-        pandas.concat([df, df2, pandas_series], axis=0),
+    # Test axis=0
+    pandas_series = pandas.Series(random_state.random_integers(RAND_LOW, RAND_HIGH, pandas_df1.shape[1]))
+    modin_series = modin.Series(random_state.random_integers(RAND_LOW, RAND_HIGH, modin_df1.shape[1]))
+    df_equals(
+        pd.concat([modin_df1, modin_df2, pandas_series], axis=0),
+        pandas.concat([pandas_df1, pandas_df2, pandas_series], axis=0),
     )
 
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2, pandas_series], axis=1),
-        pandas.concat([df, df2, pandas_series], axis=1),
-    )
-
-
-def test_ray_concat_on_index():
-    df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
-
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2], axis="index"),
-        pandas.concat([df, df2], axis="index"),
-    )
-
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2], axis="rows"),
-        pandas.concat([df, df2], axis="rows"),
-    )
-
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2], axis=0), pandas.concat([df, df2], axis=0)
+    # Test axis=1
+    pandas_series = pandas.Series(random_state.random_integers(RAND_LOW, RAND_HIGH, pandas_df1.shape[0]))
+    modin_series = modin.Series(random_state.random_integers(RAND_LOW, RAND_HIGH, modin_df1.shape[0]))
+    df_equals(
+        pd.concat([modin_df1, modin_df2, pandas_series], axis=1),
+        pandas.concat([pandas_df1, pandas_df2, pandas_series], axis=1),
     )
 
 
-def test_ray_concat_on_column():
-    df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+def test_modin_concat_on_index(data1, data2):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
 
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2], axis=1), pandas.concat([df, df2], axis=1)
+    df_equals(
+        pd.concat([modin_df1, modin_df2], axis="index"),
+        pandas.concat([pandas_df1, pandas_df2], axis="index"),
     )
 
-    assert modin_df_equals_pandas(
-        pd.concat([modin_df, modin_df2], axis="columns"),
-        pandas.concat([df, df2], axis="columns"),
+    df_equals(
+        pd.concat([modin_df1, modin_df2], axis="rows"),
+        pandas.concat([pandas_df, pandas_df2], axis="rows"),
+    )
+
+    df_equals(
+        pd.concat([modin_df1, modin_df2], axis=0), pandas.concat([pandas_df, pandas_df2], axis=0)
     )
 
 
-def test_invalid_axis_errors():
-    df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+def test_ray_concat_on_column(data1, data2):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
+
+    df_equals(
+        pd.concat([modin_df1, modin_df2], axis=1), pandas.concat([pandas_df1, pandas_df2], axis=1)
+    )
+
+    df_equals(
+        pd.concat([modin_df1, modin_df2], axis="columns"),
+        pandas.concat([pandas_df1, pandas_df2], axis="columns"),
+    )
+
+
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+def test_invalid_axis_errors(data1, data2):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
 
     with pytest.raises(ValueError):
-        pd.concat([modin_df, modin_df2], axis=2)
+        pd.concat([modin_df1, modin_df2], axis=2)
 
 
-def test_mixed_concat():
-    df, df2 = generate_dfs()
-    df3 = df.copy()
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data3", test_data_values, ids=test_data_keys)
+def test_mixed_concat(data1, data2, data3):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    pandas_df3 = pandas.DataFrame(data3)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
+    modin_df3 = pd.DataFrame(data3)
 
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
-
-    assert modin_df_equals_pandas(pd.concat(mixed_dfs), pandas.concat([df, df2, df3]))
-
-
-def test_mixed_inner_concat():
-    df, df2 = generate_dfs()
-    df3 = df.copy()
-
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
-
-    assert modin_df_equals_pandas(
-        pd.concat(mixed_dfs, join="inner"), pandas.concat([df, df2, df3], join="inner")
-    )
+    df_equals(pd.concat([modin_df1, modin_df2, modin_df3]), pandas.concat([pandas_df1, pandas_df2, pandas_df3]))
 
 
-def test_mixed_none_concat():
-    df, df2 = generate_none_dfs()
-    df3 = df.copy()
+@pytest.mark.parametrize("data1", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data2", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data3", test_data_values, ids=test_data_keys)
+def test_mixed_inner_concat(data1, data2, data3):
+    pandas_df1 = pandas.DataFrame(data1)
+    pandas_df2 = pandas.DataFrame(data2)
+    pandas_df3 = pandas.DataFrame(data3)
+    modin_df1 = pd.DataFrame(data1)
+    modin_df2 = pd.DataFrame(data2)
+    modin_df3 = pd.DataFrame(data3)
 
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
-
-    assert modin_df_equals_pandas(pd.concat(mixed_dfs), pandas.concat([df, df2, df3]))
+    df_equals(pd.concat([modin_df1, modin_df2, modin_df3], join='inner'), pandas.concat([pandas_df1, pandas_df2, pandas_df3], join='inner'))
