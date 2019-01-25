@@ -1021,9 +1021,9 @@ def test_clip(request, data, axis):
             else len(modin_df.columns)
         )
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
-        lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
+        lower_list = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
+        upper_list = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -1059,8 +1059,8 @@ def test_clip_lower(request, data, axis):
             else len(modin_df.columns)
         )
         # set bounds
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
-        lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, 1)[0]
+        lower_list = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         # test lower scalar bound
         pandas_result = pandas_df.clip_lower(lower, axis=axis)
@@ -1086,8 +1086,8 @@ def test_clip_upper(request, data, axis):
             else len(modin_df.columns)
         )
         # set bounds
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
-        upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, 1)[0]
+        upper_list = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         # test upper scalar bound
         modin_result = modin_df.clip_upper(upper, axis=axis)
