@@ -85,7 +85,7 @@ format is the `developer mailing list`_.
 More docs on this coming soon...
 
 .. _Good first issue: https://github.com/modin-project/modin/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue+%3Abeginner%3A%22
-.. _Documentation: https://github.com/modin-project/modin/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue+%3Abeginner%3A%22
+.. _Documentation: https://github.com/modin-project/modin/issues?q=is%3Aissue+is%3Aopen+label%3A%22documentation+%3Abookmark_tabs%3A%22
 .. _architecture: architecture.html
 .. _internal methods:
 .. _black: https://github.com/ambv/black
