@@ -30,7 +30,7 @@ These pre-releases are uploaded for dependencies and users to test their existin
 to ensure that it still works. If you find something wrong, please raise an issue_ or
 email the bug reporter: bugs@modin.org.
 
-Installing specific dependnecy sets
+Installing specific dependency sets
 """""""""""""""""""""""""""""""""""
 
 Modin has a number of specific dependency sets for running Modin on different backends
@@ -90,7 +90,7 @@ Building Modin from Source
 --------------------------
 
 If you're planning on contributing_ to Modin, you will need to ensure that you are
-building Modin from the local repository that you are working off of. Occassionally,
+building Modin from the local repository that you are working off of. Occasionally,
 there are issues in overlapping Modin installs from pypi and from source. To avoid these
 issues, we recommend uninstalling Modin before you install from source:
 
