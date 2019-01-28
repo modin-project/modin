@@ -23,6 +23,7 @@ from .utils import (
     df_is_empty,
     arg_keys,
     name_contains,
+    test_data,
     test_data_values,
     test_data_keys,
     numeric_dfs,
@@ -1385,35 +1386,54 @@ def test_drop_api_equivalence():
         modin_df.drop(axis=1)
 
 
-def test_drop_duplicates():
+@pytest.mark.parametrize("frame_data", test_data, ids=test_data_keys)
+def test_drop_duplicates(frame_data):
+    modin_df = pd.DataFrame(frame_data)
+    pandas_df = pandas.DataFrame(frame_data)
+
+    df_equals(
+        modin_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep="first", inplace=False
+        ),
+        pandas_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep="first", inplace=False
+        ),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep="last", inplace=False
+        ),
+        pandas_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep="last", inplace=False
+        ),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep=False, inplace=False
+        ),
+        pandas_df.drop_duplicates(
+            subset=["int_data", "dense_nan_data"], keep=False, inplace=False
+        ),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(inplace=False),
+        pandas_df.drop_duplicates(inplace=False),
+    )
+
+    modin_df.drop_duplicates(subset=["int_data", "dense_nan_data"], inplace=True)
+    df_equals(
+        modin_df,
+        pandas_df.drop_duplicates(subset=["int_data", "dense_nan_data"], inplace=False),
+    )
+
     frame_data = {
         "A": list(range(3)) * 2,
         "B": list(range(1, 4)) * 2,
         "C": list(range(6)),
     }
-    modin_df = pd.DataFrame(frame_data)
-    pandas_df = pandas.DataFrame(frame_data)
-
-    df_equals(
-        modin_df.drop_duplicates(subset=["A", "B"], keep="first", inplace=False),
-        pandas_df.drop_duplicates(subset=["A", "B"], keep="first", inplace=False),
-    )
-
-    df_equals(
-        modin_df.drop_duplicates(subset=["A", "B"], keep="last", inplace=False),
-        pandas_df.drop_duplicates(subset=["A", "B"], keep="last", inplace=False),
-    )
-
-    df_equals(
-        modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=False),
-        pandas_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=False),
-    )
-
-    df_equals(modin_df.drop_duplicates(inplace=False), pandas_df)
-
-    modin_df.drop_duplicates(subset=["A", "B"], inplace=True)
-    df_equals(modin_df, pandas_df.drop_duplicates(subset=["A", "B"], inplace=False))
-
     modin_df = pd.DataFrame(frame_data)
     modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=True)
     df_equals(modin_df, pandas.DataFrame({"A": [], "B": [], "C": []}))
