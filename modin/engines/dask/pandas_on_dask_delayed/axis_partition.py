@@ -1,5 +1,4 @@
 import pandas
-import dask
 
 from modin.engines.base.axis_partition import BaseAxisPartition
 from modin.data_management.utils import split_result_of_axis_func_pandas
@@ -34,6 +33,8 @@ class DaskAxisPartition(BaseAxisPartition):
         Returns:
             A list of `DaskRemotePartition` objects.
         """
+        import dask
+
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 

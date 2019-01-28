@@ -1,5 +1,4 @@
 import pandas
-import dask
 
 from modin.engines.base.remote_partition import BaseRemotePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
@@ -7,6 +6,8 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 class DaskRemotePartition(BaseRemotePartition):
     def __init__(self, dask_obj, func=None):
+        import dask
+
         self.dask_obj = dask_obj
         self.delayed_call = (
             dask_obj if func is None else dask.delayed(func[0])(dask_obj, **func[1])
@@ -39,6 +40,8 @@ class DaskRemotePartition(BaseRemotePartition):
              A new `BaseRemotePartition` containing the object that has had `func`
              applied to it.
         """
+        import dask
+
         # applies the func lazily
         delayed_call = self.delayed_call
         self.delayed_call = self.dask_obj
@@ -50,6 +53,8 @@ class DaskRemotePartition(BaseRemotePartition):
         This function will be executed when apply is called. It will be executed
         in the order inserted; apply's func operates the last and return
         """
+        import dask
+
         self.delayed_call = dask.delayed(func)(self.delayed_call, **kwargs)
         return self
 
@@ -73,6 +78,8 @@ class DaskRemotePartition(BaseRemotePartition):
         Returns:
             A `RemotePartitions` object.
         """
+        import dask
+
         # simply wrap the input object by dask.delayed
         return cls(dask.delayed(obj))
 
