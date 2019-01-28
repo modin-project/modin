@@ -36,6 +36,7 @@ from pandas import (
 import threading
 import os
 import ray
+import types
 
 from .. import __version__
 from .concat import concat
@@ -131,6 +132,9 @@ def initialize_ray():
             plasma_directory=plasma_directory,
             object_store_memory=object_store_memory,
         )
+        # Register custom serializer for method objects to avoid warning message.
+        # We serialize `MethodType` objects when we use AxisPartition operations.
+        ray.register_custom_serializer(types.MethodType, use_pickle=True)
 
 
 if execution_engine == "Ray":
