@@ -35,7 +35,7 @@ class PandasOnRayAxisPartition(PandasOnXAxisPartition):
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-            cls, axis, func, num_splits, len_of_left, kwargs, *partitions
+        cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
         return deploy_ray_func._remote(
             args=(
@@ -45,7 +45,7 @@ class PandasOnRayAxisPartition(PandasOnXAxisPartition):
                 num_splits,
                 len_of_left,
                 kwargs,
-                *partitions
+                *partitions,
             ),
             num_return_vals=num_splits,
         )
