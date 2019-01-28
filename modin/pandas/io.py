@@ -269,6 +269,9 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    partition_column=None,
+    lower_bound=None,
+    upper_bound=None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql(**kwargs))

@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pandas
 from pandas.io.common import _infer_compression
+from pandas.io.sql import pandasSQL_builder
 
 import inspect
 from io import BytesIO
@@ -24,9 +25,101 @@ PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
 class PandasOnRayIO(BaseIO):
-
     block_partitions_cls = RayBlockPartitions
     query_compiler_cls = PandasQueryCompiler
+
+    @staticmethod
+    def _sql_build_query(con, sql):
+        pandas_sql = pandasSQL_builder(con)
+        if pandas_sql.has_table(sql):
+            query = "SELECT * FROM " + sql
+        else:
+            query = sql.replace(";", "")
+        return query
+
+    @classmethod
+    def read_sql(
+        cls,
+        sql,
+        con,
+        index_col=None,
+        coerce_float=True,
+        params=None,
+        parse_dates=None,
+        columns=None,
+        chunksize=None,
+        partition_column=None,
+        lower_bound=None,
+        upper_bound=None,
+    ):
+        if not partition_column:
+            ErrorMessage.default_to_pandas("`read_sql`")
+            return cls.from_pandas(
+                pandas.read_sql(
+                    sql,
+                    con,
+                    index_col=index_col,
+                    coerce_float=coerce_float,
+                    params=params,
+                    parse_dates=parse_dates,
+                    columns=columns,
+                    chunksize=chunksize,
+                )
+            )
+        #  starts the distributed alternative
+        num_parts = RayBlockPartitions._compute_num_partitions()
+        diff = (upper_bound - lower_bound) + 1
+        min_size = diff // num_parts
+        rest = diff % num_parts
+        query = cls._sql_build_query(con, sql)
+        partition_ids = list()
+        index_ids = list()
+        end = lower_bound - 1
+        for part in range(num_parts):
+            if rest:
+                size = min_size + 1
+                rest -= 1
+            else:
+                size = min_size
+            start = end + 1
+            end = start + size - 1
+            partition_id = _read_sql_with_offset_pandas_on_ray._remote(
+                args=(
+                    query,
+                    con,
+                    index_col,
+                    coerce_float,
+                    params,
+                    parse_dates,
+                    columns,
+                    chunksize,
+                    partition_column,
+                    start,
+                    end,
+                ),
+                num_return_vals=2,
+            )
+            partition_ids.append([PandasOnRayRemotePartition(partition_id[0])])
+            index_ids.append(partition_id[-1])
+
+        new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
+
+        column_names = pandas.read_sql(
+            sql + " LIMIT 1",
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
+        ).columns
+
+        new_query_compiler = PandasQueryCompiler(
+            RayBlockPartitions(np.array(partition_ids)), new_index, column_names
+        )
+
+        return new_query_compiler
 
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
@@ -525,6 +618,43 @@ def _split_result_for_readers(axis, num_splits, df):
     if not isinstance(splits, list):
         splits = [splits]
     return splits
+
+
+def _sql_put_bounders(query, partition_column, start, end):
+    where = " WHERE TMP_TABLE.{0} >= {1} AND TMP_TABLE.{0} <= {2}".format(
+        partition_column, start, end
+    )
+    query_with_bounders = "SELECT * FROM ({0}) AS TMP_TABLE {1}".format(query, where)
+    return query_with_bounders
+
+
+@ray.remote
+def _read_sql_with_offset_pandas_on_ray(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    columns=None,
+    chunksize=None,
+    partition_column=None,
+    start=None,
+    end=None,
+):
+    query_with_bounders = _sql_put_bounders(sql, partition_column, start, end)
+    pandas_df = pandas.read_sql(
+        query_with_bounders,
+        con,
+        index_col=index_col,
+        coerce_float=coerce_float,
+        params=params,
+        parse_dates=parse_dates,
+        columns=columns,
+        chunksize=chunksize,
+    )
+    index = len(pandas_df)
+    return [pandas_df] + [index]
 
 
 @ray.remote

@@ -265,11 +265,11 @@ def setup_sql_file(conn, force=False):
     else:
         df = pandas.DataFrame(
             {
-                "col1": [0, 1, 2, 3],
-                "col2": [4, 5, 6, 7],
-                "col3": [8, 9, 10, 11],
-                "col4": [12, 13, 14, 15],
-                "col5": [0, 0, 0, 0],
+                "col1": [0, 1, 2, 3, 4, 5, 6],
+                "col2": [7, 8, 9, 10, 11, 12, 13],
+                "col3": [14, 15, 16, 17, 18, 19, 20],
+                "col4": [21, 22, 23, 24, 25, 26, 27],
+                "col5": [0, 0, 0, 0, 0, 0, 0],
             }
         )
         df.to_sql(TEST_SQL_FILENAME.split(".")[0], conn)
@@ -448,6 +448,24 @@ def test_from_sql():
 
     pandas_df = pandas.read_sql("select * from test", conn)
     modin_df = pd.read_sql("select * from test", conn)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_sql_file()
+
+
+def test_from_sql_distributed():
+    conn = sqlite3.connect(TEST_SQL_FILENAME)
+    setup_sql_file(conn, True)
+
+    pandas_df = pandas.read_sql("select * from test", conn)
+    modin_df = pd.read_sql(
+        "select * from test",
+        "sqlite:///" + TEST_SQL_FILENAME,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+    )
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
