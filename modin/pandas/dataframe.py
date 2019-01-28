@@ -1281,7 +1281,7 @@ class DataFrame(object):
                     - False : Drop all duplicates.
                 inplace : boolean, default False
                     Whether to drop duplicates in place or to return a copy
-                Returns
+            Returns:
                 -------
                 deduplicated : DataFrame
         """
