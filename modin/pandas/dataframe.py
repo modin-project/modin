@@ -1270,7 +1270,7 @@ class DataFrame(object):
         """
                 Return DataFrame with duplicate rows removed, optionally only
                 considering certain columns
-                Parameters
+            Args:
                 ----------
                 subset : column label or sequence of labels, optional
                     Only consider certain columns for identifying duplicates, by
