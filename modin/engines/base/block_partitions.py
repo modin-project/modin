@@ -197,33 +197,8 @@ class BaseBlockPartitions(object):
         Returns:
             A Pandas Series
         """
-        mapped_parts = self.map_across_blocks(map_func).partitions
-        if reduce_func is None:
-            reduce_func = map_func
-        # For now we return a pandas.Series until ours gets implemented.
-        # We have to build the intermediate frame based on the axis passed,
-        # thus axis=axis and axis=axis ^ 1
-        #
-        # This currently requires special treatment because of the intermediate
-        # DataFrame. The individual partitions return Series objects, and those
-        # cannot be concatenated the correct way without casting them as
-        # DataFrames.
-        full_frame = pandas.concat(
-            [
-                pandas.concat(
-                    [pandas.DataFrame(part.get()).T for part in row_of_parts],
-                    axis=axis ^ 1,
-                )
-                for row_of_parts in mapped_parts
-            ],
-            axis=axis,
-        )
+        raise NotImplemented("Blocked on Distributed Series")
 
-        # Transpose because operations where axis == 1 assume that the
-        # operation is performed across the other axis
-        if axis == 1:
-            full_frame = full_frame.T
-        return reduce_func(full_frame)
 
     def map_across_blocks(self, map_func):
         """Applies `map_func` to every partition.
