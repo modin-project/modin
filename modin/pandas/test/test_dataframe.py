@@ -1385,8 +1385,6 @@ def test_drop_api_equivalence():
         modin_df.drop(axis=1)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_drop_duplicates():
     frame_data = {"A": list(range(3))*2, "B": list(range(1, 4)) * 2, "C": list(range(6))}
     modin_df = pd.DataFrame(frame_data)
@@ -1396,32 +1394,27 @@ def test_drop_duplicates():
         modin_df.drop_duplicates(subset=["A", "B"], keep="first", inplace=False),
         pandas_df.drop_duplicates(subset=["A", "B"], keep="first", inplace=False)
     )
-    print("Test Gucci1")
 
     df_equals(
         modin_df.drop_duplicates(subset=["A", "B"], keep="last", inplace=False),
         pandas_df.drop_duplicates(subset=["A", "B"], keep="last", inplace=False)
     )
-    print("Test Gucci2")
 
     df_equals(
         modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=False),
         pandas_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=False)
     )
-    print("Test Gucci3")
 
     df_equals(
         modin_df.drop_duplicates(inplace=False),
         pandas_df
     )
-    print("Test Gucci4")
 
     modin_df.drop_duplicates(subset=["A", "B"], inplace=True)
     df_equals(
         modin_df,
         pandas_df.drop_duplicates(subset=["A", "B"], inplace=False)
     )
-    print("Test Gucci5")
 
     modin_df = pd.DataFrame(frame_data)
     modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=True)
@@ -1429,10 +1422,6 @@ def test_drop_duplicates():
         modin_df,
         pandas.DataFrame({"A":[], "B":[], "C": []})
     )
-    print("Test Gucci6")
-
-    # with pytest.raises(NotImplementedError):
-    #     modin_df.drop_duplicates()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
