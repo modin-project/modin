@@ -197,7 +197,7 @@ class BaseBlockPartitions(object):
         Returns:
             A Pandas Series
         """
-        raise NotImplemented("Blocked on Distributed Series")
+        raise NotImplementedError("Blocked on Distributed Series")
 
     def map_across_blocks(self, map_func):
         """Applies `map_func` to every partition.
