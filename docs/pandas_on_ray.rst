@@ -2,7 +2,7 @@ Pandas on Ray
 =============
 
 Pandas on Ray is the component of Modin that runs on the Ray execution Framework.
-Currently, the in-memory format for Pandas on Ray is a pandas DataFrame on each
+Currently, the in-memory format for Pandas on Ray is a pandas `DataFrame`_ on each
 partition. There are a number of Ray-specific optimizations we perform, which are
 explained below. Currently, Ray is the only execution framework supported on Modin.
 There are additional optimizations we can do on the pandas in-memory format. Those are
@@ -59,6 +59,7 @@ This optimization is also used to determine which columns or rows were dropped d
 ``dropna`` or other similar operation. We use the ``pandas.RangeIndex`` internal to the
 partitions to communicate the missing values back to the external ``Index``.
 
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray
 .. _using Modin: using_modin.html
 .. _Apache Arrow: https://arrow.apache.org
