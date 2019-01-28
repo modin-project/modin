@@ -1392,7 +1392,7 @@ def test_drop_duplicates():
         "C": list(range(6)),
     }
     modin_df = pd.DataFrame(frame_data)
-    pandas_df = pandas.DataFrame(frame_data)  # noqa F841
+    pandas_df = pandas.DataFrame(frame_data)
 
     df_equals(
         modin_df.drop_duplicates(subset=["A", "B"], keep="first", inplace=False),
