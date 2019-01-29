@@ -409,19 +409,19 @@ class PandasOnRayIO(BaseIO):
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
-        hdfs_f = pandas.HDFStore(path_or_buf)
-        groups = hdfs_f.groups()
+        s = pandas.HDFStore(path_or_buf)
+        groups = s.groups()
         if len(groups) == 0:
             raise ValueError('No dataset in HDF5 file.')
         candidate_only_group = groups[0]
         format = getattr(candidate_only_group._v_attrs, 'table_type', None)
-        hdfs_f.close()
+        s.close()
         return format
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
         format = cls._validate_hdf_format(path_or_buf=path_or_buf)
-        if format != 'appendable_frame':
+        if format is None:
             ErrorMessage.default_to_pandas(
                 "File format seems to be 'fixed'. For better distribution consider saving the file in 'table' format. "
                 "df.to_hdf(format='table').")
