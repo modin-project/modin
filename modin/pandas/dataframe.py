@@ -4056,9 +4056,9 @@ class DataFrame(object):
             private_key=private_key,
         )
 
-    def to_hdf(self, path_or_buf, key, **kwargs):
+    def to_hdf(self, path_or_buf, key, format='table', **kwargs):
         return self._default_to_pandas(
-            pandas.DataFrame.to_hdf, path_or_buf, key, **kwargs
+            pandas.DataFrame.to_hdf, path_or_buf, key, format=format, **kwargs
         )
 
     def to_html(
