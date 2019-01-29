@@ -23,7 +23,6 @@ from .utils import (
     df_is_empty,
     arg_keys,
     name_contains,
-    test_data,
     test_data_values,
     test_data_keys,
     numeric_dfs,
@@ -1386,35 +1385,35 @@ def test_drop_api_equivalence():
         modin_df.drop(axis=1)
 
 
-@pytest.mark.parametrize("frame_data", test_data, ids=test_data_keys)
-def test_drop_duplicates(frame_data):
-    modin_df = pd.DataFrame(frame_data)
-    pandas_df = pandas.DataFrame(frame_data)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop_duplicates(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
 
     df_equals(
         modin_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep="first", inplace=False
+            keep="first", inplace=False
         ),
         pandas_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep="first", inplace=False
+            keep="first", inplace=False
         ),
     )
 
     df_equals(
         modin_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep="last", inplace=False
+            keep="last", inplace=False
         ),
         pandas_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep="last", inplace=False
+            keep="last", inplace=False
         ),
     )
 
     df_equals(
         modin_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep=False, inplace=False
+            keep=False, inplace=False
         ),
         pandas_df.drop_duplicates(
-            subset=["int_data", "dense_nan_data"], keep=False, inplace=False
+            keep=False, inplace=False
         ),
     )
 
@@ -1423,10 +1422,10 @@ def test_drop_duplicates(frame_data):
         pandas_df.drop_duplicates(inplace=False),
     )
 
-    modin_df.drop_duplicates(subset=["int_data", "dense_nan_data"], inplace=True)
+    modin_df.drop_duplicates(inplace=True)
     df_equals(
         modin_df,
-        pandas_df.drop_duplicates(subset=["int_data", "dense_nan_data"], inplace=False),
+        pandas_df.drop_duplicates(inplace=False),
     )
 
     frame_data = {
