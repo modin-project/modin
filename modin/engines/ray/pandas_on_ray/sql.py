@@ -100,7 +100,7 @@ def get_query_columns(engine, query):
     result = con.execute(query).fetchone()
     values = list(result)
     cols_names = result.keys()
-    cols = {}
+    cols = OrderedDict()
     for i in range(len(cols_names)):
         cols[cols_names[i]] = type(values[i]).__name__
     return cols
