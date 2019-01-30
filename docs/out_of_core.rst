@@ -2,7 +2,7 @@ Out of Core in Modin (experimental)
 ===================================
 
 If you are working with very large files or would like to exceed your memory, you may
-change the primary location of the DataFrame. If you would like to exceed memory, you
+change the primary location of the `DataFrame`_. If you would like to exceed memory, you
 can use your disk as an overflow for the memory. This API is experimental in the context
 of Modin. Please let us know what you think!
 
@@ -63,4 +63,5 @@ This example creates a 40GB DataFrame from 20 identical 2GB DataFrames and perfo
 various operations on them. Feel free to play around with this code and let us know what
 you think!
 
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _`installation page`: installation.html

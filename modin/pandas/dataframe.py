@@ -198,7 +198,7 @@ class DataFrame(object):
             expr: The expression to evaluate. This string cannot contain any
                 Python statements, only Python expressions.
         """
-        if isinstance(expr, str) and expr is "":  # noqa: F632
+        if isinstance(expr, str) and expr == "":
             raise ValueError("expr cannot be an empty string")
 
         if isinstance(expr, str) and "@" in expr:
@@ -2944,7 +2944,17 @@ class DataFrame(object):
         limit=None,
         tolerance=None,
     ):
-        if level is not None:
+        if (
+            level is not None
+            or (
+                isinstance(self.columns, pandas.MultiIndex)
+                and (columns is not None or axis == 1)
+            )
+            or (
+                isinstance(self.index, pandas.MultiIndex)
+                and (index is not None or axis == 0)
+            )
+        ):
             return self._default_to_pandas(
                 pandas.DataFrame.reindex,
                 labels=labels,
