@@ -455,19 +455,27 @@ def test_from_sql():
 
 
 def test_from_sql_distributed():
-    conn = sqlite3.connect(TEST_SQL_FILENAME)
-    setup_sql_file(conn, True)
+    db_uri = "sqlite:///" + TEST_SQL_FILENAME
+    setup_sql_file(db_uri, True)
 
-    pandas_df = pandas.read_sql("select * from test", conn)
-    modin_df = pd.read_sql(
+    pandas_df = pandas.read_sql("select * from test", db_uri)
+    modin_df_from_query = pd.read_sql(
         "select * from test",
-        "sqlite:///" + TEST_SQL_FILENAME,
+        db_uri,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+    )
+    modin_df_from_table = pd.read_sql(
+        "test",
+        db_uri,
         partition_column="col1",
         lower_bound=0,
         upper_bound=6,
     )
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert modin_df_equals_pandas(modin_df_from_query, pandas_df)
+    assert modin_df_equals_pandas(modin_df_from_table, pandas_df)
 
     teardown_sql_file()
 

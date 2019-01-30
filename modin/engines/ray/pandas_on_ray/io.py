@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import pandas
 from pandas.io.common import _infer_compression
-from pandas.io.sql import pandasSQL_builder
 
 import inspect
 from io import BytesIO
@@ -20,6 +19,7 @@ from modin.data_management.query_compiler import PandasQueryCompiler
 from modin.engines.base.io import BaseIO
 from .block_partitions import RayBlockPartitions
 from .remote_partition import PandasOnRayRemotePartition
+from .sql import is_distributed, get_query_info, query_put_bounders
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
@@ -27,15 +27,6 @@ PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 class PandasOnRayIO(BaseIO):
     block_partitions_cls = RayBlockPartitions
     query_compiler_cls = PandasQueryCompiler
-
-    @staticmethod
-    def _sql_build_query(con, sql):
-        pandas_sql = pandasSQL_builder(con)
-        if pandas_sql.has_table(sql):
-            query = "SELECT * FROM " + sql
-        else:
-            query = sql.replace(";", "")
-        return query
 
     @classmethod
     def read_sql(
@@ -52,7 +43,34 @@ class PandasOnRayIO(BaseIO):
         lower_bound=None,
         upper_bound=None,
     ):
-        if not partition_column:
+        """
+        Read SQL query or database table into a DataFrame.
+        :param sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
+        :param con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
+        :param index_col: Column(s) to set as index(MultiIndex).
+        :param coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
+            floating point, useful for SQL result sets.
+        :param params: List of parameters to pass to execute method. The syntax used
+            to pass parameters is database driver dependent. Check your
+            database driver documentation for which of the five syntax styles,
+            described in PEP 249's paramstyle, is supported.
+        :param parse_dates:
+            - List of column names to parse as dates.
+            - Dict of ``{column_name: format string}`` where format string is
+              strftime compatible in case of parsing string times, or is one of
+              (D, s, ns, ms, us) in case of parsing integer timestamps.
+            - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
+              to the keyword arguments of :func:`pandas.to_datetime`
+              Especially useful with databases without native Datetime support,
+              such as SQLite.
+        :param columns: List of column names to select from SQL table (only used when reading a table).
+        :param chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
+        :param partition_column: column used to share the data between the workers (MUST be a INTEGER column)
+        :param lower_bound: the minimum value to be requested from the partition_column
+        :param upper_bound: the maximum value to be requested from the partition_column
+        :return: Pandas Dataframe
+        """
+        if not is_distributed(partition_column, lower_bound, upper_bound):
             ErrorMessage.default_to_pandas("`read_sql`")
             return cls.from_pandas(
                 pandas.read_sql(
@@ -67,11 +85,12 @@ class PandasOnRayIO(BaseIO):
                 )
             )
         #  starts the distributed alternative
+        cols_names, query = get_query_info(sql, con, partition_column)
         num_parts = RayBlockPartitions._compute_num_partitions()
+        num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
         rest = diff % num_parts
-        query = cls._sql_build_query(con, sql)
         partition_ids = list()
         index_ids = list()
         end = lower_bound - 1
@@ -85,6 +104,10 @@ class PandasOnRayIO(BaseIO):
             end = start + size - 1
             partition_id = _read_sql_with_offset_pandas_on_ray._remote(
                 args=(
+                    partition_column,
+                    start,
+                    end,
+                    num_splits,
                     query,
                     con,
                     index_col,
@@ -93,32 +116,17 @@ class PandasOnRayIO(BaseIO):
                     parse_dates,
                     columns,
                     chunksize,
-                    partition_column,
-                    start,
-                    end,
                 ),
-                num_return_vals=2,
+                num_return_vals=num_splits + 1,
             )
-            partition_ids.append([PandasOnRayRemotePartition(partition_id[0])])
+            partition_ids.append(
+                [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+            )
             index_ids.append(partition_id[-1])
-
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
-
-        column_names = pandas.read_sql(
-            sql + " LIMIT 1",
-            con,
-            index_col=index_col,
-            coerce_float=coerce_float,
-            params=params,
-            parse_dates=parse_dates,
-            columns=columns,
-            chunksize=chunksize,
-        ).columns
-
         new_query_compiler = PandasQueryCompiler(
-            RayBlockPartitions(np.array(partition_ids)), new_index, column_names
+            RayBlockPartitions(np.array(partition_ids)), new_index, cols_names
         )
-
         return new_query_compiler
 
     @classmethod
@@ -620,16 +628,12 @@ def _split_result_for_readers(axis, num_splits, df):
     return splits
 
 
-def _sql_put_bounders(query, partition_column, start, end):
-    where = " WHERE TMP_TABLE.{0} >= {1} AND TMP_TABLE.{0} <= {2}".format(
-        partition_column, start, end
-    )
-    query_with_bounders = "SELECT * FROM ({0}) AS TMP_TABLE {1}".format(query, where)
-    return query_with_bounders
-
-
 @ray.remote
 def _read_sql_with_offset_pandas_on_ray(
+    partition_column,
+    start,
+    end,
+    num_splits,
     sql,
     con,
     index_col=None,
@@ -638,11 +642,11 @@ def _read_sql_with_offset_pandas_on_ray(
     parse_dates=None,
     columns=None,
     chunksize=None,
-    partition_column=None,
-    start=None,
-    end=None,
 ):
-    query_with_bounders = _sql_put_bounders(sql, partition_column, start, end)
+    """
+    Use a Ray task to read a chunk of SQL source
+    """
+    query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(
         query_with_bounders,
         con,
@@ -654,7 +658,7 @@ def _read_sql_with_offset_pandas_on_ray(
         chunksize=chunksize,
     )
     index = len(pandas_df)
-    return [pandas_df] + [index]
+    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
 
 
 @ray.remote

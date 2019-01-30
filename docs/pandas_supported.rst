@@ -675,7 +675,7 @@ Performance will be affected by this.
 +--------------------+--------------------+----------------------------------------------------+
 | ``read_pickle``    | Y                  | Defaults to pandas implementation                  |
 +--------------------+--------------------+----------------------------------------------------+
-| ``read_sql``       | Y                  | Defaults to pandas implementation                  |
+| ``read_sql``       | Y                  | Distributed if used with extra arguments           |
 +--------------------+--------------------+----------------------------------------------------+
 
 List of Other Supported Operations Available on Import

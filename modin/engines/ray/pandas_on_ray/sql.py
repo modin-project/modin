@@ -9,16 +9,18 @@ def is_distributed(partition_column, lower_bound, upper_bound):
     :param upper_bound: the maximum value to be requested from the partition_column
     :return: True for distributed or False if not
     """
-    if (partition_column!=None) and (lower_bound!=None) and (upper_bound!=None):
+    if (partition_column != None) and (lower_bound != None) and (upper_bound != None):  # noqa: E711
         if upper_bound > lower_bound:
             return True
         else:
             raise InvalidArguments("upper_bound must be greater than lower_bound.")
-    elif (partition_column==None) and (lower_bound==None) and (upper_bound==None):
+    elif (partition_column == None) and (lower_bound == None) and (upper_bound == None):  # noqa: E711
         return False
     else:
-        raise InvalidArguments("Invalid combination of partition_column, lower_bound, upper_bound."
-                         "All these arguments should be passed (distributed) or none of them (standard pandas).")
+        raise InvalidArguments(
+            "Invalid combination of partition_column, lower_bound, upper_bound."
+            "All these arguments should be passed (distributed) or none of them (standard pandas)."
+        )
 
 
 def is_table(engine, sql):
@@ -111,8 +113,12 @@ def check_partition_column(partition_column, cols):
             if v == "int":
                 return
             else:
-                raise InvalidPartitionColumn("partition_column must be int, and not {0}".format(v))
-    raise InvalidPartitionColumn("partition_column {0} not found in the query".format(partition_column))
+                raise InvalidPartitionColumn(
+                    "partition_column must be int, and not {0}".format(v)
+                )
+    raise InvalidPartitionColumn(
+        "partition_column {0} not found in the query".format(partition_column)
+    )
 
 
 def get_query_info(sql, con, partition_column):
