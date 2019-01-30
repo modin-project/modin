@@ -1263,7 +1263,7 @@ def test_cumsum(request, data, axis, skipna):
     # pandas exhibits weird behavior for this case
     # Remove this case when we can pull the error messages from backend
     if name_contains(request.node.name, ["datetime_timedelta_data"]) and (
-        axis == 0 or axis is "rows"
+        axis == 0 or axis == "rows"
     ):
         with pytest.raises(TypeError):
             modin_df.cumsum(axis=axis, skipna=skipna)
