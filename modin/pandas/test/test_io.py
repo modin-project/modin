@@ -467,11 +467,7 @@ def test_from_sql_distributed():
         upper_bound=6,
     )
     modin_df_from_table = pd.read_sql(
-        "test",
-        db_uri,
-        partition_column="col1",
-        lower_bound=0,
-        upper_bound=6,
+        "test", db_uri, partition_column="col1", lower_bound=0, upper_bound=6
     )
 
     assert modin_df_equals_pandas(modin_df_from_query, pandas_df)
