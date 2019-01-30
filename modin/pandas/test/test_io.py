@@ -262,7 +262,6 @@ def setup_sql_file(conn, filename, table, force=False):
     if os.path.exists(filename) and not force:
         pass
     else:
-        teardown_sql_file(filename)
         df = pandas.DataFrame(
             {
                 "col1": [0, 1, 2, 3, 4, 5, 6],
@@ -443,9 +442,10 @@ def test_from_pickle():
 
 
 def test_from_sql():
-    filename = "test_from_sql_distributed.db"
+    filename = "test_from_sql.db"
+    teardown_sql_file(filename)
     conn = sqlite3.connect(filename)
-    table = "tbl"
+    table = "test_from_sql"
     setup_sql_file(conn, filename, table, True)
     query = "select * from {0}".format(table)
 
@@ -459,7 +459,8 @@ def test_from_sql():
 
 def test_from_sql_distributed():
     filename = "test_from_sql_distributed.db"
-    table = "tbl"
+    teardown_sql_file(filename)
+    table = "test_from_sql_distributed"
     db_uri = "sqlite:///" + filename
     setup_sql_file(db_uri, filename, table, True)
     query = "select * from {0}".format(table)
