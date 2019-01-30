@@ -211,7 +211,7 @@ def read_excel(
     return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
 
 
-def read_hdf(path_or_buf, key=None, mode="r", columns=None):
+def read_hdf(path_or_buf):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
