@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from sqlalchemy import MetaData, Table, create_engine
 
 
@@ -59,7 +60,7 @@ def get_table_columns(metadata):
     :param metadata: Table metadata
     :return: dict with columns names and python types
     """
-    cols = dict()
+    cols = OrderedDict()
     for col in metadata.c:
         name = str(col).rpartition(".")[2]
         cols[name] = col.type.python_type.__name__
@@ -99,7 +100,7 @@ def get_query_columns(engine, query):
     result = con.execute(query).fetchone()
     values = list(result)
     cols_names = result.keys()
-    cols = dict()
+    cols = {}
     for i in range(len(cols_names)):
         cols[cols_names[i]] = type(values[i]).__name__
     return cols

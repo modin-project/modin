@@ -91,8 +91,8 @@ class PandasOnRayIO(BaseIO):
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
         rest = diff % num_parts
-        partition_ids = list()
-        index_ids = list()
+        partition_ids = []
+        index_ids = []
         end = lower_bound - 1
         for part in range(num_parts):
             if rest:
