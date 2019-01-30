@@ -299,7 +299,7 @@ def read_sql(
         partition_column: column used to share the data between the workers (MUST be a INTEGER column)
         lower_bound: the minimum value to be requested from the partition_column
         upper_bound: the maximum value to be requested from the partition_column
-    
+
     Returns:
         Pandas Dataframe
     """
