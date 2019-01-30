@@ -43,32 +43,35 @@ class PandasOnRayIO(BaseIO):
         lower_bound=None,
         upper_bound=None,
     ):
-        """
-        Read SQL query or database table into a DataFrame.
-        :param sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
-        :param con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
-        :param index_col: Column(s) to set as index(MultiIndex).
-        :param coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
-            floating point, useful for SQL result sets.
-        :param params: List of parameters to pass to execute method. The syntax used
-            to pass parameters is database driver dependent. Check your
-            database driver documentation for which of the five syntax styles,
-            described in PEP 249's paramstyle, is supported.
-        :param parse_dates:
-            - List of column names to parse as dates.
-            - Dict of ``{column_name: format string}`` where format string is
-              strftime compatible in case of parsing string times, or is one of
-              (D, s, ns, ms, us) in case of parsing integer timestamps.
-            - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
-              to the keyword arguments of :func:`pandas.to_datetime`
-              Especially useful with databases without native Datetime support,
-              such as SQLite.
-        :param columns: List of column names to select from SQL table (only used when reading a table).
-        :param chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
-        :param partition_column: column used to share the data between the workers (MUST be a INTEGER column)
-        :param lower_bound: the minimum value to be requested from the partition_column
-        :param upper_bound: the maximum value to be requested from the partition_column
-        :return: Pandas Dataframe
+        """ Read SQL query or database table into a DataFrame.
+
+        Args:
+            sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
+            con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
+            index_col: Column(s) to set as index(MultiIndex).
+            coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
+                          floating point, useful for SQL result sets.
+            params: List of parameters to pass to execute method. The syntax used
+                    to pass parameters is database driver dependent. Check your
+                    database driver documentation for which of the five syntax styles,
+                    described in PEP 249's paramstyle, is supported.
+            parse_dates:
+                         - List of column names to parse as dates.
+                         - Dict of ``{column_name: format string}`` where format string is
+                           strftime compatible in case of parsing string times, or is one of
+                           (D, s, ns, ms, us) in case of parsing integer timestamps.
+                         - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
+                           to the keyword arguments of :func:`pandas.to_datetime`
+                           Especially useful with databases without native Datetime support,
+                           such as SQLite.
+            columns: List of column names to select from SQL table (only used when reading a table).
+            chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
+            partition_column: column used to share the data between the workers (MUST be a INTEGER column)
+            lower_bound: the minimum value to be requested from the partition_column
+            upper_bound: the maximum value to be requested from the partition_column
+        
+        Returns:
+            Pandas Dataframe
         """
         if not is_distributed(partition_column, lower_bound, upper_bound):
             ErrorMessage.default_to_pandas("`read_sql`")
@@ -643,8 +646,7 @@ def _read_sql_with_offset_pandas_on_ray(
     columns=None,
     chunksize=None,
 ):
-    """
-    Use a Ray task to read a chunk of SQL source
+    """ Use a Ray task to read a chunk of SQL source
     """
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(

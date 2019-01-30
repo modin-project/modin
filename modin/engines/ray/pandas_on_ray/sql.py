@@ -3,12 +3,15 @@ from sqlalchemy import MetaData, Table, create_engine
 
 
 def is_distributed(partition_column, lower_bound, upper_bound):
-    """
-    Check if is possible distribute a query given that args
-    :param partition_column: column used to share the data between the workers
-    :param lower_bound: the minimum value to be requested from the partition_column
-    :param upper_bound: the maximum value to be requested from the partition_column
-    :return: True for distributed or False if not
+    """ Check if is possible distribute a query given that args
+
+    Args:
+        partition_column: column used to share the data between the workers
+        lower_bound: the minimum value to be requested from the partition_column
+        upper_bound: the maximum value to be requested from the partition_column
+
+    Returns:
+        True for distributed or False if not
     """
     if (
         (partition_column != None) and (lower_bound != None) and (upper_bound != None)
@@ -29,11 +32,14 @@ def is_distributed(partition_column, lower_bound, upper_bound):
 
 
 def is_table(engine, sql):
-    """
-    Check with the given sql arg is query or table
-    :param engine: SQLAlchemy connection engine
-    :param sql: SQL query or table name
-    :return: True for table or False if not
+    """ Check with the given sql arg is query or table
+
+    Args:
+        engine: SQLAlchemy connection engine
+        sql: SQL query or table name
+
+    Returns:
+        True for table or False if not
     """
     print(sql)
     if engine.dialect.has_table(engine, sql):
@@ -42,11 +48,14 @@ def is_table(engine, sql):
 
 
 def get_table_metadata(engine, table):
-    """
-    Extract all useful infos from the given table
-    :param engine: SQLAlchemy connection engine
-    :param table: table name
-    :return: Dictionary of infos
+    """ Extract all useful infos from the given table
+
+    Args:
+        engine: SQLAlchemy connection engine
+        table: table name
+
+    Returns:
+        Dictionary of infos
     """
     metadata = MetaData()
     metadata.reflect(bind=engine, only=[table])
@@ -55,10 +64,13 @@ def get_table_metadata(engine, table):
 
 
 def get_table_columns(metadata):
-    """
-    Extract columns names and python typos from metadata
-    :param metadata: Table metadata
-    :return: dict with columns names and python types
+    """ Extract columns names and python typos from metadata
+
+    Args:
+        metadata: Table metadata
+
+    Returns:
+        dict with columns names and python types
     """
     cols = OrderedDict()
     for col in metadata.c:
@@ -68,19 +80,25 @@ def get_table_columns(metadata):
 
 
 def build_query_from_table(name):
-    """
-    Create a query given the table name
-    :param name: Table name
-    :return: query string
+    """ Create a query given the table name
+
+    Args:
+        name: Table name
+
+    Returns:
+        query string
     """
     return "SELECT * FROM {0}".format(name)
 
 
 def check_query(query):
-    """
-    Check query sanity
-    :param query: query string
-    :return: None
+    """ Check query sanity
+
+    Args:
+        query: query string
+
+    Returns:
+        None
     """
     q = query.lower()
     if "select " not in q:
@@ -90,11 +108,14 @@ def check_query(query):
 
 
 def get_query_columns(engine, query):
-    """
-    Extract columns names and python typos from query
-    :param engine: SQLAlchemy connection engine
-    :param query: SQL query
-    :return: dict with columns names and python types
+    """ Extract columns names and python typos from query
+
+    Args:
+        engine: SQLAlchemy connection engine
+        query: SQL query
+
+    Returns:
+        dict with columns names and python types
     """
     con = engine.connect()
     result = con.execute(query).fetchone()
@@ -107,11 +128,14 @@ def get_query_columns(engine, query):
 
 
 def check_partition_column(partition_column, cols):
-    """
-    Check partition_column existence and type
-    :param partition_column: partition_column name
-    :param cols: dict with columns names and python types
-    :return: None
+    """ Check partition_column existence and type
+
+    Args:
+        partition_column: partition_column name
+        cols: dict with columns names and python types
+
+    Returns:
+        None
     """
     for k, v in cols.items():
         if k == partition_column:
@@ -127,12 +151,15 @@ def check_partition_column(partition_column, cols):
 
 
 def get_query_info(sql, con, partition_column):
-    """
-    Return a columns name list and the query string
-    :param sql: SQL query or table name
-    :param con: database connection or url string
-    :param partition_column: column used to share the data between the workers
-    :return: Columns name list and query string
+    """ Return a columns name list and the query string
+
+    Args:
+        sql: SQL query or table name
+        con: database connection or url string
+        partition_column: column used to share the data between the workers
+
+    Returns:
+        Columns name list and query string
     """
     engine = create_engine(con)
     if is_table(engine, sql):
@@ -149,13 +176,16 @@ def get_query_info(sql, con, partition_column):
 
 
 def query_put_bounders(query, partition_column, start, end):
-    """
-    Put bounders in the query
-    :param query: SQL query string
-    :param partition_column: partition_column name
-    :param start: lower_bound
-    :param end: upper_bound
-    :return: QUery with bounders
+    """ Put bounders in the query
+
+    Args:
+        query: SQL query string
+        partition_column: partition_column name
+        start: lower_bound
+        end: upper_bound
+
+    Returns:
+        Query with bounders
     """
     where = " WHERE TMP_TABLE.{0} >= {1} AND TMP_TABLE.{0} <= {2}".format(
         partition_column, start, end
