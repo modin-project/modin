@@ -46,7 +46,7 @@ def test_modin_concat_with_series(data1, data2):
         random_state.random_integers(RAND_LOW, RAND_HIGH, modin_df1.shape[1])
     )
     df_equals(
-        pd.concat([modin_df1, modin_df2, pandas_series], axis=0),
+        pd.concat([modin_df1, modin_df2, modin_series], axis=0),
         pandas.concat([pandas_df1, pandas_df2, pandas_series], axis=0),
     )
 
