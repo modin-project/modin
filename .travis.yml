@@ -50,3 +50,4 @@ script:
   - python -m pytest --disable-pytest-warnings modin/pandas/test/test_concat.py
   - python -m pytest --disable-pytest-warnings modin/pandas/test/test_io.py
   - python -m pytest --disable-pytest-warnings modin/pandas/test/test_groupby.py
+  - python -m pytest --disable-pytest-warnings modin/experimental/pandas/test/test_io_exp.py
