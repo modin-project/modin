@@ -14,15 +14,15 @@ def is_distributed(partition_column, lower_bound, upper_bound):
         True for distributed or False if not
     """
     if (
-        (partition_column != None) and (lower_bound != None) and (upper_bound != None)
-    ):  # noqa: E711
+        (partition_column is not None)
+        and (lower_bound is not None)
+        and (upper_bound is not None)
+    ):
         if upper_bound > lower_bound:
             return True
         else:
             raise InvalidArguments("upper_bound must be greater than lower_bound.")
-    elif (
-        (partition_column == None) and (lower_bound == None) and (upper_bound == None)
-    ):  # noqa: E711
+    elif (partition_column is None) and (lower_bound is None) and (upper_bound is None):
         return False
     else:
         raise InvalidArguments(
@@ -41,7 +41,6 @@ def is_table(engine, sql):
     Returns:
         True for table or False if not
     """
-    print(sql)
     if engine.dialect.has_table(engine, sql):
         return True
     return False

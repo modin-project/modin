@@ -155,19 +155,19 @@ class BaseFactory(object):
     def _read_sql(cls, **kwargs):
         if execution_engine != "Ray":
             if "partition_column" in kwargs:
-                if kwargs["partition_column"] != None:  # noqa: E711
+                if kwargs["partition_column"] is not None:
                     warnings.warn(
                         "Distributed read_sql() was only implemented for Ray engine."
                     )
                 del kwargs["partition_column"]
             if "lower_bound" in kwargs:
-                if kwargs["lower_bound"] != None:  # noqa: E711
+                if kwargs["lower_bound"] is not None:
                     warnings.warn(
                         "Distributed read_sql() was only implemented for Ray engine."
                     )
                 del kwargs["lower_bound"]
             if "upper_bound" in kwargs:
-                if kwargs["upper_bound"] != None:  # noqa: E711
+                if kwargs["upper_bound"] is not None:
                     warnings.warn(
                         "Distributed read_sql() was only implemented for Ray engine."
                     )
