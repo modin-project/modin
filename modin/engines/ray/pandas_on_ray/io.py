@@ -408,7 +408,38 @@ class PandasOnRayIO(BaseIO):
             )
 
     @classmethod
-    def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
+    def _validate_hdf_format(cls, path_or_buf):
+        s = pandas.HDFStore(path_or_buf)
+        groups = s.groups()
+        if len(groups) == 0:
+            raise ValueError("No dataset in HDF5 file.")
+        candidate_only_group = groups[0]
+        format = getattr(candidate_only_group._v_attrs, "table_type", None)
+        s.close()
+        return format
+
+    @classmethod
+    def read_hdf(cls, path_or_buf, **kwargs):
+        """Load a h5 file from the file path or buffer, returning a DataFrame.
+
+        Args:
+            path_or_buf: string, buffer or path object
+                Path to the file to open, or an open :class:`pandas.HDFStore` object.
+            kwargs: Pass into pandas.read_hdf function.
+
+        Returns:
+            DataFrame constructed from the h5 file.
+        """
+        format = cls._validate_hdf_format(path_or_buf=path_or_buf)
+
+        if format is None:
+            ErrorMessage.default_to_pandas(
+                "File format seems to be `fixed`. For better distribution consider saving the file in `table` format. "
+                "df.to_hdf(format=`table`)."
+            )
+            return cls.from_pandas(pandas.read_hdf(path_or_buf=path_or_buf, **kwargs))
+
+        columns = kwargs.get("columns", None)
         if not columns:
             empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
             columns = empty_pd_df.columns
@@ -428,7 +459,7 @@ class PandasOnRayIO(BaseIO):
         blk_partitions = np.array(
             [
                 _read_hdf_columns._remote(
-                    args=(path_or_buf, cols, num_splits, key, mode),
+                    args=(path_or_buf, cols, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
                 )
                 for cols in col_partitions
@@ -563,7 +594,7 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
 
 
 @ray.remote
-def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
+def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):
     """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
     Args:
@@ -578,7 +609,7 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
             default Index.
     """
 
-    df = pandas.read_hdf(path_or_buf, key, mode, columns=columns)
+    df = pandas.read_hdf(path_or_buf, columns=columns, **kwargs)
     # Append the length of the index here to build it externally
     return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
