@@ -1385,14 +1385,42 @@ def test_drop_api_equivalence():
         modin_df.drop(axis=1)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_drop_duplicates(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+    pandas_df = pandas.DataFrame(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_df.drop_duplicates()
+    df_equals(
+        modin_df.drop_duplicates(keep="first", inplace=False),
+        pandas_df.drop_duplicates(keep="first", inplace=False),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(keep="last", inplace=False),
+        pandas_df.drop_duplicates(keep="last", inplace=False),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(keep=False, inplace=False),
+        pandas_df.drop_duplicates(keep=False, inplace=False),
+    )
+
+    df_equals(
+        modin_df.drop_duplicates(inplace=False),
+        pandas_df.drop_duplicates(inplace=False),
+    )
+
+    modin_df.drop_duplicates(inplace=True)
+    df_equals(modin_df, pandas_df.drop_duplicates(inplace=False))
+
+    frame_data = {
+        "A": list(range(3)) * 2,
+        "B": list(range(1, 4)) * 2,
+        "C": list(range(6)),
+    }
+    modin_df = pd.DataFrame(frame_data)
+    modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=True)
+    df_equals(modin_df, pandas.DataFrame({"A": [], "B": [], "C": []}))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
