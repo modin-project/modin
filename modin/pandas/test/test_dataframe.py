@@ -1391,30 +1391,18 @@ def test_drop_duplicates(data):
     pandas_df = pandas.DataFrame(data)
 
     df_equals(
-        modin_df.drop_duplicates(
-            keep="first", inplace=False
-        ),
-        pandas_df.drop_duplicates(
-            keep="first", inplace=False
-        ),
+        modin_df.drop_duplicates(keep="first", inplace=False),
+        pandas_df.drop_duplicates(keep="first", inplace=False),
     )
 
     df_equals(
-        modin_df.drop_duplicates(
-            keep="last", inplace=False
-        ),
-        pandas_df.drop_duplicates(
-            keep="last", inplace=False
-        ),
+        modin_df.drop_duplicates(keep="last", inplace=False),
+        pandas_df.drop_duplicates(keep="last", inplace=False),
     )
 
     df_equals(
-        modin_df.drop_duplicates(
-            keep=False, inplace=False
-        ),
-        pandas_df.drop_duplicates(
-            keep=False, inplace=False
-        ),
+        modin_df.drop_duplicates(keep=False, inplace=False),
+        pandas_df.drop_duplicates(keep=False, inplace=False),
     )
 
     df_equals(
@@ -1423,10 +1411,7 @@ def test_drop_duplicates(data):
     )
 
     modin_df.drop_duplicates(inplace=True)
-    df_equals(
-        modin_df,
-        pandas_df.drop_duplicates(inplace=False),
-    )
+    df_equals(modin_df, pandas_df.drop_duplicates(inplace=False))
 
     frame_data = {
         "A": list(range(3)) * 2,

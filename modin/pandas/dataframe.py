@@ -1267,8 +1267,8 @@ class DataFrame(object):
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
-        """
-                Return DataFrame with duplicate rows removed, optionally only considering certain columns
+        """Return DataFrame with duplicate rows removed, optionally only considering certain columns
+
             Args:
                 subset : column label or sequence of labels, optional
                     Only consider certain columns for identifying duplicates, by
@@ -1279,6 +1279,7 @@ class DataFrame(object):
                     - False : Drop all duplicates.
                 inplace : boolean, default False
                     Whether to drop duplicates in place or to return a copy
+
             Returns:
                 deduplicated : DataFrame
         """
