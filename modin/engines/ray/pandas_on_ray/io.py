@@ -425,7 +425,7 @@ class PandasOnRayIO(BaseIO):
         Args:
             path_or_buf: string, buffer or path object
                 Path to the file to open, or an open :class:`pandas.HDFStore` object.
-            kwargs: Pass into parquet's read_pandas function.
+            kwargs: Pass into pandas.read_hdf function.
 
         Returns:
             DataFrame constructed from the h5 file.
