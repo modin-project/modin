@@ -198,7 +198,7 @@ class DataFrame(object):
             expr: The expression to evaluate. This string cannot contain any
                 Python statements, only Python expressions.
         """
-        if isinstance(expr, str) and expr is "":
+        if isinstance(expr, str) and expr == "":
             raise ValueError("expr cannot be an empty string")
 
         if isinstance(expr, str) and "@" in expr:
