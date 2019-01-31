@@ -28,8 +28,8 @@ class PandasOnRayAxisPartition(PandasOnXAxisPartition):
                 num_splits,
                 kwargs,
                 maintain_partitioning,
-                *partitions,
-            ),
+            )
+            + tuple(partitions),
             num_return_vals=num_splits,
         )
 
@@ -45,8 +45,8 @@ class PandasOnRayAxisPartition(PandasOnXAxisPartition):
                 num_splits,
                 len_of_left,
                 kwargs,
-                *partitions,
-            ),
+            )
+            + tuple(partitions),
             num_return_vals=num_splits,
         )
 

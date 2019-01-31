@@ -18,7 +18,9 @@ class BaseAxisPartition(object):
             there will always be `BaseRemotePartition` object stored and structures
             itself accordingly.
 
-        The only abstract method needed to implement is the `apply` method.
+        The abstract methods that need implemented are `apply` and `shuffle`.
+        The children classes must also implement `instance_type` and `partition_type`
+        (see below).
     """
 
     def apply(
@@ -58,15 +60,14 @@ class BaseAxisPartition(object):
         raise NotImplementedError("Must be implemented in children classes")
 
     def shuffle(self, func, lengths, **kwargs):
-        """Shuffle the order of the data in this axis based on the `func`.
+        """Shuffle the order of the data in this axis based on the `lengths`.
 
         Args:
-            func:
-            num_splits:
-            kwargs:
+            func: The function to apply before splitting.
+            lengths: The list of partition lengths to split the result into.
 
         Returns:
-             A list of `BaseRemotePartition` objects.
+            A list of RemotePartition objects split by `lengths`.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -82,6 +83,18 @@ class BaseAxisPartition(object):
 
 
 class PandasOnXAxisPartition(BaseAxisPartition):
+    """This abstract class is created to simplify and consolidate the code for
+        AxisPartitions that run pandas. Because much of the code is similar, this allows
+        us to reuse this code.
+
+        Subclasses must implement `list_of_blocks` which unwraps the `RemotePartition`
+        objects and creates something interpretable as a pandas DataFrame.
+
+        See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayAxisPartition`
+        for an example on how to override/use this class when the implementation needs
+        to be augmented.
+    """
+
     def apply(
         self,
         func,
