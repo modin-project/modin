@@ -269,9 +269,6 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
-    partition_column=None,
-    lower_bound=None,
-    upper_bound=None,
 ):
     """ Read SQL query or database table into a DataFrame.
 
@@ -296,9 +293,6 @@ def read_sql(
                        such as SQLite.
         columns: List of column names to select from SQL table (only used when reading a table).
         chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
-        partition_column: column used to share the data between the workers (MUST be a INTEGER column)
-        lower_bound: the minimum value to be requested from the partition_column
-        upper_bound: the maximum value to be requested from the partition_column
 
     Returns:
         Pandas Dataframe
