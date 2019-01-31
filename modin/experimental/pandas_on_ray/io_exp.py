@@ -8,21 +8,20 @@ from .sql import is_distributed, get_query_info, query_put_bounders
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
-
     @classmethod
     def read_sql(
-            cls,
-            sql,
-            con,
-            index_col=None,
-            coerce_float=True,
-            params=None,
-            parse_dates=None,
-            columns=None,
-            chunksize=None,
-            partition_column=None,
-            lower_bound=None,
-            upper_bound=None,
+        cls,
+        sql,
+        con,
+        index_col=None,
+        coerce_float=True,
+        params=None,
+        parse_dates=None,
+        columns=None,
+        chunksize=None,
+        partition_column=None,
+        lower_bound=None,
+        upper_bound=None,
     ):
         """ Read SQL query or database table into a DataFrame.
 
@@ -57,7 +56,16 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         if not is_distributed(partition_column, lower_bound, upper_bound):
             # Change this so that when `PandasOnRayIO` has a parallel `read_sql` we can
             # still use it.
-            return PandasOnRayIO.read_sql(sql, con, index_col, coerce_float, params, parse_dates, columns, chunksize)
+            return PandasOnRayIO.read_sql(
+                sql,
+                con,
+                index_col,
+                coerce_float,
+                params,
+                parse_dates,
+                columns,
+                chunksize,
+            )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
         num_parts = cls.block_partitions_cls._compute_num_partitions()
