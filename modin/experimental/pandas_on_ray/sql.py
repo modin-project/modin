@@ -169,6 +169,7 @@ def get_query_info(sql, con, partition_column):
         check_query(sql)
         query = sql.replace(";", "")
         cols = get_query_columns(engine, query)
+    # TODO allow validation that takes into account edge cases of pandas e.g. "[index]"
     # check_partition_column(partition_column, cols)
     cols_names = list(cols.keys())
     return cols_names, query
