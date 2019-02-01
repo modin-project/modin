@@ -2,6 +2,14 @@ import os
 import warnings
 
 
+def custom_formatwarning(msg, *args, **kwargs):
+    # ignore everything except the message
+    return "WARN: {}\n".format(msg)
+
+
+warnings.formatwarning = custom_formatwarning
+
+
 def get_execution_engine():
     # In the future, when there are multiple engines and different ways of
     # backing the DataFrame, there will have to be some changed logic here to
