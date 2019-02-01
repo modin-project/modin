@@ -2,9 +2,9 @@ import os
 import warnings
 
 
-def custom_formatwarning(msg, *args, **kwargs):
+def custom_formatwarning(msg, category, *args, **kwargs):
     # ignore everything except the message
-    return "WARN: {}\n".format(msg)
+    return "{}: {}\n".format(category.__name__, msg)
 
 
 warnings.formatwarning = custom_formatwarning
