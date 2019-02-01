@@ -295,7 +295,7 @@ def read_sql(
         chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
 
     Returns:
-        Pandas Dataframe
+        Modin Dataframe
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql(**kwargs))

@@ -24,6 +24,7 @@ PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
 class PandasOnRayIO(BaseIO):
+
     block_partitions_cls = RayBlockPartitions
     query_compiler_cls = PandasQueryCompiler
 

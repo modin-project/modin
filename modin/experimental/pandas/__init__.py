@@ -3,7 +3,7 @@ from .io_exp import read_sql  # noqa F401
 import warnings
 
 warnings.warn(
-    "\nThank you for using the Modin Experimental pandas API. "
+    "Thank you for using the Modin Experimental pandas API."
     "\nPlease note that some of these APIs deviate from pandas in order to "
     "provide improved performance."
 )

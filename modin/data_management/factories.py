@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
-import warnings
 
 from .query_compiler import PandasQueryCompiler
 from .. import __execution_engine__ as execution_engine
@@ -153,25 +152,6 @@ class BaseFactory(object):
 
     @classmethod
     def _read_sql(cls, **kwargs):
-        if execution_engine != "Ray":
-            if "partition_column" in kwargs:
-                if kwargs["partition_column"] is not None:
-                    warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
-                    )
-                del kwargs["partition_column"]
-            if "lower_bound" in kwargs:
-                if kwargs["lower_bound"] is not None:
-                    warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
-                    )
-                del kwargs["lower_bound"]
-            if "upper_bound" in kwargs:
-                if kwargs["upper_bound"] is not None:
-                    warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
-                    )
-                del kwargs["upper_bound"]
         return cls.io_cls.read_sql(**kwargs)
 
 
