@@ -26,7 +26,6 @@ TEST_MSGPACK_FILENAME = "test.msg"
 TEST_STATA_FILENAME = "test.dta"
 TEST_PICKLE_FILENAME = "test.pkl"
 TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
-TEST_SQL_FILENAME = "test.db"
 SMALL_ROW_SIZE = 2000
 
 
@@ -259,26 +258,26 @@ def teardown_pickle_file():
 
 
 @pytest.fixture
-def setup_sql_file(conn, force=False):
-    if os.path.exists(TEST_SQL_FILENAME) and not force:
+def setup_sql_file(conn, filename, table, force=False):
+    if os.path.exists(filename) and not force:
         pass
     else:
         df = pandas.DataFrame(
             {
-                "col1": [0, 1, 2, 3],
-                "col2": [4, 5, 6, 7],
-                "col3": [8, 9, 10, 11],
-                "col4": [12, 13, 14, 15],
-                "col5": [0, 0, 0, 0],
+                "col1": [0, 1, 2, 3, 4, 5, 6],
+                "col2": [7, 8, 9, 10, 11, 12, 13],
+                "col3": [14, 15, 16, 17, 18, 19, 20],
+                "col4": [21, 22, 23, 24, 25, 26, 27],
+                "col5": [0, 0, 0, 0, 0, 0, 0],
             }
         )
-        df.to_sql(TEST_SQL_FILENAME.split(".")[0], conn)
+        df.to_sql(table, conn)
 
 
 @pytest.fixture
-def teardown_sql_file():
-    if os.path.exists(TEST_SQL_FILENAME):
-        os.remove(TEST_SQL_FILENAME)
+def teardown_sql_file(filename):
+    if os.path.exists(filename):
+        os.remove(filename)
 
 
 def test_from_parquet():
@@ -443,15 +442,19 @@ def test_from_pickle():
 
 
 def test_from_sql():
-    conn = sqlite3.connect(TEST_SQL_FILENAME)
-    setup_sql_file(conn, True)
+    filename = "test_from_sql.db"
+    teardown_sql_file(filename)
+    conn = sqlite3.connect(filename)
+    table = "test_from_sql"
+    setup_sql_file(conn, filename, table, True)
+    query = "select * from {0}".format(table)
 
-    pandas_df = pandas.read_sql("select * from test", conn)
-    modin_df = pd.read_sql("select * from test", conn)
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df = pd.read_sql(query, conn)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_sql_file()
+    teardown_sql_file(filename)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
