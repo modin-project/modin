@@ -56,9 +56,12 @@ class DaskAxisPartition(BaseAxisPartition):
         args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
 
         args.extend(dask.compute(*self.list_of_blocks))
-        return [
-            DaskRemotePartition(dask.delayed(obj)) for obj in deploy_axis_func(*args)
-        ]
+        # return [
+        #     DaskRemotePartition(dask.delayed(obj)) for obj in deploy_axis_func(*args)
+        # ]
+        # args = [self.axis, func, num_splits, kwargs] + self.list_of_blocks
+        delayed_call = dask.delayed(deploy_axis_func, nout=num_splits)(*args)
+        return [DaskRemotePartition(delayed_call[i]) for i in range(num_splits)]
 
 
 class DaskColumnPartition(DaskAxisPartition):
