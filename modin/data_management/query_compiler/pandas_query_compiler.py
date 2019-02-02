@@ -20,7 +20,7 @@ from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
 
 
-class PandasQueryCompiler(object):
+class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
 
@@ -38,13 +38,7 @@ class PandasQueryCompiler(object):
         if dtypes is not None:
             self._dtype_cache = dtypes
 
-    def __constructor__(self, block_paritions_object, index, columns, dtypes=None):
-        """By default, constructor method will invoke an init"""
-        return type(self)(block_paritions_object, index, columns, dtypes)
-
     # Index, columns and dtypes objects
-    _dtype_cache = None
-
     def _get_dtype(self):
         if self._dtype_cache is None:
             map_func = self._prepare_method(lambda df: df.dtypes)
@@ -57,49 +51,6 @@ class PandasQueryCompiler(object):
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache.index = self.columns
         return self._dtype_cache
-
-    def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    # These objects are currently not distributed.
-    _index_cache = None
-    _columns_cache = None
-
-    def _get_index(self):
-        return self._index_cache
-
-    def _get_columns(self):
-        return self._columns_cache
-
-    def _validate_set_axis(self, new_labels, old_labels):
-        new_labels = _ensure_index(new_labels)
-        old_len = len(old_labels)
-        new_len = len(new_labels)
-        if old_len != new_len:
-            raise ValueError(
-                "Length mismatch: Expected axis has %d elements, "
-                "new values have %d elements" % (old_len, new_len)
-            )
-        return new_labels
-
-    def _set_index(self, new_index):
-        if self._index_cache is None:
-            self._index_cache = _ensure_index(new_index)
-        else:
-            new_index = self._validate_set_axis(new_index, self._index_cache)
-            self._index_cache = new_index
-
-    def _set_columns(self, new_columns):
-        if self._columns_cache is None:
-            self._columns_cache = _ensure_index(new_columns)
-        else:
-            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            self._columns_cache = new_columns
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
 
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
@@ -273,31 +224,6 @@ class PandasQueryCompiler(object):
             return self.columns.join(other_index, how=how, sort=sort)
         else:
             return self.index.join(other_index, how=how, sort=sort)
-
-    def join(self, other, **kwargs):
-        """Joins a list or two objects together
-
-        Args:
-            other: The other object(s) to join on.
-
-        Returns:
-            Joined objects.
-        """
-        if not isinstance(other, list):
-            other = [other]
-        return self._join_list_of_managers(other, **kwargs)
-
-    def concat(self, axis, other, **kwargs):
-        """Concatenates two objects together.
-
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other: The other_index to concat with.
-
-        Returns:
-            Concatenated objects.
-        """
-        return self._append_list_of_managers(other, axis, **kwargs)
 
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
@@ -827,26 +753,6 @@ class PandasQueryCompiler(object):
 
     # END Inter-Data operations
 
-    # Single Manager scalar operations (e.g. add to scalar, list of scalars)
-    def scalar_operations(self, axis, scalar, func):
-        """Handler for mapping scalar operations across a Manager.
-
-        Args:
-            axis: The axis index object to execute the function on.
-            scalar: The scalar value to map.
-            func: The function to use on the Manager with the scalar.
-
-        Returns:
-            New DataManager with updated data and new index.
-        """
-        if isinstance(scalar, (list, np.ndarray, pandas.Series)):
-            new_data = self.map_across_full_axis(axis, func)
-            return self.__constructor__(new_data, self.index, self.columns)
-        else:
-            return self.map_partitions(func)
-
-    # END Single Manager scalar operations
-
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
         """Fits a new index for this Manger.
@@ -923,34 +829,6 @@ class PandasQueryCompiler(object):
             )
 
     # END Reindex/reset_index
-
-    # Transpose
-    # For transpose, we aren't going to immediately copy everything. Since the
-    # actual transpose operation is very fast, we will just do it before any
-    # operation that gets called on the transposed data. See _prepare_method
-    # for how the transpose is applied.
-    #
-    # Our invariants assume that the blocks are transposed, but not the
-    # data inside. Sometimes we have to reverse this transposition of blocks
-    # for simplicity of implementation.
-    #
-    # _is_transposed, 0 for False or non-transposed, 1 for True or transposed.
-    _is_transposed = 0
-
-    def transpose(self, *args, **kwargs):
-        """Transposes this DataManager.
-
-        Returns:
-            Transposed new DataManager.
-        """
-        new_data = self.data.transpose(*args, **kwargs)
-        # Switch the index and columns and transpose the
-        new_manager = self.__constructor__(new_data, self.columns, self.index)
-        # It is possible that this is already transposed
-        new_manager._is_transposed = self._is_transposed ^ 1
-        return new_manager
-
-    # END Transpose
 
     # Full Reduce operations
     #
@@ -1158,11 +1036,6 @@ class PandasQueryCompiler(object):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    def map_partitions(self, func, new_dtypes=None):
-        return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-        )
-
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
         return self.map_partitions(func, new_dtypes=self.dtypes.copy())
@@ -1272,38 +1145,6 @@ class PandasQueryCompiler(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce(self, func, axis, alternate_index=None):
-        """Applies map that reduce Manager to series but require knowledge of full axis.
-
-        Args:
-            func: Function to reduce the Manager by. This function takes in a Manager.
-            axis: axis to apply the function to.
-            alternate_index: If the resulting series should have an index
-                different from the current query_compiler's index or columns.
-
-        Return:
-            Pandas series containing the reduced data.
-        """
-        # We XOR with axis because if we are doing an operation over the columns
-        # (i.e. along the rows), we want to take the transpose so that the
-        # results from the same parition will be concated together first.
-        # We need this here because if the operations is over the columns,
-        # map_across_full_axis does not transpose the result before returning.
-        result = self.data.map_across_full_axis(axis, func).to_pandas(
-            self._is_transposed ^ axis
-        )
-        if result.empty:
-            return result
-        if not axis:
-            result.index = (
-                alternate_index if alternate_index is not None else self.columns
-            )
-        else:
-            result.index = (
-                alternate_index if alternate_index is not None else self.index
-            )
-        return result
-
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
 
@@ -1588,32 +1429,6 @@ class PandasQueryCompiler(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_axis_reduce_along_select_indices(
-        self, func, axis, index, pandas_result=True
-    ):
-        """Reduce Manger along select indices using function that needs full axis.
-
-        Args:
-            func: Callable that reduces Manager to Series using full knowledge of an
-                axis.
-            axis: 0 for columns and 1 for rows. Defaults to 0.
-            index: Index of the resulting series.
-            pandas_result: Return the result as a Pandas Series instead of raw data.
-
-        Returns:
-            Either a Pandas Series with index or BaseBlockPartitions object.
-        """
-        # Convert indices to numeric indices
-        old_index = self.index if axis else self.columns
-        numeric_indices = [i for i, name in enumerate(old_index) if name in index]
-        result = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, numeric_indices
-        )
-        if pandas_result:
-            result = result.to_pandas(self._is_transposed)
-            result.index = index
-        return result
-
     def describe(self, **kwargs):
         """Generates descriptive statistics.
 
@@ -1687,9 +1502,6 @@ class PandasQueryCompiler(object):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
-    def map_across_full_axis(self, axis, func):
-        return self.data.map_across_full_axis(axis, func)
-
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(func, **kwargs)
@@ -1984,24 +1796,6 @@ class PandasQueryCompiler(object):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
-    def map_across_full_axis_select_indices(
-        self, axis, func, indices, keep_remaining=False
-    ):
-        """Maps function to select indices along full axis.
-
-        Args:
-            axis: 0 for columns and 1 for rows.
-            func: Callable mapping function over the BlockParitions.
-            indices: indices along axis to map over.
-            keep_remaining: True if keep indices where function was not applied.
-
-        Returns:
-            BaseBlockPartitions containing the result of mapping func over axis on indices.
-        """
-        return self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, indices, keep_remaining
-        )
-
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
 
@@ -2171,55 +1965,6 @@ class PandasQueryCompiler(object):
 
     # End Head/Tail/Front/Back
 
-    # Data Management Methods
-    def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
-        # TODO create a way to clean up this object.
-        return
-
-    # END Data Management Methods
-
-    # To/From Pandas
-    def to_pandas(self):
-        """Converts Modin DataFrame to Pandas DataFrame.
-
-        Returns:
-            Pandas DataFrame of the DataManager.
-        """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
-        if df.empty:
-            dtype_dict = {
-                col_name: pandas.Series(dtype=self.dtypes[col_name])
-                for col_name in self.columns
-            }
-            df = pandas.DataFrame(dtype_dict, self.index)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
-            )
-            df.index = self.index
-            df.columns = self.columns
-        return df
-
-    @classmethod
-    def from_pandas(cls, df, block_partitions_cls):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
-
-        Args:
-            cls: DataManger object to convert the DataFrame to.
-            df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
-
-        Returns:
-            Returns DataManager containing data from the Pandas DataFrame.
-        """
-        new_index = df.index
-        new_columns = df.columns
-        new_dtypes = df.dtypes
-        new_data = block_partitions_cls.from_pandas(df)
-        return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
-
     # __getitem__ methods
     def getitem_single_key(self, key):
         """Get item for a single target index.
@@ -2290,11 +2035,8 @@ class PandasQueryCompiler(object):
 
     # END __getitem__ methods
 
-    # __delitem__ and drop
-    # These will change the shape of the resulting data.
-    def delitem(self, key):
-        return self.drop(columns=[key])
-
+    # Drop
+    # This will change the shape of the resulting data.
     def drop(self, index=None, columns=None):
         """Remove row data for target index and columns.
 
@@ -2337,7 +2079,7 @@ class PandasQueryCompiler(object):
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
-    # END __delitem__ and drop
+    # END Drop
 
     # Insert
     # This method changes the shape of the resulting data. In Pandas, this
@@ -2814,11 +2556,6 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             self, block_partitions_object, index, columns, dtypes
         )
 
-    _dtype_cache = None
-
-    def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
-
     def _get_dtype(self):
         """Override the parent on this to avoid getting the wrong dtypes"""
         if self._dtype_cache is None:
@@ -2832,17 +2569,6 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache = self._dtype_cache.reindex(self.columns)
         return self._dtype_cache
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    def __constructor__(
-        self,
-        block_partitions_object: BaseBlockPartitions,
-        index: pandas.Index,
-        columns: pandas.Index,
-        dtypes=None,
-    ):
-        return PandasQueryCompiler(block_partitions_object, index, columns, dtypes)
 
     def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
@@ -2862,14 +2588,6 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             keep_remaining=False,
         )
         return masked_data
-
-    def _set_data(self, new_data):
-        """Note this setter will be called by the
-            `super(PandasDataManagerView).__init__` function
-        """
-        self.parent_data = new_data
-
-    data = property(_get_data, _set_data)
 
     def global_idx_to_numeric_idx(self, axis, indices):
         assert axis in ["row", "col", "columns"]

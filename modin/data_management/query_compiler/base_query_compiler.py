@@ -1360,7 +1360,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         columns: pandas.Index,
         dtypes=None,
     ):
-        return super(BaseQueryCompiler, self)(block_partitions_object, index, columns, dtypes)
+        return type(self)(block_partitions_object, index, columns, dtypes)
 
     def _set_data(self, new_data):
         """Note this setter will be called by the
