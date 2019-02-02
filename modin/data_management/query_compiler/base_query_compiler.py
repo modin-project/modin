@@ -1344,6 +1344,8 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     def global_idx_to_numeric_idx(self, axis, indices):
         raise NotImplementedError("Must be implemented in children classes")
 
+    # END Abstract functions for QueryCompilerView
+
     _dtype_cache = None
 
     def _set_dtype(self, dtypes):
