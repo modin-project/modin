@@ -18,6 +18,7 @@ from pandas.core.base import DataError
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
+from .base_query_compiler import BaseQueryCompiler
 
 
 class PandasQueryCompiler(BaseQueryCompiler):
@@ -51,6 +52,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache.index = self.columns
         return self._dtype_cache
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    dtypes = property(_get_dtype, _set_dtype)
 
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
@@ -88,6 +94,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return index_obj[new_indices] if compute_diff else new_indices
 
+    def _validate_set_axis(self, new_labels, old_labels):
+        new_labels = _ensure_index(new_labels)
+        old_len = len(old_labels)
+        new_len = len(new_labels)
+        if old_len != new_len:
+            raise ValueError(
+                "Length mismatch: Expected axis has %d elements, "
+                "new values have %d elements" % (old_len, new_len)
+            )
+        return new_labels
+
+    def _get_index(self):
+        return self._index_cache
+
+    def _get_columns(self):
+        return self._columns_cache
+
+    def _set_index(self, new_index):
+        if self._index_cache is None:
+            self._index_cache = _ensure_index(new_index)
+        else:
+            new_index = self._validate_set_axis(new_index, self._index_cache)
+            self._index_cache = new_index
+
+    def _set_columns(self, new_columns):
+        if self._columns_cache is None:
+            self._columns_cache = _ensure_index(new_columns)
+        else:
+            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
+            self._columns_cache = new_columns
+
+    columns = property(_get_columns, _set_columns)
+    index = property(_get_index, _set_index)
     # END Index, columns, and dtypes objects
 
     # Internal methods

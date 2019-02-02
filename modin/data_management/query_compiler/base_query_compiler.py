@@ -3,32 +3,35 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pandas
+
 from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
 
 class BaseQueryCompiler(object):
-  """Abstract Class that handles the queries to Modin dataframes.
+    """Abstract Class that handles the queries to Modin dataframes.
 
     Note: See the Abstract Methods and Fields section immediately below this
         for a list of requirements for subclassing this object.
     """
+
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
-    def __init__(
-        self,
-        block_partitions_object: BaseBlockPartitions,
-        index: pandas.Index,
-        columns: pandas.Index,
-        dtypes=None,
-    ):
+    def __init__(self, block_partitions_object: BaseBlockPartitions, index, columns, dtypes=None,):
         raise NotImplementedError("Must be implemented in children classes")
 
     # Dtypes and Indexing Abstract Methods
+    _dtype_cache = None
 
     def _get_dtype(self):
         raise NotImplementedError("Must be implemented in children classes")
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    dtypes = property(_get_dtype, _set_dtype)
 
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
@@ -45,9 +48,28 @@ class BaseQueryCompiler(object):
                 unknown.
 
         Returns:
-            A new pandas.Index object.
+            A new Index object.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
+    # These objects are currently not distributed.
+    _index_cache = None
+    _columns_cache = None
+
+    def _get_index(self):
+        return self._index_cache
+
+    def _get_columns(self):
+        return self._columns_cache
+
+    def _set_index(self, new_index):
+        raise NotImplementedError("Must be implemented in children classes")
+
+    def _set_columns(self, new_columns):
+        raise NotImplementedError("Must be implemented in children classes")
+
+    columns = property(_get_columns, _set_columns)
+    index = property(_get_index, _set_index)
 
     # END dtypes and indexing abstract methods
 
@@ -108,28 +130,28 @@ class BaseQueryCompiler(object):
 
     # Abstract join and append helper functions
     def _join_index_objects(self, axis, other_index, how, sort=True):
-    """Joins a pair of index objects (columns or rows) by a given strategy.
+        """Joins a pair of index objects (columns or rows) by a given strategy.
 
-    Args:
-        axis: The axis index object to join (0 for columns, 1 for index).
-        other_index: The other_index to join on.
-        how: The type of join to join to make (e.g. right, left).
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other_index: The other_index to join on.
+            how: The type of join to join to make (e.g. right, left).
 
-    Returns:
-        Joined indices.
-    """
-    # if isinstance(other_index, list):
-    #     joined_obj = self.columns if not axis else self.index
-    #     # TODO: revisit for performance
-    #     for obj in other_index:
-    #         joined_obj = joined_obj.join(obj, how=how)
-    #
-    #     return joined_obj
-    # if not axis:
-    #     return self.columns.join(other_index, how=how, sort=sort)
-    # else:
-    #     return self.index.join(other_index, how=how, sort=sort)
-    raise NotImplementedError("Must be implemented in children classes")
+        Returns:
+            Joined indices.
+        """
+        # if isinstance(other_index, list):
+        #     joined_obj = self.columns if not axis else self.index
+        #     # TODO: revisit for performance
+        #     for obj in other_index:
+        #         joined_obj = joined_obj.join(obj, how=how)
+        #
+        #     return joined_obj
+        # if not axis:
+        #     return self.columns.join(other_index, how=how, sort=sort)
+        # else:
+        #     return self.index.join(other_index, how=how, sort=sort)
+        raise NotImplementedError("Must be implemented in children classes")
 
     def _append_list_of_managers(self, others, axis, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
@@ -455,9 +477,9 @@ class BaseQueryCompiler(object):
 
         Return:
             Returns Pandas Series containing the results from map_func and reduce_func.
-        """:
+        """
         raise NotImplementedError("Must be implemented in children classes")
-        
+
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
@@ -973,53 +995,6 @@ class BaseQueryCompiler(object):
         """By default, constructor method will invoke an init"""
         return type(self)(block_paritions_object, index, columns, dtypes)
 
-    # Index, columns and dtypes objects
-    _dtype_cache = None
-
-    def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    # These objects are currently not distributed.
-    _index_cache = None
-    _columns_cache = None
-
-    def _get_index(self):
-        return self._index_cache
-
-    def _get_columns(self):
-        return self._columns_cache
-
-    def _validate_set_axis(self, new_labels, old_labels):
-        new_labels = _ensure_index(new_labels)
-        old_len = len(old_labels)
-        new_len = len(new_labels)
-        if old_len != new_len:
-            raise ValueError(
-                "Length mismatch: Expected axis has %d elements, "
-                "new values have %d elements" % (old_len, new_len)
-            )
-        return new_labels
-
-    def _set_index(self, new_index):
-        if self._index_cache is None:
-            self._index_cache = _ensure_index(new_index)
-        else:
-            new_index = self._validate_set_axis(new_index, self._index_cache)
-            self._index_cache = new_index
-
-    def _set_columns(self, new_columns):
-        if self._columns_cache is None:
-            self._columns_cache = _ensure_index(new_columns)
-        else:
-            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            self._columns_cache = new_columns
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
-    # END Index, columns, and dtypes objects
-
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
     # compute. These operations should only ever be manipulations of the
@@ -1303,9 +1278,16 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
+    _dtype_cache = None
+
     def _get_dtype(self):
         """Override the parent on this to avoid getting the wrong dtypes"""
         raise NotImplementedError("Must be implemented in children classes")
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    dtypes = property(_get_dtype, _set_dtype)
 
     def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
@@ -1315,27 +1297,6 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    def global_idx_to_numeric_idx(self, axis, indices):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # END Abstract functions for QueryCompilerView
-
-    _dtype_cache = None
-
-    def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    def __constructor__(
-        self,
-        block_partitions_object: BaseBlockPartitions,
-        index: pandas.Index,
-        columns: pandas.Index,
-        dtypes=None,
-    ):
-        return type(self)(block_partitions_object, index, columns, dtypes)
-
     def _set_data(self, new_data):
         """Note this setter will be called by the
             `super(PandasDataManagerView).__init__` function
@@ -1343,3 +1304,17 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         self.parent_data = new_data
 
     data = property(_get_data, _set_data)
+
+    def global_idx_to_numeric_idx(self, axis, indices):
+        raise NotImplementedError("Must be implemented in children classes")
+
+    # END Abstract functions for QueryCompilerView
+
+    def __constructor__(
+        self,
+        block_partitions_object: BaseBlockPartitions,
+        index,
+        columns,
+        dtypes=None,
+    ):
+        return type(self)(block_partitions_object, index, columns, dtypes)
