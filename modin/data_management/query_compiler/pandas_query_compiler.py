@@ -16,7 +16,6 @@ from pandas.core.dtypes.common import (
 from pandas.core.index import _ensure_index
 from pandas.core.base import DataError
 
-from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
 from .base_query_compiler import BaseQueryCompiler
 
@@ -888,7 +887,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     _is_transposed = 0
 
     def transpose(self, *args, **kwargs):
-        """Transposes this DataManager.	
+        """Transposes this DataManager.
          Returns:
             Transposed new DataManager.
         """
