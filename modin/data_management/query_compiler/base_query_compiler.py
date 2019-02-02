@@ -443,6 +443,21 @@ class BaseQueryCompiler(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
+    def full_reduce(self, axis, map_func, reduce_func=None, numeric_only=False):
+        """Apply function that will reduce the data to a Pandas Series.
+
+        Args:
+            axis: 0 for columns and 1 for rows. Default is 0.
+            map_func: Callable function to map the dataframe.
+            reduce_func: Callable function to reduce the dataframe. If none,
+                then apply map_func twice.
+            numeric_only: Apply only over the numeric rows.
+
+        Return:
+            Returns Pandas Series containing the results from map_func and reduce_func.
+        """:
+        raise NotImplementedError("Must be implemented in children classes")
+        
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
@@ -1087,47 +1102,6 @@ class BaseQueryCompiler(object):
         new_manager._is_transposed = self._is_transposed ^ 1
         return new_manager
     # END Transpose
-
-    # Full Reduce operations
-    #
-    # These operations result in a reduced dimensionality of data.
-    # Currently, this means a Pandas Series will be returned, but in the future
-    # we will implement a Distributed Series, and this will be returned
-    # instead.
-    def full_reduce(self, axis, map_func, reduce_func=None, numeric_only=False):
-        """Apply function that will reduce the data to a Pandas Series.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            map_func: Callable function to map the dataframe.
-            reduce_func: Callable function to reduce the dataframe. If none,
-                then apply map_func twice.
-            numeric_only: Apply only over the numeric rows.
-
-        Return:
-            Returns Series containing the results from map_func and reduce_func.
-        """
-        if numeric_only:
-            result, query_compiler = self.numeric_function_clean_dataframe(axis)
-            if result is not None:
-                return result
-        else:
-            query_compiler = self
-        if reduce_func is None:
-            reduce_func = map_func
-        # The XOR here will ensure that we reduce over the correct axis that
-        # exists on the internal partitions. We flip the axis
-        result = query_compiler.data.full_reduce(
-            map_func, reduce_func, axis ^ self._is_transposed
-        )
-        if result.shape == (0,):
-            return result
-        elif not axis:
-            result.index = query_compiler.columns
-        else:
-            result.index = query_compiler.index
-        return result
-    # END Full Reduce operations
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
