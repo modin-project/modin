@@ -101,8 +101,6 @@ class PandasQueryCompiler(object):
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
 
-    # END Index, columns, and dtypes objects
-
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
 
@@ -139,7 +137,7 @@ class PandasQueryCompiler(object):
         )
         return index_obj[new_indices] if compute_diff else new_indices
 
-    # END Index and columns objects
+    # END Index, columns, and dtypes objects
 
     # Internal methods
     # These methods are for building the correct answer in a modular way.
@@ -239,6 +237,8 @@ class PandasQueryCompiler(object):
         return self.__constructor__(
             self.data.copy(), self.index.copy(), self.columns.copy(), self._dtype_cache
         )
+
+    # END Copy
 
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
