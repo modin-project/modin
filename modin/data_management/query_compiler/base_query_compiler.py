@@ -23,13 +23,11 @@ class BaseQueryCompiler(object):
         raise NotImplementedError("Must be implemented in children classes")
 
     # Dtypes and Indexing Abstract Methods
-    _dtype_cache = None
-
     def _get_dtype(self):
         raise NotImplementedError("Must be implemented in children classes")
 
     def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
+        raise NotImplementedError("Must be implemented in children classes")
 
     dtypes = property(_get_dtype, _set_dtype)
 
@@ -53,14 +51,11 @@ class BaseQueryCompiler(object):
         raise NotImplementedError("Must be implemented in children classes")
 
     # These objects are currently not distributed.
-    _index_cache = None
-    _columns_cache = None
-
     def _get_index(self):
-        return self._index_cache
+        raise NotImplementedError("Must be implemented in children classes")
 
     def _get_columns(self):
-        return self._columns_cache
+        raise NotImplementedError("Must be implemented in children classes")
 
     def _set_index(self, new_index):
         raise NotImplementedError("Must be implemented in children classes")
@@ -73,47 +68,12 @@ class BaseQueryCompiler(object):
 
     # END dtypes and indexing abstract methods
 
-    # Abstract internal methods
-    # These methods are for building the correct answer in a modular way.
-    # Please be careful when changing these!
-    def _prepare_method(self, func, **kwargs):
-        """Prepares methods given various metadata. Currently only transpose here
-        Args:
-            func: The function to prepare.
-
-        Returns
-            Helper function which handles potential transpose.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # def numeric_columns(self, include_bool=True):
-    #     """Returns the numeric columns of the Manager.
-    #
-    #     Returns:
-    #         List of index names.
-    #     """
-    #     raise NotImplementedError("Must be implemented in children classes")
-    #
-    # def numeric_function_clean_dataframe(self, axis):
-    #     """Preprocesses numeric functions to clean dataframe and pick numeric indices.
-    #
-    #     Args:
-    #         axis: '0' if columns and '1' if rows.
-    #
-    #     Returns:
-    #         Tuple with return value(if any), indices to apply func to & cleaned Manager.
-    #     """
-    #     raise NotImplementedError("Must be implemented in children classes")
-
-    # END Abstract internal methods
-
     # Metadata modification abstract methods
     def add_prefix(self, prefix):
         raise NotImplementedError("Must be implemented in children classes")
 
     def add_suffix(self, suffix):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Metadata modification abstract methods
 
     # Abstract copy
@@ -121,11 +81,7 @@ class BaseQueryCompiler(object):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        # return self.__constructor__(
-        #     self.data.copy(), self.index.copy(), self.columns.copy(), self._dtype_cache
-        # )
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract copy
 
     # Abstract join and append helper functions
@@ -140,17 +96,6 @@ class BaseQueryCompiler(object):
         Returns:
             Joined indices.
         """
-        # if isinstance(other_index, list):
-        #     joined_obj = self.columns if not axis else self.index
-        #     # TODO: revisit for performance
-        #     for obj in other_index:
-        #         joined_obj = joined_obj.join(obj, how=how)
-        #
-        #     return joined_obj
-        # if not axis:
-        #     return self.columns.join(other_index, how=how, sort=sort)
-        # else:
-        #     return self.index.join(other_index, how=how, sort=sort)
         raise NotImplementedError("Must be implemented in children classes")
 
     def _append_list_of_managers(self, others, axis, **kwargs):
@@ -158,7 +103,6 @@ class BaseQueryCompiler(object):
 
     def _join_list_of_managers(self, others, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract join and append helper functions
 
     # Abstract copartition
@@ -179,7 +123,6 @@ class BaseQueryCompiler(object):
             A tuple (left query compiler, right query compiler list, joined index).
         """
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract copartition
 
     # Abstract inter-data operations (e.g. add, sub)
@@ -433,8 +376,17 @@ class BaseQueryCompiler(object):
             New DataManager with updated data and index.
         """
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract inter-data operations
+
+    # Abstract Transpose
+    def transpose(self, *args, **kwargs):
+        """Transposes this DataManager.
+
+        Returns:
+            Transposed new DataManager.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+    # END Abstract Transpose
 
     # Abstract reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
@@ -456,7 +408,6 @@ class BaseQueryCompiler(object):
             New DataManager with updated data and reset index.
         """
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract reindex/reset_index
 
     # Full Reduce operations
@@ -935,19 +886,6 @@ class BaseQueryCompiler(object):
     # These methods require some sort of manual partitioning due to their
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
-    def _manual_repartition(self, axis, repartition_func, **kwargs):
-        """This method applies all manual partitioning functions.
-
-        Args:
-            axis: The axis to shuffle data along.
-            repartition_func: The function used to repartition data.
-
-        Returns:
-            A `BaseBlockPartitions` object.
-        """
-        func = self._prepare_method(repartition_func, **kwargs)
-        return self.data.manual_shuffle(axis, func)
-
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
         raise NotImplementedError("Must be implemented in children classes")
     # END Manual Partitioning methods
@@ -988,12 +926,12 @@ class BaseQueryCompiler(object):
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract methods for QueryCompiler
 
-    def __constructor__(self, block_paritions_object, index, columns, dtypes=None):
+    @property
+    def __constructor__(self):
         """By default, constructor method will invoke an init"""
-        return type(self)(block_paritions_object, index, columns, dtypes)
+        return type(self)
 
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
@@ -1050,33 +988,6 @@ class BaseQueryCompiler(object):
         else:
             return self.map_partitions(func)
     # END Single Manager scalar operations
-
-    # Transpose
-    # For transpose, we aren't going to immediately copy everything. Since the
-    # actual transpose operation is very fast, we will just do it before any
-    # operation that gets called on the transposed data. See _prepare_method
-    # for how the transpose is applied.
-    #
-    # Our invariants assume that the blocks are transposed, but not the
-    # data inside. Sometimes we have to reverse this transposition of blocks
-    # for simplicity of implementation.
-    #
-    # _is_transposed, 0 for False or non-transposed, 1 for True or transposed.
-    _is_transposed = 0
-
-    def transpose(self, *args, **kwargs):
-        """Transposes this DataManager.
-
-        Returns:
-            Transposed new DataManager.
-        """
-        new_data = self.data.transpose(*args, **kwargs)
-        # Switch the index and columns and transpose the
-        new_manager = self.__constructor__(new_data, self.columns, self.index)
-        # It is possible that this is already transposed
-        new_manager._is_transposed = self._is_transposed ^ 1
-        return new_manager
-    # END Transpose
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
@@ -1236,7 +1147,7 @@ class BaseQueryCompiler(object):
         new_dtypes = df.dtypes
         new_data = block_partitions_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
-    # Abstract to/from Pandas
+    # END To/From Pandas
 
     # __delitem__
     # This will change the shape of the resulting data.
@@ -1310,11 +1221,6 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     # END Abstract functions for QueryCompilerView
 
-    def __constructor__(
-        self,
-        block_partitions_object: BaseBlockPartitions,
-        index,
-        columns,
-        dtypes=None,
-    ):
-        return type(self)(block_partitions_object, index, columns, dtypes)
+    @property
+    def __constructor__(self):
+        return type(self)
