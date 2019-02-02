@@ -871,6 +871,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self.data.copy(), new_index, self.columns.copy(), self._dtype_cache
             )
+
     # END Reindex/reset_index
 
     # Transpose
@@ -1912,6 +1913,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0, func, numeric_indices
         )
         return self.__constructor__(new_data, q_index, new_columns)
+
     # END Map across rows/columns
 
     # Head/Tail/Front/Back

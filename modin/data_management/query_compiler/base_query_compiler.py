@@ -1,4 +1,3 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -6,8 +5,9 @@ from __future__ import print_function
 import pandas
 import numpy as np
 
-from modin.error_message import ErrorMessage
+from modin.error_message.ErrorMessage import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
+
 
 class BaseQueryCompiler(object):
     """Abstract Class that handles the queries to Modin dataframes.
@@ -20,7 +20,9 @@ class BaseQueryCompiler(object):
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
-    def __init__(self, block_partitions_object: BaseBlockPartitions, index, columns, dtypes=None,):
+    def __init__(
+        self, block_partitions_object: BaseBlockPartitions, index, columns, dtypes=None
+    ):
         raise NotImplementedError("Must be implemented in children classes")
 
     # Dtypes and Indexing Abstract Methods
@@ -75,6 +77,7 @@ class BaseQueryCompiler(object):
 
     def add_suffix(self, suffix):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Metadata modification abstract methods
 
     # Abstract copy
@@ -83,6 +86,7 @@ class BaseQueryCompiler(object):
     # to prevent that.
     def copy(self):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract copy
 
     # Abstract join and append helper functions
@@ -104,6 +108,7 @@ class BaseQueryCompiler(object):
 
     def _join_list_of_managers(self, others, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract join and append helper functions
 
     # Abstract copartition
@@ -124,6 +129,7 @@ class BaseQueryCompiler(object):
             A tuple (left query compiler, right query compiler list, joined index).
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract copartition
 
     # Abstract inter-data operations (e.g. add, sub)
@@ -377,6 +383,7 @@ class BaseQueryCompiler(object):
             New DataManager with updated data and index.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract inter-data operations
 
     # Abstract Transpose
@@ -387,6 +394,7 @@ class BaseQueryCompiler(object):
             Transposed new DataManager.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract Transpose
 
     # Abstract reindex/reset_index (may shuffle data)
@@ -409,6 +417,7 @@ class BaseQueryCompiler(object):
             New DataManager with updated data and reset index.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract reindex/reset_index
 
     # Full Reduce operations
@@ -479,6 +488,7 @@ class BaseQueryCompiler(object):
             Pandas series with the sum of each numerical column or row.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract full Reduce operations
 
     # Abstract map partitions operations
@@ -509,6 +519,7 @@ class BaseQueryCompiler(object):
 
     def round(self, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract map partitions operations
 
     # Abstract map partitions across select indices
@@ -523,6 +534,7 @@ class BaseQueryCompiler(object):
             DataFrame with updated dtypes.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract map partitions across select indices
 
     # Abstract column/row partitions reduce operations
@@ -642,6 +654,7 @@ class BaseQueryCompiler(object):
             Series containing the variance of each column or row.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract column/row partitions reduce operations
 
     # Abstract column/row partitions reduce operations over select indices
@@ -657,6 +670,7 @@ class BaseQueryCompiler(object):
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract column/row partitions reduce operations over select indices
 
     # Map across rows/columns
@@ -738,6 +752,7 @@ class BaseQueryCompiler(object):
             DataManager containing the data sorted by columns or indices.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract map across rows/columns
 
     # Map across rows/columns
@@ -751,6 +766,7 @@ class BaseQueryCompiler(object):
             DataManager containing quantiles of original DataManager along an axis.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract map across rows/columns
 
     # Abstract head/tail/front/back
@@ -797,6 +813,7 @@ class BaseQueryCompiler(object):
             DataManager containing the last n columns of the original DataManager.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END head/tail/front/back
 
     # Abstract __getitem__ methods
@@ -832,6 +849,7 @@ class BaseQueryCompiler(object):
             A new Query Compiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract __getitem__ methods
 
     # Abstract insert
@@ -851,6 +869,7 @@ class BaseQueryCompiler(object):
             A new QueryCompiler with new data inserted.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract insert
 
     # Abstract drop
@@ -865,6 +884,7 @@ class BaseQueryCompiler(object):
             A new PandasDataManager.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END drop
 
     # UDF (apply and agg) methods
@@ -881,6 +901,7 @@ class BaseQueryCompiler(object):
             A new QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END UDF
 
     # Manual Partitioning methods (e.g. merge, groupby)
@@ -889,6 +910,7 @@ class BaseQueryCompiler(object):
     # after the shuffle, there should be only a local map required.
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Manual Partitioning methods
 
     def get_dummies(self, columns, **kwargs):
@@ -927,6 +949,7 @@ class BaseQueryCompiler(object):
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract methods for QueryCompiler
 
     @property
@@ -969,6 +992,7 @@ class BaseQueryCompiler(object):
             Concatenated objects.
         """
         return self._append_list_of_managers(other, axis, **kwargs)
+
     # END Append/Concat/Join
 
     # Single Manager scalar operations (e.g. add to scalar, list of scalars)
@@ -988,6 +1012,7 @@ class BaseQueryCompiler(object):
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             return self.map_partitions(func)
+
     # END Single Manager scalar operations
 
     # Map partitions operations
@@ -996,6 +1021,7 @@ class BaseQueryCompiler(object):
         return self.__constructor__(
             self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
         )
+
     # END Map partitions operations
 
     # Column/Row partitions reduce operations
@@ -1035,6 +1061,7 @@ class BaseQueryCompiler(object):
                 alternate_index if alternate_index is not None else self.index
             )
         return result
+
     # END Column/Row partitions reduce operations
 
     # Column/Row partitions reduce operations over select indices
@@ -1068,6 +1095,7 @@ class BaseQueryCompiler(object):
             result = result.to_pandas(self._is_transposed)
             result.index = index
         return result
+
     # END Column/Row partitions reduce operations over select indices
 
     # Map across rows/columns
@@ -1076,6 +1104,7 @@ class BaseQueryCompiler(object):
     # data in the same place.
     def map_across_full_axis(self, axis, func):
         return self.data.map_across_full_axis(axis, func)
+
     # END Map across rows/columns
 
     # Map across rows/columns
@@ -1099,6 +1128,7 @@ class BaseQueryCompiler(object):
         return self.data.apply_func_to_select_indices_along_full_axis(
             axis, func, indices, keep_remaining
         )
+
     # END Map across rows/columns
 
     # Data Management Methods
@@ -1107,6 +1137,7 @@ class BaseQueryCompiler(object):
         """
         # TODO create a way to clean up this object.
         return
+
     # END Data Management Methods
 
     # To/From Pandas
@@ -1148,12 +1179,14 @@ class BaseQueryCompiler(object):
         new_dtypes = df.dtypes
         new_data = block_partitions_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
+
     # END To/From Pandas
 
     # __delitem__
     # This will change the shape of the resulting data.
     def delitem(self, key):
         return self.drop(columns=[key])
+
     # END __delitem__
 
 
@@ -1178,8 +1211,8 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         index,
         column,
         dtypes=None,
-        index_map_series = None,
-        columns_map_series = None,
+        index_map_series=None,
+        columns_map_series=None,
     ):
         """
         Args:
