@@ -40,6 +40,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self._dtype_cache = dtypes
 
     # Index, columns and dtypes objects
+    _dtype_cache = None
+
     def _get_dtype(self):
         if self._dtype_cache is None:
             map_func = self._prepare_method(lambda df: df.dtypes)
@@ -104,6 +106,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 "new values have %d elements" % (old_len, new_len)
             )
         return new_labels
+
+    _index_cache = None
+    _columns_cache = None
 
     def _get_index(self):
         return self._index_cache
@@ -866,8 +871,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self.data.copy(), new_index, self.columns.copy(), self._dtype_cache
             )
-
     # END Reindex/reset_index
+
+    # Transpose
+    # For transpose, we aren't going to immediately copy everything. Since the
+    # actual transpose operation is very fast, we will just do it before any
+    # operation that gets called on the transposed data. See _prepare_method
+    # for how the transpose is applied.
+    #
+    # Our invariants assume that the blocks are transposed, but not the
+    # data inside. Sometimes we have to reverse this transposition of blocks
+    # for simplicity of implementation.
+    #
+    # _is_transposed, 0 for False or non-transposed, 1 for True or transposed.
+    _is_transposed = 0
+
+    def transpose(self, *args, **kwargs):
+        """Transposes this DataManager.	
+         Returns:
+            Transposed new DataManager.
+        """
+        new_data = self.data.transpose(*args, **kwargs)
+        # Switch the index and columns and transpose the
+        new_manager = self.__constructor__(new_data, self.columns, self.index)
+        # It is possible that this is already transposed
+        new_manager._is_transposed = self._is_transposed ^ 1
+        return new_manager
+
+    # END Transpose
 
     # Full Reduce operations
     #
@@ -1881,7 +1912,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0, func, numeric_indices
         )
         return self.__constructor__(new_data, q_index, new_columns)
-
     # END Map across rows/columns
 
     # Head/Tail/Front/Back
@@ -2595,6 +2625,8 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             self, block_partitions_object, index, columns, dtypes
         )
 
+    _dtype_cache = None
+
     def _get_dtype(self):
         """Override the parent on this to avoid getting the wrong dtypes"""
         if self._dtype_cache is None:
@@ -2608,6 +2640,11 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache = self._dtype_cache.reindex(self.columns)
         return self._dtype_cache
+
+    def _set_dtype(self, dtypes):
+        self._dtype_cache = dtypes
+
+    dtypes = property(_get_dtype, _set_dtype)
 
     def _get_data(self) -> BaseBlockPartitions:
         """Perform the map step
@@ -2627,6 +2664,14 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             keep_remaining=False,
         )
         return masked_data
+
+    def _set_data(self, new_data):
+        """Note this setter will be called by the
+            `super(PandasDataManagerView).__init__` function
+        """
+        self.parent_data = new_data
+
+    data = property(_get_data, _set_data)
 
     def global_idx_to_numeric_idx(self, axis, indices):
         assert axis in ["row", "col", "columns"]
