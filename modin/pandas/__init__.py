@@ -109,20 +109,13 @@ def initialize_ray():
             object_store_memory = os.environ["MODIN_MEMORY"]
         # In case anything failed above, we can still improve the memory for Modin.
         if object_store_memory is None:
-            # We try to give a little more memory to Modin, but if we can't use psutil,
-            # we'll just use Ray's default
-            try:
-                from psutil import virtual_memory
-
-                # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * virtual_memory().total // 10 ** 9 * 10 ** 9
-                )
-                # If the memory pool is smaller than 2GB, just use the default in ray.
-                if object_store_memory == 0:
-                    object_store_memory = None
-            except ImportError:
-                pass
+            # Round down to the nearest Gigabyte.
+            object_store_memory = int(
+                0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+            )
+            # If the memory pool is smaller than 2GB, just use the default in ray.
+            if object_store_memory == 0:
+                object_store_memory = None
         ray.init(
             redirect_output=True,
             include_webui=False,
