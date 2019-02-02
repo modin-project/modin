@@ -52,7 +52,7 @@ class PandasQueryCompiler(object):
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache = self.full_reduce(0, map_func, dtype_builder)
             self._dtype_cache.index = self.columns
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache.index = self.columns
@@ -980,9 +980,37 @@ class PandasQueryCompiler(object):
             reduce_func = map_func
         # The XOR here will ensure that we reduce over the correct axis that
         # exists on the internal partitions. We flip the axis
-        result = query_compiler.data.full_reduce(
-            map_func, reduce_func, axis ^ self._is_transposed
+        mapped_parts = query_compiler.data.map_across_blocks(map_func).partitions
+        if reduce_func is None:
+            reduce_func = map_func
+
+        if reduce_func is None:
+            reduce_func = map_func
+        # For now we return a pandas.Series until ours gets implemented.
+        # We have to build the intermediate frame based on the axis passed,
+        # thus axis=axis and axis=axis ^ 1
+        #
+        # This currently requires special treatment because of the intermediate
+        # DataFrame. The individual partitions return Series objects, and those
+        # cannot be concatenated the correct way without casting them as
+        # DataFrames.
+        full_frame = pandas.concat(
+            [
+                pandas.concat(
+                    [pandas.DataFrame(part.get()).T for part in row_of_parts],
+                    axis=axis ^ 1,
+                )
+                for row_of_parts in mapped_parts
+            ],
+            axis=axis,
         )
+
+        # Transpose because operations where axis == 1 assume that the
+        # operation is performed across the other axis
+        if axis == 1:
+            full_frame = full_frame.T
+        result = reduce_func(full_frame)
+
         if result.shape == (0,):
             return result
         elif not axis:
@@ -2798,7 +2826,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            self._dtype_cache = self.data.full_reduce(map_func, dtype_builder, 0)
+            self._dtype_cache = self.full_reduce(0, map_func, dtype_builder)
             self._dtype_cache.index = self.columns
         elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache = self._dtype_cache.reindex(self.columns)
