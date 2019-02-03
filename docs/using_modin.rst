@@ -82,8 +82,8 @@ you can customize your Ray environment for use in Modin!
 Exceeding memory (Out of core pandas)
 """""""""""""""""""""""""""""""""""""
 
-Modin experimentally supports out of core operations. See more on the `out_of_core`_
-page.
+Modin experimentally supports out of core operations. See more on the `Out of Core`_
+documentation page.
 
 Reducing or limiting the resources Modin can use
 """"""""""""""""""""""""""""""""""""""""""""""""
@@ -115,4 +115,4 @@ used to create the blog post.
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
-.. _`out_out_of_core`: out_of_core.html
+.. _`Out of Core`: out_of_core.html

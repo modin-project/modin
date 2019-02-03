@@ -71,14 +71,17 @@ import modin.pandas as pd
 df = pd.read_csv("my_dataset.csv")
 ```
 
-#### Modin is a DataFrame for datasets from 1KB to 1TB+ 
+#### Modin is a DataFrame designed for datasets from 1KB to 1TB+ 
 
 We have focused heavily on bridging the solutions between DataFrames for small data 
 (e.g. pandas) and large data. Often data scientists require different tools for doing
 the same thing on different sizes of data. The DataFrame solutions that exist for 1KB do
 not scale to 1TB+, and the overheads of the solutions for 1TB+ are too costly for 
 datasets in the 1KB range. With Modin, because of its light-weight, robust, and scalable
-nature, you get a fast DataFrame at 1KB and 1TB+.
+nature, you get a fast DataFrame at small and large data. With preliminary [cluster](https://modin.readthedocs.io/en/latest/using_modin.html#using-modin-on-a-cluster)
+and [out of core](https://modin.readthedocs.io/en/latest/out_of_core.html)
+support, Modin is a DataFrame library with great single-node performance and high
+scalability in a cluster.
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 

@@ -84,7 +84,7 @@ typically means better performance and more correct code.
 
 Modin also depends on Ray_. Ray is a task-parallel execution framework for
 parallelizing new and existing applications with minor code changes. Currently,
-we depend on the most recent Ray release: 0.5.3.
+we depend on the most recent Ray release: https://pypi.org/project/ray/.
 
 Building Modin from Source
 --------------------------
