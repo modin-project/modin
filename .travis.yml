@@ -50,7 +50,7 @@ matrix:
         - pip install pytest==3.9.3 pytest-cov
         - ./.travis/install-dependencies.sh
       script:
-        - pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin/pandas/test/
+        - pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/
       after_success:
         - codecov
 
