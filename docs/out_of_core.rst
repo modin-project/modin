@@ -32,8 +32,13 @@ We also set up a way to tell Modin how much memory you'd like to use. Currently,
 only accepts the number of bytes. This can only exceed your memory if you have enabled
 ``MODIN_OUT_OF_CORE``.
 
+[Optional]: Set a limit on the out of core space for Modin
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 **Warning: Make sure you have enough space in your disk for however many bytes you**
 **request for your DataFrame**
+
+This limits the amount of memory that Modin can use.
 
 Here is how you set ``MODIN_MEMORY``:
 
@@ -41,7 +46,8 @@ Here is how you set ``MODIN_MEMORY``:
 
   export MODIN_MEMORY=200000000000 # Set the number of bytes to 200GB
 
-This limits the amount of memory that Modin can use.
+
+**The default for Modin is 8x the memory on the machine.**
 
 Running an example with out of core
 -----------------------------------
