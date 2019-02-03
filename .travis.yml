@@ -47,9 +47,9 @@ matrix:
       language: python
       python: 3.6
       install:
-        - pip install codecov
+        - pip install pytest-cov
       script:
-        - coverage run tests.py
+        - python -m pytest --disable-pytest-warnings --cov=modin/pandas/test/
       after_success:
         - codecov
 
