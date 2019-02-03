@@ -48,6 +48,7 @@ matrix:
       python: 3.6
       install:
         - pip install pytest-cov
+        - ./.travis/install-dependencies.sh
       script:
         - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin/pandas/test/
       after_success:
