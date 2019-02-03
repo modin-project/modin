@@ -44,11 +44,13 @@ matrix:
       dist: trusty
       env:
         - PYTHON=3.6
+      language: python
+      python: 3.6
       install:
+        - pip install pytest==3.9.3 pytest-cov
         - ./.travis/install-dependencies.sh
-        - pip install pytest-cov
       script:
-        - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin/pandas/test/
+        - pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin/pandas/test/
       after_success:
         - codecov
 
