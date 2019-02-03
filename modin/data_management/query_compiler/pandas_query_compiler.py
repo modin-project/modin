@@ -1394,7 +1394,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if len(not_bool_col) == len(self.columns):
                 query_compiler = self
             else:
-                query_compiler = self.drop(columns=not_bool_col)
+                # See note above about pandas-dev/pandas#25101
+                query_compiler = self
+                # query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False
