@@ -1,4 +1,4 @@
-sudo: required
+sudo: false
 
 language: generic
 cache:
@@ -39,6 +39,19 @@ matrix:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check modin/
         - flake8 .
+
+    - os: linux
+      dist: trusty
+      env:
+        - PYTHON=3.6
+      language: python
+      python: 3.6
+      install:
+        - pip install codecov
+      script:
+        - coverage run tests.py
+      after_success:
+        - codecov
 
 install:
   - ./.travis/install-dependencies.sh
