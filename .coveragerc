@@ -1,2 +1,12 @@
 [run]
-omit = modin/pandas/test/performance-tests/*
+omit =
+    # These are not covered by any test because it is an experimental API
+    modin/sql/*
+    # This is not used yet
+    modin/pandas/index/*
+    # Skip tests
+    modin/pandas/test/*
+    # This is not distributed yet
+    modin/pandas/series
+    # Skip Dask until it is fully a part of the testing suite
+    modin/engines/dask/*
