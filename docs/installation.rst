@@ -28,7 +28,7 @@ install a pre-release of Modin, run the following:
 
 These pre-releases are uploaded for dependencies and users to test their existing code
 to ensure that it still works. If you find something wrong, please raise an issue_ or
-email the bug reporter: bugs@modin.org.
+email the bug reporter: bug_reports@modin.org.
 
 Installing specific dependency sets
 """""""""""""""""""""""""""""""""""
