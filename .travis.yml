@@ -12,24 +12,32 @@ matrix:
       env:
         - PYTHON=2.7
         - MODIN_ENGINE=ray
+      after_success:
+        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env:
         - PYTHON=3.6
         - MODIN_ENGINE=ray
+      after_success:
+        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env: 
         - PYTHON=2.7
         - MODIN_DEBUG=1
+      after_success:
+        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env: 
         - PYTHON=3.6
         - MODIN_DEBUG=1
+      after_success:
+        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
@@ -40,26 +48,14 @@ matrix:
         - black --check modin/
         - flake8 .
 
-    - os: linux
-      dist: trusty
-      env:
-        - PYTHON=3.6
-        - MODIN_DEBUG=1
-      script:
-        - export PATH="$HOME/miniconda/bin:$PATH"
-        - sudo pip install --user codecov
-        - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/
-      after_success:
-        - codecov
-
 install:
   - ./.travis/install-dependencies.sh
 
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - if [[ "$PYTHON" == "2.7" ]]; then python .travis/strip-type-hints.py; fi
-  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_dataframe.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_concat.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_io.py
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_groupby.py
-  - python -m pytest --disable-pytest-warnings modin/experimental/pandas/test/test_io_exp.py
+  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_dataframe.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
+  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_concat.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
+  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_io.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
+  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_groupby.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
+  - python -m pytest --disable-pytest-warnings modin/experimental/pandas/test/test_io_exp.py --cov-config=.coveragerc --cov=modin modin/pandas/test/

@@ -7,7 +7,7 @@ from modin.pandas.utils import to_pandas
 random_state = np.random.RandomState(seed=42)
 
 # Size of test dataframes
-NCOLS = 2 ** 8
+NCOLS = 2 ** 6
 NROWS = 2 ** 8
 
 # Range for values for test data
