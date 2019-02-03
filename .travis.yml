@@ -45,6 +45,7 @@ matrix:
       env:
         - PYTHON=3.6
       script:
+        - export PATH="$HOME/miniconda/bin:$PATH"
         - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/
       after_success:
         - codecov
