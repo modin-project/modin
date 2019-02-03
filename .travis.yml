@@ -12,32 +12,24 @@ matrix:
       env:
         - PYTHON=2.7
         - MODIN_ENGINE=ray
-      after_success:
-        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env:
         - PYTHON=3.6
         - MODIN_ENGINE=ray
-      after_success:
-        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env: 
         - PYTHON=2.7
         - MODIN_DEBUG=1
-      after_success:
-        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
       env: 
         - PYTHON=3.6
         - MODIN_DEBUG=1
-      after_success:
-        - bash < (curl -s https://codecov.io/bash)
 
     - os: linux
       dist: trusty
@@ -47,6 +39,8 @@ matrix:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check modin/
         - flake8 .
+      after_success:
+        - exit
 
 install:
   - ./.travis/install-dependencies.sh
@@ -59,3 +53,6 @@ script:
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py
+after_success:
+  - curl -s https://codecov.io/bash > codecov.sh
+  - bash codecov.sh
