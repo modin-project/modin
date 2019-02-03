@@ -44,8 +44,6 @@ matrix:
       dist: trusty
       env:
         - PYTHON=3.6
-      language: python
-      python: 3.6
       script:
         - pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/
       after_success:
