@@ -49,7 +49,7 @@ matrix:
       install:
         - pip install pytest-cov
       script:
-        - python -m pytest --disable-pytest-warnings --cov=modin/pandas/test/ --ignore=modin/pandas/test/performance-tests
+        - python -m pytest --disable-pytest-warnings --ignore=modin/pandas/test/performance-tests/ --cov=modin/pandas/test/
       after_success:
         - codecov
 
