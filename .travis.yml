@@ -54,8 +54,8 @@ install:
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - if [[ "$PYTHON" == "2.7" ]]; then python .travis/strip-type-hints.py; fi
-  - python -m pytest -n auto --disable-pytest-warnings modin/pandas/test/test_dataframe.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_concat.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_io.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
-  - python -m pytest --disable-pytest-warnings modin/pandas/test/test_groupby.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
-  - python -m pytest --disable-pytest-warnings modin/experimental/pandas/test/test_io_exp.py --cov-config=.coveragerc --cov=modin modin/pandas/test/
+  - python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py
