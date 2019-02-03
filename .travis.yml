@@ -44,6 +44,7 @@ matrix:
       dist: trusty
       env:
         - PYTHON=3.6
+        - MODIN_DEBUG=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/
