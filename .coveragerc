@@ -1,0 +1,2 @@
+[run]
+omit = modin/pandas/test/performance-tests/*
