@@ -5,9 +5,9 @@ from __future__ import print_function
 import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle as pkl
-import pandas.core.common as com
+from pandas.core.common import count_not_none, _pipe, apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
-    _get_dtype_from_object,
+    infer_dtype_from_object,
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
@@ -15,7 +15,7 @@ from pandas.core.dtypes.common import (
     is_object_dtype,
     is_integer_dtype,
 )
-from pandas.core.index import _ensure_index_from_sequences
+from pandas.core.index import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer, convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg
 
@@ -769,13 +769,7 @@ class DataFrame(object):
                     FutureWarning,
                     stacklevel=2,
                 )
-        elif is_list_like(func):
-            if axis == 1:
-                raise TypeError(
-                    "(\"'list' object is not callable\", "
-                    "'occurred at index {0}'".format(self.index[0])
-                )
-        elif not callable(func):
+        elif not callable(func) and not is_list_like(func):
             return
 
         query_compiler = self._query_compiler.apply(func, axis, *args, **kwds)
@@ -1512,7 +1506,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the filter applied.
         """
-        nkw = com._count_not_none(items, like, regex)
+        nkw = count_not_none(items, like, regex)
         if nkw > 1:
             raise TypeError(
                 "Keyword arguments `items`, `like`, or `regex` "
@@ -2553,7 +2547,7 @@ class DataFrame(object):
         Returns:
             object: the return type of ``func``.
         """
-        return com._pipe(self, func, *args, **kwargs)
+        return _pipe(self, func, *args, **kwargs)
 
     def pivot(self, index=None, columns=None, values=None):
         return self._default_to_pandas(
@@ -3465,7 +3459,7 @@ class DataFrame(object):
             exclude = []
 
         sel = tuple(map(set, (include, exclude)))
-        include, exclude = map(lambda x: set(map(_get_dtype_from_object, x)), sel)
+        include, exclude = map(lambda x: set(map(infer_dtype_from_object, x)), sel)
         include_these = pandas.Series(not bool(include), index=self.columns)
         exclude_these = pandas.Series(not bool(exclude), index=self.columns)
 
@@ -3595,7 +3589,7 @@ class DataFrame(object):
                 if drop:
                     to_remove.append(col)
             arrays.append(level)
-        index = _ensure_index_from_sequences(arrays, names)
+        index = ensure_index_from_sequences(arrays, names)
 
         if verify_integrity and not index.is_unique:
             duplicates = index.get_duplicates()
@@ -4500,7 +4494,7 @@ class DataFrame(object):
         Returns:
             A Pandas Series representing the value for the column.
         """
-        key = com._apply_if_callable(key, self)
+        key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
         is_mi_columns = isinstance(self.columns, pandas.MultiIndex)
         try:
@@ -4529,7 +4523,7 @@ class DataFrame(object):
         )
 
     def _getitem_array(self, key):
-        if com.is_bool_indexer(key):
+        if is_bool_indexer(key):
             if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
                     "Boolean Series key will be reindexed to match DataFrame index.",
