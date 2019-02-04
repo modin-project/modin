@@ -1392,7 +1392,6 @@ class DataFrame(object):
         halflife=None,
         alpha=None,
         min_periods=0,
-        freq=None,
         adjust=True,
         ignore_na=False,
         axis=0,
@@ -1404,17 +1403,15 @@ class DataFrame(object):
             halflife=halflife,
             alpha=alpha,
             min_periods=min_periods,
-            freq=freq,
             adjust=adjust,
             ignore_na=ignore_na,
             axis=axis,
         )
 
-    def expanding(self, min_periods=1, freq=None, center=False, axis=0):
+    def expanding(self, min_periods=1, center=False, axis=0):
         return self._default_to_pandas(
             pandas.DataFrame.expanding,
             min_periods=min_periods,
-            freq=freq,
             center=center,
             axis=axis,
         )
@@ -1878,74 +1875,6 @@ class DataFrame(object):
             )
             buf.write(result)
         return None
-
-        index = self.index
-        columns = self.columns
-        dtypes = self.dtypes
-        # Set up default values
-        verbose = True if verbose is None else verbose
-        buf = sys.stdout if not buf else buf
-        max_cols = 100 if not max_cols else max_cols
-        memory_usage = True if memory_usage is None else memory_usage
-        if not null_counts:
-            if len(columns) < 100 and len(index) < 1690785:
-                null_counts = True
-            else:
-                null_counts = False
-
-        # Determine if actually verbose
-        actually_verbose = True if verbose and max_cols > len(columns) else False
-
-        if type(memory_usage) == str and memory_usage == "deep":
-            memory_usage_deep = True
-        else:
-            memory_usage_deep = False
-
-        # Start putting together output
-        # Class denoted in info() output
-        class_string = "<class 'modin.pandas.dataframe.DataFrame'>\n"
-
-        # Create the Index info() string by parsing self.index
-        index_string = index.summary() + "\n"
-
-        if null_counts:
-            counts = self._query_compiler.count()
-        if memory_usage:
-            memory_usage_data = self._query_compiler.memory_usage(
-                deep=memory_usage_deep, index=True
-            )
-        if actually_verbose:
-            # Create string for verbose output
-            col_string = "Data columns (total {0} columns):\n".format(len(columns))
-            for col, dtype in zip(columns, dtypes):
-                col_string += "{0}\t".format(col)
-                if null_counts:
-                    col_string += "{0} not-null ".format(counts[col])
-                col_string += "{0}\n".format(dtype)
-        else:
-            # Create string for not verbose output
-            col_string = "Columns: {0} entries, {1} to {2}\n".format(
-                len(columns), columns[0], columns[-1]
-            )
-        # A summary of the dtypes in the dataframe
-        dtypes_string = "dtypes: "
-        for dtype, count in dtypes.value_counts().iteritems():
-            dtypes_string += "{0}({1}),".format(dtype, count)
-        dtypes_string = dtypes_string[:-1] + "\n"
-
-        # Create memory usage string
-        memory_string = ""
-        if memory_usage:
-            if memory_usage_deep:
-                memory_string = "memory usage: {0} bytes".format(memory_usage_data)
-            else:
-                memory_string = "memory usage: {0}+ bytes".format(memory_usage_data)
-        # Combine all the components of the info() output
-        result = "".join(
-            [class_string, index_string, col_string, dtypes_string, memory_string]
-        )
-        # Write to specified output buffer
-        buf.write(result)
 
     def insert(self, loc, column, value, allow_duplicates=False):
         """Insert column into DataFrame at specified location.
@@ -3681,7 +3610,7 @@ class DataFrame(object):
 
     def set_value(self, index, col, value, takeable=False):
         return self._default_to_pandas(
-            pandas.DataFrame.set_values, index, col, value, takeable=takeable
+            pandas.DataFrame.set_value, index, col, value, takeable=takeable
         )
 
     def shift(self, periods=1, freq=None, axis=0):
@@ -4885,15 +4814,27 @@ class DataFrame(object):
 
     @property
     def __doc__(self):
-        return self._query_compiler.to_pandas().__doc__
+        def __doc__(df):
+            """Defined because properties do not have a __name__"""
+            return df.__doc__
+
+        return self._default_to_pandas(__doc__)
 
     @property
     def blocks(self):
-        return self._query_compiler.to_pandas().blocks
+        def blocks(df):
+            """Defined because properties do not have a __name__"""
+            return df.blocks
+
+        return self._default_to_pandas(blocks)
 
     @property
     def style(self):
-        return self._query_compiler.to_pandas().style
+        def style(df):
+            """Defined because properties do not have a __name__"""
+            return df.style
+
+        return self._default_to_pandas(style)
 
     @property
     def iat(self, axis=None):
@@ -4914,7 +4855,11 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        return self._query_compiler.to_pandas().is_copy
+        def is_copy(df):
+            """Defined because properties do not have a __name__"""
+            return df.is_copy
+
+        return self._default_to_pandas(is_copy)
 
     @property
     def at(self, axis=None):

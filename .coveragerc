@@ -7,6 +7,8 @@ omit =
     # Skip tests
     modin/pandas/test/*
     # This is not distributed yet
-    modin/pandas/series
+    modin/pandas/series.py
+    # Plotting is not tested
+    modin/pandas/plotting.py
     # Skip Dask until it is fully a part of the testing suite
     modin/engines/dask/*

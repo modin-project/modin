@@ -700,14 +700,12 @@ def test_aggregate_numeric(request, data, axis, func):
             df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_align(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.align(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_align():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).align(pd.DataFrame(data))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -839,14 +837,12 @@ def test_apply_numeric(request, data, func, axis):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_as_blocks(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.as_blocks()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_as_blocks():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).as_blocks()
 
 
 def test_as_matrix():
@@ -880,34 +876,36 @@ def test_as_matrix():
     tm.assert_almost_equal(mat, expected)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_asfreq(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.asfreq(None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_asof(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.asof(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_asfreq():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        # We are only testing that this defaults to pandas, so we will just check for
+        # the warning
+        try:
+            pd.DataFrame(data).asfreq(None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_assign(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_asof():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).asof(None)
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.assign()
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_assign():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).assign()
 
 
 def test_astype():
@@ -943,24 +941,26 @@ def test_astype():
     df_equals(modin_df_casted, expected_df_casted)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_at_time(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_at_time():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).at_time(None)
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.at_time(None)
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_between_time(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.between_time(None, None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_between_time():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).between_time(None, None)
+        except Exception:
+            pass
 
 
 def test_bfill():
@@ -971,14 +971,12 @@ def test_bfill():
     df_equals(modin_df.bfill(), test_data.tsframe.bfill())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_blocks(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.blocks
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_blocks():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).blocks
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1100,74 +1098,69 @@ def test_clip_upper(request, data, axis):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_combine(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.combine(None, None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_combine_first(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.combine_first(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_combine():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).combine(None, None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_compound(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.compound()
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_consolidate(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.consolidate()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_combine_first():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).combine_first(None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_convert_objects(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.convert_objects()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_compound():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).compound()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_corr(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.corr()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_consolidate():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).consolidate()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_corrwith(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_convert_objects():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).convert_objects()
 
-    with pytest.raises(NotImplementedError):
-        modin_df.corrwith(None)
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_corr():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).corr()
+
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_corrwith():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).corrwith(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1184,14 +1177,12 @@ def test_count(request, data, axis, numeric_only):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_cov(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.cov()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_cov():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).cov()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1535,14 +1526,15 @@ def test_dropna_subset_error(data):
             modin_df.dropna(axis=1, subset=[4, 5])
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_dot(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.dot(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_dot():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).dot(pd.DataFrame(data))
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1651,24 +1643,23 @@ def test_eval_df_arithmetic_subexpression():
     df_equals(modin_df, df)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_ewm(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_ewm():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).ewm()
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.ewm()
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_expanding(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.expanding()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_expanding():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).expanding()
 
 
 def test_ffill():
@@ -2030,14 +2021,15 @@ def test_filter(data):
     df_equals(modin_df.filter(like=by["like"]), pandas_df.filter(like=by["like"]))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_first(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.first(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_first():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).first(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2088,24 +2080,23 @@ def test_from_records(data):
         pd.DataFrame.from_records(None)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_get_value(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_get_value():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).get_value(None, None)
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.get_value(None, None)
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_get_values(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.get_values()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_get_values():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).get_values()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2117,14 +2108,15 @@ def test_head(data, n):
     df_equals(modin_df.head(n), pandas_df.head(n))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_hist(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.hist(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_hist():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).hist(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
@@ -2165,14 +2157,12 @@ def test_idxmin(data, axis, skipna):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_infer_objects(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.infer_objects()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_infer_objects():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).infer_objects()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2221,36 +2211,12 @@ def test_index(data):
     df_equals(modin_df_cp.index, pandas_df_cp.index)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_info(request, data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    # Test to make sure that it does not crash
-    modin_df.info(memory_usage="deep")
-
-    if not name_contains(request.node.name, ["empty_data"]):
-        with io.StringIO() as buf:
-            modin_df.info(buf=buf)
-            info_string = buf.getvalue()
-            assert "<class 'modin.pandas.dataframe.DataFrame'>\n" in info_string
-            assert "memory usage: " in info_string
-            assert (
-                "Data columns (total {} columns):".format(modin_df.shape[1])
-                in info_string
-            )
-
-        with io.StringIO() as buf:
-            modin_df.info(buf=buf, verbose=False, memory_usage=False)
-            info_string = buf.getvalue()
-            assert "memory usage: " not in info_string
-            assert (
-                "Columns: {0} entries, {1} to {2}".format(
-                    modin_df.shape[1], modin_df.columns[0], modin_df.columns[-1]
-                )
-                in info_string
-            )
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_info():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).info(memory_usage="deep")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2274,24 +2240,20 @@ def test_insert(data, loc):
         df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_interpolate(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.interpolate()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_interpolate():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).interpolate()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_is_copy(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.is_copy
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_is_copy():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).is_copy
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2409,34 +2371,31 @@ def test_keys(data):
     df_equals(modin_df.keys(), pandas_df.keys())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurt(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.kurt()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_kurt():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).kurt()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurtosis(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.kurtosis()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_kurtosis():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).kurtosis()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_last(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.last(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_last():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).last(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2483,34 +2442,34 @@ def test_loc(request, data):
         df_equals(modin_df_copy, pandas_df_copy)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_lookup(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.lookup(None, None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_mad(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.mad()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_lookup():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).lookup(None, None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_mask(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_mad():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).mad()
 
-    with pytest.raises(NotImplementedError):
-        modin_df.mask(None)
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_mask():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).mask(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2591,14 +2550,12 @@ def test_median(request, data, axis, skipna, numeric_only):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_melt(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.melt()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_melt():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).melt()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2732,14 +2689,15 @@ def test_ndim(data):
     assert modin_df.ndim == pandas_df.ndim
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_nlargest(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.nlargest(None, None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nlargest():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).nlargest(None, None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2758,14 +2716,15 @@ def test_notnull(data):
     df_equals(modin_df.notnull(), pandas_df.notnull())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_nsmallest(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.nsmallest(None, None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nsmallest():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).nsmallest(None, None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2782,14 +2741,12 @@ def test_nunique(data, axis, dropna):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_pct_change(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.pct_change()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_pct_change():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).pct_change()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2823,24 +2780,26 @@ def test_pipe(data):
     )
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_pivot(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_pivot():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).pivot()
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.pivot()
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_pivot_table(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.pivot_table()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_pivot_table():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).pivot_table()
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3029,24 +2988,26 @@ def test_reindex():
     )
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reindex_axis(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reindex_axis():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).reindex_axis(None)
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.reindex_axis(None)
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reindex_like(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.reindex_like(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reindex_like():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).reindex_like(None)
+        except Exception:
+            pass
 
 
 def test_rename_sanity():
@@ -3251,34 +3212,34 @@ def test_rename_axis_inplace():
     df_equals(modin_result, result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reorder_levels(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.reorder_levels(None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_replace(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.replace()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reorder_levels():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).reorder_levels(None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_resample(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_replace():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).replace()
 
-    with pytest.raises(NotImplementedError):
-        modin_df.resample(None)
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_resample():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).resample(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3297,14 +3258,15 @@ def test_reset_index(data):
     df_equals(modin_df_cp, pd_df_cp)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rolling(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.rolling(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rolling():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).rolling(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3334,14 +3296,15 @@ def test_sample(data, axis):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_select(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.select(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_select():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).select(None)
+        except Exception:
+            pass
 
 
 def test_select_dtypes():
@@ -3370,14 +3333,12 @@ def test_select_dtypes():
         assert True
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_sem(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.sem()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_sem():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).sem()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3441,14 +3402,12 @@ def test_set_index(request, data, drop, append):
         df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_set_value(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.set_value(None, None, None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_value():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).set_value(0, 0, 0)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3459,14 +3418,12 @@ def test_shape(data):
     assert modin_df.shape == pandas_df.shape
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_shift(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.shift()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_shift():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).shift()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3503,14 +3460,12 @@ def test_skew(request, data, axis, skipna, numeric_only):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_slice_shift(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.slice_shift()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_slice_shift():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).slice_shift()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3622,14 +3577,12 @@ def test_sort_values(request, data, axis, ascending, na_position):
         df_equals(modin_df_cp, pandas_df_cp)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_sortlevel(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.sortlevel()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_sortlevel():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).sortlevel()
 
 
 def test_squeeze():
@@ -3666,14 +3619,12 @@ def test_squeeze():
     df_equals(ray_df_5, pandas_df_5)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_stack(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.stack()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_stack():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).stack()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3703,14 +3654,12 @@ def test_std(request, data, axis, skipna, numeric_only, ddof):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_style(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.style
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_style():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).style
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3744,24 +3693,23 @@ def test_sum(request, data, axis, skipna, numeric_only, min_count):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_swapaxes(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.swapaxes(None, None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_swapaxes():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).swapaxes(0, 1)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_swaplevel(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.swaplevel()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_swaplevel():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).swaplevel()
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3773,14 +3721,15 @@ def test_tail(data, n):
     df_equals(modin_df.tail(n), pandas_df.tail(n))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_take(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.take(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_take():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).take(None)
+        except Exception:
+            pass
 
 
 def test_to_datetime():
@@ -3801,14 +3750,12 @@ def test_to_records(request, data):
         assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_to_sparse(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.to_sparse()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_sparse():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).to_sparse()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3821,24 +3768,23 @@ def test_to_string(request, data):
         assert modin_df.to_string() == to_pandas(modin_df).to_string()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_to_timestamp(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_timestamp():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).to_timestamp()
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.to_timestamp()
 
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_to_xarray(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.to_xarray()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_xarray():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).to_xarray()
 
 
 @pytest.mark.skip(
@@ -3895,54 +3841,53 @@ def test_transpose(data):
     # df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_truncate(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.truncate()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_truncate():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).truncate()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_tshift(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.tshift()
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_tz_convert(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.tz_convert(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_tshift():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).tshift()
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_tz_localize(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_tz_convert():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).tz_convert(None)
+        except Exception:
+            pass
 
-    with pytest.raises(NotImplementedError):
-        modin_df.tz_localize(None)
+
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_tz_localize():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).tz_localize(None)
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_unstack(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.unstack()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_unstack():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).unstack()
 
 
 def test_update():
@@ -4019,14 +3964,15 @@ def test_where():
     assert all((to_pandas(modin_result) == pandas_result).all())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_xs(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.xs(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_xs():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).xs(None)
+        except Exception:
+            pass
 
 
 def test__doc__():
@@ -4091,14 +4037,12 @@ def test___len__(data):
     assert len(modin_df) == len(pandas_df)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___unicode__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__unicode__()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___unicode__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).__unicode__()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -4116,24 +4060,23 @@ def test___neg__(request, data):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___invert__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__invert__()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___invert__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).__invert__()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___hash__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__hash__()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___hash__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).__hash__()
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -4193,14 +4136,12 @@ def test___abs__(request, data):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___round__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__round__()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___round__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).__round__()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -4226,24 +4167,23 @@ def test___bool__(data):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___getstate__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__getstate__()
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___getstate__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).__getstate__()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___setstate__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__setstate__(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___setstate__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).__setstate__(None)
+        except Exception:
+            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -4267,14 +4207,12 @@ def test___delitem__(request, data):
         df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___finalize__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        modin_df.__finalize__(None)
+# @pytest.mark.skip(reason="Defaulting to Pandas")
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___finalize__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        pd.DataFrame(data).__finalize__(None)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
