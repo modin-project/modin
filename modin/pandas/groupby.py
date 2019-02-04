@@ -84,18 +84,16 @@ class DataFrameGroupBy(object):
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
                 # aware.
+                ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if self._axis == 0:
-                    self._index_grouped_cache = {
-                        k: v.index
-                        for k, v in self._df._query_compiler.getitem_column_array(
-                            self._by
-                        )
-                        .to_pandas()
-                        .groupby(by=self._by)
-                    }
-                else:
-                    ErrorMessage.catch_bugs_and_request_email(True)
+                self._index_grouped_cache = {
+                    k: v.index
+                    for k, v in self._df._query_compiler.getitem_column_array(
+                        self._by
+                    )
+                    .to_pandas()
+                    .groupby(by=self._by)
+                }
             else:
                 if self._axis == 0:
                     self._index_grouped_cache = self._index.groupby(self._by)
