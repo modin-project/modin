@@ -56,3 +56,4 @@ script:
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py
   - bash codecov.sh
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py
+  - bash codecov.sh

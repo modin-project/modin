@@ -9,7 +9,7 @@ from .. import __execution_engine__ as execution_engine
 from .. import __partition_format__ as partition_format
 
 
-class BaseFactory(object):
+class BaseFactory(object):  # pragma: no cover
     @property
     def query_compiler_cls(self):
         """The Query Compiler class for this factory."""

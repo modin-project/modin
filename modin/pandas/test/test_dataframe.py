@@ -565,14 +565,15 @@ def test_add_prefix(data):
     df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("testfunc", test_func_values, ids=test_func_keys)
 def test_applymap(request, data, testfunc):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
+
+    with pytest.raises(ValueError):
+        x = 2
+        modin_df.applymap(x)
 
     try:
         pandas_result = pandas_df.applymap(testfunc)
@@ -731,9 +732,6 @@ def test_get_ftype_counts(data):
     df_equals(modin_df.get_ftype_counts(), pandas_df.get_ftype_counts())
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
@@ -771,9 +769,7 @@ def test_agg_numeric(request, data, axis, func):
             df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
@@ -904,15 +900,15 @@ def test_append():
         modin_df.append(modin_df2, verify_integrity=True)
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply(request, data, func, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
+
+    with pytest.raises(TypeError):
+        modin_df.apply({"row": func}, axis=1)
 
     try:
         pandas_result = pandas_df.apply(func, axis)
@@ -1532,6 +1528,15 @@ def test_dropna(data, axis, how):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
+    with pytest.raises(ValueError):
+        modin_df.dropna(axis=axis, how="invalid")
+
+    with pytest.raises(TypeError):
+        modin_df.dropna(axis=axis, how=None, thresh=None)
+
+    with pytest.raises(KeyError):
+        modin_df.dropna(axis=axis, subset=["NotExists"], how=how)
+
     modin_result = modin_df.dropna(axis=axis, how=how)
     pandas_result = pandas_df.dropna(axis=axis, how=how)
     df_equals(modin_result, pandas_result)
@@ -1697,23 +1702,16 @@ def test_equals():
     modin_df2 = pd.DataFrame(frame_data)
 
     df_equals(modin_df1, modin_df2)
+    df_equals(modin_df1, pd.DataFrame(modin_df1))
 
     frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 5, 1]}
     modin_df3 = pd.DataFrame(frame_data)
 
-    try:
+    with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df1)
-    except AssertionError:
-        pass
-    else:
-        raise AssertionError
 
-    try:
+    with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df2)
-    except AssertionError:
-        pass
-    else:
-        raise AssertionError
 
 
 def test_eval_df_use_case():
@@ -3018,9 +3016,15 @@ def test_quantile(request, data, q):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
-def test_query(request, data, funcs):
+def test_query(data, funcs):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
+
+    with pytest.raises(ValueError):
+        modin_df.query("")
+    with pytest.raises(NotImplementedError):
+        x = 2
+        modin_df.query("col1 < @x")
 
     try:
         pandas_result = pandas_df.query(funcs)
@@ -3387,6 +3391,47 @@ def test_sample(data, axis):
 
     with pytest.raises(ValueError):
         modin_df.sample(n=3, frac=0.4, axis=axis)
+
+    with pytest.raises(KeyError):
+        modin_df.sample(frac=0.5, weights="CoLuMn_No_ExIsT", axis=0)
+
+    with pytest.raises(ValueError):
+        modin_df.sample(frac=0.5, weights=modin_df.columns[0], axis=1)
+
+    with pytest.raises(ValueError):
+        modin_df.sample(frac=0.5, weights=[0.5 for _ in range(len(modin_df.index[:-1]))], axis=0)
+
+    with pytest.raises(ValueError):
+        modin_df.sample(frac=0.5, weights=[0.5 for _ in range(len(modin_df.columns[:-1]))], axis=1)
+
+    with pytest.raises(ValueError):
+        modin_df.sample(n=-3, axis=axis)
+
+    with pytest.raises(ValueError):
+        modin_df.sample(frac=0.2, weights=pandas.Series(), axis=axis)
+
+    if isinstance(axis, str):
+        num_axis = pandas.DataFrame()._get_axis_number(axis)
+    else:
+        num_axis = axis
+
+    # weights that sum to 1
+    sums = sum([i % 2 for i in range(len(modin_df.axes[num_axis]))])
+    weights = [i % 2 / sums for i in range(len(modin_df.axes[num_axis]))]
+
+    modin_result = modin_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    pandas_result = pandas_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    df_equals(modin_result, pandas_result)
+
+    # weights that don't sum to 1
+    weights = [i % 2 for i in range(len(modin_df.axes[num_axis]))]
+    modin_result = modin_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    pandas_result = pandas_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_df.sample(n=0, axis=axis)
+    pandas_result = pandas_df.sample(n=0, axis=axis)
+    df_equals(modin_result, pandas_result)
 
     modin_result = modin_df.sample(frac=0.5, random_state=42, axis=axis)
     pandas_result = pandas_df.sample(frac=0.5, random_state=42, axis=axis)
@@ -3820,6 +3865,7 @@ def test_tail(data, n):
     pandas_df = pandas.DataFrame(data)
 
     df_equals(modin_df.tail(n), pandas_df.tail(n))
+    df_equals(modin_df.tail(len(modin_df)), pandas_df.tail(len(pandas_df)))
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
@@ -4425,3 +4471,38 @@ def test___setattr__():
     modin_df.new_col = [4, 5, 6]
 
     df_equals(modin_df, pandas_df)
+
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_isin(data):
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+
+    val = [1, 2, 3, 4]
+    pandas_result = pandas_df.isin(val)
+    modin_result = modin_df.isin(val)
+
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_isna(data):
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+
+    pandas_result = pandas_df.isna()
+    modin_result = modin_df.isna()
+
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_isnull(data):
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+
+    pandas_result = pandas_df.isnull()
+    modin_result = modin_df.isnull()
+
+    df_equals(modin_result, pandas_result)

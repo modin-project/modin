@@ -458,16 +458,7 @@ class DataFrame(object):
         """
         return DataFrame(query_compiler=self._query_compiler.isna())
 
-    def isnull(self):
-        """Fill a DataFrame with booleans for cells containing a null value.
-
-        Returns:
-            A new DataFrame with booleans representing whether or not a cell
-                is null.
-            True: cell contains null.
-            False: otherwise.
-        """
-        return DataFrame(query_compiler=self._query_compiler.isnull())
+    isnull = isna
 
     def keys(self):
         """Get the info axis for the DataFrame.
@@ -3439,7 +3430,7 @@ class DataFrame(object):
             # choose random numbers and then get corresponding labels from
             # chosen axis
             sample_indices = random_num_gen.choice(
-                np.arange(0, axis_length), size=n, replace=replace
+                np.arange(0, axis_length), size=n, replace=replace, p=weights
             )
             samples = axis_labels[sample_indices]
         else:
@@ -3464,11 +3455,11 @@ class DataFrame(object):
 
         if include and not is_list_like(include):
             include = [include]
-        elif not include:
+        elif include is None:
             include = []
         if exclude and not is_list_like(exclude):
             exclude = [exclude]
-        elif not exclude:
+        elif exclude is None:
             exclude = []
 
         sel = tuple(map(set, (include, exclude)))
