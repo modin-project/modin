@@ -4065,7 +4065,10 @@ def test___neg__(request, data):
 def test___invert__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
-        pd.DataFrame(data).__invert__()
+        try:
+            pd.DataFrame(data).__invert__()
+        except Exception:
+            pass
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
