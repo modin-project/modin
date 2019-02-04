@@ -5037,7 +5037,11 @@ class DataFrame(object):
         """Helper method to use default pandas function"""
         ErrorMessage.default_to_pandas("`{}`".format(op.__name__))
         result = op(self._query_compiler.to_pandas(), *args, **kwargs)
-        if isinstance(result, pandas.DataFrame):
+        # SparseDataFrames cannot be serialize by arrow and cause problems for Modin.
+        # For now we will use pandas.
+        if isinstance(result, pandas.DataFrame) and not isinstance(
+            result, pandas.SparseDataFrame
+        ):
             return DataFrame(result)
         else:
             try:

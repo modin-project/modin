@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import pytest
-import io
 import numpy as np
 import pandas
 import pandas.util.testing as tm
@@ -2038,16 +2037,6 @@ def test_first_valid_index(data):
     pandas_df = pandas.DataFrame(data)
 
     assert modin_df.first_valid_index() == (pandas_df.first_valid_index())
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_from_csv(data):
-    modin_df = pd.DataFrame(data)  # noqa F841
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_csv(None)
 
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
