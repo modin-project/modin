@@ -132,7 +132,7 @@ class DataFrame(object):
         else:
             return result
 
-    def _repr_html_(self): # pragma: no cover
+    def _repr_html_(self):  # pragma: no cover
         """repr function for rendering in Jupyter Notebooks like Pandas
         Dataframes.
 
@@ -4143,7 +4143,9 @@ class DataFrame(object):
             multirow=multirow,
         )
 
-    def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):  # pragma: no cover
+    def to_msgpack(
+        self, path_or_buf=None, encoding="utf-8", **kwargs
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_msgpack,
             path_or_buf=path_or_buf,
@@ -4154,7 +4156,9 @@ class DataFrame(object):
     def to_panel(self):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_panel)
 
-    def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):  # pragma: no cover
+    def to_parquet(
+        self, fname, engine="auto", compression="snappy", **kwargs
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
             fname,
@@ -4168,7 +4172,9 @@ class DataFrame(object):
             pandas.DataFrame.to_period, freq=freq, axis=axis, copy=copy
         )
 
-    def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):  # pragma: no cover
+    def to_pickle(
+        self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_pickle, path, compression=compression, protocol=protocol
         )
@@ -4744,7 +4750,9 @@ class DataFrame(object):
     def __add__(self, other, axis=None, level=None, fill_value=None):
         return self.add(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __iadd__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __iadd__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.add(other, axis=axis, level=level, fill_value=fill_value)
 
     def __radd__(self, other, axis=None, level=None, fill_value=None):
@@ -4753,7 +4761,9 @@ class DataFrame(object):
     def __mul__(self, other, axis=None, level=None, fill_value=None):
         return self.mul(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __imul__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __imul__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.mul(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rmul__(self, other, axis=None, level=None, fill_value=None):
@@ -4762,7 +4772,9 @@ class DataFrame(object):
     def __pow__(self, other, axis=None, level=None, fill_value=None):
         return self.pow(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __ipow__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __ipow__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.pow(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rpow__(self, other, axis=None, level=None, fill_value=None):
@@ -4771,7 +4783,9 @@ class DataFrame(object):
     def __sub__(self, other, axis=None, level=None, fill_value=None):
         return self.sub(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __isub__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __isub__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.sub(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rsub__(self, other, axis=None, level=None, fill_value=None):
@@ -4780,7 +4794,9 @@ class DataFrame(object):
     def __floordiv__(self, other, axis=None, level=None, fill_value=None):
         return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __ifloordiv__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __ifloordiv__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rfloordiv__(self, other, axis=None, level=None, fill_value=None):
@@ -4789,7 +4805,9 @@ class DataFrame(object):
     def __truediv__(self, other, axis=None, level=None, fill_value=None):
         return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __itruediv__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __itruediv__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rtruediv__(self, other, axis=None, level=None, fill_value=None):
@@ -4798,7 +4816,9 @@ class DataFrame(object):
     def __mod__(self, other, axis=None, level=None, fill_value=None):
         return self.mod(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __imod__(self, other, axis=None, level=None, fill_value=None):  # pragma: no cover
+    def __imod__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
         return self.mod(other, axis=axis, level=level, fill_value=fill_value)
 
     def __rmod__(self, other, axis=None, level=None, fill_value=None):

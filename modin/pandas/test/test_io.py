@@ -473,7 +473,9 @@ def test_from_csv_delimiter():
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    modin_df = pd.DataFrame.from_csv(TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None)
+    modin_df = pd.DataFrame.from_csv(
+        TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
+    )
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_csv_file()
