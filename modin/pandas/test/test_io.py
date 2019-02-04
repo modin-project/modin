@@ -468,12 +468,12 @@ def test_from_sas():
 def test_from_csv_delimiter():
     setup_csv_file(SMALL_ROW_SIZE, delimiter="|")
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep="|")
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, sep="|")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    modin_df = pd.DataFrame.from_csv(TEST_CSV_FILENAME)
+    modin_df = pd.DataFrame.from_csv(TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None)
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_csv_file()
