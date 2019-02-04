@@ -3419,7 +3419,7 @@ def test_sample(data, axis):
         num_axis = axis
 
     # weights that sum to 1
-    sums = sum([i % 2 for i in range(len(modin_df.axes[num_axis]))])
+    sums = sum(i % 2 for i in range(len(modin_df.axes[num_axis])))
     weights = [i % 2 / sums for i in range(len(modin_df.axes[num_axis]))]
 
     modin_result = modin_df.sample(
