@@ -465,7 +465,8 @@ def test_multi_column_groupby():
             "col3": np.random.randint(0, 100, size=1000),
             "col4": np.random.randint(0, 100, size=1000),
             "col5": np.random.randint(0, 100, size=1000),
-        }, index=["row{}".format(i) for i in range(1000)]
+        },
+        index=["row{}".format(i) for i in range(1000)],
     )
 
     ray_df = from_pandas(pandas_df)
@@ -753,7 +754,10 @@ def test_quantile(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_take(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
-        ray_groupby.take()
+        try:
+            ray_groupby.take()
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -775,6 +779,3 @@ def test_groups(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_shift(ray_groupby, pandas_groupby):
     assert ray_groupby.groups == pandas_groupby.groups
-
-
-
