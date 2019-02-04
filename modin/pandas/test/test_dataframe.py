@@ -769,7 +769,6 @@ def test_agg_numeric(request, data, axis, func):
             df_equals(modin_result, pandas_result)
 
 
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
@@ -3399,10 +3398,14 @@ def test_sample(data, axis):
         modin_df.sample(frac=0.5, weights=modin_df.columns[0], axis=1)
 
     with pytest.raises(ValueError):
-        modin_df.sample(frac=0.5, weights=[0.5 for _ in range(len(modin_df.index[:-1]))], axis=0)
+        modin_df.sample(
+            frac=0.5, weights=[0.5 for _ in range(len(modin_df.index[:-1]))], axis=0
+        )
 
     with pytest.raises(ValueError):
-        modin_df.sample(frac=0.5, weights=[0.5 for _ in range(len(modin_df.columns[:-1]))], axis=1)
+        modin_df.sample(
+            frac=0.5, weights=[0.5 for _ in range(len(modin_df.columns[:-1]))], axis=1
+        )
 
     with pytest.raises(ValueError):
         modin_df.sample(n=-3, axis=axis)
@@ -3419,14 +3422,22 @@ def test_sample(data, axis):
     sums = sum([i % 2 for i in range(len(modin_df.axes[num_axis]))])
     weights = [i % 2 / sums for i in range(len(modin_df.axes[num_axis]))]
 
-    modin_result = modin_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
-    pandas_result = pandas_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    modin_result = modin_df.sample(
+        frac=0.5, random_state=42, weights=weights, axis=axis
+    )
+    pandas_result = pandas_df.sample(
+        frac=0.5, random_state=42, weights=weights, axis=axis
+    )
     df_equals(modin_result, pandas_result)
 
     # weights that don't sum to 1
     weights = [i % 2 for i in range(len(modin_df.axes[num_axis]))]
-    modin_result = modin_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
-    pandas_result = pandas_df.sample(frac=0.5, random_state=42, weights=weights, axis=axis)
+    modin_result = modin_df.sample(
+        frac=0.5, random_state=42, weights=weights, axis=axis
+    )
+    pandas_result = pandas_df.sample(
+        frac=0.5, random_state=42, weights=weights, axis=axis
+    )
     df_equals(modin_result, pandas_result)
 
     modin_result = modin_df.sample(n=0, axis=axis)
@@ -4471,7 +4482,6 @@ def test___setattr__():
     modin_df.new_col = [4, 5, 6]
 
     df_equals(modin_df, pandas_df)
-
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
