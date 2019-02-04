@@ -227,6 +227,117 @@ def test___div__(data):
     inter_df_math_helper(modin_df, pandas_df, "__div__")
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___add__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__add__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___radd__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__radd__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___mul__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__mul__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rmul__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rmul__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___pow__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__pow__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rpow__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rpow__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___sub__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__sub__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___floordiv__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__floordiv__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rfloordiv__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rfloordiv__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___truediv__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__truediv__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rtruediv__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rtruediv__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___mod__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__mod__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rmod__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rmod__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___rdiv__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    inter_df_math_helper(modin_df, pandas_df, "__rdiv__")
+
 # END test inter df math functions
 
 
@@ -4303,3 +4414,13 @@ def test_inplace_series_ops(data):
         pandas_df[col0].fillna(0, inplace=True)
         modin_df[col0].fillna(0, inplace=True)
         df_equals(modin_df, pandas_df)
+
+
+def test___setattr__():
+    pandas_df = pandas.DataFrame([1, 2, 3])
+    modin_df = pd.DataFrame([1, 2, 3])
+
+    pandas_df.new_col = [4, 5, 6]
+    modin_df.new_col = [4, 5, 6]
+
+    df_equals(modin_df, pandas_df)
