@@ -3022,7 +3022,7 @@ def test_query(data, funcs):
     with pytest.raises(ValueError):
         modin_df.query("")
     with pytest.raises(NotImplementedError):
-        x = 2
+        x = 2  # noqa F841
         modin_df.query("col1 < @x")
 
     try:
