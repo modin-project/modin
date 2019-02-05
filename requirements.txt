@@ -10,3 +10,4 @@ xarray
 Jinja2
 pathlib
 tables
+scipy

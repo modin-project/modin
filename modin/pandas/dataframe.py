@@ -1896,7 +1896,9 @@ class DataFrame(object):
                 value, index=new_index, columns=new_columns
             )._query_compiler
         elif len(self.columns) == 0 and loc == 0:
-            new_query_compiler = DataFrame(data=value, columns=[column], index=self.index)._query_compiler
+            new_query_compiler = DataFrame(
+                data=value, columns=[column], index=self.index
+            )._query_compiler
         else:
             if not is_list_like(value):
                 value = np.full(len(self.index), value)

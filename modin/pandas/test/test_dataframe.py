@@ -985,9 +985,9 @@ def test_as_matrix():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_asfreq():
-    index = pd.date_range('1/1/2000', periods=4, freq='T')
+    index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
-    df = pd.DataFrame({'s': series})
+    df = pd.DataFrame({"s": series})
     with pytest.warns(UserWarning):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
@@ -997,15 +997,20 @@ def test_asfreq():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_asof():
-    df = pd.DataFrame({'a': [10, 20, 30, 40, 50],
-                       'b': [None, None, None, None, 500]},
-                      index=pd.DatetimeIndex(['2018-02-27 09:01:00',
-                                              '2018-02-27 09:02:00',
-                                              '2018-02-27 09:03:00',
-                                              '2018-02-27 09:04:00',
-                                              '2018-02-27 09:05:00']))
+    df = pd.DataFrame(
+        {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]},
+        index=pd.DatetimeIndex(
+            [
+                "2018-02-27 09:01:00",
+                "2018-02-27 09:02:00",
+                "2018-02-27 09:03:00",
+                "2018-02-27 09:04:00",
+                "2018-02-27 09:05:00",
+            ]
+        ),
+    )
     with pytest.warns(UserWarning):
-        df.asof(pd.DatetimeIndex(['2018-02-27 09:03:30', '2018-02-27 09:04:30']))
+        df.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
@@ -1052,8 +1057,8 @@ def test_astype():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_at_time():
-    i = pd.date_range('2018-04-09', periods=4, freq='12H')
-    ts = pd.DataFrame({'A': [1, 2, 3, 4]}, index=i)
+    i = pd.date_range("2018-04-09", periods=4, freq="12H")
+    ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
     with pytest.warns(UserWarning):
         ts.at_time("12:00")
 
@@ -1061,10 +1066,10 @@ def test_at_time():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_between_time():
-    i = pd.date_range('2018-04-09', periods=4, freq='12H')
-    ts = pd.DataFrame({'A': [1, 2, 3, 4]}, index=i)
+    i = pd.date_range("2018-04-09", periods=4, freq="12H")
+    ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
     with pytest.warns(UserWarning):
-        ts.between_time('0:15', '0:45')
+        ts.between_time("0:15", "0:45")
 
 
 def test_bfill():
@@ -1205,8 +1210,8 @@ def test_clip_upper(request, data, axis):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine():
-    df1 = pd.DataFrame({'A': [0, 0], 'B': [4, 4]})
-    df2 = pd.DataFrame({'A': [1, 1], 'B': [3, 3]})
+    df1 = pd.DataFrame({"A": [0, 0], "B": [4, 4]})
+    df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
 
     with pytest.warns(UserWarning):
         df1.combine(df2, lambda s1, s2: s1 if s1.sum() < s2.sum() else s2)
@@ -1215,8 +1220,8 @@ def test_combine():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine_first():
-    df1 = pd.DataFrame({'A': [None, 0], 'B': [None, 4]})
-    df2 = pd.DataFrame({'A': [1, 1], 'B': [3, 3]})
+    df1 = pd.DataFrame({"A": [None, 0], "B": [None, 4]})
+    df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
 
     with pytest.warns(UserWarning):
         df1.combine_first(df2)
@@ -1744,7 +1749,7 @@ def test_eval_df_arithmetic_subexpression():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ewm():
-    df = pd.DataFrame({'B': [0, 1, 2, np.nan, 4]})
+    df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
     with pytest.warns(UserWarning):
         df.ewm(com=0.5).mean()
 
@@ -2119,10 +2124,10 @@ def test_filter(data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_first():
-    i = pd.date_range('2018-04-09', periods=4, freq='2D')
-    ts = pd.DataFrame({'A': [1, 2, 3, 4]}, index=i)
+    i = pd.date_range("2018-04-09", periods=4, freq="2D")
+    ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
     with pytest.warns(UserWarning):
-        ts.first('3D')
+        ts.first("3D")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2467,8 +2472,8 @@ def test_kurtosis():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_last():
-    i = pd.date_range('2018-04-09', periods=4, freq='2D')
-    ts = pd.DataFrame({'A': [1, 2, 3, 4]}, index=i)
+    i = pd.date_range("2018-04-09", periods=4, freq="2D")
+    ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
     with pytest.warns(UserWarning):
         ts.last("3D")
 
@@ -2536,7 +2541,7 @@ def test_mad():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_mask():
-    df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=['A', 'B'])
+    df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])
     m = df % 3 == 0
     with pytest.warns(UserWarning):
         try:
@@ -2765,17 +2770,36 @@ def test_ndim(data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nlargest():
-    df = pd.DataFrame({'population': [59000000, 65000000, 434000,
-                                      434000, 434000, 337000, 11300,
-                                      11300, 11300],
-                       'GDP': [1937894, 2583560, 12011, 4520, 12128,
-                               17036, 182, 38, 311],
-                       'alpha-2': ["IT", "FR", "MT", "MV", "BN",
-                                   "IS", "NR", "TV", "AI"]}, index=["Italy", "France", "Malta",
-                                                                    "Maldives", "Brunei", "Iceland",
-                                                                    "Nauru", "Tuvalu", "Anguilla"])
+    df = pd.DataFrame(
+        {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
+            ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        },
+        index=[
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ],
+    )
     with pytest.warns(UserWarning):
-        df.nlargest(3, 'population')
+        df.nlargest(3, "population")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2797,17 +2821,36 @@ def test_notnull(data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nsmallest():
-    df = pd.DataFrame({'population': [59000000, 65000000, 434000,
-                                      434000, 434000, 337000, 11300,
-                                      11300, 11300],
-                       'GDP': [1937894, 2583560, 12011, 4520, 12128,
-                               17036, 182, 38, 311],
-                       'alpha-2': ["IT", "FR", "MT", "MV", "BN",
-                                   "IS", "NR", "TV", "AI"]}, index=["Italy", "France", "Malta",
-                                                                    "Maldives", "Brunei", "Iceland",
-                                                                    "Nauru", "Tuvalu", "Anguilla"])
+    df = pd.DataFrame(
+        {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
+            ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        },
+        index=[
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ],
+    )
     with pytest.warns(UserWarning):
-        df.nsmallest(3, 'population')
+        df.nsmallest(3, "population")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2866,24 +2909,42 @@ def test_pipe(data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pivot():
-    df = pd.DataFrame({'foo': ['one', 'one', 'one', 'two', 'two', 'two'],
-                       'bar': ['A', 'B', 'C', 'A', 'B', 'C'],
-                       'baz': [1, 2, 3, 4, 5, 6],
-                       'zoo': ['x', 'y', 'z', 'q', 'w', 't']})
+    df = pd.DataFrame(
+        {
+            "foo": ["one", "one", "one", "two", "two", "two"],
+            "bar": ["A", "B", "C", "A", "B", "C"],
+            "baz": [1, 2, 3, 4, 5, 6],
+            "zoo": ["x", "y", "z", "q", "w", "t"],
+        }
+    )
     with pytest.warns(UserWarning):
-        df.pivot(index='foo', columns='bar', values='baz')
+        df.pivot(index="foo", columns="bar", values="baz")
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pivot_table():
-    df = pd.DataFrame({"A": ["foo", "foo", "foo", "foo", "foo", "bar", "bar", "bar", "bar"],
-                       "B": ["one", "one", "one", "two", "two", "one", "one", "two", "two"],
-                       "C": ["small", "large", "large", "small", "small", "large", "small", "small", "large"],
-                       "D": [1, 2, 2, 3, 3, 4, 5, 6, 7],
-                       "E": [2, 4, 5, 5, 6, 6, 8, 9, 9]})
+    df = pd.DataFrame(
+        {
+            "A": ["foo", "foo", "foo", "foo", "foo", "bar", "bar", "bar", "bar"],
+            "B": ["one", "one", "one", "two", "two", "one", "one", "two", "two"],
+            "C": [
+                "small",
+                "large",
+                "large",
+                "small",
+                "small",
+                "large",
+                "small",
+                "small",
+                "large",
+            ],
+            "D": [1, 2, 2, 3, 3, 4, 5, 6, 7],
+            "E": [2, 4, 5, 5, 6, 6, 8, 9, 9],
+        }
+    )
     with pytest.warns(UserWarning):
-        df.pivot_table(values='D', index=['A', 'B'], columns=['C'], aggfunc=np.sum)
+        df.pivot_table(values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3081,27 +3142,29 @@ def test_reindex():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reindex_axis():
-    df = pd.DataFrame({'num_legs': [4, 2], 'num_wings': [0, 2]}, index=['dog', 'hawk'])
+    df = pd.DataFrame({"num_legs": [4, 2], "num_wings": [0, 2]}, index=["dog", "hawk"])
     with pytest.warns(UserWarning):
-        df.reindex_axis(['num_wings', 'num_legs', 'num_heads'], axis='columns')
+        df.reindex_axis(["num_wings", "num_legs", "num_heads"], axis="columns")
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reindex_like():
-    df1 = pd.DataFrame([[24.3, 75.7, 'high'],
-                        [31, 87.8, 'high'],
-                        [22, 71.6, 'medium'],
-                        [35, 95, 'medium']],
-                       columns=['temp_celsius', 'temp_fahrenheit', 'windspeed'],
-                       index=pd.date_range(start='2014-02-12',
-                                           end='2014-02-15', freq='D'))
-    df2 = pd.DataFrame([[28, 'low'],
-                        [30, 'low'],
-                        [35.1, 'medium']],
-                       columns=['temp_celsius', 'windspeed'],
-                       index=pd.DatetimeIndex(['2014-02-12', '2014-02-13',
-                                               '2014-02-15']))
+    df1 = pd.DataFrame(
+        [
+            [24.3, 75.7, "high"],
+            [31, 87.8, "high"],
+            [22, 71.6, "medium"],
+            [35, 95, "medium"],
+        ],
+        columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
+        index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
+    )
+    df2 = pd.DataFrame(
+        [[28, "low"], [30, "low"], [35.1, "medium"]],
+        columns=["temp_celsius", "windspeed"],
+        index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
+    )
     with pytest.warns(UserWarning):
         df2.reindex_like(df1)
 
@@ -3311,13 +3374,20 @@ def test_rename_axis_inplace():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reorder_levels():
-    df = pd.DataFrame(index=pd.MultiIndex.from_tuples([(num, letter, color)
-                                                       for num in range(1, 3)
-                                                       for letter in ['a', 'b', 'c'] for color in ['Red', 'Green']],
-                                                      names=['Number', 'Letter', 'Color']))
-    df['Value'] = np.random.randint(1, 100, len(df))
+    df = pd.DataFrame(
+        index=pd.MultiIndex.from_tuples(
+            [
+                (num, letter, color)
+                for num in range(1, 3)
+                for letter in ["a", "b", "c"]
+                for color in ["Red", "Green"]
+            ],
+            names=["Number", "Letter", "Color"],
+        )
+    )
+    df["Value"] = np.random.randint(1, 100, len(df))
     with pytest.warns(UserWarning):
-        df.reorder_levels(['Letter', 'Color', 'Number'])
+        df.reorder_levels(["Letter", "Color", "Number"])
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
@@ -3331,14 +3401,16 @@ def test_replace():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_resample():
-    d = dict({'price': [10, 11, 9, 13, 14, 18, 17, 19],
-              'volume': [50, 60, 40, 100, 50, 100, 40, 50]})
+    d = dict(
+        {
+            "price": [10, 11, 9, 13, 14, 18, 17, 19],
+            "volume": [50, 60, 40, 100, 50, 100, 40, 50],
+        }
+    )
     df = pd.DataFrame(d)
-    df['week_starting'] = pd.date_range('01/01/2018',
-                                        periods=8,
-                                        freq='W')
+    df["week_starting"] = pd.date_range("01/01/2018", periods=8, freq="W")
     with pytest.warns(UserWarning):
-        df.resample('M', on='week_starting')
+        df.resample("M", on="week_starting")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3360,9 +3432,9 @@ def test_reset_index(data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rolling():
-    df = pd.DataFrame({'B': [0, 1, 2, np.nan, 4]})
+    df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
     with pytest.warns(UserWarning):
-        df.rolling(2, win_type='triang')
+        df.rolling(2, win_type="triang")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3850,11 +3922,18 @@ def test_swapaxes():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_swaplevel():
-    df = pd.DataFrame(index=pd.MultiIndex.from_tuples([(num, letter, color)
-                                                       for num in range(1, 3)
-                                                       for letter in ['a', 'b', 'c'] for color in ['Red', 'Green']],
-                                                      names=['Number', 'Letter', 'Color']))
-    df['Value'] = np.random.randint(1, 100, len(df))
+    df = pd.DataFrame(
+        index=pd.MultiIndex.from_tuples(
+            [
+                (num, letter, color)
+                for num in range(1, 3)
+                for letter in ["a", "b", "c"]
+                for color in ["Red", "Green"]
+            ],
+            names=["Number", "Letter", "Color"],
+        )
+    )
+    df["Value"] = np.random.randint(1, 100, len(df))
     with pytest.warns(UserWarning):
         df.swaplevel("Number", "Color")
 
@@ -3872,12 +3951,16 @@ def test_tail(data, n):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_take():
-    df = pd.DataFrame([('falcon', 'bird', 389.0),
-                       ('parrot', 'bird', 24.0),
-                       ('lion', 'mammal', 80.5),
-                       ('monkey', 'mammal', np.nan)],
-                      columns=['name', 'class', 'max_speed'],
-                      index=[0, 2, 3, 1])
+    df = pd.DataFrame(
+        [
+            ("falcon", "bird", 389.0),
+            ("parrot", "bird", 24.0),
+            ("lion", "mammal", 80.5),
+            ("monkey", "mammal", np.nan),
+        ],
+        columns=["name", "class", "max_speed"],
+        index=[0, 2, 3, 1],
+    )
     with pytest.warns(UserWarning):
         df.take([0, 3])
 
@@ -3921,7 +4004,7 @@ def test_to_string(request, data):
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_timestamp():
-    idx = pd.date_range('1/1/2012', periods=5, freq='M')
+    idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
     with pytest.warns(UserWarning):
@@ -4001,7 +4084,7 @@ def test_truncate():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tshift():
-    idx = pd.date_range('1/1/2012', periods=5, freq='M')
+    idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
     with pytest.warns(UserWarning):
@@ -4011,7 +4094,7 @@ def test_tshift():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tz_convert():
-    idx = pd.date_range('1/1/2012', periods=5, freq='M')
+    idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
     with pytest.warns(UserWarning):
@@ -4021,7 +4104,7 @@ def test_tz_convert():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tz_localize():
-    idx = pd.date_range('1/1/2012', periods=5, freq='M')
+    idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
     with pytest.warns(UserWarning):
@@ -4113,15 +4196,17 @@ def test_where():
 # @pytest.mark.skip(reason="Defaulting to Pandas")
 # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_xs():
-    d = {'num_legs': [4, 4, 2, 2],
-         'num_wings': [0, 0, 2, 2],
-         'class': ['mammal', 'mammal', 'mammal', 'bird'],
-         'animal': ['cat', 'dog', 'bat', 'penguin'],
-         'locomotion': ['walks', 'walks', 'flies', 'walks']}
+    d = {
+        "num_legs": [4, 4, 2, 2],
+        "num_wings": [0, 0, 2, 2],
+        "class": ["mammal", "mammal", "mammal", "bird"],
+        "animal": ["cat", "dog", "bat", "penguin"],
+        "locomotion": ["walks", "walks", "flies", "walks"],
+    }
     df = pd.DataFrame(data=d)
-    df = df.set_index(['class', 'animal', 'locomotion'])
+    df = df.set_index(["class", "animal", "locomotion"])
     with pytest.warns(UserWarning):
-        df.xs('mammal')
+        df.xs("mammal")
 
 
 def test__doc__():
@@ -4214,7 +4299,10 @@ def test___neg__(request, data):
 def test___invert__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
-        pd.DataFrame(data).__invert__()
+        try:
+            pd.DataFrame(data).__invert__()
+        except TypeError:
+            pass
 
 
 # @pytest.mark.skip(reason="Defaulting to Pandas")
