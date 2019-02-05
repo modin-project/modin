@@ -405,7 +405,6 @@ def test_from_feather():
     teardown_feather_file()
 
 
-# @pytest.mark.skip(reason="Memory overflow on Travis")
 def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE, format=None)
 
@@ -417,7 +416,6 @@ def test_from_hdf():
     teardown_hdf_file()
 
 
-# @pytest.mark.skip(reason="Memory overflow on Travis")
 def test_from_hdf_format():
     setup_hdf_file(SMALL_ROW_SIZE, format="table")
 

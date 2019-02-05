@@ -806,8 +806,6 @@ def test_aggregate_numeric(request, data, axis, func):
             df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_align():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -943,8 +941,6 @@ def test_apply_numeric(request, data, func, axis):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_as_blocks():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -982,8 +978,6 @@ def test_as_matrix():
     tm.assert_almost_equal(mat, expected)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
@@ -994,8 +988,6 @@ def test_asfreq():
         df.asfreq(freq="30S")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_asof():
     df = pd.DataFrame(
         {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]},
@@ -1013,8 +1005,6 @@ def test_asof():
         df.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_assign():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1054,8 +1044,6 @@ def test_astype():
     df_equals(modin_df_casted, expected_df_casted)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_at_time():
     i = pd.date_range("2018-04-09", periods=4, freq="12H")
     ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -1063,8 +1051,6 @@ def test_at_time():
         ts.at_time("12:00")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_between_time():
     i = pd.date_range("2018-04-09", periods=4, freq="12H")
     ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -1080,8 +1066,6 @@ def test_bfill():
     df_equals(modin_df.bfill(), test_data.tsframe.bfill())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_blocks():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1207,8 +1191,6 @@ def test_clip_upper(request, data, axis):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine():
     df1 = pd.DataFrame({"A": [0, 0], "B": [4, 4]})
     df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
@@ -1217,8 +1199,6 @@ def test_combine():
         df1.combine(df2, lambda s1, s2: s1 if s1.sum() < s2.sum() else s2)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine_first():
     df1 = pd.DataFrame({"A": [None, 0], "B": [None, 4]})
     df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
@@ -1227,40 +1207,30 @@ def test_combine_first():
         df1.combine_first(df2)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_compound():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).compound()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_consolidate():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).consolidate()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_convert_objects():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).convert_objects()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_corr():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).corr()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_corrwith():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1281,8 +1251,6 @@ def test_count(request, data, axis, numeric_only):
     df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_cov():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1639,8 +1607,6 @@ def test_dropna_subset_error(data):
             modin_df.dropna(axis=1, subset=[4, 5])
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1746,16 +1712,12 @@ def test_eval_df_arithmetic_subexpression():
     df_equals(modin_df, df)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ewm():
     df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
     with pytest.warns(UserWarning):
         df.ewm(com=0.5).mean()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_expanding():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2121,8 +2083,6 @@ def test_filter(data):
     df_equals(modin_df.filter(like=by["like"]), pandas_df.filter(like=by["like"]))
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_first():
     i = pd.date_range("2018-04-09", periods=4, freq="2D")
     ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -2168,16 +2128,12 @@ def test_from_records(data):
         pd.DataFrame.from_records(None)
 
 
-# @pytest.mark.skip(reason="Deprecated since 0.21")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_get_value():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).get_value(0, "col1")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_get_values():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2194,7 +2150,6 @@ def test_head(data, n):
 
 
 @pytest.mark.skip(reason="Skip plotting")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_hist():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2239,8 +2194,6 @@ def test_idxmin(data, axis, skipna):
     df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_infer_objects():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2293,8 +2246,6 @@ def test_index(data):
     df_equals(modin_df_cp.index, pandas_df_cp.index)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_info():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2322,16 +2273,12 @@ def test_insert(data, loc):
         df_equals(modin_df, pandas_df)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_interpolate():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).interpolate()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_copy():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2453,24 +2400,18 @@ def test_keys(data):
     df_equals(modin_df.keys(), pandas_df.keys())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_kurt():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).kurt()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_kurtosis():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).kurtosis()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_last():
     i = pd.date_range("2018-04-09", periods=4, freq="2D")
     ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -2522,24 +2463,18 @@ def test_loc(request, data):
         df_equals(modin_df_copy, pandas_df_copy)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lookup():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_mad():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).mad()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_mask():
     df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])
     m = df % 3 == 0
@@ -2628,8 +2563,6 @@ def test_median(request, data, axis, skipna, numeric_only):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_melt():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2767,8 +2700,6 @@ def test_ndim(data):
     assert modin_df.ndim == pandas_df.ndim
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nlargest():
     df = pd.DataFrame(
         {
@@ -2818,8 +2749,6 @@ def test_notnull(data):
     df_equals(modin_df.notnull(), pandas_df.notnull())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nsmallest():
     df = pd.DataFrame(
         {
@@ -2867,8 +2796,6 @@ def test_nunique(data, axis, dropna):
     df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pct_change():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -2906,8 +2833,6 @@ def test_pipe(data):
     )
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pivot():
     df = pd.DataFrame(
         {
@@ -2921,8 +2846,6 @@ def test_pivot():
         df.pivot(index="foo", columns="bar", values="baz")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pivot_table():
     df = pd.DataFrame(
         {
@@ -3139,16 +3062,12 @@ def test_reindex():
     )
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reindex_axis():
     df = pd.DataFrame({"num_legs": [4, 2], "num_wings": [0, 2]}, index=["dog", "hawk"])
     with pytest.warns(UserWarning):
         df.reindex_axis(["num_wings", "num_legs", "num_heads"], axis="columns")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reindex_like():
     df1 = pd.DataFrame(
         [
@@ -3371,8 +3290,6 @@ def test_rename_axis_inplace():
     df_equals(modin_result, result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reorder_levels():
     df = pd.DataFrame(
         index=pd.MultiIndex.from_tuples(
@@ -3390,16 +3307,12 @@ def test_reorder_levels():
         df.reorder_levels(["Letter", "Color", "Number"])
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_replace():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).replace()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_resample():
     d = dict(
         {
@@ -3429,8 +3342,6 @@ def test_reset_index(data):
     df_equals(modin_df_cp, pd_df_cp)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rolling():
     df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
     with pytest.warns(UserWarning):
@@ -3517,8 +3428,6 @@ def test_sample(data, axis):
     df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_select():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3551,8 +3460,6 @@ def test_select_dtypes():
         assert True
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sem():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3620,8 +3527,6 @@ def test_set_index(request, data, drop, append):
         df_equals(modin_df, pandas_df)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_set_value():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3636,8 +3541,6 @@ def test_shape(data):
     assert modin_df.shape == pandas_df.shape
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_shift():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3678,8 +3581,6 @@ def test_skew(request, data, axis, skipna, numeric_only):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_slice_shift():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3795,8 +3696,6 @@ def test_sort_values(request, data, axis, ascending, na_position):
         df_equals(modin_df_cp, pandas_df_cp)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sortlevel():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3837,8 +3736,6 @@ def test_squeeze():
     df_equals(ray_df_5, pandas_df_5)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_stack():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3872,8 +3769,6 @@ def test_std(request, data, axis, skipna, numeric_only, ddof):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_style():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3911,16 +3806,12 @@ def test_sum(request, data, axis, skipna, numeric_only, min_count):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_swapaxes():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).swapaxes(0, 1)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_swaplevel():
     df = pd.DataFrame(
         index=pd.MultiIndex.from_tuples(
@@ -3948,8 +3839,6 @@ def test_tail(data, n):
     df_equals(modin_df.tail(len(modin_df)), pandas_df.tail(len(pandas_df)))
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_take():
     df = pd.DataFrame(
         [
@@ -3983,8 +3872,6 @@ def test_to_records(request, data):
         assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_sparse():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4001,8 +3888,6 @@ def test_to_string(request, data):
         assert modin_df.to_string() == to_pandas(modin_df).to_string()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
@@ -4011,8 +3896,6 @@ def test_to_timestamp():
         df.to_period().to_timestamp()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4073,16 +3956,12 @@ def test_transpose(data):
     # df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_truncate():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).truncate()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tshift():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
@@ -4091,8 +3970,6 @@ def test_tshift():
         df.to_period().tshift()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tz_convert():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
@@ -4101,8 +3978,6 @@ def test_tz_convert():
         df.tz_localize("America/Los_Angeles").tz_convert("America/Los_Angeles")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tz_localize():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
@@ -4111,8 +3986,6 @@ def test_tz_localize():
         df.tz_localize("America/Los_Angeles")
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unstack():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4193,8 +4066,6 @@ def test_where():
     assert all((to_pandas(modin_result) == pandas_result).all())
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_xs():
     d = {
         "num_legs": [4, 4, 2, 2],
@@ -4271,8 +4142,6 @@ def test___len__(data):
     assert len(modin_df) == len(pandas_df)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___unicode__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4294,8 +4163,6 @@ def test___neg__(request, data):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___invert__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4305,8 +4172,6 @@ def test___invert__():
             pass
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___hash__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4373,8 +4238,6 @@ def test___abs__(request, data):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___round__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4404,16 +4267,12 @@ def test___bool__(data):
         df_equals(modin_result, pandas_result)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___getstate__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).__getstate__()
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___setstate__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4444,8 +4303,6 @@ def test___delitem__(request, data):
         df_equals(modin_df, pandas_df)
 
 
-# @pytest.mark.skip(reason="Defaulting to Pandas")
-# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___finalize__():
     data = test_data_values[0]
     with pytest.warns(UserWarning):

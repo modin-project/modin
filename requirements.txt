@@ -11,3 +11,14 @@ Jinja2
 pathlib
 tables
 scipy
+pytest==3.9.3
+coverage
+pytest-cov
+pytest-xdist
+feather-format
+lxml
+openpyxl
+xlrd
+numpy
+matplotlib
+sqlalchemy
