@@ -118,7 +118,7 @@ class PandasOnRayRemotePartition(BaseRemotePartition):
 
 
 @ray.remote
-def deploy_ray_func(func, partition, kwargs):
+def deploy_ray_func(func, partition, kwargs):  # pragma: no cover
     """Deploy a function to a partition in Ray.
 
     Args:

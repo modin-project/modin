@@ -8,3 +8,5 @@ strip_hints==0.1.1
 typing
 xarray
 Jinja2
+pathlib
+tables

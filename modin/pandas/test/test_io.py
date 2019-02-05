@@ -10,6 +10,7 @@ import modin.pandas as pd
 import pyarrow as pa
 import os
 import sqlite3
+from pathlib import Path
 
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
@@ -99,14 +100,14 @@ def teardown_parquet_file():
 
 
 @pytest.fixture
-def setup_csv_file(row_size, force=False, delimiter=","):
+def setup_csv_file(row_size, force=False, delimiter=",", encoding=None):
     if os.path.exists(TEST_CSV_FILENAME) and not force:
         pass
     else:
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
-        df.to_csv(TEST_CSV_FILENAME, sep=delimiter)
+        df.to_csv(TEST_CSV_FILENAME, sep=delimiter, encoding=encoding)
 
 
 @pytest.fixture
@@ -190,14 +191,14 @@ def teardown_feather_file():
 
 
 @pytest.fixture
-def setup_hdf_file(row_size, force=False):
+def setup_hdf_file(row_size, force=False, format=None):
     if os.path.exists(TEST_HDF_FILENAME) and not force:
         pass
     else:
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
-        df.to_hdf(TEST_HDF_FILENAME, "test")
+        df.to_hdf(TEST_HDF_FILENAME, key="df", format=format)
 
 
 @pytest.fixture
@@ -308,6 +309,11 @@ def test_from_csv():
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
+    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
+    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
     teardown_csv_file()
 
 
@@ -396,12 +402,23 @@ def test_from_feather():
     teardown_feather_file()
 
 
-@pytest.mark.skip(reason="Memory overflow on Travis")
+# @pytest.mark.skip(reason="Memory overflow on Travis")
 def test_from_hdf():
-    setup_hdf_file(SMALL_ROW_SIZE)
+    setup_hdf_file(SMALL_ROW_SIZE, format=None)
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="test")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="test")
+    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_hdf_file()
+
+
+def test_from_hdf_format():
+    setup_hdf_file(SMALL_ROW_SIZE, format="table")
+
+    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -476,6 +493,68 @@ def test_from_csv_delimiter():
     modin_df = pd.DataFrame.from_csv(
         TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
     )
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_csv_file()
+
+
+def test_from_csv_skiprows():
+    setup_csv_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_csv_file()
+
+
+def test_from_csv_encoding():
+    setup_csv_file(SMALL_ROW_SIZE, encoding="latin8")
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding="latin8")
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding="latin8")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_csv_file()
+
+
+def test_from_csv_default_to_pandas_behavior():
+    setup_csv_file(SMALL_ROW_SIZE)
+
+    with pytest.warns(UserWarning):
+        # Test nrows
+        pd.read_csv(TEST_CSV_FILENAME, nrows=10)
+
+    with pytest.warns(UserWarning):
+        # This tests that we default to pandas on a buffer
+        from io import StringIO
+        pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
+
+    with pytest.warns(UserWarning):
+        pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
+
+
+
+
+def test_from_csv_index_col():
+    setup_csv_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_csv_file()
+
+
+def test_from_csv_skipfooter():
+    setup_csv_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
+
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_csv_file()

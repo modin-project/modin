@@ -70,5 +70,5 @@ class PandasOnRayRowPartition(PandasOnRayAxisPartition):
 
 
 @ray.remote
-def deploy_ray_func(func, *args):
+def deploy_ray_func(func, *args):  # pragma: no cover
     return func(*args)
