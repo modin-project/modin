@@ -7,15 +7,17 @@ import numpy as np
 import pandas
 from modin.pandas.utils import to_pandas
 import modin.pandas as pd
+from pathlib import Path
 import pyarrow as pa
 import os
 import sqlite3
-from pathlib import Path
+import sys
 
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
 
+PY2 = sys.version_info[0] == 2
 TEST_PARQUET_FILENAME = "test.parquet"
 TEST_CSV_FILENAME = "test.csv"
 TEST_JSON_FILENAME = "test.json"
@@ -309,10 +311,11 @@ def test_from_csv():
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+    if not PY2:
+        pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
+        modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+        assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_csv_file()
 

@@ -152,6 +152,8 @@ def read_gbq(
     **kwargs
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    if "kwargs" in kwargs:
+        kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_gbq(**kwargs))
 
 
@@ -211,13 +213,17 @@ def read_excel(
     return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
 
 
-def read_hdf(path_or_buf, **kwargs):
+def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    if "kwargs" in kwargs:
+        kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
 
 def read_feather(path, nthreads=1):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    if "kwargs" in kwargs:
+        kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
 
 
