@@ -1895,6 +1895,8 @@ class DataFrame(object):
             new_query_compiler = DataFrame(
                 value, index=new_index, columns=new_columns
             )._query_compiler
+        elif len(self.columns) == 0 and loc == 0:
+            new_query_compiler = DataFrame(data=value, columns=[column], index=self.index)._query_compiler
         else:
             if not is_list_like(value):
                 value = np.full(len(self.index), value)
@@ -3204,7 +3206,6 @@ class DataFrame(object):
         self,
         window,
         min_periods=None,
-        freq=None,
         center=False,
         win_type=None,
         on=None,
@@ -3215,7 +3216,6 @@ class DataFrame(object):
             pandas.DataFrame.rolling,
             window,
             min_periods=min_periods,
-            freq=freq,
             center=center,
             win_type=win_type,
             on=on,

@@ -6,6 +6,7 @@ omit =
     modin/pandas/index/*
     # Skip tests
     modin/pandas/test/*
+    modin/experimental/pandas/test/*
     # This is not distributed yet
     modin/pandas/series.py
     # Plotting is not tested
