@@ -49,7 +49,8 @@ script:
   - curl -s https://codecov.io/bash > codecov.sh
   - python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
-  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py --cov-append
+  - pip install numexpr
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py --cov-append
   - bash codecov.sh
