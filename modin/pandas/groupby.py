@@ -88,9 +88,7 @@ class DataFrameGroupBy(object):
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
                 self._index_grouped_cache = {
                     k: v.index
-                    for k, v in self._df._query_compiler.getitem_column_array(
-                        self._by
-                    )
+                    for k, v in self._df._query_compiler.getitem_column_array(self._by)
                     .to_pandas()
                     .groupby(by=self._by)
                 }

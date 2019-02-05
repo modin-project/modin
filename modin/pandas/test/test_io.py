@@ -530,12 +530,11 @@ def test_from_csv_default_to_pandas_behavior():
     with pytest.warns(UserWarning):
         # This tests that we default to pandas on a buffer
         from io import StringIO
+
         pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
 
     with pytest.warns(UserWarning):
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
-
-
 
 
 def test_from_csv_index_col():

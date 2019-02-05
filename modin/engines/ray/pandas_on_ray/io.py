@@ -154,7 +154,9 @@ class PandasOnRayIO(BaseIO):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-        partition_kwargs = dict(kwargs, header=None, names=column_names, skipfooter=0, skiprows=None)
+        partition_kwargs = dict(
+            kwargs, header=None, names=column_names, skipfooter=0, skiprows=None
+        )
         with open(filepath, "rb") as f:
             # Get the BOM if necessary
             prefix = b""
@@ -562,7 +564,9 @@ def _split_result_for_readers(axis, num_splits, df):
 
 
 @ray.remote
-def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, header):  # pragma: no cover
+def _read_csv_with_offset_pandas_on_ray(
+    fname, num_splits, start, end, kwargs, header
+):  # pragma: no cover
     """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
 
     Args:
