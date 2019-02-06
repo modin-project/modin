@@ -4251,7 +4251,6 @@ class DataFrame(object):
         self,
         name,
         con,
-        flavor=None,
         schema=None,
         if_exists="fail",
         index=True,
@@ -4259,18 +4258,23 @@ class DataFrame(object):
         chunksize=None,
         dtype=None,
     ):
-        return self._default_to_pandas(
-            pandas.DataFrame.to_sql,
-            name,
-            con,
-            flavor,
-            schema,
-            if_exists,
-            index,
-            index_label,
-            chunksize,
-            dtype,
-        )
+        new_query_compiler = self._query_compiler
+
+        if index:
+            if not index_label:
+                index_label = "index"
+            new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
+            index = False
+
+        new_query_compiler.to_sql(
+            name=name,
+            con=con,
+            schema=schema,
+            if_exists=if_exists,
+            index=index,
+            index_label=index_label,
+            chunksize=chunksize,
+            dtype=dtype)
 
     def to_stata(
         self,
