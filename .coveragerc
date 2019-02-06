@@ -13,3 +13,9 @@ omit =
     modin/pandas/plotting.py
     # Skip Dask until it is fully a part of the testing suite
     modin/engines/dask/*
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError

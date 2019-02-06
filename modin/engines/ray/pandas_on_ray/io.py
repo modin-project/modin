@@ -541,6 +541,9 @@ class PandasOnRayIO(BaseIO):
 
 @ray.remote
 def get_index(index_name, *partition_indices):  # pragma: no cover
+    """Get the index from the indices returned by the workers.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)"""
     index = partition_indices[0].append(partition_indices[1:])
     index.names = index_name
     return index
@@ -568,6 +571,8 @@ def _read_csv_with_offset_pandas_on_ray(
     fname, num_splits, start, end, kwargs, header
 ):  # pragma: no cover
     """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         fname: The filename of the file to open.
@@ -605,8 +610,10 @@ def _read_csv_with_offset_pandas_on_ray(
 def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
     Args:
-        path: The path of the HDF5 file.
+        path_or_buf: The path of the HDF5 file.
         columns: The list of column names to read.
         num_splits: The number of partitions to split the column into.
 
@@ -625,6 +632,8 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no c
 @ray.remote
 def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         path: The path of the Parquet file.
@@ -647,6 +656,8 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 @ray.remote
 def _read_feather_columns(path, columns, num_splits):  # pragma: no cover
     """Use a Ray task to read columns from Feather into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         path: The path of the Feather file.
