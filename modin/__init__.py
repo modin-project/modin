@@ -2,6 +2,16 @@ import os
 import warnings
 
 
+def custom_formatwarning(msg, category, *args, **kwargs):
+    # ignore everything except the message
+    return "{}: {}\n".format(category.__name__, msg)
+
+
+warnings.formatwarning = custom_formatwarning
+# Filter numpy version warnings because they are not relevant
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+
+
 def get_execution_engine():
     # In the future, when there are multiple engines and different ways of
     # backing the DataFrame, there will have to be some changed logic here to
@@ -23,9 +33,6 @@ def get_partition_format():
 __version__ = "0.3.0"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
-
-# Filter numpy version warnings because they are not relevant
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 
 # We don't want these used outside of this file.
 del get_execution_engine
