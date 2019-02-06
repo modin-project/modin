@@ -8,6 +8,8 @@ def custom_formatwarning(msg, category, *args, **kwargs):
 
 
 warnings.formatwarning = custom_formatwarning
+# Filter numpy version warnings because they are not relevant
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 
 
 def get_execution_engine():
@@ -31,9 +33,6 @@ def get_partition_format():
 __version__ = "0.3.0"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
-
-# Filter numpy version warnings because they are not relevant
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 
 # We don't want these used outside of this file.
 del get_execution_engine
