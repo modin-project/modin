@@ -84,25 +84,14 @@ class DataFrameGroupBy(object):
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
                 # aware.
+                ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if self._axis == 0:
-                    self._index_grouped_cache = {
-                        k: v.index
-                        for k, v in self._df._query_compiler.getitem_column_array(
-                            self._by
-                        )
-                        .to_pandas()
-                        .groupby(by=self._by)
-                    }
-                else:
-                    self._index_grouped_cache = {
-                        k: v.index
-                        for k, v in self._df._query_compiler.getitem_row_array(
-                            self._index.get_indexer_for(self._by)
-                        )
-                        .to_pandas()
-                        .groupby(by=self._by)
-                    }
+                self._index_grouped_cache = {
+                    k: v.index
+                    for k, v in self._df._query_compiler.getitem_column_array(self._by)
+                    .to_pandas()
+                    .groupby(by=self._by)
+                }
             else:
                 if self._axis == 0:
                     self._index_grouped_cache = self._index.groupby(self._by)
@@ -163,7 +152,7 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.any())
 
     @property
-    def plot(self):
+    def plot(self):  # pragma: no cover
         return self._default_to_pandas(lambda df: df.plot)
 
     def ohlc(self):

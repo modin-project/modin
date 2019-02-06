@@ -126,8 +126,10 @@ def _read_sql_with_offset_pandas_on_ray(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):
-    """ Use a Ray task to read a chunk of SQL source
+):  # pragma: no cover
+    """Use a Ray task to read a chunk of SQL source.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
     """
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(

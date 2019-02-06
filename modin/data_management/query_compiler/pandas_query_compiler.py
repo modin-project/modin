@@ -495,7 +495,8 @@ class PandasQueryCompiler(object):
         Returns:
             New DataManager with new data and index.
         """
-        axis = pandas.DataFrame()._get_axis_number(kwargs.get("axis", 0))
+        axis = kwargs.get("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
 
         if isinstance(other, type(self)):
             return self.inter_manager_operations(

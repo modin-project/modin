@@ -76,7 +76,7 @@ class DataFrame(object):
         else:
             self._query_compiler = query_compiler
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return repr(self)
 
     def _build_repr_df(self, num_rows, num_cols):
@@ -132,7 +132,7 @@ class DataFrame(object):
         else:
             return result
 
-    def _repr_html_(self):
+    def _repr_html_(self):  # pragma: no cover
         """repr function for rendering in Jupyter Notebooks like Pandas
         Dataframes.
 
@@ -458,16 +458,7 @@ class DataFrame(object):
         """
         return DataFrame(query_compiler=self._query_compiler.isna())
 
-    def isnull(self):
-        """Fill a DataFrame with booleans for cells containing a null value.
-
-        Returns:
-            A new DataFrame with booleans representing whether or not a cell
-                is null.
-            True: cell contains null.
-            False: otherwise.
-        """
-        return DataFrame(query_compiler=self._query_compiler.isnull())
+    isnull = isna
 
     def keys(self):
         """Get the info axis for the DataFrame.
@@ -549,7 +540,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the applied addition.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -1135,6 +1126,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Divide applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -1392,7 +1384,6 @@ class DataFrame(object):
         halflife=None,
         alpha=None,
         min_periods=0,
-        freq=None,
         adjust=True,
         ignore_na=False,
         axis=0,
@@ -1404,17 +1395,15 @@ class DataFrame(object):
             halflife=halflife,
             alpha=alpha,
             min_periods=min_periods,
-            freq=freq,
             adjust=adjust,
             ignore_na=ignore_na,
             axis=axis,
         )
 
-    def expanding(self, min_periods=1, freq=None, center=False, axis=0):
+    def expanding(self, min_periods=1, center=False, axis=0):
         return self._default_to_pandas(
             pandas.DataFrame.expanding,
             min_periods=min_periods,
-            freq=freq,
             center=center,
             axis=axis,
         )
@@ -1579,6 +1568,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Divide applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -1879,74 +1869,6 @@ class DataFrame(object):
             buf.write(result)
         return None
 
-        index = self.index
-        columns = self.columns
-        dtypes = self.dtypes
-        # Set up default values
-        verbose = True if verbose is None else verbose
-        buf = sys.stdout if not buf else buf
-        max_cols = 100 if not max_cols else max_cols
-        memory_usage = True if memory_usage is None else memory_usage
-        if not null_counts:
-            if len(columns) < 100 and len(index) < 1690785:
-                null_counts = True
-            else:
-                null_counts = False
-
-        # Determine if actually verbose
-        actually_verbose = True if verbose and max_cols > len(columns) else False
-
-        if type(memory_usage) == str and memory_usage == "deep":
-            memory_usage_deep = True
-        else:
-            memory_usage_deep = False
-
-        # Start putting together output
-        # Class denoted in info() output
-        class_string = "<class 'modin.pandas.dataframe.DataFrame'>\n"
-
-        # Create the Index info() string by parsing self.index
-        index_string = index.summary() + "\n"
-
-        if null_counts:
-            counts = self._query_compiler.count()
-        if memory_usage:
-            memory_usage_data = self._query_compiler.memory_usage(
-                deep=memory_usage_deep, index=True
-            )
-        if actually_verbose:
-            # Create string for verbose output
-            col_string = "Data columns (total {0} columns):\n".format(len(columns))
-            for col, dtype in zip(columns, dtypes):
-                col_string += "{0}\t".format(col)
-                if null_counts:
-                    col_string += "{0} not-null ".format(counts[col])
-                col_string += "{0}\n".format(dtype)
-        else:
-            # Create string for not verbose output
-            col_string = "Columns: {0} entries, {1} to {2}\n".format(
-                len(columns), columns[0], columns[-1]
-            )
-        # A summary of the dtypes in the dataframe
-        dtypes_string = "dtypes: "
-        for dtype, count in dtypes.value_counts().iteritems():
-            dtypes_string += "{0}({1}),".format(dtype, count)
-        dtypes_string = dtypes_string[:-1] + "\n"
-
-        # Create memory usage string
-        memory_string = ""
-        if memory_usage:
-            if memory_usage_deep:
-                memory_string = "memory usage: {0} bytes".format(memory_usage_data)
-            else:
-                memory_string = "memory usage: {0}+ bytes".format(memory_usage_data)
-        # Combine all the components of the info() output
-        result = "".join(
-            [class_string, index_string, col_string, dtypes_string, memory_string]
-        )
-        # Write to specified output buffer
-        buf.write(result)
-
     def insert(self, loc, column, value, allow_duplicates=False):
         """Insert column into DataFrame at specified location.
         Args:
@@ -1972,6 +1894,10 @@ class DataFrame(object):
             new_columns = self.columns.insert(loc, column)
             new_query_compiler = DataFrame(
                 value, index=new_index, columns=new_columns
+            )._query_compiler
+        elif len(self.columns) == 0 and loc == 0:
+            new_query_compiler = DataFrame(
+                data=value, columns=[column], index=self.index
             )._query_compiler
         else:
             if not is_list_like(value):
@@ -2466,6 +2392,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Mod applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -2511,6 +2438,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Multiply applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -2717,6 +2645,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Pow applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -2932,6 +2861,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the rdiv applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3225,6 +3155,7 @@ class DataFrame(object):
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3253,6 +3184,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the rdiv applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3276,7 +3208,6 @@ class DataFrame(object):
         self,
         window,
         min_periods=None,
-        freq=None,
         center=False,
         win_type=None,
         on=None,
@@ -3287,7 +3218,6 @@ class DataFrame(object):
             pandas.DataFrame.rolling,
             window,
             min_periods=min_periods,
-            freq=freq,
             center=center,
             win_type=win_type,
             on=on,
@@ -3320,6 +3250,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Pow applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3356,7 +3287,7 @@ class DataFrame(object):
         Returns:
              A new DataFrame with the subtraciont applied.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3374,7 +3305,7 @@ class DataFrame(object):
         return self._create_dataframe_from_compiler(new_query_compiler)
 
     def rtruediv(self, other, axis="columns", level=None, fill_value=None):
-        return self.truediv(other, axis, level, fill_value)
+        return self.rdiv(other, axis, level, fill_value)
 
     def sample(
         self,
@@ -3501,7 +3432,7 @@ class DataFrame(object):
             # choose random numbers and then get corresponding labels from
             # chosen axis
             sample_indices = random_num_gen.choice(
-                np.arange(0, axis_length), size=n, replace=replace
+                np.arange(0, axis_length), size=n, replace=replace, p=weights
             )
             samples = axis_labels[sample_indices]
         else:
@@ -3526,11 +3457,11 @@ class DataFrame(object):
 
         if include and not is_list_like(include):
             include = [include]
-        elif not include:
+        elif include is None:
             include = []
         if exclude and not is_list_like(exclude):
             exclude = [exclude]
-        elif not exclude:
+        elif exclude is None:
             exclude = []
 
         sel = tuple(map(set, (include, exclude)))
@@ -3681,7 +3612,7 @@ class DataFrame(object):
 
     def set_value(self, index, col, value, takeable=False):
         return self._default_to_pandas(
-            pandas.DataFrame.set_values, index, col, value, takeable=takeable
+            pandas.DataFrame.set_value, index, col, value, takeable=takeable
         )
 
     def shift(self, periods=1, freq=None, axis=0):
@@ -3897,7 +3828,7 @@ class DataFrame(object):
         Returns:
              A new DataFrame with the subtraciont applied.
         """
-        axis = pandas.DataFrame()._get_axis_number(axis)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -3959,7 +3890,7 @@ class DataFrame(object):
             **kwargs
         )
 
-    def to_clipboard(self, excel=None, sep=None, **kwargs):
+    def to_clipboard(self, excel=None, sep=None, **kwargs):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_clipboard, excel=excel, sep=sep, **kwargs
         )
@@ -3986,7 +3917,7 @@ class DataFrame(object):
         doublequote=True,
         escapechar=None,
         decimal=".",
-    ):
+    ):  # pragma: no cover
 
         kwargs = {
             "path_or_buf": path_or_buf,
@@ -4012,10 +3943,10 @@ class DataFrame(object):
         }
         return self._default_to_pandas(pandas.DataFrame.to_csv, **kwargs)
 
-    def to_dense(self):
+    def to_dense(self):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_dense)
 
-    def to_dict(self, orient="dict", into=dict):
+    def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_dict, orient=orient, into=into
         )
@@ -4038,7 +3969,7 @@ class DataFrame(object):
         inf_rep="inf",
         verbose=True,
         freeze_panes=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_excel,
             excel_writer,
@@ -4059,7 +3990,7 @@ class DataFrame(object):
             freeze_panes,
         )
 
-    def to_feather(self, fname):
+    def to_feather(self, fname):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_feather, fname)
 
     def to_gbq(
@@ -4071,7 +4002,7 @@ class DataFrame(object):
         reauth=False,
         if_exists="fail",
         private_key=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
             destination_table,
@@ -4083,7 +4014,7 @@ class DataFrame(object):
             private_key=private_key,
         )
 
-    def to_hdf(self, path_or_buf, key, format="table", **kwargs):
+    def to_hdf(self, path_or_buf, key, format="table", **kwargs):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_hdf, path_or_buf, key, format=format, **kwargs
         )
@@ -4110,7 +4041,7 @@ class DataFrame(object):
         notebook=False,
         decimal=".",
         border=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
             buf,
@@ -4146,7 +4077,7 @@ class DataFrame(object):
         default_handler=None,
         lines=False,
         compression=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_json,
             path_or_buf,
@@ -4181,7 +4112,7 @@ class DataFrame(object):
         multicolumn=None,
         multicolumn_format=None,
         multirow=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_latex,
             buf=buf,
@@ -4205,7 +4136,9 @@ class DataFrame(object):
             multirow=multirow,
         )
 
-    def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
+    def to_msgpack(
+        self, path_or_buf=None, encoding="utf-8", **kwargs
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_msgpack,
             path_or_buf=path_or_buf,
@@ -4213,10 +4146,12 @@ class DataFrame(object):
             **kwargs
         )
 
-    def to_panel(self):
+    def to_panel(self):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_panel)
 
-    def to_parquet(self, fname, engine="auto", compression="snappy", **kwargs):
+    def to_parquet(
+        self, fname, engine="auto", compression="snappy", **kwargs
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
             fname,
@@ -4225,12 +4160,14 @@ class DataFrame(object):
             **kwargs
         )
 
-    def to_period(self, freq=None, axis=0, copy=True):
+    def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_period, freq=freq, axis=axis, copy=copy
         )
 
-    def to_pickle(self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL):
+    def to_pickle(
+        self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_pickle, path, compression=compression, protocol=protocol
         )
@@ -4258,7 +4195,7 @@ class DataFrame(object):
         index_label=None,
         chunksize=None,
         dtype=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_sql,
             name,
@@ -4282,7 +4219,7 @@ class DataFrame(object):
         time_stamp=None,
         data_label=None,
         variable_labels=None,
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
             fname,
@@ -4362,6 +4299,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the Divide applied.
         """
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         if level is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -4802,74 +4740,88 @@ class DataFrame(object):
     def __ne__(self, other):
         return self.ne(other)
 
-    def __add__(self, other):
-        return self.add(other)
+    def __add__(self, other, axis=None, level=None, fill_value=None):
+        return self.add(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __iadd__(self, other):
-        return self.add(other)
+    def __iadd__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.add(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __radd__(self, other, axis="columns", level=None, fill_value=None):
-        return self.radd(other, axis, level, fill_value)
+    def __radd__(self, other, axis=None, level=None, fill_value=None):
+        return self.radd(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __mul__(self, other):
-        return self.mul(other)
+    def __mul__(self, other, axis=None, level=None, fill_value=None):
+        return self.mul(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __imul__(self, other):
-        return self.mul(other)
+    def __imul__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.mul(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rmul__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rmul(other, axis, level, fill_value)
+    def __rmul__(self, other, axis=None, level=None, fill_value=None):
+        return self.rmul(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __pow__(self, other):
-        return self.pow(other)
+    def __pow__(self, other, axis=None, level=None, fill_value=None):
+        return self.pow(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __ipow__(self, other):
-        return self.pow(other)
+    def __ipow__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.pow(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rpow__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rpow(other, axis, level, fill_value)
+    def __rpow__(self, other, axis=None, level=None, fill_value=None):
+        return self.rpow(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __sub__(self, other):
-        return self.sub(other)
+    def __sub__(self, other, axis=None, level=None, fill_value=None):
+        return self.sub(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __isub__(self, other):
-        return self.sub(other)
+    def __isub__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.sub(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rsub__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rsub(other, axis, level, fill_value)
+    def __rsub__(self, other, axis=None, level=None, fill_value=None):
+        return self.rsub(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __floordiv__(self, other):
-        return self.floordiv(other)
+    def __floordiv__(self, other, axis=None, level=None, fill_value=None):
+        return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __ifloordiv__(self, other):
-        return self.floordiv(other)
+    def __ifloordiv__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rfloordiv__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rfloordiv(other, axis, level, fill_value)
+    def __rfloordiv__(self, other, axis=None, level=None, fill_value=None):
+        return self.rfloordiv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __truediv__(self, other):
-        return self.truediv(other)
+    def __truediv__(self, other, axis=None, level=None, fill_value=None):
+        return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __itruediv__(self, other):
-        return self.truediv(other)
+    def __itruediv__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rtruediv__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rtruediv(other, axis, level, fill_value)
+    def __rtruediv__(self, other, axis=None, level=None, fill_value=None):
+        return self.rtruediv(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __mod__(self, other):
-        return self.mod(other)
+    def __mod__(self, other, axis=None, level=None, fill_value=None):
+        return self.mod(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __imod__(self, other):
-        return self.mod(other)
+    def __imod__(
+        self, other, axis=None, level=None, fill_value=None
+    ):  # pragma: no cover
+        return self.mod(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rmod__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rmod(other, axis, level, fill_value)
+    def __rmod__(self, other, axis=None, level=None, fill_value=None):
+        return self.rmod(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __div__(self, other, axis="columns", level=None, fill_value=None):
-        return self.div(other, axis, level, fill_value)
+    def __div__(self, other, axis=None, level=None, fill_value=None):
+        return self.div(other, axis=axis, level=level, fill_value=fill_value)
 
-    def __rdiv__(self, other, axis="columns", level=None, fill_value=None):
-        return self.rdiv(other, axis, level, fill_value)
+    def __rdiv__(self, other, axis=None, level=None, fill_value=None):
+        return self.rdiv(other, axis=axis, level=level, fill_value=fill_value)
 
     def __neg__(self):
         """Computes an element wise negative DataFrame
@@ -4880,20 +4832,32 @@ class DataFrame(object):
         self._validate_dtypes(numeric_only=True)
         return DataFrame(query_compiler=self._query_compiler.negative())
 
-    def __sizeof__(self):
+    def __sizeof__(self):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.__sizeof__)
 
     @property
-    def __doc__(self):
-        return self._query_compiler.to_pandas().__doc__
+    def __doc__(self):  # pragma: no cover
+        def __doc__(df):
+            """Defined because properties do not have a __name__"""
+            return df.__doc__
+
+        return self._default_to_pandas(__doc__)
 
     @property
     def blocks(self):
-        return self._query_compiler.to_pandas().blocks
+        def blocks(df):
+            """Defined because properties do not have a __name__"""
+            return df.blocks
+
+        return self._default_to_pandas(blocks)
 
     @property
     def style(self):
-        return self._query_compiler.to_pandas().style
+        def style(df):
+            """Defined because properties do not have a __name__"""
+            return df.style
+
+        return self._default_to_pandas(style)
 
     @property
     def iat(self, axis=None):
@@ -4914,7 +4878,11 @@ class DataFrame(object):
 
     @property
     def is_copy(self):
-        return self._query_compiler.to_pandas().is_copy
+        def is_copy(df):
+            """Defined because properties do not have a __name__"""
+            return df.is_copy
+
+        return self._default_to_pandas(is_copy)
 
     @property
     def at(self, axis=None):
@@ -4958,7 +4926,7 @@ class DataFrame(object):
         comparison_dtypes_only=False,
     ):
         """Helper method to check validity of other in inter-df operations"""
-        axis = pandas.DataFrame()._get_axis_number(axis)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         result = other
         if isinstance(other, DataFrame):
             return other._query_compiler
@@ -5092,7 +5060,11 @@ class DataFrame(object):
         """Helper method to use default pandas function"""
         ErrorMessage.default_to_pandas("`{}`".format(op.__name__))
         result = op(self._query_compiler.to_pandas(), *args, **kwargs)
-        if isinstance(result, pandas.DataFrame):
+        # SparseDataFrames cannot be serialize by arrow and cause problems for Modin.
+        # For now we will use pandas.
+        if isinstance(result, pandas.DataFrame) and not isinstance(
+            result, pandas.SparseDataFrame
+        ):
             return DataFrame(result)
         else:
             try:

@@ -2,7 +2,7 @@ import pandas
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
-class BaseAxisPartition(object):
+class BaseAxisPartition(object):  # pragma: no cover
     """This abstract class represents the Parent class for any
         `ColumnPartition` or `RowPartition` class. This class is intended to
         simplify the way that operations are performed

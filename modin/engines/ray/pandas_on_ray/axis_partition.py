@@ -70,5 +70,15 @@ class PandasOnRayRowPartition(PandasOnRayAxisPartition):
 
 
 @ray.remote
-def deploy_ray_func(func, *args):
+def deploy_ray_func(func, *args):  # pragma: no cover
+    """Run a function on a remote partition.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
+    Args:
+        func: The function to run.
+
+    Returns:
+        The result of the function `func`.
+    """
     return func(*args)
