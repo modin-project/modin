@@ -426,6 +426,7 @@ class BaseIO(object):
     @classmethod
     def to_sql(
         cls,
+        qc,
         name,
         con,
         schema=None,
