@@ -125,7 +125,7 @@ class DataFrameGroupBy(object):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_column_array(
-                            self._index_grouped[k].unique()
+                            self._index_grouped[k]
                         )
                     ),
                 )

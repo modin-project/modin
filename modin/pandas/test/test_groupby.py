@@ -767,9 +767,11 @@ def test_shift(ray_groupby, pandas_groupby):
 
 
 def test_groupby_on_index_values_with_loop():
-    data = {"a": [6, 2, 2], "b": [4, 5, 6]}
-    modin_df = pd.DataFrame(data, index=["g1", "g1", "g2"])
-    pandas_df = pandas.DataFrame(data, index=["g1", "g1", "g2"])
+    l = 2**6
+    data = {"a": np.random.randint(0, 100, size=l), "b": np.random.randint(0, 100, size=l)}
+    idx = ["g1" if i % 3 != 0 else "g2" for i in range(l)]
+    modin_df = pd.DataFrame(data, index=idx)
+    pandas_df = pandas.DataFrame(data, index=idx)
     modin_groupby_obj = modin_df.groupby(modin_df.index)
     pandas_groupby_obj = pandas_df.groupby(pandas_df.index)
 
