@@ -54,4 +54,5 @@ else
 fi
 
 pip install -r requirements.txt
-pip install -q pytest==3.9.3 feather-format lxml openpyxl xlrd numpy matplotlib
+# This causes problems with execution in the tests
+pip uninstall -y numexpr

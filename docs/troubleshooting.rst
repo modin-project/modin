@@ -28,7 +28,7 @@ plasma store.
 
 **Solution**
 
-Retart your interpreter or notebook kernel.
+Restart your interpreter or notebook kernel.
 
 **Avoiding this Error**
 

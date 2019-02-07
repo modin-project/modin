@@ -47,6 +47,9 @@ class SeriesView(object):
     def __str__(self):
         return str(self.series)
 
+    def __dir__(self):
+        return self.series.__dir__()
+
     def __comparisons__(self, func):
         def compare_func(other):
             if hasattr(other, "series"):
@@ -147,6 +150,9 @@ class SeriesView(object):
     def __neg__(self, other):
         return self.__arithmetic_op__("__neg__")(other)
 
+    def __abs__(self):
+        return self.series.abs()
+
     def __iter__(self):
         return self.series.__iter__()
 
@@ -173,24 +179,30 @@ class SeriesView(object):
         ]
         if item not in default_behaviors:
             method = self.series.__getattribute__(item)
-            try:
-                has_inplace_param = callable(method) and "inplace" in str(
-                    inspect.signature(method)
-                )
-            # This will occur on Python2
-            except AttributeError:
-                has_inplace_param = callable(method) and "inplace" in str(
-                    inspect.getargspec(method)
-                )
             # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
             # pandas they are equivalent to classes. They are verified here because they
             # cannot be overridden with the functions below. This generally solves the
             # problem where the instance property is callable, but the class property is
             # not.
-            needs_override = callable(method) and callable(
-                getattr(type(self.series), item)
+            # The isclass check is to ensure that we return the correct type. Some of
+            # the objects that are called result in classes being returned, and we don't
+            # want to override with our own function.
+            is_callable = (
+                callable(method)
+                and callable(getattr(type(self.series), item))
+                and not inspect.isclass(getattr(type(self.series), item))
             )
-            if needs_override and has_inplace_param and self.parent_df is not None:
+            try:
+                has_inplace_param = is_callable and "inplace" in str(
+                    inspect.signature(method)
+                )
+            # This will occur on Python2
+            except AttributeError:
+                has_inplace_param = is_callable and "inplace" in str(
+                    inspect.getargspec(method)
+                )
+
+            if is_callable and has_inplace_param and self.parent_df is not None:
 
                 def inplace_handler(*args, **kwargs):
                     """Replaces the default behavior of methods with inplace kwarg.
@@ -234,7 +246,7 @@ class SeriesView(object):
 
                 # We replace the method with `inplace_handler` for inplace operations
                 method = inplace_handler
-            elif needs_override:
+            elif is_callable:
 
                 def other_handler(*args, **kwargs):
                     """Replaces the method's args and kwargs with the Series object.

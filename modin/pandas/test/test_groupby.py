@@ -19,8 +19,12 @@ if sys.version_info.major < 3:
 @pytest.fixture
 def ray_df_equals_pandas(ray_df, pandas_df):
     assert isinstance(ray_df, pd.DataFrame)
-    assert to_pandas(ray_df).equals(pandas_df) or (
-        all(ray_df.isna().all()) and all(pandas_df.isna().all())
+    # Order may not match here, but pandas behavior can change, so we will be consistent
+    # ourselves in keeping the columns in the order they were in before the groupby
+    assert (
+        to_pandas(ray_df).equals(pandas_df)
+        or (all(ray_df.isna().all()) and all(pandas_df.isna().all()))
+        or to_pandas(ray_df)[list(pandas_df.columns)].equals(pandas_df)
     )
 
 
@@ -51,6 +55,85 @@ def ray_groupby_equals_pandas(ray_groupby, pandas_groupby):
     for g1, g2 in zip(ray_groupby, pandas_groupby):
         assert g1[0] == g2[0]
         ray_df_equals_pandas(g1[1], g2[1])
+
+
+def test_mixed_dtypes_groupby():
+    frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
+    pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
+    # Convert every other column to string
+    for col in pandas_df.iloc[
+        :, [i for i in range(len(pandas_df.columns)) if i % 2 == 0]
+    ]:
+        pandas_df[col] = [str(chr(i)) for i in pandas_df[col]]
+    ray_df = from_pandas(pandas_df)
+
+    n = 1
+
+    ray_groupby = ray_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
+    test_ngroups(ray_groupby, pandas_groupby)
+    test_skew(ray_groupby, pandas_groupby)
+    test_ffill(ray_groupby, pandas_groupby)
+    test_sem(ray_groupby, pandas_groupby)
+    test_mean(ray_groupby, pandas_groupby)
+    test_any(ray_groupby, pandas_groupby)
+    test_min(ray_groupby, pandas_groupby)
+    test_idxmax(ray_groupby, pandas_groupby)
+    test_ndim(ray_groupby, pandas_groupby)
+    test_cumsum(ray_groupby, pandas_groupby)
+    test_pct_change(ray_groupby, pandas_groupby)
+    test_cummax(ray_groupby, pandas_groupby)
+
+    # TODO Add more apply functions
+    apply_functions = [lambda df: df.sum(), min]
+    for func in apply_functions:
+        test_apply(ray_groupby, pandas_groupby, func)
+
+    test_dtypes(ray_groupby, pandas_groupby)
+    test_first(ray_groupby, pandas_groupby)
+    test_backfill(ray_groupby, pandas_groupby)
+    test_cummin(ray_groupby, pandas_groupby)
+    test_bfill(ray_groupby, pandas_groupby)
+    test_idxmin(ray_groupby, pandas_groupby)
+    test_prod(ray_groupby, pandas_groupby)
+    test_std(ray_groupby, pandas_groupby)
+
+    agg_functions = ["min", "max"]
+    for func in agg_functions:
+        test_agg(ray_groupby, pandas_groupby, func)
+        test_aggregate(ray_groupby, pandas_groupby, func)
+
+    test_last(ray_groupby, pandas_groupby)
+    test_mad(ray_groupby, pandas_groupby)
+    test_max(ray_groupby, pandas_groupby)
+    test_var(ray_groupby, pandas_groupby)
+    test_len(ray_groupby, pandas_groupby)
+    test_sum(ray_groupby, pandas_groupby)
+    test_ngroup(ray_groupby, pandas_groupby)
+    test_nunique(ray_groupby, pandas_groupby)
+    test_median(ray_groupby, pandas_groupby)
+    test_head(ray_groupby, pandas_groupby, n)
+    test_cumprod(ray_groupby, pandas_groupby)
+    test_cov(ray_groupby, pandas_groupby)
+
+    transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+    for func in transform_functions:
+        test_transform(ray_groupby, pandas_groupby, func)
+
+    pipe_functions = [lambda dfgb: dfgb.sum()]
+    for func in pipe_functions:
+        test_pipe(ray_groupby, pandas_groupby, func)
+
+    test_corr(ray_groupby, pandas_groupby)
+    test_fillna(ray_groupby, pandas_groupby)
+    test_count(ray_groupby, pandas_groupby)
+    test_tail(ray_groupby, pandas_groupby, n)
+    test_quantile(ray_groupby, pandas_groupby)
+    test_take(ray_groupby, pandas_groupby)
+    test___getattr__(ray_groupby, pandas_groupby)
+    test_groups(ray_groupby, pandas_groupby)
 
 
 def test_simple_row_groupby():
@@ -132,6 +215,8 @@ def test_simple_row_groupby():
     test_tail(ray_groupby, pandas_groupby, n)
     test_quantile(ray_groupby, pandas_groupby)
     test_take(ray_groupby, pandas_groupby)
+    test___getattr__(ray_groupby, pandas_groupby)
+    test_groups(ray_groupby, pandas_groupby)
 
 
 def test_single_group_row_groupby():
@@ -213,9 +298,10 @@ def test_single_group_row_groupby():
     test_tail(ray_groupby, pandas_groupby, n)
     test_quantile(ray_groupby, pandas_groupby)
     test_take(ray_groupby, pandas_groupby)
+    test___getattr__(ray_groupby, pandas_groupby)
+    test_groups(ray_groupby, pandas_groupby)
 
 
-@pytest.mark.skip(reason="See Modin issue #21.")
 def test_large_row_groupby():
     pandas_df = pandas.DataFrame(
         np.random.randint(0, 8, size=(100, 4)), columns=list("ABCD")
@@ -289,6 +375,7 @@ def test_large_row_groupby():
     test_tail(ray_groupby, pandas_groupby, n)
     test_quantile(ray_groupby, pandas_groupby)
     test_take(ray_groupby, pandas_groupby)
+    test_groups(ray_groupby, pandas_groupby)
 
 
 def test_simple_col_groupby():
@@ -366,6 +453,35 @@ def test_simple_col_groupby():
     test_fillna(ray_groupby, pandas_groupby)
     test_count(ray_groupby, pandas_groupby)
     test_take(ray_groupby, pandas_groupby)
+    test___getattr__(ray_groupby, pandas_groupby)
+    test_groups(ray_groupby, pandas_groupby)
+
+
+def test_multi_column_groupby():
+    pandas_df = pandas.DataFrame(
+        {
+            "col1": np.random.randint(0, 100, size=1000),
+            "col2": np.random.randint(0, 100, size=1000),
+            "col3": np.random.randint(0, 100, size=1000),
+            "col4": np.random.randint(0, 100, size=1000),
+            "col5": np.random.randint(0, 100, size=1000),
+        },
+        index=["row{}".format(i) for i in range(1000)],
+    )
+
+    ray_df = from_pandas(pandas_df)
+    by = ["col1", "col2"]
+
+    with pytest.warns(UserWarning):
+        ray_df.groupby(by).count()
+
+    with pytest.warns(UserWarning):
+        for k, _ in ray_df.groupby(by):
+            assert isinstance(k, tuple)
+
+    by = ["row0", "row1"]
+    with pytest.raises(KeyError):
+        ray_df.groupby(by, axis=1).count()
 
 
 @pytest.fixture
@@ -378,16 +494,19 @@ def test_skew(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.skew(), pandas_groupby.skew())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_ffill(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        try:
+            ray_groupby.ffill()
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_sem(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.sem()
 
 
 @pytest.fixture
@@ -405,10 +524,10 @@ def test_min(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.min(), pandas_groupby.min())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_idxmax(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.idxmax()
 
 
 @pytest.fixture
@@ -423,10 +542,13 @@ def test_cumsum(ray_groupby, pandas_groupby, axis=0):
     )
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_pct_change(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        try:
+            ray_groupby.pct_change()
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -446,16 +568,19 @@ def test_dtypes(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.dtypes, pandas_groupby.dtypes)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_first(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.first()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_backfill(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        try:
+            ray_groupby.backfill()
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -465,16 +590,19 @@ def test_cummin(ray_groupby, pandas_groupby, axis=0):
     )
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_bfill(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        try:
+            ray_groupby.bfill()
+        except Exception:
+            pass
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_idxmin(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.idxmin()
 
 
 @pytest.fixture
@@ -497,16 +625,16 @@ def test_agg(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.agg(func), pandas_groupby.agg(func))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_last(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.last()
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_mad(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.mad()
 
 
 @pytest.fixture
@@ -549,10 +677,10 @@ def test_median(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.median(), pandas_groupby.median())
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_head(ray_groupby, pandas_groupby, n):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.head()
 
 
 @pytest.fixture
@@ -563,10 +691,10 @@ def test_cumprod(ray_groupby, pandas_groupby, axis=0):
     )
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_cov(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.cov()
 
 
 @pytest.fixture
@@ -574,10 +702,10 @@ def test_transform(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.transform(func), pandas_groupby.transform(func))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_corr(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.corr()
 
 
 @pytest.fixture
@@ -597,10 +725,10 @@ def test_pipe(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.pipe(func), pandas_groupby.pipe(func))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_tail(ray_groupby, pandas_groupby, n):
-    return
+    with pytest.warns(UserWarning):
+        ray_groupby.tail()
 
 
 @pytest.fixture
@@ -608,7 +736,31 @@ def test_quantile(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.quantile(q=0.4), pandas_groupby.quantile(q=0.4))
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.fixture
 def test_take(ray_groupby, pandas_groupby):
-    return
+    with pytest.warns(UserWarning):
+        try:
+            ray_groupby.take()
+        except Exception:
+            pass
+
+
+@pytest.fixture
+def test___getattr__(ray_groupby, pandas_groupby):
+    with pytest.warns(UserWarning):
+        ray_groupby["col1"]
+
+    with pytest.warns(UserWarning):
+        ray_groupby.col1
+
+
+@pytest.fixture
+def test_groups(ray_groupby, pandas_groupby):
+    print(ray_groupby.groups)
+    for k, v in ray_groupby.groups.items():
+        assert v.equals(pandas_groupby.groups[k])
+
+
+@pytest.fixture
+def test_shift(ray_groupby, pandas_groupby):
+    assert ray_groupby.groups == pandas_groupby.groups

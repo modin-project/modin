@@ -152,6 +152,7 @@ def read_gbq(
     **kwargs
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_gbq(**kwargs))
 
 
@@ -185,33 +186,41 @@ def read_excel(
     io,
     sheet_name=0,
     header=0,
-    skiprows=None,
-    index_col=None,
     names=None,
+    index_col=None,
     usecols=None,
-    parse_dates=False,
-    date_parser=None,
-    na_values=None,
-    thousands=None,
-    convert_float=True,
-    converters=None,
+    squeeze=False,
     dtype=None,
+    engine=None,
+    converters=None,
     true_values=None,
     false_values=None,
-    engine=None,
-    squeeze=False,
+    skiprows=None,
+    nrows=None,
+    na_values=None,
+    parse_dates=False,
+    date_parser=None,
+    thousands=None,
+    comment=None,
+    skipfooter=0,
+    convert_float=True,
+    **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.pop("kwds")
+    kwargs.update(kwds)
     return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
 
 
-def read_hdf(path_or_buf, key=None, mode="r", columns=None):
+def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
 
 def read_feather(path, nthreads=1):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
 
 
@@ -264,5 +273,32 @@ def read_sql(
     columns=None,
     chunksize=None,
 ):
+    """ Read SQL query or database table into a DataFrame.
+
+    Args:
+        sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
+        con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
+        index_col: Column(s) to set as index(MultiIndex).
+        coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
+                      floating point, useful for SQL result sets.
+        params: List of parameters to pass to execute method. The syntax used
+                to pass parameters is database driver dependent. Check your
+                database driver documentation for which of the five syntax styles,
+                described in PEP 249's paramstyle, is supported.
+        parse_dates:
+                     - List of column names to parse as dates.
+                     - Dict of ``{column_name: format string}`` where format string is
+                       strftime compatible in case of parsing string times, or is one of
+                       (D, s, ns, ms, us) in case of parsing integer timestamps.
+                     - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
+                       to the keyword arguments of :func:`pandas.to_datetime`
+                       Especially useful with databases without native Datetime support,
+                       such as SQLite.
+        columns: List of column names to select from SQL table (only used when reading a table).
+        chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
+
+    Returns:
+        Modin Dataframe
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql(**kwargs))

@@ -1,4 +1,15 @@
 import os
+import warnings
+
+
+def custom_formatwarning(msg, category, *args, **kwargs):
+    # ignore everything except the message
+    return "{}: {}\n".format(category.__name__, msg)
+
+
+warnings.formatwarning = custom_formatwarning
+# Filter numpy version warnings because they are not relevant
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 
 
 def get_execution_engine():
@@ -19,7 +30,7 @@ def get_partition_format():
     return "Pandas"
 
 
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 

@@ -36,6 +36,7 @@ from pandas import (
 import threading
 import os
 import ray
+import types
 
 from .. import __version__
 from .concat import concat
@@ -58,8 +59,9 @@ from .io import (
     read_gbq,
     read_table,
 )
-from .reshape import get_dummies, melt
-from .general import isna, merge, pivot_table
+from .reshape import get_dummies, melt, crosstab
+from .general import isna, isnull, merge, pivot_table
+from .plotting import Plotting as plotting
 from .. import __execution_engine__ as execution_engine
 
 __pandas_version__ = "0.23.4"
@@ -75,18 +77,62 @@ if pandas.__version__ != __pandas_version__:
 os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
 
-if execution_engine == "Ray":
-    try:
-        if threading.current_thread().name == "MainThread":
-            ray.init(
-                redirect_output=True,
-                include_webui=False,
-                redirect_worker_output=True,
-                ignore_reinit_error=True,
+
+def initialize_ray():
+    """Initializes ray based on environment variables and internal defaults."""
+    if threading.current_thread().name == "MainThread":
+        plasma_directory = None
+        object_store_memory = None
+        if "MODIN_MEMORY" in os.environ:
+            object_store_memory = os.environ["MODIN_MEMORY"]
+        if (
+            "MODIN_OUT_OF_CORE" in os.environ
+            and os.environ["MODIN_OUT_OF_CORE"].title() == "True"
+        ):
+            from tempfile import gettempdir
+
+            plasma_directory = gettempdir()
+            # We may have already set the memory from the environment variable, we don't
+            # want to overwrite that value if we have.
+            if object_store_memory is None:
+                try:
+                    from psutil import virtual_memory
+                except ImportError:
+                    raise ImportError(
+                        "To use Modin out of core, please install modin[out_of_core]: "
+                        '`pip install "modin[out_of_core]"`'
+                    )
+                # Round down to the nearest Gigabyte.
+                mem_bytes = virtual_memory().total // 10 ** 9 * 10 ** 9
+                # Default to 8x memory for out of core
+                object_store_memory = 8 * mem_bytes
+        elif "MODIN_MEMORY" in os.environ:
+            object_store_memory = os.environ["MODIN_MEMORY"]
+        # In case anything failed above, we can still improve the memory for Modin.
+        if object_store_memory is None:
+            # Round down to the nearest Gigabyte.
+            object_store_memory = int(
+                0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
             )
-            num_cpus = ray.global_state.cluster_resources()["CPU"]
-    except AssertionError:
-        pass
+            # If the memory pool is smaller than 2GB, just use the default in ray.
+            if object_store_memory == 0:
+                object_store_memory = None
+        ray.init(
+            redirect_output=True,
+            include_webui=False,
+            redirect_worker_output=True,
+            ignore_reinit_error=True,
+            plasma_directory=plasma_directory,
+            object_store_memory=object_store_memory,
+        )
+        # Register custom serializer for method objects to avoid warning message.
+        # We serialize `MethodType` objects when we use AxisPartition operations.
+        ray.register_custom_serializer(types.MethodType, use_pickle=True)
+
+
+if execution_engine == "Ray":
+    initialize_ray()
+    num_cpus = ray.global_state.cluster_resources()["CPU"]
 elif execution_engine == "Dask":
     from distributed.client import _get_global_client
 
@@ -134,6 +180,7 @@ __all__ = [
     "to_datetime",
     "get_dummies",
     "isna",
+    "isnull",
     "merge",
     "pivot_table",
     "Panel",
@@ -155,6 +202,8 @@ __all__ = [
     "Categorical",
     "__version__",
     "melt",
+    "crosstab",
+    "plotting",
 ]
 
 del pandas

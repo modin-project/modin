@@ -147,18 +147,13 @@ class _LocationIndexerBase(object):
     def __init__(self, ray_df: DataFrame):
         self.df = ray_df
         self.qc = ray_df._query_compiler
-        self.is_view = hasattr(self.qc, "is_view")
-
         self.row_scaler = False
         self.col_scaler = False
 
     def __getitem__(
         self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
     ):
-        if self.is_view:
-            qc_view = self.qc.__constructor__(self.qc.data, row_lookup, col_lookup)
-        else:
-            qc_view = self.qc.view(row_lookup, col_lookup)
+        qc_view = self.qc.view(row_lookup, col_lookup)
 
         if ndim == 2:
             return DataFrame(query_compiler=qc_view)
@@ -241,8 +236,24 @@ class _LocIndexer(_LocationIndexerBase):
 
     def __setitem__(self, key, item):
         row_loc, col_loc, _, __, ___ = _parse_tuple(key)
-        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+        if isinstance(row_loc, list) and len(row_loc) == 1:
+            if row_loc[0] not in self.qc.index:
+                index = self.qc.index.insert(len(self.qc.index), row_loc[0])
+                self.qc = self.qc.reindex(labels=index, axis=0)
+                self.df._update_inplace(new_query_compiler=self.qc)
+
+        if (
+            isinstance(col_loc, list)
+            and len(col_loc) == 1
+            and col_loc[0] not in self.qc.columns
+        ):
+            new_col = pandas.Series(index=self.df.index)
+            new_col[row_loc] = item
+            self.df.insert(loc=len(self.df.columns), column=col_loc[0], value=new_col)
+            self.qc = self.df._query_compiler
+        else:
+            row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+            super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _handle_enlargement(self, row_loc, col_loc):
         """Handle Enlargement (if there is one).

@@ -153,7 +153,10 @@ class PandasOnRayIO(BaseIO):
         empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
-        partition_kwargs = dict(kwargs, header=None, names=column_names, skipfooter=0)
+        skiprows = kwargs.pop("skiprows", None)
+        partition_kwargs = dict(
+            kwargs, header=None, names=column_names, skipfooter=0, skiprows=None
+        )
         with open(filepath, "rb") as f:
             # Get the BOM if necessary
             prefix = b""
@@ -164,7 +167,9 @@ class PandasOnRayIO(BaseIO):
 
             prefix_id = ray.put(prefix)
             partition_kwargs_id = ray.put(partition_kwargs)
-            # Skip the header since we already have the header information
+            # Skip the header since we already have the header information and skip the
+            # rows we are told to skip.
+            kwargs["skiprows"] = skiprows
             cls._skip_header(f, kwargs)
             # Launch tasks to read partitions
             partition_ids = []
@@ -377,7 +382,7 @@ class PandasOnRayIO(BaseIO):
 
                 if isinstance(filepath_or_buffer, pathlib.Path):
                     read_from_pandas = False
-            except ImportError:
+            except ImportError:  # pragma: no cover
                 pass
             if read_from_pandas:
                 ErrorMessage.default_to_pandas("Reading from buffer.")
@@ -400,7 +405,7 @@ class PandasOnRayIO(BaseIO):
             return cls._read_csv_from_pandas(filepath_or_buffer, kwargs)
         # TODO: replace this by reading lines from file.
         if kwargs.get("nrows") is not None:
-            ErrorMessage.default_to_pandas()
+            ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
             return cls._read_csv_from_file_pandas_on_ray(
@@ -408,7 +413,38 @@ class PandasOnRayIO(BaseIO):
             )
 
     @classmethod
-    def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
+    def _validate_hdf_format(cls, path_or_buf):
+        s = pandas.HDFStore(path_or_buf)
+        groups = s.groups()
+        if len(groups) == 0:
+            raise ValueError("No dataset in HDF5 file.")
+        candidate_only_group = groups[0]
+        format = getattr(candidate_only_group._v_attrs, "table_type", None)
+        s.close()
+        return format
+
+    @classmethod
+    def read_hdf(cls, path_or_buf, **kwargs):
+        """Load a h5 file from the file path or buffer, returning a DataFrame.
+
+        Args:
+            path_or_buf: string, buffer or path object
+                Path to the file to open, or an open :class:`pandas.HDFStore` object.
+            kwargs: Pass into pandas.read_hdf function.
+
+        Returns:
+            DataFrame constructed from the h5 file.
+        """
+        format = cls._validate_hdf_format(path_or_buf=path_or_buf)
+
+        if format is None:
+            ErrorMessage.default_to_pandas(
+                "File format seems to be `fixed`. For better distribution consider saving the file in `table` format. "
+                "df.to_hdf(format=`table`)."
+            )
+            return cls.from_pandas(pandas.read_hdf(path_or_buf=path_or_buf, **kwargs))
+
+        columns = kwargs.get("columns", None)
         if not columns:
             empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
             columns = empty_pd_df.columns
@@ -428,7 +464,7 @@ class PandasOnRayIO(BaseIO):
         blk_partitions = np.array(
             [
                 _read_hdf_columns._remote(
-                    args=(path_or_buf, cols, num_splits, key, mode),
+                    args=(path_or_buf, cols, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
                 )
                 for cols in col_partitions
@@ -504,7 +540,10 @@ class PandasOnRayIO(BaseIO):
 
 
 @ray.remote
-def get_index(index_name, *partition_indices):
+def get_index(index_name, *partition_indices):  # pragma: no cover
+    """Get the index from the indices returned by the workers.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)"""
     index = partition_indices[0].append(partition_indices[1:])
     index.names = index_name
     return index
@@ -528,8 +567,12 @@ def _split_result_for_readers(axis, num_splits, df):
 
 
 @ray.remote
-def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, header):
+def _read_csv_with_offset_pandas_on_ray(
+    fname, num_splits, start, end, kwargs, header
+):  # pragma: no cover
     """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         fname: The filename of the file to open.
@@ -545,13 +588,14 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
             This is used to determine the total length of the DataFrame to build a
             default Index.
     """
+    index_col = kwargs.pop("index_col", None)
     bio = open(fname, "rb")
     bio.seek(start)
     to_read = header + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
     pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
-    if kwargs.get("index_col", None) is not None:
+    if index_col is not None:
         index = pandas_df.index
         # Partitions must have RangeIndex
         pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
@@ -563,11 +607,13 @@ def _read_csv_with_offset_pandas_on_ray(fname, num_splits, start, end, kwargs, h
 
 
 @ray.remote
-def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
+def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
     Args:
-        path: The path of the HDF5 file.
+        path_or_buf: The path of the HDF5 file.
         columns: The list of column names to read.
         num_splits: The number of partitions to split the column into.
 
@@ -578,14 +624,16 @@ def _read_hdf_columns(path_or_buf, columns, num_splits, key, mode):
             default Index.
     """
 
-    df = pandas.read_hdf(path_or_buf, key, mode, columns=columns)
+    df = pandas.read_hdf(path_or_buf, columns=columns, **kwargs)
     # Append the length of the index here to build it externally
     return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
 
 @ray.remote
-def _read_parquet_columns(path, columns, num_splits, kwargs):
+def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         path: The path of the Parquet file.
@@ -606,8 +654,10 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):
 
 
 @ray.remote
-def _read_feather_columns(path, columns, num_splits):
+def _read_feather_columns(path, columns, num_splits):  # pragma: no cover
     """Use a Ray task to read columns from Feather into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
     Args:
         path: The path of the Feather file.

@@ -6,5 +6,6 @@ RUN pip install -q pytest==3.9.3 awscli  pytest-benchmark pytest-xdist pytest-ht
 
 COPY . .
 RUN pip install -e .
+RUN pip install awscli pytest-html
 
 ENTRYPOINT ["bash", ".jenkins/build-tests/run_test.sh"]

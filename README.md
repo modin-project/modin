@@ -1,12 +1,13 @@
-<p align="center"><a href="https://modin.readthedocs.io"><img width=600 alt="" src="https://github.com/modin-project/modin/blob/3d6368edf311995ad231ec5342a51cd9e4e3dc20/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
-<h3 align="center">Scale your pandas workflows by changing one line of code</h3>
+<p align="center"><a href="https://modin.readthedocs.io"><img width=77% alt="" src="https://github.com/modin-project/modin/blob/3d6368edf311995ad231ec5342a51cd9e4e3dc20/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
+<h2 align="center">Scale your pandas workflows by changing one line of code</h2>
 
 <p align="center">
+<a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white"></a>
+<a href="https://mybinder.org/v2/gh/modin-project/modin/master"><img alt="" src="https://mybinder.org/badge_logo.svg">
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest"></a>
 <a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.2.5-blue.svg"></a>
-<a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.3.0-blue.svg"></a>
 </p>
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -70,14 +71,17 @@ import modin.pandas as pd
 df = pd.read_csv("my_dataset.csv")
 ```
 
-#### Modin is a DataFrame for datasets from 1KB to 1TB+ 
+#### Modin is a DataFrame designed for datasets from 1KB to 1TB+ 
 
 We have focused heavily on bridging the solutions between DataFrames for small data 
 (e.g. pandas) and large data. Often data scientists require different tools for doing
 the same thing on different sizes of data. The DataFrame solutions that exist for 1KB do
 not scale to 1TB+, and the overheads of the solutions for 1TB+ are too costly for 
 datasets in the 1KB range. With Modin, because of its light-weight, robust, and scalable
-nature, you get a fast DataFrame at 1KB and 1TB+.
+nature, you get a fast DataFrame at small and large data. With preliminary [cluster](https://modin.readthedocs.io/en/latest/using_modin.html#using-modin-on-a-cluster)
+and [out of core](https://modin.readthedocs.io/en/latest/out_of_core.html)
+support, Modin is a DataFrame library with great single-node performance and high
+scalability in a cluster.
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 

@@ -1,4 +1,4 @@
-class BaseRemotePartition(object):
+class BaseRemotePartition(object):  # pragma: no cover
     """This abstract class holds the data and metadata for a single partition.
         The methods required for implementing this abstract class are listed in
         the section immediately following this.

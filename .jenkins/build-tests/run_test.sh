@@ -16,7 +16,7 @@ TESTS_FAILED=()
 
 test_and_upload_result() {
     test_name=$1
-    pytest --html=test_"$test_name".html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_"$test_name".py
+    pytest -n auto --html=test_"$test_name".html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_"$test_name".py
     test_status=$?
 
     aws s3 cp test_"$test_name".html s3://modin-jenkins-result/"$sha_tag"/ --acl public-read
