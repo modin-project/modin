@@ -751,19 +751,38 @@ def test_to_pickle():
 
 
 def test_to_sql():
+    filename_modin = "test_to_sql.db"
+    filename_pandas = "test_to_sql_pandas.db"
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
-    TEST_SQL_DF_FILENAME = "test_df.sql"
-    TEST_SQL_pandas_FILENAME = "test_pandas.sql"
+    teardown_sql_file(filename_modin)
+    teardown_sql_file(filename_pandas)
 
-    modin_df.to_pickle(TEST_SQL_DF_FILENAME)
-    pandas_df.to_pickle(TEST_SQL_pandas_FILENAME)
+    table_name = "tbl_without_index"
 
-    assert test_files_eq(TEST_SQL_DF_FILENAME, TEST_SQL_pandas_FILENAME)
+    conn = "sqlite:///{}".format(filename_modin)
+    modin_df.to_sql(table_name, conn, index=False)
 
-    teardown_test_file(TEST_SQL_DF_FILENAME)
-    teardown_test_file(TEST_SQL_pandas_FILENAME)
+    conn = "sqlite:///{}".format(filename_pandas)
+    pandas_df.to_sql(table_name, conn, index=False)
+
+    assert test_files_eq(filename_modin, filename_pandas)
+
+    table_name = "tbl_with_index"
+
+    conn = "sqlite:///{}".format(filename_modin)
+    modin_df.to_sql(table_name, conn)
+    df_modin_sql = pandas.read_sql(table_name, con=conn, index_col="index")
+
+    conn = "sqlite:///{}".format(filename_pandas)
+    pandas_df.to_sql(table_name, conn)
+    df_pandas_sql = pandas.read_sql(table_name, con=conn, index_col="index")
+
+    assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
+
+    teardown_sql_file(filename_modin)
+    teardown_sql_file(filename_pandas)
 
 
 def test_to_stata():
