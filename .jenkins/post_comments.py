@@ -33,7 +33,7 @@ header = """
 Test Failed:
 """
 comment = '\n'.join([
-    f"- https://s3.amazonaws.com/modin-jenkins-result/{args.sha}/test_{test_name}.html"
+    f"- [test_name](https://s3.amazonaws.com/modin-jenkins-result/{args.sha}/test_{test_name}).html"
     for test_name in tests_ran
 ])
 

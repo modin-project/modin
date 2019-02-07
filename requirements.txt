@@ -21,3 +21,4 @@ openpyxl
 xlrd
 matplotlib
 sqlalchemy
+numexpr

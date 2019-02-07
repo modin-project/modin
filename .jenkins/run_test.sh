@@ -11,12 +11,18 @@ sha_tag=$(git rev-parse --verify --short HEAD)
 
 any_test_failed=0
 
-TESTS=("dataframe" "concat" "io" "groupby")
+TESTS=(
+	"modin/pandas/test/test_dataframe" 
+	"modin/pandas/test/test_concat" 
+	"modin/pandas/test/test_io" 
+	"modin/pandas/test/test_groupby"
+	"modin/experimental/pandas/test/test_io_exp.py"
+)
 TESTS_FAILED=()
 
 test_and_upload_result() {
-    test_name=$1
-    pytest -n auto --html=test_"$test_name".html --self-contained-html --disable-pytest-warnings modin/pandas/test/test_"$test_name".py
+    test_path=$1
+    pytest -n auto --html=test_"$test_path".html --self-contained-html --disable-pytest-warnings --cov-config=.coveragerc --cov=modin --cov-append $test_path
     test_status=$?
 
     aws s3 cp test_"$test_name".html s3://modin-jenkins-result/"$sha_tag"/ --acl public-read
@@ -27,10 +33,14 @@ test_and_upload_result() {
     fi;
 }
 
+curl -s https://codecov.io/bash > codecov.sh
+
 for test in "${TESTS[@]}"; do
     test_and_upload_result $test
 done
 
 python .jenkins/build-tests/post_comments.py --sha "$sha_tag" --tests "${TESTS_FAILED[@]}"
+
+bash codecov.sh
 
 exit $any_test_failed
