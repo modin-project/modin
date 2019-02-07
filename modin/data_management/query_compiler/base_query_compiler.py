@@ -53,7 +53,6 @@ class BaseQueryCompiler(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    # These objects are currently not distributed.
     def _get_index(self):
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -68,7 +67,6 @@ class BaseQueryCompiler(object):
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
-
     # END dtypes and indexing abstract methods
 
     # Metadata modification abstract methods
@@ -949,12 +947,11 @@ class BaseQueryCompiler(object):
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract methods for QueryCompiler
 
     @property
     def __constructor__(self):
-        """By default, constructor method will invoke an init"""
+        """By default, constructor method will invoke an init."""
         return type(self)
 
     # Append/Concat/Join (Not Merge)
@@ -969,7 +966,7 @@ class BaseQueryCompiler(object):
     # DataFrame in memory. This can be problematic and should be fixed in the
     # future. TODO (devin-petersohn): Delay reindexing
     def join(self, other, **kwargs):
-        """Joins a list or two objects together
+        """Joins a list or two objects together.
 
         Args:
             other: The other object(s) to join on.
@@ -992,144 +989,7 @@ class BaseQueryCompiler(object):
             Concatenated objects.
         """
         return self._append_list_of_managers(other, axis, **kwargs)
-
     # END Append/Concat/Join
-
-    # Single Manager scalar operations (e.g. add to scalar, list of scalars)
-    def scalar_operations(self, axis, scalar, func):
-        """Handler for mapping scalar operations across a Manager.
-
-        Args:
-            axis: The axis index object to execute the function on.
-            scalar: The scalar value to map.
-            func: The function to use on the Manager with the scalar.
-
-        Returns:
-            New DataManager with updated data and new index.
-        """
-        if isinstance(scalar, (list, np.ndarray, pandas.Series)):
-            new_data = self.map_across_full_axis(axis, func)
-            return self.__constructor__(new_data, self.index, self.columns)
-        else:
-            return self.map_partitions(func)
-
-    # END Single Manager scalar operations
-
-    # Map partitions operations
-    # These operations are operations that apply a function to every partition.
-    def map_partitions(self, func, new_dtypes=None):
-        return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-        )
-
-    # END Map partitions operations
-
-    # Column/Row partitions reduce operations
-    #
-    # These operations result in a reduced dimensionality of data.
-    # Currently, this means a Pandas Series will be returned, but in the future
-    # we will implement a Distributed Series, and this will be returned
-    # instead.
-    def full_axis_reduce(self, func, axis, alternate_index=None):
-        """Applies map that reduce Manager to series but require knowledge of full axis.
-
-        Args:
-            func: Function to reduce the Manager by. This function takes in a Manager.
-            axis: axis to apply the function to.
-            alternate_index: If the resulting series should have an index
-                different from the current query_compiler's index or columns.
-
-        Return:
-            Pandas series containing the reduced data.
-        """
-        # We XOR with axis because if we are doing an operation over the columns
-        # (i.e. along the rows), we want to take the transpose so that the
-        # results from the same parition will be concated together first.
-        # We need this here because if the operations is over the columns,
-        # map_across_full_axis does not transpose the result before returning.
-        result = self.data.map_across_full_axis(axis, func).to_pandas(
-            self._is_transposed ^ axis
-        )
-        if result.empty:
-            return result
-        if not axis:
-            result.index = (
-                alternate_index if alternate_index is not None else self.columns
-            )
-        else:
-            result.index = (
-                alternate_index if alternate_index is not None else self.index
-            )
-        return result
-
-    # END Column/Row partitions reduce operations
-
-    # Column/Row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # Currently, this means a Pandas Series will be returned, but in the future
-    # we will implement a Distributed Series, and this will be returned
-    # instead.
-    def full_axis_reduce_along_select_indices(
-        self, func, axis, index, pandas_result=True
-    ):
-        """Reduce Manger along select indices using function that needs full axis.
-
-        Args:
-            func: Callable that reduces Manager to Series using full knowledge of an
-                axis.
-            axis: 0 for columns and 1 for rows. Defaults to 0.
-            index: Index of the resulting series.
-            pandas_result: Return the result as a Pandas Series instead of raw data.
-
-        Returns:
-            Either a Pandas Series with index or BaseBlockPartitions object.
-        """
-        # Convert indices to numeric indices
-        old_index = self.index if axis else self.columns
-        numeric_indices = [i for i, name in enumerate(old_index) if name in index]
-        result = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, numeric_indices
-        )
-        if pandas_result:
-            result = result.to_pandas(self._is_transposed)
-            result.index = index
-        return result
-
-    # END Column/Row partitions reduce operations over select indices
-
-    # Map across rows/columns
-    # These operations require some global knowledge of the full column/row
-    # that is being operated on. This means that we have to put all of that
-    # data in the same place.
-    def map_across_full_axis(self, axis, func):
-        return self.data.map_across_full_axis(axis, func)
-
-    # END Map across rows/columns
-
-    # Map across rows/columns
-    # These operations require some global knowledge of the full column/row
-    # that is being operated on. This means that we have to put all of that
-    # data in the same place.
-    def map_across_full_axis_select_indices(
-        self, axis, func, indices, keep_remaining=False
-    ):
-        """Maps function to select indices along full axis.
-
-        Args:
-            axis: 0 for columns and 1 for rows.
-            func: Callable mapping function over the BlockParitions.
-            indices: indices along axis to map over.
-            keep_remaining: True if keep indices where function was not applied.
-
-        Returns:
-            BaseBlockPartitions containing the result of mapping func over axis on indices.
-        """
-        return self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, indices, keep_remaining
-        )
-
-    # END Map across rows/columns
 
     # Data Management Methods
     def free(self):
@@ -1137,7 +997,6 @@ class BaseQueryCompiler(object):
         """
         # TODO create a way to clean up this object.
         return
-
     # END Data Management Methods
 
     # To/From Pandas
@@ -1179,14 +1038,12 @@ class BaseQueryCompiler(object):
         new_dtypes = df.dtypes
         new_data = block_partitions_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
-
     # END To/From Pandas
 
     # __delitem__
     # This will change the shape of the resulting data.
     def delitem(self, key):
         return self.drop(columns=[key])
-
     # END __delitem__
 
 
@@ -1226,7 +1083,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     _dtype_cache = None
 
     def _get_dtype(self):
-        """Override the parent on this to avoid getting the wrong dtypes"""
+        """Override the parent on this to avoid getting the wrong dtypes."""
         raise NotImplementedError("Must be implemented in children classes")
 
     def _set_dtype(self, dtypes):
@@ -1252,7 +1109,6 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     def global_idx_to_numeric_idx(self, axis, indices):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract functions for QueryCompilerView
 
     @property
