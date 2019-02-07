@@ -902,7 +902,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def transpose(self, *args, **kwargs):
         """Transposes this DataManager.
 
-         Returns:
+        Returns:
             Transposed new DataManager.
         """
         new_data = self.data.transpose(*args, **kwargs)
@@ -1249,7 +1249,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # results from the same parition will be concated together first.
         # We need this here because if the operations is over the columns,
         # map_across_full_axis does not transpose the result before returning.
-        result = self.data._map_across_full_axis(axis, func).to_pandas(
+        result = self.data.map_across_full_axis(axis, func).to_pandas(
             self._is_transposed ^ axis
         )
         if result.empty:
@@ -1646,7 +1646,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
     def _map_across_full_axis(self, axis, func):
-        return self.data._map_across_full_axis(axis, func)
+        return self.data.map_across_full_axis(axis, func)
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
@@ -2504,6 +2504,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(result_data, index, columns)
     # END Manual Partitioning methods
 
+    # Get_dummies
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
 
@@ -2580,6 +2581,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data = untouched_data.data.concat(1, new_data)
             final_columns = untouched_data.columns.append(pandas.Index(final_columns))
         return cls(new_data, self.index, final_columns)
+    # END Get_dummies
 
     # Indexing
     def view(self, index=None, columns=None):
