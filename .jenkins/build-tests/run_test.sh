@@ -8,9 +8,6 @@ set -x
 #   exit normally. This script will exit with status code from this variable.
 
 sha_tag=$(git rev-parse --verify --short HEAD)
-source activate py3
-
-python -c "import ray; ray.init()"
 
 any_test_failed=0
 
