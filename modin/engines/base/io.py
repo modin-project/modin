@@ -422,3 +422,29 @@ class BaseIO(object):
                 chunksize=chunksize,
             )
         )
+
+    @classmethod
+    def to_sql(
+        cls,
+        name,
+        con,
+        schema=None,
+        if_exists="fail",
+        index=True,
+        index_label=None,
+        chunksize=None,
+        dtype=None,
+    ):
+        ErrorMessage.default_to_pandas("`to_sql`")
+        return cls.from_pandas(
+            pandas.to_sql(
+                name=name,
+                con=con,
+                schema=schema,
+                if_exists=if_exists,
+                index=index,
+                index_label=index_label,
+                chunksize=chunksize,
+                dtype=dtype,
+            )
+        )
