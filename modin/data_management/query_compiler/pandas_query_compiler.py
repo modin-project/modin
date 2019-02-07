@@ -1101,6 +1101,26 @@ class PandasQueryCompiler(object):
         """
         return self._process_min_max(pandas.DataFrame.min, **kwargs)
 
+    def to_sql(self, **kwargs):
+        """Write records stored in a DataFrame to a SQL database.
+
+        """
+        empty_df = self.head(1).to_pandas().head(0)
+        # this is to create the full DB table and validate the input against pandas
+        empty_df.to_sql(**kwargs)
+        # so each partition will append its respective DF
+        kwargs["if_exists"] = "append"
+        columns = self.columns
+
+        def func(df, **kwargs):
+            raise ValueError(kwargs)
+            df.columns = columns
+            df.to_sql(**kwargs)
+
+        map_func = self._prepare_method(func, **kwargs)
+        self.map_across_full_axis(1, map_func)
+        # return self.__constructor__(new_data, self.index, self.columns)
+
     def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
 
