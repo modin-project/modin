@@ -30,7 +30,7 @@ def get_partition_format():
     return "Pandas"
 
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 
