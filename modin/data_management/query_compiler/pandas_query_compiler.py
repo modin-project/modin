@@ -1112,12 +1112,13 @@ class PandasQueryCompiler(object):
         columns = self.columns
 
         def func(df, **kwargs):
+            raise ValueError(kwargs)
             df.columns = columns
             df.to_sql(**kwargs)
 
         map_func = self._prepare_method(func, **kwargs)
-        new_data = self.map_across_full_axis(1, map_func)
-        return self.__constructor__(new_data, self.index, self.columns)
+        self.map_across_full_axis(1, map_func)
+        # return self.__constructor__(new_data, self.index, self.columns)
 
     def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.

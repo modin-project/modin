@@ -533,6 +533,27 @@ class PandasOnRayIO(BaseIO):
         )
         return new_query_compiler
 
+    @classmethod
+    def to_sql(cls, qc, **kwargs):
+        """Write records stored in a DataFrame to a SQL database.
+
+        """
+        empty_df = qc.head(1).to_pandas().head(0)
+        # this is to create the full DB table and validate the input against pandas
+        empty_df.to_sql(**kwargs)
+        # so each partition will append its respective DF
+        kwargs["if_exists"] = "append"
+        columns = qc.columns
+
+        def func(df, **kwargs):
+            df.columns = columns
+            df.to_sql(**kwargs)
+            return pandas.DataFrame()
+
+        map_func = qc._prepare_method(func, **kwargs)
+        result = qc.map_across_full_axis(1, map_func)
+        result.to_pandas()
+
 
 @ray.remote
 def get_index(index_name, *partition_indices):

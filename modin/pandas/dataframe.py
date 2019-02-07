@@ -4266,7 +4266,8 @@ class DataFrame(object):
             new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
             index = False
 
-        new_query_compiler.to_sql(
+        from modin.data_management.factories import BaseFactory
+        BaseFactory.to_sql(new_query_compiler,
             name=name,
             con=con,
             schema=schema,
