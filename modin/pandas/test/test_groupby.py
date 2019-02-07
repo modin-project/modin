@@ -764,3 +764,17 @@ def test_groups(ray_groupby, pandas_groupby):
 @pytest.fixture
 def test_shift(ray_groupby, pandas_groupby):
     assert ray_groupby.groups == pandas_groupby.groups
+
+
+def test_groupby_on_index_values_with_loop():
+    data = {"a": [6, 2, 2], "b": [4, 5, 6]}
+    modin_df = pd.DataFrame(data, index=["g1", "g1", "g2"])
+    pandas_df = pandas.DataFrame(data, index=["g1", "g1", "g2"])
+    modin_groupby_obj = modin_df.groupby(modin_df.index)
+    pandas_groupby_obj = pandas_df.groupby(pandas_df.index)
+
+    modin_dict = {k: v for k, v in modin_groupby_obj}
+    pandas_dict = {k: v for k, v in pandas_groupby_obj}
+
+    for k in modin_dict:
+        ray_df_equals_pandas(modin_dict[k], pandas_dict[k])
