@@ -41,7 +41,7 @@ class DataFrameGroupBy(object):
         self._columns = self._query_compiler.columns
         self._by = by
         # This tells us whether or not there are multiple columns/rows in the groupby
-        self._is_multi_by = all(obj in self._df for obj in self._by)
+        self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
         self._level = level
         self._kwargs = {
             "sort": sort,
@@ -125,7 +125,7 @@ class DataFrameGroupBy(object):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_column_array(
-                            self._index_grouped[k]
+                            self._index_grouped[k].unique()
                         )
                     ),
                 )
