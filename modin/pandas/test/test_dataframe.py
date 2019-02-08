@@ -1564,6 +1564,21 @@ def test_drop_duplicates_with_missing_index_values():
     df_equals(modin_result, pandas_result)
 
 
+def test_drop_duplicates_after_sort():
+    data = [
+        {'value': 1, 'time': 2},
+        {'value': 1, 'time': 1},
+        {'value': 2, 'time': 1},
+        {'value': 2, 'time': 2}
+    ]
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = modin_df.sort_values(['value', 'time']).drop_duplicates(['value'])
+    pandas_result = pandas_df.sort_values(['value', 'time']).drop_duplicates(['value'])
+    df_equals(modin_result, pandas_result)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
