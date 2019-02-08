@@ -942,7 +942,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             reduce_func = map_func
         # The XOR here will ensure that we reduce over the correct axis that
         # exists on the internal partitions. We flip the axis
-        mapped_parts = query_compiler.data._map_across_blocks(map_func).partitions
+        mapped_parts = query_compiler.data.map_across_blocks(map_func).partitions
         if reduce_func is None:
             reduce_func = map_func
 
