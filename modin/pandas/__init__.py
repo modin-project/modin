@@ -63,7 +63,7 @@ from .general import isna, isnull, merge, pivot_table
 from .plotting import Plotting as plotting
 from .. import __execution_engine__ as execution_engine
 
-__pandas_version__ = "0.24.0"
+__pandas_version__ = "0.24.1"
 
 if pandas.__version__ != __pandas_version__:
     raise ImportError(
