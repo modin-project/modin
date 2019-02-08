@@ -1277,7 +1277,7 @@ class DataFrame(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         duplicates = self.duplicated(subset=subset, keep=keep)
-        indices, = duplicates.nonzero()
+        indices, = duplicates.values.nonzero()
         return self.drop(index=self.index[indices], inplace=inplace)
 
     def duplicated(self, subset=None, keep="first"):
