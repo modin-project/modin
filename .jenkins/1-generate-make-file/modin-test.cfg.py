@@ -70,7 +70,7 @@ for image_name, base_image in base_images.items():
 for image_name in base_images.keys():
     for engine, partitions in modin_engine_partitions.items():
         for partition in partitions:
-            if image_name == 'py2-test' and partition != 4:
+            if image_name == "py2-test" and partition != 4:
                 continue
 
             test_action = CIPrettyLogAction(

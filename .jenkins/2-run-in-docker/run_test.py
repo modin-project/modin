@@ -14,13 +14,13 @@ sha_tag = exec_cmd("git rev-parse --verify --short HEAD")
 exec_cmd("python .jenkins/utils/strip-type-hints.py")
 
 tests = {
-    "dataframe": "modin/pandas/test/test_dataframe",
-    "concat": "modin/pandas/test/test_concat",
-    "io": "modin/pandas/test/test_io",
-    "groupby": "modin/pandas/test/test_groupby",
+    "dataframe": "modin/pandas/test/test_dataframe.py",
+    "concat": "modin/pandas/test/test_concat.py",
+    "io": "modin/pandas/test/test_io.py",
+    "groupby": "modin/pandas/test/test_groupby.py",
     "io_exp": "modin/experimental/pandas/test/test_io_exp.py",
 }
-# not using xdist for now 
+# not using xdist for now
 # https://github.com/pytest-dev/pytest-cov/issues/129
 par_tests = {}
 result_dir = "/result"
@@ -69,9 +69,6 @@ for test_name, proc in tests_procs.items():
         exec_cmd(cmd)
 
 
-codecov = "curl -s https://codecov.io/bash | bash"
-exec_cmd(codecov)
-
 if os.path.exists(result_dir) and len(failed_procs) > 0:
     for test_failed in failed_procs:
         with open(os.path.join(result_dir, "{}.json".format(random())), "w") as f:
@@ -85,3 +82,6 @@ if os.path.exists(result_dir) and len(failed_procs) > 0:
                 },
                 f,
             )
+
+codecov = "curl -s https://codecov.io/bash | bash"
+exec_cmd(codecov)
