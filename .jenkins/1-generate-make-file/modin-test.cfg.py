@@ -12,7 +12,7 @@ def generate_build_command(image_name, base_image_name):
     return """
     docker build -t modin-project/{image_name} \
             --build-arg PY_VERSION="{base_image_name}" \
-            -f .jenkins/build-tests/Dockerfile .
+            -f .jenkins/Dockerfile .
     """.strip(
         "\n"
     ).format(
