@@ -81,10 +81,10 @@ class Action(object):
     def __str__(self):
         [hook() for hook in reversed(self.post_processing_hooks)]
 
-        return f"""
-{self.name}: {" ".join(self.dependencies)}
-\t{self.command}
-        """
+        return """
+{0}: {1}
+\t{2}
+        """.format(self.name, " ".join(self.dependencies), self.command)
 
     def __lt__(self, action):
         self.dependencies.append(action.name)
@@ -121,17 +121,19 @@ class CIPrettyLogAction(Action):
 
     def _colorize_output(self):
         whitespace = re.compile("^[\s]*$")
-        header = "=" * 5 + f" start: {self.name} " + "=" * 5
-        footer = "=" * 5 + f" finished: {self.name} " + "=" * 5
+
+        header = "=" * 5 + " start: {} ".format(self.name) + "=" * 5
+        footer = "=" * 5 + " finished: {} ".format(self.name) + "=" * 5
+
         self.command = "\n".join(
-            [f"\t@echo {header}\n"]
+            ["\t@echo {header}\n"]
             + [
-                f"\t({line}) 2>&1 | python3 ./jenkins/utils/colorize_output.py --tag {self.name}\n"
+                "\t({line}) 2>&1 | python3 ./jenkins/utils/colorize_output.py --tag {name}\n".format(line=line, name=self.name)
                 for line in self.command.split("\n")
                 if not whitespace.match(line)
             ]
-            + [f"\t@echo {footer}\n"]
-        )
+            + ["\t@echo {footer}\n"]
+        ).format(**locals())
 
 
 def print_make_all():
@@ -147,9 +149,9 @@ def print_make_all():
 
     for tag, actions in tag_to_action_name.items():
         print(
-            f"""
-{tag}: {' '.join(actions)}
-"""
+            """
+{}: {}
+""".format(tag, ''.join(actions))
         )
 
 
