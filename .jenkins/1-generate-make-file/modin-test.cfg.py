@@ -1,3 +1,7 @@
+import psutil
+
+num_cpu = psutil.cpu_count()
+
 # assume the following names exists
 # from shipyard import Action, CIPrettyLogAction, PRELUDE, IsolatedAction
 
@@ -23,7 +27,7 @@ def generate_build_command(image_name, base_image_name):
 
 def generate_test_command(image_name, engine, partition_size):
     return """
-    docker run --rm --shm-size=4g --cpus={partition_size * 2} \
+    docker run --rm --shm-size=4g --cpus={num_cpu} \
             -e MODIN_ENGINE={engine} \
             -e MODIN_DEFAULT_NPARTITIONS={partition_size} \
             -e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
@@ -36,7 +40,10 @@ def generate_test_command(image_name, engine, partition_size):
     """.strip(
         "\n"
     ).format(
-        image_name=image_name, engine=engine, partition_size=partition_size
+        image_name=image_name,
+        engine=engine,
+        partition_size=partition_size,
+        num_cpu=min(partition_size * 2, num_cpu),
     )
 
 
