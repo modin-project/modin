@@ -151,7 +151,7 @@ def print_make_all():
         print(
             """
 {}: {}
-""".format(tag, ''.join(actions))
+""".format(tag, ' '.join(actions))
         )
 
 
