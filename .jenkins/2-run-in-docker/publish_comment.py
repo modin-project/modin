@@ -18,7 +18,7 @@ from github import Github
 import os
 import argparse
 import sys
-import glob
+from glob import glob
 import json
 
 parser = argparse.ArgumentParser(description="Pust a comment to PR")
