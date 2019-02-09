@@ -84,6 +84,6 @@ if os.path.exists(result_dir) and len(failed_procs) > 0:
             )
 
 codecov = "curl -s https://codecov.io/bash | bash -s - -t {token}".format(
-    os.environ["CODECOV_TOKEN"]
+    token=os.environ["CODECOV_TOKEN"]
 )
 exec_cmd(codecov)
