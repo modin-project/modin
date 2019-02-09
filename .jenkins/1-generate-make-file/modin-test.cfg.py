@@ -54,9 +54,7 @@ def generate_report_command():
 
 # We will use result directory to aggregate test results
 result_dir = Action("make_result_dir", command="mkdir .jenkins/test-result")
-report_action = IsolatedAction(
-    name="publish_report", command=generate_report_command()
-)
+report_action = IsolatedAction(name="publish_report", command=generate_report_command())
 
 # Here we build the docker images for different python versions
 for image_name, base_image in base_images.items():
@@ -81,4 +79,3 @@ for image_name in base_images.keys():
             build_action = Action.get_action("build_{}".format(image_name))
             build_action > test_action
             result_dir > test_action
-

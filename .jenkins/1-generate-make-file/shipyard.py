@@ -84,7 +84,9 @@ class Action(object):
         return """
 {0}: {1}
 \t{2}
-        """.format(self.name, " ".join(self.dependencies), self.command)
+        """.format(
+            self.name, " ".join(self.dependencies), self.command
+        )
 
     def __lt__(self, action):
         self.dependencies.append(action.name)
@@ -128,7 +130,9 @@ class CIPrettyLogAction(Action):
         self.command = "\n".join(
             ["\t@echo {header}\n"]
             + [
-                "\t({line}) 2>&1 | python3 .jenkins/utils/colorize_output.py --tag {name}\n".format(line=line, name=self.name)
+                "\t({line}) 2>&1 | python3 .jenkins/utils/colorize_output.py --tag {name}\n".format(
+                    line=line, name=self.name
+                )
                 for line in self.command.split("\n")
                 if not whitespace.match(line)
             ]
@@ -151,7 +155,9 @@ def print_make_all():
         print(
             """
 {}: {}
-""".format(tag, ' '.join(actions))
+""".format(
+                tag, " ".join(actions)
+            )
         )
 
 

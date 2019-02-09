@@ -47,7 +47,9 @@ for failed in failed_test:
 
     comment_line = f"""
     - [{label}](https://s3.amazonaws.com/modin-jenkins-result/{args.sha}/{html}) 
-    """.strip("\n")
+    """.strip(
+        "\n"
+    )
     comments.append(comment_line)
 
 full_comment = "\n".join(comments)
