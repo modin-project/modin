@@ -11,7 +11,7 @@ modin_engine_partitions = {"Ray": [4, 8, 12, 16], "Dask": [4], "Python": [4]}
 def generate_build_command(image_name, base_image_name):
     return """
     docker build -t modin-project/{image_name} \
-            --build-arg PY_VERSION="{base_image_name} \
+            --build-arg PY_VERSION="{base_image_name}" \
             -f .jenkins/build-tests/Dockerfile .
     """.strip(
         "\n"
