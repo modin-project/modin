@@ -23,7 +23,7 @@ def generate_build_command(image_name, base_image_name):
 
 def generate_test_command(image_name, engine, partition_size):
     return """
-    docker run --rm --shm-size=4g --cpus=4 \
+    docker run --rm --shm-size=4g --cpus={partition_size} \
             -e MODIN_ENGINE={engine} \
             -e MODIN_DEFAULT_NPARTITIONS={partition_size} \
             -e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
