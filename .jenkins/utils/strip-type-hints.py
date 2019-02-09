@@ -3,6 +3,7 @@ import os
 import fnmatch
 import sys
 from subprocess import check_output
+from shlex import split
 
 py_version = sys.version_info
 if py_version[0] >= 3 and py_version[1] >= 5:
@@ -20,7 +21,8 @@ def find_files(directory, pattern):
 
 
 # Go up to modin root
-modin_path = check_output("git rev-parse --show-toplevel")
+file_dir = os.path.split(__file__)[0]
+modin_path = check_output(split("git rev-parse --show-toplevel"), cwd=file_dir)
 
 for path in find_files(modin_path, "*.py"):
     string = strip_file_to_string(
