@@ -30,6 +30,7 @@ def generate_test_command(image_name, engine, partition_size):
             -e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
             -e GITHUB_TOKEN=$(GITHUB_TOKEN) \
             -e ghprbPullId=$(ghprbPullId) \
+            -e CODECOV_TOKEN=$(CODECOV_TOKEN) \
             -v $(pwd)/.jenkins/test-result:/result \
             modin-project/{image_name}
     """.strip(
