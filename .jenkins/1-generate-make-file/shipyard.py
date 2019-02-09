@@ -128,7 +128,7 @@ class CIPrettyLogAction(Action):
         self.command = "\n".join(
             ["\t@echo {header}\n"]
             + [
-                "\t({line}) 2>&1 | python3 ./jenkins/utils/colorize_output.py --tag {name}\n".format(line=line, name=self.name)
+                "\t({line}) 2>&1 | python3 .jenkins/utils/colorize_output.py --tag {name}\n".format(line=line, name=self.name)
                 for line in self.command.split("\n")
                 if not whitespace.match(line)
             ]
