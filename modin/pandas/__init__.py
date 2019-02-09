@@ -147,7 +147,9 @@ elif execution_engine == "Dask":
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
-DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+DEFAULT_NPARTITIONS = int(
+    os.environ.get("MODIN_DEFAULT_NPARTITIONS", max(4, int(num_cpus)))
+)
 
 __all__ = [
     "DataFrame",
