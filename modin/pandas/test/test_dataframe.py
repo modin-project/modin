@@ -978,6 +978,11 @@ def test_as_matrix():
     tm.assert_almost_equal(mat, expected)
 
 
+def test_to_numpy():
+    with pytest.warns(UserWarning):
+        pd.DataFrame({"A": [1, 2], "B": [3, 4]}).to_numpy()
+
+
 def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
@@ -1213,12 +1218,6 @@ def test_compound():
         pd.DataFrame(data).compound()
 
 
-def test_consolidate():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).consolidate()
-
-
 def test_convert_objects():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1446,6 +1445,26 @@ def test_drop_api_equivalence():
 
     with pytest.raises(ValueError):
         modin_df.drop(axis=1)
+
+
+def test_droplevel():
+    df = (
+        pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+        .set_index([0, 1])
+        .rename_axis(["a", "b"])
+    )
+
+    df.columns = pd.MultiIndex.from_tuples(
+        [("c", "e"), ("d", "f")], names=["level_1", "level_2"]
+    )
+
+    print(df)
+
+    with pytest.warns(UserWarning):
+        df.droplevel("a")
+
+    with pytest.warns(UserWarning):
+        df.droplevel("level_2", axis=1)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3787,12 +3806,6 @@ def test_sort_values(request, data, axis, ascending, na_position):
             keys, axis=axis, ascending=ascending, na_position=na_position, inplace=True
         )
         df_equals(modin_df_cp, pandas_df_cp)
-
-
-def test_sortlevel():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).sortlevel()
 
 
 def test_squeeze():

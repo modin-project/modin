@@ -341,6 +341,7 @@ class DataFrame(object):
         sort=True,
         group_keys=True,
         squeeze=False,
+        observed=False,
         **kwargs
     ):
         """Apply a groupby to this DataFrame. See _groupby() remote task.
@@ -390,6 +391,7 @@ class DataFrame(object):
             group_keys,
             squeeze,
             idx_name,
+            observed=observed,
             **kwargs
         )
 
@@ -736,7 +738,15 @@ class DataFrame(object):
         return DataFrame(query_compiler=query_compiler)
 
     def apply(
-        self, func, axis=0, broadcast=False, raw=False, reduce=None, args=(), **kwds
+        self,
+        func,
+        axis=0,
+        broadcast=None,
+        raw=False,
+        reduce=None,
+        result_type=None,
+        args=(),
+        **kwds
     ):
         """Apply a function along input axis of DataFrame.
 
@@ -793,6 +803,21 @@ class DataFrame(object):
         # TODO this is very inefficient, also see __array__
         return to_pandas(self).as_matrix(columns)
 
+    def to_numpy(self, dtype=None, copy=False):
+        """Convert the DataFrame to a NumPy array.
+
+        Args:
+            dtype: The dtype to pass to numpy.asarray()
+            copy: Whether to ensure that the returned value is a not a view on another
+                array.
+
+        Returns:
+            A numpy array.
+        """
+        return self._default_to_pandas(
+            pandas.DataFrame.to_numpy, dtype=dtype, copy=copy
+        )
+
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas(
             pandas.DataFrame.asfreq,
@@ -826,16 +851,21 @@ class DataFrame(object):
         new_query_compiler = self._query_compiler.astype(col_dtypes, **kwargs)
         return self._create_dataframe_from_compiler(new_query_compiler, not copy)
 
-    def at_time(self, time, asof=False):
-        return self._default_to_pandas(pandas.DataFrame.at_time, time, asof=asof)
+    def at_time(self, time, asof=False, axis=None):
+        return self._default_to_pandas(
+            pandas.DataFrame.at_time, time, asof=asof, axis=axis
+        )
 
-    def between_time(self, start_time, end_time, include_start=True, include_end=True):
+    def between_time(
+        self, start_time, end_time, include_start=True, include_end=True, axis=None
+    ):
         return self._default_to_pandas(
             pandas.DataFrame.between_time,
             start_time,
             end_time,
             include_start=include_start,
             include_end=include_end,
+            axis=axis,
         )
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -876,7 +906,7 @@ class DataFrame(object):
         figsize=None,
         layout=None,
         return_type=None,
-        **kwargs
+        **kwds
     ):
         return to_pandas(self).boxplot(
             column=column,
@@ -888,7 +918,7 @@ class DataFrame(object):
             figsize=figsize,
             layout=layout,
             return_type=return_type,
-            **kwargs
+            **kwds
         )
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
@@ -940,9 +970,6 @@ class DataFrame(object):
             pandas.DataFrame.compound, axis=axis, skipna=skipna, level=level
         )
 
-    def consolidate(self, inplace=False):
-        return self._default_to_pandas(pandas.DataFrame.consolidate, inplace=inplace)
-
     def convert_objects(
         self,
         convert_dates=True,
@@ -963,11 +990,11 @@ class DataFrame(object):
             pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
 
-    def corrwith(self, other, axis=0, drop=False):
+    def corrwith(self, other, axis=0, drop=False, method="pearson"):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         return self._default_to_pandas(
-            pandas.DataFrame.corrwith, other, axis=axis, drop=drop
+            pandas.DataFrame.corrwith, other, axis=axis, drop=drop, metho=method
         )
 
     def count(self, axis=0, level=None, numeric_only=False):
@@ -1251,6 +1278,17 @@ class DataFrame(object):
             index=axes["index"], columns=axes["columns"]
         )
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
+
+    def droplevel(self, level, axis=0):
+        """Return index with requested level(s) removed.
+
+        Args:
+            level: The level to drop
+
+        Returns:
+            Index or MultiIndex
+        """
+        return self._default_to_pandas(pandas.DataFrame.droplevel, level, axis=axis)
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns
@@ -1605,9 +1643,13 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_dict(cls, data, orient="columns", dtype=None):
+    def from_dict(cls, data, orient="columns", dtype=None, columns=None):
         ErrorMessage.default_to_pandas("`from_dict`")
-        return from_pandas(pandas.DataFrame.from_dict(data, orient=orient, dtype=dtype))
+        return from_pandas(
+            pandas.DataFrame.from_dict(
+                data, orient=orient, dtype=dtype, columns=columns
+            )
+        )
 
     @classmethod
     def from_items(cls, items, columns=None, orient="columns"):
@@ -1755,7 +1797,7 @@ class DataFrame(object):
         figsize=None,
         layout=None,
         bins=10,
-        **kwargs
+        **kwds
     ):
         return self._default_to_pandas(
             pandas.DataFrame.hist,
@@ -1772,7 +1814,7 @@ class DataFrame(object):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwargs
+            **kwds
         )
 
     def idxmax(self, axis=0, skipna=True):
@@ -1919,6 +1961,7 @@ class DataFrame(object):
         limit=None,
         inplace=False,
         limit_direction="forward",
+        limit_area=None,
         downcast=None,
         **kwargs
     ):
@@ -1929,6 +1972,7 @@ class DataFrame(object):
             limit=limit,
             inplace=inplace,
             limit_direction=limit_direction,
+            limit_area=limit_area,
             downcast=downcast,
             **kwargs
         )
@@ -2403,7 +2447,7 @@ class DataFrame(object):
         )
         return self._create_dataframe_from_compiler(new_query_compiler)
 
-    def mode(self, axis=0, numeric_only=False):
+    def mode(self, axis=0, numeric_only=False, dropna=True):
         """Perform mode across the DataFrame.
 
         Args:
@@ -2416,7 +2460,7 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
         return DataFrame(
             query_compiler=self._query_compiler.mode(
-                axis=axis, numeric_only=numeric_only
+                axis=axis, numeric_only=numeric_only, dropna=dropna
             )
         )
 
@@ -3016,13 +3060,16 @@ class DataFrame(object):
         if not inplace:
             return obj
 
-    def rename_axis(self, mapper, axis=0, copy=True, inplace=False):
-        axes_is_columns = axis == 1 or axis == "columns"
+    def rename_axis(
+        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
+    ):
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
         renamed = self if inplace else self.copy()
-        if axes_is_columns:
-            renamed.columns.name = mapper
+        if axis == 1:
+            renamed.columns = renamed.columns.rename(mapper)
         else:
-            renamed.index.name = mapper
+            renamed.index = renamed.index.rename(mapper)
+
         if not inplace:
             return renamed
 
@@ -3609,9 +3656,13 @@ class DataFrame(object):
             pandas.DataFrame.set_value, index, col, value, takeable=takeable
         )
 
-    def shift(self, periods=1, freq=None, axis=0):
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
         return self._default_to_pandas(
-            pandas.DataFrame.shift, periods=periods, freq=freq, axis=axis
+            pandas.DataFrame.shift,
+            periods=periods,
+            freq=freq,
+            axis=axis,
+            fill_value=fill_value,
         )
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -3752,18 +3803,6 @@ class DataFrame(object):
                 na_position=na_position,
             ).columns
             return self.reindex(columns=new_columns, copy=not inplace)
-
-    def sortlevel(
-        self, level=0, axis=0, ascending=True, inplace=False, sort_remaining=True
-    ):
-        return self._default_to_pandas(
-            pandas.DataFrame.sortlevel,
-            level=level,
-            axis=axis,
-            ascending=ascending,
-            inplace=inplace,
-            sort_remaining=sort_remaining,
-        )
 
     def squeeze(self, axis=None):
         # Checks for 1x1 DF, passes into squeeze with approproate ndim
@@ -3990,21 +4029,31 @@ class DataFrame(object):
     def to_gbq(
         self,
         destination_table,
-        project_id,
-        chunksize=10000,
-        verbose=True,
+        project_id=None,
+        chunksize=None,
         reauth=False,
         if_exists="fail",
+        auth_local_webserver=False,
+        table_schema=None,
+        location=None,
+        progress_bar=True,
+        credentials=None,
+        verbose=None,
         private_key=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
             destination_table,
-            project_id,
+            project_id=project_id,
             chunksize=chunksize,
-            verbose=verbose,
             reauth=reauth,
             if_exists=if_exists,
+            auth_local_webserver=auth_local_webserver,
+            table_schema=table_schema,
+            location=location,
+            progress_bar=progress_bar,
+            credentials=credentials,
+            verbose=verbose,
             private_key=private_key,
         )
 
@@ -4020,44 +4069,48 @@ class DataFrame(object):
         col_space=None,
         header=True,
         index=True,
-        na_rep="np.NaN",
+        na_rep="NaN",
         formatters=None,
         float_format=None,
         sparsify=None,
         index_names=True,
         justify=None,
-        bold_rows=True,
-        classes=None,
-        escape=True,
         max_rows=None,
         max_cols=None,
         show_dimensions=False,
-        notebook=False,
         decimal=".",
+        bold_rows=True,
+        classes=None,
+        escape=True,
+        notebook=False,
         border=None,
-    ):  # pragma: no cover
+        table_id=None,
+        render_links=False,
+    ):
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
-            buf,
-            columns,
-            col_space,
-            header,
-            index,
-            na_rep,
-            formatters,
-            float_format,
-            sparsify,
-            index_names,
-            justify,
-            bold_rows,
-            classes,
-            escape,
-            max_rows,
-            max_cols,
-            show_dimensions,
-            notebook,
-            decimal,
-            border,
+            buf=buf,
+            columns=columns,
+            col_space=col_space,
+            header=header,
+            index=index,
+            na_rep=na_rep,
+            formatters=formatters,
+            float_format=float_format,
+            sparsify=sparsify,
+            index_names=index_names,
+            justify=justify,
+            max_rows=max_rows,
+            max_cols=max_cols,
+            show_dimensions=show_dimensions,
+            decimal=decimal,
+            bold_rows=bold_rows,
+            classes=classes,
+            escape=escape,
+            notebook=notebook,
+            border=border,
+            table_id=table_id,
+            render_links=render_links,
         )
 
     def to_json(
@@ -4070,19 +4123,21 @@ class DataFrame(object):
         date_unit="ms",
         default_handler=None,
         lines=False,
-        compression=None,
+        compression="infer",
+        index=True,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_json,
             path_or_buf,
-            orient,
-            date_format,
-            double_precision,
-            force_ascii,
-            date_unit,
-            default_handler,
-            lines,
-            compression,
+            orient=orient,
+            date_format=date_format,
+            double_precision=double_precision,
+            force_ascii=force_ascii,
+            date_unit=date_unit,
+            default_handler=default_handler,
+            lines=lines,
+            compression=compression,
+            index=index,
         )
 
     def to_latex(
@@ -4144,13 +4199,21 @@ class DataFrame(object):
         return self._default_to_pandas(pandas.DataFrame.to_panel)
 
     def to_parquet(
-        self, fname, engine="auto", compression="snappy", **kwargs
+        self,
+        fname,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        **kwargs
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
             fname,
             engine=engine,
             compression=compression,
+            index=index,
+            partition_cols=partition_cols,
             **kwargs
         )
 
@@ -4166,11 +4229,15 @@ class DataFrame(object):
             pandas.DataFrame.to_pickle, path, compression=compression, protocol=protocol
         )
 
-    def to_records(self, index=True, convert_datetime64=True):
+    def to_records(
+        self, index=True, convert_datetime64=None, column_dtypes=None, index_dtypes=None
+    ):
         return self._default_to_pandas(
             pandas.DataFrame.to_records,
             index=index,
             convert_datetime64=convert_datetime64,
+            column_dtypes=column_dtypes,
+            index_dtypes=index_dtypes,
         )
 
     def to_sparse(self, fill_value=None, kind="block"):
@@ -4188,6 +4255,7 @@ class DataFrame(object):
         index_label=None,
         chunksize=None,
         dtype=None,
+        method=None,
     ):
         new_query_compiler = self._query_compiler
         # writing the index to the database by inserting it to the DF
@@ -4210,6 +4278,7 @@ class DataFrame(object):
             index_label=index_label,
             chunksize=chunksize,
             dtype=dtype,
+            method=method,
         )
 
     def to_stata(
@@ -4222,17 +4291,21 @@ class DataFrame(object):
         time_stamp=None,
         data_label=None,
         variable_labels=None,
+        version=114,
+        convert_strl=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
             fname,
-            convert_dates,
-            write_index,
-            encoding,
-            byteorder,
-            time_stamp,
-            data_label,
-            variable_labels,
+            convert_dates=convert_dates,
+            write_index=write_index,
+            encoding=encoding,
+            byteorder=byteorder,
+            time_stamp=time_stamp,
+            data_label=data_label,
+            variable_labels=variable_labels,
+            version=version,
+            convert_strl=convert_strl,
         )
 
     def to_string(
@@ -4242,16 +4315,17 @@ class DataFrame(object):
         col_space=None,
         header=True,
         index=True,
-        na_rep="np.NaN",
+        na_rep="NaN",
         formatters=None,
         float_format=None,
         sparsify=None,
         index_names=True,
         justify=None,
-        line_width=None,
         max_rows=None,
         max_cols=None,
         show_dimensions=False,
+        decimal=".",
+        line_width=None,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.to_string,
@@ -4266,10 +4340,11 @@ class DataFrame(object):
             sparsify=sparsify,
             index_names=index_names,
             justify=justify,
-            line_width=line_width,
             max_rows=max_rows,
             max_cols=max_cols,
             show_dimensions=show_dimensions,
+            decimal=decimal,
+            line_width=line_width,
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
@@ -4280,9 +4355,9 @@ class DataFrame(object):
     def to_xarray(self):
         return self._default_to_pandas(pandas.DataFrame.to_xarray)
 
-    def transform(self, func, *args, **kwargs):
+    def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
-        result = self.agg(func, *args, **kwargs)
+        result = self.agg(func, axis=axis, *args, **kwargs)
         try:
             result.columns = self.columns
             result.index = self.index
@@ -4334,7 +4409,9 @@ class DataFrame(object):
             pandas.DataFrame.tz_convert, tz, axis=axis, level=level, copy=copy
         )
 
-    def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
+    def tz_localize(
+        self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
+    ):
         return self._default_to_pandas(
             pandas.DataFrame.tz_localize,
             tz,
@@ -4342,6 +4419,7 @@ class DataFrame(object):
             level=level,
             copy=copy,
             ambiguous=ambiguous,
+            nonexistent=nonexistent,
         )
 
     def unstack(self, level=-1, fill_value=None):
@@ -4350,7 +4428,7 @@ class DataFrame(object):
         )
 
     def update(
-        self, other, join="left", overwrite=True, filter_func=None, raise_conflict=False
+        self, other, join="left", overwrite=True, filter_func=None, errors="ignore"
     ):
         """Modify DataFrame in place using non-NA values from other.
 
@@ -4365,14 +4443,14 @@ class DataFrame(object):
         Returns:
             None
         """
-        if raise_conflict:
+        if errors == "raise":
             return self._default_to_pandas(
                 pandas.DataFrame.update,
                 other,
                 join=join,
                 overwrite=overwrite,
                 filter_func=filter_func,
-                raise_conflict=raise_conflict,
+                errors=errors,
             )
         if not isinstance(other, DataFrame):
             other = DataFrame(other)

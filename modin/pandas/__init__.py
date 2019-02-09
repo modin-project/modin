@@ -173,7 +173,6 @@ __all__ = [
     "factorize",
     "test",
     "qcut",
-    "match",
     "to_datetime",
     "get_dummies",
     "isna",
