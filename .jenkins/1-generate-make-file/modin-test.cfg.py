@@ -30,7 +30,7 @@ def generate_test_command(image_name, engine, partition_size):
             -e GITHUB_TOKEN=$(GITHUB_TOKEN) \
             -e ghprbPullId=$(ghprbPullId) \
             -v .jenkins/test-result:/result \
-            modin-project/{image_name}:$(sha_tag)
+            modin-project/{image_name}
     """.strip(
         "\n"
     ).format(
