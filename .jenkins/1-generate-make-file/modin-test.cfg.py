@@ -3,6 +3,7 @@
 
 # Inject sha_tag env var
 PRELUDE.append("sha_tag=$(shell git rev-parse --verify --short HEAD)")
+PRELUDE.append("pwd=$(shell pwd)")
 
 base_images = {"py2-test": "2.7.15-stretch", "py3-test": "3.6.6-stretch"}
 modin_engine_partitions = {"Ray": [4, 8, 12, 16], "Dask": [4], "Python": [4]}
@@ -29,7 +30,7 @@ def generate_test_command(image_name, engine, partition_size):
             -e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
             -e GITHUB_TOKEN=$(GITHUB_TOKEN) \
             -e ghprbPullId=$(ghprbPullId) \
-            -v .jenkins/test-result:/result \
+            -v $(pwd)/.jenkins/test-result:/result \
             modin-project/{image_name}
     """.strip(
         "\n"
@@ -43,7 +44,7 @@ def generate_report_command():
     docker run --rm \
             -e GITHUB_TOKEN=$(GITHUB_TOKEN) \
             -e ghprbPullId=$(ghprbPullId) \
-            -v .jenkins/test-result:/result \
+            -v $(pwd)/.jenkins/test-result:/result \
             modin-project/py3-test \
             python .jenkins/2-run-in-docker/publish_comment.py \
             --dir /result --sha $(sha_tag)
