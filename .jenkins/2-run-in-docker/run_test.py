@@ -20,7 +20,9 @@ tests = {
     "groupby": "modin/pandas/test/test_groupby",
     "io_exp": "modin/experimental/pandas/test/test_io_exp.py",
 }
-par_tests = {"dataframe"}
+# not using xdist for now 
+# https://github.com/pytest-dev/pytest-cov/issues/129
+par_tests = {}
 result_dir = "/result"
 
 engine = os.environ.get("MODIN_ENGINE", "Unknown")
