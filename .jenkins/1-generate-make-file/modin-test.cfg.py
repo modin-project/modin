@@ -1,6 +1,5 @@
-import psutil
-
-num_cpu = psutil.cpu_count()
+import multiprocessing
+num_cpu = multiprocessing.cpu_count()
 
 # assume the following names exists
 # from shipyard import Action, CIPrettyLogAction, PRELUDE, IsolatedAction
