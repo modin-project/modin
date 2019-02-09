@@ -44,7 +44,7 @@ def generate_report_command():
             -e GITHUB_TOKEN=$(GITHUB_TOKEN) \
             -e ghprbPullId=$(ghprbPullId) \
             -v .jenkins/test-result:/result \
-            modin-project/py3-test:$(sha_tag) \
+            modin-project/py3-test \
             python .jenkins/2-run-in-docker/publish_comment.py \
             --dir /result --sha $(sha_tag)
     """.strip(

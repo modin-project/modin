@@ -3,8 +3,10 @@ from __future__ import division
 from __future__ import print_function
 
 from setuptools import setup, find_packages
+import io
 
-with open("README.md", "r", encoding="utf8") as fh:
+# Both py2 and py3 compatible
+with io.open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 setup(
