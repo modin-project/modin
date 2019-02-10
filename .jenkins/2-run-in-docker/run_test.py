@@ -5,9 +5,12 @@ import os
 import json
 from random import random
 
-
+subcommand_failed = False
 def exec_cmd(cmd):
-    return check_output(split(cmd))
+    proc = Popen(split(cmd), stdout=sys.stdout, stderr=sys.stderr)
+    proc.wait()
+    if proc.returncode != 0:
+        subcommand_failed = True
 
 
 sha_tag = exec_cmd("git rev-parse --verify --short HEAD")
@@ -67,6 +70,8 @@ for test_name, proc in tests_procs.items():
             html=htmls[test_name], sha_tag=sha_tag
         )
         exec_cmd(cmd)
+        
+        subcommand_failed=True
 
 
 if os.path.exists(result_dir) and len(failed_procs) > 0:
@@ -87,3 +92,5 @@ codecov = "curl -s https://codecov.io/bash > codecov.sh; bash codecov.sh -t {tok
     token=os.environ["CODECOV_TOKEN"]
 )
 exec_cmd(codecov)
+
+sys.exit(1 if subcommand_failed else 0)
