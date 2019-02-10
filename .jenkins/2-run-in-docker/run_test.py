@@ -22,7 +22,7 @@ tests = {
 }
 # not using xdist for now
 # https://github.com/pytest-dev/pytest-cov/issues/129
-par_tests = {}
+par_tests = {"dataframe"}
 result_dir = "/result"
 
 engine = os.environ.get("MODIN_ENGINE", "Unknown")
@@ -83,7 +83,7 @@ if os.path.exists(result_dir) and len(failed_procs) > 0:
                 f,
             )
 
-codecov = "curl -s https://codecov.io/bash | bash -s -t {token}".format(
+codecov = "curl -s https://codecov.io/bash > codecov.sh; bash codecov.sh -t {token}".format(
     token=os.environ["CODECOV_TOKEN"]
 )
 exec_cmd(codecov)
