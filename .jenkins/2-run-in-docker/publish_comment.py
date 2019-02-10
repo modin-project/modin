@@ -46,7 +46,7 @@ for failed in failed_test:
     label = json.dumps(failed)
 
     comment_line = f"""
-    - [{label}](https://s3.amazonaws.com/modin-jenkins-result/{args.sha}/{html}) 
+- [{label}](https://s3.amazonaws.com/modin-jenkins-result/{args.sha}/{html}) 
     """.strip(
         "\n"
     )
