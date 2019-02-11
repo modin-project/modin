@@ -437,15 +437,14 @@ class BaseIO(object):
         dtype=None,
     ):
         ErrorMessage.default_to_pandas("`to_sql`")
-        return cls.from_pandas(
-            pandas.to_sql(
-                name=name,
-                con=con,
-                schema=schema,
-                if_exists=if_exists,
-                index=index,
-                index_label=index_label,
-                chunksize=chunksize,
-                dtype=dtype,
-            )
+        df = qc.to_pandas()
+        df.to_sql(
+            name=name,
+            con=con,
+            schema=schema,
+            if_exists=if_exists,
+            index=index,
+            index_label=index_label,
+            chunksize=chunksize,
+            dtype=dtype,
         )
