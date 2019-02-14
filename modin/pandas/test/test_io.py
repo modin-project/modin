@@ -47,7 +47,6 @@ def setup_parquet_file(row_size, force=False):
         ).to_parquet(TEST_PARQUET_FILENAME)
 
 
-@pytest.fixture
 def create_test_ray_dataframe():
     df = pd.DataFrame(
         {
@@ -62,7 +61,6 @@ def create_test_ray_dataframe():
     return df
 
 
-@pytest.fixture
 def create_test_pandas_dataframe():
     df = pandas.DataFrame(
         {
