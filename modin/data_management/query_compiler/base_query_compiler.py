@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-import numpy as np
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
