@@ -199,6 +199,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             query_compiler = self.drop(columns=nonnumeric)
         return result, query_compiler
+
     # END Internal methods
 
     # Metadata modification methods
@@ -219,6 +220,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self.data, self.index, new_column_names, new_dtype_cache
         )
+
     # END Metadata modification methods
 
     # Copy
@@ -229,6 +231,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self.data.copy(), self.index.copy(), self.columns.copy(), self._dtype_cache
         )
+
     # END Copy
 
     # Append/Concat/Join (Not Merge)
@@ -325,6 +328,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
         ).columns
         return self.__constructor__(new_data, joined_index, new_columns)
+
     # END Append/Concat/Join
 
     # Copartition
@@ -789,6 +793,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis, lambda l, r: where_builder_series(l, r), reindexed_cond
             )
             return self.__constructor__(new_data, self.index, self.columns)
+
     # END Inter-Data operations
 
     # Single Manager scalar operations (e.g. add to scalar, list of scalars)
@@ -808,6 +813,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             return self._map_partitions(func)
+
     # END Single Manager scalar operations
 
     # Reindex/reset_index (may shuffle data)
@@ -884,6 +890,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self.data.copy(), new_index, self.columns.copy(), self._dtype_cache
             )
+
     # END Reindex/reset_index
 
     # Transpose
@@ -911,6 +918,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # It is possible that this is already transposed
         new_manager._is_transposed = self._is_transposed ^ 1
         return new_manager
+
     # END Transpose
 
     # Full Reduce operations
@@ -1224,6 +1232,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
+
     # END Map partitions across select indices
 
     # Column/Row partitions reduce operations
@@ -1539,6 +1548,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result
         func = query_compiler._prepare_method(pandas.DataFrame.var, **kwargs)
         return query_compiler._full_axis_reduce(func, axis)
+
     # END Column/Row partitions reduce operations
 
     # Column/Row partitions reduce operations over select indices
@@ -1639,6 +1649,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 [np.object for _ in new_columns], index=new_columns
             )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
+
     # END Column/Row partitions reduce operations over select indices
 
     # Map across rows/columns
@@ -1935,6 +1946,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             new_data, new_index, new_columns, self.dtypes.copy()
         )
+
     # END Map across rows/columns
 
     # Map across rows/columns
@@ -2005,6 +2017,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0, func, numeric_indices
         )
         return self.__constructor__(new_data, q_index, new_columns)
+
     # END Map across rows/columns
 
     # Head/Tail/Front/Back
@@ -2124,6 +2137,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self.data.take(1, -n), self.index, self.columns[-n:], new_dtypes
             )
         return result
+
     # End Head/Tail/Front/Back
 
     # __getitem__ methods
@@ -2193,6 +2207,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # instances of a key.
         new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
+
     # END __getitem__ methods
 
     # Drop
@@ -2238,6 +2253,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = self.columns[~self.columns.isin(columns)]
             new_dtypes = self.dtypes.drop(columns)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
+
     # END Drop
 
     # Insert
@@ -2278,6 +2294,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_columns = self.columns.insert(loc, column)
 
         return self.__constructor__(new_data, self.index, new_columns)
+
     # END Insert
 
     # UDF (apply and agg) methods
@@ -2432,6 +2449,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         result_data = self._map_across_full_axis(axis, func_prepared)
         return self._post_process_apply(result_data, axis)
+
     # END UDF
 
     # Manual Partitioning methods (e.g. merge, groupby)
@@ -2502,6 +2520,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self._post_process_apply(result_data, axis, try_scale=True)
         else:
             return self.__constructor__(result_data, index, columns)
+
     # END Manual Partitioning methods
 
     # Get_dummies
@@ -2581,6 +2600,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data = untouched_data.data.concat(1, new_data)
             final_columns = untouched_data.columns.append(pandas.Index(final_columns))
         return cls(new_data, self.index, final_columns)
+
     # END Get_dummies
 
     # Indexing

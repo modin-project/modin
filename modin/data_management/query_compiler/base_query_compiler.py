@@ -947,6 +947,7 @@ class BaseQueryCompiler(object):
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract methods for QueryCompiler
 
     @property
@@ -989,6 +990,7 @@ class BaseQueryCompiler(object):
             Concatenated objects.
         """
         return self._append_list_of_managers(other, axis, **kwargs)
+
     # END Append/Concat/Join
 
     # Data Management Methods
@@ -997,6 +999,7 @@ class BaseQueryCompiler(object):
         """
         # TODO create a way to clean up this object.
         return
+
     # END Data Management Methods
 
     # To/From Pandas
@@ -1038,12 +1041,14 @@ class BaseQueryCompiler(object):
         new_dtypes = df.dtypes
         new_data = block_partitions_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
+
     # END To/From Pandas
 
     # __delitem__
     # This will change the shape of the resulting data.
     def delitem(self, key):
         return self.drop(columns=[key])
+
     # END __delitem__
 
 
@@ -1109,6 +1114,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     def global_idx_to_numeric_idx(self, axis, indices):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract functions for QueryCompilerView
 
     @property
