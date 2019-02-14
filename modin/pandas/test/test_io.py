@@ -261,26 +261,26 @@ def teardown_pickle_file():
 
 
 @pytest.fixture
-def setup_sql_file(conn, filename, table, force=False):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {
-                "col1": [0, 1, 2, 3, 4, 5, 6],
-                "col2": [7, 8, 9, 10, 11, 12, 13],
-                "col3": [14, 15, 16, 17, 18, 19, 20],
-                "col4": [21, 22, 23, 24, 25, 26, 27],
-                "col5": [0, 0, 0, 0, 0, 0, 0],
-            }
-        )
-        df.to_sql(table, conn)
+def sql_connections():
+    """Sets up sql connections and takes them down after the caller is done.
 
+    Yields:
+        Dictionary of strings (e.g., "modin", "pandas") and sql connection object.
+    """
+    # Remove files if they already exist
+    filenames = {"modin": "test_to_sql.db", "pandas": "test_to_sql_pandas.db"}
+    for filename in filenames.values():
+        if os.path.exists(filename):
+            os.remove(filename)
 
-@pytest.fixture
-def teardown_sql_file(filename):
-    if os.path.exists(filename):
-        os.remove(filename)
+    # Return sql connections to the function calling the fixture
+    sql_connections = {library: "sqlite:///{}".format(filename) for library, filename in filenames.items()}
+    yield sql_connections
+
+    # Takedown the fixture
+    for filename in filenames.values():
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 def test_from_parquet():
@@ -750,39 +750,36 @@ def test_to_pickle():
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
 
 
-def test_to_sql():
-    filename_modin = "test_to_sql.db"
-    filename_pandas = "test_to_sql_pandas.db"
+def test_to_sql_without_index(sql_connections):
+    table_name = "tbl_without_index"
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
-    teardown_sql_file(filename_modin)
-    teardown_sql_file(filename_pandas)
-
-    table_name = "tbl_without_index"
-
-    conn = "sqlite:///{}".format(filename_modin)
+    conn = sql_connections["modin"]
     modin_df.to_sql(table_name, conn, index=False)
+    df_modin_sql = pandas.read_sql(table_name, con=conn)
 
-    conn = "sqlite:///{}".format(filename_pandas)
+    conn = sql_connections["pandas"]
     pandas_df.to_sql(table_name, conn, index=False)
+    df_pandas_sql = pandas.read_sql(table_name, con=conn)
 
-    assert test_files_eq(filename_modin, filename_pandas)
+    assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
+
+def test_to_sql_with_index(sql_connections):
     table_name = "tbl_with_index"
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
 
-    conn = "sqlite:///{}".format(filename_modin)
+    conn = sql_connections["modin"]
     modin_df.to_sql(table_name, conn)
     df_modin_sql = pandas.read_sql(table_name, con=conn, index_col="index")
 
-    conn = "sqlite:///{}".format(filename_pandas)
+    conn = sql_connections["pandas"]
     pandas_df.to_sql(table_name, conn)
     df_pandas_sql = pandas.read_sql(table_name, con=conn, index_col="index")
 
     assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
-
-    teardown_sql_file(filename_modin)
-    teardown_sql_file(filename_pandas)
 
 
 def test_to_stata():
