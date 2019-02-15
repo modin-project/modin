@@ -2,10 +2,10 @@ import os
 import pandas
 import pytest
 import modin.experimental.pandas as pd
-from modin.pandas.test.test_io import (
+from modin.pandas.test.test_io import (  # noqa: F401
     modin_df_equals_pandas,
     make_sql_connection,
-)  # noqa: F401
+)
 
 
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
