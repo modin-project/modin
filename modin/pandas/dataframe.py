@@ -5,10 +5,11 @@ from __future__ import print_function
 import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle as pkl
-from pandas.core.common import count_not_none, _pipe, apply_if_callable, is_bool_indexer
+from pandas.core.common import count_not_none, _pipe, apply_if_callable, is_bool_indexer, _get_rename_function
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_list_like,
+    is_dict_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
@@ -31,6 +32,9 @@ from .utils import from_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import SeriesView
 
+# Similar to pandas, sentinel value to use as kwarg in place of None when None has
+# special meaning and needs to be distinguished from a user explicitly passing None.
+sentinel = object()
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
@@ -994,7 +998,7 @@ class DataFrame(object):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         return self._default_to_pandas(
-            pandas.DataFrame.corrwith, other, axis=axis, drop=drop, metho=method
+            pandas.DataFrame.corrwith, other, axis=axis, drop=drop, method=method
         )
 
     def count(self, axis=0, level=None, numeric_only=False):
@@ -3061,17 +3065,60 @@ class DataFrame(object):
             return obj
 
     def rename_axis(
-        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
+        self, mapper=sentinel, index=None, columns=None, axis=None, copy=True, inplace=False
     ):
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 1
-        renamed = self if inplace else self.copy()
-        if axis == 1:
-            renamed.columns = renamed.columns.rename(mapper)
-        else:
-            renamed.index = renamed.index.rename(mapper)
+        kwargs = {"index": index, "columns": columns, "axis": axis, "copy": copy, "inplace": inplace}
+        axes, kwargs = pandas.DataFrame()._construct_axes_from_arguments(
+            (), kwargs, sentinel=sentinel)
+        copy = kwargs.pop('copy', True)
+        inplace = kwargs.pop('inplace', False)
+        axis = kwargs.pop('axis', 0)
+        if axis is not None:
+            axis = self._get_axis_number(axis)
 
-        if not inplace:
-            return renamed
+        if kwargs:
+            raise TypeError('rename_axis() got an unexpected keyword '
+                            'argument "{0}"'.format(list(kwargs.keys())[0]))
+
+        inplace = validate_bool_kwarg(inplace, 'inplace')
+
+        if mapper is not sentinel:
+            # Use v0.23 behavior if a scalar or list
+            non_mapper = is_scalar(mapper) or (is_list_like(mapper) and not
+            is_dict_like(mapper))
+            if non_mapper:
+                return self._set_axis_name(mapper, axis=axis, inplace=inplace)
+            else:
+                # Deprecated (v0.21) behavior is if mapper is specified,
+                # and not a list or scalar, then call rename
+                msg = ("Using 'rename_axis' to alter labels is deprecated. "
+                       "Use '.rename' instead")
+                warnings.warn(msg, FutureWarning, stacklevel=3)
+                axis = self._get_axis_name(axis)
+                d = {'copy': copy, 'inplace': inplace}
+                d[axis] = mapper
+                return self.rename(**d)
+        else:
+            # Use new behavior.  Means that index and/or columns
+            # is specified
+            result = self if inplace else self.copy(deep=copy)
+
+            for axis in lrange(self._AXIS_LEN):
+                v = axes.get(self._AXIS_NAMES[axis])
+                if v is sentinel:
+                    continue
+                non_mapper = is_scalar(v) or (is_list_like(v) and not
+                is_dict_like(v))
+                if non_mapper:
+                    newnames = v
+                else:
+                    f = _get_rename_function(v)
+                    curnames = self._get_axis(axis).names
+                    newnames = [f(name) for name in curnames]
+                result._set_axis_name(newnames, axis=axis,
+                                      inplace=True)
+            if not inplace:
+                return result
 
     def _set_axis_name(self, name, axis=0, inplace=False):
         """Alter the name or names of the axis.
@@ -3084,12 +3131,12 @@ class DataFrame(object):
         Returns:
             Type of caller or None if inplace=True.
         """
-        axes_is_columns = axis == 1 or axis == "columns"
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         renamed = self if inplace else self.copy()
-        if axes_is_columns:
-            renamed.columns.set_names(name)
-        else:
+        if axis == 0:
             renamed.index.set_names(name)
+        else:
+            renamed.columns.set_names(name)
         if not inplace:
             return renamed
 
@@ -4459,7 +4506,7 @@ class DataFrame(object):
             join=join,
             overwrite=overwrite,
             filter_func=filter_func,
-            raise_conflict=raise_conflict,
+            errors=errors,
         )
         self._update_inplace(new_query_compiler=query_compiler)
 
