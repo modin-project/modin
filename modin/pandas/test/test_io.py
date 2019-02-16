@@ -10,7 +10,6 @@ import modin.pandas as pd
 from pathlib import Path
 import pyarrow as pa
 import os
-import sqlite3
 import sys
 
 # needed to resolve ray-project/ray#3744
@@ -47,7 +46,6 @@ def setup_parquet_file(row_size, force=False):
         ).to_parquet(TEST_PARQUET_FILENAME)
 
 
-@pytest.fixture
 def create_test_ray_dataframe():
     df = pd.DataFrame(
         {
@@ -62,7 +60,6 @@ def create_test_ray_dataframe():
     return df
 
 
-@pytest.fixture
 def create_test_pandas_dataframe():
     df = pandas.DataFrame(
         {
@@ -261,26 +258,41 @@ def teardown_pickle_file():
 
 
 @pytest.fixture
-def setup_sql_file(conn, filename, table, force=False):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {
-                "col1": [0, 1, 2, 3, 4, 5, 6],
-                "col2": [7, 8, 9, 10, 11, 12, 13],
-                "col3": [14, 15, 16, 17, 18, 19, 20],
-                "col4": [21, 22, 23, 24, 25, 26, 27],
-                "col5": [0, 0, 0, 0, 0, 0, 0],
-            }
-        )
-        df.to_sql(table, conn)
+def make_sql_connection():
+    """Sets up sql connections and takes them down after the caller is done.
 
+    Yields:
+        Factory that generates sql connection objects
+    """
+    filenames = []
 
-@pytest.fixture
-def teardown_sql_file(filename):
-    if os.path.exists(filename):
-        os.remove(filename)
+    def _sql_connection(filename, table=""):
+        # Remove file if exists
+        if os.path.exists(filename):
+            os.remove(filename)
+        filenames.append(filename)
+
+        # Create connection and, if needed, table
+        conn = "sqlite:///{}".format(filename)
+        if table:
+            df = pandas.DataFrame(
+                {
+                    "col1": [0, 1, 2, 3, 4, 5, 6],
+                    "col2": [7, 8, 9, 10, 11, 12, 13],
+                    "col3": [14, 15, 16, 17, 18, 19, 20],
+                    "col4": [21, 22, 23, 24, 25, 26, 27],
+                    "col5": [0, 0, 0, 0, 0, 0, 0],
+                }
+            )
+            df.to_sql(table, conn)
+        return conn
+
+    yield _sql_connection
+
+    # Takedown the fixture
+    for filename in filenames:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 def test_from_parquet():
@@ -460,20 +472,16 @@ def test_from_pickle():
     teardown_pickle_file()
 
 
-def test_from_sql():
+def test_from_sql(make_sql_connection):
     filename = "test_from_sql.db"
-    teardown_sql_file(filename)
-    conn = sqlite3.connect(filename)
     table = "test_from_sql"
-    setup_sql_file(conn, filename, table, True)
+    conn = make_sql_connection(filename, table)
     query = "select * from {0}".format(table)
 
     pandas_df = pandas.read_sql(query, conn)
     modin_df = pd.read_sql(query, conn)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    teardown_sql_file(filename)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
@@ -750,20 +758,40 @@ def test_to_pickle():
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
 
 
-def test_to_sql():
+def test_to_sql_without_index(make_sql_connection):
+    table_name = "tbl_without_index"
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
-    TEST_SQL_DF_FILENAME = "test_df.sql"
-    TEST_SQL_pandas_FILENAME = "test_pandas.sql"
+    # We do not pass the table name so the fixture won't generate a table
+    conn = make_sql_connection("test_to_sql.db")
+    modin_df.to_sql(table_name, conn, index=False)
+    df_modin_sql = pandas.read_sql(table_name, con=conn)
 
-    modin_df.to_pickle(TEST_SQL_DF_FILENAME)
-    pandas_df.to_pickle(TEST_SQL_pandas_FILENAME)
+    # We do not pass the table name so the fixture won't generate a table
+    conn = make_sql_connection("test_to_sql_pandas.db")
+    pandas_df.to_sql(table_name, conn, index=False)
+    df_pandas_sql = pandas.read_sql(table_name, con=conn)
 
-    assert test_files_eq(TEST_SQL_DF_FILENAME, TEST_SQL_pandas_FILENAME)
+    assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
-    teardown_test_file(TEST_SQL_DF_FILENAME)
-    teardown_test_file(TEST_SQL_pandas_FILENAME)
+
+def test_to_sql_with_index(make_sql_connection):
+    table_name = "tbl_with_index"
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
+
+    # We do not pass the table name so the fixture won't generate a table
+    conn = make_sql_connection("test_to_sql.db")
+    modin_df.to_sql(table_name, conn)
+    df_modin_sql = pandas.read_sql(table_name, con=conn, index_col="index")
+
+    # We do not pass the table name so the fixture won't generate a table
+    conn = make_sql_connection("test_to_sql_pandas.db")
+    pandas_df.to_sql(table_name, conn)
+    df_pandas_sql = pandas.read_sql(table_name, con=conn, index_col="index")
+
+    assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
 def test_to_stata():

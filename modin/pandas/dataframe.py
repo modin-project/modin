@@ -4188,25 +4188,34 @@ class DataFrame(object):
         self,
         name,
         con,
-        flavor=None,
         schema=None,
         if_exists="fail",
         index=True,
         index_label=None,
         chunksize=None,
         dtype=None,
-    ):  # pragma: no cover
-        return self._default_to_pandas(
-            pandas.DataFrame.to_sql,
-            name,
-            con,
-            flavor,
-            schema,
-            if_exists,
-            index,
-            index_label,
-            chunksize,
-            dtype,
+    ):
+        new_query_compiler = self._query_compiler
+        # writing the index to the database by inserting it to the DF
+        if index:
+            if not index_label:
+                index_label = "index"
+            new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
+            # so pandas._to_sql will not write the index to the database as well
+            index = False
+
+        from modin.data_management.factories import BaseFactory
+
+        BaseFactory.to_sql(
+            new_query_compiler,
+            name=name,
+            con=con,
+            schema=schema,
+            if_exists=if_exists,
+            index=index,
+            index_label=index_label,
+            chunksize=chunksize,
+            dtype=dtype,
         )
 
     def to_stata(

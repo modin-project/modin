@@ -154,6 +154,14 @@ class BaseFactory(object):
     def _read_sql(cls, **kwargs):
         return cls.io_cls.read_sql(**kwargs)
 
+    @classmethod
+    def to_sql(cls, *args, **kwargs):
+        return cls._determine_engine()._to_sql(*args, **kwargs)
+
+    @classmethod
+    def _to_sql(cls, *args, **kwargs):
+        return cls.io_cls.to_sql(*args, **kwargs)
+
 
 class PandasOnRayFactory(BaseFactory):
 
