@@ -17,6 +17,7 @@ from pandas.core.index import _ensure_index
 from pandas.core.base import DataError
 
 from modin.engines.base.block_partitions import BaseBlockPartitions
+from modin.error_message import ErrorMessage
 from .base_query_compiler import BaseQueryCompiler
 
 
