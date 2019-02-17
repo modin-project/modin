@@ -268,6 +268,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.index.join(other_index, how=how, sort=sort)
 
+    def join(self, other, **kwargs):
+        """Joins a list or two objects together.
+
+        Args:
+            other: The other object(s) to join on.
+
+        Returns:
+            Joined objects.
+        """
+        if not isinstance(other, list):
+            other = [other]
+        return self._join_list_of_managers(other, **kwargs)
+
+    def concat(self, axis, other, **kwargs):
+        """Concatenates two objects together.
+
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other: The other_index to concat with.
+
+        Returns:
+            Concatenated objects.
+        """
+        return self._append_list_of_managers(other, axis, **kwargs)
+
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
             others = [others]
@@ -328,7 +353,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
         ).columns
         return self.__constructor__(new_data, joined_index, new_columns)
-
     # END Append/Concat/Join
 
     # Copartition
@@ -407,6 +431,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
+
+    # Data Management Methods
+    def free(self):
+        """In the future, this will hopefully trigger a cleanup of this object.
+        """
+        # TODO create a way to clean up this object.
+        return
+    # END Data Management Methods
+
+    # To/From Pandas
+    def to_pandas(self):
+        """Converts Modin DataFrame to Pandas DataFrame.
+
+        Returns:
+            Pandas DataFrame of the DataManager.
+        """
+        df = self.data.to_pandas(is_transposed=self._is_transposed)
+        if df.empty:
+            dtype_dict = {
+                col_name: pandas.Series(dtype=self.dtypes[col_name])
+                for col_name in self.columns
+            }
+            df = pandas.DataFrame(dtype_dict, self.index)
+        else:
+            ErrorMessage.catch_bugs_and_request_email(
+                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
+            )
+            df.index = self.index
+            df.columns = self.columns
+        return df
+
+    @classmethod
+    def from_pandas(cls, df, block_partitions_cls):
+        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+
+        Args:
+            cls: DataManger object to convert the DataFrame to.
+            df: Pandas DataFrame object.
+            block_partitions_cls: BlockParitions object to store partitions
+
+        Returns:
+            Returns DataManager containing data from the Pandas DataFrame.
+        """
+        new_index = df.index
+        new_columns = df.columns
+        new_dtypes = df.dtypes
+        new_data = block_partitions_cls.from_pandas(df)
+        return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
+    # END To/From Pandas
 
     # Inter-Data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the

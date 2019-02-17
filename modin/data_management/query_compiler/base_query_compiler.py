@@ -100,13 +100,67 @@ class BaseQueryCompiler(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
+    def join(self, other, **kwargs):
+        """Joins a list or two objects together.
+
+        Args:
+            other: The other object(s) to join on.
+
+        Returns:
+            Joined objects.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+
+    def concat(self, axis, other, **kwargs):
+        """Concatenates two objects together.
+
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other: The other_index to concat with.
+
+        Returns:
+            Concatenated objects.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+
     def _append_list_of_managers(self, others, axis, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
 
     def _join_list_of_managers(self, others, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract join and append helper functions
+
+    # Data Management Methods
+    def free(self):
+        """In the future, this will hopefully trigger a cleanup of this object.
+        """
+        # TODO create a way to clean up this object.
+        raise NotImplementedError("Must be implemented in children classes")
+    # END Data Management Methods
+
+    # To/From Pandas
+    def to_pandas(self):
+        """Converts Modin DataFrame to Pandas DataFrame.
+
+        Returns:
+            Pandas DataFrame of the DataManager.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+
+    @classmethod
+    def from_pandas(cls, df, block_partitions_cls):
+        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+
+        Args:
+            cls: DataManger object to convert the DataFrame to.
+            df: Pandas DataFrame object.
+            block_partitions_cls: BlockParitions object to store partitions
+
+        Returns:
+            Returns DataManager containing data from the Pandas DataFrame.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+    # END To/From Pandas
 
     # Abstract copartition
     def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
@@ -953,95 +1007,6 @@ class BaseQueryCompiler(object):
     def __constructor__(self):
         """By default, constructor method will invoke an init."""
         return type(self)
-
-    # Append/Concat/Join (Not Merge)
-    # The append/concat/join operations should ideally never trigger remote
-    # compute. These operations should only ever be manipulations of the
-    # metadata of the resulting object. It should just be a simple matter of
-    # appending the other object's blocks and adding np.nan columns for the new
-    # columns, if needed. If new columns are added, some compute may be
-    # required, though it can be delayed.
-    #
-    # Currently this computation is not delayed, and it may make a copy of the
-    # DataFrame in memory. This can be problematic and should be fixed in the
-    # future. TODO (devin-petersohn): Delay reindexing
-    def join(self, other, **kwargs):
-        """Joins a list or two objects together.
-
-        Args:
-            other: The other object(s) to join on.
-
-        Returns:
-            Joined objects.
-        """
-        if not isinstance(other, list):
-            other = [other]
-        return self._join_list_of_managers(other, **kwargs)
-
-    def concat(self, axis, other, **kwargs):
-        """Concatenates two objects together.
-
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other: The other_index to concat with.
-
-        Returns:
-            Concatenated objects.
-        """
-        return self._append_list_of_managers(other, axis, **kwargs)
-
-    # END Append/Concat/Join
-
-    # Data Management Methods
-    def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
-        # TODO create a way to clean up this object.
-        return
-
-    # END Data Management Methods
-
-    # To/From Pandas
-    def to_pandas(self):
-        """Converts Modin DataFrame to Pandas DataFrame.
-
-        Returns:
-            Pandas DataFrame of the DataManager.
-        """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
-        if df.empty:
-            dtype_dict = {
-                col_name: pandas.Series(dtype=self.dtypes[col_name])
-                for col_name in self.columns
-            }
-            df = pandas.DataFrame(dtype_dict, self.index)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
-            )
-            df.index = self.index
-            df.columns = self.columns
-        return df
-
-    @classmethod
-    def from_pandas(cls, df, block_partitions_cls):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
-
-        Args:
-            cls: DataManger object to convert the DataFrame to.
-            df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
-
-        Returns:
-            Returns DataManager containing data from the Pandas DataFrame.
-        """
-        new_index = df.index
-        new_columns = df.columns
-        new_dtypes = df.dtypes
-        new_data = block_partitions_cls.from_pandas(df)
-        return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
-
-    # END To/From Pandas
 
     # __delitem__
     # This will change the shape of the resulting data.
