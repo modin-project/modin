@@ -118,9 +118,7 @@ def initialize_ray():
             if object_store_memory == 0:
                 object_store_memory = None
         ray.init(
-            redirect_output=True,
             include_webui=False,
-            redirect_worker_output=True,
             ignore_reinit_error=True,
             plasma_directory=plasma_directory,
             object_store_memory=object_store_memory,
