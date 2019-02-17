@@ -156,7 +156,12 @@ class PandasOnRayIO(BaseIO):
         skiprows = kwargs.pop("skiprows", None)
         parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
-            kwargs, header=None, names=column_names, skipfooter=0, skiprows=None, parse_dates=parse_dates
+            kwargs,
+            header=None,
+            names=column_names,
+            skipfooter=0,
+            skiprows=None,
+            parse_dates=parse_dates,
         )
         with open(filepath, "rb") as f:
             # Get the BOM if necessary

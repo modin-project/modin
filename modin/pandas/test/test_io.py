@@ -107,14 +107,24 @@ def make_csv_file():
     """
     filenames = []
 
-    def _make_csv_file(filename=TEST_CSV_FILENAME, row_size=SMALL_ROW_SIZE, force=False, delimiter=",", encoding=None):
+    def _make_csv_file(
+        filename=TEST_CSV_FILENAME,
+        row_size=SMALL_ROW_SIZE,
+        force=False,
+        delimiter=",",
+        encoding=None,
+    ):
         if os.path.exists(filename) and not force:
             pass
         else:
-            dates = pandas.date_range('2000', freq='h', periods=row_size)
+            dates = pandas.date_range("2000", freq="h", periods=row_size)
             df = pandas.DataFrame(
-                {"col1": np.arange(row_size), "col2": [str(x.date()) for x in dates],
-                "col3": np.arange(row_size), "col4": [str(x.time()) for x in dates]}
+                {
+                    "col1": np.arange(row_size),
+                    "col2": [str(x.date()) for x in dates],
+                    "col3": np.arange(row_size),
+                    "col4": [str(x.time()) for x in dates],
+                }
             )
             df.to_csv(filename, sep=delimiter, encoding=encoding)
             filenames.append(filename)
@@ -582,7 +592,9 @@ def test_from_csv_parse_dates(make_csv_file):
     modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]})
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]}
+    )
     modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]})
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
