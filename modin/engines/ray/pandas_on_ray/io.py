@@ -563,7 +563,7 @@ class PandasOnRayIO(BaseIO):
             return pandas.DataFrame()
 
         map_func = qc._prepare_method(func, **kwargs)
-        result = qc.map_across_full_axis(1, map_func)
+        result = qc._map_across_full_axis(1, map_func)
         # blocking operation
         result.to_pandas()
 
