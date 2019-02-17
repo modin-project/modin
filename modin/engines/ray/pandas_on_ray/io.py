@@ -154,8 +154,9 @@ class PandasOnRayIO(BaseIO):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
+        parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
-            kwargs, header=None, names=column_names, skipfooter=0, skiprows=None
+            kwargs, header=None, names=column_names, skipfooter=0, skiprows=None, parse_dates=parse_dates
         )
         with open(filepath, "rb") as f:
             # Get the BOM if necessary
@@ -208,6 +209,21 @@ class PandasOnRayIO(BaseIO):
         else:
             new_index_ids = get_index.remote([empty_pd_df.index.name], *index_ids)
             new_index = ray.get(new_index_ids)
+
+        # If parse_dates is present, the column names that we have might not be
+        # the same length as the returned column names. If we do need to modify
+        # the column names, we remove the old names from the column names and
+        # insert the new one at the front of the Index.
+        if parse_dates is not None:
+            # Check if is list of lists
+            if isinstance(parse_dates, list) and isinstance(parse_dates[0], list):
+                for group in parse_dates:
+                    new_col_name = "_".join(group)
+                    column_names = column_names.drop(group).insert(0, new_col_name)
+            # Check if it is a dictionary
+            elif isinstance(parse_dates, dict):
+                for new_col_name, group in parse_dates.items():
+                    column_names = column_names.drop(group).insert(0, new_col_name)
 
         new_query_compiler = PandasQueryCompiler(
             RayBlockPartitions(np.array(partition_ids)), new_index, column_names
