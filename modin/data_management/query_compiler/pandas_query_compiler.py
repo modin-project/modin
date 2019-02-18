@@ -354,6 +354,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
         ).columns
         return self.__constructor__(new_data, joined_index, new_columns)
+
     # END Append/Concat/Join
 
     # Copartition
@@ -439,6 +440,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # TODO create a way to clean up this object.
         return
+
     # END Data Management Methods
 
     # To/From Pandas
@@ -480,6 +482,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_dtypes = df.dtypes
         new_data = block_partitions_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
+
     # END To/From Pandas
 
     # Inter-Data operations (e.g. add, sub)

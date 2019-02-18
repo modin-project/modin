@@ -2,9 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import pandas
-
-from modin.error_message import ErrorMessage
 from modin.engines.base.block_partitions import BaseBlockPartitions
 
 
@@ -128,6 +125,7 @@ class BaseQueryCompiler(object):
 
     def _join_list_of_managers(self, others, **kwargs):
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Abstract join and append helper functions
 
     # Data Management Methods
@@ -136,6 +134,7 @@ class BaseQueryCompiler(object):
         """
         # TODO create a way to clean up this object.
         raise NotImplementedError("Must be implemented in children classes")
+
     # END Data Management Methods
 
     # To/From Pandas
@@ -160,6 +159,7 @@ class BaseQueryCompiler(object):
             Returns DataManager containing data from the Pandas DataFrame.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END To/From Pandas
 
     # Abstract copartition
