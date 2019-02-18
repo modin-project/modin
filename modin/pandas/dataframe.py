@@ -4,8 +4,20 @@ from __future__ import print_function
 
 import pandas
 from pandas.api.types import is_scalar
-from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle as pkl
-from pandas.core.common import count_not_none, _pipe, apply_if_callable, is_bool_indexer, _get_rename_function
+from pandas.compat import (
+    to_str,
+    string_types,
+    numpy as numpy_compat,
+    cPickle as pkl,
+    lrange,
+)
+from pandas.core.common import (
+    count_not_none,
+    _pipe,
+    apply_if_callable,
+    is_bool_indexer,
+    _get_rename_function,
+)
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_list_like,
@@ -23,6 +35,7 @@ from pandas.util._validators import validate_bool_kwarg
 import itertools
 import functools
 import numpy as np
+from numpy import nan
 import re
 import sys
 import warnings
@@ -35,6 +48,7 @@ from .series import SeriesView
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
+
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
@@ -402,7 +416,7 @@ class DataFrame(object):
     def sum(
         self,
         axis=None,
-        skipna=True,
+        skipna=None,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -651,7 +665,7 @@ class DataFrame(object):
             broadcast_axis=broadcast_axis,
         )
 
-    def all(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
+    def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
         """Return whether all elements are True over requested axis
 
         Note:
@@ -667,7 +681,7 @@ class DataFrame(object):
             axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
         )
 
-    def any(self, axis=0, bool_only=None, skipna=None, level=None, **kwargs):
+    def any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
         """Return whether any elements are True over requested axis
 
         Note:
@@ -1626,7 +1640,7 @@ class DataFrame(object):
         cls,
         path,
         header=0,
-        sep=", ",
+        sep=",",
         index_col=0,
         parse_dates=True,
         encoding=None,
@@ -2226,7 +2240,7 @@ class DataFrame(object):
     def mask(
         self,
         cond,
-        other=np.nan,
+        other=nan,
         inplace=False,
         axis=None,
         level=None,
@@ -2710,7 +2724,7 @@ class DataFrame(object):
         skipna=None,
         level=None,
         numeric_only=None,
-        min_count=1,
+        min_count=0,
         **kwargs
     ):
         """Return the product of the values for the requested axis
@@ -2720,7 +2734,7 @@ class DataFrame(object):
             skipna : boolean, default True
             level : int or level name, default None
             numeric_only : boolean, default None
-            min_count : int, default 1
+            min_count : int, default 0
 
         Returns:
             prod : Series or DataFrame (if level specified)
@@ -2742,7 +2756,7 @@ class DataFrame(object):
         skipna=None,
         level=None,
         numeric_only=None,
-        min_count=1,
+        min_count=0,
         **kwargs
     ):
         """Return the product of the values for the requested axis
@@ -2752,7 +2766,7 @@ class DataFrame(object):
             skipna : boolean, default True
             level : int or level name, default None
             numeric_only : boolean, default None
-            min_count : int, default 1
+            min_count : int, default 0
 
         Returns:
             product : Series or DataFrame (if level specified)
@@ -3043,13 +3057,12 @@ class DataFrame(object):
             If inplace is False, a new DataFrame with the updated axes.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        # We have to do this with the args because of how rename handles
-        # kwargs. It doesn't ignore None values passed in, so we have to filter
-        # them ourselves.
+        # We have to do this with the args because of how rename handles kwargs. It
+        # doesn't ignore None values passed in, so we have to filter them ourselves.
         args = locals()
         kwargs = {k: v for k, v in args.items() if v is not None and k != "self"}
-        # inplace should always be true because this is just a copy, and we
-        # will use the results after.
+        # inplace should always be true because this is just a copy, and we will use the
+        # results after.
         kwargs["inplace"] = True
         df_to_rename = pandas.DataFrame(index=self.index, columns=self.columns)
         df_to_rename.rename(**kwargs)
@@ -3065,58 +3078,59 @@ class DataFrame(object):
             return obj
 
     def rename_axis(
-        self, mapper=sentinel, index=None, columns=None, axis=None, copy=True, inplace=False
+        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
     ):
-        kwargs = {"index": index, "columns": columns, "axis": axis, "copy": copy, "inplace": inplace}
+        kwargs = {
+            "index": index,
+            "columns": columns,
+            "axis": axis,
+            "copy": copy,
+            "inplace": inplace,
+        }
         axes, kwargs = pandas.DataFrame()._construct_axes_from_arguments(
-            (), kwargs, sentinel=sentinel)
-        copy = kwargs.pop('copy', True)
-        inplace = kwargs.pop('inplace', False)
-        axis = kwargs.pop('axis', 0)
+            (), kwargs, sentinel=sentinel
+        )
         if axis is not None:
-            axis = self._get_axis_number(axis)
+            axis = pandas.DataFrame()._get_axis_number(axis)
 
-        if kwargs:
-            raise TypeError('rename_axis() got an unexpected keyword '
-                            'argument "{0}"'.format(list(kwargs.keys())[0]))
-
-        inplace = validate_bool_kwarg(inplace, 'inplace')
+        inplace = validate_bool_kwarg(inplace, "inplace")
 
         if mapper is not sentinel:
             # Use v0.23 behavior if a scalar or list
-            non_mapper = is_scalar(mapper) or (is_list_like(mapper) and not
-            is_dict_like(mapper))
+            non_mapper = is_scalar(mapper) or (
+                is_list_like(mapper) and not is_dict_like(mapper)
+            )
             if non_mapper:
-                return self._set_axis_name(mapper, axis=axis, inplace=inplace)
+                return pandas.DataFrame()._set_axis_name(
+                    mapper, axis=axis, inplace=inplace
+                )
             else:
                 # Deprecated (v0.21) behavior is if mapper is specified,
                 # and not a list or scalar, then call rename
-                msg = ("Using 'rename_axis' to alter labels is deprecated. "
-                       "Use '.rename' instead")
+                msg = (
+                    "Using 'rename_axis' to alter labels is deprecated. "
+                    "Use '.rename' instead"
+                )
                 warnings.warn(msg, FutureWarning, stacklevel=3)
-                axis = self._get_axis_name(axis)
-                d = {'copy': copy, 'inplace': inplace}
-                d[axis] = mapper
+                axis = pandas.DataFrame()._get_axis_name(axis)
+                d = {"copy": copy, "inplace": inplace, axis: mapper}
                 return self.rename(**d)
         else:
-            # Use new behavior.  Means that index and/or columns
-            # is specified
+            # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
 
             for axis in lrange(self._AXIS_LEN):
                 v = axes.get(self._AXIS_NAMES[axis])
                 if v is sentinel:
                     continue
-                non_mapper = is_scalar(v) or (is_list_like(v) and not
-                is_dict_like(v))
+                non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
                 if non_mapper:
                     newnames = v
                 else:
                     f = _get_rename_function(v)
-                    curnames = self._get_axis(axis).names
+                    curnames = pandas.DataFrame()._get_axis(axis).names
                     newnames = [f(name) for name in curnames]
-                result._set_axis_name(newnames, axis=axis,
-                                      inplace=True)
+                result._set_axis_name(newnames, axis=axis, inplace=True)
             if not inplace:
                 return result
 
@@ -3134,9 +3148,9 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         renamed = self if inplace else self.copy()
         if axis == 0:
-            renamed.index.set_names(name)
+            renamed.index = renamed.index.set_names(name)
         else:
-            renamed.columns.set_names(name)
+            renamed.columns = renamed.columns.set_names(name)
         if not inplace:
             return renamed
 
@@ -3970,7 +3984,7 @@ class DataFrame(object):
             **kwargs
         )
 
-    def to_clipboard(self, excel=None, sep=None, **kwargs):  # pragma: no cover
+    def to_clipboard(self, excel=True, sep=None, **kwargs):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_clipboard, excel=excel, sep=sep, **kwargs
         )
@@ -3987,10 +4001,10 @@ class DataFrame(object):
         index_label=None,
         mode="w",
         encoding=None,
-        compression=None,
+        compression="infer",
         quoting=None,
         quotechar='"',
-        line_terminator="\n",
+        line_terminator=None,
         chunksize=None,
         tupleize_cols=None,
         date_format=None,
@@ -4194,7 +4208,7 @@ class DataFrame(object):
         col_space=None,
         header=True,
         index=True,
-        na_rep="np.NaN",
+        na_rep="NaN",
         formatters=None,
         float_format=None,
         sparsify=None,
