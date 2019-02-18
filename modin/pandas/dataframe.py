@@ -3092,7 +3092,8 @@ class DataFrame(object):
         )
         if axis is not None:
             axis = pandas.DataFrame()._get_axis_number(axis)
-
+        else:
+            axis = 0
         inplace = validate_bool_kwarg(inplace, "inplace")
 
         if mapper is not sentinel:
@@ -3101,9 +3102,7 @@ class DataFrame(object):
                 is_list_like(mapper) and not is_dict_like(mapper)
             )
             if non_mapper:
-                return pandas.DataFrame()._set_axis_name(
-                    mapper, axis=axis, inplace=inplace
-                )
+                return self._set_axis_name(mapper, axis=axis, inplace=inplace)
             else:
                 # Deprecated (v0.21) behavior is if mapper is specified,
                 # and not a list or scalar, then call rename
