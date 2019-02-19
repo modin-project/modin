@@ -1391,12 +1391,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # TODO add this line back once pandas-dev/pandas#25101 is resolved
                 # return pandas.Series(dtype=bool)
                 pass
-            if len(not_bool_col) == len(self.columns):
-                query_compiler = self
-            else:
-                # See note above about pandas-dev/pandas#25101
-                query_compiler = self
-                # query_compiler = self.drop(columns=not_bool_col)
+            # See note above about pandas-dev/pandas#25101
+            # TODO remove this when pandas 0.24.2 is released.
+            query_compiler = self
+            # if len(not_bool_col) == len(self.columns):
+            #     query_compiler = self
+            # else:
+            #     query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False

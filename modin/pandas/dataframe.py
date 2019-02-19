@@ -224,7 +224,7 @@ class DataFrame(object):
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
-                ErrorMessage.not_implemented("'Not' nodes are not implemented.")
+                ErrorMessage.not_implemented("'Not' nodes are not implemented.") # pragma: no cover
 
     @property
     def size(self):
@@ -612,8 +612,7 @@ class DataFrame(object):
         elif is_list_like(arg) or callable(arg):
             return self.apply(arg, axis=_axis, args=args, **kwargs)
         else:
-            # TODO Make pandas error
-            raise ValueError("type {} is not callable".format(type(arg)))
+            raise TypeError("type {} is not callable".format(type(arg)))
 
     def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, string_types)
@@ -798,7 +797,7 @@ class DataFrame(object):
                     stacklevel=2,
                 )
         elif not callable(func) and not is_list_like(func):
-            return
+            raise TypeError("{} object is not callable".format(type(func)))
 
         query_compiler = self._query_compiler.apply(func, axis, *args, **kwds)
         if isinstance(query_compiler, pandas.Series):
@@ -1565,8 +1564,7 @@ class DataFrame(object):
         nkw = count_not_none(items, like, regex)
         if nkw > 1:
             raise TypeError(
-                "Keyword arguments `items`, `like`, or `regex` "
-                "are mutually exclusive"
+                "Keyword arguments `items`, `like`, or `regex` are mutually exclusive"
             )
         if nkw == 0:
             raise TypeError("Must pass either `items`, `like`, or `regex`")
@@ -3096,7 +3094,7 @@ class DataFrame(object):
             axis = 0
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if mapper is not sentinel:
+        if mapper is not None:
             # Use v0.23 behavior if a scalar or list
             non_mapper = is_scalar(mapper) or (
                 is_list_like(mapper) and not is_dict_like(mapper)
@@ -3118,16 +3116,17 @@ class DataFrame(object):
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
 
-            for axis in lrange(self._AXIS_LEN):
-                v = axes.get(self._AXIS_NAMES[axis])
-                if v is sentinel:
+            for axis in axes:
+                if axes[axis] is None:
                     continue
+                v = axes[axis]
+                axis = pandas.DataFrame()._get_axis_number(axis)
                 non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
                 if non_mapper:
                     newnames = v
                 else:
                     f = _get_rename_function(v)
-                    curnames = pandas.DataFrame()._get_axis(axis).names
+                    curnames = self.index.names if axis == 0 else self.columns.names
                     newnames = [f(name) for name in curnames]
                 result._set_axis_name(newnames, axis=axis, inplace=True)
             if not inplace:

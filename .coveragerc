@@ -22,3 +22,4 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     raise ImportError
+    assert

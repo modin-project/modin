@@ -122,6 +122,16 @@ def inter_df_math_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(list_test, axis=0)
         df_equals(modin_result, pandas_result)
 
+    # Level test
+    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add(data):
@@ -388,6 +398,15 @@ def comparison_inter_ops_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(modin_df2)
         df_equals(modin_result, pandas_result)
 
+    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_eq(data):
@@ -459,6 +478,15 @@ def inter_df_math_right_ops_helper(modin_df, pandas_df, op):
     else:
         modin_result = getattr(modin_df, op)(4.0)
         df_equals(modin_result, pandas_result)
+
+    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -911,7 +939,7 @@ def test_apply(request, data, func, axis):
         pandas_result = pandas_df.apply(func, axis)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_result = modin_df.apply(func, axis)
+            modin_df.apply(func, axis)
     else:
         modin_result = modin_df.apply(func, axis)
         df_equals(modin_result, pandas_result)
@@ -1777,13 +1805,15 @@ def test_equals():
     df_equals(modin_df1, pd.DataFrame(modin_df1))
 
     frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 5, 1]}
-    modin_df3 = pd.DataFrame(frame_data)
+    modin_df3 = pd.DataFrame(frame_data, index=list("abcd"))
 
     with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df1)
 
     with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df2)
+
+    assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
 
 
 def test_eval_df_use_case():
@@ -2193,6 +2223,9 @@ def test_filter(data):
     )
 
     df_equals(modin_df.filter(like=by["like"]), pandas_df.filter(like=by["like"]))
+
+    with pytest.raises(TypeError):
+        modin_df.filter(items=by["items"], regest=by["regex"])
 
 
 def test_first():
@@ -3379,6 +3412,29 @@ def test_rename_bug():
     # modin_df.columns = ['2001-01-01']
 
     df_equals(modin_df, df)
+
+
+def test_rename_axis():
+    data = {"num_legs": [4, 4, 2], "num_arms": [0, 0, 2]}
+    index = ["dog", "cat", "monkey"]
+    modin_df = pd.DataFrame(data, index)
+    pandas_df = pandas.DataFrame(data, index)
+    df_equals(modin_df.rename_axis("animal"), pandas_df.rename_axis("animal"))
+    df_equals(modin_df.rename_axis("limbs", axis="columns"), pandas_df.rename_axis("limbs", axis="columns"))
+
+    modin_df.rename_axis("limbs", axis="columns", inplace=True)
+    pandas_df.rename_axis("limbs", axis="columns", inplace=True)
+    df_equals(modin_df, pandas_df)
+
+    new_index = pd.MultiIndex.from_product([['mammal'], ['dog', 'cat', 'monkey']], names=['type', 'name'])
+    modin_df.index = new_index
+    pandas_df.index = new_index
+
+    df_equals(modin_df.rename_axis(index={'type': 'class'}), pandas_df.rename_axis(index={'type': 'class'}))
+    df_equals(modin_df.rename_axis(columns=str.upper), pandas_df.rename_axis(columns=str.upper))
+
+    with pytest.warns(FutureWarning):
+        df_equals(modin_df.rename_axis(str.upper, axis=1), pandas_df.rename_axis(str.upper, axis=1))
 
 
 def test_rename_axis_inplace():
