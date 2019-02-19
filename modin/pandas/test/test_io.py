@@ -99,20 +99,44 @@ def teardown_parquet_file():
 
 
 @pytest.fixture
-def setup_csv_file(row_size, force=False, delimiter=",", encoding=None):
-    if os.path.exists(TEST_CSV_FILENAME) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_csv(TEST_CSV_FILENAME, sep=delimiter, encoding=encoding)
+def make_csv_file():
+    """Pytest fixture factory that makes temp csv files for testing.
 
+    Yields:
+        Function that generates csv files
+    """
+    filenames = []
 
-@pytest.fixture
-def teardown_csv_file():
-    if os.path.exists(TEST_CSV_FILENAME):
-        os.remove(TEST_CSV_FILENAME)
+    def _make_csv_file(
+        filename=TEST_CSV_FILENAME,
+        row_size=SMALL_ROW_SIZE,
+        force=False,
+        delimiter=",",
+        encoding=None,
+    ):
+        if os.path.exists(filename) and not force:
+            pass
+        else:
+            dates = pandas.date_range("2000", freq="h", periods=row_size)
+            df = pandas.DataFrame(
+                {
+                    "col1": np.arange(row_size),
+                    "col2": [str(x.date()) for x in dates],
+                    "col3": np.arange(row_size),
+                    "col4": [str(x.time()) for x in dates],
+                }
+            )
+            df.to_csv(filename, sep=delimiter, encoding=encoding)
+            filenames.append(filename)
+            return df
+
+    # Return function that generates csv files
+    yield _make_csv_file
+
+    # Delete csv files that were created
+    for filename in filenames:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 @pytest.fixture
@@ -315,53 +339,6 @@ def test_from_parquet_with_columns():
     teardown_parquet_file()
 
 
-def test_from_csv():
-    setup_csv_file(SMALL_ROW_SIZE)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
-
-    assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    if not PY2:
-        pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
-        modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
-
-        assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    teardown_csv_file()
-
-
-def test_from_csv_chunksize():
-    setup_csv_file(SMALL_ROW_SIZE)
-
-    # Tests __next__ and correctness of reader as an iterator
-    # Use larger chunksize to read through file quicker
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
-
-    for modin_df, pd_df in zip(rdf_reader, pd_reader):
-        assert modin_df_equals_pandas(modin_df, pd_df)
-
-    # Tests that get_chunk works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.get_chunk(1)
-    pd_df = pd_reader.get_chunk(1)
-
-    assert modin_df_equals_pandas(modin_df, pd_df)
-
-    # Tests that read works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.read()
-    pd_df = pd_reader.read()
-
-    assert modin_df_equals_pandas(modin_df, pd_df)
-
-
 def test_from_json():
     setup_json_file(SMALL_ROW_SIZE)
 
@@ -492,8 +469,53 @@ def test_from_sas():
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
-def test_from_csv_delimiter():
-    setup_csv_file(SMALL_ROW_SIZE, delimiter="|")
+def test_from_csv(make_csv_file):
+    make_csv_file()
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    if not PY2:
+        pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
+        modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+
+        assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_csv_chunksize(make_csv_file):
+    make_csv_file()
+
+    # Tests __next__ and correctness of reader as an iterator
+    # Use larger chunksize to read through file quicker
+    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
+    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
+
+    for modin_df, pd_df in zip(rdf_reader, pd_reader):
+        assert modin_df_equals_pandas(modin_df, pd_df)
+
+    # Tests that get_chunk works correctly
+    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
+    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.get_chunk(1)
+    pd_df = pd_reader.get_chunk(1)
+
+    assert modin_df_equals_pandas(modin_df, pd_df)
+
+    # Tests that read works correctly
+    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
+    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.read()
+    pd_df = pd_reader.read()
+
+    assert modin_df_equals_pandas(modin_df, pd_df)
+
+
+def test_from_csv_delimiter(make_csv_file):
+    make_csv_file(delimiter="|")
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep="|")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, sep="|")
@@ -503,35 +525,32 @@ def test_from_csv_delimiter():
     modin_df = pd.DataFrame.from_csv(
         TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
     )
+    pandas_df = pandas.DataFrame.from_csv(
+        TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
+    )
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_csv_file()
 
-
-def test_from_csv_skiprows():
-    setup_csv_file(SMALL_ROW_SIZE)
+def test_from_csv_skiprows(make_csv_file):
+    make_csv_file()
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_csv_file()
 
-
-def test_from_csv_encoding():
-    setup_csv_file(SMALL_ROW_SIZE, encoding="latin8")
+def test_from_csv_encoding(make_csv_file):
+    make_csv_file(encoding="latin8")
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding="latin8")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding="latin8")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_csv_file()
 
-
-def test_from_csv_default_to_pandas_behavior():
-    setup_csv_file(SMALL_ROW_SIZE)
+def test_from_csv_default_to_pandas_behavior(make_csv_file):
+    make_csv_file()
 
     with pytest.warns(UserWarning):
         # Test nrows
@@ -548,26 +567,36 @@ def test_from_csv_default_to_pandas_behavior():
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
 
 
-def test_from_csv_index_col():
-    setup_csv_file(SMALL_ROW_SIZE)
+def test_from_csv_index_col(make_csv_file):
+    make_csv_file()
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_csv_file()
 
-
-def test_from_csv_skipfooter():
-    setup_csv_file(SMALL_ROW_SIZE)
+def test_from_csv_skipfooter(make_csv_file):
+    make_csv_file()
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    teardown_csv_file()
+
+def test_from_csv_parse_dates(make_csv_file):
+    make_csv_file(force=True)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]}
+    )
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]})
+    assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
