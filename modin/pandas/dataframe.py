@@ -9,7 +9,6 @@ from pandas.compat import (
     string_types,
     numpy as numpy_compat,
     cPickle as pkl,
-    lrange,
 )
 from pandas.core.common import (
     count_not_none,
@@ -224,7 +223,9 @@ class DataFrame(object):
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
-                ErrorMessage.not_implemented("'Not' nodes are not implemented.") # pragma: no cover
+                ErrorMessage.not_implemented(
+                    "'Not' nodes are not implemented."
+                )  # pragma: no cover
 
     @property
     def size(self):

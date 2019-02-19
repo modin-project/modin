@@ -123,7 +123,9 @@ def inter_df_math_helper(modin_df, pandas_df, op):
         df_equals(modin_result, pandas_result)
 
     # Level test
-    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
     modin_df_multi_level = modin_df.copy()
     modin_df_multi_level.index = new_idx
 
@@ -398,7 +400,9 @@ def comparison_inter_ops_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(modin_df2)
         df_equals(modin_result, pandas_result)
 
-    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
     modin_df_multi_level = modin_df.copy()
     modin_df_multi_level.index = new_idx
 
@@ -479,7 +483,9 @@ def inter_df_math_right_ops_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(4.0)
         df_equals(modin_result, pandas_result)
 
-    new_idx = pandas.MultiIndex.from_tuples([(i // 4, i // 2, i) for i in modin_df.index])
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
     modin_df_multi_level = modin_df.copy()
     modin_df_multi_level.index = new_idx
 
@@ -3420,21 +3426,35 @@ def test_rename_axis():
     modin_df = pd.DataFrame(data, index)
     pandas_df = pandas.DataFrame(data, index)
     df_equals(modin_df.rename_axis("animal"), pandas_df.rename_axis("animal"))
-    df_equals(modin_df.rename_axis("limbs", axis="columns"), pandas_df.rename_axis("limbs", axis="columns"))
+    df_equals(
+        modin_df.rename_axis("limbs", axis="columns"),
+        pandas_df.rename_axis("limbs", axis="columns"),
+    )
 
     modin_df.rename_axis("limbs", axis="columns", inplace=True)
     pandas_df.rename_axis("limbs", axis="columns", inplace=True)
     df_equals(modin_df, pandas_df)
 
-    new_index = pd.MultiIndex.from_product([['mammal'], ['dog', 'cat', 'monkey']], names=['type', 'name'])
+    new_index = pd.MultiIndex.from_product(
+        [["mammal"], ["dog", "cat", "monkey"]], names=["type", "name"]
+    )
     modin_df.index = new_index
     pandas_df.index = new_index
 
-    df_equals(modin_df.rename_axis(index={'type': 'class'}), pandas_df.rename_axis(index={'type': 'class'}))
-    df_equals(modin_df.rename_axis(columns=str.upper), pandas_df.rename_axis(columns=str.upper))
+    df_equals(
+        modin_df.rename_axis(index={"type": "class"}),
+        pandas_df.rename_axis(index={"type": "class"}),
+    )
+    df_equals(
+        modin_df.rename_axis(columns=str.upper),
+        pandas_df.rename_axis(columns=str.upper),
+    )
 
     with pytest.warns(FutureWarning):
-        df_equals(modin_df.rename_axis(str.upper, axis=1), pandas_df.rename_axis(str.upper, axis=1))
+        df_equals(
+            modin_df.rename_axis(str.upper, axis=1),
+            pandas_df.rename_axis(str.upper, axis=1),
+        )
 
 
 def test_rename_axis_inplace():
