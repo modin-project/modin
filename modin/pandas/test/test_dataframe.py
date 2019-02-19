@@ -553,7 +553,7 @@ def test_rtruediv(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rtrudiv")
+    inter_df_math_right_ops_helper(modin_df, pandas_df, "rtruediv")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
