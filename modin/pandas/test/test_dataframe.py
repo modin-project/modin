@@ -1487,12 +1487,9 @@ def test_droplevel():
         .set_index([0, 1])
         .rename_axis(["a", "b"])
     )
-
     df.columns = pd.MultiIndex.from_tuples(
         [("c", "e"), ("d", "f")], names=["level_1", "level_2"]
     )
-
-    print(df)
 
     with pytest.warns(UserWarning):
         df.droplevel("a")
