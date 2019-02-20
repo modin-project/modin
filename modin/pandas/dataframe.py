@@ -4,12 +4,7 @@ from __future__ import print_function
 
 import pandas
 from pandas.api.types import is_scalar
-from pandas.compat import (
-    to_str,
-    string_types,
-    numpy as numpy_compat,
-    cPickle as pkl,
-)
+from pandas.compat import to_str, string_types, numpy as numpy_compat, cPickle as pkl
 from pandas.core.common import (
     count_not_none,
     _pipe,
