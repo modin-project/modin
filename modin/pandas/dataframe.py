@@ -583,7 +583,7 @@ class DataFrame(object):
 
         if axis == 0:
             try:
-                result = self._aggregate(func, axis=axis, *args, **kwargs)
+                result = self._aggregate(func, _axis=axis, *args, **kwargs)
             except TypeError:
                 pass
 
@@ -594,9 +594,7 @@ class DataFrame(object):
         return result
 
     def _aggregate(self, arg, *args, **kwargs):
-        _axis = kwargs.pop("_axis", None)
-        if _axis is None:
-            _axis = getattr(self, "axis", 0)
+        _axis = kwargs.pop("_axis", 0)
         kwargs.pop("_level", None)
 
         if isinstance(arg, string_types):
@@ -1810,7 +1808,7 @@ class DataFrame(object):
         layout=None,
         bins=10,
         **kwds
-    ):
+    ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.hist,
             column=column,
@@ -4413,10 +4411,7 @@ class DataFrame(object):
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
         result = self.agg(func, axis=axis, *args, **kwargs)
-        try:
-            result.columns = self.columns
-            result.index = self.index
-        except ValueError:
+        if len(result) != len(self):
             raise ValueError("transforms cannot produce aggregated results")
         return result
 

@@ -2228,7 +2228,10 @@ def test_filter(data):
     df_equals(modin_df.filter(like=by["like"]), pandas_df.filter(like=by["like"]))
 
     with pytest.raises(TypeError):
-        modin_df.filter(items=by["items"], regest=by["regex"])
+        modin_df.filter(items=by["items"], regex=by["regex"])
+
+    with pytest.raises(TypeError):
+        modin_df.filter()
 
 
 def test_first():
@@ -2297,7 +2300,6 @@ def test_head(data, n):
     df_equals(modin_df.head(n), pandas_df.head(n))
 
 
-@pytest.mark.skip(reason="Skip plotting")
 def test_hist():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -4081,9 +4083,6 @@ def test_to_xarray():
         pd.DataFrame(data).to_xarray()
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_transform(request, data, func):
@@ -4091,12 +4090,12 @@ def test_transform(request, data, func):
     pandas_df = pandas.DataFrame(data)
 
     try:
-        pandas_result = pandas_df.agg(func)
+        pandas_result = pandas_df.transform(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.agg(func)
+            modin_df.transform(func)
     else:
-        modin_result = modin_df.agg(func)
+        modin_result = modin_df.transform(func)
         df_equals(modin_result, pandas_result)
 
 
@@ -4110,12 +4109,12 @@ def test_transform_numeric(request, data, func):
         pandas_df = pandas.DataFrame(data)
 
         try:
-            pandas_result = pandas_df.agg(func)
+            pandas_result = pandas_df.transform(func)
         except Exception as e:
             with pytest.raises(type(e)):
-                modin_df.agg(func)
+                modin_df.transform(func)
         else:
-            modin_result = modin_df.agg(func)
+            modin_result = modin_df.transform(func)
             df_equals(modin_result, pandas_result)
 
 
