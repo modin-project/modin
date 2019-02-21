@@ -3450,7 +3450,7 @@ def test_rename_axis():
     )
     df_equals(
         modin_df.rename_axis(columns=[str.upper(o) for o in modin_df.columns.names]),
-        pandas_df.rename_axis(columns=[str.upper(o) for o in pandas_df.columns.names])
+        pandas_df.rename_axis(columns=[str.upper(o) for o in pandas_df.columns.names]),
     )
 
     with pytest.warns(FutureWarning):

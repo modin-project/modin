@@ -130,7 +130,7 @@ def initialize_ray():
 if execution_engine == "Ray":
     initialize_ray()
     num_cpus = ray.global_state.cluster_resources()["CPU"]
-elif execution_engine == "Dask":
+elif execution_engine == "Dask":  # pragma: no cover
     from distributed.client import _get_global_client
 
     if threading.current_thread().name == "MainThread":
