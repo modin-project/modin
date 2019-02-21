@@ -122,6 +122,18 @@ def inter_df_math_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(list_test, axis=0)
         df_equals(modin_result, pandas_result)
 
+    # Level test
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add(data):
@@ -388,6 +400,17 @@ def comparison_inter_ops_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(modin_df2)
         df_equals(modin_result, pandas_result)
 
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_eq(data):
@@ -460,6 +483,17 @@ def inter_df_math_right_ops_helper(modin_df, pandas_df, op):
         modin_result = getattr(modin_df, op)(4.0)
         df_equals(modin_result, pandas_result)
 
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
+    modin_df_multi_level = modin_df.copy()
+    modin_df_multi_level.index = new_idx
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_radd(data):
@@ -525,7 +559,7 @@ def test_rtruediv(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rtrudiv")
+    inter_df_math_right_ops_helper(modin_df, pandas_df, "rtruediv")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -911,7 +945,7 @@ def test_apply(request, data, func, axis):
         pandas_result = pandas_df.apply(func, axis)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_result = modin_df.apply(func, axis)
+            modin_df.apply(func, axis)
     else:
         modin_result = modin_df.apply(func, axis)
         df_equals(modin_result, pandas_result)
@@ -976,6 +1010,11 @@ def test_as_matrix():
     mat = pd.DataFrame(test_data.frame).as_matrix(["A", "B"])
     expected = test_data.frame.reindex(columns=["A", "B"]).values
     tm.assert_almost_equal(mat, expected)
+
+
+def test_to_numpy():
+    with pytest.warns(UserWarning):
+        pd.DataFrame({"A": [1, 2], "B": [3, 4]}).to_numpy()
 
 
 def test_asfreq():
@@ -1213,12 +1252,6 @@ def test_compound():
         pd.DataFrame(data).compound()
 
 
-def test_consolidate():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).consolidate()
-
-
 def test_convert_objects():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -1446,6 +1479,23 @@ def test_drop_api_equivalence():
 
     with pytest.raises(ValueError):
         modin_df.drop(axis=1)
+
+
+def test_droplevel():
+    df = (
+        pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+        .set_index([0, 1])
+        .rename_axis(["a", "b"])
+    )
+    df.columns = pd.MultiIndex.from_tuples(
+        [("c", "e"), ("d", "f")], names=["level_1", "level_2"]
+    )
+
+    with pytest.warns(UserWarning):
+        df.droplevel("a")
+
+    with pytest.warns(UserWarning):
+        df.droplevel("level_2", axis=1)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1758,13 +1808,15 @@ def test_equals():
     df_equals(modin_df1, pd.DataFrame(modin_df1))
 
     frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 5, 1]}
-    modin_df3 = pd.DataFrame(frame_data)
+    modin_df3 = pd.DataFrame(frame_data, index=list("abcd"))
 
     with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df1)
 
     with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df2)
+
+    assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
 
 
 def test_eval_df_use_case():
@@ -2175,6 +2227,12 @@ def test_filter(data):
 
     df_equals(modin_df.filter(like=by["like"]), pandas_df.filter(like=by["like"]))
 
+    with pytest.raises(TypeError):
+        modin_df.filter(items=by["items"], regex=by["regex"])
+
+    with pytest.raises(TypeError):
+        modin_df.filter()
+
 
 def test_first():
     i = pd.date_range("2018-04-09", periods=4, freq="2D")
@@ -2242,7 +2300,6 @@ def test_head(data, n):
     df_equals(modin_df.head(n), pandas_df.head(n))
 
 
-@pytest.mark.skip(reason="Skip plotting")
 def test_hist():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -3362,6 +3419,47 @@ def test_rename_bug():
     df_equals(modin_df, df)
 
 
+def test_rename_axis():
+    data = {"num_legs": [4, 4, 2], "num_arms": [0, 0, 2]}
+    index = ["dog", "cat", "monkey"]
+    modin_df = pd.DataFrame(data, index)
+    pandas_df = pandas.DataFrame(data, index)
+    df_equals(modin_df.rename_axis("animal"), pandas_df.rename_axis("animal"))
+    df_equals(
+        modin_df.rename_axis("limbs", axis="columns"),
+        pandas_df.rename_axis("limbs", axis="columns"),
+    )
+
+    modin_df.rename_axis("limbs", axis="columns", inplace=True)
+    pandas_df.rename_axis("limbs", axis="columns", inplace=True)
+    df_equals(modin_df, pandas_df)
+
+    new_index = pd.MultiIndex.from_product(
+        [["mammal"], ["dog", "cat", "monkey"]], names=["type", "name"]
+    )
+    modin_df.index = new_index
+    pandas_df.index = new_index
+
+    df_equals(
+        modin_df.rename_axis(index={"type": "class"}),
+        pandas_df.rename_axis(index={"type": "class"}),
+    )
+    df_equals(
+        modin_df.rename_axis(columns=str.upper),
+        pandas_df.rename_axis(columns=str.upper),
+    )
+    df_equals(
+        modin_df.rename_axis(columns=[str.upper(o) for o in modin_df.columns.names]),
+        pandas_df.rename_axis(columns=[str.upper(o) for o in pandas_df.columns.names]),
+    )
+
+    with pytest.warns(FutureWarning):
+        df_equals(
+            modin_df.rename_axis(str.upper, axis=1),
+            pandas_df.rename_axis(str.upper, axis=1),
+        )
+
+
 def test_rename_axis_inplace():
     test_frame = TestData().frame
     modin_df = pd.DataFrame(test_frame)
@@ -3789,12 +3887,6 @@ def test_sort_values(request, data, axis, ascending, na_position):
         df_equals(modin_df_cp, pandas_df_cp)
 
 
-def test_sortlevel():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).sortlevel()
-
-
 def test_squeeze():
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -3995,9 +4087,6 @@ def test_to_xarray():
         pd.DataFrame(data).to_xarray()
 
 
-@pytest.mark.skip(
-    reason="We do not have support to check if a UDF can only take in numeric functions"
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_transform(request, data, func):
@@ -4005,12 +4094,12 @@ def test_transform(request, data, func):
     pandas_df = pandas.DataFrame(data)
 
     try:
-        pandas_result = pandas_df.agg(func)
+        pandas_result = pandas_df.transform(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.agg(func)
+            modin_df.transform(func)
     else:
-        modin_result = modin_df.agg(func)
+        modin_result = modin_df.transform(func)
         df_equals(modin_result, pandas_result)
 
 
@@ -4024,12 +4113,12 @@ def test_transform_numeric(request, data, func):
         pandas_df = pandas.DataFrame(data)
 
         try:
-            pandas_result = pandas_df.agg(func)
+            pandas_result = pandas_df.transform(func)
         except Exception as e:
             with pytest.raises(type(e)):
-                modin_df.agg(func)
+                modin_df.transform(func)
         else:
-            modin_result = modin_df.agg(func)
+            modin_result = modin_df.transform(func)
             df_equals(modin_result, pandas_result)
 
 

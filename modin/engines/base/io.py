@@ -435,6 +435,7 @@ class BaseIO(object):
         index_label=None,
         chunksize=None,
         dtype=None,
+        method=None,
     ):
         ErrorMessage.default_to_pandas("`to_sql`")
         df = qc.to_pandas()
@@ -447,4 +448,5 @@ class BaseIO(object):
             index_label=index_label,
             chunksize=chunksize,
             dtype=dtype,
+            method=method,
         )

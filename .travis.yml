@@ -40,6 +40,15 @@ matrix:
         - black --check modin/
         - flake8 .
 
+    - os: linux
+      dist: trusty
+      env:
+        - PYTHON=3.6
+        - API_COMPAT=1
+      script:
+        - export PATH="$HOME/miniconda/bin:$PATH"
+        - python -m pytest modin/pandas/test/test_api.py
+
 install:
   - ./.travis/install-dependencies.sh
 

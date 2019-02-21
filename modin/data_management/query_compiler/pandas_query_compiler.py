@@ -13,7 +13,7 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_bool_dtype,
 )
-from pandas.core.index import _ensure_index
+from pandas.core.index import ensure_index
 from pandas.core.base import DataError
 
 from modin.engines.base.block_partitions import BaseBlockPartitions
@@ -97,7 +97,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return index_obj[new_indices] if compute_diff else new_indices
 
     def _validate_set_axis(self, new_labels, old_labels):
-        new_labels = _ensure_index(new_labels)
+        new_labels = ensure_index(new_labels)
         old_len = len(old_labels)
         new_len = len(new_labels)
         if old_len != new_len:
@@ -118,14 +118,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def _set_index(self, new_index):
         if self._index_cache is None:
-            self._index_cache = _ensure_index(new_index)
+            self._index_cache = ensure_index(new_index)
         else:
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
 
     def _set_columns(self, new_columns):
         if self._columns_cache is None:
-            self._columns_cache = _ensure_index(new_columns)
+            self._columns_cache = ensure_index(new_columns)
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
@@ -1388,11 +1388,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if bool_only:
             if axis == 0 and not axis_none and len(not_bool_col) == len(self.columns):
-                return pandas.Series(dtype=bool)
-            if len(not_bool_col) == len(self.columns):
-                query_compiler = self
-            else:
-                query_compiler = self.drop(columns=not_bool_col)
+                # TODO add this line back once pandas-dev/pandas#25101 is resolved
+                # return pandas.Series(dtype=bool)
+                pass
+            # See note above about pandas-dev/pandas#25101
+            # TODO remove this when pandas 0.24.2 is released.
+            query_compiler = self
+            # if len(not_bool_col) == len(self.columns):
+            #     query_compiler = self
+            # else:
+            #     query_compiler = self.drop(columns=not_bool_col)
         else:
             if (
                 bool_only is False
@@ -2492,11 +2497,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        func_prepared = self._prepare_method(lambda df: df.apply(func, *args, **kwargs))
+        func_prepared = self._prepare_method(
+            lambda df: df.apply(func, axis, *args, **kwargs)
+        )
         new_data = self._map_across_full_axis(axis, func_prepared)
-        # When the function is list-like, the function names become the index
-        new_index = [f if isinstance(f, string_types) else f.__name__ for f in func]
-        return self.__constructor__(new_data, new_index, self.columns)
+        # When the function is list-like, the function names become the index/columns
+        new_index = (
+            [f if isinstance(f, string_types) else f.__name__ for f in func]
+            if axis == 0
+            else self.index
+        )
+        new_columns = (
+            [f if isinstance(f, string_types) else f.__name__ for f in func]
+            if axis == 1
+            else self.columns
+        )
+        return self.__constructor__(new_data, new_index, new_columns)
 
     def _callable_func(self, func, axis, *args, **kwargs):
         """Apply callable functions across given axis.

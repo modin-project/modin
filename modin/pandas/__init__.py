@@ -14,7 +14,6 @@ from pandas import (
     factorize,
     test,
     qcut,
-    match,
     Panel,
     date_range,
     period_range,
@@ -64,7 +63,7 @@ from .general import isna, isnull, merge, pivot_table
 from .plotting import Plotting as plotting
 from .. import __execution_engine__ as execution_engine
 
-__pandas_version__ = "0.23.4"
+__pandas_version__ = "0.24.1"
 
 if pandas.__version__ != __pandas_version__:
     raise ImportError(
@@ -131,7 +130,7 @@ def initialize_ray():
 if execution_engine == "Ray":
     initialize_ray()
     num_cpus = ray.global_state.cluster_resources()["CPU"]
-elif execution_engine == "Dask":
+elif execution_engine == "Dask":  # pragma: no cover
     from distributed.client import _get_global_client
 
     if threading.current_thread().name == "MainThread":
@@ -174,7 +173,6 @@ __all__ = [
     "factorize",
     "test",
     "qcut",
-    "match",
     "to_datetime",
     "get_dummies",
     "isna",

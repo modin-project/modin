@@ -141,6 +141,7 @@ agg_func = {
     "sum mean": ["sum", "mean"],
     "sum sum": ["sum", "sum"],
     "sum df sum": ["sum", lambda df: df.sum()],
+    "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
 agg_func_values = list(agg_func.values())

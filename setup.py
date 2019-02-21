@@ -15,7 +15,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==0.23.4", "ray==0.6.2", "numpy<=1.15.0", "typing"],
+    install_requires=["pandas==0.24.1", "ray==0.6.2", "numpy<=1.15.0", "typing"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": ["dask==1.0.0", "distributed==1.25.0"],
