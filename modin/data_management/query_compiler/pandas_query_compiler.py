@@ -49,9 +49,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if len(self.columns) != len(self._dtype_cache):
                 if all(col in self._dtype_cache.index for col in self.columns):
+<<<<<<< HEAD
                     self._dtype_cache = pandas.Series(
                         {col: self._dtype_cache[col] for col in self.columns}
                     )
+=======
+                    self._dtype_cache = pandas.Series({col: self._dtype_cache[col] for col in self.columns})
+>>>>>>> Fix how dtypes calculated and empty dataframes are converted to pandas
                 else:
                     calculate_dtype = True
             elif not self._dtype_cache.equals(self.columns):
@@ -463,6 +467,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         df = self.data.to_pandas(is_transposed=self._is_transposed)
         if df.empty:
+<<<<<<< HEAD
             if len(self.columns) != 0:
                 data = [
                     pandas.Series(dtype=self.dtypes[col_name], name=col_name)
@@ -471,6 +476,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 df = pandas.concat(data, axis=1)
             else:
                 df = pandas.DataFrame(index=self.index)
+=======
+            data = [
+                pandas.Series(dtype=self.dtypes[col_name], name=col_name)
+                for col_name in self.columns
+            ]
+            df = pandas.concat(data, axis=1)
+>>>>>>> Fix how dtypes calculated and empty dataframes are converted to pandas
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
