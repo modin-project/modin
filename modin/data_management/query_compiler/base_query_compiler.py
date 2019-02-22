@@ -1052,7 +1052,6 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     @property
     def __constructor__(self):
         raise NotImplementedError("Must be implemented in children classes")
-        return BaseQueryCompiler
 
     _dtype_cache = None
 
