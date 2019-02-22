@@ -2790,7 +2790,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
 class PandasQueryCompilerView(PandasQueryCompiler):
     """
-    This class represent a view of the PandasDataManager
+    This class represent a view of the PandasQueryCompiler
 
     In particular, the following constraints are broken:
     - (len(self.index), len(self.columns)) != self.data.shape
@@ -2826,6 +2826,11 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         PandasQueryCompiler.__init__(
             self, block_partitions_object, index, columns, dtypes
         )
+
+    @property
+    def __constructor__(self):
+        """Return parent object when getting the constructor."""
+        return PandasQueryCompiler
 
     _dtype_cache = None
 
@@ -2869,7 +2874,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     def _set_data(self, new_data):
         """Note this setter will be called by the
-            `super(PandasDataManagerView).__init__` function
+            `super(PandasQueryCompiler).__init__` function
         """
         self.parent_data = new_data
 
