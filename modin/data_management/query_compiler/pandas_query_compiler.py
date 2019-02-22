@@ -49,7 +49,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if len(self.columns) != len(self._dtype_cache):
                 if all(col in self._dtype_cache.index for col in self.columns):
-                    self._dtype_cache = pandas.Series({col: self._dtype_cache[col] for col in self.columns})
+                    self._dtype_cache = pandas.Series(
+                        {col: self._dtype_cache[col] for col in self.columns}
+                    )
                 else:
                     calculate_dtype = True
             elif not self._dtype_cache.equals(self.columns):
