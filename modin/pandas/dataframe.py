@@ -98,14 +98,14 @@ class DataFrame(object):
         num_rows_for_head = num_rows // 2 + 1
         num_cols_for_front = num_cols // 2 + 1
 
-        if len(self.index) <= num_rows:
+        if len(self._query_compiler.index) <= num_rows:
             head = self._query_compiler
             tail = None
         else:
             head = self._query_compiler.head(num_rows_for_head)
             tail = self._query_compiler.tail(num_rows_for_head)
 
-        if len(self.columns) <= num_cols:
+        if len(self._query_compiler.columns) <= num_cols:
             head_front = head.to_pandas()
             # Creating these empty to make the concat logic simpler
             head_back = pandas.DataFrame()
@@ -136,10 +136,10 @@ class DataFrame(object):
         num_cols = 30
 
         result = repr(self._build_repr_df(num_rows, num_cols))
-        if len(self.index) > num_rows or len(self.columns) > num_cols:
+        if len(self._query_compiler.index) > num_rows or len(self._query_compiler.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
             return result.rsplit("\n\n", 1)[0] + "\n\n[{0} rows x {1} columns]".format(
-                len(self.index), len(self.columns)
+                len(self._query_compiler.index), len(self._query_compiler.columns)
             )
         else:
             return result
@@ -158,12 +158,12 @@ class DataFrame(object):
         # We use pandas _repr_html_ to get a string of the HTML representation
         # of the dataframe.
         result = self._build_repr_df(num_rows, num_cols)._repr_html_()
-        if len(self.index) > num_rows or len(self.columns) > num_cols:
+        if len(self._query_compiler.index) > num_rows or len(self._query_compiler.columns) > num_cols:
             # We split so that we insert our correct dataframe dimensions.
             return result.split("<p>")[
                 0
             ] + "<p>{0} rows x {1} columns</p>\n</div>".format(
-                len(self.index), len(self.columns)
+                len(self._query_compiler.index), len(self._query_compiler.columns)
             )
         else:
             return result
@@ -229,7 +229,7 @@ class DataFrame(object):
         Returns:
             The number of elements in the DataFrame.
         """
-        return len(self.index) * len(self.columns)
+        return len(self._query_compiler.index) * len(self._query_compiler.columns)
 
     @property
     def ndim(self):
@@ -252,7 +252,7 @@ class DataFrame(object):
         # The first partition will be enough.
         dtypes = self.dtypes.copy()
         ftypes = ["{0}:dense".format(str(dtype)) for dtype in dtypes.values]
-        result = pandas.Series(ftypes, index=self.columns)
+        result = pandas.Series(ftypes, index=self._query_compiler.columns)
         return result
 
     @property
@@ -272,7 +272,7 @@ class DataFrame(object):
             True if the DataFrame is empty.
             False otherwise.
         """
-        return len(self.columns) == 0 or len(self.index) == 0
+        return len(self._query_compiler.columns) == 0 or len(self._query_compiler.index) == 0
 
     @property
     def values(self):
@@ -290,7 +290,7 @@ class DataFrame(object):
         Returns:
             The axes for the DataFrame.
         """
-        return [self.index, self.columns]
+        return [self._query_compiler.index, self._query_compiler.columns]
 
     @property
     def shape(self):
@@ -299,7 +299,7 @@ class DataFrame(object):
         Returns:
             A tuple with the size of each dimension as they appear in axes().
         """
-        return len(self.index), len(self.columns)
+        return len(self._query_compiler.index), len(self._query_compiler.columns)
 
     def _update_inplace(self, new_query_compiler):
         """Updates the current DataFrame inplace.
@@ -373,7 +373,7 @@ class DataFrame(object):
         axis = pandas.DataFrame()._get_axis_number(axis)
         idx_name = None
         if callable(by):
-            by = by(self.index)
+            by = by(self._query_compiler.index)
         elif isinstance(by, string_types):
             idx_name = by
             by = self.__getitem__(by).values.tolist()
@@ -383,7 +383,7 @@ class DataFrame(object):
                 by = by.values.tolist()
 
             mismatch = (
-                len(by) != len(self) if axis == 0 else len(by) != len(self.columns)
+                len(by) != len(self) if axis == 0 else len(by) != len(self._query_compiler.columns)
             )
 
             if all(obj in self for obj in by) and mismatch:
@@ -482,7 +482,7 @@ class DataFrame(object):
         Returns:
             A pandas Index for this DataFrame.
         """
-        return self.columns
+        return self._query_compiler.columns
 
     def transpose(self, *args, **kwargs):
         """Transpose columns and rows for the DataFrame.
@@ -529,12 +529,12 @@ class DataFrame(object):
             raise TypeError("must specify how or thresh")
         if subset is not None:
             if axis == 1:
-                indices = self.index.get_indexer_for(subset)
+                indices = self._query_compiler.index.get_indexer_for(subset)
                 check = indices == -1
                 if check.any():
                     raise KeyError(list(np.compress(check, subset)))
             else:
-                indices = self.columns.get_indexer_for(subset)
+                indices = self._query_compiler.columns.get_indexer_for(subset)
                 check = indices == -1
                 if check.any():
                     raise KeyError(list(np.compress(check, subset)))
@@ -717,15 +717,15 @@ class DataFrame(object):
             else:
                 # other must have the same index name as self, otherwise
                 # index name will be reset
-                index = pandas.Index([other.name], name=self.index.name)
+                index = pandas.Index([other.name], name=self._query_compiler.index.name)
 
             # Create a Modin DataFrame from this Series for ease of development
             other = DataFrame(pandas.DataFrame(other).T, index=index)._query_compiler
         elif isinstance(other, list):
             if not isinstance(other[0], DataFrame):
                 other = pandas.DataFrame(other)
-                if (self.columns.get_indexer(other.columns) >= 0).all():
-                    other = DataFrame(other.loc[:, self.columns])._query_compiler
+                if (self._query_compiler.columns.get_indexer(other.columns) >= 0).all():
+                    other = DataFrame(other.loc[:, self._query_compiler.columns])._query_compiler
                 else:
                     other = DataFrame(other)._query_compiler
             else:
@@ -736,7 +736,7 @@ class DataFrame(object):
         # If ignore_index is False, by definition the Index will be correct.
         # We also do this first to ensure that we don't waste compute/memory.
         if verify_integrity and not ignore_index:
-            appended_index = self.index.append(other.index)
+            appended_index = self._query_compiler.index.append(other.index)
             is_valid = next((False for idx in appended_index.duplicated() if idx), True)
             if not is_valid:
                 raise ValueError(
@@ -784,9 +784,9 @@ class DataFrame(object):
             if axis == 1:
                 raise TypeError(
                     "(\"'dict' object is not callable\", "
-                    "'occurred at index {0}'".format(self.index[0])
+                    "'occurred at index {0}'".format(self._query_compiler.index[0])
                 )
-            if len(self.columns) != len(set(self.columns)):
+            if len(self._query_compiler.columns) != len(set(self._query_compiler.columns)):
                 warnings.warn(
                     "duplicate column names not supported with apply().",
                     FutureWarning,
@@ -850,7 +850,7 @@ class DataFrame(object):
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
         if isinstance(dtype, dict):
-            if not set(dtype.keys()).issubset(set(self.columns)) and errors == "raise":
+            if not set(dtype.keys()).issubset(set(self._query_compiler.columns)) and errors == "raise":
                 raise KeyError(
                     "Only a column name can be used for the key in"
                     "a dtype mappings argument."
@@ -858,7 +858,7 @@ class DataFrame(object):
             col_dtypes = dtype
 
         else:
-            for column in self.columns:
+            for column in self._query_compiler.columns:
                 col_dtypes[column] = dtype
 
         new_query_compiler = self._query_compiler.astype(col_dtypes, **kwargs)
@@ -1255,13 +1255,13 @@ class DataFrame(object):
             if not is_list_like(axes["index"]):
                 axes["index"] = [axes["index"]]
             if errors == "raise":
-                non_existant = [obj for obj in axes["index"] if obj not in self.index]
+                non_existant = [obj for obj in axes["index"] if obj not in self._query_compiler.index]
                 if len(non_existant):
                     raise ValueError(
                         "labels {} not contained in axis".format(non_existant)
                     )
             else:
-                axes["index"] = [obj for obj in axes["index"] if obj in self.index]
+                axes["index"] = [obj for obj in axes["index"] if obj in self._query_compiler.index]
                 # If the length is zero, we will just do nothing
                 if not len(axes["index"]):
                     axes["index"] = None
@@ -1273,7 +1273,7 @@ class DataFrame(object):
                 axes["columns"] = [axes["columns"]]
             if errors == "raise":
                 non_existant = [
-                    obj for obj in axes["columns"] if obj not in self.columns
+                    obj for obj in axes["columns"] if obj not in self._query_compiler.columns
                 ]
                 if len(non_existant):
                     raise ValueError(
@@ -1281,7 +1281,7 @@ class DataFrame(object):
                     )
             else:
                 axes["columns"] = [
-                    obj for obj in axes["columns"] if obj in self.columns
+                    obj for obj in axes["columns"] if obj in self._query_compiler.columns
                 ]
                 # If the length is zero, we will just do nothing
                 if not len(axes["columns"]):
@@ -1323,7 +1323,7 @@ class DataFrame(object):
         inplace = validate_bool_kwarg(inplace, "inplace")
         duplicates = self.duplicated(subset=subset, keep=keep)
         indices, = duplicates.values.nonzero()
-        return self.drop(index=self.index[indices], inplace=inplace)
+        return self.drop(index=self._query_compiler.index[indices], inplace=inplace)
 
     def duplicated(self, subset=None, keep="first"):
         return self._default_to_pandas(
@@ -1363,7 +1363,7 @@ class DataFrame(object):
         if isinstance(other, pandas.DataFrame):
             # Copy into a Ray DataFrame to simplify logic below
             other = DataFrame(other)
-        if not self.index.equals(other.index) or not self.columns.equals(other.columns):
+        if not self._query_compiler.index.equals(other.index) or not self._query_compiler.columns.equals(other.columns):
             return False
 
         return all(self.eq(other).all())
@@ -1568,7 +1568,7 @@ class DataFrame(object):
             axis = "columns"  # This is the default info axis for dataframes
 
         axis = pandas.DataFrame()._get_axis_number(axis)
-        labels = self.columns if axis else self.index
+        labels = self._query_compiler.columns if axis else self._query_compiler.index
 
         if items is not None:
             bool_arr = labels.isin(items)
@@ -1587,7 +1587,7 @@ class DataFrame(object):
             bool_arr = labels.map(f).tolist()
         if not axis:
             return self[bool_arr]
-        return self[self.columns[bool_arr]]
+        return self[self._query_compiler.columns[bool_arr]]
 
     def first(self, offset):
         return self._default_to_pandas(pandas.DataFrame.first, offset)
@@ -1790,7 +1790,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the first n rows of the DataFrame.
         """
-        if n >= len(self.index):
+        if n >= len(self._query_compiler.index):
             return self.copy()
         return DataFrame(query_compiler=self._query_compiler.head(n))
 
@@ -1929,7 +1929,7 @@ class DataFrame(object):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
             value = value.iloc[:, 0]
-        if len(self.index) == 0:
+        if len(self._query_compiler.index) == 0:
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
@@ -1939,25 +1939,25 @@ class DataFrame(object):
                     "Series"
                 )
             new_index = value.index.copy()
-            new_columns = self.columns.insert(loc, column)
+            new_columns = self._query_compiler.columns.insert(loc, column)
             new_query_compiler = DataFrame(
                 value, index=new_index, columns=new_columns
             )._query_compiler
-        elif len(self.columns) == 0 and loc == 0:
+        elif len(self._query_compiler.columns) == 0 and loc == 0:
             new_query_compiler = DataFrame(
-                data=value, columns=[column], index=self.index
+                data=value, columns=[column], index=self._query_compiler.index
             )._query_compiler
         else:
             if not is_list_like(value):
-                value = np.full(len(self.index), value)
-            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
+                value = np.full(len(self._query_compiler.index), value)
+            if not isinstance(value, pandas.Series) and len(value) != len(self._query_compiler.index):
                 raise ValueError("Length of values does not match length of index")
-            if not allow_duplicates and column in self.columns:
+            if not allow_duplicates and column in self._query_compiler.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
-            if loc > len(self.columns):
+            if loc > len(self._query_compiler.columns):
                 raise IndexError(
                     "index {0} is out of bounds for axis 0 with size {1}".format(
-                        loc, len(self.columns)
+                        loc, len(self._query_compiler.columns)
                     )
                 )
             if loc < 0:
@@ -2000,10 +2000,10 @@ class DataFrame(object):
         Returns:
             A generator that iterates over the rows of the frame.
         """
-        index_iter = iter(self.index)
+        index_iter = iter(self._query_compiler.index)
 
         def iterrow_builder(df):
-            df.columns = self.columns
+            df.columns = self._query_compiler.columns
             df.index = [next(index_iter)]
             return df.iterrows()
 
@@ -2022,11 +2022,11 @@ class DataFrame(object):
         Returns:
             A generator that iterates over the columns of the frame.
         """
-        col_iter = iter(self.columns)
+        col_iter = iter(self._query_compiler.columns)
 
         def items_builder(df):
             df.columns = [next(col_iter)]
-            df.index = self.index
+            df.index = self._query_compiler.index
             return df.items()
 
         partition_iterator = PartitionIterator(self._query_compiler, 1, items_builder)
@@ -2060,10 +2060,10 @@ class DataFrame(object):
         Returns:
             A tuple representing row data. See args for varying tuples.
         """
-        index_iter = iter(self.index)
+        index_iter = iter(self._query_compiler.index)
 
         def itertuples_builder(df):
-            df.columns = self.columns
+            df.columns = self._query_compiler.columns
             df.index = [next(index_iter)]
             return df.itertuples(index=index, name=name)
 
@@ -2108,7 +2108,7 @@ class DataFrame(object):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
             # would otherwise require a lot more logic.
-            pandas.DataFrame(columns=self.columns).join(
+            pandas.DataFrame(columns=self._query_compiler.columns).join(
                 pandas.DataFrame(columns=other.columns),
                 lsuffix=lsuffix,
                 rsuffix=rsuffix,
@@ -2130,7 +2130,7 @@ class DataFrame(object):
                     "Joining multiple DataFrames only supported for joining on index"
                 )
             # See note above about error checking with an empty join.
-            pandas.DataFrame(columns=self.columns).join(
+            pandas.DataFrame(columns=self._query_compiler.columns).join(
                 [pandas.DataFrame(columns=obj.columns) for obj in other],
                 lsuffix=lsuffix,
                 rsuffix=rsuffix,
@@ -2340,9 +2340,9 @@ class DataFrame(object):
             then the first value of the Series will be 'Index' with its memory usage.
         """
         result = self._query_compiler.memory_usage(index=index, deep=deep)
-        result.index = self.columns
+        result.index = self._query_compiler.columns
         if index:
-            index_value = self.index.memory_usage(deep=deep)
+            index_value = self._query_compiler.index.memory_usage(deep=deep)
             return pandas.Series(index_value, index=["Index"]).append(result)
 
         return result
@@ -2944,11 +2944,11 @@ class DataFrame(object):
         if (
             level is not None
             or (
-                isinstance(self.columns, pandas.MultiIndex)
+                isinstance(self._query_compiler.columns, pandas.MultiIndex)
                 and (columns is not None or axis == 1)
             )
             or (
-                isinstance(self.index, pandas.MultiIndex)
+                isinstance(self._query_compiler.index, pandas.MultiIndex)
                 and (index is not None or axis == 0)
             )
         ):
@@ -3058,7 +3058,7 @@ class DataFrame(object):
         # inplace should always be true because this is just a copy, and we will use the
         # results after.
         kwargs["inplace"] = True
-        df_to_rename = pandas.DataFrame(index=self.index, columns=self.columns)
+        df_to_rename = pandas.DataFrame(index=self._query_compiler.index, columns=self._query_compiler.columns)
         df_to_rename.rename(**kwargs)
 
         if inplace:
@@ -3122,7 +3122,7 @@ class DataFrame(object):
                     newnames = v
                 else:
                     f = _get_rename_function(v)
-                    curnames = self.index.names if axis == 0 else self.columns.names
+                    curnames = self._query_compiler.index.names if axis == 0 else self._query_compiler.columns.names
                     newnames = [f(name) for name in curnames]
                 result._set_axis_name(newnames, axis=axis, inplace=True)
             if not inplace:
@@ -3243,8 +3243,8 @@ class DataFrame(object):
         # exist.
         if (
             not drop
-            and not isinstance(self.index, pandas.MultiIndex)
-            and all(n in self.columns for n in ["level_0", "index"])
+            and not isinstance(self._query_compiler.index, pandas.MultiIndex)
+            and all(n in self._query_compiler.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
         new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
@@ -3438,11 +3438,11 @@ class DataFrame(object):
         """
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if axis:
-            axis_labels = self.columns
+            axis_labels = self._query_compiler.columns
             axis_length = len(axis_labels)
         else:
             # Getting rows requires indices instead of labels. RangeIndex provides this.
-            axis_labels = pandas.RangeIndex(len(self.index))
+            axis_labels = pandas.RangeIndex(len(self._query_compiler.index))
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
@@ -3509,8 +3509,8 @@ class DataFrame(object):
             # The Empty Dataframe should have either columns or index specified
             # depending on which axis is passed in.
             return DataFrame(
-                columns=[] if axis == 1 else self.columns,
-                index=self.index if axis == 1 else [],
+                columns=[] if axis == 1 else self._query_compiler.columns,
+                index=self._query_compiler.index if axis == 1 else [],
             )
         if random_state is not None:
             # Get a random number generator depending on the type of
@@ -3562,8 +3562,8 @@ class DataFrame(object):
 
         sel = tuple(map(set, (include, exclude)))
         include, exclude = map(lambda x: set(map(infer_dtype_from_object, x)), sel)
-        include_these = pandas.Series(not bool(include), index=self.columns)
-        exclude_these = pandas.Series(not bool(exclude), index=self.columns)
+        include_these = pandas.Series(not bool(include), index=self._query_compiler.columns)
+        exclude_these = pandas.Series(not bool(exclude), index=self._query_compiler.columns)
 
         def is_dtype_instance_mapper(column, dtype):
             return column, functools.partial(issubclass, dtype.type)
@@ -3580,7 +3580,7 @@ class DataFrame(object):
         indicate = [
             i for i in range(len(dtype_indexer.values)) if not dtype_indexer.values[i]
         ]
-        return self.drop(columns=self.columns[indicate], inplace=False)
+        return self.drop(columns=self._query_compiler.columns[indicate], inplace=False)
 
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
@@ -3660,12 +3660,12 @@ class DataFrame(object):
         arrays = []
         names = []
         if append:
-            names = [x for x in self.index.names]
-            if isinstance(self.index, pandas.MultiIndex):
-                for i in range(self.index.nlevels):
-                    arrays.append(self.index._get_level_values(i))
+            names = [x for x in self._query_compiler.index.names]
+            if isinstance(self._query_compiler.index, pandas.MultiIndex):
+                for i in range(self._query_compiler.index.nlevels):
+                    arrays.append(self._query_compiler.index._get_level_values(i))
             else:
-                arrays.append(self.index)
+                arrays.append(self._query_compiler.index)
         to_remove = []
         for col in keys:
             if isinstance(col, pandas.MultiIndex):
@@ -3832,7 +3832,7 @@ class DataFrame(object):
         # TODO create a more efficient way to sort
         if axis == 0:
             broadcast_value_dict = {col: self[col] for col in by}
-            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
+            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self._query_compiler.index)
             new_index = broadcast_values.sort_values(
                 by=by,
                 axis=axis,
@@ -3843,13 +3843,13 @@ class DataFrame(object):
             return self.reindex(index=new_index, copy=not inplace)
         else:
             broadcast_value_list = [
-                to_pandas(self[row :: len(self.index)]) for row in by
+                to_pandas(self[row :: len(self._query_compiler.index)]) for row in by
             ]
             index_builder = list(zip(broadcast_value_list, by))
             broadcast_values = pandas.concat(
                 [row for row, idx in index_builder], copy=False
             )
-            broadcast_values.columns = self.columns
+            broadcast_values.columns = self._query_compiler.columns
             new_columns = broadcast_values.sort_values(
                 by=by,
                 axis=axis,
@@ -3964,7 +3964,7 @@ class DataFrame(object):
         Returns:
             A new DataFrame with the last n rows of this DataFrame.
         """
-        if n >= len(self.index):
+        if n >= len(self._query_compiler.index):
             return self.copy()
         return DataFrame(query_compiler=self._query_compiler.tail(n))
 
@@ -4317,7 +4317,7 @@ class DataFrame(object):
         if index:
             if not index_label:
                 index_label = "index"
-            new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
+            new_query_compiler = new_query_compiler.insert(0, index_label, self._query_compiler.index)
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
@@ -4597,13 +4597,13 @@ class DataFrame(object):
                 cond = np.asanyarray(cond)
             if cond.shape != self.shape:
                 raise ValueError("Array conditional must be same shape as self")
-            cond = DataFrame(cond, index=self.index, columns=self.columns)
+            cond = DataFrame(cond, index=self._query_compiler.index, columns=self._query_compiler.columns)
         if isinstance(other, DataFrame):
             other = other._query_compiler
         elif isinstance(other, pandas.Series):
-            other = other.reindex(self.index if not axis else self.columns)
+            other = other.reindex(self._query_compiler.index if not axis else self._query_compiler.columns)
         else:
-            index = self.index if not axis else self.columns
+            index = self._query_compiler.index if not axis else self._query_compiler.columns
             other = pandas.Series(other, index=index)
         query_compiler = self._query_compiler.where(
             cond._query_compiler, other, axis=axis, level=level
@@ -4626,15 +4626,15 @@ class DataFrame(object):
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
-        is_mi_columns = isinstance(self.columns, pandas.MultiIndex)
+        is_mi_columns = isinstance(self._query_compiler.columns, pandas.MultiIndex)
         try:
-            if key in self.columns and not is_mi_columns:
+            if key in self._query_compiler.columns and not is_mi_columns:
                 return self._getitem_column(key)
         except (KeyError, ValueError, TypeError):
             pass
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
-        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self._query_compiler.index), key)
         if indexer is not None:
             return self._getitem_slice(indexer)
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
@@ -4654,29 +4654,29 @@ class DataFrame(object):
 
     def _getitem_array(self, key):
         if is_bool_indexer(key):
-            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
+            if isinstance(key, pandas.Series) and not key.index.equals(self._query_compiler.index):
                 warnings.warn(
                     "Boolean Series key will be reindexed to match DataFrame index.",
                     PendingDeprecationWarning,
                     stacklevel=3,
                 )
-            elif len(key) != len(self.index):
+            elif len(key) != len(self._query_compiler.index):
                 raise ValueError(
                     "Item wrong length {} instead of {}.".format(
-                        len(key), len(self.index)
+                        len(key), len(self._query_compiler.index)
                     )
                 )
-            key = check_bool_indexer(self.index, key)
+            key = check_bool_indexer(self._query_compiler.index, key)
             # We convert to a RangeIndex because getitem_row_array is expecting a list
             # of indices, and RangeIndex will give us the exact indices of each boolean
             # requested.
-            key = pandas.RangeIndex(len(self.index))[key]
+            key = pandas.RangeIndex(len(self._query_compiler.index))[key]
             return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
         else:
-            if any(k not in self.columns for k in key):
+            if any(k not in self._query_compiler.columns for k in key):
                 raise KeyError(
                     "{} not index".format(
-                        str([k for k in key if k not in self.columns]).replace(",", "")
+                        str([k for k in key if k not in self._query_compiler.columns]).replace(",", "")
                     )
                 )
             return DataFrame(
@@ -4687,7 +4687,7 @@ class DataFrame(object):
         # We convert to a RangeIndex because getitem_row_array is expecting a list
         # of indices, and RangeIndex will give us the exact indices of each boolean
         # requested.
-        key = pandas.RangeIndex(len(self.index))[key]
+        key = pandas.RangeIndex(len(self._query_compiler.index))[key]
         return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
 
     def __getattr__(self, key):
@@ -4702,7 +4702,7 @@ class DataFrame(object):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
-            if key in self.columns:
+            if key in self._query_compiler.columns:
                 return self[key]
             raise e
 
@@ -4724,10 +4724,10 @@ class DataFrame(object):
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             return self._default_to_pandas(pandas.DataFrame.__setitem__, key, value)
-        if key not in self.columns:
-            self.insert(loc=len(self.columns), column=key, value=value)
+        if key not in self._query_compiler.columns:
+            self.insert(loc=len(self._query_compiler.columns), column=key, value=value)
         else:
-            loc = self.columns.get_loc(key)
+            loc = self._query_compiler.columns.get_loc(key)
             self.__delitem__(key)
             self.insert(loc=loc, column=key, value=value)
 
@@ -4737,7 +4737,7 @@ class DataFrame(object):
         Returns:
             Returns an integer length of the DataFrame object.
         """
-        return len(self.index)
+        return len(self._query_compiler.index)
 
     def __unicode__(self):
         return self._default_to_pandas(pandas.DataFrame.__unicode__)
@@ -4754,7 +4754,7 @@ class DataFrame(object):
         Returns:
             An Iterator over the columns of the DataFrame.
         """
-        return iter(self.columns)
+        return iter(self._query_compiler.columns)
 
     def __contains__(self, key):
         """Searches columns for specific key
@@ -4765,7 +4765,7 @@ class DataFrame(object):
         Returns:
             Returns a boolean if the specified key exists as a column name
         """
-        return self.columns.__contains__(key)
+        return self._query_compiler.columns.__contains__(key)
 
     def __nonzero__(self):
         raise ValueError(
@@ -5066,21 +5066,21 @@ class DataFrame(object):
         elif is_list_like(other):
             other_dtypes = [type(x) for x in other]
             if axis == 0:
-                if len(other) != len(self.index):
+                if len(other) != len(self._query_compiler.index):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self.index), len(other))
+                        "given {1}".format(len(self._query_compiler.index), len(other))
                     )
             else:
-                if len(other) != len(self.columns):
+                if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self.columns), len(other))
+                        "given {1}".format(len(self._query_compiler.columns), len(other))
                     )
         else:
             other_dtypes = [
                 type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
+                for _ in range(len(self._query_compiler.index) if axis else len(self._query_compiler.columns))
             ]
 
         # Do dtype checking
