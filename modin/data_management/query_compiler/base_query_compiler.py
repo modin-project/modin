@@ -71,7 +71,6 @@ class BaseQueryCompiler(object):
 
     def add_suffix(self, suffix):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Metadata modification abstract methods
 
     # Abstract copy
@@ -1000,7 +999,6 @@ class BaseQueryCompiler(object):
 
     def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract methods for QueryCompiler
 
     @property
@@ -1012,7 +1010,6 @@ class BaseQueryCompiler(object):
     # This will change the shape of the resulting data.
     def delitem(self, key):
         return self.drop(columns=[key])
-
     # END __delitem__
 
 
@@ -1052,9 +1049,15 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     @property
     def __constructor__(self):
         raise NotImplementedError("Must be implemented in children classes")
+<<<<<<< HEAD
 
     _dtype_cache = None
+=======
+        return BaseQueryCompiler
+>>>>>>> Fix inheritance issue with PandasQueryCompilerView
 
+    _dtype_cache = None
+    
     def _get_dtype(self):
         """Override the parent on this to avoid getting the wrong dtypes."""
         raise NotImplementedError("Must be implemented in children classes")
@@ -1082,5 +1085,4 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     def global_idx_to_numeric_idx(self, axis, indices):
         raise NotImplementedError("Must be implemented in children classes")
-
     # END Abstract functions for QueryCompilerView
