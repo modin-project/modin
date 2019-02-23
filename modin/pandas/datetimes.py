@@ -9,7 +9,7 @@ from .dataframe import DataFrame
 
 def to_datetime(
     arg,
-    errors="raise",
+    errors='raise',
     dayfirst=False,
     yearfirst=False,
     utc=None,
@@ -18,7 +18,8 @@ def to_datetime(
     exact=True,
     unit=None,
     infer_datetime_format=False,
-    origin="unix",
+    origin='unix',
+    cache=False,
 ):
     """Convert the arg to datetime format. If not Ray DataFrame, this falls
        back on pandas.
@@ -56,6 +57,7 @@ def to_datetime(
             unit=unit,
             infer_datetime_format=infer_datetime_format,
             origin=origin,
+            cache=cache,
         )
     # Pandas seems to ignore this kwarg so we will too
     pandas.to_datetime(
@@ -70,5 +72,6 @@ def to_datetime(
         unit=unit,
         infer_datetime_format=infer_datetime_format,
         origin=origin,
+        cache=cache,
     )
     return arg._query_compiler.to_datetime()

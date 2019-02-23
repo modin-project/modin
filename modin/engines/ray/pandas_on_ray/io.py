@@ -505,22 +505,23 @@ class PandasOnRayIO(BaseIO):
         return new_query_compiler
 
     @classmethod
-    def read_feather(cls, path, nthreads=1, columns=None):
+    def read_feather(cls, path, columns=None, use_threads=True):
         """Read a pandas.DataFrame from Feather format.
            Ray DataFrame only supports pyarrow engine for now.
 
         Args:
             path: The filepath of the feather file.
                   We only support local files for now.
-            nthreads: since we use pyarrow reader then this does nothing.
                 multi threading is set to True by default
-            columns: not supported by pandas api, but can be passed here to read only specific columns
+            columns: not supported by pandas api, but can be passed here to read only
+                specific columns
+            use_threads: Whether or not to use threads when reading
 
         Notes:
             pyarrow feather is used. Please refer to the documentation here
             https://arrow.apache.org/docs/python/api.html#feather-format
         """
-        if not columns:
+        if columns is None:
             from pyarrow.feather import FeatherReader
 
             fr = FeatherReader(path)

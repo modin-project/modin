@@ -5,6 +5,16 @@ from __future__ import print_function
 # TODO: In the future `set_option` or similar needs to run on every node
 # in order to keep all pandas instances across nodes consistent
 import pandas
+
+__pandas_version__ = "0.24.1"
+
+if pandas.__version__ != __pandas_version__:
+    raise ImportError(
+        "The pandas version installed does not match the required pandas "
+        "version in Modin. Please install pandas {} to use "
+        "Modin.".format(__pandas_version__)
+    )
+
 from pandas import (
     eval,
     unique,
@@ -31,6 +41,37 @@ from pandas import (
     NaT,
     PeriodIndex,
     Categorical,
+    Interval,
+    UInt8Dtype,
+    UInt16Dtype,
+    UInt32Dtype,
+    UInt64Dtype,
+    SparseDtype,
+    Int8Dtype,
+    Int16Dtype,
+    Int32Dtype,
+    Int64Dtype,
+    CategoricalDtype,
+    DatetimeTZDtype,
+    IntervalDtype,
+    PeriodDtype,
+    RangeIndex,
+    Int64Index,
+    UInt64Index,
+    Float64Index,
+    TimedeltaIndex,
+    IntervalIndex,
+    IndexSlice,
+    TimeGrouper,
+    Grouper,
+    array,
+    Period,
+    show_versions,
+    DateOffset,
+    timedelta_range,
+    infer_freq,
+    interval_range,
+    ExcelWriter,
 )
 import threading
 import os
@@ -57,20 +98,28 @@ from .io import (
     read_sql,
     read_gbq,
     read_table,
+    read_fwf,
+    read_sql_table,
+    read_sql_query,
+    ExcelFile,
+    to_pickle,
+    HDFStore,
 )
-from .reshape import get_dummies, melt, crosstab
-from .general import isna, isnull, merge, pivot_table
+from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
+from .general import (
+    isna,
+    isnull,
+    merge,
+    merge_asof,
+    merge_ordered,
+    pivot_table,
+    notnull,
+    notna,
+    pivot,
+)
 from .plotting import Plotting as plotting
+from .sparse import SparseArray, SparseSeries, SparseDataFrame
 from .. import __execution_engine__ as execution_engine
-
-__pandas_version__ = "0.24.1"
-
-if pandas.__version__ != __pandas_version__:
-    raise ImportError(
-        "The pandas version installed does not match the required pandas "
-        "version in Modin. Please install pandas {} to use "
-        "Modin.".format(__pandas_version__)
-    )
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
