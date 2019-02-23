@@ -308,33 +308,37 @@ class BaseIO(object):
         **kwds
     ):
         ErrorMessage.default_to_pandas("`read_excel`")
-        return cls.from_pandas(pandas.read_excel(io,
-                                                 sheet_name=sheet_name,
-                                                 header=header,
-                                                names=names,
-                                                index_col=index_col,
-                                                parse_cols=parse_cols,
-                                                usecols=usecols,
-                                                squeeze=squeeze,
-                                                dtype=dtype,
-                                                engine=engine,
-                                                converters=converters,
-                                                true_values=true_values,
-                                                false_values=false_values,
-                                                skiprows=skiprows,
-                                                nrows=nrows,
-                                                na_values=na_values,
-                                                keep_default_na=keep_default_na,
-                                                verbose=verbose,
-                                                parse_dates=parse_dates,
-                                                date_parser=date_parser,
-                                                thousands=thousands,
-                                                comment=comment,
-                                                skip_footer=skip_footer,
-                                                skipfooter=skipfooter,
-                                                convert_float=convert_float,
-                                                mangle_dupe_cols=mangle_dupe_cols,
-                                                 **kwds))
+        return cls.from_pandas(
+            pandas.read_excel(
+                io,
+                sheet_name=sheet_name,
+                header=header,
+                names=names,
+                index_col=index_col,
+                parse_cols=parse_cols,
+                usecols=usecols,
+                squeeze=squeeze,
+                dtype=dtype,
+                engine=engine,
+                converters=converters,
+                true_values=true_values,
+                false_values=false_values,
+                skiprows=skiprows,
+                nrows=nrows,
+                na_values=na_values,
+                keep_default_na=keep_default_na,
+                verbose=verbose,
+                parse_dates=parse_dates,
+                date_parser=date_parser,
+                thousands=thousands,
+                comment=comment,
+                skip_footer=skip_footer,
+                skipfooter=skipfooter,
+                convert_float=convert_float,
+                mangle_dupe_cols=mangle_dupe_cols,
+                **kwds
+            )
+        )
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
@@ -346,13 +350,17 @@ class BaseIO(object):
     @classmethod
     def read_feather(cls, path, columns=None, use_threads=True):
         ErrorMessage.default_to_pandas("`read_feather`")
-        return cls.from_pandas(pandas.read_feather(path, columns=columns, use_threads=use_threads))
+        return cls.from_pandas(
+            pandas.read_feather(path, columns=columns, use_threads=use_threads)
+        )
 
     @classmethod
     def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False, **kwargs):
         ErrorMessage.default_to_pandas("`read_msgpack`")
         return cls.from_pandas(
-            pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator, **kwargs)
+            pandas.read_msgpack(
+                path_or_buf, encoding=encoding, iterator=iterator, **kwargs
+            )
         )
 
     @classmethod
@@ -440,22 +448,69 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_fwf(cls, filepath_or_buffer, colspecs='infer', widths=None, infer_nrows=100, **kwds):
+    def read_fwf(
+        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+    ):
         ErrorMessage.default_to_pandas("`read_fwf`")
-        return cls.from_pandas(pandas.read_fwf(filepath_or_buffer, colspecs=colspecs, widths=widths, infer_nrows=infer_nrows, **kwds))
+        return cls.from_pandas(
+            pandas.read_fwf(
+                filepath_or_buffer,
+                colspecs=colspecs,
+                widths=widths,
+                infer_nrows=infer_nrows,
+                **kwds
+            )
+        )
 
     @classmethod
-    def read_sql_table(cls, table_name, con, schema=None, index_col=None,
-                   coerce_float=True, parse_dates=None, columns=None,
-                   chunksize=None):
+    def read_sql_table(
+        cls,
+        table_name,
+        con,
+        schema=None,
+        index_col=None,
+        coerce_float=True,
+        parse_dates=None,
+        columns=None,
+        chunksize=None,
+    ):
         ErrorMessage.default_to_pandas("`read_sql_table`")
-        return cls.from_pandas(pandas.read_sql_table(table_name, con, schema=schema, index_col=index_col, coerce_float=coerce_float, parse_dates=parse_dates, columns=columns, chunksize=chunksize))
+        return cls.from_pandas(
+            pandas.read_sql_table(
+                table_name,
+                con,
+                schema=schema,
+                index_col=index_col,
+                coerce_float=coerce_float,
+                parse_dates=parse_dates,
+                columns=columns,
+                chunksize=chunksize,
+            )
+        )
 
     @classmethod
-    def read_sql_query(cls, sql, con, index_col=None, coerce_float=True, params=None,
-                   parse_dates=None, chunksize=None):
+    def read_sql_query(
+        cls,
+        sql,
+        con,
+        index_col=None,
+        coerce_float=True,
+        params=None,
+        parse_dates=None,
+        chunksize=None,
+    ):
         ErrorMessage.default_to_pandas("`read_sql_query`")
-        return cls.from_pandas(pandas.read_sql_query(sql, con, index_col=index_col, coerce_float=coerce_float, params=params, parse_dates=parse_dates, chunksize=chunksize))
+        return cls.from_pandas(
+            pandas.read_sql_query(
+                sql,
+                con,
+                index_col=index_col,
+                coerce_float=coerce_float,
+                params=params,
+                parse_dates=parse_dates,
+                chunksize=chunksize,
+            )
+        )
 
     @classmethod
     def to_sql(
@@ -486,9 +541,13 @@ class BaseIO(object):
         )
 
     @classmethod
-    def to_pickle(cls, obj, path, compression='infer', protocol=4):
+    def to_pickle(cls, obj, path, compression="infer", protocol=4):
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
-            return pandas.to_pickle(obj.to_pandas(), path, compression=compression, protocol=protocol)
+            return pandas.to_pickle(
+                obj.to_pandas(), path, compression=compression, protocol=protocol
+            )
         else:
-            return pandas.to_pickle(obj, path, compression=compression, protocol=protocol)
+            return pandas.to_pickle(
+                obj, path, compression=compression, protocol=protocol
+            )

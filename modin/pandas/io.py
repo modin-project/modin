@@ -315,37 +315,49 @@ def read_sql(
     return DataFrame(query_compiler=BaseFactory.read_sql(**kwargs))
 
 
-def read_fwf(filepath_or_buffer, colspecs='infer', widths=None, infer_nrows=100, **kwds):
+def read_fwf(
+    filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_fwf(**kwargs))
 
 
-def read_sql_table(table_name, con, schema=None, index_col=None,
-                   coerce_float=True, parse_dates=None, columns=None,
-                   chunksize=None):
+def read_sql_table(
+    table_name,
+    con,
+    schema=None,
+    index_col=None,
+    coerce_float=True,
+    parse_dates=None,
+    columns=None,
+    chunksize=None,
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql_table(**kwargs))
 
 
-def read_sql_query(sql, con, index_col=None, coerce_float=True, params=None,
-                   parse_dates=None, chunksize=None):
+def read_sql_query(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    chunksize=None,
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql_query(**kwargs))
 
 
-def to_pickle(obj, path, compression='infer', protocol=4):
+def to_pickle(obj, path, compression="infer", protocol=4):
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return BaseFactory.to_pickle(obj, path, compression=compression, protocol=protocol)
 
 
 class DefaultToPandasImplementation(object):
-
     def __getattribute__(self, item):
-        default_behaviors = [
-            "__init__",
-            "__class__",
-        ]
+        default_behaviors = ["__init__", "__class__"]
         if item not in default_behaviors:
             method = super(HDFStore, self).__getattribute__(item)
             # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
@@ -356,9 +368,7 @@ class DefaultToPandasImplementation(object):
             # The isclass check is to ensure that we return the correct type. Some of
             # the objects that are called result in classes being returned, and we don't
             # want to override with our own function.
-            is_callable = (
-                callable(method)
-            )
+            is_callable = callable(method)
 
             if is_callable:
 
@@ -392,12 +402,19 @@ class DefaultToPandasImplementation(object):
                         If `inplace` is True: None, else: A new Series.
                     """
                     from .utils import to_pandas
+
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
                         ErrorMessage.default_to_pandas("`{}`".format(item))
-                    args = [to_pandas(arg) if isinstance(arg, DataFrame) else arg for arg in args]
-                    kwargs = {k: to_pandas(v) if isinstance(v, DataFrame) else v for k, v in kwargs.items()}
+                    args = [
+                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        for arg in args
+                    ]
+                    kwargs = {
+                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        for k, v in kwargs.items()
+                    }
                     obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
                     if isinstance(obj, pandas.DataFrame):
                         return DataFrame(obj)

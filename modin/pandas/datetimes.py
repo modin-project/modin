@@ -9,7 +9,7 @@ from .dataframe import DataFrame
 
 def to_datetime(
     arg,
-    errors='raise',
+    errors="raise",
     dayfirst=False,
     yearfirst=False,
     utc=None,
@@ -18,7 +18,7 @@ def to_datetime(
     exact=True,
     unit=None,
     infer_datetime_format=False,
-    origin='unix',
+    origin="unix",
     cache=False,
 ):
     """Convert the arg to datetime format. If not Ray DataFrame, this falls

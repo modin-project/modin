@@ -40,9 +40,7 @@ def test_top_level_api_equality():
         if m in allowed_different:
             continue
         try:
-            pandas_sig = dict(
-                inspect.signature(getattr(pandas, m)).parameters
-            )
+            pandas_sig = dict(inspect.signature(getattr(pandas, m)).parameters)
         except TypeError:
             continue
         try:
