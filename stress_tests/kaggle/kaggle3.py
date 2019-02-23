@@ -3,17 +3,17 @@
 
 # # DATA SCIENTIST
 # **In this tutorial, I only explain you what you need to be a data scientist neither more nor less.**
-# 
+#
 # Data scientist need to have these skills:
-# 
+#
 # 1. Basic Tools: Like python, R or SQL. You do not need to know everything. What you only need is to learn how to use **python**
-# 1. Basic Statistics: Like mean, median or standart deviation. If you know basic statistics, you can use **python** easily. 
+# 1. Basic Statistics: Like mean, median or standart deviation. If you know basic statistics, you can use **python** easily.
 # 1. Data Munging: Working with messy and difficult data. Like a inconsistent date and string formatting. As you guess, **python** helps us.
 # 1. Data Visualization: Title is actually explanatory. We will visualize the data with **python** like matplot and seaborn libraries.
 # 1. Machine Learning: You do not need to understand math behind the machine learning technique. You only need is understanding basics of machine learning and learning how to implement it while using **python**.
-# 
+#
 # ### As a summary we will learn python to be data scientist !!!
-# 
+#
 # **Content:**
 # 1. [Introduction to Python:](#1)
 #     1. [Matplotlib](#2)
@@ -80,8 +80,9 @@
 
 # This Python 3 environment comes with many helpful analytics libraries installed
 # It is defined by the kaggle/python docker image: https://github.com/kaggle/docker-python
-# For example, here's several helpful packages to load in 
-
+# For example, here's several helpful packages to load in
+import matplotlib
+matplotlib.use('PS')
 import numpy as np # linear algebra
 import modin.pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
@@ -144,7 +145,7 @@ data.columns
 # * Line plot is better when x axis is time.
 # * Scatter is better when there is correlation between two variables
 # * Histogram is better when we need to see distribution of numerical data.
-# * Customization: Colors,labels,thickness of line, title, opacity, grid, figsize, ticks of axis and linestyle  
+# * Customization: Colors,labels,thickness of line, title, opacity, grid, figsize, ticks of axis and linestyle
 
 # In[8]:
 
@@ -163,7 +164,7 @@ plt.show()
 # In[9]:
 
 
-# Scatter Plot 
+# Scatter Plot
 # x = attack, y = defense
 data.plot(kind='scatter', x='Attack', y='Defense',alpha = 0.5,color = 'red')
 plt.xlabel('Attack')              # label = name of label
@@ -233,7 +234,7 @@ print(dictionary)
 
 
 # In order to run all code you need to take comment this line
-# del dictionary         # delete entire dictionary     
+# del dictionary         # delete entire dictionary
 print(dictionary)       # it gives error because dictionary is deleted
 
 
@@ -241,8 +242,8 @@ print(dictionary)       # it gives error because dictionary is deleted
 # ### PANDAS
 # What we need to know about pandas?
 # * CSV: comma - separated values
-# 
-# 
+#
+#
 
 # In[15]:
 
@@ -310,7 +311,7 @@ data[(data['Defense']>200) & (data['Attack']>100)]
 i = 0
 while i != 5 :
     print('i is: ',i)
-    i +=1 
+    i +=1
 print(i,' is equal to 5')
 
 
@@ -327,7 +328,7 @@ print('')
 # index : value = 0:1, 1:2, 2:3, 3:4, 4:5
 for index, value in enumerate(lis):
     print(index," : ",value)
-print('')   
+print('')
 
 # For dictionaries
 # We can use for loop to achive key and value of dictionary. We learnt key and value at dictionary part.
@@ -357,11 +358,11 @@ for index,value in data[['Attack']][0:1].iterrows():
 # * docstrings: documentation for functions. Example:
 # <br>for f():
 #     <br>"""This is docstring for documentation of function f"""
-# * tuble: sequence of immutable python objects. 
+# * tuble: sequence of immutable python objects.
 # <br>cant modify values
 # <br>tuble uses paranthesis like tuble = (1,2,3)
 # <br>unpack tuble into several variables like a,b,c = tuble
-#     
+#
 
 # In[23]:
 
@@ -433,7 +434,7 @@ def square():
         z = x + y
         return z
     return add()**2
-print(square())    
+print(square())
 
 
 # <a id="11"></a> <br>
@@ -446,8 +447,8 @@ print(square())
 #        """ *args can be one or more"""
 # <br>def f(** kwargs)
 #        """ **kwargs is a dictionary"""
-#        
-# <br><br> lets write some code to practice  
+#
+# <br><br> lets write some code to practice
 
 # In[28]:
 
@@ -497,7 +498,7 @@ print(tot(1,2,3))
 # ### ANONYMOUS FUNCTİON
 # Like lambda function but it can take more than one arguments.
 # * map(func,seq) : applies a function to all the items in a list
-# 
+#
 
 # In[31]:
 
@@ -551,7 +552,7 @@ print(type(un_list2))
 # <a id="15"></a> <br>
 # ### LIST COMPREHENSİON
 # **One of the most important topic of this kernel**
-# <br>We use list comprehension for data analysis often. 
+# <br>We use list comprehension for data analysis often.
 # <br> list comprehension: collapse for loops for building lists into a single line
 # <br>Ex: num1 = [1,2,3] and we want to make it num2 = [2,3,4]. This can be done with for loop. However it is  unnecessarily long. We can make it one line code that is list comprehension.
 
@@ -589,8 +590,8 @@ data["speed_level"] = ["high" if i > threshold else "low" for i in data.Speed]
 data.loc[:10,["speed_level","Speed"]] # we will learn loc more detailed later
 
 
-# Up to now, you learn 
-# * User defined function 
+# Up to now, you learn
+# * User defined function
 # * Scope
 # * Nested function
 # * Default and flexible arguments
@@ -598,7 +599,7 @@ data.loc[:10,["speed_level","Speed"]] # we will learn loc more detailed later
 # *  Anonymous function
 # *  Iterators
 # * List comprehension
-# 
+#
 
 # <a id="16"></a> <br>
 # # 3.CLEANING DATA
@@ -610,9 +611,9 @@ data.loc[:10,["speed_level","Speed"]] # we will learn loc more detailed later
 # * Column name inconsistency like upper-lower case letter or space between words
 # * missing data
 # * different language
-# 
+#
 # <br> We will use head, tail, columns, shape and info methods to diagnose data
-# 
+#
 
 # In[38]:
 
@@ -653,7 +654,7 @@ data.info()
 # ### EXPLORATORY DATA ANALYSIS
 # value_counts(): Frequency counts
 # <br>outliers: the value that is considerably higher or lower from rest of the data
-# * Lets say value at 75% is Q3 and value at 25% is Q1. 
+# * Lets say value at 75% is Q3 and value at 25% is Q1.
 # * Outlier are smaller than Q1 - 1.5(Q3-Q1) and bigger than Q3 + 1.5(Q3-Q1). (Q3-Q1) = IQR
 # <br>We will use describe() method. Describe method includes:
 # * count: number of entries
@@ -664,12 +665,12 @@ data.info()
 # * 50%: median or second quantile
 # * 75%: third quantile
 # * max: maximum entry
-# 
+#
 # <br> What is quantile?
-# 
+#
 # * 1,4,5,6,8,9,11,12,13,14,15,16,17
 # * The median is the number that is in **middle** of the sequence. In this case it would be 11.
-# 
+#
 # * The lower quartile is the median in between the smallest number and the median i.e. in between 1 and 11, which is 6.
 # * The upper quartile, you find the median between the median and the largest number i.e. between 11 and 17, which will be 14 according to the question above.
 
@@ -709,7 +710,7 @@ data.boxplot(column='Attack',by = 'Legendary')
 # ### TIDY DATA
 # We tidy data with melt().
 # Describing melt is confusing. Therefore lets make example to understand it.
-# 
+#
 
 # In[46]:
 
@@ -744,7 +745,7 @@ melted.pivot(index = 'Name', columns = 'variable',values='value')
 
 # <a id="22"></a> <br>
 # ### CONCATENATING DATA
-# We can concatenate two dataframe 
+# We can concatenate two dataframe
 
 # In[49]:
 
@@ -769,8 +770,8 @@ conc_data_col
 # ### DATA TYPES
 # There are 5 basic data types: object(string),booleab,  integer, float and categorical.
 # <br> We can make conversion data types like from str to categorical or from int to float
-# <br> Why is category important: 
-# * make dataframe smaller in memory 
+# <br> Why is category important:
+# * make dataframe smaller in memory
 # * can be utilized for anlaysis especially for sklear(we will learn later)
 
 # In[51]:
@@ -881,7 +882,7 @@ assert  data['Type 2'].notnull().all() # returns nothing because we do not have 
 # * Missing data and testing with assert
 
 # <a id="25"></a> <br>
-# # 4. PANDAS FOUNDATION 
+# # 4. PANDAS FOUNDATION
 
 # <a id="26"></a> <br>
 # ### REVİEW of PANDAS
@@ -889,7 +890,7 @@ assert  data['Type 2'].notnull().all() # returns nothing because we do not have 
 # * single column = series
 # * NaN = not a number
 # * dataframe.values = numpy
-# 
+#
 
 # <a id="27"></a> <br>
 # ### BUILDING DATA FRAMES FROM SCRATCH
@@ -942,7 +943,7 @@ df
 # In[66]:
 
 
-# Plotting all data 
+# Plotting all data
 data1 = data.loc[:,["Attack","Defense","Speed"]]
 data1.plot()
 # it is confusing
@@ -959,7 +960,7 @@ plt.show()
 # In[68]:
 
 
-# scatter plot  
+# scatter plot
 data1.plot(kind = "scatter",x="Attack",y = "Defense")
 plt.show()
 
@@ -967,7 +968,7 @@ plt.show()
 # In[69]:
 
 
-# hist plot  
+# hist plot
 data1.plot(kind = "hist",y = "Defense",bins = 50,range= (0,250),normed = True)
 
 
@@ -1028,7 +1029,7 @@ datetime_object = pd.to_datetime(date_list)
 data2["date"] = datetime_object
 # lets make date as index
 data2= data2.set_index("date")
-data2 
+data2
 
 
 # In[74]:
@@ -1045,9 +1046,9 @@ print(data2.loc["1992-03-10":"1993-03-16"])
 #     * Needs string to specify frequency like "M" = month or "A" = year
 # * Downsampling: reduce date time rows to slower frequency like from daily to weekly
 # * Upsampling: increase date time rows to faster frequency like from daily to hourly
-# * Interpolate: Interpolate values according to different methods like ‘linear’, ‘time’ or index’ 
+# * Interpolate: Interpolate values according to different methods like ‘linear’, ‘time’ or index’
 #     * https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.interpolate.html
-# 
+#
 
 # In[75]:
 
@@ -1131,7 +1132,7 @@ data[["HP","Attack"]]
 # * Difference between selecting columns
 #     * Series and data frames
 # * Slicing and indexing series
-# * Reverse slicing 
+# * Reverse slicing
 # * From something to end
 
 # In[84]:
@@ -1152,15 +1153,15 @@ data.loc[1:10,"HP":"Defense"]   # 10 and "Defense" are inclusive
 # In[86]:
 
 
-# Reverse slicing 
-data.loc[10:1:-1,"HP":"Defense"] 
+# Reverse slicing
+data.loc[10:1:-1,"HP":"Defense"]
 
 
 # In[87]:
 
 
 # From something to end
-data.loc[1:10,"Speed":] 
+data.loc[1:10,"Speed":]
 
 
 # <a id="35"></a> <br>
@@ -1226,7 +1227,7 @@ data.head()
 # <a id="37"></a> <br>
 # ### INDEX OBJECTS AND LABELED DATA
 # index: sequence of label
-# 
+#
 
 # In[94]:
 
@@ -1244,10 +1245,11 @@ data.head()
 # Overwrite index
 # if we want to modify index we need to change all of them.
 data.head()
-# first copy of our data to data3 then change index 
+# first copy of our data to data3 then change index
 data3 = data.copy()
 # lets make index start from 100. It is not remarkable change but it is just example
-data3.index = range(100,900,1)
+# data3.index = range(100,900,1)
+data3.index = range(100,100+len(data3.index),1)
 data3.head()
 
 
@@ -1257,7 +1259,7 @@ data3.head()
 # We can make one of the column as index. I actually did it at the beginning of manipulating data frames with pandas section
 # It was like this
 # data= data.set_index("#")
-# also you can use 
+# also you can use
 # data.index = data["#"]
 
 
@@ -1278,7 +1280,7 @@ data.head()
 
 
 # Setting index : type 1 is outer type 2 is inner index
-data1 = data.set_index(["Type 1","Type 2"]) 
+data1 = data.set_index(["Type 1","Type 2"])
 data1.head(100)
 # data1.loc["Fire","Flying"] # howw to use indexes
 
@@ -1376,14 +1378,14 @@ df.groupby("treatment").mean()   # mean is aggregation / reduction method
 
 
 # we can only choose one of the feature
-df.groupby("treatment").age.max() 
+df.groupby("treatment").age.max()
 
 
 # In[110]:
 
 
 # Or we can choose multiple features
-df.groupby("treatment")[["age","response"]].min() 
+df.groupby("treatment")[["age","response"]].min()
 
 
 # In[111]:
@@ -1391,7 +1393,7 @@ df.groupby("treatment")[["age","response"]].min()
 
 df.info()
 # as you can see gender is object
-# However if we use groupby, we can convert it categorical data. 
+# However if we use groupby, we can convert it categorical data.
 # Because categorical data uses less memory, speed up operations like groupby
 #df["gender"] = df["gender"].astype("category")
 #df["treatment"] = df["treatment"].astype("category")
@@ -1412,7 +1414,3 @@ df.info()
 
 
 # In[ ]:
-
-
-
-
