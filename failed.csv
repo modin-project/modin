@@ -1,0 +1,815 @@
+,test,case,Line
+0,test_add,empty_data,Line 3067
+1,test_add,columns_only,Line 3108
+2,test_div,empty_data,Line 3174
+3,test_div,columns_only,Line 3215
+4,test_divide,columns_only,Line 3281
+5,test_divide,empty_data,Line 3347
+6,test_floordiv,empty_data,Line 3388
+7,test_floordiv,columns_only,Line 3429
+8,test_mod,columns_only,Line 3495
+9,test_mod,empty_data,Line 3561
+10,test_mul,empty_data,Line 3602
+11,test_mul,columns_only,Line 3643
+12,test_multiply,columns_only,Line 3709
+13,test_multiply,empty_data,Line 3775
+14,test_pow,empty_data,Line 3816
+15,test_pow,columns_only,Line 3853
+16,test_sub,columns_only,Line 3927
+17,test_sub,empty_data,Line 3993
+18,test_subtract,empty_data,Line 4034
+19,test_subtract,columns_only,Line 4075
+20,test_truediv,columns_only,Line 4141
+21,test_truediv,empty_data,Line 4207
+22,test___div__,empty_data,Line 4248
+23,test___div__,columns_only,Line 4289
+24,test_eq,columns_only,Line 4355
+25,test_eq,empty_data,Line 4421
+26,test_ge,empty_data,Line 4462
+27,test_ge,columns_only,Line 4503
+28,test_gt,columns_only,Line 4569
+29,test_gt,empty_data,Line 4635
+30,test_le,empty_data,Line 4676
+31,test_le,columns_only,Line 4717
+32,test_lt,columns_only,Line 4783
+33,test_lt,empty_data,Line 4849
+34,test_ne,empty_data,Line 4890
+35,test_ne,columns_only,Line 4931
+36,test_radd,columns_only,Line 4997
+37,test_rfloordiv,columns_only,Line 5063
+38,test_rdiv,columns_only,Line 5129
+39,test_rmul,columns_only,Line 5195
+40,test_rmod,columns_only,Line 5261
+41,test_rsub,columns_only,Line 5327
+42,test_rpow,columns_only,Line 5393
+43,test___rsub__,columns_only,Line 5463
+44,test_abs,empty_data,Line 5529
+45,test_applymap_numeric,plus one-columns_only,Line 5565
+46,test_applymap_numeric,convert to string-columns_only,Line 5642
+47,test_applymap_numeric,square-columns_only,Line 5719
+48,test_applymap_numeric,identity-columns_only,Line 5796
+49,test_applymap_numeric,return false-columns_only,Line 5873
+50,test_at,columns_only,Line 5950
+51,test_at,empty_data,Line 5998
+52,test_get,col2-columns_only,Line 6038
+53,test_get,B-columns_only,Line 6085
+54,test_get,col1-columns_only,Line 6132
+55,test_get_dummies,drop_first True-dummy_na True-empty_data,Line 6179
+56,test_get,A-columns_only,Line 6206
+57,test_get,does not exist-columns_only,Line 6253
+58,test_get_dummies,drop_first True-dummy_na None-empty_data,Line 6301
+59,test_get_dummies,drop_first True-dummy_na False-empty_data,Line 6328
+60,test_get_dummies,drop_first False-dummy_na False-empty_data,Line 6355
+61,test_get_dummies,drop_first False-dummy_na True-empty_data,Line 6382
+62,test_get_dummies,drop_first None-dummy_na True-empty_data,Line 6409
+63,test_get_dummies,drop_first False-dummy_na None-empty_data,Line 6436
+64,test_get_dummies,drop_first None-dummy_na None-empty_data,Line 6463
+65,test_get_dummies,drop_first None-dummy_na False-empty_data,Line 6490
+66,test_agg_numeric,sum mean-over rows int-empty_data,Line 6517
+67,test_get_ftype_counts,empty_data,Line 6569
+68,test_agg_numeric,sum mean-over rows int-columns_only,Line 6637
+69,test_agg_numeric,sum mean-over rows str-columns_only,Line 6717
+70,test_agg_numeric,sum mean-over columns int-empty_data,Line 6797
+71,test_agg_numeric,sum mean-over rows str-empty_data,Line 6856
+72,test_agg_numeric,sum mean-over columns str-columns_only,Line 6908
+73,test_agg_numeric,sum sum-over rows int-empty_data,Line 6966
+74,test_agg_numeric,sum mean-over columns int-columns_only,Line 7018
+75,test_agg_numeric,sum mean-over columns str-empty_data,Line 7076
+76,test_agg_numeric,sum sum-over rows str-columns_only,Line 7135
+77,test_agg_numeric,sum sum-over rows int-columns_only,Line 7215
+78,test_agg_numeric,sum sum-over columns int-empty_data,Line 7295
+79,test_agg_numeric,sum sum-over rows str-empty_data,Line 7354
+80,test_agg_numeric,sum sum-over columns str-columns_only,Line 7406
+81,test_agg_numeric,sum df sum-over rows int-empty_data,Line 7464
+82,test_agg_numeric,sum sum-over columns int-columns_only,Line 7517
+83,test_agg_numeric,sum sum-over columns str-empty_data,Line 7575
+84,test_agg_numeric,sum df sum-over rows int-columns_only,Line 7634
+85,test_agg_numeric,sum df sum-over rows str-columns_only,Line 7688
+86,test_agg_numeric,sum df sum-over columns int-empty_data,Line 7742
+87,test_agg_numeric,sum df sum-over rows str-empty_data,Line 7801
+88,test_agg_numeric,sum df sum-over columns str-columns_only,Line 7854
+89,test_aggregate_numeric,sum mean-over rows int-empty_data,Line 7912
+90,test_agg_numeric,sum df sum-over columns int-columns_only,Line 7964
+91,test_agg_numeric,sum df sum-over columns str-empty_data,Line 8022
+92,test_aggregate_numeric,sum mean-over rows str-columns_only,Line 8082
+93,test_aggregate_numeric,sum mean-over rows int-columns_only,Line 8162
+94,test_aggregate_numeric,sum mean-over columns int-empty_data,Line 8242
+95,test_aggregate_numeric,sum mean-over rows str-empty_data,Line 8301
+96,test_aggregate_numeric,sum mean-over columns str-columns_only,Line 8353
+97,test_aggregate_numeric,sum sum-over rows int-empty_data,Line 8411
+98,test_aggregate_numeric,sum mean-over columns int-columns_only,Line 8463
+99,test_aggregate_numeric,sum mean-over columns str-empty_data,Line 8521
+100,test_aggregate_numeric,sum sum-over rows str-columns_only,Line 8580
+101,test_aggregate_numeric,sum sum-over rows int-columns_only,Line 8660
+102,test_aggregate_numeric,sum sum-over columns int-empty_data,Line 8740
+103,test_aggregate_numeric,sum sum-over rows str-empty_data,Line 8799
+104,test_aggregate_numeric,sum sum-over columns str-columns_only,Line 8851
+105,test_aggregate_numeric,sum df sum-over rows int-empty_data,Line 8909
+106,test_aggregate_numeric,sum sum-over columns int-columns_only,Line 8962
+107,test_aggregate_numeric,sum sum-over columns str-empty_data,Line 9020
+108,test_aggregate_numeric,sum df sum-over rows str-columns_only,Line 9079
+109,test_aggregate_numeric,sum df sum-over rows int-columns_only,Line 9133
+110,test_aggregate_numeric,sum df sum-over columns int-empty_data,Line 9187
+111,test_aggregate_numeric,sum df sum-over rows str-empty_data,Line 9246
+112,test_aggregate_numeric,sum df sum-over columns str-columns_only,Line 9299
+113,test_all,bool_only True-skipna True-over columns int-columns_only,Line 9357
+114,test_all,bool_only True-skipna True-over columns str-empty_data,Line 9401
+115,test_aggregate_numeric,sum df sum-over columns int-columns_only,Line 9444
+116,test_all,bool_only True-skipna False-over columns int-columns_only,Line 9502
+117,test_aggregate_numeric,sum df sum-over columns str-empty_data,Line 9546
+118,test_all,bool_only True-skipna False-over columns str-empty_data,Line 9606
+119,test_all,bool_only True-skipna True-over columns int-empty_data,Line 9649
+120,test_all,bool_only True-skipna None-over columns int-columns_only,Line 9692
+121,test_all,bool_only True-skipna True-over columns str-columns_only,Line 9736
+122,test_all,bool_only True-skipna None-over columns str-empty_data,Line 9780
+123,test_all,bool_only False-skipna True-over rows int-columns_only,Line 9823
+124,test_all,bool_only True-skipna False-over columns int-empty_data,Line 9867
+125,test_all,bool_only False-skipna True-over rows str-empty_data,Line 9910
+126,test_all,bool_only True-skipna False-over columns str-columns_only,Line 9953
+127,test_all,bool_only False-skipna True-over columns int-columns_only,Line 9997
+128,test_all,bool_only True-skipna None-over columns int-empty_data,Line 10041
+129,test_all,bool_only False-skipna True-over columns str-empty_data,Line 10084
+130,test_all,bool_only True-skipna None-over columns str-columns_only,Line 10127
+131,test_all,bool_only False-skipna False-over rows int-columns_only,Line 10171
+132,test_all,bool_only False-skipna True-over rows int-empty_data,Line 10215
+133,test_all,bool_only False-skipna False-over rows str-empty_data,Line 10258
+134,test_all,bool_only False-skipna True-over rows str-columns_only,Line 10301
+135,test_all,bool_only False-skipna False-over columns int-columns_only,Line 10345
+136,test_all,bool_only False-skipna True-over columns int-empty_data,Line 10389
+137,test_all,bool_only False-skipna False-over columns str-empty_data,Line 10432
+138,test_all,bool_only False-skipna True-over columns str-columns_only,Line 10475
+139,test_all,bool_only False-skipna False-over rows int-empty_data,Line 10519
+140,test_all,bool_only False-skipna None-over rows int-columns_only,Line 10562
+141,test_all,bool_only False-skipna None-over rows str-empty_data,Line 10606
+142,test_all,bool_only False-skipna False-over rows str-columns_only,Line 10649
+143,test_all,bool_only False-skipna None-over columns int-columns_only,Line 10693
+144,test_all,bool_only False-skipna False-over columns int-empty_data,Line 10737
+145,test_all,bool_only False-skipna None-over columns str-empty_data,Line 10780
+146,test_all,bool_only False-skipna False-over columns str-columns_only,Line 10823
+147,test_all,bool_only False-skipna None-over rows int-empty_data,Line 10867
+148,test_all,bool_only None-skipna True-over rows int-columns_only,Line 10910
+149,test_all,bool_only False-skipna None-over rows str-columns_only,Line 10954
+150,test_all,bool_only None-skipna True-over rows str-empty_data,Line 10998
+151,test_all,bool_only False-skipna None-over columns int-empty_data,Line 11041
+152,test_all,bool_only None-skipna True-over columns int-columns_only,Line 11084
+153,test_all,bool_only False-skipna None-over columns str-columns_only,Line 11128
+154,test_all,bool_only None-skipna True-over columns str-empty_data,Line 11172
+155,test_all,bool_only None-skipna True-over rows int-empty_data,Line 11215
+156,test_all,bool_only None-skipna False-over rows int-columns_only,Line 11258
+157,test_all,bool_only None-skipna True-over rows str-columns_only,Line 11302
+158,test_all,bool_only None-skipna False-over rows str-empty_data,Line 11346
+159,test_all,bool_only None-skipna True-over columns int-empty_data,Line 11389
+160,test_all,bool_only None-skipna False-over columns int-columns_only,Line 11432
+161,test_all,bool_only None-skipna True-over columns str-columns_only,Line 11476
+162,test_all,bool_only None-skipna False-over columns str-empty_data,Line 11520
+163,test_all,bool_only None-skipna False-over rows int-empty_data,Line 11563
+164,test_all,bool_only None-skipna None-over rows int-columns_only,Line 11606
+165,test_all,bool_only None-skipna None-over rows str-empty_data,Line 11650
+166,test_all,bool_only None-skipna False-over rows str-columns_only,Line 11693
+167,test_all,bool_only None-skipna False-over columns int-empty_data,Line 11737
+168,test_all,bool_only None-skipna None-over columns int-columns_only,Line 11780
+169,test_all,bool_only None-skipna None-over columns str-empty_data,Line 11824
+170,test_all,bool_only None-skipna False-over columns str-columns_only,Line 11867
+171,test_all,bool_only None-skipna None-over rows int-empty_data,Line 11911
+172,test_any,bool_only True-skipna True-over columns int-columns_only,Line 11954
+173,test_all,bool_only None-skipna None-over rows str-columns_only,Line 11998
+174,test_any,bool_only True-skipna True-over columns str-empty_data,Line 12042
+175,test_all,bool_only None-skipna None-over columns int-empty_data,Line 12085
+176,test_all,bool_only None-skipna None-over columns str-columns_only,Line 12128
+177,test_any,bool_only True-skipna False-over columns int-columns_only,Line 12172
+178,test_any,bool_only True-skipna False-over columns str-empty_data,Line 12216
+179,test_any,bool_only True-skipna True-over columns int-empty_data,Line 12259
+180,test_any,bool_only True-skipna True-over columns str-columns_only,Line 12302
+181,test_any,bool_only True-skipna None-over columns int-columns_only,Line 12346
+182,test_any,bool_only True-skipna None-over columns str-empty_data,Line 12390
+183,test_any,bool_only True-skipna False-over columns int-empty_data,Line 12433
+184,test_any,bool_only False-skipna True-over rows int-columns_only,Line 12476
+185,test_any,bool_only True-skipna False-over columns str-columns_only,Line 12520
+186,test_any,bool_only False-skipna True-over rows str-empty_data,Line 12564
+187,test_any,bool_only False-skipna True-over columns int-columns_only,Line 12607
+188,test_any,bool_only True-skipna None-over columns int-empty_data,Line 12651
+189,test_any,bool_only False-skipna True-over columns str-empty_data,Line 12694
+190,test_any,bool_only True-skipna None-over columns str-columns_only,Line 12737
+191,test_any,bool_only False-skipna False-over rows int-columns_only,Line 12781
+192,test_any,bool_only False-skipna True-over rows int-empty_data,Line 12825
+193,test_any,bool_only False-skipna True-over rows str-columns_only,Line 12868
+194,test_any,bool_only False-skipna False-over rows str-empty_data,Line 12912
+195,test_any,bool_only False-skipna True-over columns int-empty_data,Line 12955
+196,test_any,bool_only False-skipna False-over columns int-columns_only,Line 12998
+197,test_any,bool_only False-skipna False-over columns str-empty_data,Line 13042
+198,test_any,bool_only False-skipna True-over columns str-columns_only,Line 13085
+199,test_any,bool_only False-skipna None-over rows int-columns_only,Line 13129
+200,test_any,bool_only False-skipna False-over rows int-empty_data,Line 13173
+201,test_any,bool_only False-skipna None-over rows str-empty_data,Line 13216
+202,test_any,bool_only False-skipna False-over rows str-columns_only,Line 13259
+203,test_any,bool_only False-skipna None-over columns int-columns_only,Line 13303
+204,test_any,bool_only False-skipna False-over columns int-empty_data,Line 13347
+205,test_any,bool_only False-skipna None-over columns str-empty_data,Line 13390
+206,test_any,bool_only False-skipna False-over columns str-columns_only,Line 13433
+207,test_any,bool_only False-skipna None-over rows int-empty_data,Line 13477
+208,test_any,bool_only None-skipna True-over rows int-columns_only,Line 13520
+209,test_any,bool_only None-skipna True-over rows str-empty_data,Line 13564
+210,test_any,bool_only False-skipna None-over rows str-columns_only,Line 13607
+211,test_any,bool_only None-skipna True-over columns int-columns_only,Line 13651
+212,test_any,bool_only False-skipna None-over columns int-empty_data,Line 13695
+213,test_any,bool_only None-skipna True-over columns str-empty_data,Line 13738
+214,test_any,bool_only False-skipna None-over columns str-columns_only,Line 13781
+215,test_any,bool_only None-skipna False-over rows int-columns_only,Line 13825
+216,test_any,bool_only None-skipna True-over rows int-empty_data,Line 13869
+217,test_any,bool_only None-skipna False-over rows str-empty_data,Line 13912
+218,test_any,bool_only None-skipna True-over rows str-columns_only,Line 13955
+219,test_any,bool_only None-skipna False-over columns int-columns_only,Line 13999
+220,test_any,bool_only None-skipna True-over columns int-empty_data,Line 14043
+221,test_any,bool_only None-skipna False-over columns str-empty_data,Line 14086
+222,test_any,bool_only None-skipna True-over columns str-columns_only,Line 14129
+223,test_any,bool_only None-skipna None-over rows int-columns_only,Line 14173
+224,test_any,bool_only None-skipna False-over rows int-empty_data,Line 14217
+225,test_any,bool_only None-skipna None-over rows str-empty_data,Line 14260
+226,test_any,bool_only None-skipna False-over rows str-columns_only,Line 14303
+227,test_any,bool_only None-skipna None-over columns int-columns_only,Line 14347
+228,test_any,bool_only None-skipna False-over columns int-empty_data,Line 14391
+229,test_any,bool_only None-skipna None-over columns str-empty_data,Line 14434
+230,test_any,bool_only None-skipna False-over columns str-columns_only,Line 14477
+231,test_any,bool_only None-skipna None-over rows int-empty_data,Line 14521
+232,test_apply_numeric,over rows int-sum-empty_data,Line 14564
+233,test_any,bool_only None-skipna None-over rows str-columns_only,Line 14640
+234,test_any,bool_only None-skipna None-over columns int-empty_data,Line 14684
+235,test_any,bool_only None-skipna None-over columns str-columns_only,Line 14727
+236,test_apply_numeric,over rows int-sum-columns_only,Line 14771
+237,test_apply_numeric,over rows int-df sum-columns_only,Line 14848
+238,test_apply_numeric,over rows int-df sum-empty_data,Line 14904
+239,test_apply_numeric,over rows int-sum mean-empty_data,Line 14959
+240,test_apply_numeric,over rows int-sum mean-columns_only,Line 14983
+241,test_apply_numeric,over rows int-sum sum-columns_only,Line 15061
+242,test_apply_numeric,over rows int-sum sum-empty_data,Line 15139
+243,test_apply_numeric,over rows int-sum df sum-empty_data,Line 15163
+244,test_apply_numeric,over rows int-sum df sum-columns_only,Line 15187
+245,test_apply_numeric,over rows str-sum-columns_only,Line 15212
+246,test_apply_numeric,over rows str-sum-empty_data,Line 15289
+247,test_apply_numeric,over rows str-df sum-empty_data,Line 15365
+248,test_apply_numeric,over rows str-df sum-columns_only,Line 15420
+249,test_apply_numeric,over rows str-sum mean-columns_only,Line 15476
+250,test_apply_numeric,over rows str-sum mean-empty_data,Line 15554
+251,test_apply_numeric,over rows str-sum sum-empty_data,Line 15578
+252,test_apply_numeric,over rows str-sum sum-columns_only,Line 15602
+253,test_apply_numeric,over rows str-sum df sum-columns_only,Line 15680
+254,test_apply_numeric,over rows str-sum df sum-empty_data,Line 15705
+255,test_apply_numeric,over columns int-sum-empty_data,Line 15729
+256,test_apply_numeric,over columns int-sum-columns_only,Line 15771
+257,test_apply_numeric,over columns int-df sum-columns_only,Line 15836
+258,test_apply_numeric,over columns int-df sum-empty_data,Line 15892
+259,test_apply_numeric,over columns int-sum mean-empty_data,Line 15947
+260,test_apply_numeric,over columns int-sum mean-columns_only,Line 16000
+261,test_apply_numeric,over columns int-sum sum-columns_only,Line 16052
+262,test_apply_numeric,over columns int-sum sum-empty_data,Line 16104
+263,test_apply_numeric,over columns int-sum df sum-empty_data,Line 16157
+264,test_apply_numeric,over columns int-sum df sum-columns_only,Line 16210
+265,test_apply_numeric,over columns str-sum-columns_only,Line 16262
+266,test_apply_numeric,over columns str-sum-empty_data,Line 16327
+267,test_apply_numeric,over columns str-df sum-empty_data,Line 16369
+268,test_apply_numeric,over columns str-df sum-columns_only,Line 16424
+269,test_apply_numeric,over columns str-sum mean-columns_only,Line 16480
+270,test_apply_numeric,over columns str-sum mean-empty_data,Line 16532
+271,test_apply_numeric,over columns str-sum sum-empty_data,Line 16585
+272,test_apply_numeric,over columns str-sum sum-columns_only,Line 16638
+273,test_apply_numeric,over columns str-sum df sum-columns_only,Line 16690
+274,test_apply_numeric,over columns str-sum df sum-empty_data,Line 16742
+275,test_clip,over rows int-empty_data,Line 16796
+276,test_clip,over rows str-columns_only,Line 16840
+277,test_clip,over columns int-empty_data,Line 16920
+278,test_clip,over columns str-columns_only,Line 16964
+279,test_clip_lower,over rows int-empty_data,Line 17044
+280,test_clip_lower,over rows str-columns_only,Line 17090
+281,test_clip_lower,over columns int-empty_data,Line 17169
+282,test_clip_lower,over columns str-columns_only,Line 17215
+283,test_clip_upper,over rows int-empty_data,Line 17294
+284,test_clip_upper,over rows str-columns_only,Line 17339
+285,test_clip_upper,over columns int-empty_data,Line 17418
+286,test_clip_upper,over columns str-columns_only,Line 17463
+287,test_count,numeric_only True-over rows int-columns_only,Line 17542
+288,test_clip,over rows int-columns_only,Line 17598
+289,test_count,numeric_only True-over rows str-empty_data,Line 17678
+290,test_count,numeric_only True-over columns int-columns_only,Line 17753
+291,test_count,numeric_only True-over columns str-empty_data,Line 17809
+292,test_clip,over rows str-empty_data,Line 17884
+293,test_count,numeric_only False-over rows int-columns_only,Line 17928
+294,test_count,numeric_only False-over rows str-empty_data,Line 17994
+295,test_count,numeric_only False-over columns int-columns_only,Line 18059
+296,test_clip,over columns int-columns_only,Line 18125
+297,test_count,numeric_only False-over columns str-empty_data,Line 18205
+298,test_count,numeric_only None-over rows int-columns_only,Line 18270
+299,test_count,numeric_only None-over rows str-empty_data,Line 18336
+300,test_clip,over columns str-empty_data,Line 18401
+301,test_count,numeric_only None-over columns int-columns_only,Line 18445
+302,test_count,numeric_only None-over columns str-empty_data,Line 18511
+303,test_clip_lower,over rows int-columns_only,Line 18576
+304,test_cummax,skipna True-over columns int-empty_data,Line 18655
+305,test_clip_lower,over rows str-empty_data,Line 18696
+306,test_clip_lower,over columns int-columns_only,Line 18742
+307,test_cummax,skipna False-over columns int-empty_data,Line 18821
+308,test_clip_lower,over columns str-empty_data,Line 18862
+309,test_clip_upper,over rows int-columns_only,Line 18908
+310,test_cummax,skipna None-over columns int-empty_data,Line 18987
+311,test_clip_upper,over rows str-empty_data,Line 19028
+312,test_clip_upper,over columns int-columns_only,Line 19073
+313,test_cummin,skipna True-over columns int-empty_data,Line 19152
+314,test_clip_upper,over columns str-empty_data,Line 19193
+315,test_cummin,skipna False-over columns int-empty_data,Line 19238
+316,test_count,numeric_only True-over rows int-empty_data,Line 19279
+317,test_count,numeric_only True-over rows str-columns_only,Line 19354
+318,test_count,numeric_only True-over columns int-empty_data,Line 19410
+319,test_count,numeric_only True-over columns str-columns_only,Line 19485
+320,test_cummin,skipna None-over columns int-empty_data,Line 19541
+321,test_count,numeric_only False-over rows int-empty_data,Line 19582
+322,test_cumprod,skipna True-over rows int-empty_data,Line 19647
+323,test_count,numeric_only False-over rows str-columns_only,Line 19688
+324,test_count,numeric_only False-over columns int-empty_data,Line 19754
+325,test_count,numeric_only False-over columns str-columns_only,Line 19819
+326,test_cumprod,skipna True-over columns int-empty_data,Line 19885
+327,test_count,numeric_only None-over rows int-empty_data,Line 19926
+328,test_count,numeric_only None-over rows str-columns_only,Line 19991
+329,test_cumprod,skipna False-over rows int-empty_data,Line 20057
+330,test_count,numeric_only None-over columns int-empty_data,Line 20098
+331,test_count,numeric_only None-over columns str-columns_only,Line 20163
+332,test_cumprod,skipna False-over columns int-empty_data,Line 20229
+333,test_cumprod,skipna None-over rows int-empty_data,Line 20270
+334,test_cummax,skipna True-over columns str-empty_data,Line 20311
+335,test_cumprod,skipna None-over columns int-empty_data,Line 20352
+336,test_cummax,skipna False-over columns str-empty_data,Line 20393
+337,test_cumsum,skipna True-over rows int-empty_data,Line 20434
+338,test_cumsum,skipna True-over columns int-empty_data,Line 20483
+339,test_cummax,skipna None-over columns str-empty_data,Line 20532
+340,test_cumsum,skipna False-over rows int-empty_data,Line 20573
+341,test_cumsum,skipna False-over columns int-empty_data,Line 20622
+342,test_cummin,skipna True-over columns str-empty_data,Line 20671
+343,test_cumsum,skipna None-over rows int-empty_data,Line 20712
+344,test_cummin,skipna False-over columns str-empty_data,Line 20761
+345,test_cumsum,skipna None-over columns int-empty_data,Line 20802
+346,test_describe,empty_data,Line 20851
+347,test_cummin,skipna None-over columns str-empty_data,Line 20912
+348,test_cumprod,skipna True-over rows str-empty_data,Line 20953
+349,test_diff,periods -5-over rows int-columns_only,Line 20994
+350,test_cumprod,skipna True-over columns str-empty_data,Line 21071
+351,test_diff,periods -5-over columns int-columns_only,Line 21112
+352,test_cumprod,skipna False-over rows str-empty_data,Line 21189
+353,test_diff,periods -1-over rows int-columns_only,Line 21230
+354,test_cumprod,skipna False-over columns str-empty_data,Line 21307
+355,test_diff,periods -1-over columns int-columns_only,Line 21348
+356,test_cumprod,skipna None-over rows str-empty_data,Line 21425
+357,test_diff,periods 0-over rows int-columns_only,Line 21466
+358,test_diff,periods 0-over columns int-columns_only,Line 21543
+359,test_cumprod,skipna None-over columns str-empty_data,Line 21620
+360,test_diff,periods 1-over rows int-columns_only,Line 21661
+361,test_cumsum,skipna True-over rows str-empty_data,Line 21738
+362,test_diff,periods 1-over columns int-columns_only,Line 21787
+363,test_cumsum,skipna True-over columns str-empty_data,Line 21864
+364,test_diff,periods 5-over rows int-columns_only,Line 21913
+365,test_cumsum,skipna False-over rows str-empty_data,Line 21990
+366,test_diff,periods 5-over columns int-columns_only,Line 22039
+367,test_cumsum,skipna False-over columns str-empty_data,Line 22116
+368,test_dropna,any-over rows int-empty_data,Line 22165
+369,test_dropna,any-over rows str-columns_only,Line 22221
+370,test_cumsum,skipna None-over rows str-empty_data,Line 22281
+371,test_dropna,any-over columns int-empty_data,Line 22330
+372,test_dropna,any-over columns str-columns_only,Line 22386
+373,test_cumsum,skipna None-over columns str-empty_data,Line 22444
+374,test_dropna,all-over rows int-empty_data,Line 22493
+375,test_describe,columns_only,Line 22549
+376,test_dropna,all-over rows str-columns_only,Line 22610
+377,test_dropna,all-over columns int-empty_data,Line 22670
+378,test_dropna,all-over columns str-columns_only,Line 22726
+379,test_dropna_inplace,empty_data,Line 22784
+380,test_diff,periods -5-over rows str-columns_only,Line 22838
+381,test_diff,periods -5-over columns str-columns_only,Line 22915
+382,test_dropna_multiple_axes,columns_only,Line 22992
+383,test_diff,periods -1-over rows str-columns_only,Line 23054
+384,test_dropna_multiple_axes_inplace,empty_data,Line 23131
+385,test_diff,periods -1-over columns str-columns_only,Line 23190
+386,test_dropna_subset,columns_only,Line 23267
+387,test_diff,periods 0-over rows str-columns_only,Line 23316
+388,test_duplicated,empty_data,Line 23393
+389,test_diff,periods 0-over columns str-columns_only,Line 23462
+390,test_frame_fillna_limit,columns_only,Line 23539
+391,test_diff,periods 1-over rows str-columns_only,Line 23608
+392,test_diff,periods 1-over columns str-columns_only,Line 23685
+393,test_fillna_columns,columns_only,Line 23762
+394,test_diff,periods 5-over rows str-columns_only,Line 23829
+395,test_filter,columns_only,Line 23906
+396,test_diff,periods 5-over columns str-columns_only,Line 23952
+397,test_first_valid_index,columns_only,Line 24029
+398,test_dropna,any-over rows int-columns_only,Line 24085
+399,test_dropna,any-over rows str-empty_data,Line 24145
+400,test_dropna,any-over columns int-columns_only,Line 24201
+401,test_idxmax,skipna True-over rows int-columns_only,Line 24259
+402,test_dropna,any-over columns str-empty_data,Line 24295
+403,test_idxmax,skipna True-over rows str-empty_data,Line 24351
+404,test_idxmax,skipna True-over columns int-columns_only,Line 24386
+405,test_dropna,all-over rows int-columns_only,Line 24422
+406,test_idxmax,skipna True-over columns str-empty_data,Line 24482
+407,test_idxmax,skipna False-over rows int-columns_only,Line 24517
+408,test_dropna,all-over rows str-empty_data,Line 24553
+409,test_idxmax,skipna False-over rows str-empty_data,Line 24609
+410,test_dropna,all-over columns int-columns_only,Line 24644
+411,test_idxmax,skipna False-over columns int-columns_only,Line 24702
+412,test_idxmax,skipna False-over columns str-empty_data,Line 24738
+413,test_dropna,all-over columns str-empty_data,Line 24773
+414,test_idxmax,skipna None-over rows int-columns_only,Line 24829
+415,test_idxmax,skipna None-over rows str-empty_data,Line 24865
+416,test_idxmax,skipna None-over columns int-columns_only,Line 24900
+417,test_dropna_inplace,columns_only,Line 24936
+418,test_idxmax,skipna None-over columns str-empty_data,Line 24993
+419,test_idxmin,skipna True-over rows int-columns_only,Line 25028
+420,test_idxmin,skipna True-over rows str-empty_data,Line 25064
+421,test_dropna_multiple_axes,empty_data,Line 25099
+422,test_idxmin,skipna True-over columns int-columns_only,Line 25158
+423,test_idxmin,skipna True-over columns str-empty_data,Line 25194
+424,test_idxmin,skipna False-over rows int-columns_only,Line 25229
+425,test_idxmin,skipna False-over rows str-empty_data,Line 25265
+426,test_dropna_multiple_axes_inplace,columns_only,Line 25300
+427,test_idxmin,skipna False-over columns int-columns_only,Line 25362
+428,test_idxmin,skipna False-over columns str-empty_data,Line 25398
+429,test_idxmin,skipna None-over rows int-columns_only,Line 25433
+430,test_idxmin,skipna None-over rows str-empty_data,Line 25469
+431,test_idxmin,skipna None-over columns int-columns_only,Line 25504
+432,test_idxmin,skipna None-over columns str-empty_data,Line 25540
+433,test_frame_pad_backfill_limit,columns_only,Line 25575
+434,test_info,int_data,Line 25644
+435,test_info,sparse_nan_data,Line 25683
+436,test_insert,loc -5-columns_only,Line 25722
+437,test_fillna_skip_certain_blocks,columns_only,Line 25779
+438,test_insert,loc -1-empty_data,Line 25844
+439,test_insert,loc 0-columns_only,Line 25898
+440,test_fillna_col_reordering,columns_only,Line 25955
+441,test_insert,loc 1-empty_data,Line 26019
+442,test_filter,empty_data,Line 26073
+443,test_insert,loc 5-columns_only,Line 26116
+444,test_first_valid_index,empty_data,Line 26173
+445,test_idxmax,skipna True-over rows int-empty_data,Line 26227
+446,test_idxmax,skipna True-over rows str-columns_only,Line 26262
+447,test_idxmax,skipna True-over columns int-empty_data,Line 26298
+448,test_iteritems,columns_only,Line 26333
+449,test_idxmax,skipna True-over columns str-columns_only,Line 26379
+450,test_idxmax,skipna False-over rows int-empty_data,Line 26415
+451,test_idxmax,skipna False-over rows str-columns_only,Line 26450
+452,test_idxmax,skipna False-over columns int-empty_data,Line 26486
+453,test_idxmax,skipna False-over columns str-columns_only,Line 26521
+454,test_idxmax,skipna None-over rows int-empty_data,Line 26557
+455,test_idxmax,skipna None-over rows str-columns_only,Line 26592
+456,test_idxmax,skipna None-over columns int-empty_data,Line 26628
+457,test_idxmax,skipna None-over columns str-columns_only,Line 26663
+458,test_idxmin,skipna True-over rows int-empty_data,Line 26699
+459,test_idxmin,skipna True-over rows str-columns_only,Line 26734
+460,test_idxmin,skipna True-over columns int-empty_data,Line 26770
+461,test_idxmin,skipna True-over columns str-columns_only,Line 26805
+462,test_idxmin,skipna False-over rows int-empty_data,Line 26841
+463,test_idxmin,skipna False-over rows str-columns_only,Line 26876
+464,test_idxmin,skipna False-over columns int-empty_data,Line 26912
+465,test_idxmin,skipna False-over columns str-columns_only,Line 26947
+466,test_idxmin,skipna None-over rows int-empty_data,Line 26983
+467,test_idxmin,skipna None-over rows str-columns_only,Line 27018
+468,test_idxmin,skipna None-over columns int-empty_data,Line 27054
+469,test_idxmin,skipna None-over columns str-columns_only,Line 27089
+470,test_iloc,columns_only,Line 27125
+471,test_info,float_data,Line 27178
+472,test_info,dense_nan_data,Line 27219
+473,test_insert,loc -5-empty_data,Line 27258
+474,test_insert,loc -1-columns_only,Line 27312
+475,test_insert,loc 0-empty_data,Line 27369
+476,test_insert,loc 1-columns_only,Line 27423
+477,test_insert,loc 5-empty_data,Line 27480
+478,test_items,columns_only,Line 27534
+479,test_last_valid_index,empty_data,Line 27580
+480,test_loc,empty_data,Line 27634
+481,test_loc,columns_only,Line 27674
+482,test_max,numeric_only True-skipna True-over rows int-empty_data,Line 27723
+483,test_max,numeric_only True-skipna True-over rows int-columns_only,Line 27810
+484,test_max,numeric_only True-skipna True-over rows str-empty_data,Line 27881
+485,test_max,numeric_only True-skipna True-over rows str-columns_only,Line 27968
+486,test_max,numeric_only True-skipna True-over columns int-empty_data,Line 28039
+487,test_max,numeric_only True-skipna True-over columns int-columns_only,Line 28126
+488,test_max,numeric_only True-skipna True-over columns str-empty_data,Line 28197
+489,test_max,numeric_only True-skipna True-over columns str-columns_only,Line 28284
+490,test_max,numeric_only True-skipna False-over rows int-empty_data,Line 28355
+491,test_max,numeric_only True-skipna False-over rows int-columns_only,Line 28442
+492,test_max,numeric_only True-skipna False-over rows str-empty_data,Line 28513
+493,test_max,numeric_only True-skipna False-over rows str-columns_only,Line 28600
+494,test_max,numeric_only True-skipna False-over columns int-empty_data,Line 28671
+495,test_max,numeric_only True-skipna False-over columns int-columns_only,Line 28758
+496,test_max,numeric_only True-skipna False-over columns str-empty_data,Line 28829
+497,test_max,numeric_only True-skipna False-over columns str-columns_only,Line 28916
+498,test_max,numeric_only True-skipna None-over rows int-empty_data,Line 28987
+499,test_max,numeric_only True-skipna None-over rows int-columns_only,Line 29074
+500,test_max,numeric_only True-skipna None-over rows str-empty_data,Line 29145
+501,test_max,numeric_only True-skipna None-over rows str-columns_only,Line 29232
+502,test_max,numeric_only True-skipna None-over columns int-empty_data,Line 29303
+503,test_max,numeric_only True-skipna None-over columns int-columns_only,Line 29390
+504,test_max,numeric_only True-skipna None-over columns str-empty_data,Line 29461
+505,test_max,numeric_only True-skipna None-over columns str-columns_only,Line 29548
+506,test_max,numeric_only False-skipna True-over rows int-empty_data,Line 29619
+507,test_max,numeric_only False-skipna True-over rows int-columns_only,Line 29699
+508,test_max,numeric_only False-skipna True-over rows str-empty_data,Line 29780
+509,test_max,numeric_only False-skipna True-over rows str-columns_only,Line 29860
+510,test_max,numeric_only False-skipna True-over columns int-empty_data,Line 29941
+511,test_max,numeric_only False-skipna True-over columns int-columns_only,Line 30028
+512,test_max,numeric_only False-skipna True-over columns str-empty_data,Line 30099
+513,test_max,numeric_only False-skipna True-over columns str-columns_only,Line 30186
+514,test_max,numeric_only False-skipna False-over rows int-empty_data,Line 30257
+515,test_max,numeric_only False-skipna False-over rows int-columns_only,Line 30337
+516,test_max,numeric_only False-skipna False-over rows str-empty_data,Line 30418
+517,test_max,numeric_only False-skipna False-over rows str-columns_only,Line 30498
+518,test_max,numeric_only False-skipna False-over columns int-empty_data,Line 30579
+519,test_max,numeric_only False-skipna False-over columns int-columns_only,Line 30666
+520,test_max,numeric_only False-skipna False-over columns str-empty_data,Line 30737
+521,test_max,numeric_only False-skipna False-over columns str-columns_only,Line 30824
+522,test_max,numeric_only False-skipna None-over rows int-empty_data,Line 30895
+523,test_max,numeric_only False-skipna None-over rows int-columns_only,Line 30975
+524,test_max,numeric_only False-skipna None-over rows str-empty_data,Line 31056
+525,test_max,numeric_only False-skipna None-over rows str-columns_only,Line 31136
+526,test_max,numeric_only False-skipna None-over columns int-empty_data,Line 31217
+527,test_max,numeric_only False-skipna None-over columns int-columns_only,Line 31304
+528,test_max,numeric_only False-skipna None-over columns str-empty_data,Line 31375
+529,test_max,numeric_only False-skipna None-over columns str-columns_only,Line 31462
+530,test_max,numeric_only None-skipna True-over rows int-empty_data,Line 31533
+531,test_max,numeric_only None-skipna True-over rows int-columns_only,Line 31613
+532,test_max,numeric_only None-skipna True-over rows str-empty_data,Line 31694
+533,test_max,numeric_only None-skipna True-over rows str-columns_only,Line 31774
+534,test_max,numeric_only None-skipna True-over columns int-empty_data,Line 31855
+535,test_max,numeric_only None-skipna True-over columns int-columns_only,Line 31942
+536,test_max,numeric_only None-skipna True-over columns str-empty_data,Line 32013
+537,test_max,numeric_only None-skipna True-over columns str-columns_only,Line 32100
+538,test_max,numeric_only None-skipna False-over rows int-empty_data,Line 32171
+539,test_max,numeric_only None-skipna False-over rows int-columns_only,Line 32251
+540,test_max,numeric_only None-skipna False-over rows str-empty_data,Line 32332
+541,test_max,numeric_only None-skipna False-over rows str-columns_only,Line 32412
+542,test_max,numeric_only None-skipna False-over columns int-empty_data,Line 32493
+543,test_max,numeric_only None-skipna False-over columns int-columns_only,Line 32580
+544,test_max,numeric_only None-skipna False-over columns str-empty_data,Line 32651
+545,test_max,numeric_only None-skipna False-over columns str-columns_only,Line 32738
+546,test_max,numeric_only None-skipna None-over rows int-empty_data,Line 32809
+547,test_max,numeric_only None-skipna None-over rows int-columns_only,Line 32889
+548,test_max,numeric_only None-skipna None-over rows str-empty_data,Line 32970
+549,test_max,numeric_only None-skipna None-over rows str-columns_only,Line 33050
+550,test_max,numeric_only None-skipna None-over columns int-empty_data,Line 33131
+551,test_max,numeric_only None-skipna None-over columns int-columns_only,Line 33218
+552,test_max,numeric_only None-skipna None-over columns str-empty_data,Line 33289
+553,test_max,numeric_only None-skipna None-over columns str-columns_only,Line 33376
+554,test_mean,numeric_only True-skipna True-over rows int-empty_data,Line 33447
+555,test_mean,numeric_only True-skipna True-over rows int-columns_only,Line 33534
+556,test_last_valid_index,columns_only,Line 33605
+557,test_mean,numeric_only True-skipna True-over rows str-empty_data,Line 33661
+558,test_nunique,dropna True-over columns int-columns_only,Line 33748
+559,test_mean,numeric_only True-skipna True-over rows str-columns_only,Line 33814
+560,test_mean,numeric_only True-skipna True-over columns int-empty_data,Line 33885
+561,test_nunique,dropna True-over columns str-columns_only,Line 33972
+562,test_mean,numeric_only True-skipna True-over columns int-columns_only,Line 34038
+563,test_mean,numeric_only True-skipna True-over columns str-empty_data,Line 34109
+564,test_nunique,dropna False-over rows int-columns_only,Line 34196
+565,test_mean,numeric_only True-skipna True-over columns str-columns_only,Line 34262
+566,test_nunique,dropna False-over rows str-columns_only,Line 34333
+567,test_mean,numeric_only True-skipna False-over rows int-empty_data,Line 34399
+568,test_mean,numeric_only True-skipna False-over rows int-columns_only,Line 34486
+569,test_nunique,dropna False-over columns int-columns_only,Line 34557
+570,test_mean,numeric_only True-skipna False-over rows str-empty_data,Line 34623
+571,test_nunique,dropna False-over columns str-columns_only,Line 34710
+572,test_mean,numeric_only True-skipna False-over rows str-columns_only,Line 34776
+573,test_mean,numeric_only True-skipna False-over columns int-empty_data,Line 34847
+574,test_nunique,dropna None-over rows int-columns_only,Line 34934
+575,test_mean,numeric_only True-skipna False-over columns int-columns_only,Line 35000
+576,test_nunique,dropna None-over rows str-columns_only,Line 35071
+577,test_mean,numeric_only True-skipna False-over columns str-empty_data,Line 35137
+578,test_nunique,dropna None-over columns int-columns_only,Line 35224
+579,test_mean,numeric_only True-skipna False-over columns str-columns_only,Line 35290
+580,test_mean,numeric_only True-skipna None-over rows int-empty_data,Line 35361
+581,test_nunique,dropna None-over columns str-columns_only,Line 35448
+582,test_mean,numeric_only True-skipna None-over rows int-columns_only,Line 35514
+583,test_pipe,empty_data,Line 35585
+584,test_mean,numeric_only True-skipna None-over rows str-empty_data,Line 35600
+585,test_pipe,columns_only,Line 35687
+586,test_mean,numeric_only True-skipna None-over rows str-columns_only,Line 35702
+587,test_mean,numeric_only True-skipna None-over columns int-empty_data,Line 35773
+588,test_mean,numeric_only True-skipna None-over columns int-columns_only,Line 35860
+589,test_mean,numeric_only True-skipna None-over columns str-empty_data,Line 35931
+590,test_mean,numeric_only True-skipna None-over columns str-columns_only,Line 36018
+591,test_plot,empty_data,Line 36089
+592,test_mean,numeric_only False-skipna True-over rows int-empty_data,Line 36146
+593,test_plot,columns_only,Line 36228
+594,test_mean,numeric_only False-skipna True-over rows int-columns_only,Line 36286
+595,test_mean,numeric_only False-skipna True-over rows str-empty_data,Line 36369
+596,test_mean,numeric_only False-skipna True-over rows str-columns_only,Line 36451
+597,test_mean,numeric_only False-skipna True-over columns int-empty_data,Line 36534
+598,test_mean,numeric_only False-skipna True-over columns int-columns_only,Line 36614
+599,test_mean,numeric_only False-skipna True-over columns str-empty_data,Line 36685
+600,test_mean,numeric_only False-skipna True-over columns str-columns_only,Line 36765
+601,test_mean,numeric_only False-skipna False-over rows int-empty_data,Line 36836
+602,test_mean,numeric_only False-skipna False-over rows int-columns_only,Line 36918
+603,test_pop,columns_only,Line 37001
+604,test_mean,numeric_only False-skipna False-over rows str-empty_data,Line 37052
+605,test_mean,numeric_only False-skipna False-over rows str-columns_only,Line 37134
+606,test_mean,numeric_only False-skipna False-over columns int-empty_data,Line 37309
+607,test_mean,numeric_only False-skipna False-over columns int-columns_only,Line 37463
+608,test_mean,numeric_only False-skipna False-over columns str-empty_data,Line 37700
+609,test_mean,numeric_only False-skipna False-over columns str-columns_only,Line 37780
+610,test_mean,numeric_only False-skipna None-over rows int-empty_data,Line 38017
+611,test_mean,numeric_only False-skipna None-over rows int-columns_only,Line 38191
+612,test_mean,numeric_only False-skipna None-over rows str-empty_data,Line 38348
+613,test_mean,numeric_only False-skipna None-over rows str-columns_only,Line 38430
+614,test_mean,numeric_only False-skipna None-over columns int-empty_data,Line 38679
+615,test_mean,numeric_only False-skipna None-over columns int-columns_only,Line 38851
+616,test_mean,numeric_only False-skipna None-over columns str-empty_data,Line 38996
+617,test_mean,numeric_only False-skipna None-over columns str-columns_only,Line 39168
+618,test_mean,numeric_only None-skipna True-over rows int-empty_data,Line 39479
+619,test_mean,numeric_only None-skipna True-over rows int-columns_only,Line 39561
+620,test_mean,numeric_only None-skipna True-over rows str-empty_data,Line 39736
+621,test_mean,numeric_only None-skipna True-over rows str-columns_only,Line 39892
+622,test_mean,numeric_only None-skipna True-over columns int-empty_data,Line 40141
+623,test_mean,numeric_only None-skipna True-over columns int-columns_only,Line 40221
+624,test_mean,numeric_only None-skipna True-over columns str-empty_data,Line 40458
+625,test_mean,numeric_only None-skipna True-over columns str-columns_only,Line 40630
+626,test_mean,numeric_only None-skipna False-over rows int-empty_data,Line 40775
+627,test_mean,numeric_only None-skipna False-over rows int-columns_only,Line 40857
+628,test_mean,numeric_only None-skipna False-over rows str-empty_data,Line 41196
+629,test_mean,numeric_only None-skipna False-over rows str-columns_only,Line 41278
+630,test_mean,numeric_only None-skipna False-over columns int-empty_data,Line 41539
+631,test_mean,numeric_only None-skipna False-over columns int-columns_only,Line 41693
+632,test_mean,numeric_only None-skipna False-over columns str-empty_data,Line 41856
+633,test_mean,numeric_only None-skipna False-over columns str-columns_only,Line 42010
+634,test_mean,numeric_only None-skipna None-over rows int-empty_data,Line 42252
+635,test_mean,numeric_only None-skipna None-over rows int-columns_only,Line 42334
+636,test_mean,numeric_only None-skipna None-over rows str-empty_data,Line 42588
+637,test_mean,numeric_only None-skipna None-over rows str-columns_only,Line 42670
+638,test_mean,numeric_only None-skipna None-over columns int-empty_data,Line 42919
+639,test_mean,numeric_only None-skipna None-over columns int-columns_only,Line 42999
+640,test_mean,numeric_only None-skipna None-over columns str-empty_data,Line 43237
+641,test_mean,numeric_only None-skipna None-over columns str-columns_only,Line 43402
+642,test_median,numeric_only True-skipna True-over rows int-empty_data,Line 43559
+643,test_median,numeric_only True-skipna True-over rows int-columns_only,Line 43731
+644,test_median,numeric_only True-skipna True-over rows str-empty_data,Line 43884
+645,test_median,numeric_only True-skipna True-over rows str-columns_only,Line 44063
+646,test_median,numeric_only True-skipna True-over columns int-empty_data,Line 44204
+647,test_median,numeric_only True-skipna True-over columns int-columns_only,Line 44457
+648,test_median,numeric_only True-skipna True-over columns str-empty_data,Line 44524
+649,test_median,numeric_only True-skipna True-over columns str-columns_only,Line 44696
+650,test_median,numeric_only True-skipna False-over rows int-empty_data,Line 44849
+651,test_median,numeric_only True-skipna False-over rows int-columns_only,Line 45021
+652,test_median,numeric_only True-skipna False-over rows str-empty_data,Line 45174
+653,test_median,numeric_only True-skipna False-over rows str-columns_only,Line 45353
+654,test_median,numeric_only True-skipna False-over columns int-empty_data,Line 45494
+655,test_median,numeric_only True-skipna False-over columns int-columns_only,Line 45673
+656,test_median,numeric_only True-skipna False-over columns str-empty_data,Line 45899
+657,test_median,numeric_only True-skipna False-over columns str-columns_only,Line 46072
+658,test_median,numeric_only True-skipna None-over rows int-empty_data,Line 46310
+659,test_median,numeric_only True-skipna None-over rows int-columns_only,Line 46397
+660,test_median,numeric_only True-skipna None-over rows str-empty_data,Line 46630
+661,test_median,numeric_only True-skipna None-over rows str-columns_only,Line 46809
+662,test_median,numeric_only True-skipna None-over columns int-empty_data,Line 46950
+663,test_median,numeric_only True-skipna None-over columns int-columns_only,Line 47122
+664,test_median,numeric_only True-skipna None-over columns str-empty_data,Line 47275
+665,test_median,numeric_only True-skipna None-over columns str-columns_only,Line 47362
+666,test_median,numeric_only False-skipna True-over rows int-empty_data,Line 47600
+667,test_median,numeric_only False-skipna True-over rows int-columns_only,Line 47740
+668,test_median,numeric_only False-skipna True-over rows str-empty_data,Line 47881
+669,test_median,numeric_only False-skipna True-over rows str-columns_only,Line 48095
+670,test_median,numeric_only False-skipna True-over columns int-empty_data,Line 48254
+671,test_median,numeric_only False-skipna True-over columns int-columns_only,Line 48376
+672,test_median,numeric_only False-skipna True-over columns str-empty_data,Line 48535
+673,test_median,numeric_only False-skipna True-over columns str-columns_only,Line 48657
+674,test_median,numeric_only False-skipna False-over rows int-empty_data,Line 48816
+675,test_median,numeric_only False-skipna False-over rows int-columns_only,Line 48938
+676,test_median,numeric_only False-skipna False-over rows str-empty_data,Line 49171
+677,test_median,numeric_only False-skipna False-over rows str-columns_only,Line 49311
+678,test_median,numeric_only False-skipna False-over columns int-empty_data,Line 49452
+679,test_median,numeric_only False-skipna False-over columns int-columns_only,Line 49500
+680,test_median,numeric_only False-skipna False-over columns str-empty_data,Line 49825
+681,test_median,numeric_only False-skipna False-over columns str-columns_only,Line 49873
+682,test_median,numeric_only False-skipna None-over rows int-empty_data,Line 50180
+683,test_median,numeric_only False-skipna None-over rows int-columns_only,Line 50320
+684,test_median,numeric_only False-skipna None-over rows str-empty_data,Line 50461
+685,test_median,numeric_only False-skipna None-over rows str-columns_only,Line 50601
+686,test_median,numeric_only False-skipna None-over columns int-empty_data,Line 50834
+687,test_median,numeric_only False-skipna None-over columns int-columns_only,Line 50882
+688,test_median,numeric_only False-skipna None-over columns str-empty_data,Line 51023
+689,test_median,numeric_only False-skipna None-over columns str-columns_only,Line 51237
+690,test_median,numeric_only None-skipna True-over rows int-empty_data,Line 51389
+691,test_median,numeric_only None-skipna True-over rows int-columns_only,Line 51476
+692,test_median,numeric_only None-skipna True-over rows str-empty_data,Line 51714
+693,test_median,numeric_only None-skipna True-over rows str-columns_only,Line 51887
+694,test_median,numeric_only None-skipna True-over columns int-empty_data,Line 52046
+695,test_median,numeric_only None-skipna True-over columns int-columns_only,Line 52133
+696,test_median,numeric_only None-skipna True-over columns str-empty_data,Line 52366
+697,test_median,numeric_only None-skipna True-over columns str-columns_only,Line 52527
+698,test_median,numeric_only None-skipna False-over rows int-empty_data,Line 52594
+699,test_median,numeric_only None-skipna False-over rows int-columns_only,Line 52852
+700,test_median,numeric_only None-skipna False-over rows str-empty_data,Line 53004
+701,test_median,numeric_only None-skipna False-over rows str-columns_only,Line 53091
+702,test_median,numeric_only None-skipna False-over columns int-empty_data,Line 53336
+703,test_median,numeric_only None-skipna False-over columns int-columns_only,Line 53497
+704,test_median,numeric_only None-skipna False-over columns str-empty_data,Line 53657
+705,test_median,numeric_only None-skipna False-over columns str-columns_only,Line 53818
+706,test_median,numeric_only None-skipna None-over rows int-empty_data,Line 54056
+707,test_median,numeric_only None-skipna None-over rows int-columns_only,Line 54228
+708,test_median,numeric_only None-skipna None-over rows str-empty_data,Line 54381
+709,test_median,numeric_only None-skipna None-over rows str-columns_only,Line 54560
+710,test_median,numeric_only None-skipna None-over columns int-empty_data,Line 54701
+711,test_median,numeric_only None-skipna None-over columns int-columns_only,Line 54880
+712,test_median,numeric_only None-skipna None-over columns str-empty_data,Line 55021
+713,test_median,numeric_only None-skipna None-over columns str-columns_only,Line 55193
+714,test_memory_usage,empty_data,Line 55346
+715,test_memory_usage,columns_only,Line 55582
+716,test_min,numeric_only True-skipna True-over rows int-empty_data,Line 55802
+717,test_min,numeric_only True-skipna True-over rows int-columns_only,Line 55960
+718,test_min,numeric_only True-skipna True-over rows str-empty_data,Line 56120
+719,test_min,numeric_only True-skipna True-over rows str-columns_only,Line 56278
+720,test_min,numeric_only True-skipna True-over columns int-empty_data,Line 56431
+721,test_min,numeric_only True-skipna True-over columns int-columns_only,Line 56601
+722,test_min,numeric_only True-skipna True-over columns str-empty_data,Line 56754
+723,test_min,numeric_only True-skipna True-over columns str-columns_only,Line 56838
+724,test_min,numeric_only True-skipna False-over rows int-empty_data,Line 57084
+725,test_min,numeric_only True-skipna False-over rows int-columns_only,Line 57242
+726,test_min,numeric_only True-skipna False-over rows str-empty_data,Line 57402
+727,test_min,numeric_only True-skipna False-over rows str-columns_only,Line 57560
+728,test_min,numeric_only True-skipna False-over columns int-empty_data,Line 57713
+729,test_min,numeric_only True-skipna False-over columns int-columns_only,Line 57883
+730,test_min,numeric_only True-skipna False-over columns str-empty_data,Line 58036
+731,test_min,numeric_only True-skipna False-over columns str-columns_only,Line 58206
+732,test_min,numeric_only True-skipna None-over rows int-empty_data,Line 58440
+733,test_min,numeric_only True-skipna None-over rows int-columns_only,Line 58524
+734,test_min,numeric_only True-skipna None-over rows str-empty_data,Line 58684
+735,test_min,numeric_only True-skipna None-over rows str-columns_only,Line 58842
+736,test_min,numeric_only True-skipna None-over columns int-empty_data,Line 59076
+737,test_min,numeric_only True-skipna None-over columns int-columns_only,Line 59252
+738,test_min,numeric_only True-skipna None-over columns str-empty_data,Line 59320
+739,test_min,numeric_only True-skipna None-over columns str-columns_only,Line 59478
+740,test_min,numeric_only False-skipna True-over rows int-empty_data,Line 59712
+741,test_min,numeric_only False-skipna True-over rows int-columns_only,Line 59789
+742,test_min,numeric_only False-skipna True-over rows str-empty_data,Line 59959
+743,test_min,numeric_only False-skipna True-over rows str-columns_only,Line 60110
+744,test_min,numeric_only False-skipna True-over columns int-empty_data,Line 60280
+745,test_min,numeric_only False-skipna True-over columns int-columns_only,Line 60438
+746,test_min,numeric_only False-skipna True-over columns str-empty_data,Line 60598
+747,test_min,numeric_only False-skipna True-over columns str-columns_only,Line 60756
+748,test_min,numeric_only False-skipna False-over rows int-empty_data,Line 60916
+749,test_min,numeric_only False-skipna False-over rows int-columns_only,Line 61067
+750,test_min,numeric_only False-skipna False-over rows str-empty_data,Line 61237
+751,test_min,numeric_only False-skipna False-over rows str-columns_only,Line 61388
+752,test_min,numeric_only False-skipna False-over columns int-empty_data,Line 61558
+753,test_min,numeric_only False-skipna False-over columns int-columns_only,Line 61716
+754,test_min,numeric_only False-skipna False-over columns str-empty_data,Line 61876
+755,test_min,numeric_only False-skipna False-over columns str-columns_only,Line 62034
+756,test_min,numeric_only False-skipna None-over rows int-empty_data,Line 62194
+757,test_min,numeric_only False-skipna None-over rows int-columns_only,Line 62345
+758,test_min,numeric_only False-skipna None-over rows str-empty_data,Line 62515
+759,test_min,numeric_only False-skipna None-over rows str-columns_only,Line 62592
+760,test_min,numeric_only False-skipna None-over columns int-empty_data,Line 62829
+761,test_min,numeric_only False-skipna None-over columns int-columns_only,Line 62999
+762,test_min,numeric_only False-skipna None-over columns str-empty_data,Line 63067
+763,test_min,numeric_only False-skipna None-over columns str-columns_only,Line 63322
+764,test_min,numeric_only None-skipna True-over rows int-empty_data,Line 63482
+765,test_min,numeric_only None-skipna True-over rows int-columns_only,Line 63559
+766,test_min,numeric_only None-skipna True-over rows str-empty_data,Line 63711
+767,test_min,numeric_only None-skipna True-over rows str-columns_only,Line 63954
+768,test_min,numeric_only None-skipna True-over columns int-empty_data,Line 64032
+769,test_min,numeric_only None-skipna True-over columns int-columns_only,Line 64201
+770,test_min,numeric_only None-skipna True-over columns str-empty_data,Line 64355
+771,test_min,numeric_only None-skipna True-over columns str-columns_only,Line 64524
+772,test_min,numeric_only None-skipna False-over rows int-empty_data,Line 64678
+773,test_min,numeric_only None-skipna False-over rows int-columns_only,Line 64847
+774,test_min,numeric_only None-skipna False-over rows str-empty_data,Line 64999
+775,test_min,numeric_only None-skipna False-over rows str-columns_only,Line 65168
+776,test_min,numeric_only None-skipna False-over columns int-empty_data,Line 65320
+777,test_min,numeric_only None-skipna False-over columns int-columns_only,Line 65489
+778,test_min,numeric_only None-skipna False-over columns str-empty_data,Line 65643
+779,test_min,numeric_only None-skipna False-over columns str-columns_only,Line 65812
+780,test_min,numeric_only None-skipna None-over rows int-empty_data,Line 65966
+781,test_min,numeric_only None-skipna None-over rows int-columns_only,Line 66135
+782,test_min,numeric_only None-skipna None-over rows str-empty_data,Line 66287
+783,test_min,numeric_only None-skipna None-over rows str-columns_only,Line 66364
+784,test_min,numeric_only None-skipna None-over columns int-empty_data,Line 66608
+785,test_min,numeric_only None-skipna None-over columns int-columns_only,Line 66777
+786,test_min,numeric_only None-skipna None-over columns str-empty_data,Line 66845
+787,test_min,numeric_only None-skipna None-over columns str-columns_only,Line 67015
+788,test_mode,numeric_only True-over rows int-empty_data,Line 67254
+789,test_mode,numeric_only True-over rows int-columns_only,Line 67416
+790,test_mode,numeric_only True-over rows str-empty_data,Line 67812
+791,test_mode,numeric_only True-over rows str-columns_only,Line 67968
+792,test_mode,numeric_only True-over columns int-empty_data,Line 68542
+793,test_mode,numeric_only True-over columns int-columns_only,Line 68612
+794,test_mode,numeric_only True-over columns str-empty_data,Line 69283
+795,test_mode,numeric_only True-over columns str-columns_only,Line 69427
+796,test_mode,numeric_only False-over rows int-empty_data,Line 70162
+797,test_mode,numeric_only False-over rows int-columns_only,Line 70324
+798,test_mode,numeric_only False-over rows str-empty_data,Line 70801
+799,test_mode,numeric_only False-over rows str-columns_only,Line 70963
+800,test_mode,numeric_only False-over columns int-empty_data,Line 71366
+801,test_mode,numeric_only False-over columns int-columns_only,Line 71510
+802,test_mode,numeric_only False-over columns str-empty_data,Line 72169
+803,test_mode,numeric_only False-over columns str-columns_only,Line 72325
+804,test_mode,numeric_only None-over rows int-empty_data,Line 73070
+805,test_mode,numeric_only None-over rows int-columns_only,Line 73140
+806,test_mode,numeric_only None-over rows str-empty_data,Line 73714
+807,test_mode,numeric_only None-over rows str-columns_only,Line 73784
+808,test_mode,numeric_only None-over columns int-empty_data,Line 74284
+809,test_mode,numeric_only None-over columns int-columns_only,Line 74428
+810,test_mode,numeric_only None-over columns str-empty_data,Line 75095
+811,test_mode,numeric_only None-over columns str-columns_only,Line 75165
+812,test_nunique,dropna True-over rows int-columns_only,Line 76009
+813,test_nunique,dropna True-over rows str-columns_only,Line 76255

@@ -21,19 +21,19 @@ matrix:
 
     - os: linux
       dist: trusty
-      env: 
+      env:
         - PYTHON=2.7
         - MODIN_DEBUG=1
 
     - os: linux
       dist: trusty
-      env: 
+      env:
         - PYTHON=3.6
         - MODIN_DEBUG=1
 
     - os: linux
       dist: trusty
-      env: 
+      env:
         - LINT=1
       script:
         - export PATH="$HOME/miniconda/bin:$PATH"
@@ -50,7 +50,7 @@ matrix:
         - python -m pytest modin/pandas/test/test_api.py
 
 install:
-  - ./.travis/install-dependencies.sh
+  - ./ci/travis/install-dependencies.sh
 
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
