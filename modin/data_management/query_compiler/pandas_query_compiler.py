@@ -2668,7 +2668,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         return pandas.DataFrame([])
 
             func = self._prepare_method(lambda df: get_dummies_builder(df))
-            new_data = columns_applied._map_across_full_axis(0, func)
+            new_data = columns_applied.map_across_full_axis(0, func)
             untouched_data = None
         else:
 

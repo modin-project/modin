@@ -12,6 +12,8 @@ import pyarrow as pa
 import os
 import sys
 
+from .utils import df_equals
+
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
@@ -23,7 +25,9 @@ TEST_JSON_FILENAME = "test.json"
 TEST_HTML_FILENAME = "test.html"
 TEST_EXCEL_FILENAME = "test.xlsx"
 TEST_FEATHER_FILENAME = "test.feather"
-TEST_HDF_FILENAME = "test.hdf"
+TEST_READ_HDF_FILENAME = "test.hdf"
+TEST_WRITE_HDF_FILENAME_MODIN = "test_write_modin.hdf"
+TEST_WRITE_HDF_FILENAME_PANDAS = "test_write_pandas.hdf"
 TEST_MSGPACK_FILENAME = "test.msg"
 TEST_STATA_FILENAME = "test.dta"
 TEST_PICKLE_FILENAME = "test.pkl"
@@ -215,19 +219,19 @@ def teardown_feather_file():
 
 @pytest.fixture
 def setup_hdf_file(row_size, force=False, format=None):
-    if os.path.exists(TEST_HDF_FILENAME) and not force:
+    if os.path.exists(TEST_READ_HDF_FILENAME) and not force:
         pass
     else:
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
-        df.to_hdf(TEST_HDF_FILENAME, key="df", format=format)
+        df.to_hdf(TEST_READ_HDF_FILENAME, key="df", format=format)
 
 
 @pytest.fixture
 def teardown_hdf_file():
-    if os.path.exists(TEST_HDF_FILENAME):
-        os.remove(TEST_HDF_FILENAME)
+    if os.path.exists(TEST_READ_HDF_FILENAME):
+        os.remove(TEST_READ_HDF_FILENAME)
 
 
 @pytest.fixture
@@ -382,7 +386,7 @@ def test_from_excel():
     teardown_excel_file()
 
 
-@pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
+# @pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
 def test_from_feather():
     setup_feather_file(SMALL_ROW_SIZE)
 
@@ -397,8 +401,8 @@ def test_from_feather():
 def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE, format=None)
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
+    pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -408,8 +412,8 @@ def test_from_hdf():
 def test_from_hdf_format():
     setup_hdf_file(SMALL_ROW_SIZE, format="table")
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
+    pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -459,6 +463,12 @@ def test_from_sql(make_sql_connection):
     modin_df = pd.read_sql(query, conn)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    with pytest.warns(UserWarning):
+        pd.read_sql_query(query, conn)
+
+    with pytest.warns(UserWarning):
+        pd.read_sql_table(table, conn)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
@@ -786,6 +796,14 @@ def test_to_pickle():
     teardown_test_file(TEST_PICKLE_pandas_FILENAME)
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
 
+    pd.to_pickle(modin_df, TEST_PICKLE_DF_FILENAME)
+    pandas.to_pickle(pandas_df, TEST_PICKLE_pandas_FILENAME)
+
+    assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
+
+    teardown_test_file(TEST_PICKLE_pandas_FILENAME)
+    teardown_test_file(TEST_PICKLE_DF_FILENAME)
+
 
 def test_to_sql_without_index(make_sql_connection):
     table_name = "tbl_without_index"
@@ -837,3 +855,28 @@ def test_to_stata():
 
     teardown_test_file(TEST_STATA_pandas_FILENAME)
     teardown_test_file(TEST_STATA_DF_FILENAME)
+
+
+def test_HDFStore():
+    modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
+    pandas_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
+
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
+
+    modin_store["foo"] = modin_df
+    pandas_store["foo"] = pandas_df
+
+    assert test_files_eq(TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS)
+    modin_df = modin_store.get("foo")
+    pandas_df = pandas_store.get("foo")
+    df_equals(modin_df, pandas_df)
+
+
+def test_ExcelFile():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    modin_excel_file = pd.ExcelFile(TEST_EXCEL_FILENAME)
+    pandas_excel_file = pandas.ExcelFile(TEST_EXCEL_FILENAME)
+
+    df_equals(modin_excel_file.parse(), pandas_excel_file.parse())

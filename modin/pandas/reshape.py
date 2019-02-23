@@ -43,30 +43,29 @@ def get_dummies(
             "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):
-        return pandas.get_dummies(
-            data,
+        ErrorMessage.default_to_pandas("`get_dummies` on non-DataFrame")
+        return DataFrame(
+            pandas.get_dummies(
+                data,
+                prefix=prefix,
+                prefix_sep=prefix_sep,
+                dummy_na=dummy_na,
+                columns=columns,
+                sparse=sparse,
+                drop_first=drop_first,
+                dtype=dtype,
+            )
+        )
+    else:
+        new_manager = data._query_compiler.get_dummies(
+            columns,
             prefix=prefix,
             prefix_sep=prefix_sep,
             dummy_na=dummy_na,
-            columns=columns,
-            sparse=sparse,
             drop_first=drop_first,
             dtype=dtype,
         )
-    if isinstance(data, DataFrame):
-        df = data
-    elif is_list_like(data):
-        df = DataFrame(data)
-
-    new_manager = df._query_compiler.get_dummies(
-        columns,
-        prefix=prefix,
-        prefix_sep=prefix_sep,
-        dummy_na=dummy_na,
-        drop_first=drop_first,
-        dtype=dtype,
-    )
-    return DataFrame(query_compiler=new_manager)
+        return DataFrame(query_compiler=new_manager)
 
 
 def melt(

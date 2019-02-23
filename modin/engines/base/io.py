@@ -272,7 +272,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
-    def read_clipboard(cls, sep=r"\s+", **kwargs):
+    def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
@@ -307,6 +307,8 @@ class BaseIO(object):
         mangle_dupe_cols=True,
         **kwds
     ):
+        if skip_footer != 0:
+            skipfooter = skip_footer
         ErrorMessage.default_to_pandas("`read_excel`")
         return cls.from_pandas(
             pandas.read_excel(
@@ -332,7 +334,6 @@ class BaseIO(object):
                 date_parser=date_parser,
                 thousands=thousands,
                 comment=comment,
-                skip_footer=skip_footer,
                 skipfooter=skipfooter,
                 convert_float=convert_float,
                 mangle_dupe_cols=mangle_dupe_cols,
@@ -403,7 +404,7 @@ class BaseIO(object):
         encoding=None,
         chunksize=None,
         iterator=False,
-    ):
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
             pandas.read_sas(

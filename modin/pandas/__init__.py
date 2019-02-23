@@ -72,6 +72,9 @@ from pandas import (
     infer_freq,
     interval_range,
     ExcelWriter,
+    SparseArray,
+    SparseSeries,
+    SparseDataFrame,
 )
 import threading
 import os
@@ -118,7 +121,6 @@ from .general import (
     pivot,
 )
 from .plotting import Plotting as plotting
-from .sparse import SparseArray, SparseSeries, SparseDataFrame
 from .. import __execution_engine__ as execution_engine
 
 # Set this so that Pandas doesn't try to multithread by itself

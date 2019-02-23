@@ -182,7 +182,7 @@ def read_html(
     return DataFrame(query_compiler=BaseFactory.read_html(**kwargs))
 
 
-def read_clipboard(sep=r"\s+", **kwargs):
+def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_clipboard(**kwargs))
@@ -230,7 +230,6 @@ def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
 
 def read_feather(path, columns=None, use_threads=True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
 
 
@@ -264,7 +263,7 @@ def read_sas(
     encoding=None,
     chunksize=None,
     iterator=False,
-):
+):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sas(**kwargs))
 
@@ -355,51 +354,69 @@ def to_pickle(obj, path, compression="infer", protocol=4):
     return BaseFactory.to_pickle(obj, path, compression=compression, protocol=protocol)
 
 
-class DefaultToPandasImplementation(object):
+class ExcelFile(pandas.ExcelFile):
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         if item not in default_behaviors:
-            method = super(HDFStore, self).__getattribute__(item)
-            # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
-            # pandas they are equivalent to classes. They are verified here because they
-            # cannot be overridden with the functions below. This generally solves the
-            # problem where the instance property is callable, but the class property is
-            # not.
-            # The isclass check is to ensure that we return the correct type. Some of
-            # the objects that are called result in classes being returned, and we don't
-            # want to override with our own function.
-            is_callable = callable(method)
-
-            if is_callable:
+            method = super(ExcelFile, self).__getattribute__(item)
+            if callable(method):
 
                 def return_handler(*args, **kwargs):
                     """Replaces the default behavior of methods with inplace kwarg.
 
-                    Note: This method will modify the DataFrame this Series is attached
-                        to when `inplace` is True. Instead of rewriting or overriding
-                        every method that uses `inplace`, we use this handler.
-
-                        This handler will first check that the keyword argument passed
-                        for `inplace` is True, if not then it will just return the
-                        result of the operation requested.
-
-                        If `inplace` is True, do the operation, keeping track of the
-                        previous length. This is because operations like `dropna` still
-                        propagate back to the DataFrame that holds the Series.
-
-                        If the length did not change, we propagate the inplace changes
-                        of the operation back to the original DataFrame with
-                        `__setitem__`.
-
-                        If the length changed, we just need to do a `reindex` on the
-                        parent DataFrame. This will propagate the inplace operation
-                        (e.g. `dropna`) back to the parent DataFrame.
-
-                        See notes in SeriesView class about when it is okay to return a
-                        pandas Series vs a SeriesView.
+                    Note: This function will replace all of the arguments passed to
+                        methods of ExcelFile with the pandas equivalent. It will convert
+                        Modin DataFrame to pandas DataFrame, etc.
 
                     Returns:
-                        If `inplace` is True: None, else: A new Series.
+                        A Modin DataFrame in place of a pandas DataFrame, or the same
+                        return type as pandas.ExcelFile.
+                    """
+                    from .utils import to_pandas
+
+                    # We don't want to constantly be giving this error message for
+                    # internal methods.
+                    if item[0] != "_":
+                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                    args = [
+                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        for arg in args
+                    ]
+                    kwargs = {
+                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        for k, v in kwargs.items()
+                    }
+                    obj = super(ExcelFile, self).__getattribute__(item)(*args, **kwargs)
+                    if isinstance(obj, pandas.DataFrame):
+                        return DataFrame(obj)
+                    return obj
+
+                # We replace the method with `inplace_handler` for inplace operations
+                method = return_handler
+            return method
+        else:
+            return object.__getattribute__(pandas.ExcelFile, item)
+
+
+class HDFStore(pandas.HDFStore):
+    def __getattribute__(self, item):
+        default_behaviors = ["__init__", "__class__"]
+        if item not in default_behaviors:
+            method = super(HDFStore, self).__getattribute__(item)
+            if callable(method):
+
+                def return_handler(*args, **kwargs):
+                    """Replaces the default behavior of methods with inplace kwarg.
+
+                    Note: This function will replace all of the arguments passed to
+                        methods of HDFStore with the pandas equivalent. It will convert
+                        Modin DataFrame to pandas DataFrame, etc. Currently, pytables
+                        does not accept Modin DataFrame objects, so we must convert to
+                        pandas.
+
+                    Returns:
+                        A Modin DataFrame in place of a pandas DataFrame, or the same
+                        return type as pandas.HDFStore.
                     """
                     from .utils import to_pandas
 
@@ -424,12 +441,4 @@ class DefaultToPandasImplementation(object):
                 method = return_handler
             return method
         else:
-            return object.__getattribute__(self, item)
-
-
-class ExcelFile(pandas.ExcelFile, DefaultToPandasImplementation):
-    pass
-
-
-class HDFStore(pandas.HDFStore, DefaultToPandasImplementation):
-    pass
+            return object.__getattribute__(pandas.HDFStore, item)
