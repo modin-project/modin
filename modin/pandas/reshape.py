@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-from pandas.core.dtypes.common import is_list_like
 
 from .dataframe import DataFrame
 from .utils import to_pandas

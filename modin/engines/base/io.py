@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
+from sys import version_info
 from modin.error_message import ErrorMessage
 from modin.data_management.query_compiler import BaseQueryCompiler
 
@@ -543,6 +544,9 @@ class BaseIO(object):
 
     @classmethod
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
+        if version_info[0] == "2" and protocol > 2:
+            # Override because it is not valid to use protocol 4 in pandas 2
+            protocol = 2
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
             return pandas.to_pickle(
