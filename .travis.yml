@@ -54,7 +54,7 @@ install:
 
 script:
   - export PATH="$HOME/miniconda/bin:$PATH"
-  - if [[ "$PYTHON" == "2.7" ]]; then python .travis/strip-type-hints.py; fi
+  - if [[ "$PYTHON" == "2.7" ]]; then python ./ci/travis/strip-type-hints.py; fi
   - curl -s https://codecov.io/bash > codecov.sh
   - python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
