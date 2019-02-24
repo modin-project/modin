@@ -136,10 +136,7 @@ class DataFrame(object):
         num_cols = 30
 
         result = repr(self._build_repr_df(num_rows, num_cols))
-        if (
-            len(self.index) > num_rows
-            or len(self.columns) > num_cols
-        ):
+        if len(self.index) > num_rows or len(self.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
             return result.rsplit("\n\n", 1)[0] + "\n\n[{0} rows x {1} columns]".format(
                 len(self.index), len(self.columns)
@@ -161,10 +158,7 @@ class DataFrame(object):
         # We use pandas _repr_html_ to get a string of the HTML representation
         # of the dataframe.
         result = self._build_repr_df(num_rows, num_cols)._repr_html_()
-        if (
-            len(self.index) > num_rows
-            or len(self.columns) > num_cols
-        ):
+        if len(self.index) > num_rows or len(self.columns) > num_cols:
             # We split so that we insert our correct dataframe dimensions.
             return result.split("<p>")[
                 0
@@ -278,10 +272,7 @@ class DataFrame(object):
             True if the DataFrame is empty.
             False otherwise.
         """
-        return (
-            len(self.columns) == 0
-            or len(self.index) == 0
-        )
+        return len(self.columns) == 0 or len(self.index) == 0
 
     @property
     def values(self):
@@ -392,9 +383,7 @@ class DataFrame(object):
                 by = by.values.tolist()
 
             mismatch = (
-                len(by) != len(self)
-                if axis == 0
-                else len(by) != len(self.columns)
+                len(by) != len(self) if axis == 0 else len(by) != len(self.columns)
             )
 
             if all(obj in self for obj in by) and mismatch:
@@ -736,9 +725,7 @@ class DataFrame(object):
             if not isinstance(other[0], DataFrame):
                 other = pandas.DataFrame(other)
                 if (self.columns.get_indexer(other.columns) >= 0).all():
-                    other = DataFrame(
-                        other.loc[:, self.columns]
-                    )._query_compiler
+                    other = DataFrame(other.loc[:, self.columns])._query_compiler
                 else:
                     other = DataFrame(other)._query_compiler
             else:
@@ -799,9 +786,7 @@ class DataFrame(object):
                     "(\"'dict' object is not callable\", "
                     "'occurred at index {0}'".format(self.index[0])
                 )
-            if len(self.columns) != len(
-                set(self.columns)
-            ):
+            if len(self.columns) != len(set(self.columns)):
                 warnings.warn(
                     "duplicate column names not supported with apply().",
                     FutureWarning,
@@ -865,10 +850,7 @@ class DataFrame(object):
     def astype(self, dtype, copy=True, errors="raise", **kwargs):
         col_dtypes = {}
         if isinstance(dtype, dict):
-            if (
-                not set(dtype.keys()).issubset(set(self.columns))
-                and errors == "raise"
-            ):
+            if not set(dtype.keys()).issubset(set(self.columns)) and errors == "raise":
                 raise KeyError(
                     "Only a column name can be used for the key in"
                     "a dtype mappings argument."
@@ -1273,19 +1255,13 @@ class DataFrame(object):
             if not is_list_like(axes["index"]):
                 axes["index"] = [axes["index"]]
             if errors == "raise":
-                non_existant = [
-                    obj
-                    for obj in axes["index"]
-                    if obj not in self.index
-                ]
+                non_existant = [obj for obj in axes["index"] if obj not in self.index]
                 if len(non_existant):
                     raise ValueError(
                         "labels {} not contained in axis".format(non_existant)
                     )
             else:
-                axes["index"] = [
-                    obj for obj in axes["index"] if obj in self.index
-                ]
+                axes["index"] = [obj for obj in axes["index"] if obj in self.index]
                 # If the length is zero, we will just do nothing
                 if not len(axes["index"]):
                     axes["index"] = None
@@ -1297,9 +1273,7 @@ class DataFrame(object):
                 axes["columns"] = [axes["columns"]]
             if errors == "raise":
                 non_existant = [
-                    obj
-                    for obj in axes["columns"]
-                    if obj not in self.columns
+                    obj for obj in axes["columns"] if obj not in self.columns
                 ]
                 if len(non_existant):
                     raise ValueError(
@@ -1307,9 +1281,7 @@ class DataFrame(object):
                     )
             else:
                 axes["columns"] = [
-                    obj
-                    for obj in axes["columns"]
-                    if obj in self.columns
+                    obj for obj in axes["columns"] if obj in self.columns
                 ]
                 # If the length is zero, we will just do nothing
                 if not len(axes["columns"]):
@@ -1391,9 +1363,7 @@ class DataFrame(object):
         if isinstance(other, pandas.DataFrame):
             # Copy into a Ray DataFrame to simplify logic below
             other = DataFrame(other)
-        if not self.index.equals(
-            other.index
-        ) or not self.columns.equals(other.columns):
+        if not self.index.equals(other.index) or not self.columns.equals(other.columns):
             return False
 
         return all(self.eq(other).all())
@@ -1980,9 +1950,7 @@ class DataFrame(object):
         else:
             if not is_list_like(value):
                 value = np.full(len(self.index), value)
-            if not isinstance(value, pandas.Series) and len(value) != len(
-                self.index
-            ):
+            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
@@ -3090,9 +3058,7 @@ class DataFrame(object):
         # inplace should always be true because this is just a copy, and we will use the
         # results after.
         kwargs["inplace"] = True
-        df_to_rename = pandas.DataFrame(
-            index=self.index, columns=self.columns
-        )
+        df_to_rename = pandas.DataFrame(index=self.index, columns=self.columns)
         df_to_rename.rename(**kwargs)
 
         if inplace:
@@ -3156,11 +3122,7 @@ class DataFrame(object):
                     newnames = v
                 else:
                     f = _get_rename_function(v)
-                    curnames = (
-                        self.index.names
-                        if axis == 0
-                        else self.columns.names
-                    )
+                    curnames = self.index.names if axis == 0 else self.columns.names
                     newnames = [f(name) for name in curnames]
                 result._set_axis_name(newnames, axis=axis, inplace=True)
             if not inplace:
@@ -3600,12 +3562,8 @@ class DataFrame(object):
 
         sel = tuple(map(set, (include, exclude)))
         include, exclude = map(lambda x: set(map(infer_dtype_from_object, x)), sel)
-        include_these = pandas.Series(
-            not bool(include), index=self.columns
-        )
-        exclude_these = pandas.Series(
-            not bool(exclude), index=self.columns
-        )
+        include_these = pandas.Series(not bool(include), index=self.columns)
+        exclude_these = pandas.Series(not bool(exclude), index=self.columns)
 
         def is_dtype_instance_mapper(column, dtype):
             return column, functools.partial(issubclass, dtype.type)
@@ -3874,9 +3832,7 @@ class DataFrame(object):
         # TODO create a more efficient way to sort
         if axis == 0:
             broadcast_value_dict = {col: self[col] for col in by}
-            broadcast_values = pandas.DataFrame(
-                broadcast_value_dict, index=self.index
-            )
+            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
             new_index = broadcast_values.sort_values(
                 by=by,
                 axis=axis,
@@ -4361,9 +4317,7 @@ class DataFrame(object):
         if index:
             if not index_label:
                 index_label = "index"
-            new_query_compiler = new_query_compiler.insert(
-                0, index_label, self.index
-            )
+            new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
@@ -4643,21 +4597,13 @@ class DataFrame(object):
                 cond = np.asanyarray(cond)
             if cond.shape != self.shape:
                 raise ValueError("Array conditional must be same shape as self")
-            cond = DataFrame(
-                cond,
-                index=self.index,
-                columns=self.columns,
-            )
+            cond = DataFrame(cond, index=self.index, columns=self.columns)
         if isinstance(other, DataFrame):
             other = other._query_compiler
         elif isinstance(other, pandas.Series):
-            other = other.reindex(
-                self.index if not axis else self.columns
-            )
+            other = other.reindex(self.index if not axis else self.columns)
         else:
-            index = (
-                self.index if not axis else self.columns
-            )
+            index = self.index if not axis else self.columns
             other = pandas.Series(other, index=index)
         query_compiler = self._query_compiler.where(
             cond._query_compiler, other, axis=axis, level=level
@@ -4688,9 +4634,7 @@ class DataFrame(object):
             pass
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
-        indexer = convert_to_index_sliceable(
-            pandas.DataFrame(index=self.index), key
-        )
+        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
         if indexer is not None:
             return self._getitem_slice(indexer)
         if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
@@ -4710,9 +4654,7 @@ class DataFrame(object):
 
     def _getitem_array(self, key):
         if is_bool_indexer(key):
-            if isinstance(key, pandas.Series) and not key.index.equals(
-                self.index
-            ):
+            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
                     "Boolean Series key will be reindexed to match DataFrame index.",
                     PendingDeprecationWarning,
@@ -4734,9 +4676,7 @@ class DataFrame(object):
             if any(k not in self.columns for k in key):
                 raise KeyError(
                     "{} not index".format(
-                        str(
-                            [k for k in key if k not in self.columns]
-                        ).replace(",", "")
+                        str([k for k in key if k not in self.columns]).replace(",", "")
                     )
                 )
             return DataFrame(
@@ -5135,18 +5075,12 @@ class DataFrame(object):
                 if len(other) != len(self.columns):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(
-                            len(self.columns), len(other)
-                        )
+                        "given {1}".format(len(self.columns), len(other))
                     )
         else:
             other_dtypes = [
                 type(other)
-                for _ in range(
-                    len(self.index)
-                    if axis
-                    else len(self.columns)
-                )
+                for _ in range(len(self.index) if axis else len(self.columns))
             ]
 
         # Do dtype checking
