@@ -1,4 +1,6 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import numpy as np # linear algebra
 import modin.pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
@@ -107,7 +109,8 @@ print("Best accuracy is {} with K = {}".format(np.max(test_accuracy),1+test_accu
 # In[11]:
 
 
-data1 = data[data['class'] =='Abnormal']
+# data1 = data[data['class'] =='Abnormal']
+data1 = data[data['class'] =='A']
 x = np.array(data1.loc[:,'pelvic_incidence']).reshape(-1,1)
 y = np.array(data1.loc[:,'sacral_slope']).reshape(-1,1)
 # Scatter
@@ -129,7 +132,7 @@ predict_space = np.linspace(min(x), max(x)).reshape(-1,1)
 reg.fit(x,y)
 # Predict
 predicted = reg.predict(predict_space)
-# R^2 
+# R^2
 print('R^2 score: ',reg.score(x, y))
 # Plot regression line and scatter
 plt.plot(predict_space, predicted, color='black', linewidth=3)
@@ -146,7 +149,7 @@ plt.show()
 from sklearn.model_selection import cross_val_score
 reg = LinearRegression()
 k = 5
-cv_result = cross_val_score(reg,x,y,cv=k) # uses R^2 as score 
+cv_result = cross_val_score(reg,x,y,cv=k) # uses R^2 as score
 print('CV Scores: ',cv_result)
 print('CV scores average: ',np.sum(cv_result)/k)
 
@@ -191,7 +194,7 @@ print('Classification report: \n',classification_report(y_test,y_pred))
 
 
 # visualize with seaborn library
-sns.heatmap(cm,annot=True,fmt="d") 
+sns.heatmap(cm,annot=True,fmt="d")
 plt.show()
 
 # In[18]:
@@ -226,7 +229,7 @@ knn_cv = GridSearchCV(knn, grid, cv=3) # GridSearchCV
 knn_cv.fit(x,y)# Fit
 
 # Print hyperparameter
-print("Tuned hyperparameter k: {}".format(knn_cv.best_params_)) 
+print("Tuned hyperparameter k: {}".format(knn_cv.best_params_))
 print("Best score: {}".format(knn_cv.best_score_))
 
 # In[ ]:
@@ -255,7 +258,7 @@ df.head(10)
 
 
 # drop one of the feature
-df.drop("class_Normal",axis = 1, inplace = True) 
+df.drop("class_Normal",axis = 1, inplace = True)
 df.head(10)
 # instead of two steps we can make it with one step pd.get_dummies(data,drop_first = True)
 

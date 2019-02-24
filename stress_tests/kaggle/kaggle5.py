@@ -1,4 +1,6 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 
 import modin.pandas as pd
@@ -7,7 +9,6 @@ import random as rnd
 
 import seaborn as sns
 import matplotlib.pyplot as plt
-get_ipython().run_line_magic('matplotlib', 'inline')
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC, LinearSVC
@@ -70,8 +71,9 @@ train_df[["Parch", "Survived"]].groupby(['Parch'], as_index=False).mean().sort_v
 
 # In[13]:
 
-g = sns.FacetGrid(train_df, col='Survived')
-g.map(plt.hist, 'Age', bins=20)
+# TODO (williamma12): The following does not work with the data being generated
+# g = sns.FacetGrid(train_df, col='Survived')
+# g.map(plt.hist, 'Age', bins=20)
 
 # In[14]:
 
@@ -116,7 +118,7 @@ for dataset in combine:
     dataset['Title'] = dataset['Title'].replace('Mlle', 'Miss')
     dataset['Title'] = dataset['Title'].replace('Ms', 'Miss')
     dataset['Title'] = dataset['Title'].replace('Mme', 'Mrs')
-    
+
 train_df[['Title', 'Survived']].groupby(['Title'], as_index=False).mean()
 
 # In[20]:
@@ -173,7 +175,7 @@ for dataset in combine:
 
             # Convert random age float to nearest .5 age
             guess_ages[i,j] = int( age_guess/0.5 + 0.5 ) * 0.5
-            
+
     for i in range(0, 2):
         for j in range(0, 3):
             dataset.loc[ (dataset.Age.isnull()) & (dataset.Sex == i) & (dataset.Pclass == j+1),                    'Age'] = guess_ages[i,j]
@@ -189,7 +191,7 @@ train_df[['AgeBand', 'Survived']].groupby(['AgeBand'], as_index=False).mean().so
 
 # In[27]:
 
-for dataset in combine:    
+for dataset in combine:
     dataset.loc[ dataset['Age'] <= 16, 'Age'] = 0
     dataset.loc[(dataset['Age'] > 16) & (dataset['Age'] <= 32), 'Age'] = 1
     dataset.loc[(dataset['Age'] > 32) & (dataset['Age'] <= 48), 'Age'] = 2
@@ -243,7 +245,7 @@ freq_port
 
 for dataset in combine:
     dataset['Embarked'] = dataset['Embarked'].fillna(freq_port)
-    
+
 train_df[['Embarked', 'Survived']].groupby(['Embarked'], as_index=False).mean().sort_values(by='Survived', ascending=False)
 
 # In[35]:
@@ -276,7 +278,7 @@ for dataset in combine:
 
 train_df = train_df.drop(['FareBand'], axis=1)
 combine = [train_df, test_df]
-    
+
 train_df.head(10)
 
 
@@ -363,7 +365,7 @@ acc_decision_tree
 
 # In[49]:
 
-random_forest = RandomForestClassifier(n_estimators=100)
+random_forest = RandomForestClassifier(n_estimators=1)
 random_forest.fit(X_train, Y_train)
 Y_pred = random_forest.predict(X_test)
 random_forest.score(X_train, Y_train)
@@ -373,12 +375,12 @@ acc_random_forest
 # In[50]:
 
 models = pd.DataFrame({
-    'Model': ['Support Vector Machines', 'KNN', 'Logistic Regression', 
-              'Random Forest', 'Naive Bayes', 'Perceptron', 
-              'Stochastic Gradient Decent', 'Linear SVC', 
+    'Model': ['Support Vector Machines', 'KNN', 'Logistic Regression',
+              'Random Forest', 'Naive Bayes', 'Perceptron',
+              'Stochastic Gradient Decent', 'Linear SVC',
               'Decision Tree'],
-    'Score': [acc_svc, acc_knn, acc_log, 
-              acc_random_forest, acc_gaussian, acc_perceptron, 
+    'Score': [acc_svc, acc_knn, acc_log,
+              acc_random_forest, acc_gaussian, acc_perceptron,
               acc_sgd, acc_linear_svc, acc_decision_tree]})
 models.sort_values(by='Score', ascending=False)
 

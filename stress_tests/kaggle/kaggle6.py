@@ -1,9 +1,11 @@
+import matplotlib
+matplotlib.use('PS')
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import seaborn as sns
-get_ipython().run_line_magic('matplotlib', 'inline')
 
 np.random.seed(2)
 
@@ -21,15 +23,17 @@ from keras.callbacks import ReduceLROnPlateau
 
 sns.set(style='white', context='notebook', palette='deep')
 
-train = pd.read_csv("../input/train.csv")
-test = pd.read_csv("../input/test.csv")
+# train = pd.read_csv("../input/train.csv")
+# test = pd.read_csv("../input/test.csv")
+train = pd.read_csv("train.csv")
+test = pd.read_csv("test.csv")
 
 
 Y_train = train["label"]
 
-X_train = train.drop(labels = ["label"],axis = 1) 
+X_train = train.drop(labels = ["label"],axis = 1)
 
-del train 
+del train
 
 g = sns.countplot(Y_train)
 
@@ -55,17 +59,17 @@ g = plt.imshow(X_train[0][:,:,0])
 
 model = Sequential()
 
-model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same', 
+model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same',
                  activation ='relu', input_shape = (28,28,1)))
-model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same', 
+model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same',
                  activation ='relu'))
 model.add(MaxPool2D(pool_size=(2,2)))
 model.add(Dropout(0.25))
 
 
-model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
+model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same',
                  activation ='relu'))
-model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
+model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same',
                  activation ='relu'))
 model.add(MaxPool2D(pool_size=(2,2), strides=(2,2)))
 model.add(Dropout(0.25))
@@ -80,10 +84,10 @@ optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
 
 model.compile(optimizer = optimizer , loss = "categorical_crossentropy", metrics=["accuracy"])
 
-learning_rate_reduction = ReduceLROnPlateau(monitor='val_acc', 
-                                            patience=3, 
-                                            verbose=1, 
-                                            factor=0.5, 
+learning_rate_reduction = ReduceLROnPlateau(monitor='val_acc',
+                                            patience=3,
+                                            verbose=1,
+                                            factor=0.5,
                                             min_lr=0.00001)
 
 
@@ -97,7 +101,7 @@ datagen = ImageDataGenerator(
         samplewise_std_normalization=False,  # divide each input by its std
         zca_whitening=False,  # apply ZCA whitening
         rotation_range=10,  # randomly rotate images in the range (degrees, 0 to 180)
-        zoom_range = 0.1, # Randomly zoom image 
+        zoom_range = 0.1, # Randomly zoom image
         width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
         height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
         horizontal_flip=False,  # randomly flip images
@@ -149,10 +153,10 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
 
 Y_pred = model.predict(X_val)
-Y_pred_classes = np.argmax(Y_pred,axis = 1) 
-Y_true = np.argmax(Y_val,axis = 1) 
-confusion_mtx = confusion_matrix(Y_true, Y_pred_classes) 
-plot_confusion_matrix(confusion_mtx, classes = range(10)) 
+Y_pred_classes = np.argmax(Y_pred,axis = 1)
+Y_true = np.argmax(Y_val,axis = 1)
+confusion_mtx = confusion_matrix(Y_true, Y_pred_classes)
+plot_confusion_matrix(confusion_mtx, classes = range(10))
 
 errors = (Y_pred_classes - Y_true != 0)
 

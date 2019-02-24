@@ -1,4 +1,6 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import modin.pandas as pd
 import numpy as np
@@ -10,8 +12,8 @@ from scipy.stats import skew
 from scipy.stats.stats import pearsonr
 
 
-get_ipython().run_line_magic('config', "InlineBackend.figure_format = 'retina' #set 'png' here when working on notebook")
-get_ipython().run_line_magic('matplotlib', 'inline')
+# get_ipython().run_line_magic('config', "InlineBackend.figure_format = 'retina' #set 'png' here when working on notebook")
+# get_ipython().run_line_magic('matplotlib', 'inline')
 
 
 # In[2]:
@@ -87,7 +89,7 @@ model_ridge = Ridge()
 
 
 alphas = [0.05, 0.1, 0.3, 1, 3, 5, 10, 15, 30, 50, 75]
-cv_ridge = [rmse_cv(Ridge(alpha = alpha)).mean() 
+cv_ridge = [rmse_cv(Ridge(alpha = alpha)).mean()
             for alpha in alphas]
 
 # In[13]:
@@ -264,7 +266,3 @@ pd.Series(model.predict(X_val)[:,0]).hist()
 
 
 # In[ ]:
-
-
-
-

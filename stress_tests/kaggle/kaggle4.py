@@ -1,8 +1,10 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import numpy as np # linear algebra
 import modin.pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-get_ipython().run_line_magic('matplotlib', 'inline')
+# get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt  # Matlab-style plotting
 import seaborn as sns
 color = sns.color_palette()
@@ -43,7 +45,7 @@ test_ID = test['Id']
 train.drop("Id", axis = 1, inplace = True)
 test.drop("Id", axis = 1, inplace = True)
 
-print("\nThe train data size after dropping Id feature is : {} ".format(train.shape)) 
+print("\nThe train data size after dropping Id feature is : {} ".format(train.shape))
 print("The test data size after dropping Id feature is : {} ".format(test.shape))
 
 # In[6]:
@@ -116,12 +118,13 @@ missing_data.head(20)
 
 # In[12]:
 
-f, ax = plt.subplots(figsize=(15, 12))
-plt.xticks(rotation='90')
-sns.barplot(x=all_data_na.index, y=all_data_na)
-plt.xlabel('Features', fontsize=15)
-plt.ylabel('Percent of missing values', fontsize=15)
-plt.title('Percent missing data by feature', fontsize=15)
+# TODO (williamma12): Leave this commented out because generated data has no nans
+# f, ax = plt.subplots(figsize=(15, 12))
+# plt.xticks(rotation='90')
+# sns.barplot(x=all_data_na.index, y=all_data_na)
+# plt.xlabel('Features', fontsize=15)
+# plt.ylabel('Percent of missing values', fontsize=15)
+# plt.title('Percent missing data by feature', fontsize=15)
 
 # In[13]:
 
@@ -186,7 +189,7 @@ all_data = all_data.drop(['Utilities'], axis=1)
 all_data["Functional"] = all_data["Functional"].fillna("Typ")
 
 all_data['Electrical'] = all_data['Electrical'].fillna(all_data['Electrical'].mode()[0])
- 
+
 # In[24]:
 
 all_data['KitchenQual'] = all_data['KitchenQual'].fillna(all_data['KitchenQual'].mode()[0])
@@ -222,14 +225,14 @@ all_data['MoSold'] = all_data['MoSold'].astype(str)
 # In[29]:
 
 from sklearn.preprocessing import LabelEncoder
-cols = ('FireplaceQu', 'BsmtQual', 'BsmtCond', 'GarageQual', 'GarageCond', 
-        'ExterQual', 'ExterCond','HeatingQC', 'PoolQC', 'KitchenQual', 'BsmtFinType1', 
+cols = ('FireplaceQu', 'BsmtQual', 'BsmtCond', 'GarageQual', 'GarageCond',
+        'ExterQual', 'ExterCond','HeatingQC', 'PoolQC', 'KitchenQual', 'BsmtFinType1',
         'BsmtFinType2', 'Functional', 'Fence', 'BsmtExposure', 'GarageFinish', 'LandSlope',
-        'LotShape', 'PavedDrive', 'Street', 'Alley', 'CentralAir', 'MSSubClass', 'OverallCond', 
+        'LotShape', 'PavedDrive', 'Street', 'Alley', 'CentralAir', 'MSSubClass', 'OverallCond',
         'YrSold', 'MoSold')
 for c in cols:
-    lbl = LabelEncoder() 
-    lbl.fit(list(all_data[c].values)) 
+    lbl = LabelEncoder()
+    lbl.fit(list(all_data[c].values))
     all_data[c] = lbl.transform(list(all_data[c].values))
 
 print('Shape all_data: {}'.format(all_data.shape))
@@ -252,7 +255,7 @@ lam = 0.15
 for feat in skewed_features:
     #all_data[feat] += 1
     all_data[feat] = boxcox1p(all_data[feat], lam)
-    
+
 # In[30]:
 
 all_data = pd.get_dummies(all_data)
@@ -291,20 +294,20 @@ ENet = make_pipeline(RobustScaler(), ElasticNet(alpha=0.0005, l1_ratio=.9, rando
 
 # In[34]:
 
-KRR = KernelRidge(alpha=0.6, kernel='polynomial', degree=2, coef0=2.5) 
+KRR = KernelRidge(alpha=0.6, kernel='polynomial', degree=2, coef0=2.5)
 
 # In[35]:
 
-GBoost = GradientBoostingRegressor(n_estimators=3000, learning_rate=0.05,
+GBoost = GradientBoostingRegressor(n_estimators=1, learning_rate=0.05,
                                    max_depth=4, max_features='sqrt',
-                                   min_samples_leaf=15, min_samples_split=10, 
+                                   min_samples_leaf=15, min_samples_split=10,
                                    loss='huber', random_state =5)
 
 # In[36]:
 
-model_xgb = xgb.XGBRegressor(colsample_bytree=0.4603, gamma=0.0468, 
-                             learning_rate=0.05, max_depth=3, 
-                             min_child_weight=1.7817, n_estimators=2200,
+model_xgb = xgb.XGBRegressor(colsample_bytree=0.4603, gamma=0.0468,
+                             learning_rate=0.05, max_depth=3,
+                             min_child_weight=1.7817, n_estimators=1,
                              reg_alpha=0.4640, reg_lambda=0.8571,
                              subsample=0.5213, silent=1,
                              random_state =7, nthread = -1)
@@ -312,7 +315,7 @@ model_xgb = xgb.XGBRegressor(colsample_bytree=0.4603, gamma=0.0468,
 # In[37]:
 
 model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=5,
-                              learning_rate=0.05, n_estimators=720,
+                              learning_rate=0.05, n_estimators=1,
                               max_bin = 55, bagging_fraction = 0.8,
                               bagging_freq = 5, feature_fraction = 0.2319,
                               feature_fraction_seed=9, bagging_seed=9,
@@ -354,20 +357,20 @@ print("LGBM score: {:.4f} ({:.4f})\n" .format(score.mean(), score.std()))
 class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
     def __init__(self, models):
         self.models = models
-        
+
     def fit(self, X, y):
         self.models_ = [clone(x) for x in self.models]
-        
+
         for model in self.models_:
             model.fit(X, y)
 
         return self
-    
+
     def predict(self, X):
         predictions = np.column_stack([
             model.predict(X) for model in self.models_
         ])
-        return np.mean(predictions, axis=1)   
+        return np.mean(predictions, axis=1)
 
 # In[45]:
 
@@ -383,12 +386,12 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
         self.base_models = base_models
         self.meta_model = meta_model
         self.n_folds = n_folds
-   
+
     def fit(self, X, y):
         self.base_models_ = [list() for x in self.base_models]
         self.meta_model_ = clone(self.meta_model)
         kfold = KFold(n_splits=self.n_folds, shuffle=True, random_state=156)
-        
+
         out_of_fold_predictions = np.zeros((X.shape[0], len(self.base_models)))
         for i, model in enumerate(self.base_models):
             for train_index, holdout_index in kfold.split(X, y):
@@ -397,10 +400,10 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
                 instance.fit(X[train_index], y[train_index])
                 y_pred = instance.predict(X[holdout_index])
                 out_of_fold_predictions[holdout_index, i] = y_pred
-                
+
         self.meta_model_.fit(out_of_fold_predictions, y)
         return self
-   
+
     def predict(self, X):
         meta_features = np.column_stack([
             np.column_stack([model.predict(X) for model in base_models]).mean(axis=1)
