@@ -27,7 +27,9 @@ def test_get_dummies():
     df_equals(modin_result, pandas_result)
 
     modin_result = pd.get_dummies(pd.DataFrame(pd.Series(list("abcdeabac"))))
-    pandas_result = pandas.get_dummies(pandas.DataFrame(pandas.Series(list("abcdeabac"))))
+    pandas_result = pandas.get_dummies(
+        pandas.DataFrame(pandas.Series(list("abcdeabac")))
+    )
     df_equals(modin_result, pandas_result)
 
     with pytest.raises(NotImplementedError):

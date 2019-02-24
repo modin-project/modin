@@ -357,8 +357,8 @@ def to_pickle(obj, path, compression="infer", protocol=4):
 class ExcelFile(pandas.ExcelFile):
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
+        method = super(ExcelFile, self).__getattribute__(item)
         if item not in default_behaviors:
-            method = super(ExcelFile, self).__getattribute__(item)
             if callable(method):
 
                 def return_handler(*args, **kwargs):
@@ -391,18 +391,16 @@ class ExcelFile(pandas.ExcelFile):
                         return DataFrame(obj)
                     return obj
 
-                # We replace the method with `inplace_handler` for inplace operations
+                # We replace the method with `return_handler` for inplace operations
                 method = return_handler
-            return method
-        else:
-            return object.__getattribute__(pandas.ExcelFile, item)
+        return method
 
 
 class HDFStore(pandas.HDFStore):
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
+        method = super(HDFStore, self).__getattribute__(item)
         if item not in default_behaviors:
-            method = super(HDFStore, self).__getattribute__(item)
             if callable(method):
 
                 def return_handler(*args, **kwargs):
@@ -437,8 +435,6 @@ class HDFStore(pandas.HDFStore):
                         return DataFrame(obj)
                     return obj
 
-                # We replace the method with `inplace_handler` for inplace operations
+                # We replace the method with `return_handler` for inplace operations
                 method = return_handler
-            return method
-        else:
-            return object.__getattribute__(pandas.HDFStore, item)
+        return method

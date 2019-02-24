@@ -93,47 +93,47 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_on and right_index
-        modin_result = pd.merge(modin_df,
-            modin_df2, how=how, left_on="col1", right_index=True
+        modin_result = pd.merge(
+            modin_df, modin_df2, how=how, left_on="col1", right_index=True
         )
-        pandas_result = pandas.merge(pandas_df,
-            pandas_df2, how=how, left_on="col1", right_index=True
+        pandas_result = pandas.merge(
+            pandas_df, pandas_df2, how=how, left_on="col1", right_index=True
         )
         df_equals(modin_result, pandas_result)
 
         # left_index and right_on
-        modin_result = pd.merge(modin_df,
-            modin_df2, how=how, left_index=True, right_on="col1"
+        modin_result = pd.merge(
+            modin_df, modin_df2, how=how, left_index=True, right_on="col1"
         )
-        pandas_result = pandas.merge(pandas_df,
-            pandas_df2, how=how, left_index=True, right_on="col1"
+        pandas_result = pandas.merge(
+            pandas_df, pandas_df2, how=how, left_index=True, right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col1
-        modin_result = pd.merge(modin_df,
-            modin_df2, how=how, left_on="col1", right_on="col1"
+        modin_result = pd.merge(
+            modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
         )
-        pandas_result = pandas.merge(pandas_df,
-            pandas_df2, how=how, left_on="col1", right_on="col1"
+        pandas_result = pandas.merge(
+            pandas_df, pandas_df2, how=how, left_on="col1", right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col2
-        modin_result = pd.merge(modin_df,
-            modin_df2, how=how, left_on="col2", right_on="col2"
+        modin_result = pd.merge(
+            modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
         )
-        pandas_result = pandas.merge(pandas_df,
-            pandas_df2, how=how, left_on="col2", right_on="col2"
+        pandas_result = pandas.merge(
+            pandas_df, pandas_df2, how=how, left_on="col2", right_on="col2"
         )
         df_equals(modin_result, pandas_result)
 
         # left_index and right_index
-        modin_result = pd.merge(modin_df,
-            modin_df2, how=how, left_index=True, right_index=True
+        modin_result = pd.merge(
+            modin_df, modin_df2, how=how, left_index=True, right_index=True
         )
-        pandas_result = pandas.merge(pandas_df,
-            pandas_df2, how=how, left_index=True, right_index=True
+        pandas_result = pandas.merge(
+            pandas_df, pandas_df2, how=how, left_index=True, right_index=True
         )
         df_equals(modin_result, pandas_result)
 
@@ -142,49 +142,60 @@ def test_merge():
 
 
 def test_merge_ordered():
-    data_a = {"key": list("aceace"), "lvalue": [1, 2, 3, 1, 2, 3], "group": list("aaabbb")}
+    data_a = {
+        "key": list("aceace"),
+        "lvalue": [1, 2, 3, 1, 2, 3],
+        "group": list("aaabbb"),
+    }
     data_b = {"key": list("bcd"), "rvalue": [1, 2, 3]}
 
     modin_df_a = pd.DataFrame(data_a)
     modin_df_b = pd.DataFrame(data_b)
 
     with pytest.warns(UserWarning):
-        df = pd.merge_ordered(modin_df_a, modin_df_b, fill_method='ffill', left_by='group')
+        df = pd.merge_ordered(
+            modin_df_a, modin_df_b, fill_method="ffill", left_by="group"
+        )
         assert isinstance(df, pd.DataFrame)
 
     with pytest.raises(ValueError):
-        pd.merge_ordered(data_a, data_b, fill_method='ffill', left_by='group')
+        pd.merge_ordered(data_a, data_b, fill_method="ffill", left_by="group")
 
 
 def test_merge_asof():
-    left = pd.DataFrame({'a': [1, 5, 10], 'left_val': ['a', 'b', 'c']})
-    right = pd.DataFrame({'a': [1, 2, 3, 6, 7], 'right_val': [1, 2, 3, 6, 7]})
+    left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
+    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
 
     with pytest.warns(UserWarning):
-        df = pd.merge_asof(left, right, on='a')
+        df = pd.merge_asof(left, right, on="a")
         assert isinstance(df, pd.DataFrame)
 
     with pytest.warns(UserWarning):
-        df = pd.merge_asof(left, right, on='a', allow_exact_matches=False)
+        df = pd.merge_asof(left, right, on="a", allow_exact_matches=False)
         assert isinstance(df, pd.DataFrame)
 
     with pytest.warns(UserWarning):
-        df = pd.merge_asof(left, right, on='a', direction='forward')
+        df = pd.merge_asof(left, right, on="a", direction="forward")
         assert isinstance(df, pd.DataFrame)
 
     with pytest.warns(UserWarning):
-        df = pd.merge_asof(left, right, on='a', direction='nearest')
+        df = pd.merge_asof(left, right, on="a", direction="nearest")
         assert isinstance(df, pd.DataFrame)
 
-    left = pd.DataFrame({'left_val': ['a', 'b', 'c']}, index=[1, 5, 10])
-    right = pd.DataFrame({'right_val': [1, 2, 3, 6, 7]}, index=[1, 2, 3, 6, 7])
+    left = pd.DataFrame({"left_val": ["a", "b", "c"]}, index=[1, 5, 10])
+    right = pd.DataFrame({"right_val": [1, 2, 3, 6, 7]}, index=[1, 2, 3, 6, 7])
 
     with pytest.warns(UserWarning):
         df = pd.merge_asof(left, right, left_index=True, right_index=True)
         assert isinstance(df, pd.DataFrame)
 
     with pytest.raises(ValueError):
-        pd.merge_asof({'left_val': ['a', 'b', 'c']}, {'right_val': [1, 2, 3, 6, 7]}, left_index=True, right_index=True)
+        pd.merge_asof(
+            {"left_val": ["a", "b", "c"]},
+            {"right_val": [1, 2, 3, 6, 7]},
+            left_index=True,
+            right_index=True,
+        )
 
 
 def test_pivot():
@@ -225,8 +236,12 @@ def test_pivot_table():
         }
     )
     with pytest.warns(UserWarning):
-        df = pd.pivot_table(test_df, values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum)
+        df = pd.pivot_table(
+            test_df, values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
+        )
         assert isinstance(df, pd.DataFrame)
 
     with pytest.raises(ValueError):
-        pd.pivot_table(test_df["C"], values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum)
+        pd.pivot_table(
+            test_df["C"], values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
+        )
