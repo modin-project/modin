@@ -2294,10 +2294,15 @@ def test_get_values():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("n", int_arg_values, ids=arg_keys("n", int_arg_keys))
 def test_head(data, n):
+    # Test normal dataframe head
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
-
     df_equals(modin_df.head(n), pandas_df.head(n))
+
+    # Test head when we call it from a QueryCompilerView
+    modin_result = modin_df.loc[:, ["col1", "col3", "col3"]].head(n)
+    pandas_result = pandas_df.loc[:, ["col1", "col3", "col3"]].head(n)
+    df_equals(modin_result, pandas_result)
 
 
 def test_hist():

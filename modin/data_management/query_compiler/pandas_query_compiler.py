@@ -43,15 +43,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
     _dtype_cache = None
 
     def _get_dtype(self):
+        calculate_dtype = False
         if self._dtype_cache is None:
+            calculate_dtype = True
+        else:
+            if len(self.columns) != len(self._dtype_cache):
+                if all(col in self._dtype_cache.index for col in self.columns):
+                    self._dtype_cache = pandas.Series(
+                        {col: self._dtype_cache[col] for col in self.columns}
+                    )
+                else:
+                    calculate_dtype = True
+            elif not self._dtype_cache.equals(self.columns):
+                self._dtype_cache.index = self.columns
+        if calculate_dtype:
             map_func = self._prepare_method(lambda df: df.dtypes)
 
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
             self._dtype_cache = self._full_reduce(0, map_func, dtype_builder)
-            self._dtype_cache.index = self.columns
-        elif not self._dtype_cache.index.equals(self.columns):
             self._dtype_cache.index = self.columns
         return self._dtype_cache
 
@@ -452,11 +463,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         df = self.data.to_pandas(is_transposed=self._is_transposed)
         if df.empty:
-            dtype_dict = {
-                col_name: pandas.Series(dtype=self.dtypes[col_name])
-                for col_name in self.columns
-            }
-            df = pandas.DataFrame(dtype_dict, self.index)
+            if len(self.columns) != 0:
+                data = [
+                    pandas.Series(dtype=self.dtypes[col_name], name=col_name)
+                    for col_name in self.columns
+                ]
+                df = pandas.concat(data, axis=1)
+            else:
+                df = pandas.DataFrame(index=self.index)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
@@ -2790,7 +2804,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
 class PandasQueryCompilerView(PandasQueryCompiler):
     """
-    This class represent a view of the PandasDataManager
+    This class represent a view of the PandasQueryCompiler
 
     In particular, the following constraints are broken:
     - (len(self.index), len(self.columns)) != self.data.shape
@@ -2826,6 +2840,11 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         PandasQueryCompiler.__init__(
             self, block_partitions_object, index, columns, dtypes
         )
+
+    @property
+    def __constructor__(self):
+        """Return parent object when getting the constructor."""
+        return PandasQueryCompiler
 
     _dtype_cache = None
 
@@ -2869,7 +2888,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     def _set_data(self, new_data):
         """Note this setter will be called by the
-            `super(PandasDataManagerView).__init__` function
+            `super(PandasQueryCompiler).__init__` function
         """
         self.parent_data = new_data
 

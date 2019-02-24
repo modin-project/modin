@@ -1049,6 +1049,10 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
+    @property
+    def __constructor__(self):
+        raise NotImplementedError("Must be implemented in children classes")
+
     _dtype_cache = None
 
     def _get_dtype(self):
@@ -1056,7 +1060,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         raise NotImplementedError("Must be implemented in children classes")
 
     def _set_dtype(self, dtypes):
-        self._dtype_cache = dtypes
+        raise NotImplementedError("Must be implemented in children classes")
 
     dtypes = property(_get_dtype, _set_dtype)
 
@@ -1070,9 +1074,9 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     def _set_data(self, new_data):
         """Note this setter will be called by the
-            `super(PandasDataManagerView).__init__` function
+            `super(BaseQueryCompiler).__init__` function
         """
-        self.parent_data = new_data
+        raise NotImplementedError("Must be implemented in children classes")
 
     data = property(_get_data, _set_data)
 
@@ -1080,7 +1084,3 @@ class BaseQueryCompilerView(BaseQueryCompiler):
         raise NotImplementedError("Must be implemented in children classes")
 
     # END Abstract functions for QueryCompilerView
-
-    @property
-    def __constructor__(self):
-        return type(self)
