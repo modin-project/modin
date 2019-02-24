@@ -323,14 +323,6 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
-def setup_gbq_file():
-
-
-
-def teardown_gbq_file():
-
-
-
 def test_from_parquet():
     setup_parquet_file(SMALL_ROW_SIZE)
 
