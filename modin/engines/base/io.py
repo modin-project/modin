@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pandas
 from modin.error_message import ErrorMessage
+from modin.data_management.query_compiler import BaseQueryCompiler
 
 
 class BaseIO(object):
@@ -203,10 +204,13 @@ class BaseIO(object):
         index_col=None,
         col_order=None,
         reauth=False,
-        verbose=None,
+        auth_local_webserver=False,
+        dialect=None,
+        location=None,
+        configuration=None,
+        credentials=None,
         private_key=None,
-        dialect="legacy",
-        **kwargs
+        verbose=None,
     ):
         ErrorMessage.default_to_pandas("`read_gbq`")
         return cls.from_pandas(
@@ -216,10 +220,13 @@ class BaseIO(object):
                 index_col=index_col,
                 col_order=col_order,
                 reauth=reauth,
-                verbose=verbose,
-                private_key=private_key,
+                auth_local_webserver=auth_local_webserver,
                 dialect=dialect,
-                **kwargs
+                location=location,
+                configuration=configuration,
+                credentials=credentials,
+                private_key=private_key,
+                verbose=verbose,
             )
         )
 
@@ -241,6 +248,7 @@ class BaseIO(object):
         converters=None,
         na_values=None,
         keep_default_na=True,
+        displayed_only=True,
     ):
         ErrorMessage.default_to_pandas("`read_html`")
         kwargs = {
@@ -259,13 +267,14 @@ class BaseIO(object):
             "converters": converters,
             "na_values": na_values,
             "keep_default_na": keep_default_na,
+            "displayed_only": displayed_only,
         }
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
-    def read_clipboard(cls, sep=r"\s+"):
+    def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_clipboard`")
-        return cls.from_pandas(pandas.read_clipboard(sep=sep))
+        return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
     def read_excel(
@@ -275,6 +284,7 @@ class BaseIO(object):
         header=0,
         names=None,
         index_col=None,
+        parse_cols=None,
         usecols=None,
         squeeze=False,
         dtype=None,
@@ -285,40 +295,51 @@ class BaseIO(object):
         skiprows=None,
         nrows=None,
         na_values=None,
+        keep_default_na=True,
+        verbose=False,
         parse_dates=False,
         date_parser=None,
         thousands=None,
         comment=None,
+        skip_footer=0,
         skipfooter=0,
         convert_float=True,
+        mangle_dupe_cols=True,
         **kwds
     ):
+        if skip_footer != 0:
+            skipfooter = skip_footer
         ErrorMessage.default_to_pandas("`read_excel`")
-        kwargs = {
-            "io": io,
-            "sheet_name": sheet_name,
-            "header": header,
-            "skiprows": skiprows,
-            "nrows": nrows,
-            "index_col": index_col,
-            "names": names,
-            "usecols": usecols,
-            "parse_dates": parse_dates,
-            "date_parser": date_parser,
-            "na_values": na_values,
-            "thousands": thousands,
-            "comment": comment,
-            "convert_float": convert_float,
-            "converters": converters,
-            "dtype": dtype,
-            "true_values": true_values,
-            "false_values": false_values,
-            "engine": engine,
-            "squeeze": squeeze,
-            "skipfooter": skipfooter,
-        }
-        kwargs.update(kwds)
-        return cls.from_pandas(pandas.read_excel(**kwargs))
+        return cls.from_pandas(
+            pandas.read_excel(
+                io,
+                sheet_name=sheet_name,
+                header=header,
+                names=names,
+                index_col=index_col,
+                parse_cols=parse_cols,
+                usecols=usecols,
+                squeeze=squeeze,
+                dtype=dtype,
+                engine=engine,
+                converters=converters,
+                true_values=true_values,
+                false_values=false_values,
+                skiprows=skiprows,
+                nrows=nrows,
+                na_values=na_values,
+                keep_default_na=keep_default_na,
+                verbose=verbose,
+                parse_dates=parse_dates,
+                date_parser=date_parser,
+                thousands=thousands,
+                comment=comment,
+                skipfooter=skipfooter,
+                convert_float=convert_float,
+                mangle_dupe_cols=mangle_dupe_cols,
+                **kwds
+            )
+        )
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
@@ -328,15 +349,19 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_feather(cls, path, nthreads=1):
+    def read_feather(cls, path, columns=None, use_threads=True):
         ErrorMessage.default_to_pandas("`read_feather`")
-        return cls.from_pandas(pandas.read_feather(path, nthreads))
+        return cls.from_pandas(
+            pandas.read_feather(path, columns=columns, use_threads=use_threads)
+        )
 
     @classmethod
-    def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False):
+    def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False, **kwargs):
         ErrorMessage.default_to_pandas("`read_msgpack`")
         return cls.from_pandas(
-            pandas.read_msgpack(path_or_buf, encoding=encoding, iterator=iterator)
+            pandas.read_msgpack(
+                path_or_buf, encoding=encoding, iterator=iterator, **kwargs
+            )
         )
 
     @classmethod
@@ -379,7 +404,7 @@ class BaseIO(object):
         encoding=None,
         chunksize=None,
         iterator=False,
-    ):
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
             pandas.read_sas(
@@ -424,6 +449,71 @@ class BaseIO(object):
         )
 
     @classmethod
+    def read_fwf(
+        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+    ):
+        ErrorMessage.default_to_pandas("`read_fwf`")
+        return cls.from_pandas(
+            pandas.read_fwf(
+                filepath_or_buffer,
+                colspecs=colspecs,
+                widths=widths,
+                infer_nrows=infer_nrows,
+                **kwds
+            )
+        )
+
+    @classmethod
+    def read_sql_table(
+        cls,
+        table_name,
+        con,
+        schema=None,
+        index_col=None,
+        coerce_float=True,
+        parse_dates=None,
+        columns=None,
+        chunksize=None,
+    ):
+        ErrorMessage.default_to_pandas("`read_sql_table`")
+        return cls.from_pandas(
+            pandas.read_sql_table(
+                table_name,
+                con,
+                schema=schema,
+                index_col=index_col,
+                coerce_float=coerce_float,
+                parse_dates=parse_dates,
+                columns=columns,
+                chunksize=chunksize,
+            )
+        )
+
+    @classmethod
+    def read_sql_query(
+        cls,
+        sql,
+        con,
+        index_col=None,
+        coerce_float=True,
+        params=None,
+        parse_dates=None,
+        chunksize=None,
+    ):
+        ErrorMessage.default_to_pandas("`read_sql_query`")
+        return cls.from_pandas(
+            pandas.read_sql_query(
+                sql,
+                con,
+                index_col=index_col,
+                coerce_float=coerce_float,
+                params=params,
+                parse_dates=parse_dates,
+                chunksize=chunksize,
+            )
+        )
+
+    @classmethod
     def to_sql(
         cls,
         qc,
@@ -450,3 +540,19 @@ class BaseIO(object):
             dtype=dtype,
             method=method,
         )
+
+    @classmethod
+    def to_pickle(cls, obj, path, compression="infer", protocol=4):
+        if protocol == 4:
+            # This forces pandas to use default pickling, which is different for python3
+            # and python2
+            protocol = -1
+        ErrorMessage.default_to_pandas("`to_pickle`")
+        if isinstance(obj, BaseQueryCompiler):
+            return pandas.to_pickle(
+                obj.to_pandas(), path, compression=compression, protocol=protocol
+            )
+        else:
+            return pandas.to_pickle(
+                obj, path, compression=compression, protocol=protocol
+            )

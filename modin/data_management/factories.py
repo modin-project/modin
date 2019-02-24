@@ -83,11 +83,11 @@ class BaseFactory(object):
         return cls.io_cls.read_html(**kwargs)
 
     @classmethod
-    def read_clipboard(cls, **kwargs):
+    def read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls._determine_engine()._read_clipboard(**kwargs)
 
     @classmethod
-    def _read_clipboard(cls, **kwargs):
+    def _read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_clipboard(**kwargs)
 
     @classmethod
@@ -131,11 +131,11 @@ class BaseFactory(object):
         return cls.io_cls.read_stata(**kwargs)
 
     @classmethod
-    def read_sas(cls, **kwargs):
+    def read_sas(cls, **kwargs):  # pragma: no cover
         return cls._determine_engine()._read_sas(**kwargs)
 
     @classmethod
-    def _read_sas(cls, **kwargs):
+    def _read_sas(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_sas(**kwargs)
 
     @classmethod
@@ -155,12 +155,44 @@ class BaseFactory(object):
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod
+    def read_fwf(cls, **kwargs):
+        return cls._determine_engine()._read_fwf(**kwargs)
+
+    @classmethod
+    def _read_fwf(cls, **kwargs):
+        return cls.io_cls.read_fwf(**kwargs)
+
+    @classmethod
+    def read_sql_table(cls, **kwargs):
+        return cls._determine_engine()._read_sql_table(**kwargs)
+
+    @classmethod
+    def _read_sql_table(cls, **kwargs):
+        return cls.io_cls.read_sql_table(**kwargs)
+
+    @classmethod
+    def read_sql_query(cls, **kwargs):
+        return cls._determine_engine()._read_sql_query(**kwargs)
+
+    @classmethod
+    def _read_sql_query(cls, **kwargs):
+        return cls.io_cls.read_sql_query(**kwargs)
+
+    @classmethod
     def to_sql(cls, *args, **kwargs):
         return cls._determine_engine()._to_sql(*args, **kwargs)
 
     @classmethod
     def _to_sql(cls, *args, **kwargs):
         return cls.io_cls.to_sql(*args, **kwargs)
+
+    @classmethod
+    def to_pickle(cls, *args, **kwargs):
+        return cls._determine_engine()._to_pickle(*args, **kwargs)
+
+    @classmethod
+    def _to_pickle(cls, *args, **kwargs):
+        return cls.io_cls.to_pickle(*args, **kwargs)
 
 
 class PandasOnRayFactory(BaseFactory):

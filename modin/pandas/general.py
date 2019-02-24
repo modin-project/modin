@@ -4,7 +4,9 @@ from __future__ import print_function
 
 import pandas
 
+from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
+from .utils import to_pandas
 
 
 def isna(obj):
@@ -23,6 +25,16 @@ def isna(obj):
 
 
 isnull = isna
+
+
+def notna(obj):
+    if isinstance(obj, DataFrame):
+        return obj.notna()
+    else:
+        return pandas.notna(obj)
+
+
+notnull = notna
 
 
 def merge(
@@ -84,6 +96,84 @@ def merge(
     )
 
 
+def merge_ordered(
+    left,
+    right,
+    on=None,
+    left_on=None,
+    right_on=None,
+    left_by=None,
+    right_by=None,
+    fill_method=None,
+    suffixes=("_x", "_y"),
+    how="outer",
+):
+    if not isinstance(left, DataFrame):
+        raise ValueError(
+            "can not merge DataFrame with instance of type {}".format(type(right))
+        )
+    ErrorMessage.default_to_pandas("`merge_ordered`")
+    if isinstance(right, DataFrame):
+        right = to_pandas(right)
+    return DataFrame(
+        pandas.merge_ordered(
+            to_pandas(left),
+            right,
+            on=on,
+            left_on=left_on,
+            right_on=right_on,
+            left_by=left_by,
+            right_by=right_by,
+            fill_method=fill_method,
+            suffixes=suffixes,
+            how=how,
+        )
+    )
+
+
+def merge_asof(
+    left,
+    right,
+    on=None,
+    left_on=None,
+    right_on=None,
+    left_index=False,
+    right_index=False,
+    by=None,
+    left_by=None,
+    right_by=None,
+    suffixes=("_x", "_y"),
+    tolerance=None,
+    allow_exact_matches=True,
+    direction="backward",
+):
+    if not isinstance(left, DataFrame):
+        raise ValueError(
+            "can not merge DataFrame with instance of type {}".format(type(right))
+        )
+    ErrorMessage.default_to_pandas("`merge_asof`")
+    if isinstance(right, DataFrame):
+        right = to_pandas(right)
+    return DataFrame(
+        pandas.merge_asof(
+            to_pandas(left),
+            right,
+            on=on,
+            left_on=left_on,
+            right_on=right_on,
+            left_index=left_index,
+            right_index=right_index,
+            by=by,
+            left_by=left_by,
+            right_by=right_by,
+            suffixes=suffixes,
+            tolerance=tolerance,
+            allow_exact_matches=allow_exact_matches,
+            direction=direction,
+        )
+    )
+
+
 def pivot_table(
     data,
     values=None,
@@ -110,3 +200,9 @@ def pivot_table(
         dropna=dropna,
         margins_name=margins_name,
     )
+
+
+def pivot(data, index=None, columns=None, values=None):
+    if not isinstance(data, DataFrame):
+        raise ValueError("can not pivot with instance of type {}".format(type(data)))
+    return data.pivot(index=index, columns=columns, values=values)

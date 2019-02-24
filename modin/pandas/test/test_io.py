@@ -12,6 +12,8 @@ import pyarrow as pa
 import os
 import sys
 
+from .utils import df_equals
+
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
@@ -23,20 +25,22 @@ TEST_JSON_FILENAME = "test.json"
 TEST_HTML_FILENAME = "test.html"
 TEST_EXCEL_FILENAME = "test.xlsx"
 TEST_FEATHER_FILENAME = "test.feather"
-TEST_HDF_FILENAME = "test.hdf"
+TEST_READ_HDF_FILENAME = "test.hdf"
+TEST_WRITE_HDF_FILENAME_MODIN = "test_write_modin.hdf"
+TEST_WRITE_HDF_FILENAME_PANDAS = "test_write_pandas.hdf"
 TEST_MSGPACK_FILENAME = "test.msg"
 TEST_STATA_FILENAME = "test.dta"
 TEST_PICKLE_FILENAME = "test.pkl"
 TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
+TEST_FWF_FILENAME = "test_fwf.txt"
+TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
 
-@pytest.fixture
 def modin_df_equals_pandas(modin_df, pandas_df):
     return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
 
 
-@pytest.fixture
 def setup_parquet_file(row_size, force=False):
     if os.path.exists(TEST_PARQUET_FILENAME) and not force:
         pass
@@ -86,13 +90,11 @@ def test_files_eq(path1, path2):
             return False
 
 
-@pytest.fixture
 def teardown_test_file(test_path):
     if os.path.exists(test_path):
         os.remove(test_path)
 
 
-@pytest.fixture
 def teardown_parquet_file():
     if os.path.exists(TEST_PARQUET_FILENAME):
         os.remove(TEST_PARQUET_FILENAME)
@@ -139,7 +141,6 @@ def make_csv_file():
             os.remove(filename)
 
 
-@pytest.fixture
 def setup_json_file(row_size, force=False):
     if os.path.exists(TEST_JSON_FILENAME) and not force:
         pass
@@ -150,13 +151,11 @@ def setup_json_file(row_size, force=False):
         df.to_json(TEST_JSON_FILENAME)
 
 
-@pytest.fixture
 def teardown_json_file():
     if os.path.exists(TEST_JSON_FILENAME):
         os.remove(TEST_JSON_FILENAME)
 
 
-@pytest.fixture
 def setup_html_file(row_size, force=False):
     if os.path.exists(TEST_HTML_FILENAME) and not force:
         pass
@@ -167,19 +166,16 @@ def setup_html_file(row_size, force=False):
         df.to_html(TEST_HTML_FILENAME)
 
 
-@pytest.fixture
 def teardown_html_file():
     if os.path.exists(TEST_HTML_FILENAME):
         os.remove(TEST_HTML_FILENAME)
 
 
-@pytest.fixture
 def setup_clipboard(row_size, force=False):
     df = pandas.DataFrame({"col1": np.arange(row_size), "col2": np.arange(row_size)})
     df.to_clipboard()
 
 
-@pytest.fixture
 def setup_excel_file(row_size, force=False):
     if os.path.exists(TEST_EXCEL_FILENAME) and not force:
         pass
@@ -190,13 +186,11 @@ def setup_excel_file(row_size, force=False):
         df.to_excel(TEST_EXCEL_FILENAME)
 
 
-@pytest.fixture
 def teardown_excel_file():
     if os.path.exists(TEST_EXCEL_FILENAME):
         os.remove(TEST_EXCEL_FILENAME)
 
 
-@pytest.fixture
 def setup_feather_file(row_size, force=False):
     if os.path.exists(TEST_FEATHER_FILENAME) and not force:
         pass
@@ -207,30 +201,26 @@ def setup_feather_file(row_size, force=False):
         df.to_feather(TEST_FEATHER_FILENAME)
 
 
-@pytest.fixture
 def teardown_feather_file():
     if os.path.exists(TEST_FEATHER_FILENAME):
         os.remove(TEST_FEATHER_FILENAME)
 
 
-@pytest.fixture
 def setup_hdf_file(row_size, force=False, format=None):
-    if os.path.exists(TEST_HDF_FILENAME) and not force:
+    if os.path.exists(TEST_READ_HDF_FILENAME) and not force:
         pass
     else:
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
-        df.to_hdf(TEST_HDF_FILENAME, key="df", format=format)
+        df.to_hdf(TEST_READ_HDF_FILENAME, key="df", format=format)
 
 
-@pytest.fixture
 def teardown_hdf_file():
-    if os.path.exists(TEST_HDF_FILENAME):
-        os.remove(TEST_HDF_FILENAME)
+    if os.path.exists(TEST_READ_HDF_FILENAME):
+        os.remove(TEST_READ_HDF_FILENAME)
 
 
-@pytest.fixture
 def setup_msgpack_file(row_size, force=False):
     if os.path.exists(TEST_MSGPACK_FILENAME) and not force:
         pass
@@ -241,13 +231,11 @@ def setup_msgpack_file(row_size, force=False):
         df.to_msgpack(TEST_MSGPACK_FILENAME)
 
 
-@pytest.fixture
 def teardown_msgpack_file():
     if os.path.exists(TEST_MSGPACK_FILENAME):
         os.remove(TEST_MSGPACK_FILENAME)
 
 
-@pytest.fixture
 def setup_stata_file(row_size, force=False):
     if os.path.exists(TEST_STATA_FILENAME) and not force:
         pass
@@ -258,13 +246,11 @@ def setup_stata_file(row_size, force=False):
         df.to_stata(TEST_STATA_FILENAME)
 
 
-@pytest.fixture
 def teardown_stata_file():
     if os.path.exists(TEST_STATA_FILENAME):
         os.remove(TEST_STATA_FILENAME)
 
 
-@pytest.fixture
 def setup_pickle_file(row_size, force=False):
     if os.path.exists(TEST_PICKLE_FILENAME) and not force:
         pass
@@ -275,7 +261,6 @@ def setup_pickle_file(row_size, force=False):
         df.to_pickle(TEST_PICKLE_FILENAME)
 
 
-@pytest.fixture
 def teardown_pickle_file():
     if os.path.exists(TEST_PICKLE_FILENAME):
         os.remove(TEST_PICKLE_FILENAME)
@@ -317,6 +302,25 @@ def make_sql_connection():
     for filename in filenames:
         if os.path.exists(filename):
             os.remove(filename)
+
+
+def setup_fwf_file():
+    if os.path.exists(TEST_FWF_FILENAME):
+        return
+
+    fwf_data = """id8141    360.242940  149.910199  11950.7
+    id1594  444.953632  166.985655 11788.4
+    id1849  364.136849  183.628767 11806.2
+    id1230  413.836124  184.375703 11916.8
+    id1948  502.953953  173.237159 12468.3"""
+
+    with open(TEST_FWF_FILENAME, "w") as f:
+        f.write(fwf_data)
+
+
+def teardown_fwf_file():
+    if os.path.exists(TEST_FWF_FILENAME):
+        os.remove(TEST_FWF_FILENAME)
 
 
 def test_from_parquet():
@@ -382,7 +386,7 @@ def test_from_excel():
     teardown_excel_file()
 
 
-@pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
+# @pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
 def test_from_feather():
     setup_feather_file(SMALL_ROW_SIZE)
 
@@ -397,8 +401,8 @@ def test_from_feather():
 def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE, format=None)
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
+    pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -408,8 +412,8 @@ def test_from_hdf():
 def test_from_hdf_format():
     setup_hdf_file(SMALL_ROW_SIZE, format="table")
 
-    pandas_df = pandas.read_hdf(TEST_HDF_FILENAME, key="df")
-    modin_df = pd.read_hdf(TEST_HDF_FILENAME, key="df")
+    pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
+    modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -459,6 +463,12 @@ def test_from_sql(make_sql_connection):
     modin_df = pd.read_sql(query, conn)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    with pytest.warns(UserWarning):
+        pd.read_sql_query(query, conn)
+
+    with pytest.warns(UserWarning):
+        pd.read_sql_table(table, conn)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
@@ -786,6 +796,14 @@ def test_to_pickle():
     teardown_test_file(TEST_PICKLE_pandas_FILENAME)
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
 
+    pd.to_pickle(modin_df, TEST_PICKLE_DF_FILENAME)
+    pandas.to_pickle(pandas_df, TEST_PICKLE_pandas_FILENAME)
+
+    assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
+
+    teardown_test_file(TEST_PICKLE_pandas_FILENAME)
+    teardown_test_file(TEST_PICKLE_DF_FILENAME)
+
 
 def test_to_sql_without_index(make_sql_connection):
     table_name = "tbl_without_index"
@@ -837,3 +855,48 @@ def test_to_stata():
 
     teardown_test_file(TEST_STATA_pandas_FILENAME)
     teardown_test_file(TEST_STATA_DF_FILENAME)
+
+
+def test_HDFStore():
+    modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
+    pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
+
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
+
+    modin_store["foo"] = modin_df
+    pandas_store["foo"] = pandas_df
+
+    assert test_files_eq(TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS)
+    modin_df = modin_store.get("foo")
+    pandas_df = pandas_store.get("foo")
+    df_equals(modin_df, pandas_df)
+
+    assert isinstance(modin_store, pd.HDFStore)
+
+
+def test_ExcelFile():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    modin_excel_file = pd.ExcelFile(TEST_EXCEL_FILENAME)
+    pandas_excel_file = pandas.ExcelFile(TEST_EXCEL_FILENAME)
+
+    df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
+
+    assert modin_excel_file.io == TEST_EXCEL_FILENAME
+    assert isinstance(modin_excel_file, pd.ExcelFile)
+    modin_excel_file.close()
+    pandas_excel_file.close()
+
+    teardown_excel_file()
+
+
+def test_fwf_file():
+    setup_fwf_file()
+
+    colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
+    with pytest.warns(UserWarning):
+        df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
+        assert isinstance(df, pd.DataFrame)
+
+    teardown_fwf_file()

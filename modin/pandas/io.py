@@ -6,6 +6,7 @@ import inspect
 import pandas
 import re
 
+from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
 from modin.data_management.factories import BaseFactory
 
@@ -116,7 +117,7 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-read_table = _make_parser_func(sep="\t")
+read_table = _make_parser_func(sep=False)
 read_csv = _make_parser_func(sep=",")
 
 
@@ -146,10 +147,13 @@ def read_gbq(
     index_col=None,
     col_order=None,
     reauth=False,
-    verbose=None,
+    auth_local_webserver=False,
+    dialect=None,
+    location=None,
+    configuration=None,
+    credentials=None,
     private_key=None,
-    dialect="legacy",
-    **kwargs
+    verbose=None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -172,13 +176,15 @@ def read_html(
     converters=None,
     na_values=None,
     keep_default_na=True,
+    displayed_only=True,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_html(**kwargs))
 
 
-def read_clipboard(sep=r"\s+"):
+def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_clipboard(**kwargs))
 
 
@@ -188,6 +194,7 @@ def read_excel(
     header=0,
     names=None,
     index_col=None,
+    parse_cols=None,
     usecols=None,
     squeeze=False,
     dtype=None,
@@ -198,17 +205,20 @@ def read_excel(
     skiprows=None,
     nrows=None,
     na_values=None,
+    keep_default_na=True,
+    verbose=False,
     parse_dates=False,
     date_parser=None,
     thousands=None,
     comment=None,
+    skip_footer=0,
     skipfooter=0,
     convert_float=True,
+    mangle_dupe_cols=True,
     **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    kwargs.pop("kwds")
-    kwargs.update(kwds)
+    kwargs.update(kwargs.pop("kwds", {}))
     return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
 
 
@@ -218,14 +228,14 @@ def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
 
-def read_feather(path, nthreads=1):
+def read_feather(path, columns=None, use_threads=True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
 
 
-def read_msgpack(path_or_buf, encoding="utf-8", iterator=False):
+def read_msgpack(path_or_buf, encoding="utf-8", iterator=False, **kwargs):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_msgpack(**kwargs))
 
 
@@ -253,7 +263,7 @@ def read_sas(
     encoding=None,
     chunksize=None,
     iterator=False,
-):
+):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sas(**kwargs))
 
@@ -302,3 +312,129 @@ def read_sql(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql(**kwargs))
+
+
+def read_fwf(
+    filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+):
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(query_compiler=BaseFactory.read_fwf(**kwargs))
+
+
+def read_sql_table(
+    table_name,
+    con,
+    schema=None,
+    index_col=None,
+    coerce_float=True,
+    parse_dates=None,
+    columns=None,
+    chunksize=None,
+):
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(query_compiler=BaseFactory.read_sql_table(**kwargs))
+
+
+def read_sql_query(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    chunksize=None,
+):
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(query_compiler=BaseFactory.read_sql_query(**kwargs))
+
+
+def to_pickle(obj, path, compression="infer", protocol=4):
+    if isinstance(obj, DataFrame):
+        obj = obj._query_compiler
+    return BaseFactory.to_pickle(obj, path, compression=compression, protocol=protocol)
+
+
+class ExcelFile(pandas.ExcelFile):
+    def __getattribute__(self, item):
+        default_behaviors = ["__init__", "__class__"]
+        method = super(ExcelFile, self).__getattribute__(item)
+        if item not in default_behaviors:
+            if callable(method):
+
+                def return_handler(*args, **kwargs):
+                    """Replaces the default behavior of methods with inplace kwarg.
+
+                    Note: This function will replace all of the arguments passed to
+                        methods of ExcelFile with the pandas equivalent. It will convert
+                        Modin DataFrame to pandas DataFrame, etc.
+
+                    Returns:
+                        A Modin DataFrame in place of a pandas DataFrame, or the same
+                        return type as pandas.ExcelFile.
+                    """
+                    from .utils import to_pandas
+
+                    # We don't want to constantly be giving this error message for
+                    # internal methods.
+                    if item[0] != "_":
+                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                    args = [
+                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        for arg in args
+                    ]
+                    kwargs = {
+                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        for k, v in kwargs.items()
+                    }
+                    obj = super(ExcelFile, self).__getattribute__(item)(*args, **kwargs)
+                    if isinstance(obj, pandas.DataFrame):
+                        return DataFrame(obj)
+                    return obj
+
+                # We replace the method with `return_handler` for inplace operations
+                method = return_handler
+        return method
+
+
+class HDFStore(pandas.HDFStore):
+    def __getattribute__(self, item):
+        default_behaviors = ["__init__", "__class__"]
+        method = super(HDFStore, self).__getattribute__(item)
+        if item not in default_behaviors:
+            if callable(method):
+
+                def return_handler(*args, **kwargs):
+                    """Replaces the default behavior of methods with inplace kwarg.
+
+                    Note: This function will replace all of the arguments passed to
+                        methods of HDFStore with the pandas equivalent. It will convert
+                        Modin DataFrame to pandas DataFrame, etc. Currently, pytables
+                        does not accept Modin DataFrame objects, so we must convert to
+                        pandas.
+
+                    Returns:
+                        A Modin DataFrame in place of a pandas DataFrame, or the same
+                        return type as pandas.HDFStore.
+                    """
+                    from .utils import to_pandas
+
+                    # We don't want to constantly be giving this error message for
+                    # internal methods.
+                    if item[0] != "_":
+                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                    args = [
+                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        for arg in args
+                    ]
+                    kwargs = {
+                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        for k, v in kwargs.items()
+                    }
+                    obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
+                    if isinstance(obj, pandas.DataFrame):
+                        return DataFrame(obj)
+                    return obj
+
+                # We replace the method with `return_handler` for inplace operations
+                method = return_handler
+        return method

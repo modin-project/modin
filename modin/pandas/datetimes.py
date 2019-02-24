@@ -19,6 +19,7 @@ def to_datetime(
     unit=None,
     infer_datetime_format=False,
     origin="unix",
+    cache=False,
 ):
     """Convert the arg to datetime format. If not Ray DataFrame, this falls
        back on pandas.
@@ -56,6 +57,7 @@ def to_datetime(
             unit=unit,
             infer_datetime_format=infer_datetime_format,
             origin=origin,
+            cache=cache,
         )
     # Pandas seems to ignore this kwarg so we will too
     pandas.to_datetime(
@@ -70,5 +72,6 @@ def to_datetime(
         unit=unit,
         infer_datetime_format=infer_datetime_format,
         origin=origin,
+        cache=cache,
     )
     return arg._query_compiler.to_datetime()
