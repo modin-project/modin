@@ -1,13 +1,15 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
-import numpy as np 
+import numpy as np
 import modin.pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 plt.style.use('fivethirtyeight')
 import warnings
 warnings.filterwarnings('ignore')
-get_ipython().run_line_magic('matplotlib', 'inline')
+# get_ipython().run_line_magic('matplotlib', 'inline')
 
 # In[2]:
 
@@ -23,13 +25,14 @@ data.isnull().sum() #checking for total null values
 
 # In[5]:
 
-f,ax=plt.subplots(1,2,figsize=(18,8))
-data['Survived'].value_counts().plot.pie(explode=[0,0.1],autopct='%1.1f%%',ax=ax[0],shadow=True)
-ax[0].set_title('Survived')
-ax[0].set_ylabel('')
-sns.countplot('Survived',data=data,ax=ax[1])
-ax[1].set_title('Survived')
-plt.show()
+# TODO (williamma12): Plotting does not work with synthetic data
+# f,ax=plt.subplots(1,2,figsize=(18,8))
+# data['Survived'].value_counts().plot.pie(explode=[0,0.1],autopct='%1.1f%%',ax=ax[0],shadow=True)
+# ax[0].set_title('Survived')
+# ax[0].set_ylabel('')
+# sns.countplot('Survived',data=data,ax=ax[1])
+# ax[1].set_title('Survived')
+# plt.show()
 
 # In[6]:
 
@@ -112,7 +115,7 @@ data.loc[(data.Age.isnull())&(data.Initial=='Other'),'Age']=46
 
 # In[ ]:
 
-data.Age.isnull().any() #So no null values left finally 
+data.Age.isnull().any() #So no null values left finally
 
 # In[ ]:
 
@@ -352,7 +355,7 @@ print('The accuracy of the Decision Tree is',metrics.accuracy_score(prediction4,
 
 # In[ ]:
 
-model=KNeighborsClassifier() 
+model=KNeighborsClassifier()
 model.fit(train_X,train_Y)
 prediction5=model.predict(test_X)
 print('The accuracy of the KNN is',metrics.accuracy_score(prediction5,test_Y))
@@ -363,7 +366,7 @@ a_index=list(range(1,11))
 a=pd.Series()
 x=[0,1,2,3,4,5,6,7,8,9,10]
 for i in list(range(1,11)):
-    model=KNeighborsClassifier(n_neighbors=i) 
+    model=KNeighborsClassifier(n_neighbors=i)
     model.fit(train_X,train_Y)
     prediction=model.predict(test_X)
     a=a.append(pd.Series(metrics.accuracy_score(prediction,test_Y)))
@@ -406,7 +409,7 @@ for i in models:
     xyz.append(cv_result.mean())
     std.append(cv_result.std())
     accuracy.append(cv_result)
-new_models_dataframe2=pd.DataFrame({'CV Mean':xyz,'Std':std},index=classifiers)       
+new_models_dataframe2=pd.DataFrame({'CV Mean':xyz,'Std':std},index=classifiers)
 new_models_dataframe2
 
 # In[ ]:
@@ -481,7 +484,7 @@ ensemble_lin_rbf=VotingClassifier(estimators=[('KNN',KNeighborsClassifier(n_neig
                                               ('DT',DecisionTreeClassifier(random_state=0)),
                                               ('NB',GaussianNB()),
                                               ('svm',svm.SVC(kernel='linear',probability=True))
-                                             ], 
+                                             ],
                        voting='soft').fit(train_X,train_Y)
 print('The accuracy for ensembled model is:',ensemble_lin_rbf.score(test_X,test_Y))
 cross=cross_val_score(ensemble_lin_rbf,X,Y, cv = 10,scoring = "accuracy")

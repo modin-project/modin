@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
+import matplotlib
+matplotlib.use('PS')
 
 # ## This notebook demos Python data visualizations on the Iris dataset
-# 
+#
 # This Python 3 environment comes with many helpful analytics libraries installed. It is defined by the [kaggle/python docker image](https://github.com/kaggle/docker-python)
-# 
+#
 # We'll use three libraries for this tutorial: [pandas](http://pandas.pydata.org/), [matplotlib](http://matplotlib.org/), and [seaborn](http://stanford.edu/~mwaskom/software/seaborn/).
-# 
+#
 # Press "Fork" at the top-right of this screen to run this notebook yourself and build each of the examples.
 
 # In[1]:
@@ -74,7 +76,7 @@ sns.boxplot(x="Species", y="PetalLengthCm", data=iris)
 
 # One way we can extend this plot is adding a layer of individual points on top of
 # it through Seaborn's striplot
-# 
+#
 # We'll use jitter=True so that all the points don't fall in single vertical lines
 # above the species
 #
@@ -105,7 +107,7 @@ sns.FacetGrid(iris, hue="Species", size=6)    .map(sns.kdeplot, "PetalLengthCm")
 
 # Another useful seaborn plot is the pairplot, which shows the bivariate relation
 # between each pair of features
-# 
+#
 # From the pairplot, we'll see that the Iris-setosa species is separataed from the other
 # two across all feature combinations
 #sns.pairplot(iris.drop("Id", axis=1), hue="Species", size=3)
@@ -159,9 +161,9 @@ radviz(iris.drop("Id", axis=1), "Species")
 
 
 # # Wrapping Up
-# 
+#
 # I hope you enjoyed this quick introduction to some of the quick, simple data visualizations you can create with pandas, seaborn, and matplotlib in Python!
-# 
+#
 # I encourage you to run through these examples yourself, tweaking them and seeing what happens. From there, you can try applying these methods to a new dataset and incorprating them into your own workflow!
-# 
+#
 # See [Kaggle Datasets](https://www.kaggle.com/datasets) for other datasets to try visualizing. The [World Food Facts data](https://www.kaggle.com/openfoodfacts/world-food-facts) is an especially rich one for visualization.

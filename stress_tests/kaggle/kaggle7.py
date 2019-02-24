@@ -151,8 +151,8 @@ plt.xlabel('Days Employment');
 
 # In[19]:
 
-app_test['DAYS_EMPLOYED_ANOM'] = app_test["DAYS_EMPLOYED"] == 365243
-app_test["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace = True)
+app_test['DAYS_EMPLOYED_ANOM'] = app_test["DAYS_EMPLOYED"] == 3
+app_test["DAYS_EMPLOYED"].replace({3: np.nan}, inplace = True)
 
 print('There are %d anomalies in the test data out of %d entries' % (app_test["DAYS_EMPLOYED_ANOM"].sum(), len(app_test)))
 
@@ -352,6 +352,8 @@ from sklearn.preprocessing import MinMaxScaler, Imputer
 
 if 'TARGET' in app_train.columns:
     train = app_train.drop(columns = ['TARGET'])
+    # TODO (williamma12): Not sure why this line is necessary but it is
+    app_test = app_test.drop(columns = ['TARGET'])
 else:
     train = app_train.copy()
 
@@ -452,6 +454,8 @@ submit.to_csv('random_forest_baseline_engineered.csv', index = False)
 # In[49]:
 
 app_train_domain = app_train_domain.drop(columns = 'TARGET')
+# TODO (williamma12): Not sure why this line is necessary but it is
+app_test_domain = app_test_domain.drop(columns = 'TARGET')
 
 domain_features_names = list(app_train_domain.columns)
 

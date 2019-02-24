@@ -1,10 +1,12 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import modin.pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-get_ipython().run_line_magic('matplotlib', 'inline')
+# get_ipython().run_line_magic('matplotlib', 'inline')
 
 from collections import Counter
 
@@ -29,7 +31,7 @@ IDtest = test["PassengerId"]
 
 def detect_outliers(df,n,features):
     outlier_indices = []
-    
+
     # iterate over features(columns)
     for col in features:
         # 1st quartile (25%)
@@ -38,21 +40,21 @@ def detect_outliers(df,n,features):
         Q3 = np.percentile(df[col],75)
         # Interquartile range (IQR)
         IQR = Q3 - Q1
-        
+
         # outlier step
         outlier_step = 1.5 * IQR
-        
+
         # Determine a list of indices of outliers for feature col
         outlier_list_col = df[(df[col] < Q1 - outlier_step) | (df[col] > Q3 + outlier_step )].index
-        
-        # append the found outlier indices for col to the list of outlier indices 
+
+        # append the found outlier indices for col to the list of outlier indices
         outlier_indices.extend(outlier_list_col)
-        
+
     # select observations containing more than 2 outliers
-    outlier_indices = Counter(outlier_indices)        
+    outlier_indices = Counter(outlier_indices)
     multiple_outliers = list( k for k, v in outlier_indices.items() if v > n )
-    
-    return multiple_outliers   
+
+    return multiple_outliers
 
 Outliers_to_drop = detect_outliers(train,2,["Age","SibSp","Parch","Fare"])
 
@@ -98,30 +100,32 @@ g = sns.heatmap(train[["Survived","SibSp","Parch","Age","Fare"]].corr(),annot=Tr
 
 # In[13]:
 
-g = sns.factorplot(x="SibSp",y="Survived",data=train,kind="bar", size = 6 , 
+g = sns.factorplot(x="SibSp",y="Survived",data=train,kind="bar", size = 6 ,
 palette = "muted")
 g.despine(left=True)
 g = g.set_ylabels("survival probability")
 
 # In[14]:
 
-g  = sns.factorplot(x="Parch",y="Survived",data=train,kind="bar", size = 6 , 
+g  = sns.factorplot(x="Parch",y="Survived",data=train,kind="bar", size = 6 ,
 palette = "muted")
 g.despine(left=True)
 g = g.set_ylabels("survival probability")
 
 # In[15]:
 
-g = sns.FacetGrid(train, col='Survived')
-g = g.map(sns.distplot, "Age")
+# TODO (williamma12): does not work with the generated synthetic data
+# g = sns.FacetGrid(train, col='Survived')
+# g = g.map(sns.distplot, "Age")
 
 # In[16]:
 
-g = sns.kdeplot(train["Age"][(train["Survived"] == 0) & (train["Age"].notnull())], color="Red", shade = True)
-g = sns.kdeplot(train["Age"][(train["Survived"] == 1) & (train["Age"].notnull())], ax =g, color="Blue", shade= True)
-g.set_xlabel("Age")
-g.set_ylabel("Frequency")
-g = g.legend(["Not Survived","Survived"])
+# TODO (williamma12): does not work with the generated synthetic data
+# g = sns.kdeplot(train["Age"][(train["Survived"] == 0) & (train["Age"].notnull())], color="Red", shade = True)
+# g = sns.kdeplot(train["Age"][(train["Survived"] == 1) & (train["Age"].notnull())], ax =g, color="Blue", shade= True)
+# g.set_xlabel("Age")
+# g.set_ylabel("Frequency")
+# g = g.legend(["Not Survived","Survived"])
 
 # In[17]:
 
@@ -156,7 +160,7 @@ train[["Sex","Survived"]].groupby('Sex').mean()
 
 # In[24]:
 
-g = sns.factorplot(x="Pclass",y="Survived",data=train,kind="bar", size = 6 , 
+g = sns.factorplot(x="Pclass",y="Survived",data=train,kind="bar", size = 6 ,
 palette = "muted")
 g.despine(left=True)
 g = g.set_ylabels("survival probability")
@@ -235,7 +239,7 @@ dataset["Title"].head()
 # In[37]:
 
 g = sns.countplot(x="Title",data=dataset)
-g = plt.setp(g.get_xticklabels(), rotation=45) 
+g = plt.setp(g.get_xticklabels(), rotation=45)
 
 # In[38]:
 
@@ -339,7 +343,7 @@ for i in list(dataset.Ticket):
         Ticket.append(i.replace(".","").replace("/","").strip().split(' ')[0]) #Take prefix
     else:
         Ticket.append("X")
-        
+
 dataset["Ticket"] = Ticket
 dataset["Ticket"].head()
 
@@ -481,7 +485,7 @@ gb_param_grid = {'loss' : ["deviance"],
               'learning_rate': [0.1, 0.05, 0.01],
               'max_depth': [4, 8],
               'min_samples_leaf': [100,150],
-              'max_features': [0.3, 0.1] 
+              'max_features': [0.3, 0.1]
               }
 
 gsGBC = GridSearchCV(GBC,param_grid = gb_param_grid, cv=kfold, scoring="accuracy", n_jobs= 4, verbose = 1)
@@ -495,7 +499,7 @@ gsGBC.best_score_
 # In[73]:
 
 SVMC = SVC(probability=True)
-svc_param_grid = {'kernel': ['rbf'], 
+svc_param_grid = {'kernel': ['rbf'],
                   'gamma': [ 0.001, 0.01, 0.1, 1],
                   'C': [1, 10, 50, 100,200,300, 1000]}
 
