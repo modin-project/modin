@@ -600,7 +600,7 @@ def get_index(index_name, *partition_indices):  # pragma: no cover
     return index
 
 
-def _split_result_for_readers(axis, num_splits, df):
+def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     """Splits the DataFrame read into smaller DataFrames and handles all edge cases.
 
     Args:

@@ -83,11 +83,11 @@ class BaseFactory(object):
         return cls.io_cls.read_html(**kwargs)
 
     @classmethod
-    def read_clipboard(cls, **kwargs):
+    def read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls._determine_engine()._read_clipboard(**kwargs)
 
     @classmethod
-    def _read_clipboard(cls, **kwargs):
+    def _read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_clipboard(**kwargs)
 
     @classmethod
@@ -131,11 +131,11 @@ class BaseFactory(object):
         return cls.io_cls.read_stata(**kwargs)
 
     @classmethod
-    def read_sas(cls, **kwargs):
+    def read_sas(cls, **kwargs):  # pragma: no cover
         return cls._determine_engine()._read_sas(**kwargs)
 
     @classmethod
-    def _read_sas(cls, **kwargs):
+    def _read_sas(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_sas(**kwargs)
 
     @classmethod

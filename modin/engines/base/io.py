@@ -544,9 +544,10 @@ class BaseIO(object):
 
     @classmethod
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
-        if version_info[0] == "2" and protocol > 2:
-            # Override because it is not valid to use protocol 4 in pandas 2
-            protocol = 2
+        if protocol == 4:
+            # This forces pandas to use default pickling, which is different for python3
+            # and python2
+            protocol = -1
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
             return pandas.to_pickle(
