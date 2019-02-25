@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 import matplotlib
-matplotlib.use('PS')
+
+matplotlib.use("PS")
 
 # ## This notebook demos Python data visualizations on the Iris dataset
 #
@@ -18,14 +19,16 @@ matplotlib.use('PS')
 import modin.pandas as pd
 
 # We'll also import seaborn, a Python graphing library
-import warnings # current version of seaborn generates a bunch of warnings that we'll ignore
+import warnings  # current version of seaborn generates a bunch of warnings that we'll ignore
+
 warnings.filterwarnings("ignore")
 import seaborn as sns
 import matplotlib.pyplot as plt
+
 sns.set(style="white", color_codes=True)
 
 # Next, we'll load the Iris flower dataset, which is in the "../input/" directory
-iris = pd.read_csv("Iris.csv") # the iris dataset is now a Pandas DataFrame
+iris = pd.read_csv("Iris.csv")  # the iris dataset is now a Pandas DataFrame
 
 # Let's see what's in the iris data - Jupyter notebooks print the result of the last thing you do
 iris.head()
@@ -61,7 +64,9 @@ sns.jointplot(x="SepalLengthCm", y="SepalWidthCm", data=iris, size=5)
 
 # One piece of information missing in the plots above is what species each plant is
 # We'll use seaborn's FacetGrid to color the scatterplot by species
-sns.FacetGrid(iris, hue="Species", size=5)    .map(plt.scatter, "SepalLengthCm", "SepalWidthCm")    .add_legend()
+sns.FacetGrid(iris, hue="Species", size=5).map(
+    plt.scatter, "SepalLengthCm", "SepalWidthCm"
+).add_legend()
 
 
 # In[6]:
@@ -83,7 +88,9 @@ sns.boxplot(x="Species", y="PetalLengthCm", data=iris)
 # Saving the resulting axes as ax each time causes the resulting plot to be shown
 # on top of the previous axes
 ax = sns.boxplot(x="Species", y="PetalLengthCm", data=iris)
-ax = sns.stripplot(x="Species", y="PetalLengthCm", data=iris, jitter=True, edgecolor="gray")
+ax = sns.stripplot(
+    x="Species", y="PetalLengthCm", data=iris, jitter=True, edgecolor="gray"
+)
 
 
 # In[8]:
@@ -99,7 +106,9 @@ sns.violinplot(x="Species", y="PetalLengthCm", data=iris, size=6)
 
 # A final seaborn plot useful for looking at univariate relations is the kdeplot,
 # which creates and visualizes a kernel density estimate of the underlying feature
-sns.FacetGrid(iris, hue="Species", size=6)    .map(sns.kdeplot, "PetalLengthCm")    .add_legend()
+sns.FacetGrid(iris, hue="Species", size=6).map(
+    sns.kdeplot, "PetalLengthCm"
+).add_legend()
 
 
 # In[11]:
@@ -110,7 +119,7 @@ sns.FacetGrid(iris, hue="Species", size=6)    .map(sns.kdeplot, "PetalLengthCm")
 #
 # From the pairplot, we'll see that the Iris-setosa species is separataed from the other
 # two across all feature combinations
-#sns.pairplot(iris.drop("Id", axis=1), hue="Species", size=3)
+# sns.pairplot(iris.drop("Id", axis=1), hue="Species", size=3)
 
 
 # In[13]:
@@ -118,7 +127,7 @@ sns.FacetGrid(iris, hue="Species", size=6)    .map(sns.kdeplot, "PetalLengthCm")
 
 # The diagonal elements in a pairplot show the histogram by default
 # We can update these elements to show other things, such as a kde
-#sns.pairplot(iris.drop("Id", axis=1), hue="Species", size=3, diag_kind="kde")
+# sns.pairplot(iris.drop("Id", axis=1), hue="Species", size=3, diag_kind="kde")
 
 
 # In[14]:
@@ -136,6 +145,7 @@ iris.drop("Id", axis=1).boxplot(by="Species", figsize=(12, 6))
 # Andrews Curves involve using attributes of samples as coefficients for Fourier series
 # and then plotting these
 from pandas.tools.plotting import andrews_curves
+
 andrews_curves(iris.drop("Id", axis=1), "Species")
 
 
@@ -146,6 +156,7 @@ andrews_curves(iris.drop("Id", axis=1), "Species")
 # Parallel coordinates plots each feature on a separate column & then draws lines
 # connecting the features for each data sample
 from pandas.tools.plotting import parallel_coordinates
+
 parallel_coordinates(iris.drop("Id", axis=1), "Species")
 
 
@@ -157,6 +168,7 @@ parallel_coordinates(iris.drop("Id", axis=1), "Species")
 # having each sample attached to those points through a spring weighted
 # by the relative value for that feature
 from pandas.tools.plotting import radviz
+
 radviz(iris.drop("Id", axis=1), "Species")
 
 
