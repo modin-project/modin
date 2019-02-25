@@ -2300,18 +2300,8 @@ def test_head(data, n):
     df_equals(modin_df.head(n), pandas_df.head(n))
 
     # Test head when we call it from a QueryCompilerView
-<<<<<<< HEAD
-<<<<<<< HEAD
     modin_result = modin_df.loc[:, ["col1", "col3", "col3"]].head(n)
     pandas_result = pandas_df.loc[:, ["col1", "col3", "col3"]].head(n)
-=======
-    modin_result = modin_df.loc[:,['col1', 'col3', 'col3']].head(n)
-    pandas_result = pandas_df.loc[:,['col1', 'col3', 'col3']].head(n)
->>>>>>> Add test to cover the issue
-=======
-    modin_result = modin_df.loc[:, ["col1", "col3", "col3"]].head(n)
-    pandas_result = pandas_df.loc[:, ["col1", "col3", "col3"]].head(n)
->>>>>>> linting
     df_equals(modin_result, pandas_result)
 
 
