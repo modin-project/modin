@@ -15,7 +15,7 @@ setup_environment(){
     source stress_tests_env/bin/activate
 
     # Install modin from source to virtual environment
-    pushd "../$ROOT_DIR"
+    pushd "$ROOT_DIR/.."
     pip install -e .
     popd
 
