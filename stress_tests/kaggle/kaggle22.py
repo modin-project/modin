@@ -1,4 +1,6 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import modin.pandas as pd, numpy as np
 from sklearn.linear_model import LogisticRegression

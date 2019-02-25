@@ -4,7 +4,7 @@
 # ## EDA for the popular battle royale game PUBG
 
 # <img src="https://pmcvariety.files.wordpress.com/2018/04/pubg.jpg?w=1000&h=563&crop=1" alt="PUBG" style="width: 750px;"/>
-# 
+#
 # This kernel features:
 # - [The Killers](#The-Killers)
 # - [The Runners](#The-Runners)
@@ -16,12 +16,14 @@
 # - [Feature Engineering](#Feature-Engineering)
 
 # In[ ]:
+import matplotlib
+matplotlib.use('PS')
 
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns 
+import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -105,7 +107,9 @@ data = train.copy()
 data = data[data['kills']==0]
 plt.figure(figsize=(15,10))
 plt.title("Damage Dealt by 0 killers",fontsize=15)
-sns.distplot(data['damageDealt'])
+# TODO (williamma12): Rest of file not work until we have a better data generation
+# that reflects the origianl data properly
+# sns.distplot(data['damageDealt'])
 plt.show()
 
 
@@ -125,8 +129,9 @@ print("{} players ({:.4f}%) have won without dealing damage!".format(len(data1[d
 # In[ ]:
 
 
-sns.jointplot(x="winPlacePerc", y="kills", data=train, height=10, ratio=3, color="r")
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.jointplot
+# sns.jointplot(x="winPlacePerc", y="kills", data=train, height=10, ratio=3, color="r")
+# plt.show()
 
 
 # Apparentrly killing has a correlation with winning. Finally let's group players based on kills (0 kills, 1-2 kills, 3-5 kills, 6-10 kills and 10+ kills).
@@ -173,8 +178,9 @@ print("{} players ({:.4f}%) walked 0 meters. This means that they die before eve
 # In[ ]:
 
 
-sns.jointplot(x="winPlacePerc", y="walkDistance",  data=train, height=10, ratio=3, color="lime")
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.jointplot
+# sns.jointplot(x="winPlacePerc", y="walkDistance",  data=train, height=10, ratio=3, color="lime")
+# plt.show()
 
 
 # Apparently walking has a high correlation with winPlacePerc.
@@ -209,8 +215,9 @@ print("{} players ({:.4f}%) drived for 0 meters. This means that they don't have
 # In[ ]:
 
 
-sns.jointplot(x="winPlacePerc", y="rideDistance", data=train, height=10, ratio=3, color="y")
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.jointplot
+# sns.jointplot(x="winPlacePerc", y="rideDistance", data=train, height=10, ratio=3, color="y")
+# plt.show()
 
 
 # There is a small correlation between rideDistance and winPlacePerc.
@@ -301,15 +308,17 @@ plt.show()
 # In[ ]:
 
 
-sns.jointplot(x="winPlacePerc", y="heals", data=train, height=10, ratio=3, color="lime")
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.jointplot
+# sns.jointplot(x="winPlacePerc", y="heals", data=train, height=10, ratio=3, color="lime")
+# plt.show()
 
 
 # In[ ]:
 
 
-sns.jointplot(x="winPlacePerc", y="boosts", data=train, height=10, ratio=3, color="blue")
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.jointplot
+# sns.jointplot(x="winPlacePerc", y="boosts", data=train, height=10, ratio=3, color="blue")
+# plt.show()
 
 
 # So healing and boosting, definitely are correlated with winPlacePerc. Boosting is more.
@@ -318,7 +327,7 @@ plt.show()
 
 # ## Solos, Duos and Squads
 
-# There are 3 game modes in the game. One can play solo, or with a friend (duo), or with 3 other friends (squad). 100 players join the same server, so in the case of duos the max teams are 50 and in the case of squads the max teams are 25. 
+# There are 3 game modes in the game. One can play solo, or with a friend (duo), or with 3 other friends (squad). 100 players join the same server, so in the case of duos the max teams are 50 and in the case of squads the max teams are 25.
 
 # In[ ]:
 
@@ -349,9 +358,9 @@ plt.show()
 # Hmm, very interesting. Solos and duos behave the same, but when playing squads kills don't matter that much.
 
 # The attribute DBNOs means enemy players knocked. A "knock" can happen only in duos or squads, because the teammates have the chance to "revive" the knocked player in a given time. So a knocked player can be revived or die. If he is revived, the next time he will be knocked, his teammates will have less time to revive him.
-# 
+#
 # The attribute assist can also happen only in duos or squads. It generally means that the player had an involvement in a kill.
-# 
+#
 # The attribute revive also happens in duos or squads.
 
 # In[ ]:
@@ -388,7 +397,7 @@ plt.show()
 
 
 # In terms of the target variable (winPlacePerc), there are a few variables high medium to high correlation. The highest positive correlation is walkDistance and the highest negative the killPlace.
-# 
+#
 # **Let's zoom to the top-5 most positive correlated variables with the target.**
 
 # In[ ]:
@@ -408,10 +417,11 @@ plt.show()
 # In[ ]:
 
 
-sns.set()
-cols = ['winPlacePerc', 'walkDistance', 'boosts', 'weaponsAcquired', 'damageDealt', 'killPlace']
-sns.pairplot(train[cols], size = 2.5)
-plt.show()
+# TODO (williamma12): Figure out why plt.show() does not work with sns.pairplot
+# sns.set()
+# cols = ['winPlacePerc', 'walkDistance', 'boosts', 'weaponsAcquired', 'damageDealt', 'killPlace']
+# sns.pairplot(train[cols], size = 2.5)
+# plt.show()
 
 
 # ## Feature Engineering
@@ -429,10 +439,11 @@ train['playersJoined'] = train.groupby('matchId')['matchId'].transform('count')
 
 data = train.copy()
 data = data[data['playersJoined']>49]
-plt.figure(figsize=(15,10))
-sns.countplot(data['playersJoined'])
-plt.title("Players Joined",fontsize=15)
-plt.show()
+# TODO (williamma12): The following does not work with the synthetic dataset
+# plt.figure(figsize=(15,10))
+# sns.countplot(data['playersJoined'])
+# plt.title("Players Joined",fontsize=15)
+# plt.show()
 
 
 # Based on the "playersJoined" feature we can create (or change) a lot of others to normalize their values. For example i will create the "killsNorm" and "damageDealtNorm" features. When there are 100 players in the game it might be easier to find and kill someone, than when there are 90 players. So i will normalize the kills in a way that a kill in 100 players will score 1 (as it is) and in 90 players it will score (100-90)/100 + 1 = 1.1. This is just an assumption. You can use different scales.
@@ -497,5 +508,5 @@ train.head()
 # So we created 10 features. I hope some of them to be useful.
 
 # ### Thank you if you reached this point! This is my first kernel ever. An upvote would be really appreciated and help me keep going!
-# 
-# ### In progress.. 
+#
+# ### In progress..

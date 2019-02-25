@@ -369,8 +369,7 @@ def test_kaggle17(generate_dataset):
        'Regionname', 'Propertycount']
     dtypes = [str, str, int, str, float, str, str, str, float, float, float,
     float, float, float, float, float, str, float, float, str, float]
-    generate_dataset("test.csv", columns, dtypes)
-    generate_dataset("train.csv", columns, dtypes)
+    generate_dataset("melb_data.csv", columns, dtypes)
 
     ipynb = subprocess.Popen(["python", "kaggle17.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=KAGGLE_DIR_PATH)
     outs, errs = ipynb.communicate()
@@ -383,7 +382,9 @@ def test_kaggle17(generate_dataset):
 def test_kaggle18(generate_dataset):
     columns = ['train_id', 'name', 'item_condition_id', 'category_name',
        'brand_name', 'price', 'shipping', 'item_description']
-    dtypes = [int, str, int, str, float, float, int, str]
+    # TODO (williamma12): "category_name" should be strings but original data
+    # that is not currently captured by the data generation
+    dtypes = [int, str, int, int, float, float, int, str]
     generate_dataset("test.csv", columns, dtypes)
     generate_dataset("train.csv", columns, dtypes)
 
@@ -401,10 +402,10 @@ def test_kaggle19(generate_dataset):
        'kills', 'killStreaks', 'longestKill', 'matchDuration',
        'matchType', 'maxPlace', 'numGroups', 'rankPoints', 'revives',
        'rideDistance', 'roadKills', 'swimDistance', 'teamKills',
-       'vehicleDestroys', 'walkDistance', 'weaponsAcquired', 'winPoints']
+       'vehicleDestroys', 'walkDistance', 'weaponsAcquired', 'winPoints', 'winPlacePerc']
     dtypes = [str, str, str, int, int, float, int, int, int, int, int, int, int,
     float, int, str, int, int, int, int, float, int, float, int, int, float,
-    int, int]
+    int, int, int]
     generate_dataset("train.csv", columns, dtypes)
 
     ipynb = subprocess.Popen(["python", "kaggle19.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=KAGGLE_DIR_PATH)
@@ -430,26 +431,29 @@ def test_kaggle20(generate_dataset):
     float, float, float, float, float, float, float, float, float, float, float,
     float, float, float, float, float, float, float, float, float, float, float,
     float]
-    generate_dataset("test.csv", columns, dtypes)
-    generate_dataset("train.csv", columns, dtypes)
+    generate_dataset("data.csv", columns, dtypes)
 
     ipynb = subprocess.Popen(["python", "kaggle20.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=KAGGLE_DIR_PATH)
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
         print(errs.decode("utf-8"))
+        print(outs.decode("utf-8"))
         assert ipynb.returncode == 0
 
 
 def test_kaggle22(generate_dataset):
-    in_columns = ['id', 'comment_text']
-    in_dtypes = [str, str]
-    out_columns = ['id', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
+    train_columns = ['id', 'comment_text', 'toxic', 'severe_toxic', 'obscene',
+    'threat', 'insult', 'identity_hate']
+    train_dtypes = [str, str, float, float, float, float, float, float]
+    test_columns = ['id', 'comment_text']
+    test_dtypes = [str, str]
+    submission_columns = ['id', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
        'identity_hate']
-    out_dtypes = [str, float, float, float, float, float, float]
-    generate_dataset("test.csv", in_columns, in_dtypes)
-    generate_dataset("train.csv", in_columns, in_dtypes)
-    generate_dataset("sample_submission.csv", out_columns, out_dtypes)
+    submission_dtypes = [str, float, float, float, float, float, float]
+    generate_dataset("train.csv", train_columns, train_dtypes, files_to_remove=['submission.csv'])
+    generate_dataset("test.csv", test_columns, test_dtypes)
+    generate_dataset("sample_submission.csv", submission_columns, submission_dtypes)
 
     ipynb = subprocess.Popen(["python", "kaggle22.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=KAGGLE_DIR_PATH)
     outs, errs = ipynb.communicate()

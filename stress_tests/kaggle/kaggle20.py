@@ -1,8 +1,10 @@
 # In[1]:
+import matplotlib
+matplotlib.use('PS')
 
 import numpy as np # linear algebra
 import modin.pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-import seaborn as sns # data visualization library  
+import seaborn as sns # data visualization library
 import matplotlib.pyplot as plt
 import time
 from subprocess import check_output
@@ -22,7 +24,7 @@ print(col)
 
 # In[5]:
 
-y = data.diagnosis                          # M or B 
+y = data.diagnosis                          # M or B
 list = ['Unnamed: 32','id','diagnosis']
 x = data.drop(list,axis = 1 )
 x.head()
@@ -30,9 +32,10 @@ x.head()
 # In[6]:
 
 ax = sns.countplot(y,label="Count")       # M = 212, B = 357
-B, M = y.value_counts()
-print('Number of Benign: ',B)
-print('Number of Malignant : ',M)
+# The following does not work with the synthetic dataset
+# B, M = y.value_counts()
+# print('Number of Benign: ',B)
+# print('Number of Malignant : ',M)
 
 # In[7]:
 
@@ -136,7 +139,7 @@ sns.heatmap(x.corr(), annot=True, linewidths=.5, fmt= '.1f',ax=ax)
 # In[18]:
 
 drop_list1 = ['perimeter_mean','radius_mean','compactness_mean','concave points_mean','radius_se','perimeter_se','radius_worst','perimeter_worst','compactness_worst','concave points_worst','compactness_se','concave points_se','texture_worst','area_worst']
-x_1 = x.drop(drop_list1,axis = 1 )        # do not modify x, we will use it later 
+x_1 = x.drop(drop_list1,axis = 1 )        # do not modify x, we will use it later
 x_1.head()
 
 # In[19]:
@@ -153,7 +156,7 @@ from sklearn.metrics import accuracy_score
 
 x_train, x_test, y_train, y_test = train_test_split(x_1, y, test_size=0.3, random_state=42)
 
-clf_rf = RandomForestClassifier(random_state=43)      
+clf_rf = RandomForestClassifier(random_state=43)
 clr_rf = clf_rf.fit(x_train,y_train)
 
 ac = accuracy_score(y_test,clf_rf.predict(x_test))
@@ -178,7 +181,7 @@ print('Feature list:', x_train.columns)
 x_train_2 = select_feature.transform(x_train)
 x_test_2 = select_feature.transform(x_test)
 #random forest classifier with n_estimators=10 (default)
-clf_rf_2 = RandomForestClassifier()      
+clf_rf_2 = RandomForestClassifier()
 clr_rf_2 = clf_rf_2.fit(x_train_2,y_train)
 ac_2 = accuracy_score(y_test,clf_rf_2.predict(x_test_2))
 print('Accuracy is: ',ac_2)
@@ -189,7 +192,7 @@ sns.heatmap(cm_2,annot=True,fmt="d")
 
 from sklearn.feature_selection import RFE
 # Create the RFE object and rank each pixel
-clf_rf_3 = RandomForestClassifier()      
+clf_rf_3 = RandomForestClassifier()
 rfe = RFE(estimator=clf_rf_3, n_features_to_select=5, step=1)
 rfe = rfe.fit(x_train, y_train)
 
@@ -201,7 +204,7 @@ print('Chosen best 5 feature by rfe:',x_train.columns[rfe.support_])
 
 from sklearn.feature_selection import RFECV
 
-clf_rf_4 = RandomForestClassifier() 
+clf_rf_4 = RandomForestClassifier()
 rfecv = RFECV(estimator=clf_rf_4, step=1, cv=5,scoring='accuracy')   #5-fold cross-validation
 rfecv = rfecv.fit(x_train, y_train)
 
@@ -219,7 +222,7 @@ plt.show()
 
 # In[27]:
 
-clf_rf_5 = RandomForestClassifier()      
+clf_rf_5 = RandomForestClassifier()
 clr_rf_5 = clf_rf_5.fit(x_train,y_train)
 importances = clr_rf_5.feature_importances_
 std = np.std([tree.feature_importances_ for tree in clf_rf.estimators_],
