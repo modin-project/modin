@@ -96,8 +96,10 @@ def test_kaggle3(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle3")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle4(generate_dataset):
@@ -131,8 +133,10 @@ def test_kaggle4(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle4")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle5(generate_dataset):
@@ -146,8 +150,10 @@ def test_kaggle5(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle5")
+    assert ipynb.returncode == 0
 
 
 @pytest.mark.skip("Missing Original Data Schema")
@@ -161,8 +167,10 @@ def test_kaggle6(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle6")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle7(generate_dataset):
@@ -229,8 +237,10 @@ def test_kaggle7(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle7")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle8(generate_dataset):
@@ -265,8 +275,10 @@ def test_kaggle8(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle8")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle9(generate_dataset):
@@ -300,8 +312,10 @@ def test_kaggle9(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle9")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle10(generate_dataset):
@@ -314,8 +328,10 @@ def test_kaggle10(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle10")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle12(generate_dataset):
@@ -329,8 +345,10 @@ def test_kaggle12(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle12")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle13(generate_dataset):
@@ -343,8 +361,10 @@ def test_kaggle13(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle13")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle14(generate_dataset):
@@ -358,8 +378,10 @@ def test_kaggle14(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle14")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle17(generate_dataset):
@@ -375,8 +397,10 @@ def test_kaggle17(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle17")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle18(generate_dataset):
@@ -392,8 +416,10 @@ def test_kaggle18(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle18")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle19(generate_dataset):
@@ -412,8 +438,10 @@ def test_kaggle19(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle19")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle20(generate_dataset):
@@ -437,9 +465,10 @@ def test_kaggle20(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        print(outs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle20")
+    assert ipynb.returncode == 0
 
 
 def test_kaggle22(generate_dataset):
@@ -459,5 +488,7 @@ def test_kaggle22(generate_dataset):
     outs, errs = ipynb.communicate()
 
     if ipynb.returncode:
-        print(errs.decode("utf-8"))
-        assert ipynb.returncode == 0
+        logging.debug("Error message\n-------------\n %s", errs.decode("utf-8"))
+
+    logging.info("Finished kaggle22")
+    assert ipynb.returncode == 0
