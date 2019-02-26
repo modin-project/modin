@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python  # noqa: E902
 # coding: utf-8
 
 # # **Introduction**
@@ -54,9 +54,9 @@ import plotly.graph_objs as go
 # get_ipython().run_line_magic('matplotlib', 'inline')
 
 import bokeh.plotting as bp
-from bokeh.models import HoverTool#, BoxSelectTool
+from bokeh.models import HoverTool  # BoxSelectTool
 from bokeh.models import ColumnDataSource
-from bokeh.plotting import show, output_notebook#, figure
+from bokeh.plotting import show, output_notebook  # figure
 
 # from bokeh.transform import factor_cmap
 
@@ -232,7 +232,7 @@ print(
 def split_cat(text):
     try:
         return text.split("/")
-    except as e:
+    except Exception as e:
         return ("No Label", "No Label", "No Label")
 
 
@@ -1030,7 +1030,7 @@ plot_lda = bp.figure(
 
 
 source = ColumnDataSource(
-    data={}
+    data={
         "x": lda_df["x"],
         "y": lda_df["y"],
         "color": colormap[lda_keys],

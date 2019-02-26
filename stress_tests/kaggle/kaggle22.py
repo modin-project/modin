@@ -6,7 +6,7 @@ matplotlib.use("PS")
 import modin.pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.feature_extraction.text import TfidfVectorizer#, CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer  # CountVectorizer
 
 # In[2]:
 

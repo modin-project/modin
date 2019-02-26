@@ -101,7 +101,7 @@ plt.show()
 data["Initial"] = 0
 for i in data:
     data["Initial"] = data.Name.str.extract(
-        "([A-Za-z]+)\." # noqa: W605
+        "([A-Za-z]+)\."  # noqa: W605
     )  # lets extract the Salutations
 
 # In[15]:

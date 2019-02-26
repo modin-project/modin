@@ -85,7 +85,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best" # noqa: W605
+    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best"  # noqa: W605
 )
 plt.ylabel("Frequency")
 plt.title("SalePrice distribution")
@@ -104,7 +104,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best" # noqa: W605
+    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best"  # noqa: W605
 )
 plt.ylabel("Frequency")
 plt.title("SalePrice distribution")
@@ -330,13 +330,13 @@ print(all_data.shape)
 train = all_data[:ntrain]
 test = all_data[ntrain:]
 
-from sklearn.linear_model import ElasticNet, Lasso#, BayesianRidge, LassoLarsIC
-from sklearn.ensemble import GradientBoostingRegressor#, RandomForestRegressor
+from sklearn.linear_model import ElasticNet, Lasso  # BayesianRidge, LassoLarsIC
+from sklearn.ensemble import GradientBoostingRegressor  # RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
-from sklearn.model_selection import KFold, cross_val_score#, train_test_split
+from sklearn.model_selection import KFold, cross_val_score  # train_test_split
 from sklearn.metrics import mean_squared_error
 import xgboost as xgb
 import lightgbm as lgb

@@ -82,7 +82,7 @@ y = train.SalePrice
 
 # In[9]:
 
-from sklearn.linear_model import Ridge, LassoCV#, RidgeCV, ElasticNet, LassoLarsCV
+from sklearn.linear_model import Ridge, LassoCV  # RidgeCV, ElasticNet, LassoLarsCV
 from sklearn.model_selection import cross_val_score
 
 
