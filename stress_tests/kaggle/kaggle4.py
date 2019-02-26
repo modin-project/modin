@@ -28,7 +28,7 @@ pd.set_option(
     "display.float_format", lambda x: "{:.3f}".format(x)
 )  # Limiting floats output to 3 decimal points
 
-from subprocess import check_output
+# from subprocess import check_output
 
 # In[2]:
 
@@ -85,7 +85,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best"
+    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best" # noqa: W605
 )
 plt.ylabel("Frequency")
 plt.title("SalePrice distribution")
@@ -104,7 +104,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best"
+    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)], loc="best" # noqa: W605
 )
 plt.ylabel("Frequency")
 plt.title("SalePrice distribution")
@@ -330,13 +330,13 @@ print(all_data.shape)
 train = all_data[:ntrain]
 test = all_data[ntrain:]
 
-from sklearn.linear_model import ElasticNet, Lasso, BayesianRidge, LassoLarsIC
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import ElasticNet, Lasso#, BayesianRidge, LassoLarsIC
+from sklearn.ensemble import GradientBoostingRegressor#, RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
-from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.model_selection import KFold, cross_val_score#, train_test_split
 from sklearn.metrics import mean_squared_error
 import xgboost as xgb
 import lightgbm as lgb
@@ -487,7 +487,7 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
         self.n_folds = n_folds
 
     def fit(self, X, y):
-        self.base_models_ = [list() for x in self.base_models]
+        self.base_models_ = [[] for x in self.base_models]
         self.meta_model_ = clone(self.meta_model)
         kfold = KFold(n_splits=self.n_folds, shuffle=True, random_state=156)
 

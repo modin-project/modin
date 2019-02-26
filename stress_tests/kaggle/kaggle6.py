@@ -5,7 +5,7 @@ matplotlib.use("PS")
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+# import matplotlib.image as mpimg
 import seaborn as sns
 
 np.random.seed(2)

@@ -3,9 +3,10 @@ import matplotlib
 
 matplotlib.use("PS")
 
-import modin.pandas as pd, numpy as np
+import modin.pandas as pd
+import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer#, CountVectorizer
 
 # In[2]:
 
@@ -52,7 +53,8 @@ test[COMMENT].fillna("unknown", inplace=True)
 
 # In[11]:
 
-import re, string
+import re
+import string
 
 re_tok = re.compile(f"([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’])")
 

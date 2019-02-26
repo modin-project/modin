@@ -10,7 +10,7 @@ import seaborn as sns
 import warnings
 
 warnings.filterwarnings("ignore")
-from subprocess import check_output
+# from subprocess import check_output
 
 # print(check_output(["ls", "../input"]).decode("utf8"))
 

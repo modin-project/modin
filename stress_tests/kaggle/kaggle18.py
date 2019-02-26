@@ -25,7 +25,7 @@ import string
 import re
 import numpy as np
 import pandas as pd
-import pickle
+# import pickle
 
 # import lda
 
@@ -34,7 +34,7 @@ import seaborn as sns
 
 sns.set(style="white")
 
-from nltk.stem.porter import *
+# from nltk.stem.porter import *
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 from sklearn.feature_extraction import stop_words
@@ -49,14 +49,14 @@ import plotly.offline as py
 
 # py.init_notebook_mode(connected=True)
 import plotly.graph_objs as go
-import plotly.tools as tls
+# import plotly.tools as tls
 
 # get_ipython().run_line_magic('matplotlib', 'inline')
 
 import bokeh.plotting as bp
-from bokeh.models import HoverTool, BoxSelectTool
+from bokeh.models import HoverTool#, BoxSelectTool
 from bokeh.models import ColumnDataSource
-from bokeh.plotting import figure, show, output_notebook
+from bokeh.plotting import show, output_notebook#, figure
 
 # from bokeh.transform import factor_cmap
 
@@ -232,7 +232,7 @@ print(
 def split_cat(text):
     try:
         return text.split("/")
-    except:
+    except as e:
         return ("No Label", "No Label", "No Label")
 
 
@@ -280,12 +280,12 @@ pct = [("%.2f" % (v * 100)) + "%" for v in (y / len(train))]
 
 
 trace1 = go.Bar(x=x, y=y, text=pct)
-layout = dict(
-    title="Number of Items by Main Category",
-    yaxis=dict(title="Count"),
-    xaxis=dict(title="Category"),
-)
-fig = dict(data=[trace1], layout=layout)
+layout = {
+    "title": "Number of Items by Main Category",
+    "yaxis": {"title": "Count"},
+    "xaxis": {"title": "Category"},
+}
+fig = {"data": [trace1], "layout": layout}
 py.iplot(fig)
 
 
@@ -304,14 +304,14 @@ trace1 = go.Bar(
     x=x,
     y=y,
     text=pct,
-    marker=dict(color=y, colorscale="Portland", showscale=True, reversescale=False),
+    marker={"color": y, "colorscale": "Portland", "showscale": True, "reversescale": False},
 )
-layout = dict(
-    title="Number of Items by Sub Category (Top 15)",
-    yaxis=dict(title="Count"),
-    xaxis=dict(title="SubCategory"),
-)
-fig = dict(data=[trace1], layout=layout)
+layout = {
+    "title": "Number of Items by Sub Category (Top 15)",
+    "yaxis": {"title": "Count"},
+    "xaxis": {"title": "SubCategory"},
+}
+fig = {"data": [trace1], "layout": layout}
 py.iplot(fig)
 
 
@@ -335,12 +335,12 @@ data = [
 # In[ ]:
 
 
-layout = dict(
-    title="Price Distribution by General Category",
-    yaxis=dict(title="Frequency"),
-    xaxis=dict(title="Category"),
-)
-fig = dict(data=data, layout=layout)
+layout = {
+    "title": "Price Distribution by General Category",
+    "yaxis": {"title": "Frequency"},
+    "xaxis": {"title": "Category"},
+}
+fig = {"data": data, "layout": layout}
 py.iplot(fig)
 
 
@@ -397,10 +397,10 @@ def wordCount(text):
         words = [
             w
             for w in txt.split(" ")
-            if not w in stop_words.ENGLISH_STOP_WORDS and len(w) > 3
+            if w not in stop_words.ENGLISH_STOP_WORDS and len(w) > 3
         ]
         return len(words)
-    except:
+    except as e:
         return 0
 
 
@@ -433,12 +433,12 @@ trace1 = go.Scatter(
     mode="lines+markers",
     name="lines+markers",
 )
-layout = dict(
-    title="Average Log(Price) by Description Length",
-    yaxis=dict(title="Average Log(Price)"),
-    xaxis=dict(title="Description Length"),
-)
-fig = dict(data=[trace1], layout=layout)
+layout = {
+    "title": "Average Log(Price) by Description Length",
+    "yaxis": {"title": "Average Log(Price)"},
+    "xaxis": {"title": "Description Length"},
+}
+fig = {"data": [trace1], "layout": layout}
 py.iplot(fig)
 
 
@@ -486,7 +486,7 @@ def tokenize(text):
 
 
 # create a dictionary of words for each category
-cat_desc = dict()
+cat_desc = {}
 for cat in general_cats:
     text = " ".join(train.loc[train["general_cat"] == cat, "item_description"].values)
     cat_desc[cat] = tokenize(text)
@@ -503,10 +503,10 @@ y = [w[1] for w in all_top10]
 
 
 trace1 = go.Bar(x=x, y=y, text=pct)
-layout = dict(
-    title="Word Frequency", yaxis=dict(title="Count"), xaxis=dict(title="Word")
-)
-fig = dict(data=[trace1], layout=layout)
+layout = {
+    "title": "Word Frequency", "yaxis": {"title": "Count"}, "xaxis": {"title": "Word"}
+}
+fig = {"data": [trace1], "layout": layout}
 py.iplot(fig)
 
 
@@ -587,7 +587,7 @@ for description, tokens in zip(
 
 
 # build dictionary with key=category and values as all the descriptions related.
-cat_desc = dict()
+cat_desc = {}
 for cat in general_cats:
     text = " ".join(train.loc[train["general_cat"] == cat, "item_description"].values)
     cat_desc[cat] = tokenize(text)
@@ -653,7 +653,7 @@ ax.set_title("Electronic Top 100", fontsize=30)
 # In[ ]:
 
 
-from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.feature_extraction.text import TfidfVectorizer
 
 vectorizer = TfidfVectorizer(
     min_df=10, max_features=180000, tokenizer=tokenize, ngram_range=(1, 2)
@@ -781,7 +781,7 @@ tfidf_df["category"] = combined_sample["general_cat"]
 
 
 plot_tfidf.scatter(x="x", y="y", source=tfidf_df, alpha=0.7)
-hover = plot_tfidf.select(dict(type=HoverTool))
+hover = plot_tfidf.select({"type": HoverTool})
 hover.tooltips = {
     "description": "@description",
     "tokens": "@tokens",
@@ -915,18 +915,18 @@ plot_kmeans = bp.figure(
 
 
 source = ColumnDataSource(
-    data=dict(
-        x=kmeans_df["x"],
-        y=kmeans_df["y"],
-        color=colormap[kmeans_clusters],
-        description=kmeans_df["description"],
-        category=kmeans_df["category"],
-        cluster=kmeans_df["cluster"],
-    )
+    data={
+        "x": kmeans_df["x"],
+        "y": kmeans_df["y"],
+        "color": colormap[kmeans_clusters],
+        "description": kmeans_df["description"],
+        "category": kmeans_df["category"],
+        "cluster": kmeans_df["cluster"],
+    }
 )
 
 plot_kmeans.scatter(x="x", y="y", color="color", source=source)
-hover = plot_kmeans.select(dict(type=HoverTool))
+hover = plot_kmeans.select({"type": HoverTool})
 hover.tooltips = {
     "description": "@description",
     "category": "@category",
@@ -1030,19 +1030,19 @@ plot_lda = bp.figure(
 
 
 source = ColumnDataSource(
-    data=dict(
-        x=lda_df["x"],
-        y=lda_df["y"],
-        color=colormap[lda_keys],
-        description=lda_df["description"],
-        topic=lda_df["topic"],
-        category=lda_df["category"],
-    )
+    data={}
+        "x": lda_df["x"],
+        "y": lda_df["y"],
+        "color": colormap[lda_keys],
+        "description": lda_df["description"],
+        "topic": lda_df["topic"],
+        "category": lda_df["category"],
+    }
 )
 
 plot_lda.scatter(source=source, x="x", y="y", color="color")
-hover = plot_kmeans.select(dict(type=HoverTool))
-hover = plot_lda.select(dict(type=HoverTool))
+hover = plot_kmeans.select({"type": HoverTool})
+hover = plot_lda.select({"type": HoverTool})
 hover.tooltips = {
     "description": "@description",
     "topic": "@topic",
@@ -1085,8 +1085,8 @@ prepared_data = pyLDAvis.prepare(**ldadata)
 # In[ ]:
 
 
-import IPython.display
-from IPython.core.display import display, HTML, Javascript
+# import IPython.display
+# from IPython.core.display import display, HTML, Javascript
 
 # h = IPython.display.display(HTML(html_string))
 # IPython.display.display_HTML(h)

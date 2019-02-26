@@ -3,7 +3,7 @@ import matplotlib
 
 matplotlib.use("PS")
 
-import numpy as np
+# import numpy as np
 import modin.pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -101,7 +101,7 @@ plt.show()
 data["Initial"] = 0
 for i in data:
     data["Initial"] = data.Name.str.extract(
-        "([A-Za-z]+)\."
+        "([A-Za-z]+)\." # noqa: W605
     )  # lets extract the Salutations
 
 # In[15]:

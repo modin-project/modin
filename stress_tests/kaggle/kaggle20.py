@@ -8,7 +8,7 @@ import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import seaborn as sns  # data visualization library
 import matplotlib.pyplot as plt
 import time
-from subprocess import check_output
+# from subprocess import check_output
 
 # In[2]:
 
@@ -166,7 +166,7 @@ sns.heatmap(x_1.corr(), annot=True, linewidths=0.5, fmt=".1f", ax=ax)
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score, confusion_matrix
+from sklearn.metrics import confusion_matrix#, f1_score
 from sklearn.metrics import accuracy_score
 
 x_train, x_test, y_train, y_test = train_test_split(

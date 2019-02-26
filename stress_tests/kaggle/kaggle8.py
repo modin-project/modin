@@ -1,6 +1,6 @@
 # In[1]:
 
-import numpy as np
+# import numpy as np
 import modin.pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 

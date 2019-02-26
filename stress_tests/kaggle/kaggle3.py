@@ -93,7 +93,7 @@ import seaborn as sns  # visualization tool
 # Input data files are available in the "../input/" directory.
 # For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory
 
-from subprocess import check_output
+# from subprocess import check_output
 
 # print(check_output(["ls", ""]).decode("utf8"))
 
@@ -507,6 +507,8 @@ f(1)
 print("")
 f(1, 2, 3, 4)
 # flexible arguments **kwargs that is dictionary
+
+
 def f(**kwargs):
     """ print key and value of dictionary"""
     for (
@@ -529,10 +531,10 @@ f(country="spain", capital="madrid", population=123456)
 
 
 # lambda function
-square = lambda x: x ** 2  # where x is name of argument
-print(square(4))
-tot = lambda x, y, z: x + y + z  # where x,y,z are names of arguments
-print(tot(1, 2, 3))
+# square = lambda x: x ** 2  # where x is name of argument
+# print(square(4))
+# tot = lambda x, y, z: x + y + z  # where x,y,z are names of arguments
+# print(tot(1, 2, 3))
 
 
 # <a id="13"></a> <br>

@@ -5,12 +5,12 @@ matplotlib.use("PS")
 
 import modin.pandas as pd
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
 import matplotlib
 
 import matplotlib.pyplot as plt
 from scipy.stats import skew
-from scipy.stats.stats import pearsonr
+# from scipy.stats.stats import pearsonr
 
 
 # get_ipython().run_line_magic('config', "InlineBackend.figure_format = 'retina' #set 'png' here when working on notebook")
@@ -82,7 +82,7 @@ y = train.SalePrice
 
 # In[9]:
 
-from sklearn.linear_model import Ridge, RidgeCV, ElasticNet, LassoCV, LassoLarsCV
+from sklearn.linear_model import Ridge, LassoCV#, RidgeCV, ElasticNet, LassoLarsCV
 from sklearn.model_selection import cross_val_score
 
 

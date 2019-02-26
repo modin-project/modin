@@ -8,7 +8,7 @@ import modin.pandas as pd
 
 from sklearn.preprocessing import LabelEncoder
 
-import os
+# import os
 
 import warnings
 
@@ -637,7 +637,7 @@ def model(features, test_features, encoding="ohe", n_folds=5):
 
     """
 
-    train_ids = features["SK_ID_CURR"]
+    # train_ids = features["SK_ID_CURR"]
     test_ids = test_features["SK_ID_CURR"]
 
     labels = features["TARGET"]

@@ -6,7 +6,7 @@ matplotlib.use("PS")
 
 import modin.pandas as pd
 import numpy as np
-import random as rnd
+# import random as rnd
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -115,7 +115,7 @@ combine = [train_df, test_df]
 # In[18]:
 
 for dataset in combine:
-    dataset["Title"] = dataset.Name.str.extract(" ([A-Za-z]+)\.", expand=False)
+    dataset["Title"] = dataset.Name.str.extract(" ([A-Za-z]+)\.", expand=False) # noqa: W605
 
 pd.crosstab(train_df["Title"], train_df["Sex"])
 
@@ -147,10 +147,10 @@ train_df[["Title", "Survived"]].groupby(["Title"], as_index=False).mean()
 
 # In[20]:
 
-# title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
+
 def title_mapping(string):
     return np.random.randint(1, high=6)
-
+# title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
 
 for dataset in combine:
     dataset["Title"] = dataset["Title"].map(title_mapping)

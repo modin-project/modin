@@ -68,7 +68,7 @@ def detect_outliers(df, n, features):
 
     # select observations containing more than 2 outliers
     outlier_indices = Counter(outlier_indices)
-    multiple_outliers = list(k for k, v in outlier_indices.items() if v > n)
+    multiple_outliers = [k for k, v in outlier_indices.items() if v > n]
 
     return multiple_outliers
 
