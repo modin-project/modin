@@ -400,7 +400,7 @@ def wordCount(text):
             if w not in stop_words.ENGLISH_STOP_WORDS and len(w) > 3
         ]
         return len(words)
-    except as e:
+    except Exception as e:
         return 0
 
 
