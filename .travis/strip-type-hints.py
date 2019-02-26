@@ -6,10 +6,11 @@ import fnmatch
 # From https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python # noqa: E501
 def find_files(directory, pattern):
     for root, dirs, files in os.walk(directory):
-        for basename in files:
-            if fnmatch.fnmatch(basename, pattern):
-                filename = os.path.join(root, basename)
-                yield filename
+        if "stress_tests" not in root:
+            for basename in files:
+                if fnmatch.fnmatch(basename, pattern):
+                    filename = os.path.join(root, basename)
+                    yield filename
 
 
 # Go up to modin root
