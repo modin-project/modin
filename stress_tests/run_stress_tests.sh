@@ -31,6 +31,12 @@ setup_environment(){
     popd
 }
 
+teardown_environment(){
+    pushd "$ROOT_DIR"
+    rm -rf stress_tests_env
+    popd
+}
+
 run_test(){
     local test_name=$1
 
@@ -43,6 +49,7 @@ run_test(){
 pushd "$ROOT_DIR"
     setup_environment
     run_test test_kaggle_ipynb
+    teardown_environment
 popd
 
 cat $RESULT_FILE
