@@ -232,7 +232,7 @@ print(
 def split_cat(text):
     try:
         return text.split("/")
-    except Exception as e:
+    except Exception:
         return ("No Label", "No Label", "No Label")
 
 
@@ -400,7 +400,7 @@ def wordCount(text):
             if w not in stop_words.ENGLISH_STOP_WORDS and len(w) > 3
         ]
         return len(words)
-    except Exception as e:
+    except Exception:
         return 0
 
 
