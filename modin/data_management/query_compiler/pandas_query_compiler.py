@@ -1688,22 +1688,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Only describe numeric if there are numeric columns
         # Otherwise, describe all
         new_columns = self.numeric_columns(include_bool=False)
-        if len(new_columns) != 0:
+        include = kwargs.get("include", None)
+        if len(new_columns) != 0 and include is not None:
             numeric = True
             exclude = kwargs.get("exclude", None)
-            include = kwargs.get("include", None)
             # This is done to check against the default dtypes with 'in'.
             # We don't change `include` in kwargs, so we can just use this for the
             # check.
             if include is None:
                 include = []
-            default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
-            add_to_excludes = [e for e in default_excludes if e not in include]
-            if is_list_like(exclude):
-                exclude.append(add_to_excludes)
+                default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
+                add_to_excludes = [e for e in default_excludes if e not in include]
+                if is_list_like(exclude):
+                    exclude.append(add_to_excludes)
+                else:
+                    exclude = add_to_excludes
+                kwargs["exclude"] = exclude
+                # Update `new_columns` to reflect the included types
+                new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
             else:
-                exclude = add_to_excludes
-            kwargs["exclude"] = exclude
+                if include == "all":
+                    new_columns = self.columns
+                else:
+                    new_columns = self.dtypes[self.dtypes.isin(include)].index
         else:
             numeric = False
             # If only timedelta and datetime objects, only do the timedelta

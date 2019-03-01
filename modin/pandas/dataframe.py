@@ -1117,10 +1117,13 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if include is not None:
+        if include is not None and include != "all":
             if not is_list_like(include):
                 include = [include]
             include = [np.dtype(i) for i in include]
+            if not any(self.dtypes.isin(include)):
+                # This is the error that pandas throws.
+                raise ValueError("No objects to concatenate")
         if exclude is not None:
             if not is_list_like(include):
                 exclude = [exclude]
