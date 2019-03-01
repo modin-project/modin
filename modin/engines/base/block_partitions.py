@@ -828,7 +828,7 @@ class BaseBlockPartitions(object):
             A new BaseBlockPartitions object, the type of object that called this.
         """
         if self.partitions.size == 0:
-            return np.array([[]])
+            return self.__constructor__(np.array([[]]))
         if isinstance(indices, dict):
             dict_indices = indices
             indices = list(indices.keys())

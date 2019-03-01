@@ -159,11 +159,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
 
             def helper(df, internal_indices=[]):
+                if len(internal_indices) > 0:
+                    return pandas_func(
+                        df.T, internal_indices=internal_indices, **kwargs
+                    )
                 return pandas_func(df.T, **kwargs)
 
         else:
 
             def helper(df, internal_indices=[]):
+                if len(internal_indices) > 0:
+                    return pandas_func(df, internal_indices=internal_indices, **kwargs)
                 return pandas_func(df, **kwargs)
 
         return helper
@@ -2303,6 +2309,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # instances of a key.
         new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
+
+    def setitem(self, key, value):
+        """Set the column defined by `key` to the `value` provided.
+
+        Args:
+            key: The column name to set.
+            value: The value to set the column to.
+
+        Returns:
+             A new PandasDataManager
+        """
+
+        def setitem(df, internal_indices=[]):
+            if len(internal_indices) == 1:
+                df[df.columns[internal_indices[0]]] = value
+            else:
+                df[df.columns[internal_indices]] = value
+            return df
+
+        numeric_indices = list(self.columns.get_indexer_for([key]))
+        prepared_func = self._prepare_method(setitem)
+        if is_list_like(value):
+            value = list(value)
+            new_data = self.data.apply_func_to_select_indices_along_full_axis(
+                0, prepared_func, numeric_indices, keep_remaining=True
+            )
+        else:
+            new_data = self.data.apply_func_to_select_indices(
+                0, prepared_func, numeric_indices, keep_remaining=True
+            )
+        return self.__constructor__(new_data, self.index, self.columns)
 
     # END __getitem__ methods
 
