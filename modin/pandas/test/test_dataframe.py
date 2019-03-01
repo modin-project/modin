@@ -1382,12 +1382,18 @@ def test_describe(data):
     df_equals(modin_df.describe(), pandas_df.describe())
 
     try:
-        pandas_result = pandas_df.describe(include=[np.timedelta64, np.datetime64, np.object, np.bool])
+        pandas_result = pandas_df.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.describe(include=[np.timedelta64, np.datetime64, np.object, np.bool])
+            modin_df.describe(
+                include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            )
     else:
-        modin_result = modin_df.describe(include=[np.timedelta64, np.datetime64, np.object, np.bool])
+        modin_result = modin_df.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
         df_equals(modin_result, pandas_result)
 
     df_equals(modin_df.describe(include="all"), pandas_df.describe(include="all"))
