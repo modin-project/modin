@@ -4373,14 +4373,55 @@ def test___getattr__(request, data):
         assert isinstance(df2.columns, pandas.Index)
 
 
-@pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___setitem__(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
+    pandas_df = pandas.DataFrame(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_df.__setitem__(None, None)
+    modin_df.__setitem__(modin_df.columns[-1], 1)
+    pandas_df.__setitem__(pandas_df.columns[-1], 1)
+    df_equals(modin_df, pandas_df)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_df[modin_df.columns[0]] = np.arange(len(modin_df))
+    pandas_df[pandas_df.columns[0]] = np.arange(len(pandas_df))
+    df_equals(modin_df, pandas_df)
+
+    modin_df = pd.DataFrame(columns=modin_df.columns)
+    pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+
+    for col in modin_df.columns:
+        modin_df[col] = np.arange(1000)
+
+    for col in pandas_df.columns:
+        pandas_df[col] = np.arange(1000)
+
+    df_equals(modin_df, pandas_df)
+
+    # Transpose test
+    modin_df = pd.DataFrame(data).T
+    pandas_df = pandas.DataFrame(data).T
+
+    # We default to pandas on non-string column names
+    if not all(isinstance(c, str) for c in modin_df.columns):
+        with pytest.warns(UserWarning):
+            modin_df[modin_df.columns[0]] = 0
+    else:
+        modin_df[modin_df.columns[0]] = 0
+
+    pandas_df[pandas_df.columns[0]] = 0
+
+    df_equals(modin_df, pandas_df)
+
+    modin_df.columns = [str(i) for i in modin_df.columns]
+    pandas_df.columns = [str(i) for i in pandas_df.columns]
+
+    modin_df[modin_df.columns[0]] = 0
+    pandas_df[pandas_df.columns[0]] = 0
+
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
