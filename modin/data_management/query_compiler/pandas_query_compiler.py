@@ -1690,29 +1690,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_columns = self.numeric_columns(include_bool=False)
         include = kwargs.get("include", None)
         if len(new_columns) != 0 and include is not None:
-            numeric = True
-            exclude = kwargs.get("exclude", None)
-            # This is done to check against the default dtypes with 'in'.
-            # We don't change `include` in kwargs, so we can just use this for the
-            # check.
-            if include is None:
-                include = []
-                default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
-                add_to_excludes = [e for e in default_excludes if e not in include]
-                if is_list_like(exclude):
-                    exclude.append(add_to_excludes)
-                else:
-                    exclude = add_to_excludes
-                kwargs["exclude"] = exclude
-                # Update `new_columns` to reflect the included types
-                new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
+            if include == "all":
+                new_columns = self.columns
             else:
-                if include == "all":
-                    new_columns = self.columns
-                else:
-                    new_columns = self.dtypes[self.dtypes.isin(include)].index
-        else:
-            numeric = False
+                new_columns = self.dtypes[self.dtypes.isin(include)].index
+        elif len(new_columns) == 0:
             # If only timedelta and datetime objects, only do the timedelta
             # columns
             if all(
@@ -1730,6 +1712,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 # Describe all columns
                 new_columns = self.columns
+        else:
+            exclude = kwargs.get("exclude", None)
+            # This is done to check against the default dtypes with 'in'.
+            # We don't change `include` in kwargs, so we can just use this for the
+            # check.
+            include = []
+            default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
+            add_to_excludes = [e for e in default_excludes if e not in include]
+            if is_list_like(exclude):
+                exclude.append(add_to_excludes)
+            else:
+                exclude = add_to_excludes
+            kwargs["exclude"] = exclude
+            # Update `new_columns` to reflect the included types
+            new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
 
         def describe_builder(df, **kwargs):
             try:
@@ -1743,15 +1740,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func, 0, new_columns, False
         )
         new_index = self.compute_index(0, new_data, False)
-        if numeric:
-            new_dtypes = pandas.Series(
-                [np.float64 for _ in new_columns], index=new_columns
-            )
-        else:
-            new_dtypes = pandas.Series(
-                [np.object for _ in new_columns], index=new_columns
-            )
-        return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
+        return self.__constructor__(new_data, new_index, new_columns)
 
     # END Column/Row partitions reduce operations over select indices
 
