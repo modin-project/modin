@@ -1381,7 +1381,10 @@ def test_describe(data):
 
     df_equals(modin_df.describe(), pandas_df.describe())
     percentiles = [0.10, 0.11, 0.44, 0.78, 0.99]
-    df_equals(modin_df.describe(percentiles=percentiles), pandas_df.describe(percentiles=percentiles))
+    df_equals(
+        modin_df.describe(percentiles=percentiles),
+        pandas_df.describe(percentiles=percentiles),
+    )
 
     try:
         pandas_result = pandas_df.describe(exclude=[np.float64])
@@ -1435,7 +1438,10 @@ def test_describe(data):
         # We have to do this because we choose the highest count slightly differently
         # than pandas. Because there is no true guarantee which one will be first,
         # If they don't match, make sure that the `freq` is the same at least.
-        df_equals(modin_df.describe().loc[["count", "unique", "freq"]], pandas_df.describe().loc[["count", "unique", "freq"]])
+        df_equals(
+            modin_df.describe().loc[["count", "unique", "freq"]],
+            pandas_df.describe().loc[["count", "unique", "freq"]],
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
