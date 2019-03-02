@@ -1730,11 +1730,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # Describe all columns
                 new_columns = self.columns
 
-        def describe_builder(df, **kwargs):
-            try:
-                return pandas.DataFrame.describe(df, **kwargs)
-            except ValueError:
-                return pandas.DataFrame(index=df.index)
+        def describe_builder(df, internal_indices=[], **kwargs):
+            return df.iloc[:, internal_indices].describe(**kwargs)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
