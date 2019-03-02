@@ -4338,6 +4338,29 @@ def test___setitem__(data):
 
     df_equals(modin_df, pandas_df)
 
+    # Transpose test
+    modin_df = pd.DataFrame(data).T
+    pandas_df = pandas.DataFrame(data).T
+
+    # We default to pandas on non-string column names
+    if not all(isinstance(c, str) for c in modin_df.columns):
+        with pytest.warns(UserWarning):
+            modin_df[modin_df.columns[0]] = 0
+    else:
+        modin_df[modin_df.columns[0]] = 0
+
+    pandas_df[pandas_df.columns[0]] = 0
+
+    df_equals(modin_df, pandas_df)
+
+    modin_df.columns = [str(i) for i in modin_df.columns]
+    pandas_df.columns = [str(i) for i in pandas_df.columns]
+
+    modin_df[modin_df.columns[0]] = 0
+    pandas_df[pandas_df.columns[0]] = 0
+
+    df_equals(modin_df, pandas_df)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___len__(data):
