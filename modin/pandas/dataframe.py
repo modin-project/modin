@@ -1117,14 +1117,41 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if include is not None:
+        if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
-            include = [np.dtype(i) for i in include]
+            include = [
+                np.dtype(i)
+                if not (isinstance(i, type) and i.__module__ == "numpy")
+                else i
+                for i in include
+            ]
+            if not any(
+                (isinstance(inc, np.dtype) and inc == d)
+                or (
+                    not isinstance(inc, np.dtype)
+                    and inc.__subclasscheck__(getattr(np, d.__str__()))
+                )
+                for d in self.dtypes.values
+                for inc in include
+            ):
+                # This is the error that pandas throws.
+                raise ValueError("No objects to concatenate")
         if exclude is not None:
-            if not is_list_like(include):
+            if not is_list_like(exclude):
                 exclude = [exclude]
             exclude = [np.dtype(e) for e in exclude]
+            if all(
+                (isinstance(exc, np.dtype) and exc == d)
+                or (
+                    not isinstance(exc, np.dtype)
+                    and exc.__subclasscheck__(getattr(np, d.__str__()))
+                )
+                for d in self.dtypes.values
+                for exc in exclude
+            ):
+                # This is the error that pandas throws.
+                raise ValueError("No objects to concatenate")
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
         return DataFrame(

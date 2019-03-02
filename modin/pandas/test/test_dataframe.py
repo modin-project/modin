@@ -1380,6 +1380,68 @@ def test_describe(data):
     pandas_df = pandas.DataFrame(data)
 
     df_equals(modin_df.describe(), pandas_df.describe())
+    percentiles = [0.10, 0.11, 0.44, 0.78, 0.99]
+    df_equals(
+        modin_df.describe(percentiles=percentiles),
+        pandas_df.describe(percentiles=percentiles),
+    )
+
+    try:
+        pandas_result = pandas_df.describe(exclude=[np.float64])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.describe(exclude=[np.float64])
+    else:
+        modin_result = modin_df.describe(exclude=[np.float64])
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_df.describe(exclude=np.float64)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.describe(exclude=np.float64)
+    else:
+        modin_result = modin_df.describe(exclude=np.float64)
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_df.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.describe(
+                include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            )
+    else:
+        modin_result = modin_df.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
+        df_equals(modin_result, pandas_result)
+
+    modin_result = modin_df.describe(include=str(modin_df.dtypes.values[0]))
+    pandas_result = pandas_df.describe(include=str(pandas_df.dtypes.values[0]))
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_df.describe(include=[np.number])
+    pandas_result = pandas_df.describe(include=[np.number])
+    df_equals(modin_result, pandas_result)
+
+    df_equals(modin_df.describe(include="all"), pandas_df.describe(include="all"))
+
+    modin_df = pd.DataFrame(data).applymap(str)
+    pandas_df = pandas.DataFrame(data).applymap(str)
+
+    try:
+        df_equals(modin_df.describe(), pandas_df.describe())
+    except AssertionError:
+        # We have to do this because we choose the highest count slightly differently
+        # than pandas. Because there is no true guarantee which one will be first,
+        # If they don't match, make sure that the `freq` is the same at least.
+        df_equals(
+            modin_df.describe().loc[["count", "unique", "freq"]],
+            pandas_df.describe().loc[["count", "unique", "freq"]],
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
