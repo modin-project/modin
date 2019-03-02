@@ -1690,28 +1690,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_columns = self.numeric_columns(include_bool=False)
         include = kwargs.get("include", None)
         if len(new_columns) != 0 and include is not None:
-            if include == "all":
+            if not isinstance(include, np.dtype) and include == "all":
                 new_columns = self.columns
             else:
-                new_columns = self.dtypes[self.dtypes.isin(include)].index
+                new_columns = self.dtypes[
+                    [
+                        any(
+                            (isinstance(inc, np.dtype) and inc == d)
+                            or (
+                                not isinstance(inc, np.dtype)
+                                and inc.__subclasscheck__(getattr(np, d.__str__()))
+                            )
+                            for inc in include
+                        )
+                        for d in self.dtypes.values
+                    ]
+                ].index
         elif len(new_columns) == 0:
-            # If only timedelta and datetime objects, only do the timedelta
-            # columns
-            if all(
-                (
-                    dtype
-                    for dtype in self.dtypes
-                    if dtype == np.datetime64 or dtype == np.timedelta64
-                )
-            ):
-                new_columns = [
-                    self.columns[i]
-                    for i in range(len(self.columns))
-                    if self.dtypes[i] != np.dtype("datetime64[ns]")
-                ]
-            else:
-                # Describe all columns
-                new_columns = self.columns
+            new_columns = [
+                self.columns[i]
+                for i in range(len(self.columns))
+                if self.dtypes[i] != np.dtype("datetime64[ns]")
+            ]
         else:
             exclude = kwargs.get("exclude", None)
             # This is done to check against the default dtypes with 'in'.
@@ -1720,13 +1720,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             include = []
             default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
             add_to_excludes = [e for e in default_excludes if e not in include]
-            if is_list_like(exclude):
-                exclude.append(add_to_excludes)
+            if isinstance(exclude, list):
+                exclude.extend(add_to_excludes)
             else:
                 exclude = add_to_excludes
             kwargs["exclude"] = exclude
+            print(kwargs)
             # Update `new_columns` to reflect the included types
             new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
+            print(new_columns)
 
         def describe_builder(df, **kwargs):
             try:
