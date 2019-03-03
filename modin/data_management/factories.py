@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
+import warnings
 
 from .query_compiler import PandasQueryCompiler
 from .. import __execution_engine__ as execution_engine
@@ -238,3 +239,8 @@ class GandivaOnRayFactory(BaseFactory):
     query_compiler_cls = GandivaQueryCompiler
     block_partitions_cls = RayBlockPartitions
     io_cls = GandivaOnRayIO
+
+    if partition_format == "Gandiva":
+        warnings.warn(
+            "Gandiva on Ray is experimental, some behaviors may not match expectations."
+        )

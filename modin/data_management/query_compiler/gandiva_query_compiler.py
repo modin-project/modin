@@ -1,6 +1,5 @@
 from .pandas_query_compiler import PandasQueryCompiler
 import pyarrow as pa
-import pyarrow.gandiva as gandiva
 import pandas
 from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
@@ -33,10 +32,10 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             scope = Scope(level=0, resolvers=(resolver,))
             return Expr(expr=expr, env=scope)
 
+        import pyarrow.gandiva as gandiva
+
         unary_ops = {"~": "not"}
-
         math_calls = {"log": "log", "exp": "exp", "log10": "log10", "cbrt": "cbrt"}
-
         bin_ops = {
             "+": "add",
             "-": "subtract",
@@ -44,7 +43,6 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             "/": "divide",
             "**": "power",
         }
-
         cmp_ops = {
             "==": "equal",
             "!=": "not_equal",
