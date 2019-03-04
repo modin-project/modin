@@ -47,12 +47,18 @@ elif [[ "$LINT" == "1" ]]; then
   export PATH="$HOME/miniconda/bin:$PATH"
   conda install -y python==3.6.5
   pip install black flake8 flake8-comprehensions
-  
+
 else
   echo "Unrecognized environment."
   exit 1
 fi
 
 pip install -r requirements.txt
+# Upgrade ray to 0.6.4
+if [[ "$PYTHON" == "2.7" ]]; then
+  pip install https://s3-us-west-2.amazonaws.com/ray-wheels/e96e06e031c9a000cd112ba5d54da22f1874b9c8/ray-0.6.4-cp27-cp27mu-manylinux1_x86_64.whl
+else
+  pip install https://s3-us-west-2.amazonaws.com/ray-wheels/e96e06e031c9a000cd112ba5d54da22f1874b9c8/ray-0.6.4-cp36-cp36m-manylinux1_x86_64.whl
+fi
 # This causes problems with execution in the tests
 pip uninstall -y numexpr
