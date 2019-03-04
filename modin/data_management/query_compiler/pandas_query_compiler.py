@@ -1469,7 +1469,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             External index of the intermediate_result.
         """
         index = self.index if not axis else self.columns
-        result = intermediate_result.apply(lambda x: index[x])
+
+        def apply_index(x):
+            try:
+                return index[x] if x is not np.nan else x
+            # These can happen even if x is a nan because of how pandas classifies nans
+            # as of 0.24.
+            except (ValueError, IndexError):
+                return x
+        result = intermediate_result.apply(apply_index)
         return result
 
     def idxmax(self, **kwargs):
@@ -1480,12 +1488,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # The reason for the special treatment with idxmax/min is because we
         # need to communicate the row number back here.
-        def idxmax_builder(df, **kwargs):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.idxmax(**kwargs)
+        def idxmax_builder(df, axis=0, **kwargs):
+            if axis == 0:
+                df.index = pandas.RangeIndex(len(df.index))
+            else:
+                df.columns = pandas.RangeIndex(len(df.columns))
+            return df.idxmax(axis=axis, **kwargs)
 
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(idxmax_builder, **kwargs)
+        axis = kwargs.pop("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        func = self._prepare_method(idxmax_builder, axis=axis, **kwargs)
         max_result = self._full_axis_reduce(func, axis)
         # Because our internal partitions don't track the external index, we
         # have to do a conversion.
@@ -1499,12 +1511,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # The reason for the special treatment with idxmax/min is because we
         # need to communicate the row number back here.
-        def idxmin_builder(df, **kwargs):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.idxmin(**kwargs)
+        def idxmin_builder(df, axis=0, **kwargs):
+            if axis == 0:
+                df.index = pandas.RangeIndex(len(df.index))
+            else:
+                df.columns = pandas.RangeIndex(len(df.columns))
+            return df.idxmin(axis=axis, **kwargs)
 
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(idxmin_builder, **kwargs)
+        axis = kwargs.pop("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        func = self._prepare_method(idxmin_builder, axis=axis, **kwargs)
         min_result = self._full_axis_reduce(func, axis)
         # Because our internal partitions don't track the external index, we
         # have to do a conversion.
@@ -1731,10 +1747,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 exclude = add_to_excludes
             kwargs["exclude"] = exclude
-            print(kwargs)
             # Update `new_columns` to reflect the included types
             new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
-            print(new_columns)
 
         def describe_builder(df, internal_indices=[], **kwargs):
             return df.iloc[:, internal_indices].describe(**kwargs)
@@ -2098,22 +2112,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ]
             query_compiler = self.drop(columns=nonnumeric)
             new_columns = query_compiler.index
-            numeric_indices = list(query_compiler.index.get_indexer_for(new_columns))
-            query_compiler = query_compiler.transpose()
-            kwargs.pop("axis")
         else:
             query_compiler = self
-            numeric_indices = list(self.columns.get_indexer_for(new_columns))
 
-        def quantile_builder(df, internal_indices=[], **kwargs):
-            return pandas.DataFrame.quantile(df, **kwargs)
+        def quantile_builder(df, **kwargs):
+            result = df.quantile(**kwargs)
+            return result.T if axis == 1 else result
 
-        func = self._prepare_method(quantile_builder, **kwargs)
+        func = query_compiler._prepare_method(quantile_builder, **kwargs)
         q_index = pandas.Float64Index(q)
-        new_data = query_compiler._map_across_full_axis_select_indices(
-            0, func, numeric_indices
-        )
-        return self.__constructor__(new_data, q_index, new_columns)
+        new_data = query_compiler._map_across_full_axis(axis, func)
+
+        # This took a long time to debug, so here is the rundown of why this is needed.
+        # Previously, we were operating on select indices, but that was broken. We were
+        # not correctly setting the columns/index. Because of how we compute `to_pandas`
+        # and because of the static nature of the index for `axis=1` it is easier to
+        # just handle this as the transpose (see `quantile_builder` above for the
+        # transpose within the partition) than it is to completely rework other
+        # internal methods. Basically we are returning the transpose of the object for
+        # correctness and cleanliness of the code.
+        if axis == 1:
+            q_index = new_columns
+            new_columns = pandas.Float64Index(q)
+        result = self.__constructor__(new_data, q_index, new_columns)
+        return result.transpose() if axis == 1 else result
 
     # END Map across rows/columns
 
