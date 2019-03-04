@@ -13,6 +13,8 @@ omit =
     modin/pandas/plotting.py
     # Skip Dask until it is fully a part of the testing suite
     modin/engines/dask/*
+    # Skip Gandiva because it is experimental
+    modin/engines/ray/gandiva_on_ray/*
 
 [report]
 exclude_lines =

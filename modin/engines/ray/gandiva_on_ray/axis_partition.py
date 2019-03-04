@@ -154,7 +154,7 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     table = concat_arrow_table_partitions(axis, partitions)
     try:
         result = func(table, **kwargs)
-    except:
+    except Exception:
         result = pyarrow.Table.from_pandas(func(table.to_pandas(), **kwargs))
     return split_arrow_table_result(
         axis, result, len(partitions), num_splits, table.schema.metadata
@@ -185,7 +185,7 @@ def deploy_ray_func_between_two_axis_partitions(
     rt_table = concat_arrow_table_partitions(axis, partitions[len_of_left:])
     try:
         result = func(lt_table, rt_table, **kwargs)
-    except:
+    except Exception:
         lt_frame = lt_table.from_pandas()
         rt_frame = rt_table.from_pandas()
         result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, **kwargs))
