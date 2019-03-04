@@ -230,7 +230,7 @@ class PandasOnDaskFactory(BaseFactory):
     io_cls = PandasOnDaskIO
 
 
-class GandivaOnRayFactory(BaseFactory):
+class GandivaOnRayFactory(BaseFactory):  # pragma: no cover
 
     from modin.engines.ray.gandiva_on_ray.block_partitions import RayBlockPartitions
     from modin.engines.ray.gandiva_on_ray.io import GandivaOnRayIO
