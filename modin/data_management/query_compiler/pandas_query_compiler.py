@@ -1477,6 +1477,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # as of 0.24.
             except (ValueError, IndexError):
                 return x
+
         result = intermediate_result.apply(apply_index)
         return result
 

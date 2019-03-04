@@ -732,7 +732,11 @@ class DataFrame(object):
         # If ignore_index is False, by definition the Index will be correct.
         # We also do this first to ensure that we don't waste compute/memory.
         if verify_integrity and not ignore_index:
-            appended_index = self.index.append(other.index) if not isinstance(other, list) else self.index.append([o.index for o in other])
+            appended_index = (
+                self.index.append(other.index)
+                if not isinstance(other, list)
+                else self.index.append([o.index for o in other])
+            )
             is_valid = next((False for idx in appended_index.duplicated() if idx), True)
             if not is_valid:
                 raise ValueError(
@@ -1678,7 +1682,9 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_dict(cls, data, orient="columns", dtype=None, columns=None):  # pragma: no cover
+    def from_dict(
+        cls, data, orient="columns", dtype=None, columns=None
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_dict`")
         return from_pandas(
             pandas.DataFrame.from_dict(
@@ -3270,7 +3276,9 @@ class DataFrame(object):
         ):
             raise ValueError("cannot insert level_0, already exists")
         else:
-            new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
+            new_query_compiler = self._query_compiler.reset_index(
+                drop=drop, level=level
+            )
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):

@@ -839,6 +839,7 @@ def test_aggregate_numeric(request, data, axis, func):
             modin_result = modin_df.agg(func, axis)
             df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_aggregate_error_checking(data):
     modin_df = pd.DataFrame(data)
@@ -965,16 +966,22 @@ def test_append(data):
 
     for verify_integrity in verify_integrity_values:
         try:
-            pandas_result = pandas_df.append([pandas_df, pandas_df], verify_integrity=verify_integrity)
+            pandas_result = pandas_df.append(
+                [pandas_df, pandas_df], verify_integrity=verify_integrity
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
         else:
-            modin_result = modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
+            modin_result = modin_df.append(
+                [modin_df, modin_df], verify_integrity=verify_integrity
+            )
             df_equals(modin_result, pandas_result)
 
         try:
-            pandas_result = pandas_df.append(pandas_df, verify_integrity=verify_integrity)
+            pandas_result = pandas_df.append(
+                pandas_df, verify_integrity=verify_integrity
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.append(modin_df, verify_integrity=verify_integrity)
@@ -1231,7 +1238,7 @@ def test_clip(request, data, axis):
         df_equals(modin_result, pandas_result)
 
         with pytest.raises(ValueError):
-            modin_df.clip(lower=[1,2,3], axis=None)
+            modin_df.clip(lower=[1, 2, 3], axis=None)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1564,10 +1571,27 @@ def test_drop():
     modin_df.drop(labels=df[df.b > 0].index, inplace=True)
     df_equals(modin_df, expected)
 
-    midx = pd.MultiIndex(levels=[['lama', 'cow', 'falcon'], ['speed', 'weight', 'length']], codes=[[0, 0, 0, 1, 1, 1, 2, 2, 2], [0, 1, 2, 0, 1, 2, 0, 1, 2]])
-    df = pd.DataFrame(index=midx, columns=['big', 'small'], data=[[45, 30], [200, 100], [1.5, 1], [30, 20], [250, 150], [1.5, 0.8], [320, 250], [1, 0.8], [0.3,0.2]])
+    midx = pd.MultiIndex(
+        levels=[["lama", "cow", "falcon"], ["speed", "weight", "length"]],
+        codes=[[0, 0, 0, 1, 1, 1, 2, 2, 2], [0, 1, 2, 0, 1, 2, 0, 1, 2]],
+    )
+    df = pd.DataFrame(
+        index=midx,
+        columns=["big", "small"],
+        data=[
+            [45, 30],
+            [200, 100],
+            [1.5, 1],
+            [30, 20],
+            [250, 150],
+            [1.5, 0.8],
+            [320, 250],
+            [1, 0.8],
+            [0.3, 0.2],
+        ],
+    )
     with pytest.warns(UserWarning):
-        df.drop(index='length', level=1)
+        df.drop(index="length", level=1)
 
 
 def test_drop_api_equivalence():
@@ -2586,22 +2610,34 @@ def test_insert(data, loc):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    modin_result = pd.DataFrame(columns=list("ab")).insert(0, modin_df.columns[0], modin_df[modin_df.columns[0]])
-    pandas_result = pandas.DataFrame(columns=list("ab")).insert(0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]])
+    modin_result = pd.DataFrame(columns=list("ab")).insert(
+        0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+    )
+    pandas_result = pandas.DataFrame(columns=list("ab")).insert(
+        0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+    )
     df_equals(modin_result, pandas_result)
 
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    modin_result = pd.DataFrame(index=modin_df.index).insert(0, modin_df.columns[0], modin_df[modin_df.columns[0]])
-    pandas_result = pandas.DataFrame(index=pandas_df.index).insert(0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]])
+    modin_result = pd.DataFrame(index=modin_df.index).insert(
+        0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+    )
+    pandas_result = pandas.DataFrame(index=pandas_df.index).insert(
+        0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+    )
     df_equals(modin_result, pandas_result)
 
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    modin_result = modin_df.insert(0, "DataFrame insert", modin_df[[modin_df.columns[0]]])
-    pandas_result = pandas_df.insert(0, "DataFrame insert", pandas_df[[pandas_df.columns[0]]])
+    modin_result = modin_df.insert(
+        0, "DataFrame insert", modin_df[[modin_df.columns[0]]]
+    )
+    pandas_result = pandas_df.insert(
+        0, "DataFrame insert", pandas_df[[pandas_df.columns[0]]]
+    )
     df_equals(modin_result, pandas_result)
 
 
