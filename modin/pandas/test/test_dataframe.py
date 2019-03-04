@@ -840,6 +840,22 @@ def test_aggregate_numeric(request, data, axis, func):
             df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_aggregate_error_checking(data):
+    modin_df = pd.DataFrame(data)
+
+    assert modin_df.aggregate("ndim") == 2
+
+    with pytest.warns(UserWarning):
+        modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
+
+    with pytest.warns(UserWarning):
+        modin_df.aggregate("cumproduct")
+
+    with pytest.raises(ValueError):
+        modin_df.aggregate("NOT_EXISTS")
+
+
 def test_align():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
@@ -909,26 +925,69 @@ def test_any(data, axis, skipna, bool_only):
         df_equals(modin_result, pandas_result)
 
 
-def test_append():
-    frame_data = {
-        "col1": [0, 1, 2, 3],
-        "col2": [4, 5, 6, 7],
-        "col3": [8, 9, 0, 1],
-        "col4": [2, 4, 5, 6],
-    }
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_append(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
 
-    modin_df = pd.DataFrame(frame_data)
-    pandas_df = pandas.DataFrame(frame_data)
+    data_to_append = {"append_a": 2, "append_b": 1000}
 
-    frame_data2 = {"col5": [0], "col6": [1]}
+    ignore_idx_values = [True, False]
 
-    modin_df2 = pd.DataFrame(frame_data2)
-    pandas_df2 = pandas.DataFrame(frame_data2)
+    for ignore in ignore_idx_values:
+        try:
+            pandas_result = pandas_df.append(data_to_append, ignore_index=ignore)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.append(data_to_append, ignore_index=ignore)
+        else:
+            modin_result = modin_df.append(data_to_append, ignore_index=ignore)
+            df_equals(modin_result, pandas_result)
 
-    df_equals(modin_df.append(modin_df2), pandas_df.append(pandas_df2))
+    try:
+        pandas_result = pandas_df.append(pandas_df.iloc[-1])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.append(modin_df.iloc[-1])
+    else:
+        modin_result = modin_df.append(modin_df.iloc[-1])
+        df_equals(modin_result, pandas_result)
 
-    with pytest.raises(ValueError):
-        modin_df.append(modin_df2, verify_integrity=True)
+    try:
+        pandas_result = pandas_df.append(list(pandas_df.iloc[-1]))
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.append(list(modin_df.iloc[-1]))
+    else:
+        modin_result = modin_df.append(list(modin_df.iloc[-1]))
+        df_equals(modin_result, pandas_result)
+
+    verify_integrity_values = [True, False]
+
+    for verify_integrity in verify_integrity_values:
+        try:
+            pandas_result = pandas_df.append(
+                [pandas_df, pandas_df], verify_integrity=verify_integrity
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
+        else:
+            modin_result = modin_df.append(
+                [modin_df, modin_df], verify_integrity=verify_integrity
+            )
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.append(
+                pandas_df, verify_integrity=verify_integrity
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.append(modin_df, verify_integrity=verify_integrity)
+        else:
+            modin_result = modin_df.append(modin_df, verify_integrity=verify_integrity)
+            df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1082,6 +1141,9 @@ def test_astype():
     expected_df_casted = expected_df.astype(bad_dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
+    with pytest.raises(KeyError):
+        modin_df.astype({"not_exists": np.uint8})
+
 
 def test_at_time():
     i = pd.date_range("2018-04-09", periods=4, freq="12H")
@@ -1174,6 +1236,9 @@ def test_clip(request, data, axis):
         modin_result = modin_df.clip(np.nan, upper_list, axis=axis)
         pandas_result = pandas_df.clip(np.nan, upper_list, axis=axis)
         df_equals(modin_result, pandas_result)
+
+        with pytest.raises(ValueError):
+            modin_df.clip(lower=[1, 2, 3], axis=None)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1505,6 +1570,28 @@ def test_drop():
     expected = df[~(df.b > 0)]
     modin_df.drop(labels=df[df.b > 0].index, inplace=True)
     df_equals(modin_df, expected)
+
+    midx = pd.MultiIndex(
+        levels=[["lama", "cow", "falcon"], ["speed", "weight", "length"]],
+        codes=[[0, 0, 0, 1, 1, 1, 2, 2, 2], [0, 1, 2, 0, 1, 2, 0, 1, 2]],
+    )
+    df = pd.DataFrame(
+        index=midx,
+        columns=["big", "small"],
+        data=[
+            [45, 30],
+            [200, 100],
+            [1.5, 1],
+            [30, 20],
+            [250, 150],
+            [1.5, 0.8],
+            [320, 250],
+            [1, 0.8],
+            [0.3, 0.2],
+        ],
+    )
+    with pytest.warns(UserWarning):
+        df.drop(index="length", level=1)
 
 
 def test_drop_api_equivalence():
@@ -1866,11 +1953,15 @@ def test_equals():
     modin_df1 = pd.DataFrame(frame_data)
     modin_df2 = pd.DataFrame(frame_data)
 
+    assert modin_df1.equals(modin_df2)
+
     df_equals(modin_df1, modin_df2)
     df_equals(modin_df1, pd.DataFrame(modin_df1))
 
     frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 5, 1]}
     modin_df3 = pd.DataFrame(frame_data, index=list("abcd"))
+
+    assert not modin_df1.equals(modin_df3)
 
     with pytest.raises(AssertionError):
         df_equals(modin_df3, modin_df1)
@@ -2360,6 +2451,7 @@ def test_head(data, n):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     df_equals(modin_df.head(n), pandas_df.head(n))
+    df_equals(modin_df.head(len(modin_df) + 1), pandas_df.head(len(pandas_df) + 1))
 
     # Test head when we call it from a QueryCompilerView
     modin_result = modin_df.loc[:, ["col1", "col3", "col3"]].head(n)
@@ -2392,8 +2484,8 @@ def test_idxmax(data, axis, skipna):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    modin_result = modin_df.all(axis=axis, skipna=skipna)
-    pandas_result = pandas_df.all(axis=axis, skipna=skipna)
+    pandas_result = pandas_df.idxmax(axis=axis, skipna=skipna)
+    modin_result = modin_df.idxmax(axis=axis, skipna=skipna)
     df_equals(modin_result, pandas_result)
 
 
@@ -2406,8 +2498,8 @@ def test_idxmin(data, axis, skipna):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    modin_result = modin_df.all(axis=axis, skipna=skipna)
-    pandas_result = pandas_df.all(axis=axis, skipna=skipna)
+    modin_result = modin_df.idxmin(axis=axis, skipna=skipna)
+    pandas_result = pandas_df.idxmin(axis=axis, skipna=skipna)
     df_equals(modin_result, pandas_result)
 
 
@@ -2488,6 +2580,65 @@ def test_insert(data, loc):
     else:
         modin_df.insert(loc, column, value)
         df_equals(modin_df, pandas_df)
+
+    with pytest.raises(ValueError):
+        modin_df.insert(0, "Bad Column", modin_df)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_df.insert(0, "Duplicate", modin_df[modin_df.columns[0]])
+    pandas_df.insert(0, "Duplicate", pandas_df[pandas_df.columns[0]])
+    df_equals(modin_df, pandas_df)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_df.insert(0, "Scalar", 100)
+    pandas_df.insert(0, "Scalar", 100)
+    df_equals(modin_df, pandas_df)
+
+    with pytest.raises(ValueError):
+        modin_df.insert(0, "Too Short", list(modin_df[modin_df.columns[0]])[:-1])
+
+    with pytest.raises(ValueError):
+        modin_df.insert(0, modin_df.columns[0], modin_df[modin_df.columns[0]])
+
+    with pytest.raises(IndexError):
+        modin_df.insert(len(modin_df.columns) + 100, "Bad Loc", 100)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = pd.DataFrame(columns=list("ab")).insert(
+        0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+    )
+    pandas_result = pandas.DataFrame(columns=list("ab")).insert(
+        0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = pd.DataFrame(index=modin_df.index).insert(
+        0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+    )
+    pandas_result = pandas.DataFrame(index=pandas_df.index).insert(
+        0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = modin_df.insert(
+        0, "DataFrame insert", modin_df[[modin_df.columns[0]]]
+    )
+    pandas_result = pandas_df.insert(
+        0, "DataFrame insert", pandas_df[[pandas_df.columns[0]]]
+    )
+    df_equals(modin_result, pandas_result)
 
 
 def test_interpolate():
@@ -2865,6 +3016,9 @@ def test_merge():
         )
         df_equals(modin_result, pandas_result)
 
+    with pytest.raises(ValueError):
+        modin_df.merge("Non-valid type")
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -3195,6 +3349,16 @@ def test_quantile(request, data, q):
 
     if not name_contains(request.node.name, no_numeric_dfs):
         df_equals(modin_df.quantile(q), pandas_df.quantile(q))
+        df_equals(modin_df.quantile(q, axis=1), pandas_df.quantile(q, axis=1))
+
+        try:
+            pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.quantile(q, axis=1, numeric_only=False)
+        else:
+            modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
+            df_equals(modin_result, pandas_result)
     else:
         with pytest.raises(ValueError):
             modin_df.quantile(q)
@@ -3711,6 +3875,14 @@ def test_select_dtypes():
     e = df[["test2", "test3", "test6"]]
     df_equals(r, e)
 
+    r = rd.select_dtypes(include=np.bool_)
+    e = df[["test4"]]
+    df_equals(r, e)
+
+    r = rd.select_dtypes(exclude=np.bool_)
+    e = df[["test1", "test2", "test3", "test5", "test6"]]
+    df_equals(r, e)
+
     try:
         pd.DataFrame().select_dtypes()
         assert False
@@ -3738,6 +3910,9 @@ def test_set_axis(data, axis):
     pandas_result = pandas_df.set_axis(labels, axis=axis, inplace=False)
     df_equals(modin_result, pandas_result)
 
+    with pytest.warns(FutureWarning):
+        modin_df.set_axis(axis, labels, inplace=False)
+
     modin_df_copy = modin_df.copy()
     modin_df.set_axis(labels, axis=axis, inplace=True)
 
@@ -3751,6 +3926,9 @@ def test_set_axis(data, axis):
 
     pandas_df.set_axis(labels, axis=axis, inplace=True)
     df_equals(modin_df, pandas_df)
+
+    with pytest.warns(FutureWarning):
+        modin_df.set_axis(labels, axis=axis, inplace=None)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

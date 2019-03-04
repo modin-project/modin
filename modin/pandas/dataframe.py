@@ -723,11 +723,7 @@ class DataFrame(object):
             other = DataFrame(pandas.DataFrame(other).T, index=index)._query_compiler
         elif isinstance(other, list):
             if not isinstance(other[0], DataFrame):
-                other = pandas.DataFrame(other)
-                if (self.columns.get_indexer(other.columns) >= 0).all():
-                    other = DataFrame(other.loc[:, self.columns])._query_compiler
-                else:
-                    other = DataFrame(other)._query_compiler
+                other = DataFrame(pandas.DataFrame(other))._query_compiler
             else:
                 other = [obj._query_compiler for obj in other]
         else:
@@ -736,7 +732,11 @@ class DataFrame(object):
         # If ignore_index is False, by definition the Index will be correct.
         # We also do this first to ensure that we don't waste compute/memory.
         if verify_integrity and not ignore_index:
-            appended_index = self.index.append(other.index)
+            appended_index = (
+                self.index.append(other.index)
+                if not isinstance(other, list)
+                else self.index.append([o.index for o in other])
+            )
             is_valid = next((False for idx in appended_index.duplicated() if idx), True)
             if not is_valid:
                 raise ValueError(
@@ -1682,7 +1682,9 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_dict(cls, data, orient="columns", dtype=None, columns=None):
+    def from_dict(
+        cls, data, orient="columns", dtype=None, columns=None
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_dict`")
         return from_pandas(
             pandas.DataFrame.from_dict(
@@ -1691,7 +1693,7 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_items(cls, items, columns=None, orient="columns"):
+    def from_items(cls, items, columns=None, orient="columns"):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_items`")
         return from_pandas(
             pandas.DataFrame.from_items(items, columns=columns, orient=orient)
@@ -1706,7 +1708,7 @@ class DataFrame(object):
         columns=None,
         coerce_float=False,
         nrows=None,
-    ):
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_records`")
         return from_pandas(
             pandas.DataFrame.from_records(
@@ -3264,17 +3266,19 @@ class DataFrame(object):
                 col_level=col_level,
                 col_fill=col_fill,
             )
-            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
-        if (
+        elif (
             not drop
             and not isinstance(self.index, pandas.MultiIndex)
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
+        else:
+            new_query_compiler = self._query_compiler.reset_index(
+                drop=drop, level=level
+            )
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
