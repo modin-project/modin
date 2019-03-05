@@ -1050,9 +1050,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         mapped_parts = query_compiler.data.map_across_blocks(map_func).partitions
         if reduce_func is None:
             reduce_func = map_func
-
-        if reduce_func is None:
-            reduce_func = map_func
         # For now we return a pandas.Series until ours gets implemented.
         # We have to build the intermediate frame based on the axis passed,
         # thus axis=axis and axis=axis ^ 1
@@ -1246,13 +1243,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def isna(self):
         func = self._prepare_method(pandas.DataFrame.isna)
-        new_dtypes = pandas.Series(
-            [np.dtype("bool") for _ in self.columns], index=self.columns
-        )
-        return self._map_partitions(func, new_dtypes=new_dtypes)
-
-    def isnull(self):
-        func = self._prepare_method(pandas.DataFrame.isnull)
         new_dtypes = pandas.Series(
             [np.dtype("bool") for _ in self.columns], index=self.columns
         )
