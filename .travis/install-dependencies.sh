@@ -47,7 +47,6 @@ elif [[ "$LINT" == "1" ]]; then
   export PATH="$HOME/miniconda/bin:$PATH"
   conda install -y python==3.6.5
   pip install black flake8 flake8-comprehensions
-
 else
   echo "Unrecognized environment."
   exit 1
