@@ -145,7 +145,7 @@ class GandivaQueryCompiler(PandasQueryCompiler):
 
         kwargs["expr"] = expr
         func = self._prepare_method(query_builder, **kwargs)
-        new_data = self.map_across_full_axis(1, func)
+        new_data = self._map_across_full_axis(1, func)
         # Query removes rows, so we need to update the index
         new_index = self.compute_index(0, new_data, False)
         return self.__constructor__(

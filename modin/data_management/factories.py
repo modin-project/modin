@@ -2,12 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import sys
 import warnings
 
+from modin import __execution_engine__ as execution_engine
+from modin import __partition_format__ as partition_format
 from .query_compiler import PandasQueryCompiler
-from .. import __execution_engine__ as execution_engine
-from .. import __partition_format__ as partition_format
 
 
 class BaseFactory(object):
@@ -28,6 +29,8 @@ class BaseFactory(object):
 
     @classmethod
     def _determine_engine(cls):
+        if os.environ.get("MODIN_EXPERIMENTAL", "") == "True":
+            return ExperimentalBaseFactory._determine_engine()
         factory_name = partition_format + "On" + execution_engine + "Factory"
         return getattr(sys.modules[__name__], factory_name)
 
@@ -230,17 +233,70 @@ class PandasOnDaskFactory(BaseFactory):
     io_cls = PandasOnDaskIO
 
 
-class GandivaOnRayFactory(BaseFactory):  # pragma: no cover
+class GandivaOnRayFactory(BaseFactory):
 
-    from modin.engines.ray.gandiva_on_ray.block_partitions import RayBlockPartitions
-    from modin.engines.ray.gandiva_on_ray.io import GandivaOnRayIO
+    if partition_format == "Gandiva" and not os.environ.get(
+        "MODIN_EXPERIMENTAL", False
+    ):
+        raise ImportError(
+            "Gandiva on Ray is only accessible through the experimental API.\nRun `import modin.experimental.pandas as pd` to use Gandiva on Ray."
+        )
+
+
+class ExperimentalBaseFactory(BaseFactory):
+    @classmethod
+    def _determine_engine(cls):
+        factory_name = "Experimental{}On{}Factory".format(
+            partition_format, execution_engine
+        )
+        return getattr(sys.modules[__name__], factory_name)
+
+    @classmethod
+    def _read_sql(cls, **kwargs):
+        if execution_engine != "Ray":
+            if "partition_column" in kwargs:
+                if kwargs["partition_column"] is not None:
+                    warnings.warn(
+                        "Distributed read_sql() was only implemented for Ray engine."
+                    )
+                del kwargs["partition_column"]
+            if "lower_bound" in kwargs:
+                if kwargs["lower_bound"] is not None:
+                    warnings.warn(
+                        "Distributed read_sql() was only implemented for Ray engine."
+                    )
+                del kwargs["lower_bound"]
+            if "upper_bound" in kwargs:
+                if kwargs["upper_bound"] is not None:
+                    warnings.warn(
+                        "Distributed read_sql() was only implemented for Ray engine."
+                    )
+                del kwargs["upper_bound"]
+        return cls.io_cls.read_sql(**kwargs)
+
+
+class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+
+    from modin.experimental.engines.pandas_on_ray.io_exp import (
+        ExperimentalPandasOnRayIO,
+    )
+
+    io_cls = ExperimentalPandasOnRayIO
+
+
+class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
+
+    pass
+
+
+class ExperimentalGandivaOnRayFactory(BaseFactory):  # pragma: no cover
+
+    from modin.experimental.engines.gandiva_on_ray.block_partitions import (
+        RayBlockPartitions,
+    )
+    from modin.experimental.engines.gandiva_on_ray.io import GandivaOnRayIO
     from modin.data_management.query_compiler import GandivaQueryCompiler
 
     query_compiler_cls = GandivaQueryCompiler
     block_partitions_cls = RayBlockPartitions
     io_cls = GandivaOnRayIO
-
-    if partition_format == "Gandiva":
-        warnings.warn(
-            "Gandiva on Ray is experimental, some behaviors may not match expectations."
-        )
