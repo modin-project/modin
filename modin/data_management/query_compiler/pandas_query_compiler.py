@@ -1061,7 +1061,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         full_frame = pandas.concat(
             [
                 pandas.concat(
-                    [pandas.DataFrame(part.get()).T for part in row_of_parts],
+                    [pandas.DataFrame(part.to_pandas()).T for part in row_of_parts],
                     axis=axis ^ 1,
                 )
                 for row_of_parts in mapped_parts

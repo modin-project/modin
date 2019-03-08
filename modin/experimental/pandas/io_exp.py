@@ -1,7 +1,7 @@
 import inspect
 
 from . import DataFrame
-from ..factories_exp import ExperimentalBaseFactory
+from modin.data_management.factories import ExperimentalBaseFactory
 
 
 def read_sql(

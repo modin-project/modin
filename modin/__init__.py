@@ -27,7 +27,7 @@ def get_execution_engine():
 
 def get_partition_format():
     # See note above about engine + backing.
-    return "Pandas"
+    return os.environ.get("MODIN_BACKEND", "Pandas").title()
 
 
 __version__ = "0.4.0"
