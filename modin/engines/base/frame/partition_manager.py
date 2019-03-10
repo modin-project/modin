@@ -11,10 +11,10 @@ from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize, _get_nan_block_id
 
 
-class BaseBlockPartitions(object):
-    """Abstract Class that manages a set of `BaseRemotePartition` objects, and
+class BaseFramePartitionManager(object):
+    """Abstract Class that manages a set of `BaseFramePartition` objects, and
         structures them into a 2D numpy array. This object will interact with
-        each of these objects through the `BaseRemotePartition` API.
+        each of these objects through the `BaseFramePartition` API.
 
     Note: See the Abstract Methods and Fields section immediately below this
         for a list of requirements for subclassing this object.
@@ -45,7 +45,7 @@ class BaseBlockPartitions(object):
         return type(self)
 
     # Partition class is the class to use for storing each partition. It must
-    # extend the `BaseRemotePartition` class.
+    # extend the `BaseFramePartition` class.
     _partition_class = None
     # Column partitions class is the class to use to create the column partitions.
     _column_partitions_class = None
@@ -81,12 +81,12 @@ class BaseBlockPartitions(object):
     partitions = property(_get_partitions, _set_partitions)
 
     def preprocess_func(self, map_func):
-        """Preprocess a function to be applied to `BaseRemotePartition` objects.
+        """Preprocess a function to be applied to `BaseFramePartition` objects.
 
-        Note: If your `BaseRemotePartition` objects assume that a function provided
+        Note: If your `BaseFramePartition` objects assume that a function provided
             is serialized or wrapped or in some other format, this is the place
             to add that logic. It is possible that this can also just return
-            `map_func` if the `apply` method of the `BaseRemotePartition` object
+            `map_func` if the `apply` method of the `BaseFramePartition` object
             you are using does not require any modification to a given
             function.
 
@@ -96,7 +96,7 @@ class BaseBlockPartitions(object):
         Returns
             The preprocessed version of the `map_func` provided. Note: This
             does not require any specific format, only that the
-            `BaseRemotePartition.apply` method will recognize it (For the subclass
+            `BaseFramePartition.apply` method will recognize it (For the subclass
             being used).
         """
         return self._partition_class.preprocess_func(map_func)
@@ -105,23 +105,23 @@ class BaseBlockPartitions(object):
 
     @property
     def column_partitions(self):
-        """A list of `BaseAxisPartition` objects.
+        """A list of `BaseFrameFullAxisPartition` objects.
 
-        Note: Each value in this list will be an `BaseAxisPartition` object.
-            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
+        Note: Each value in this list will be an `BaseFrameFullAxisPartition` object.
+            `BaseFrameFullAxisPartition` is located in the `base_remote_partition.py` file.
 
-        Returns a list of `BaseAxisPartition` objects.
+        Returns a list of `BaseFrameFullAxisPartition` objects.
         """
         return [self._column_partitions_class(col) for col in self.partitions.T]
 
     @property
     def row_partitions(self):
-        """A list of `BaseAxisPartition` objects, represents column partitions.
+        """A list of `BaseFrameFullAxisPartition` objects, represents column partitions.
 
-        Note: Each value in this list will an `BaseAxisPartition` object.
-            `BaseAxisPartition` is located in the `base_remote_partition.py` file.
+        Note: Each value in this list will an `BaseFrameFullAxisPartition` object.
+            `BaseFrameFullAxisPartition` is located in the `base_remote_partition.py` file.
 
-        Returns a list of `BaseAxisPartition` objects.
+        Returns a list of `BaseFrameFullAxisPartition` objects.
         """
         return [self._row_partition_class(row) for row in self.partitions]
 
@@ -206,7 +206,7 @@ class BaseBlockPartitions(object):
             map_func: The function to apply.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         preprocessed_map_func = self.preprocess_func(map_func)
         new_partitions = np.array(
@@ -287,7 +287,7 @@ class BaseBlockPartitions(object):
             map_func: The function to apply.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -326,7 +326,7 @@ class BaseBlockPartitions(object):
                 from the bottom of the object
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         # These are the partitions that we will extract over
         if not axis:
@@ -407,10 +407,10 @@ class BaseBlockPartitions(object):
         Args:
             axis: The axis to concatenate to.
             other_blocks: the other blocks to be concatenated. This is a
-                BaseBlockPartitions object.
+                BaseFramePartitionManager object.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         if type(other_blocks) is list:
             other_blocks = [blocks.partitions for blocks in other_blocks]
@@ -426,7 +426,7 @@ class BaseBlockPartitions(object):
         """Create a copy of this object.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         return self.__constructor__(self.partitions.copy())
 
@@ -434,7 +434,7 @@ class BaseBlockPartitions(object):
         """Transpose the blocks stored in this object.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         return self.__constructor__(self.partitions.T)
 
@@ -574,7 +574,7 @@ class BaseBlockPartitions(object):
 
         :return:
         """
-        from ...pandas import DEFAULT_NPARTITIONS
+        from modin.pandas import DEFAULT_NPARTITIONS
 
         return DEFAULT_NPARTITIONS
 
@@ -679,7 +679,7 @@ class BaseBlockPartitions(object):
             partitions: The list of partitions
 
         Returns:
-            A list of BaseRemotePartition objects.
+            A list of BaseFramePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
@@ -700,7 +700,7 @@ class BaseBlockPartitions(object):
                 keep only the results.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         if self.partitions.size == 0:
             return np.array([[]])
@@ -825,7 +825,7 @@ class BaseBlockPartitions(object):
                 keep only the results.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         if self.partitions.size == 0:
             return self.__constructor__(np.array([[]]))
@@ -989,15 +989,15 @@ class BaseBlockPartitions(object):
             return self.__constructor__(result)
 
     def inter_data_operation(self, axis, func, other):
-        """Apply a function that requires two BaseBlockPartitions objects.
+        """Apply a function that requires two BaseFramePartitionManager objects.
 
         Args:
             axis: The axis to apply the function over (0 - rows, 1 - columns)
             func: The function to apply
-            other: The other BaseBlockPartitions object to apply func to.
+            other: The other BaseFramePartitionManager object to apply func to.
 
         Returns:
-            A new BaseBlockPartitions object, the type of object that called this.
+            A new BaseFramePartitionManager object, the type of object that called this.
         """
         if axis:
             partitions = self.row_partitions
@@ -1027,7 +1027,7 @@ class BaseBlockPartitions(object):
             lengths: The length of each partition to split the result into.
 
         Returns:
-             A new BaseBlockPartitions object, the type of object that called this.
+             A new BaseFramePartitionManager object, the type of object that called this.
         """
         if axis:
             partitions = self.row_partitions

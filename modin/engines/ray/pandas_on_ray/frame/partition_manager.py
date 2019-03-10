@@ -1,18 +1,21 @@
-import numpy as np
 import ray
+import numpy as np
 
-from modin.engines.base.block_partitions import BaseBlockPartitions
-from .axis_partition import GandivaOnRayColumnPartition, GandivaOnRayRowPartition
-from .remote_partition import GandivaOnRayRemotePartition
+from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from .axis_partition import (
+    PandasOnRayFrameFullColumnPartition,
+    PandasOnRayFrameFullRowPartition,
+)
+from .partition import PandasOnRayFramePartition
 
 
-class RayBlockPartitions(BaseBlockPartitions):
-    """This method implements the interface in `BaseBlockPartitions`."""
+class RayFramePartitionManager(BaseFramePartitionManager):
+    """This method implements the interface in `BaseFramePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = GandivaOnRayRemotePartition
-    _column_partitions_class = GandivaOnRayColumnPartition
-    _row_partition_class = GandivaOnRayRowPartition
+    _partition_class = PandasOnRayFramePartition
+    _column_partitions_class = PandasOnRayFrameFullColumnPartition
+    _row_partition_class = PandasOnRayFrameFullRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions

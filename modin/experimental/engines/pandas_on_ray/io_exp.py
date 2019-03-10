@@ -4,7 +4,7 @@ import ray
 import warnings
 
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
-from modin.engines.ray.pandas_on_ray.remote_partition import PandasOnRayRemotePartition
+from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
@@ -103,7 +103,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 num_return_vals=num_splits + 1,
             )
             partition_ids.append(
-                [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+                [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))

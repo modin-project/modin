@@ -4,10 +4,12 @@ from __future__ import print_function
 
 from modin.engines.base.io import BaseIO
 from modin.data_management.query_compiler import PandasQueryCompiler
-from .block_partitions import DaskBlockPartitions
+from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
+    DaskFramePartitionManager,
+)
 
 
 class PandasOnDaskIO(BaseIO):
 
-    block_partitions_cls = DaskBlockPartitions
+    block_partitions_cls = DaskFramePartitionManager
     query_compiler_cls = PandasQueryCompiler

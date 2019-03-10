@@ -16,7 +16,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.index import ensure_index
 from pandas.core.base import DataError
 
-from modin.engines.base.block_partitions import BaseBlockPartitions
+from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
 from modin.error_message import ErrorMessage
 from .base_query_compiler import BaseQueryCompiler
 
@@ -27,12 +27,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def __init__(
         self,
-        block_partitions_object: BaseBlockPartitions,
+        block_partitions_object: BaseFramePartitionManager,
         index: pandas.Index,
         columns: pandas.Index,
         dtypes=None,
     ):
-        assert isinstance(block_partitions_object, BaseBlockPartitions)
+        assert isinstance(block_partitions_object, BaseFramePartitionManager)
         self.data = block_partitions_object
         self.index = index
         self.columns = columns
@@ -1679,7 +1679,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             pandas_result: Return the result as a Pandas Series instead of raw data.
 
         Returns:
-            Either a Pandas Series with index or BaseBlockPartitions object.
+            Either a Pandas Series with index or BaseFramePartitionManager object.
         """
         # Convert indices to numeric indices
         old_index = self.index if axis else self.columns
@@ -2067,7 +2067,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             keep_remaining: True if keep indices where function was not applied.
 
         Returns:
-            BaseBlockPartitions containing the result of mapping func over axis on indices.
+            BaseFramePartitionManager containing the result of mapping func over axis on indices.
         """
         return self.data.apply_func_to_select_indices_along_full_axis(
             axis, func, indices, keep_remaining
@@ -2464,7 +2464,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Recompute the index after applying function.
 
         Args:
-            result_data: a BaseBlockPartitions object.
+            result_data: a BaseFramePartitionManager object.
             axis: Target axis along which function was applied.
 
         Returns:
@@ -2616,7 +2616,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             repartition_func: The function used to repartition data.
 
         Returns:
-            A `BaseBlockPartitions` object.
+            A `BaseFramePartitionManager` object.
         """
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
@@ -2860,7 +2860,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     def __init__(
         self,
-        block_partitions_object: BaseBlockPartitions,
+        block_partitions_object: BaseFramePartitionManager,
         index: pandas.Index,
         columns: pandas.Index,
         dtypes=None,
@@ -2912,11 +2912,11 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     dtypes = property(_get_dtype, _set_dtype)
 
-    def _get_data(self) -> BaseBlockPartitions:
+    def _get_data(self) -> BaseFramePartitionManager:
         """Perform the map step
 
         Returns:
-            A BaseBlockPartitions object.
+            A BaseFramePartitionManager object.
         """
 
         def iloc(partition, row_internal_indices, col_internal_indices):

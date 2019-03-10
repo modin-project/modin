@@ -1,12 +1,12 @@
-class BaseRemotePartition(object):  # pragma: no cover
+class BaseFramePartition(object):  # pragma: no cover
     """This abstract class holds the data and metadata for a single partition.
         The methods required for implementing this abstract class are listed in
         the section immediately following this.
 
         The API exposed by the children of this object is used in
-        `BaseBlockPartitions`.
+        `BaseFramePartitionManager`.
 
-        Note: These objects are treated as immutable by `BaseBlockPartitions`
+        Note: These objects are treated as immutable by `BaseFramePartitionManager`
         subclasses. There is no logic for updating inplace.
     """
 
@@ -17,7 +17,7 @@ class BaseRemotePartition(object):  # pragma: no cover
         """Return the object wrapped by this one to the original format.
 
         Note: This is the opposite of the classmethod `put`.
-            E.g. if you assign `x = BaseRemotePartition.put(1)`, `x.get()` should
+            E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
             always return 1.
 
         Returns:
@@ -36,7 +36,7 @@ class BaseRemotePartition(object):  # pragma: no cover
             func: The lambda to apply (may already be correctly formatted)
 
         Returns:
-             A new `BaseRemotePartition` containing the object that has had `func`
+             A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
         raise NotImplementedError("Must be implemented in child class")
@@ -78,7 +78,7 @@ class BaseRemotePartition(object):  # pragma: no cover
 
         Note: This is a classmethod because the definition of how to preprocess
             should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BaseRemotePartition`
+            deploy a preprocessed function to multiple `BaseFramePartition`
             objects.
 
         Args:

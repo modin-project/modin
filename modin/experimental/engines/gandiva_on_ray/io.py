@@ -1,9 +1,11 @@
 from modin.data_management.query_compiler import GandivaQueryCompiler
 from modin.engines.base.io import BaseIO
-from .block_partitions import RayBlockPartitions
+from modin.experimental.engines.gandiva_on_ray.frame.partition_manager import (
+    RayFramePartitionManager,
+)
 
 
 class GandivaOnRayIO(BaseIO):
 
-    block_partitions_cls = RayBlockPartitions
+    block_partitions_cls = RayFramePartitionManager
     query_compiler_cls = GandivaQueryCompiler

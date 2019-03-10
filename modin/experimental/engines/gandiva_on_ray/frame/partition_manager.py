@@ -1,15 +1,21 @@
-from modin.engines.base.block_partitions import BaseBlockPartitions
-from .axis_partition import PandasOnPythonColumnPartition, PandasOnPythonRowPartition
-from .remote_partition import PandasOnPythonRemotePartition
+import numpy as np
+import ray
+
+from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from .axis_partition import (
+    GandivaOnRayFrameFullColumnPartition,
+    GandivaOnRayFrameFullRowPartition,
+)
+from .partition import GandivaOnRayFramePartition
 
 
-class PythonBlockPartitions(BaseBlockPartitions):
-    """This method implements the interface in `BaseBlockPartitions`."""
+class RayFramePartitionManager(BaseFramePartitionManager):
+    """This method implements the interface in `BaseFramePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = PandasOnPythonRemotePartition
-    _column_partitions_class = PandasOnPythonColumnPartition
-    _row_partition_class = PandasOnPythonRowPartition
+    _partition_class = GandivaOnRayFramePartition
+    _column_partitions_class = GandivaOnRayFrameFullColumnPartition
+    _row_partition_class = GandivaOnRayFrameFullRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions
@@ -33,8 +39,8 @@ class PythonBlockPartitions(BaseBlockPartitions):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
-            self._lengths_cache = (
-                [obj.length() for obj in self._partitions_cache.T[0]]
+            self._lengths_cache = np.array(
+                ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
                 if len(self._partitions_cache.T) > 0
                 else []
             )
@@ -51,8 +57,8 @@ class PythonBlockPartitions(BaseBlockPartitions):
             # The first column will have the correct lengths. We have an
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
-            self._widths_cache = (
-                [obj.width() for obj in self._partitions_cache[0]]
+            self._widths_cache = np.array(
+                ray.get([obj.width().oid for obj in self._partitions_cache[0]])
                 if len(self._partitions_cache) > 0
                 else []
             )

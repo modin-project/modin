@@ -202,34 +202,36 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.block_partitions import RayBlockPartitions
+    from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
+        RayFramePartitionManager,
+    )
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = RayBlockPartitions
+    block_partitions_cls = RayFramePartitionManager
     io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.engines.python.pandas_on_python.block_partitions import (
-        PythonBlockPartitions,
+    from modin.engines.python.pandas_on_python.frame.partition_manager import (
+        PythonFramePartitionManager,
     )
     from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = PythonBlockPartitions
+    block_partitions_cls = PythonFramePartitionManager
     io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.engines.dask.pandas_on_dask_delayed.block_partitions import (
-        DaskBlockPartitions,
+    from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
+        DaskFramePartitionManager,
     )
     from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = DaskBlockPartitions
+    block_partitions_cls = DaskFramePartitionManager
     io_cls = PandasOnDaskIO
 
 
@@ -291,12 +293,12 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
 
 class ExperimentalGandivaOnRayFactory(BaseFactory):  # pragma: no cover
 
-    from modin.experimental.engines.gandiva_on_ray.block_partitions import (
-        RayBlockPartitions,
+    from modin.experimental.engines.gandiva_on_ray.frame.partition_manager import (
+        RayFramePartitionManager,
     )
     from modin.experimental.engines.gandiva_on_ray.io import GandivaOnRayIO
     from modin.data_management.query_compiler import GandivaQueryCompiler
 
     query_compiler_cls = GandivaQueryCompiler
-    block_partitions_cls = RayBlockPartitions
+    block_partitions_cls = RayFramePartitionManager
     io_cls = GandivaOnRayIO

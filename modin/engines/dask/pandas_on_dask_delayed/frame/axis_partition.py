@@ -1,15 +1,15 @@
 import pandas
 
-from modin.engines.base.axis_partition import BaseAxisPartition
+from modin.engines.base.frame.axis_partition import BaseFrameFullAxisPartition
 from modin.data_management.utils import split_result_of_axis_func_pandas
-from .remote_partition import DaskRemotePartition
+from .partition import DaskFramePartition
 
 
-class DaskAxisPartition(BaseAxisPartition):
+class DaskFrameFullAxisPartition(BaseFrameFullAxisPartition):
     """Dask implementation for Column and Row partitions"""
 
     def __init__(self, list_of_blocks):
-        # Unwrap from BaseRemotePartition object for ease of use
+        # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [b.dask_obj for b in list_of_blocks]
 
     def apply(
@@ -27,11 +27,11 @@ class DaskAxisPartition(BaseAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `DaskAxisPartition` object to apply to
+            other_axis_partition: Another `DaskFrameFullAxisPartition` object to apply to
                 func with this one.
 
         Returns:
-            A list of `DaskRemotePartition` objects.
+            A list of `DaskFramePartition` objects.
         """
         import dask
 
@@ -40,7 +40,7 @@ class DaskAxisPartition(BaseAxisPartition):
 
         if other_axis_partition is not None:
             return [
-                DaskRemotePartition(dask.delayed(obj))
+                DaskFramePartition(dask.delayed(obj))
                 for obj in deploy_func_between_two_axis_partitions(
                     self.axis,
                     func,
@@ -59,17 +59,17 @@ class DaskAxisPartition(BaseAxisPartition):
 
         args.extend(dask.compute(*self.list_of_blocks))
         return [
-            DaskRemotePartition(dask.delayed(obj)) for obj in deploy_axis_func(*args)
+            DaskFramePartition(dask.delayed(obj)) for obj in deploy_axis_func(*args)
         ]
 
 
-class DaskColumnPartition(DaskAxisPartition):
+class DaskFrameFullColumnPartition(DaskFrameFullAxisPartition):
     """Dask implementation for Column partitions"""
 
     axis = 0
 
 
-class DaskRowPartition(DaskAxisPartition):
+class DaskFrameFullRowPartition(DaskFrameFullAxisPartition):
     """Dask implementation for Row partitions"""
 
     axis = 1

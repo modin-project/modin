@@ -2,15 +2,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from modin.engines.base.axis_partition import BaseAxisPartition
-from .remote_partition import GandivaOnRayRemotePartition
+from modin.engines.base.frame.axis_partition import BaseFrameFullAxisPartition
+from .partition import GandivaOnRayFramePartition
 import ray
 import pyarrow
 
 
-class GandivaOnRayAxisPartition(BaseAxisPartition):
+class GandivaOnRayFrameFullAxisPartition(BaseFrameFullAxisPartition):
     def __init__(self, list_of_blocks):
-        # Unwrap from BaseRemotePartition object for ease of use
+        # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
@@ -21,7 +21,7 @@ class GandivaOnRayAxisPartition(BaseAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `GandivaOnRayAxisPartition` object to apply to
+            other_axis_partition: Another `GandivaOnRayFrameFullAxisPartition` object to apply to
                 func with this one.
 
         Returns:
@@ -32,7 +32,7 @@ class GandivaOnRayAxisPartition(BaseAxisPartition):
 
         if other_axis_partition is not None:
             return [
-                GandivaOnRayRemotePartition(obj)
+                GandivaOnRayFramePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions._remote(
                     args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
@@ -43,14 +43,14 @@ class GandivaOnRayAxisPartition(BaseAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            GandivaOnRayRemotePartition(obj)
+            GandivaOnRayFramePartition(obj)
             for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
 
-        Extends `BaseAxisPartition.shuffle`.
+        Extends `BaseFrameFullAxisPartition.shuffle`.
 
         :param func:
         :param num_splits:
@@ -63,12 +63,12 @@ class GandivaOnRayAxisPartition(BaseAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            GandivaOnRayRemotePartition(obj)
+            GandivaOnRayFramePartition(obj)
             for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
 
-class GandivaOnRayColumnPartition(GandivaOnRayAxisPartition):
+class GandivaOnRayFrameFullColumnPartition(GandivaOnRayFrameFullAxisPartition):
     """The column partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -77,7 +77,7 @@ class GandivaOnRayColumnPartition(GandivaOnRayAxisPartition):
     axis = 0
 
 
-class GandivaOnRayRowPartition(GandivaOnRayAxisPartition):
+class GandivaOnRayFrameFullRowPartition(GandivaOnRayFrameFullAxisPartition):
     """The row partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
