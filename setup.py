@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name="modin",
-    version="0.3.1",
+    version="0.4.0",
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(),
     url="https://github.com/modin-project/modin",

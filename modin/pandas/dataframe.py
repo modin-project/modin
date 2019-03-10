@@ -723,11 +723,7 @@ class DataFrame(object):
             other = DataFrame(pandas.DataFrame(other).T, index=index)._query_compiler
         elif isinstance(other, list):
             if not isinstance(other[0], DataFrame):
-                other = pandas.DataFrame(other)
-                if (self.columns.get_indexer(other.columns) >= 0).all():
-                    other = DataFrame(other.loc[:, self.columns])._query_compiler
-                else:
-                    other = DataFrame(other)._query_compiler
+                other = DataFrame(pandas.DataFrame(other))._query_compiler
             else:
                 other = [obj._query_compiler for obj in other]
         else:
@@ -736,7 +732,11 @@ class DataFrame(object):
         # If ignore_index is False, by definition the Index will be correct.
         # We also do this first to ensure that we don't waste compute/memory.
         if verify_integrity and not ignore_index:
-            appended_index = self.index.append(other.index)
+            appended_index = (
+                self.index.append(other.index)
+                if not isinstance(other, list)
+                else self.index.append([o.index for o in other])
+            )
             is_valid = next((False for idx in appended_index.duplicated() if idx), True)
             if not is_valid:
                 raise ValueError(
@@ -1117,14 +1117,41 @@ class DataFrame(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if include is not None:
+        if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
-            include = [np.dtype(i) for i in include]
+            include = [
+                np.dtype(i)
+                if not (isinstance(i, type) and i.__module__ == "numpy")
+                else i
+                for i in include
+            ]
+            if not any(
+                (isinstance(inc, np.dtype) and inc == d)
+                or (
+                    not isinstance(inc, np.dtype)
+                    and inc.__subclasscheck__(getattr(np, d.__str__()))
+                )
+                for d in self.dtypes.values
+                for inc in include
+            ):
+                # This is the error that pandas throws.
+                raise ValueError("No objects to concatenate")
         if exclude is not None:
-            if not is_list_like(include):
+            if not is_list_like(exclude):
                 exclude = [exclude]
             exclude = [np.dtype(e) for e in exclude]
+            if all(
+                (isinstance(exc, np.dtype) and exc == d)
+                or (
+                    not isinstance(exc, np.dtype)
+                    and exc.__subclasscheck__(getattr(np, d.__str__()))
+                )
+                for d in self.dtypes.values
+                for exc in exclude
+            ):
+                # This is the error that pandas throws.
+                raise ValueError("No objects to concatenate")
         if percentiles is not None:
             pandas.DataFrame()._check_percentile(percentiles)
         return DataFrame(
@@ -1655,7 +1682,9 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_dict(cls, data, orient="columns", dtype=None, columns=None):
+    def from_dict(
+        cls, data, orient="columns", dtype=None, columns=None
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_dict`")
         return from_pandas(
             pandas.DataFrame.from_dict(
@@ -1664,7 +1693,7 @@ class DataFrame(object):
         )
 
     @classmethod
-    def from_items(cls, items, columns=None, orient="columns"):
+    def from_items(cls, items, columns=None, orient="columns"):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_items`")
         return from_pandas(
             pandas.DataFrame.from_items(items, columns=columns, orient=orient)
@@ -1679,7 +1708,7 @@ class DataFrame(object):
         columns=None,
         coerce_float=False,
         nrows=None,
-    ):
+    ):  # pragma: no cover
         ErrorMessage.default_to_pandas("`from_records`")
         return from_pandas(
             pandas.DataFrame.from_records(
@@ -3237,17 +3266,19 @@ class DataFrame(object):
                 col_level=col_level,
                 col_fill=col_fill,
             )
-            return self._create_dataframe_from_compiler(new_query_compiler, inplace)
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
-        if (
+        elif (
             not drop
             and not isinstance(self.index, pandas.MultiIndex)
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        new_query_compiler = self._query_compiler.reset_index(drop=drop, level=level)
+        else:
+            new_query_compiler = self._query_compiler.reset_index(
+                drop=drop, level=level
+            )
         return self._create_dataframe_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
@@ -4723,13 +4754,21 @@ class DataFrame(object):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            return self._default_to_pandas(pandas.DataFrame.__setitem__, key, value)
+
+            def setitem_without_string_columns(df):
+                df[key] = value
+                return df
+
+            return self._update_inplace(
+                self._default_to_pandas(setitem_without_string_columns)._query_compiler
+            )
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
+        elif len(self.index) == 0:
+            new_self = DataFrame({key: value}, columns=self.columns)
+            self._update_inplace(new_self._query_compiler)
         else:
-            loc = self.columns.get_loc(key)
-            self.__delitem__(key)
-            self.insert(loc=loc, column=key, value=value)
+            self._update_inplace(self._query_compiler.setitem(key, value))
 
     def __len__(self):
         """Gets the length of the DataFrame.

@@ -1,6 +1,10 @@
+import os
+
+os.environ["MODIN_EXPERIMENTAL"] = "True"
 from modin.pandas import *  # noqa F401, F403
 from .io_exp import read_sql  # noqa F401
 import warnings
+
 
 warnings.warn(
     "Thank you for using the Modin Experimental pandas API."

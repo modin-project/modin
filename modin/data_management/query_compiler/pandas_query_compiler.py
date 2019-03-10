@@ -159,11 +159,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
 
             def helper(df, internal_indices=[]):
+                if len(internal_indices) > 0:
+                    return pandas_func(
+                        df.T, internal_indices=internal_indices, **kwargs
+                    )
                 return pandas_func(df.T, **kwargs)
 
         else:
 
             def helper(df, internal_indices=[]):
+                if len(internal_indices) > 0:
+                    return pandas_func(df, internal_indices=internal_indices, **kwargs)
                 return pandas_func(df, **kwargs)
 
         return helper
@@ -1044,9 +1050,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         mapped_parts = query_compiler.data.map_across_blocks(map_func).partitions
         if reduce_func is None:
             reduce_func = map_func
-
-        if reduce_func is None:
-            reduce_func = map_func
         # For now we return a pandas.Series until ours gets implemented.
         # We have to build the intermediate frame based on the axis passed,
         # thus axis=axis and axis=axis ^ 1
@@ -1058,7 +1061,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         full_frame = pandas.concat(
             [
                 pandas.concat(
-                    [pandas.DataFrame(part.get()).T for part in row_of_parts],
+                    [pandas.DataFrame(part.to_pandas()).T for part in row_of_parts],
                     axis=axis ^ 1,
                 )
                 for row_of_parts in mapped_parts
@@ -1240,13 +1243,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def isna(self):
         func = self._prepare_method(pandas.DataFrame.isna)
-        new_dtypes = pandas.Series(
-            [np.dtype("bool") for _ in self.columns], index=self.columns
-        )
-        return self._map_partitions(func, new_dtypes=new_dtypes)
-
-    def isnull(self):
-        func = self._prepare_method(pandas.DataFrame.isnull)
         new_dtypes = pandas.Series(
             [np.dtype("bool") for _ in self.columns], index=self.columns
         )
@@ -1463,7 +1459,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             External index of the intermediate_result.
         """
         index = self.index if not axis else self.columns
-        result = intermediate_result.apply(lambda x: index[x])
+
+        def apply_index(x):
+            try:
+                return index[x] if x is not np.nan else x
+            # These can happen even if x is a nan because of how pandas classifies nans
+            # as of 0.24.
+            except (ValueError, IndexError):
+                return x
+
+        result = intermediate_result.apply(apply_index)
         return result
 
     def idxmax(self, **kwargs):
@@ -1474,12 +1479,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # The reason for the special treatment with idxmax/min is because we
         # need to communicate the row number back here.
-        def idxmax_builder(df, **kwargs):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.idxmax(**kwargs)
+        def idxmax_builder(df, axis=0, **kwargs):
+            if axis == 0:
+                df.index = pandas.RangeIndex(len(df.index))
+            else:
+                df.columns = pandas.RangeIndex(len(df.columns))
+            return df.idxmax(axis=axis, **kwargs)
 
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(idxmax_builder, **kwargs)
+        axis = kwargs.pop("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        func = self._prepare_method(idxmax_builder, axis=axis, **kwargs)
         max_result = self._full_axis_reduce(func, axis)
         # Because our internal partitions don't track the external index, we
         # have to do a conversion.
@@ -1493,12 +1502,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # The reason for the special treatment with idxmax/min is because we
         # need to communicate the row number back here.
-        def idxmin_builder(df, **kwargs):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.idxmin(**kwargs)
+        def idxmin_builder(df, axis=0, **kwargs):
+            if axis == 0:
+                df.index = pandas.RangeIndex(len(df.index))
+            else:
+                df.columns = pandas.RangeIndex(len(df.columns))
+            return df.idxmin(axis=axis, **kwargs)
 
-        axis = kwargs.get("axis", 0)
-        func = self._prepare_method(idxmin_builder, **kwargs)
+        axis = kwargs.pop("axis", 0)
+        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
+        func = self._prepare_method(idxmin_builder, axis=axis, **kwargs)
         min_result = self._full_axis_reduce(func, axis)
         # Because our internal partitions don't track the external index, we
         # have to do a conversion.
@@ -1688,47 +1701,48 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Only describe numeric if there are numeric columns
         # Otherwise, describe all
         new_columns = self.numeric_columns(include_bool=False)
-        if len(new_columns) != 0:
-            numeric = True
+        include = kwargs.get("include", None)
+        if len(new_columns) != 0 and include is not None:
+            if not isinstance(include, np.dtype) and include == "all":
+                new_columns = self.columns
+            else:
+                new_columns = self.dtypes[
+                    [
+                        any(
+                            (isinstance(inc, np.dtype) and inc == d)
+                            or (
+                                not isinstance(inc, np.dtype)
+                                and inc.__subclasscheck__(getattr(np, d.__str__()))
+                            )
+                            for inc in include
+                        )
+                        for d in self.dtypes.values
+                    ]
+                ].index
+        elif len(new_columns) == 0:
+            new_columns = [
+                self.columns[i]
+                for i in range(len(self.columns))
+                if self.dtypes[i] != np.dtype("datetime64[ns]")
+            ]
+        else:
             exclude = kwargs.get("exclude", None)
-            include = kwargs.get("include", None)
             # This is done to check against the default dtypes with 'in'.
             # We don't change `include` in kwargs, so we can just use this for the
             # check.
-            if include is None:
-                include = []
+            include = []
             default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
             add_to_excludes = [e for e in default_excludes if e not in include]
-            if is_list_like(exclude):
-                exclude.append(add_to_excludes)
+            if isinstance(exclude, list):
+                exclude.extend(add_to_excludes)
             else:
                 exclude = add_to_excludes
             kwargs["exclude"] = exclude
-        else:
-            numeric = False
-            # If only timedelta and datetime objects, only do the timedelta
-            # columns
-            if all(
-                (
-                    dtype
-                    for dtype in self.dtypes
-                    if dtype == np.datetime64 or dtype == np.timedelta64
-                )
-            ):
-                new_columns = [
-                    self.columns[i]
-                    for i in range(len(self.columns))
-                    if self.dtypes[i] != np.dtype("datetime64[ns]")
-                ]
-            else:
-                # Describe all columns
-                new_columns = self.columns
+            # Update `new_columns` to reflect the included types
+            new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
 
-        def describe_builder(df, **kwargs):
-            try:
-                return pandas.DataFrame.describe(df, **kwargs)
-            except ValueError:
-                return pandas.DataFrame(index=df.index)
+        def describe_builder(df, internal_indices=[], **kwargs):
+            return df.iloc[:, internal_indices].describe(**kwargs)
 
         # Apply describe and update indices, columns, and dtypes
         func = self._prepare_method(describe_builder, **kwargs)
@@ -1736,15 +1750,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func, 0, new_columns, False
         )
         new_index = self.compute_index(0, new_data, False)
-        if numeric:
-            new_dtypes = pandas.Series(
-                [np.float64 for _ in new_columns], index=new_columns
-            )
-        else:
-            new_dtypes = pandas.Series(
-                [np.object for _ in new_columns], index=new_columns
-            )
-        return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
+        return self.__constructor__(new_data, new_index, new_columns)
 
     # END Column/Row partitions reduce operations over select indices
 
@@ -2097,22 +2103,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ]
             query_compiler = self.drop(columns=nonnumeric)
             new_columns = query_compiler.index
-            numeric_indices = list(query_compiler.index.get_indexer_for(new_columns))
-            query_compiler = query_compiler.transpose()
-            kwargs.pop("axis")
         else:
             query_compiler = self
-            numeric_indices = list(self.columns.get_indexer_for(new_columns))
 
-        def quantile_builder(df, internal_indices=[], **kwargs):
-            return pandas.DataFrame.quantile(df, **kwargs)
+        def quantile_builder(df, **kwargs):
+            result = df.quantile(**kwargs)
+            return result.T if axis == 1 else result
 
-        func = self._prepare_method(quantile_builder, **kwargs)
+        func = query_compiler._prepare_method(quantile_builder, **kwargs)
         q_index = pandas.Float64Index(q)
-        new_data = query_compiler._map_across_full_axis_select_indices(
-            0, func, numeric_indices
-        )
-        return self.__constructor__(new_data, q_index, new_columns)
+        new_data = query_compiler._map_across_full_axis(axis, func)
+
+        # This took a long time to debug, so here is the rundown of why this is needed.
+        # Previously, we were operating on select indices, but that was broken. We were
+        # not correctly setting the columns/index. Because of how we compute `to_pandas`
+        # and because of the static nature of the index for `axis=1` it is easier to
+        # just handle this as the transpose (see `quantile_builder` above for the
+        # transpose within the partition) than it is to completely rework other
+        # internal methods. Basically we are returning the transpose of the object for
+        # correctness and cleanliness of the code.
+        if axis == 1:
+            q_index = new_columns
+            new_columns = pandas.Float64Index(q)
+        result = self.__constructor__(new_data, q_index, new_columns)
+        return result.transpose() if axis == 1 else result
 
     # END Map across rows/columns
 
@@ -2303,6 +2317,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # instances of a key.
         new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
+
+    def setitem(self, key, value):
+        """Set the column defined by `key` to the `value` provided.
+
+        Args:
+            key: The column name to set.
+            value: The value to set the column to.
+
+        Returns:
+             A new PandasDataManager
+        """
+
+        def setitem(df, internal_indices=[]):
+            if len(internal_indices) == 1:
+                df[df.columns[internal_indices[0]]] = value
+            else:
+                df[df.columns[internal_indices]] = value
+            return df
+
+        numeric_indices = list(self.columns.get_indexer_for([key]))
+        prepared_func = self._prepare_method(setitem)
+        if is_list_like(value):
+            value = list(value)
+            new_data = self.data.apply_func_to_select_indices_along_full_axis(
+                0, prepared_func, numeric_indices, keep_remaining=True
+            )
+        else:
+            new_data = self.data.apply_func_to_select_indices(
+                0, prepared_func, numeric_indices, keep_remaining=True
+            )
+        return self.__constructor__(new_data, self.index, self.columns)
 
     # END __getitem__ methods
 

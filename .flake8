@@ -7,3 +7,4 @@ select = B,C,E,F,W,T4,B9
 per-file-ignores =
     modin/pandas/__init__.py:E402
     stress_tests/kaggle/*:E402
+    modin/experimental/pandas/__init__.py:E402
