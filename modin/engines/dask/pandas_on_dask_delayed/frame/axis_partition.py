@@ -1,11 +1,11 @@
 import pandas
 
-from modin.engines.base.frame.axis_partition import BaseFrameFullAxisPartition
+from modin.engines.base.frame.axis_partition import BaseFrameAxisPartition
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from .partition import DaskFramePartition
 
 
-class DaskFrameFullAxisPartition(BaseFrameFullAxisPartition):
+class DaskFrameAxisPartition(BaseFrameAxisPartition):
     """Dask implementation for Column and Row partitions"""
 
     def __init__(self, list_of_blocks):
@@ -27,7 +27,7 @@ class DaskFrameFullAxisPartition(BaseFrameFullAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `DaskFrameFullAxisPartition` object to apply to
+            other_axis_partition: Another `DaskFrameAxisPartition` object to apply to
                 func with this one.
 
         Returns:
@@ -63,13 +63,13 @@ class DaskFrameFullAxisPartition(BaseFrameFullAxisPartition):
         ]
 
 
-class DaskFrameFullColumnPartition(DaskFrameFullAxisPartition):
+class DaskFrameColumnPartition(DaskFrameAxisPartition):
     """Dask implementation for Column partitions"""
 
     axis = 0
 
 
-class DaskFrameFullRowPartition(DaskFrameFullAxisPartition):
+class DaskFrameRowPartition(DaskFrameAxisPartition):
     """Dask implementation for Row partitions"""
 
     axis = 1

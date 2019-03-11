@@ -2,7 +2,7 @@ import pandas
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
-class BaseFrameFullAxisPartition(object):  # pragma: no cover
+class BaseFrameAxisPartition(object):  # pragma: no cover
     """This abstract class represents the Parent class for any
         `ColumnPartition` or `RowPartition` class. This class is intended to
         simplify the way that operations are performed
@@ -12,7 +12,7 @@ class BaseFrameFullAxisPartition(object):  # pragma: no cover
             require the implementation to use concatenation or append on the
             list of block partitions in this object.
 
-        Note 1: The `BaseFramePartitionManager` object that controls these objects
+        Note 1: The `BaseFrameManager` object that controls these objects
             (through the API exposed here) has an invariant that requires that
             this object is never returned from a function. It assumes that
             there will always be `BaseFramePartition` object stored and structures
@@ -45,7 +45,7 @@ class BaseFrameFullAxisPartition(object):  # pragma: no cover
             num_splits: The number of objects to return, the number of splits
                 for the resulting object. It is up to this method to choose the
                 splitting at this time.
-            other_axis_partition: Another `BaseFrameFullAxisPartition` object to be applied
+            other_axis_partition: Another `BaseFrameAxisPartition` object to be applied
                 to func. This is for operations that are between datasets.
             maintain_partitioning: Whether or not to keep the partitioning in the same
                 orientation as it was previously. This is important because we may be
@@ -82,7 +82,7 @@ class BaseFrameFullAxisPartition(object):  # pragma: no cover
             return [self.partition_type(obj) for obj in partitions]
 
 
-class PandasOnXFrameFullAxisPartition(BaseFrameFullAxisPartition):
+class PandasFrameAxisPartition(BaseFrameAxisPartition):
     """This abstract class is created to simplify and consolidate the code for
         AxisPartitions that run pandas. Because much of the code is similar, this allows
         us to reuse this code.
@@ -90,7 +90,7 @@ class PandasOnXFrameFullAxisPartition(BaseFrameFullAxisPartition):
         Subclasses must implement `list_of_blocks` which unwraps the `RemotePartition`
         objects and creates something interpretable as a pandas DataFrame.
 
-        See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameFullAxisPartition`
+        See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition`
         for an example on how to override/use this class when the implementation needs
         to be augmented.
     """
@@ -110,7 +110,7 @@ class PandasOnXFrameFullAxisPartition(BaseFrameFullAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `PandasOnRayFrameFullAxisPartition` object to apply to
+            other_axis_partition: Another `PandasOnRayFrameAxisPartition` object to apply to
                 func with this one.
             maintain_partitioning: Whether or not to keep the partitioning in the same
                 orientation as it was previously. This is important because we may be
@@ -143,7 +143,7 @@ class PandasOnXFrameFullAxisPartition(BaseFrameFullAxisPartition):
     def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `lengths`.
 
-        Extends `BaseFrameFullAxisPartition.shuffle`.
+        Extends `BaseFrameAxisPartition.shuffle`.
 
         Args:
             func: The function to apply before splitting.

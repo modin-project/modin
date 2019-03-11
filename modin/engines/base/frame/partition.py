@@ -4,9 +4,9 @@ class BaseFramePartition(object):  # pragma: no cover
         the section immediately following this.
 
         The API exposed by the children of this object is used in
-        `BaseFramePartitionManager`.
+        `BaseFrameManager`.
 
-        Note: These objects are treated as immutable by `BaseFramePartitionManager`
+        Note: These objects are treated as immutable by `BaseFrameManager`
         subclasses. There is no logic for updating inplace.
     """
 

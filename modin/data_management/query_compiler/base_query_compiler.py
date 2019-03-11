@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from modin.engines.base.frame.partition_manager import BaseFrameManager
 
 
 class BaseQueryCompiler(object):
@@ -17,11 +17,7 @@ class BaseQueryCompiler(object):
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
     def __init__(
-        self,
-        block_partitions_object: BaseFramePartitionManager,
-        index,
-        columns,
-        dtypes=None,
+        self, block_partitions_object: BaseFrameManager, index, columns, dtypes=None
     ):
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -1037,7 +1033,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     # treated differently.
     def __init__(
         self,
-        block_partitions_object: BaseFramePartitionManager,
+        block_partitions_object: BaseFrameManager,
         index,
         column,
         dtypes=None,
@@ -1068,11 +1064,11 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     dtypes = property(_get_dtype, _set_dtype)
 
-    def _get_data(self) -> BaseFramePartitionManager:
+    def _get_data(self) -> BaseFrameManager:
         """Perform the map step
 
         Returns:
-            A BaseFramePartitionManager object.
+            A BaseFrameManager object.
         """
         raise NotImplementedError("Must be implemented in children classes")
 

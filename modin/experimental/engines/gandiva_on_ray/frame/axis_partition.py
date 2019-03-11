@@ -2,13 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from modin.engines.base.frame.axis_partition import BaseFrameFullAxisPartition
+from modin.engines.base.frame.axis_partition import BaseFrameAxisPartition
 from .partition import GandivaOnRayFramePartition
 import ray
 import pyarrow
 
 
-class GandivaOnRayFrameFullAxisPartition(BaseFrameFullAxisPartition):
+class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
@@ -21,7 +21,7 @@ class GandivaOnRayFrameFullAxisPartition(BaseFrameFullAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `GandivaOnRayFrameFullAxisPartition` object to apply to
+            other_axis_partition: Another `GandivaOnRayFrameAxisPartition` object to apply to
                 func with this one.
 
         Returns:
@@ -50,7 +50,7 @@ class GandivaOnRayFrameFullAxisPartition(BaseFrameFullAxisPartition):
     def shuffle(self, func, num_splits=None, **kwargs):
         """Shuffle the order of the data in this axis based on the `func`.
 
-        Extends `BaseFrameFullAxisPartition.shuffle`.
+        Extends `BaseFrameAxisPartition.shuffle`.
 
         :param func:
         :param num_splits:
@@ -68,7 +68,7 @@ class GandivaOnRayFrameFullAxisPartition(BaseFrameFullAxisPartition):
         ]
 
 
-class GandivaOnRayFrameFullColumnPartition(GandivaOnRayFrameFullAxisPartition):
+class GandivaOnRayFrameColumnPartition(GandivaOnRayFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -77,7 +77,7 @@ class GandivaOnRayFrameFullColumnPartition(GandivaOnRayFrameFullAxisPartition):
     axis = 0
 
 
-class GandivaOnRayFrameFullRowPartition(GandivaOnRayFrameFullAxisPartition):
+class GandivaOnRayFrameRowPartition(GandivaOnRayFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.

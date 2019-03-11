@@ -1,21 +1,21 @@
 import ray
 import numpy as np
 
-from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
-    PandasOnRayFrameFullColumnPartition,
-    PandasOnRayFrameFullRowPartition,
+    PandasOnRayFrameColumnPartition,
+    PandasOnRayFrameRowPartition,
 )
 from .partition import PandasOnRayFramePartition
 
 
-class RayFramePartitionManager(BaseFramePartitionManager):
-    """This method implements the interface in `BaseFramePartitionManager`."""
+class RayFrameManager(BaseFrameManager):
+    """This method implements the interface in `BaseFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnRayFramePartition
-    _column_partitions_class = PandasOnRayFrameFullColumnPartition
-    _row_partition_class = PandasOnRayFrameFullRowPartition
+    _column_partitions_class = PandasOnRayFrameColumnPartition
+    _row_partition_class = PandasOnRayFrameRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions

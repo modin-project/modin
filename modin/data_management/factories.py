@@ -202,36 +202,34 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
-        RayFramePartitionManager,
-    )
+    from modin.engines.ray.pandas_on_ray.frame.partition_manager import RayFrameManager
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = RayFramePartitionManager
+    block_partitions_cls = RayFrameManager
     io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
 
     from modin.engines.python.pandas_on_python.frame.partition_manager import (
-        PythonFramePartitionManager,
+        PythonFrameManager,
     )
     from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = PythonFramePartitionManager
+    block_partitions_cls = PythonFrameManager
     io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
 
     from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
-        DaskFramePartitionManager,
+        DaskFrameManager,
     )
     from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = DaskFramePartitionManager
+    block_partitions_cls = DaskFrameManager
     io_cls = PandasOnDaskIO
 
 
@@ -294,11 +292,11 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
 class ExperimentalGandivaOnRayFactory(BaseFactory):  # pragma: no cover
 
     from modin.experimental.engines.gandiva_on_ray.frame.partition_manager import (
-        RayFramePartitionManager,
+        RayFrameManager,
     )
     from modin.experimental.engines.gandiva_on_ray.io import GandivaOnRayIO
     from modin.data_management.query_compiler import GandivaQueryCompiler
 
     query_compiler_cls = GandivaQueryCompiler
-    block_partitions_cls = RayFramePartitionManager
+    block_partitions_cls = RayFrameManager
     io_cls = GandivaOnRayIO

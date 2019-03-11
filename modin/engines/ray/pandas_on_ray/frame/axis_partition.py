@@ -4,11 +4,11 @@ from __future__ import print_function
 
 import ray
 
-from modin.engines.base.frame.axis_partition import PandasOnXFrameFullAxisPartition
+from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 
 
-class PandasOnRayFrameFullAxisPartition(PandasOnXFrameFullAxisPartition):
+class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
@@ -22,7 +22,7 @@ class PandasOnRayFrameFullAxisPartition(PandasOnXFrameFullAxisPartition):
     ):
         return deploy_ray_func._remote(
             args=(
-                PandasOnXFrameFullAxisPartition.deploy_axis_func,
+                PandasFrameAxisPartition.deploy_axis_func,
                 axis,
                 func,
                 num_splits,
@@ -39,7 +39,7 @@ class PandasOnRayFrameFullAxisPartition(PandasOnXFrameFullAxisPartition):
     ):
         return deploy_ray_func._remote(
             args=(
-                PandasOnXFrameFullAxisPartition.deploy_func_between_two_axis_partitions,
+                PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
                 axis,
                 func,
                 num_splits,
@@ -51,7 +51,7 @@ class PandasOnRayFrameFullAxisPartition(PandasOnXFrameFullAxisPartition):
         )
 
 
-class PandasOnRayFrameFullColumnPartition(PandasOnRayFrameFullAxisPartition):
+class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -60,7 +60,7 @@ class PandasOnRayFrameFullColumnPartition(PandasOnRayFrameFullAxisPartition):
     axis = 0
 
 
-class PandasOnRayFrameFullRowPartition(PandasOnRayFrameFullAxisPartition):
+class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.

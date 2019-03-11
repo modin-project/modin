@@ -11,7 +11,7 @@ from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize, _get_nan_block_id
 
 
-class BaseFramePartitionManager(object):
+class BaseFrameManager(object):
     """Abstract Class that manages a set of `BaseFramePartition` objects, and
         structures them into a 2D numpy array. This object will interact with
         each of these objects through the `BaseFramePartition` API.
@@ -105,23 +105,23 @@ class BaseFramePartitionManager(object):
 
     @property
     def column_partitions(self):
-        """A list of `BaseFrameFullAxisPartition` objects.
+        """A list of `BaseFrameAxisPartition` objects.
 
-        Note: Each value in this list will be an `BaseFrameFullAxisPartition` object.
-            `BaseFrameFullAxisPartition` is located in the `base_remote_partition.py` file.
+        Note: Each value in this list will be an `BaseFrameAxisPartition` object.
+            `BaseFrameAxisPartition` is located in `axis_partition.py`.
 
-        Returns a list of `BaseFrameFullAxisPartition` objects.
+        Returns a list of `BaseFrameAxisPartition` objects.
         """
         return [self._column_partitions_class(col) for col in self.partitions.T]
 
     @property
     def row_partitions(self):
-        """A list of `BaseFrameFullAxisPartition` objects, represents column partitions.
+        """A list of `BaseFrameAxisPartition` objects, represents column partitions.
 
-        Note: Each value in this list will an `BaseFrameFullAxisPartition` object.
-            `BaseFrameFullAxisPartition` is located in the `base_remote_partition.py` file.
+        Note: Each value in this list will an `BaseFrameAxisPartition` object.
+            `BaseFrameAxisPartition` is located in `axis_partition.py`.
 
-        Returns a list of `BaseFrameFullAxisPartition` objects.
+        Returns a list of `BaseFrameAxisPartition` objects.
         """
         return [self._row_partition_class(row) for row in self.partitions]
 
@@ -206,7 +206,7 @@ class BaseFramePartitionManager(object):
             map_func: The function to apply.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         preprocessed_map_func = self.preprocess_func(map_func)
         new_partitions = np.array(
@@ -287,7 +287,7 @@ class BaseFramePartitionManager(object):
             map_func: The function to apply.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -326,7 +326,7 @@ class BaseFramePartitionManager(object):
                 from the bottom of the object
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         # These are the partitions that we will extract over
         if not axis:
@@ -407,10 +407,10 @@ class BaseFramePartitionManager(object):
         Args:
             axis: The axis to concatenate to.
             other_blocks: the other blocks to be concatenated. This is a
-                BaseFramePartitionManager object.
+                BaseFrameManager object.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         if type(other_blocks) is list:
             other_blocks = [blocks.partitions for blocks in other_blocks]
@@ -426,7 +426,7 @@ class BaseFramePartitionManager(object):
         """Create a copy of this object.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         return self.__constructor__(self.partitions.copy())
 
@@ -434,7 +434,7 @@ class BaseFramePartitionManager(object):
         """Transpose the blocks stored in this object.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         return self.__constructor__(self.partitions.T)
 
@@ -700,7 +700,7 @@ class BaseFramePartitionManager(object):
                 keep only the results.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         if self.partitions.size == 0:
             return np.array([[]])
@@ -825,7 +825,7 @@ class BaseFramePartitionManager(object):
                 keep only the results.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         if self.partitions.size == 0:
             return self.__constructor__(np.array([[]]))
@@ -989,15 +989,15 @@ class BaseFramePartitionManager(object):
             return self.__constructor__(result)
 
     def inter_data_operation(self, axis, func, other):
-        """Apply a function that requires two BaseFramePartitionManager objects.
+        """Apply a function that requires two BaseFrameManager objects.
 
         Args:
             axis: The axis to apply the function over (0 - rows, 1 - columns)
             func: The function to apply
-            other: The other BaseFramePartitionManager object to apply func to.
+            other: The other BaseFrameManager object to apply func to.
 
         Returns:
-            A new BaseFramePartitionManager object, the type of object that called this.
+            A new BaseFrameManager object, the type of object that called this.
         """
         if axis:
             partitions = self.row_partitions
@@ -1027,7 +1027,7 @@ class BaseFramePartitionManager(object):
             lengths: The length of each partition to split the result into.
 
         Returns:
-             A new BaseFramePartitionManager object, the type of object that called this.
+             A new BaseFrameManager object, the type of object that called this.
         """
         if axis:
             partitions = self.row_partitions

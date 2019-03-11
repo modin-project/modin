@@ -1,21 +1,21 @@
 import numpy as np
 import ray
 
-from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
-    GandivaOnRayFrameFullColumnPartition,
-    GandivaOnRayFrameFullRowPartition,
+    GandivaOnRayFrameColumnPartition,
+    GandivaOnRayFrameRowPartition,
 )
 from .partition import GandivaOnRayFramePartition
 
 
-class RayFramePartitionManager(BaseFramePartitionManager):
-    """This method implements the interface in `BaseFramePartitionManager`."""
+class RayFrameManager(BaseFrameManager):
+    """This method implements the interface in `BaseFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = GandivaOnRayFramePartition
-    _column_partitions_class = GandivaOnRayFrameFullColumnPartition
-    _row_partition_class = GandivaOnRayFrameFullRowPartition
+    _column_partitions_class = GandivaOnRayFrameColumnPartition
+    _row_partition_class = GandivaOnRayFrameRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions

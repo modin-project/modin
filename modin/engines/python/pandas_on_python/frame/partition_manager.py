@@ -1,18 +1,18 @@
-from modin.engines.base.frame.partition_manager import BaseFramePartitionManager
+from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
-    PandasOnPythonFrameFullColumnPartition,
-    PandasOnPythonFrameFullRowPartition,
+    PandasOnPythonFrameColumnPartition,
+    PandasOnPythonFrameRowPartition,
 )
 from .partition import PandasOnPythonFramePartition
 
 
-class PythonFramePartitionManager(BaseFramePartitionManager):
-    """This method implements the interface in `BaseFramePartitionManager`."""
+class PythonFrameManager(BaseFrameManager):
+    """This method implements the interface in `BaseFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnPythonFramePartition
-    _column_partitions_class = PandasOnPythonFrameFullColumnPartition
-    _row_partition_class = PandasOnPythonFrameFullRowPartition
+    _column_partitions_class = PandasOnPythonFrameColumnPartition
+    _row_partition_class = PandasOnPythonFrameRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions
