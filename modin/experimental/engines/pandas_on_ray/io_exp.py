@@ -1,6 +1,7 @@
 import numpy as np
 import pandas
 import ray
+import warnings
 
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.remote_partition import PandasOnRayRemotePartition
@@ -55,8 +56,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         from .sql import is_distributed, get_query_info
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
-            # Change this so that when `PandasOnRayIO` has a parallel `read_sql` we can
-            # still use it.
+            warnings.warn("defaulting to modin core implementation")
             return PandasOnRayIO.read_sql(
                 sql,
                 con,
