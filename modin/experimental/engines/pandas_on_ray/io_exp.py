@@ -61,11 +61,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 sql,
                 con,
                 index_col,
-                coerce_float,
-                params,
-                parse_dates,
-                columns,
-                chunksize,
+                coerce_float=coerce_float,
+                params=params,
+                parse_dates=parse_dates,
+                columns=columns,
+                chunksize=chunksize,
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
