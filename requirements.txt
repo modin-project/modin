@@ -9,7 +9,7 @@ typing
 xarray
 Jinja2
 pathlib
-tables
+tables==3.4.4
 scipy
 pytest==3.9.3
 coverage
