@@ -1,5 +1,6 @@
 from io import BytesIO
 import ray
+import pandas
 import pyarrow
 import pyarrow.csv
 
