@@ -1,3 +1,4 @@
+from io import BytesIO
 import ray
 import pyarrow
 import pyarrow.csv
