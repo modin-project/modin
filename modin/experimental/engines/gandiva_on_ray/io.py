@@ -1,6 +1,5 @@
-import pyarrow
-
 import ray
+import pyarrow
 
 from modin.data_management.query_compiler import GandivaQueryCompiler
 from modin.engines.base.io import BaseIO
