@@ -23,10 +23,51 @@ from .remote_partition import PandasOnRayRemotePartition
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
+@ray.remote
+def _read_csv_with_offset_pandas_on_ray(
+    fname, num_splits, start, end, kwargs, header
+):  # pragma: no cover
+    """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
+    Args:
+        fname: The filename of the file to open.
+        num_splits: The number of splits (partitions) to separate the DataFrame into.
+        start: The start byte offset.
+        end: The end byte offset.
+        kwargs: The kwargs for the Pandas `read_csv` function.
+        header: The header of the file.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element. If there is not `index_col` set, then we just return the length.
+            This is used to determine the total length of the DataFrame to build a
+            default Index.
+    """
+    index_col = kwargs.pop("index_col", None)
+    bio = open(fname, "rb")
+    bio.seek(start)
+    to_read = header + bio.read(end - start)
+    bio.close()
+    pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
+    if index_col is not None:
+        index = pandas_df.index
+        # Partitions must have RangeIndex
+        pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
+    else:
+        # We will use the lengths to build the index if we are not given an
+        # `index_col`.
+        index = len(pandas_df)
+    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
+
+
 class PandasOnRayIO(BaseIO):
 
     block_partitions_cls = RayBlockPartitions
     query_compiler_cls = PandasQueryCompiler
+    read_csv_func = _read_csv_with_offset_pandas_on_ray
 
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
@@ -192,7 +233,7 @@ class PandasOnRayIO(BaseIO):
                 start = f.tell()
                 f.seek(chunk_size, os.SEEK_CUR)
                 f.readline()  # Read a whole number of lines
-                partition_id = _read_csv_with_offset_pandas_on_ray._remote(
+                partition_id = cls.read_csv_func._remote(
                     args=(
                         filepath,
                         num_splits,
@@ -615,46 +656,6 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     if not isinstance(splits, list):
         splits = [splits]
     return splits
-
-
-@ray.remote
-def _read_csv_with_offset_pandas_on_ray(
-    fname, num_splits, start, end, kwargs, header
-):  # pragma: no cover
-    """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
-
-    Args:
-        fname: The filename of the file to open.
-        num_splits: The number of splits (partitions) to separate the DataFrame into.
-        start: The start byte offset.
-        end: The end byte offset.
-        kwargs: The kwargs for the Pandas `read_csv` function.
-        header: The header of the file.
-
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-    index_col = kwargs.pop("index_col", None)
-    bio = open(fname, "rb")
-    bio.seek(start)
-    to_read = header + bio.read(end - start)
-    bio.close()
-    pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
-    if index_col is not None:
-        index = pandas_df.index
-        # Partitions must have RangeIndex
-        pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
-    else:
-        # We will use the lengths to build the index if we are not given an
-        # `index_col`.
-        index = len(pandas_df)
-    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
 
 
 @ray.remote
