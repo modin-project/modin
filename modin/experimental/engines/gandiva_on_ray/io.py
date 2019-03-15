@@ -40,10 +40,10 @@ def _read_csv_with_offset_pyarrow(
     bio.close()
     # pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
     pandas_df = pyarrow.csv.read_csv(BytesIO(to_read))
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
+    # pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     # We will use the lengths to build the index if we are not given an
     # `index_col`.
-    return [pandas_df] + [len(pandas_df)]
+    return [pandas_df] + [pyarrow.Table.from_pandas(pandas.DataFrame()) for _ in range(num_splits - 1)] + [len(pandas_df)]
 
 
 class GandivaOnRayIO(PandasOnRayIO):
