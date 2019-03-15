@@ -8,6 +8,7 @@ from modin.data_management.query_compiler import GandivaQueryCompiler
 from modin.engines.base.io import BaseIO
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 from .block_partitions import RayBlockPartitions
+from .remote_partition import GandivaOnRayRemotePartition
 
 
 @ray.remote
@@ -49,5 +50,6 @@ def _read_csv_with_offset_pyarrow(
 class GandivaOnRayIO(PandasOnRayIO):
 
     block_partitions_cls = RayBlockPartitions
+    frame_partition_cls = GandivaOnRayRemotePartition
     query_compiler_cls = GandivaQueryCompiler
     read_csv_func = _read_csv_with_offset_pyarrow

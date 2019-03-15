@@ -66,6 +66,7 @@ def _read_csv_with_offset_pandas_on_ray(
 class PandasOnRayIO(BaseIO):
 
     block_partitions_cls = RayBlockPartitions
+    frame_partition_cls = PandasOnRayRemotePartition
     query_compiler_cls = PandasQueryCompiler
     read_csv_func = _read_csv_with_offset_pandas_on_ray
 
@@ -121,7 +122,7 @@ class PandasOnRayIO(BaseIO):
         ).T
         remote_partitions = np.array(
             [
-                [PandasOnRayRemotePartition(obj) for obj in row]
+                [cls.frame_partition_cls(obj) for obj in row]
                 for row in blk_partitions[:-1]
             ]
         )
@@ -245,7 +246,7 @@ class PandasOnRayIO(BaseIO):
                     num_return_vals=num_splits + 1,
                 )
                 partition_ids.append(
-                    [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+                    [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]
                 )
                 index_ids.append(partition_id[-1])
 
@@ -534,7 +535,7 @@ class PandasOnRayIO(BaseIO):
         ).T
         remote_partitions = np.array(
             [
-                [PandasOnRayRemotePartition(obj) for obj in row]
+                [cls.frame_partition_cls(obj) for obj in row]
                 for row in blk_partitions[:-1]
             ]
         )
@@ -590,7 +591,7 @@ class PandasOnRayIO(BaseIO):
         ).T
         remote_partitions = np.array(
             [
-                [PandasOnRayRemotePartition(obj) for obj in row]
+                [cls.frame_partition_cls(obj) for obj in row]
                 for row in blk_partitions[:-1]
             ]
         )
