@@ -470,7 +470,7 @@ class PandasOnRayIO(BaseIO):
             ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            return cls._read_csv_from_file_pandas_on_ray(
+            return cls._read_csv_func(
                 filepath_or_buffer, filtered_kwargs
             )
 
