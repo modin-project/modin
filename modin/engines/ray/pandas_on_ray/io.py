@@ -18,7 +18,7 @@ from modin.error_message import ErrorMessage
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.data_management.query_compiler import PandasQueryCompiler
 from modin.engines.base.io import BaseIO
-from modin.engines.ray.pandas_on_ray.frame.partition_manager import RayFrameManager
+from modin.engines.ray.pandas_on_ray.frame.partition_manager import PandasOnRayFrameManager
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
@@ -26,7 +26,7 @@ PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 class PandasOnRayIO(BaseIO):
 
-    block_partitions_cls = RayFrameManager
+    block_partitions_cls = PandasOnRayFrameManager
     query_compiler_cls = PandasQueryCompiler
 
     @classmethod
@@ -55,7 +55,7 @@ class PandasOnRayIO(BaseIO):
                 for name in pf.metadata.schema.names
                 if not PQ_INDEX_REGEX.match(name)
             ]
-        num_partitions = RayFrameManager._compute_num_partitions()
+        num_partitions = PandasOnRayFrameManager._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -88,7 +88,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = PandasQueryCompiler(
-            RayFrameManager(remote_partitions), index, columns
+            PandasOnRayFrameManager(remote_partitions), index, columns
         )
 
         return new_query_compiler
@@ -183,7 +183,7 @@ class PandasOnRayIO(BaseIO):
             index_ids = []
             total_bytes = os.path.getsize(filepath)
             # Max number of partitions available
-            num_parts = RayFrameManager._compute_num_partitions()
+            num_parts = PandasOnRayFrameManager._compute_num_partitions()
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_parts)
             # This is the chunksize each partition will read
@@ -232,7 +232,7 @@ class PandasOnRayIO(BaseIO):
                     column_names = column_names.drop(group).insert(0, new_col_name)
 
         new_query_compiler = PandasQueryCompiler(
-            RayFrameManager(np.array(partition_ids)), new_index, column_names
+            PandasOnRayFrameManager(np.array(partition_ids)), new_index, column_names
         )
 
         if skipfooter:
@@ -471,7 +471,7 @@ class PandasOnRayIO(BaseIO):
             empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
             columns = empty_pd_df.columns
 
-        num_partitions = RayFrameManager._compute_num_partitions()
+        num_partitions = PandasOnRayFrameManager._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -501,7 +501,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = PandasQueryCompiler(
-            RayFrameManager(remote_partitions), index, columns
+            PandasOnRayFrameManager(remote_partitions), index, columns
         )
         return new_query_compiler
 
@@ -528,7 +528,7 @@ class PandasOnRayIO(BaseIO):
             fr = FeatherReader(path)
             columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
 
-        num_partitions = RayFrameManager._compute_num_partitions()
+        num_partitions = PandasOnRayFrameManager._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -557,7 +557,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = PandasQueryCompiler(
-            RayFrameManager(remote_partitions), index, columns
+            PandasOnRayFrameManager(remote_partitions), index, columns
         )
         return new_query_compiler
 

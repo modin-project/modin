@@ -6,7 +6,7 @@ from .axis_partition import (
 from .partition import GandivaOnRayFramePartition
 
 
-class RayFrameManager(RayFrameManager):
+class GandivaOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
