@@ -202,7 +202,9 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.partition_manager import PandasOnRayFrameManager
+    from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
+        PandasOnRayFrameManager,
+    )
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = PandasOnRayFrameManager
