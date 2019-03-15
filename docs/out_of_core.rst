@@ -9,15 +9,8 @@ of Modin. Please let us know what you think!
 Install Modin out of core
 -------------------------
 
-As we mentioned in the `installation page`_, we have set up a select dependency set for
-users who want to use Modin out of core. It can be installed with pip:
-
-.. code-block:: bash
-
-  pip install "modin[out_of_core]"
-
-This will ensure that you have all of the required dependencies for Modin to run out of
-core.
+Modin now comes with all the dependencies for out of core functionality by default! See
+the `installation page`_ for more information on installing Modin.
 
 Starting Modin with out of core enabled
 ---------------------------------------
