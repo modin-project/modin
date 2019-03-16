@@ -599,7 +599,7 @@ class PandasOnRayIO(BaseIO):
             kwargs: Pass into pandas.read_sql function.
         """
         row_cnt_query = "SELECT COUNT(*) FROM ({})".format(sql)
-        row_cnt = pandas.read_sql(row_cnt_query, con).iloc[0][0]
+        row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
         cols_names_df = pandas.read_sql("SELECT * FROM ({}) LIMIT 0".format(sql), con)
         if index_col is not None:
             cols_names_df = cols_names_df.drop(columns=index_col)
