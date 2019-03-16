@@ -96,7 +96,7 @@ class PandasOnRayIO(BaseIO):
                 for name in pf.metadata.schema.names
                 if not PQ_INDEX_REGEX.match(name)
             ]
-        num_partitions = RayBlockPartitions._compute_num_partitions()
+        num_partitions = cls.block_partitions_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -129,7 +129,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            RayBlockPartitions(remote_partitions), index, columns
+            cls.block_partitions_cls(remote_partitions), index, columns
         )
 
         return new_query_compiler
@@ -224,7 +224,7 @@ class PandasOnRayIO(BaseIO):
             index_ids = []
             total_bytes = os.path.getsize(filepath)
             # Max number of partitions available
-            num_parts = RayBlockPartitions._compute_num_partitions()
+            num_parts = cls.block_partitions_cls._compute_num_partitions()
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_parts)
             # This is the chunksize each partition will read
@@ -273,7 +273,7 @@ class PandasOnRayIO(BaseIO):
                     column_names = column_names.drop(group).insert(0, new_col_name)
 
         new_query_compiler = cls.query_compiler_cls(
-            RayBlockPartitions(np.array(partition_ids)), new_index, column_names
+            cls.block_partitions_cls(np.array(partition_ids)), new_index, column_names
         )
 
         if skipfooter:
@@ -512,7 +512,7 @@ class PandasOnRayIO(BaseIO):
             empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
             columns = empty_pd_df.columns
 
-        num_partitions = RayBlockPartitions._compute_num_partitions()
+        num_partitions = cls.block_partitions_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -542,7 +542,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            RayBlockPartitions(remote_partitions), index, columns
+            cls.block_partitions_cls(remote_partitions), index, columns
         )
         return new_query_compiler
 
@@ -569,7 +569,7 @@ class PandasOnRayIO(BaseIO):
             fr = FeatherReader(path)
             columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
 
-        num_partitions = RayBlockPartitions._compute_num_partitions()
+        num_partitions = cls.block_partitions_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -598,7 +598,7 @@ class PandasOnRayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            RayBlockPartitions(remote_partitions), index, columns
+            cls.block_partitions_cls(remote_partitions), index, columns
         )
         return new_query_compiler
 
