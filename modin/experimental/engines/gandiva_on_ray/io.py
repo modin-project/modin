@@ -37,11 +37,11 @@ def _read_csv_with_offset_pyarrow(
     index_col = None
     bio = open(fname, "rb")
     bio.seek(start)
-    to_read = header + bio.read(end - start)
+    to_read = header + bio.readline() + bio.read(end - start)
     bio.close()
     # pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
     # TODO: put header_rows=0 in the options or we loose data
-    pandas_df = pyarrow.csv.read_csv(BytesIO(to_read), parse_options=pyarrow.csv.ParseOptions(header_rows=0))
+    pandas_df = pyarrow.csv.read_csv(BytesIO(to_read), parse_options=pyarrow.csv.ParseOptions(header_rows=1))
     # pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     # We will use the lengths to build the index if we are not given an
     # `index_col`.
