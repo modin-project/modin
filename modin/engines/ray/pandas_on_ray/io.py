@@ -601,7 +601,9 @@ class PandasOnRayIO(BaseIO):
         """
         row_cnt_query = "SELECT COUNT(*) FROM ({})".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
-        cols_names_df = pandas.read_sql("SELECT * FROM ({}) LIMIT 0".format(sql), con, index_col=index_col)
+        cols_names_df = pandas.read_sql(
+            "SELECT * FROM ({}) LIMIT 0".format(sql), con, index_col=index_col
+        )
         cols_names = cols_names_df.columns
         num_parts = cls.block_partitions_cls._compute_num_partitions()
         partition_ids = []
