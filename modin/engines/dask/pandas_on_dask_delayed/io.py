@@ -11,5 +11,5 @@ from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
 
 class PandasOnDaskIO(BaseIO):
 
-    block_partitions_cls = DaskFrameManager
+    frame_mgr_cls = DaskFrameManager
     query_compiler_cls = PandasQueryCompiler

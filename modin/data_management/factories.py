@@ -293,12 +293,12 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
 
 class ExperimentalGandivaOnRayFactory(BaseFactory):  # pragma: no cover
 
-    from modin.experimental.engines.gandiva_on_ray.frame.partition_manager import (
-        GandivaOnRayFrameManager,
+    from modin.experimental.engines.pyarrow_on_ray.frame.partition_manager import (
+        PyarrowOnRayFrameManager,
     )
-    from modin.experimental.engines.gandiva_on_ray.io import GandivaOnRayIO
+    from modin.experimental.engines.pyarrow_on_ray.io import GandivaOnRayIO
     from modin.data_management.query_compiler import GandivaQueryCompiler
 
     query_compiler_cls = GandivaQueryCompiler
-    block_partitions_cls = GandivaOnRayFrameManager
+    block_partitions_cls = PyarrowOnRayFrameManager
     io_cls = GandivaOnRayIO

@@ -11,5 +11,5 @@ from modin.engines.python.pandas_on_python.frame.partition_manager import (
 
 class PandasOnPythonIO(BaseIO):
 
-    block_partitions_cls = PythonFrameManager
+    frame_mgr_cls = PythonFrameManager
     query_compiler_cls = PandasQueryCompiler

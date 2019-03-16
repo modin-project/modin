@@ -9,7 +9,7 @@ from modin.engines.base.frame.partition import BaseFramePartition
 import ray
 
 
-class GandivaOnRayFramePartition(BaseFramePartition):
+class PyarrowOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id):
         assert type(object_id) is ray.ObjectID
 
@@ -59,14 +59,14 @@ class GandivaOnRayFramePartition(BaseFramePartition):
         )
         self.call_queue = []
 
-        return GandivaOnRayFramePartition(oid)
+        return PyarrowOnRayFramePartition(oid)
 
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
         return self
 
     def __copy__(self):
-        return GandivaOnRayFramePartition(object_id=self.oid)
+        return PyarrowOnRayFramePartition(object_id=self.oid)
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -89,7 +89,7 @@ class GandivaOnRayFramePartition(BaseFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return GandivaOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
+        return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
     @classmethod
     def preprocess_func(cls, func):

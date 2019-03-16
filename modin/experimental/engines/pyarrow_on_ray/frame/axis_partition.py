@@ -3,12 +3,12 @@ from __future__ import division
 from __future__ import print_function
 
 from modin.engines.base.frame.axis_partition import BaseFrameAxisPartition
-from .partition import GandivaOnRayFramePartition
+from .partition import PyarrowOnRayFramePartition
 import ray
 import pyarrow
 
 
-class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
+class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
@@ -21,7 +21,7 @@ class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            other_axis_partition: Another `GandivaOnRayFrameAxisPartition` object to apply to
+            other_axis_partition: Another `PyarrowOnRayFrameAxisPartition` object to apply to
                 func with this one.
 
         Returns:
@@ -32,7 +32,7 @@ class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
 
         if other_axis_partition is not None:
             return [
-                GandivaOnRayFramePartition(obj)
+                PyarrowOnRayFramePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions._remote(
                     args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
@@ -43,7 +43,7 @@ class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            GandivaOnRayFramePartition(obj)
+            PyarrowOnRayFramePartition(obj)
             for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
@@ -63,12 +63,12 @@ class GandivaOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            GandivaOnRayFramePartition(obj)
+            PyarrowOnRayFramePartition(obj)
             for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
 
-class GandivaOnRayFrameColumnPartition(GandivaOnRayFrameAxisPartition):
+class PyarrowOnRayFrameColumnPartition(PyarrowOnRayFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -77,7 +77,7 @@ class GandivaOnRayFrameColumnPartition(GandivaOnRayFrameAxisPartition):
     axis = 0
 
 
-class GandivaOnRayFrameRowPartition(GandivaOnRayFrameAxisPartition):
+class PyarrowOnRayFrameRowPartition(PyarrowOnRayFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
