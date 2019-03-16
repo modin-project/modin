@@ -464,6 +464,11 @@ def test_from_sql(make_sql_connection):
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
+    pandas_df = pandas.read_sql(query, conn, index_col="index")
+    modin_df = pd.read_sql(query, conn, index_col="index")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
     with pytest.warns(UserWarning):
         pd.read_sql_query(query, conn)
 

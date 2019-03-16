@@ -39,7 +39,6 @@ or for different functionalities of Modin. Here is a list of dependency sets for
 .. code-block:: bash
 
   pip install "modin[dask]" # If you want to use the Dask backend
-  pip install "modin[out_of_core]" # If you want to use Modin's `out of core`_ feature
 
 Installing from the GitHub master branch
 ----------------------------------------

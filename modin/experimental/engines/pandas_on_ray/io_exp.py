@@ -1,10 +1,10 @@
 import numpy as np
 import pandas
 import ray
+import warnings
 
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.remote_partition import PandasOnRayRemotePartition
-from .sql import is_distributed, get_query_info, query_put_bounders
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
@@ -53,18 +53,19 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         Returns:
             Pandas Dataframe
         """
+        from .sql import is_distributed, get_query_info
+
         if not is_distributed(partition_column, lower_bound, upper_bound):
-            # Change this so that when `PandasOnRayIO` has a parallel `read_sql` we can
-            # still use it.
+            warnings.warn("Defaulting to Modin core implementation")
             return PandasOnRayIO.read_sql(
                 sql,
                 con,
                 index_col,
-                coerce_float,
-                params,
-                parse_dates,
-                columns,
-                chunksize,
+                coerce_float=coerce_float,
+                params=params,
+                parse_dates=parse_dates,
+                columns=columns,
+                chunksize=chunksize,
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
@@ -131,6 +132,9 @@ def _read_sql_with_offset_pandas_on_ray(
 
     Note: Ray functions are not detected by codecov (thus pragma: no cover)
     """
+
+    from .sql import query_put_bounders
+
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(
         query_with_bounders,
