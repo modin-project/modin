@@ -36,8 +36,9 @@ def _read_csv_with_offset_pyarrow(
     # index_col = kwargs.pop("index_col", None)
     index_col = None
     bio = open(fname, "rb")
+    first_line = bio.readline()
     bio.seek(start)
-    to_read = header + bio.readline() + bio.read(end - start)
+    to_read = header + first_line + bio.read(end - start)
     bio.close()
     # pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
     # TODO: put header_rows=0 in the options or we loose data
