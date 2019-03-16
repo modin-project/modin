@@ -56,7 +56,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         from .sql import is_distributed, get_query_info
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
-            warnings.warn("defaulting to modin core implementation")
+            warnings.warn("Defaulting to Modin core implementation")
             return PandasOnRayIO.read_sql(
                 sql,
                 con,
