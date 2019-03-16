@@ -12,6 +12,7 @@ import py
 import ray
 import re
 import numpy as np
+import math
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import split_result_of_axis_func_pandas
@@ -605,7 +606,7 @@ class PandasOnRayIO(BaseIO):
         num_parts = cls.block_partitions_cls._compute_num_partitions()
         partition_ids = []
         index_ids = []
-        limit = int(round(row_cnt / num_parts))
+        limit = math.ceil(row_cnt / num_parts)
         for part in range(num_parts):
             offset = part * limit
             query = "SELECT * FROM ({}) LIMIT {} OFFSET {}".format(sql, limit, offset)
