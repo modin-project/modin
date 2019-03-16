@@ -128,7 +128,7 @@ class PandasOnRayIO(BaseIO):
         )
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
-        new_query_compiler = PandasQueryCompiler(
+        new_query_compiler = cls.query_compiler_cls(
             RayBlockPartitions(remote_partitions), index, columns
         )
 
@@ -272,7 +272,7 @@ class PandasOnRayIO(BaseIO):
                 for new_col_name, group in parse_dates.items():
                     column_names = column_names.drop(group).insert(0, new_col_name)
 
-        new_query_compiler = PandasQueryCompiler(
+        new_query_compiler = cls.query_compiler_cls(
             RayBlockPartitions(np.array(partition_ids)), new_index, column_names
         )
 
@@ -541,7 +541,7 @@ class PandasOnRayIO(BaseIO):
         )
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
-        new_query_compiler = PandasQueryCompiler(
+        new_query_compiler = cls.query_compiler_cls(
             RayBlockPartitions(remote_partitions), index, columns
         )
         return new_query_compiler
@@ -597,7 +597,7 @@ class PandasOnRayIO(BaseIO):
         )
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
-        new_query_compiler = PandasQueryCompiler(
+        new_query_compiler = cls.query_compiler_cls(
             RayBlockPartitions(remote_partitions), index, columns
         )
         return new_query_compiler
