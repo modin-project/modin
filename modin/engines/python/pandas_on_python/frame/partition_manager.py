@@ -1,15 +1,18 @@
-from modin.engines.base.block_partitions import BaseBlockPartitions
-from .axis_partition import PandasOnPythonColumnPartition, PandasOnPythonRowPartition
-from .remote_partition import PandasOnPythonRemotePartition
+from modin.engines.base.frame.partition_manager import BaseFrameManager
+from .axis_partition import (
+    PandasOnPythonFrameColumnPartition,
+    PandasOnPythonFrameRowPartition,
+)
+from .partition import PandasOnPythonFramePartition
 
 
-class PythonBlockPartitions(BaseBlockPartitions):
-    """This method implements the interface in `BaseBlockPartitions`."""
+class PythonFrameManager(BaseFrameManager):
+    """This method implements the interface in `BaseFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = PandasOnPythonRemotePartition
-    _column_partitions_class = PandasOnPythonColumnPartition
-    _row_partition_class = PandasOnPythonRowPartition
+    _partition_class = PandasOnPythonFramePartition
+    _column_partitions_class = PandasOnPythonFrameColumnPartition
+    _row_partition_class = PandasOnPythonFrameRowPartition
 
     def __init__(self, partitions):
         self.partitions = partitions

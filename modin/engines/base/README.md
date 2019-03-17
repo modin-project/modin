@@ -2,12 +2,12 @@
 
 ### Object Hierarchy
 
-- `remote_partition.py` contains `BaseRemotePartition` interface and its implementations.
-- `partition_collections.py` contains `BaseBlockPartitions` interface and its implementations.
-	- `BaseBlockPartitions` manages 2D-array of `BaseRemotePartition` object
-- `axis_partition.py` contains `BaseAxisPartition` and with the following hierarchy:
+- `frame/partition.py` contains `BaseFramePartition` interface and its implementations.
+- `frame/partition_manager.py` contains `BaseFrameManager` interface and its implementations.
+	- `BaseFrameManager` manages 2D-array of `BaseFramePartition` object
+- `frame/axis_partition.py` contains `BaseFrameAxisPartition` and with the following hierarchy:
 	```
-	BaseAxisPartition -> PandasOnRayAxisPartition -> {PandasOnRayColumnPartition, PandasOnRayRowPartition}
+	BaseFrameAxisPartition -> PandasOnRayFrameAxisPartition -> {PandasOnRayFrameColumnPartition, PandasOnRayFrameRowPartition}
 	```
-	- `BaseAxisPartition` is a high level view onto BaseBlockPartitions' data. It is more
-	   convenient to operate on `BaseAxisPartition` sometimes.
+	- `BaseFrameAxisPartition` is a high level view onto BaseFrameManager' data. It is more
+	   convenient to operate on `BaseFrameAxisPartition` sometimes.

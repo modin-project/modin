@@ -4,20 +4,20 @@ from __future__ import print_function
 
 import pandas
 
-from modin.engines.base.axis_partition import PandasOnXAxisPartition
-from .remote_partition import PandasOnPythonRemotePartition
+from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
+from .partition import PandasOnPythonFramePartition
 
 
-class PandasOnPythonAxisPartition(PandasOnXAxisPartition):
+class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):
     def __init__(self, list_of_blocks):
-        # Unwrap from BaseRemotePartition object for ease of use
+        # Unwrap from BaseFramePartition object for ease of use
         self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
-    partition_type = PandasOnPythonRemotePartition
+    partition_type = PandasOnPythonFramePartition
     instance_type = pandas.DataFrame
 
 
-class PandasOnPythonColumnPartition(PandasOnPythonAxisPartition):
+class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -26,7 +26,7 @@ class PandasOnPythonColumnPartition(PandasOnPythonAxisPartition):
     axis = 0
 
 
-class PandasOnPythonRowPartition(PandasOnPythonAxisPartition):
+class PandasOnPythonFrameRowPartition(PandasOnPythonFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.

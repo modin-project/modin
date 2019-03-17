@@ -5,11 +5,11 @@ from __future__ import print_function
 import pandas
 import ray
 
-from modin.engines.base.remote_partition import BaseRemotePartition
+from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 
-class PandasOnRayRemotePartition(BaseRemotePartition):
+class PandasOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id):
         assert type(object_id) is ray.ObjectID
 
@@ -60,14 +60,14 @@ class PandasOnRayRemotePartition(BaseRemotePartition):
         )
         self.call_queue = []
 
-        return PandasOnRayRemotePartition(oid)
+        return PandasOnRayFramePartition(oid)
 
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
         return self
 
     def __copy__(self):
-        return PandasOnRayRemotePartition(object_id=self.oid)
+        return PandasOnRayFramePartition(object_id=self.oid)
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -90,7 +90,7 @@ class PandasOnRayRemotePartition(BaseRemotePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PandasOnRayRemotePartition(ray.put(obj))
+        return PandasOnRayFramePartition(ray.put(obj))
 
     @classmethod
     def preprocess_func(cls, func):

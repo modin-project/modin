@@ -4,7 +4,7 @@ import ray
 import warnings
 
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
-from modin.engines.ray.pandas_on_ray.remote_partition import PandasOnRayRemotePartition
+from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
@@ -69,7 +69,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = cls.block_partitions_cls._compute_num_partitions()
+        num_parts = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
@@ -103,12 +103,12 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 num_return_vals=num_splits + 1,
             )
             partition_ids.append(
-                [PandasOnRayRemotePartition(obj) for obj in partition_id[:-1]]
+                [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
         new_query_compiler = cls.query_compiler_cls(
-            cls.block_partitions_cls(np.array(partition_ids)), new_index, cols_names
+            cls.frame_mgr_cls(np.array(partition_ids)), new_index, cols_names
         )
         return new_query_compiler
 

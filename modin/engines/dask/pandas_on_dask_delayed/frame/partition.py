@@ -1,10 +1,10 @@
 import pandas
 
-from modin.engines.base.remote_partition import BaseRemotePartition
+from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 
-class DaskRemotePartition(BaseRemotePartition):
+class DaskFramePartition(BaseFramePartition):
     def __init__(self, dask_obj, func=None):
         import dask
 
@@ -17,7 +17,7 @@ class DaskRemotePartition(BaseRemotePartition):
         """Return the object wrapped by this one to the original format.
 
         Note: This is the opposite of the classmethod `put`.
-            E.g. if you assign `x = BaseRemotePartition.put(1)`, `x.get()` should
+            E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
             always return 1.
 
         Returns:
@@ -37,7 +37,7 @@ class DaskRemotePartition(BaseRemotePartition):
             func: The lambda to apply (may already be correctly formatted)
 
         Returns:
-             A new `BaseRemotePartition` containing the object that has had `func`
+             A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
         import dask
@@ -89,7 +89,7 @@ class DaskRemotePartition(BaseRemotePartition):
 
         Note: This is a classmethod because the definition of how to preprocess
             should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BaseRemotePartition`
+            deploy a preprocessed function to multiple `BaseFramePartition`
             objects.
 
         Args:
