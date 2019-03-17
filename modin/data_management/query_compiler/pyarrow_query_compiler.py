@@ -13,7 +13,7 @@ class FakeSeries:
         self.dtype = dtype
 
 
-class GandivaQueryCompiler(PandasQueryCompiler):
+class PyarrowQueryCompiler(PandasQueryCompiler):
     def query(self, expr, **kwargs):
         """Query columns of the DataManager with a boolean expression.
 

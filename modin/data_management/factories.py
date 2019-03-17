@@ -235,13 +235,14 @@ class PandasOnDaskFactory(BaseFactory):
     io_cls = PandasOnDaskIO
 
 
-class GandivaOnRayFactory(BaseFactory):
+class PyarrowOnRayFactory(BaseFactory):
 
-    if partition_format == "Gandiva" and not os.environ.get(
+    if partition_format == "Pyarrow" and not os.environ.get(
         "MODIN_EXPERIMENTAL", False
     ):
         raise ImportError(
-            "Gandiva on Ray is only accessible through the experimental API.\nRun `import modin.experimental.pandas as pd` to use Gandiva on Ray."
+            "Pyarrow on Ray is only accessible through the experimental API.\nRun "
+            "`import modin.experimental.pandas as pd` to use Pyarrow on Ray."
         )
 
 
@@ -291,14 +292,14 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
     pass
 
 
-class ExperimentalGandivaOnRayFactory(BaseFactory):  # pragma: no cover
+class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
 
     from modin.experimental.engines.pyarrow_on_ray.frame.partition_manager import (
         PyarrowOnRayFrameManager,
     )
-    from modin.experimental.engines.pyarrow_on_ray.io import GandivaOnRayIO
-    from modin.data_management.query_compiler import GandivaQueryCompiler
+    from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
+    from modin.data_management.query_compiler import PyarrowQueryCompiler
 
-    query_compiler_cls = GandivaQueryCompiler
+    query_compiler_cls = PyarrowQueryCompiler
     block_partitions_cls = PyarrowOnRayFrameManager
-    io_cls = GandivaOnRayIO
+    io_cls = PyarrowOnRayIO

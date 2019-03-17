@@ -14,8 +14,8 @@ omit =
     # Skip Dask until it is fully a part of the testing suite
     modin/engines/dask/*
     # Skip Gandiva because it is experimental
-    modin/experimental/engines/gandiva_on_ray/*
-    modin/data_management/query_compiler/gandiva_query_compiler.py
+    modin/experimental/engines/pyarrow_on_ray/*
+    modin/data_management/query_compiler/pyarrow_query_compiler.py
 
 [report]
 exclude_lines =
