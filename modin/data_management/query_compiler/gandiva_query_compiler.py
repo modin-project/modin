@@ -114,8 +114,7 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             record_batch = table.to_batches()[0]
             indices = s.to_array()  # .to_numpy()
             new_columns = [
-                pa.array(c.to_numpy()[indices]) for c in record_batch.columns
-            ]
+                    pa.lib.take(c, indices) for c in record_batch.columns]
             return pa.Table.from_arrays(new_columns, record_batch.schema.names)
 
         def gandiva_query(table, query):
