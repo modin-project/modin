@@ -119,16 +119,16 @@ dir(builtins)
 def square():
     """ return square of value """
 
+    def add():
+        """ add two local variable """
+        x = 2
+        y = 3
+        z = x + y
+        return z
 
-def add():
-    """ add two local variable """
-    x = 2
-    y = 3
-    z = x + y
-    return z
+    return add() ** 2
 
 
-return add() ** 2
 print(square())
 
 
@@ -282,7 +282,6 @@ data2 = data2.set_index("date")
 data2
 print(data2.loc["1993-03-16"])
 print(data2.loc["1992-03-10":"1993-03-16"])
-#
 data2.resample("A").mean()
 data2.resample("M").mean()
 data2.resample("M").first().interpolate("linear")
@@ -315,7 +314,6 @@ data.HP.apply(div)
 data.HP.apply(lambda n: n / 2)
 data["total_power"] = data.Attack + data.Defense
 data.head()
-#
 print(data.index.name)
 data.index.name = "index_name"
 data.head()
