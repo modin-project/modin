@@ -16,6 +16,8 @@ import math
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 
+from modin.engines.ray.ExternalCSV import open_csv
+
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
@@ -209,6 +211,7 @@ class RayIO(BaseIO):
         Returns:
             DataFrame or Series constructed from CSV file.
         """
+        print("I want to die")
         empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
@@ -222,13 +225,14 @@ class RayIO(BaseIO):
             skiprows=None,
             parse_dates=parse_dates,
         )
-        with open(filepath, "rb") as f:
+        with open_csv(filepath) as f:
+            print("Why did I agree to this???")
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
                 prefix = f.readline()
                 partition_kwargs["skiprows"] = 1
-                f.seek(0, os.SEEK_SET)  # Return to beginning of file
+                f.seek(0, rel=False)  # Return to beginning of file
 
             prefix_id = ray.put(prefix)
             partition_kwargs_id = ray.put(partition_kwargs)
@@ -239,24 +243,26 @@ class RayIO(BaseIO):
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
-            total_bytes = os.path.getsize(filepath)
+            total_bytes = f.size
             # Max number of partitions available
             num_parts = cls.frame_mgr_cls._compute_num_partitions()
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_parts)
             # This is the chunksize each partition will read
-            chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
-
-            while f.tell() < total_bytes:
-                start = f.tell()
-                f.seek(chunk_size, os.SEEK_CUR)
+            chunk_size = max(1, (total_bytes - f.pos) // num_parts)
+            print("Fuck the world", f.pos, total_bytes)
+            while f.pos < total_bytes:
+                print("Shooting self")
+                # import ipdb; ipdb.set_trace()
+                start = f.pos
+                f.seek(chunk_size, rel=True)
                 f.readline()  # Read a whole number of lines
                 partition_id = cls.read_csv_remote_task._remote(
                     args=(
                         filepath,
                         num_splits,
                         start,
-                        f.tell(),
+                        f.pos,
                         partition_kwargs_id,
                         prefix_id,
                     ),
@@ -266,6 +272,7 @@ class RayIO(BaseIO):
                     [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]
                 )
                 index_ids.append(partition_id[-1])
+                print("Added partition")
 
         index_col = kwargs.get("index_col", None)
         if index_col is None:

@@ -14,6 +14,7 @@ from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
 )
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
+from modin.engines.ray.ExternalCSV import open_csv
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     """Splits the DataFrame read into smaller DataFrames and handles all edge cases.
@@ -79,8 +80,8 @@ def _read_csv_with_offset_pandas_on_ray(
             default Index.
     """
     index_col = kwargs.pop("index_col", None)
-    bio = open(fname, "rb")
-    bio.seek(start)
+    bio = open_csv(fname)
+    bio.seek(start, rel=False)
     to_read = header + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
