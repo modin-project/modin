@@ -1,43 +1,34 @@
-from abc import ABC, abstractmethod
 import os
 import re
 import boto3
 
-S3_REGEX = re.compile(u's3:/+(.*?)/(.*)')
+S3_REGEX = re.compile(u"s3:/+(.*?)/(.*)")
 
-class BaseExternalCSV(ABC):
 
-    @abstractmethod
+class BaseExternalCSV:
     def seek(self, pos, rel=True):
         pass
 
-    @abstractmethod
     def read(self, bytes=None):
         pass
 
-    @abstractmethod
     def readline(self):
         pass
 
     @property
-    @abstractmethod
     def pos(self):
         pass
 
     @property
-    @abstractmethod
     def size(self):
         pass
 
-    @abstractmethod
     def close(self):
         pass
 
-    @abstractmethod
     def __enter__(self):
         pass
 
-    @abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
@@ -45,10 +36,9 @@ class BaseExternalCSV(ABC):
 
 
 class LocalCSV(BaseExternalCSV):
-
     def __init__(self, path):
         self.path = path
-        self._file_obj = open(self.path, 'rb')
+        self._file_obj = open(self.path, "rb")
         self._size = os.stat(self.path).st_size
 
     def seek(self, pos, rel=True):
@@ -80,7 +70,6 @@ class LocalCSV(BaseExternalCSV):
 
 
 class S3CSV(BaseExternalCSV):
-
     def __init__(self, path):
         path = str(path)
 
@@ -92,7 +81,7 @@ class S3CSV(BaseExternalCSV):
         self.bucket_name = res.group(1)
         self.object_name = res.group(2)
 
-        self._s3 = boto3.resource('s3')
+        self._s3 = boto3.resource("s3")
         self._bucket = self._s3.Bucket(self.bucket_name)
         self._object = self._bucket.Object(self.bucket_name)
 
@@ -115,8 +104,8 @@ class S3CSV(BaseExternalCSV):
             self._result.close()
             self._result = None
 
-        self._metadata = self._object.get(Range=('%i-' % self._pos))
-        self._result = self._metadata['Body']
+        self._metadata = self._object.get(Range=("%i-" % self._pos))
+        self._result = self._metadata["Body"]
         self._li_buffer = False
 
     def read(self, amt=None):
