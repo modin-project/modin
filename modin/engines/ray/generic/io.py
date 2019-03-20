@@ -32,12 +32,13 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 
-def open_file(file_path, mode='rb'):
+def open_file(file_path, mode="rb"):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
             return s3fs.open(file_path, mode=mode)
     return open(file_path, mode=mode)
+
 
 @ray.remote
 def get_index(index_name, *partition_indices):  # pragma: no cover
@@ -229,7 +230,9 @@ class RayIO(BaseIO):
         Returns:
             DataFrame or Series constructed from CSV file.
         """
-        empty_pd_df = pandas.read_csv(open_file(filepath, 'rb'), **dict(kwargs, nrows=0, skipfooter=0))
+        empty_pd_df = pandas.read_csv(
+            open_file(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+        )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -324,7 +327,7 @@ class RayIO(BaseIO):
     @classmethod
     def _read_csv_from_pandas(cls, filepath_or_buffer, kwargs):
         if isinstance(filepath_or_buffer, str):
-            pd_obj = pandas.read_csv(open_file(filepath_or_buffer, 'rb'), **kwargs)
+            pd_obj = pandas.read_csv(open_file(filepath_or_buffer, "rb"), **kwargs)
         else:
             pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
