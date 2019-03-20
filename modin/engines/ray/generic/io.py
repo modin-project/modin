@@ -25,19 +25,19 @@ s3fs = S3FS.S3FileSystem(anon=False)
 
 
 def file_exists(file_path):
-    match = S3_ADDRESS_REGEX.search(file_path)
-    if match:
-        s3fs.exists(file_path)
-    else:
-        return os.path.exists(file_path)
+    if isinstance(file_path, str):
+        match = S3_ADDRESS_REGEX.search(file_path)
+        if match:
+            s3fs.exists(file_path)
+    return os.path.exists(file_path)
 
 
 def open_file(file_path, mode='rb'):
-    match = S3_ADDRESS_REGEX.search(file_path)
-    if match:
-        return s3fs.open(file_path, mode=mode)
-    else:
-        return open(file_path, mode=mode)
+    if isinstance(file_path, str):
+        match = S3_ADDRESS_REGEX.search(file_path)
+        if match:
+            return s3fs.open(file_path, mode=mode)
+    return open(file_path, mode=mode)
 
 @ray.remote
 def get_index(index_name, *partition_indices):  # pragma: no cover
@@ -323,7 +323,10 @@ class RayIO(BaseIO):
 
     @classmethod
     def _read_csv_from_pandas(cls, filepath_or_buffer, kwargs):
-        pd_obj = pandas.read_csv(open_file(filepath_or_buffer, 'rb'), **kwargs)
+        if isinstance(filepath_or_buffer, str):
+            pd_obj = pandas.read_csv(open_file(filepath_or_buffer, 'rb'), **kwargs)
+        else:
+            pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         elif isinstance(pd_obj, pandas.io.parsers.TextFileReader):
