@@ -4,4 +4,7 @@
 ignore = E203, E266, E501, W503
 max-line-length = 88
 select = B,C,E,F,W,T4,B9
-per-file-ignores = modin/pandas/__init__.py:E402, modin/experimental/pandas/__init__.py:E402
+per-file-ignores =
+    modin/pandas/__init__.py:E402
+    stress_tests/kaggle/*:E402
+    modin/experimental/pandas/__init__.py:E402
