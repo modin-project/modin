@@ -56,6 +56,12 @@ script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - if [[ "$PYTHON" == "2.7" ]]; then python .travis/strip-type-hints.py; fi
   - curl -s https://codecov.io/bash > codecov.sh
-  - python -m pytest -v -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/ --cov-append
-  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/ --cov-append
+  - python -m pytest -v -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py --cov-append
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py --cov-append
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_reshape.py --cov-append
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_general.py --cov-append
+  - pip install numexpr
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
+  - python -m pytest -v --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py --cov-append
   - bash codecov.sh
