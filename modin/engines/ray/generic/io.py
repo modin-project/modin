@@ -326,6 +326,7 @@ class RayIO(BaseIO):
 
     @classmethod
     def _read_csv_from_pandas(cls, filepath_or_buffer, kwargs):
+        # TODO: Should we try to be smart about how we load files here, or naively default to pandas?
         if isinstance(filepath_or_buffer, str):
             pd_obj = pandas.read_csv(open_file(filepath_or_buffer, "rb"), **kwargs)
         else:
