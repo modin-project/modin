@@ -230,8 +230,10 @@ class _LocIndexer(_LocationIndexerBase):
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        ndim = self._expand_dim(row_lookup, col_lookup, ndim)
+        ndim = (0 if len(row_lookup) == 1 else 1) + (0 if len(col_lookup) == 1 else 1)
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+        if isinstance(result, pandas.Series) and isinstance(result.index, pandas.MultiIndex):
+            
         return result
 
     def __setitem__(self, key, item):
@@ -307,14 +309,25 @@ class _LocIndexer(_LocationIndexerBase):
         return ndim
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
-        if isinstance(row_loc, list) and len(row_loc) == 1:
+        if is_list_like(row_loc) and len(row_loc) == 1:
             if (
                 isinstance(self.qc.index.values[0], np.datetime64)
                 and type(row_loc[0]) != np.datetime64
             ):
                 row_loc = [pandas.to_datetime(row_loc[0])]
-        row_lookup = self.qc.index.to_series().loc[row_loc].index
-        col_lookup = self.qc.columns.to_series().loc[col_loc].index
+
+        if isinstance(row_loc, slice):
+            row_lookup = self.qc.index[row_loc]
+        elif isinstance(self.qc.index, pandas.MultiIndex):
+            row_lookup = self.qc.index[self.qc.index.get_locs(row_loc)]
+        else:
+            row_lookup = self.qc.index[self.qc.index.get_indexer_for(row_loc)]
+        if isinstance(col_loc, slice):
+            col_lookup = self.qc.columns[col_loc]
+        elif isinstance(self.qc.columns, pandas.MultiIndex):
+            col_lookup = self.qc.columns[self.qc.columns.get_locs(col_loc)]
+        else:
+            col_lookup = self.qc.columns[self.qc.columns.get_indexer_for(col_loc)]
         return row_lookup, col_lookup
 
 

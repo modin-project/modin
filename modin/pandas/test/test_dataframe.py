@@ -2831,6 +2831,24 @@ def test_loc(request, data):
         df_equals(modin_df_copy, pandas_df_copy)
 
 
+def test_loc_multi_index():
+    modin_df = pd.read_csv(
+        'https://github.com/lemeb/Best_of_Times_study/raw/8c0c42296a6eb01e09817ad6be0ec827ee273808/blah.csv',
+        header=[0, 1, 2, 3], index_col=0)
+    pandas_df = pandas.read_csv(
+        'https://github.com/lemeb/Best_of_Times_study/raw/8c0c42296a6eb01e09817ad6be0ec827ee273808/blah.csv',
+        header=[0, 1, 2, 3], index_col=0)
+
+    df_equals(modin_df.loc[1], pandas_df.loc[1])
+    assert modin_df.loc[1, 'Presidents'].equals(pandas_df.loc[1, 'Presidents'])
+    print("MODIN")
+    print(modin_df.loc[1, ('Presidents', 'Pure mentions', 'IND', 'all')])
+    print("PANDAS")
+    print(pandas_df.loc[1, ('Presidents', 'Pure mentions', 'IND', 'all')])
+    assert modin_df.loc[1, ('Presidents', 'Pure mentions', 'IND', 'all')].equals(pandas_df.loc[1, ('Presidents', 'Pure mentions', 'IND', 'all')])
+    assert modin_df.loc[(1, 2), "Presidents"].equals(pandas_df.loc[(1, 2), "Presidents"])
+
+
 def test_lookup():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
