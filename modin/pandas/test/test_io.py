@@ -499,6 +499,30 @@ def test_from_csv(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+class FakeS3FS:
+    def exists(self, path):
+        return "bucket/path.csv" in path
+
+    def open(self, path, mode="rb"):
+        if "bucket/path.csv" in path:
+            return open(TEST_CSV_FILENAME, mode=mode)
+        else:
+            raise Exception("You shouldn't access that!")
+
+
+def test_from_csv_s3(make_csv_file):
+    from modin.engines.ray.generic import io
+
+    io.s3fs = FakeS3FS()
+
+    make_csv_file()
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
+    modin_df = pd.read_csv("s3:/bucket/path.csv")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
 def test_from_csv_chunksize(make_csv_file):
     make_csv_file()
 
