@@ -2781,6 +2781,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis is None:
                 axis = 0 if self.data.shape[1] > 1 else 1
             squeezed = pandas.Series(to_squeeze.squeeze())
+            # In the case of `MultiIndex`, we already have the correct index and naming
+            # because we are going from pandas above. This step is to correct the
+            # `Series` to have the correct name and index.
             if not isinstance(squeezed.index, pandas.MultiIndex):
                 scaler_axis = self.columns if axis else self.index
                 non_scaler_axis = self.index if axis else self.columns
