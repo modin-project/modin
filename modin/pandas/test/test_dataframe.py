@@ -2850,31 +2850,39 @@ def test_loc_multi_index():
     )
     df_equals(modin_df.loc[(1, 2), "Presidents"], pandas_df.loc[(1, 2), "Presidents"])
 
-    tuples = [('bar', 'one'),
-              ('bar', 'two'),
-              ('bar', 'three'),
-              ('bar', 'four'),
-              ('baz', 'one'),
-              ('baz', 'two'),
-              ('baz', 'three'),
-              ('baz', 'four'),
-              ('foo', 'one'),
-              ('foo', 'two'),
-              ('foo', 'three'),
-              ('foo', 'four'),
-              ('qux', 'one'),
-              ('qux', 'two'),
-              ('qux', 'three'),
-              ('qux', 'four')]
+    tuples = [
+        ("bar", "one"),
+        ("bar", "two"),
+        ("bar", "three"),
+        ("bar", "four"),
+        ("baz", "one"),
+        ("baz", "two"),
+        ("baz", "three"),
+        ("baz", "four"),
+        ("foo", "one"),
+        ("foo", "two"),
+        ("foo", "three"),
+        ("foo", "four"),
+        ("qux", "one"),
+        ("qux", "two"),
+        ("qux", "three"),
+        ("qux", "four"),
+    ]
 
-    modin_index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-    pandas_index = pandas.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+    modin_index = pd.MultiIndex.from_tuples(tuples, names=["first", "second"])
+    pandas_index = pandas.MultiIndex.from_tuples(tuples, names=["first", "second"])
     frame_data = np.random.randint(0, 100, size=(16, 100))
-    modin_df = pd.DataFrame(frame_data, index=modin_index, columns=["col{}".format(i) for i in range(100)])
-    pandas_df = pandas.DataFrame(frame_data, index=pandas_index, columns=["col{}".format(i) for i in range(100)])
+    modin_df = pd.DataFrame(
+        frame_data, index=modin_index, columns=["col{}".format(i) for i in range(100)]
+    )
+    pandas_df = pandas.DataFrame(
+        frame_data, index=pandas_index, columns=["col{}".format(i) for i in range(100)]
+    )
     assert modin_df.loc["bar", "col1"].equals(pandas_df.loc["bar", "col1"])
     assert modin_df.loc[("bar", "one"), "col1"] == pandas_df.loc[("bar", "one"), "col1"]
-    df_equals(modin_df.loc["bar", ("col1", "col2")], pandas_df.loc["bar", ("col1", "col2")])
+    df_equals(
+        modin_df.loc["bar", ("col1", "col2")], pandas_df.loc["bar", ("col1", "col2")]
+    )
 
 
 def test_lookup():

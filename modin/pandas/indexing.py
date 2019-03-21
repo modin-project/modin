@@ -311,19 +311,6 @@ class _LocIndexer(_LocationIndexerBase):
             )
         return nan_labels
 
-    def _expand_dim(self, row_lookup, col_lookup, ndim):
-        """Expand the dimension if necessary.
-        This method is for cases like duplicate labels.
-        """
-        many_rows = len(row_lookup) > 1
-        many_cols = len(col_lookup) > 1
-
-        if ndim == 0 and (many_rows or many_cols):
-            ndim = 1
-        if ndim == 1 and (many_rows and many_cols):
-            ndim = 2
-        return ndim
-
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
         if is_list_like(row_loc) and len(row_loc) == 1:
             if (
