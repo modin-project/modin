@@ -207,15 +207,15 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             df.columns = self.columns
         return df
 
-    def getitem_single_key(self, key):
+    def getitem_column_array(self, key):
 
-        numeric_indices = list(self.columns.get_indexer_for([key]))
+        numeric_indices = list(self.columns.get_indexer_for(key))
 
         def getitem(table, internal_indices=[]):
-            print("internal_indices", internal_indices)
+            # print("internal_indices", internal_indices)
             # return table.drop([list(table.itercolumns())[i] for i in range(len(list(table.itercolumns()))) if i not in internal_indices)
             result = pa.Table.from_arrays([table.column(i) for i in internal_indices])
-            print("result", result.to_pandas())
+            # print("result", result.to_pandas())
             return result
 
         result = self.data.apply_func_to_select_indices(0, getitem, numeric_indices, keep_remaining=False)
