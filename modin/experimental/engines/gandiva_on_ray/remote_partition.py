@@ -137,5 +137,6 @@ def deploy_ray_func(func, partition, kwargs):
         result = func(partition.to_pandas(), **kwargs)
         if isinstance(result, pandas.Series):
             result = pandas.DataFrame(result).T
-        return pyarrow.Table.from_pandas(result)
+        if isinstance(result, pandas.DataFrame):
+            return pyarrow.Table.from_pandas(result)
     return result
