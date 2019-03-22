@@ -14,7 +14,7 @@ def find_files(directory, pattern):
 
 
 # Go up to modin root
-modin_path = os.path.relpath("../")
+modin_path = os.path.relpath("../../")
 
 for path in find_files(modin_path, '*.py'):
     string = strip_file_to_string(path, to_empty=False, no_ast=False,
