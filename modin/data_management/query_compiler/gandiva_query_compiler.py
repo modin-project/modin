@@ -216,5 +216,5 @@ class GandivaQueryCompiler(PandasQueryCompiler):
 
         result = self.data.apply_func_to_select_indices(0, getitem, numeric_indices, keep_remaining=False)
         new_columns = self.columns[numeric_indices]
-        new_dtypes = self.dtypes[numeric_indices]
-        return self.__constructor__(result, self.index, new_columns, new_dtypes)
+        # new_dtypes = self.dtypes[numeric_indices]
+        return self.__constructor__(result, self.index, new_columns) # , new_dtypes)
