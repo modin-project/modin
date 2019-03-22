@@ -109,7 +109,7 @@ class GandivaOnRayRemotePartition(BaseRemotePartition):
 
     @classmethod
     def width_extraction_fn(cls):
-        return lambda table: table.num_columns - 1
+        return lambda table: table.num_columns - (1 if "index" in table.columns else 0)
 
     @classmethod
     def empty(cls):
