@@ -1,6 +1,7 @@
 from .pandas_query_compiler import PandasQueryCompiler
 import pyarrow as pa
 import pandas
+import ray
 from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
