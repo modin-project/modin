@@ -13,6 +13,10 @@ class FakeSeries:
         self.dtype = dtype
 
 
+@ray.remote
+def sum_block(arrow_table):
+    return sum([chunk.sum().as_py() for chunk in arrow_table[15].data.chunks])
+
 class GandivaQueryCompiler(PandasQueryCompiler):
     def query(self, expr, **kwargs):
         """Query columns of the DataManager with a boolean expression.
@@ -112,7 +116,7 @@ class GandivaQueryCompiler(PandasQueryCompiler):
 
         def filter_with_selection_vector(table, s):
             record_batch = table.to_batches()[0]
-            indices = s.to_array()  # .to_numpy()
+            indices = s.to_array()
             new_columns = [
                     pa.lib.take(c, indices) for c in record_batch.columns]
             return pa.Table.from_arrays(new_columns, record_batch.schema.names)
@@ -150,6 +154,17 @@ class GandivaQueryCompiler(PandasQueryCompiler):
         return self.__constructor__(
             new_data, new_index, self.columns, self._dtype_cache
         )
+
+    def sum_(self):
+
+        new_partitions = np.array(
+            [
+                [sum_block.remote(part.oid) for part in row_of_parts]
+                for row_of_parts in self.data.partitions
+            ]
+        )
+        return sum(ray.get(list(new_partitions[:,0])))
+
 
     def compute_index(self, axis, data_object, compute_diff=True):
         def arrow_index_extraction(table, axis):
@@ -190,3 +205,15 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             df.index = self.index
             df.columns = self.columns
         return df
+
+    def getitem_single_key(self, key):
+
+        numeric_indices = list(self.columns.get_indexer_for([key]))
+
+        def getitem(table, internal_indices=[]):
+            return table.column(internal_indices[0])
+
+        result = self.data.apply_func_to_select_indices(0, getitem, numeric_indices, keep_remaining=False)
+        new_columns = self.columns[numeric_indices]
+        new_dtypes = self.dtypes[numeric_indices]
+        return self.__constructor__(result, self.index, new_columns, new_dtypes)
