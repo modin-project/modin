@@ -213,7 +213,9 @@ class GandivaQueryCompiler(PandasQueryCompiler):
 
         def getitem(table, internal_indices=[]):
             # return table.drop([list(table.itercolumns())[i] for i in range(len(list(table.itercolumns()))) if i not in internal_indices)
-            return pa.Table.from_arrays([table.column(i) for i in internal_indices])
+            result = pa.Table.from_arrays([table.column(i) for i in internal_indices])
+            print("result", result)
+            return result
 
         result = self.data.apply_func_to_select_indices(0, getitem, numeric_indices, keep_remaining=False)
         new_columns = self.columns[numeric_indices]
