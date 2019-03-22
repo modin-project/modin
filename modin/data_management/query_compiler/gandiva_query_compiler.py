@@ -13,10 +13,22 @@ class FakeSeries:
     def __init__(self, dtype):
         self.dtype = dtype
 
-
 @ray.remote
-def sum_block(arrow_table):
-    return sum([chunk.sum().as_py() for chunk in arrow_table[15].data.chunks])
+def sum_pyarrow_table(table):
+    names = []
+    arrays = []
+    for column in table.columns:
+        if pa.types.is_floating(column.type) or pa.types.is_integer(column.type):
+            names.append(column.name)
+            value = sum([chunk.sum().as_py() for chunk in column.data.chunks])
+            arrays.append(pa.array([value], type=column.type))
+    return pa.Table.from_arrays(arrays, names=names)
+    # return arrays, names
+
+# @ray.remote
+# def sum_block(arrow_table):
+#     for column in arrow_table.columns:
+#     return sum([chunk.sum().as_py() for chunk in arrow_table[15].data.chunks])
 
 class GandivaQueryCompiler(PandasQueryCompiler):
     def query(self, expr, **kwargs):
@@ -156,15 +168,24 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             new_data, new_index, self.columns, self._dtype_cache
         )
 
-    def sum_(self):
+    def sum(self):
 
         new_partitions = np.array(
             [
-                [sum_block.remote(part.oid) for part in row_of_parts]
+                [sum_pyarrow_table.remote(part.oid) for part in row_of_parts]
                 for row_of_parts in self.data.partitions
             ]
         )
-        return sum(ray.get(list(new_partitions[:,0])))
+        sum_partitions = ray.get(list(new_partitions[:,0]))
+        names = sum_partitions[0].schema.names
+        accumulator = {name: 0.0 for name in names}
+        for i, name in enumerate(names):
+            for sum_partition in sum_partitions:
+                    accumulator[name] += sum_partition.columns[i].data[0].as_py()
+
+        return accumulator
+
+
 
 
     def compute_index(self, axis, data_object, compute_diff=True):
