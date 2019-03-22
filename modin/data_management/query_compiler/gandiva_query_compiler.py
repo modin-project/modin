@@ -1,3 +1,4 @@
+import numpy as np
 from .pandas_query_compiler import PandasQueryCompiler
 import pyarrow as pa
 import pandas
