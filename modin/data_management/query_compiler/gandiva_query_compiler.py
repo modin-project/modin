@@ -168,7 +168,7 @@ class GandivaQueryCompiler(PandasQueryCompiler):
             new_data, new_index, self.columns, self._dtype_cache
         )
 
-    def sum(self):
+    def sum(self, **kwargs):
 
         new_partitions = np.array(
             [
