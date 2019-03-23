@@ -501,13 +501,13 @@ def test_from_csv(make_csv_file):
 
 class FakeS3FS:
     def exists(self, path):
-        return "bucket/path.csv" in path
+        return "s3://bucket/path.csv" == path
 
     def open(self, path, mode="rb"):
-        if "bucket/path.csv" in path:
+        if "s3://bucket/path.csv" == path:
             return open(TEST_CSV_FILENAME, mode=mode)
         else:
-            raise Exception("You shouldn't access that!")
+            raise Exception("You shouldn't access that! (%s)" % path)
 
 
 def test_from_csv_s3(make_csv_file):
@@ -518,7 +518,7 @@ def test_from_csv_s3(make_csv_file):
     make_csv_file()
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv("s3:/bucket/path.csv")
+    modin_df = pd.read_csv("s3://bucket/path.csv")
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
