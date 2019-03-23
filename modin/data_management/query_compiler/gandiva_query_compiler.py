@@ -186,7 +186,7 @@ class GandivaQueryCompiler(PandasQueryCompiler):
 
         arrays = []
         for name in names:
-            arrays.append(pa.array([accumulator[name]], type=sum_partitions[0].schema.field_by_name(name)))
+            arrays.append(pa.array([accumulator[name]], type=sum_partitions[0].schema.field_by_name(name).type))
 
         return pa.Table.from_arrays(arrays, names=names)
 
