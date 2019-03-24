@@ -1,4 +1,4 @@
-from .pandas_query_compiler import PandasQueryCompiler
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 import pyarrow as pa
 import pandas
 from pandas.core.computation.expr import Expr

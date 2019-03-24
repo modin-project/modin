@@ -18,7 +18,7 @@ from pandas.core.base import DataError
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.error_message import ErrorMessage
-from .base_query_compiler import BaseQueryCompiler
+from modin.backends.base.query_compiler import BaseQueryCompiler
 
 
 class PandasQueryCompiler(BaseQueryCompiler):

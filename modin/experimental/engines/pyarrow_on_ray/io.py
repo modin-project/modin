@@ -1,4 +1,4 @@
-from modin.data_management.query_compiler import PyarrowQueryCompiler
+from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.experimental.engines.pyarrow_on_ray.frame.partition_manager import (
     PyarrowOnRayFrameManager,
