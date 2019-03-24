@@ -15,7 +15,7 @@ omit =
     modin/engines/dask/*
     # Skip Gandiva because it is experimental
     modin/experimental/engines/pyarrow_on_ray/*
-    modin/data_management/query_compiler/pyarrow_query_compiler.py
+    modin/backends/pyarrow/*
 
 [report]
 exclude_lines =
