@@ -242,6 +242,10 @@ def df_equals(df1, df2):
         df1 = to_pandas(df1)
     if isinstance(df2, pd.DataFrame):
         df2 = to_pandas(df2)
+    if isinstance(df1, pd.Series):
+        df1 = to_pandas(df1)
+    if isinstance(df2, pd.Series):
+        df2 = to_pandas(df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):

@@ -66,10 +66,10 @@ class BaseQueryCompiler(object):
     # END dtypes and indexing abstract methods
 
     # Metadata modification abstract methods
-    def add_prefix(self, prefix):
+    def add_prefix(self, prefix, axis=1):
         raise NotImplementedError("Must be implemented in children classes")
 
-    def add_suffix(self, suffix):
+    def add_suffix(self, suffix, axis=1):
         raise NotImplementedError("Must be implemented in children classes")
 
     # END Metadata modification abstract methods
@@ -211,17 +211,6 @@ class BaseQueryCompiler(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    def div(self, other, **kwargs):
-        """Divides this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with divided data and new index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
     def eq(self, other, **kwargs):
         """Compares equality (==) with other object (manager or scalar).
 
@@ -329,17 +318,6 @@ class BaseQueryCompiler(object):
 
         Returns:
             New DataManager with pow-ed data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def rdiv(self, other, **kwargs):
-        """Divides other object (manager or scalar) with this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with divided data and new index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -868,17 +846,6 @@ class BaseQueryCompiler(object):
     # END head/tail/front/back
 
     # Abstract __getitem__ methods
-    def getitem_single_key(self, key):
-        """Get item for a single target index.
-
-        Args:
-            key: Target index by which to retrieve data.
-
-        Returns:
-            A new Query Compiler.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
     def getitem_column_array(self, key):
         """Get column data for target labels.
 

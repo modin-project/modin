@@ -10,7 +10,6 @@ from pandas.tests.frame.common import TestData
 import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
-from modin.pandas.series import SeriesView
 from numpy.testing import assert_array_equal
 import sys
 
@@ -1981,7 +1980,7 @@ def test_eval_df_use_case():
     tmp_pandas = df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
     tmp_modin = modin_df.eval("arctan2(sin(a), b)", engine="python", parser="pandas")
 
-    assert isinstance(tmp_modin, (pandas.Series, SeriesView))
+    assert isinstance(tmp_modin, pd.Series)
     df_equals(tmp_modin, tmp_pandas)
 
     # Test not inplace assignments
@@ -2272,7 +2271,7 @@ def test_fillna_dict_series():
     )
 
     # Series treated same as dict
-    df_equals(modin_df.fillna(df.max()), df.fillna(df.max()))
+    df_equals(modin_df.fillna(modin_df.max()), df.fillna(df.max()))
 
 
 def test_fillna_dataframe():
@@ -2289,9 +2288,10 @@ def test_fillna_dataframe():
         {"a": [np.nan, 10, 20, 30, 40], "b": [50, 60, 70, 80, 90], "foo": ["bar"] * 5},
         index=list("VWXuZ"),
     )
+    modin_df2 = pd.DataFrame(df2)
 
     # only those columns and indices which are shared get filled
-    df_equals(modin_df.fillna(df2), df.fillna(df2))
+    df_equals(modin_df.fillna(modin_df2), df.fillna(df2))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2840,9 +2840,10 @@ def test_loc_multi_index():
     )
 
     df_equals(modin_df.loc[1], pandas_df.loc[1])
-    assert modin_df.loc[1, "Presidents"].equals(pandas_df.loc[1, "Presidents"])
-    assert modin_df.loc[1, ("Presidents", "Pure mentions")].equals(
-        pandas_df.loc[1, ("Presidents", "Pure mentions")]
+    df_equals(modin_df.loc[1, "Presidents"], pandas_df.loc[1, "Presidents"])
+    df_equals(
+        modin_df.loc[1, ("Presidents", "Pure mentions")],
+        pandas_df.loc[1, ("Presidents", "Pure mentions")],
     )
     assert (
         modin_df.loc[1, ("Presidents", "Pure mentions", "IND", "all")]
@@ -2878,7 +2879,7 @@ def test_loc_multi_index():
     pandas_df = pandas.DataFrame(
         frame_data, index=pandas_index, columns=["col{}".format(i) for i in range(100)]
     )
-    assert modin_df.loc["bar", "col1"].equals(pandas_df.loc["bar", "col1"])
+    df_equals(modin_df.loc["bar", "col1"], pandas_df.loc["bar", "col1"])
     assert modin_df.loc[("bar", "one"), "col1"] == pandas_df.loc[("bar", "one"), "col1"]
     df_equals(
         modin_df.loc["bar", ("col1", "col2")], pandas_df.loc["bar", ("col1", "col2")]
@@ -3552,7 +3553,7 @@ def test_rename_sanity():
     )
 
     # have to pass something
-    pytest.raises(TypeError, modin_df.rename)
+    pytest.raises(TypeError, modin_df.rename())
 
     # partial columns
     renamed = test_data.frame.rename(columns={"C": "foo", "D": "bar"})
@@ -4338,14 +4339,6 @@ def test_take():
         df.take([0, 3])
 
 
-def test_to_datetime():
-    frame_data = {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
-    modin_df = pd.DataFrame(frame_data)
-    pd_df = pandas.DataFrame(frame_data)
-
-    df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pd_df))
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_records(request, data):
     modin_df = pd.DataFrame(data)
@@ -4579,7 +4572,7 @@ def test___getitem__(request, data):
     if "empty_data" not in request.node.name:
         key = modin_df.columns[0]
         modin_col = modin_df.__getitem__(key)
-        assert isinstance(modin_col, (pandas.Series, SeriesView))
+        assert isinstance(modin_col, pd.Series)
 
         pd_col = pandas_df[key]
         df_equals(pd_col, modin_col)
@@ -4595,10 +4588,10 @@ def test___getattr__(request, data):
         col = modin_df.__getattr__(key)
 
         col = modin_df.__getattr__("col1")
-        assert isinstance(col, (pandas.Series, SeriesView))
+        assert isinstance(col, pd.Series)
 
         col = getattr(modin_df, "col1")
-        assert isinstance(col, (pandas.Series, SeriesView))
+        assert isinstance(col, pd.Series)
 
         # Check that lookup in column doesn't override other attributes
         df2 = modin_df.rename(index=str, columns={key: "columns"})
@@ -4685,13 +4678,18 @@ def test___neg__(request, data):
         df_equals(modin_result, pandas_result)
 
 
-def test___invert__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        try:
-            pd.DataFrame(data).__invert__()
-        except TypeError:
-            pass
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___invert__(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    try:
+        pandas_result = ~pandas_df
+    except Exception as e:
+        with pytest.raises(type(e)):
+            _ = repr(~modin_df)
+    else:
+        modin_result = ~modin_df
+        df_equals(modin_result, pandas_result)
 
 
 def test___hash__():

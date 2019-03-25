@@ -1,7 +1,9 @@
 import ray
 import numpy as np
+from ray.worker import RayTaskError
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
+from modin.engines.ray.utils import handle_ray_task_error
 
 
 class RayFrameManager(BaseFrameManager):
@@ -26,14 +28,17 @@ class RayFrameManager(BaseFrameManager):
             having to recompute these values each time they are needed.
         """
         if self._lengths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same length in a
-            # row of blocks.
-            self._lengths_cache = np.array(
-                ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
-                if len(self._partitions_cache.T) > 0
-                else []
-            )
+            try:
+                # The first column will have the correct lengths. We have an
+                # invariant that requires that all blocks be the same length in a
+                # row of blocks.
+                self._lengths_cache = np.array(
+                    ray.get([obj.length().oid for obj in self._partitions_cache.T[0]])
+                    if len(self._partitions_cache.T) > 0
+                    else []
+                )
+            except RayTaskError as e:
+                handle_ray_task_error(e)
         return self._lengths_cache
 
     @property
@@ -44,12 +49,15 @@ class RayFrameManager(BaseFrameManager):
             having to recompute these values each time they are needed.
         """
         if self._widths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same width in a
-            # column of blocks.
-            self._widths_cache = np.array(
-                ray.get([obj.width().oid for obj in self._partitions_cache[0]])
-                if len(self._partitions_cache) > 0
-                else []
-            )
+            try:
+                # The first column will have the correct lengths. We have an
+                # invariant that requires that all blocks be the same width in a
+                # column of blocks.
+                self._widths_cache = np.array(
+                    ray.get([obj.width().oid for obj in self._partitions_cache[0]])
+                    if len(self._partitions_cache) > 0
+                    else []
+                )
+            except RayTaskError as e:
+                handle_ray_task_error(e)
         return self._widths_cache

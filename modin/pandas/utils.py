@@ -25,7 +25,7 @@ def to_pandas(df):
     Returns:
         A new pandas DataFrame.
     """
-    return df._query_compiler.to_pandas()
+    return df._to_pandas()
 
 
 def _inherit_docstrings(parent, excluded=[]):
