@@ -5,7 +5,7 @@ from __future__ import print_function
 import pytest
 import numpy as np
 import pandas
-from modin.pandas.utils import to_pandas
+
 from pathlib import Path
 import pyarrow as pa
 import os
@@ -13,8 +13,10 @@ import sys
 
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() != "pandas":
     import modin.pandas as pd
+    from modin.pandas.utils import to_pandas
 else:
     import modin.experimental.pandas as pd
+    to_pandas = None
 
 from .utils import df_equals
 
