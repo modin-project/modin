@@ -49,6 +49,15 @@ matrix:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - python -m pytest modin/pandas/test/test_api.py
 
+    - os: linux
+      dist: trusty
+      env:
+        - PYTHON=3.6
+        - MODIN_BACKEND=pyarrow
+      script:
+        - export PATH="$HOME/miniconda/bin:$PATH"
+        - python -m pytest modin/pandas/test/test_io.py::test_from_csv
+
 install:
   - ./ci/travis/install-dependencies.sh
 

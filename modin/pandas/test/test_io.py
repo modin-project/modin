@@ -6,11 +6,15 @@ import pytest
 import numpy as np
 import pandas
 from modin.pandas.utils import to_pandas
-import modin.pandas as pd
 from pathlib import Path
 import pyarrow as pa
 import os
 import sys
+
+if os.environ.get("MODIN_BACKEND", "Pandas").lower() != "pandas":
+    import modin.pandas as pd
+else:
+    import modin.experimental.pandas as pd
 
 from .utils import df_equals
 
