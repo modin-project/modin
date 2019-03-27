@@ -5,7 +5,7 @@ from __future__ import print_function
 import pytest
 import numpy as np
 import pandas
-
+from modin.pandas.utils import to_pandas
 from pathlib import Path
 import pyarrow as pa
 import os
@@ -13,10 +13,8 @@ import sys
 
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() != "pandas":
     import modin.pandas as pd
-    from modin.pandas.utils import to_pandas
 else:
     import modin.experimental.pandas as pd
-    to_pandas = None
 
 from .utils import df_equals
 
@@ -45,10 +43,12 @@ SMALL_ROW_SIZE = 2000
 
 def modin_df_equals_pandas(modin_df, pandas_df):
     if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
-        # TODO(pcm): We should find a better solution than this:
         df1 = to_pandas(modin_df).sort_index()
         df2 = pandas_df.sort_index()
-        return repr(df1) == repr(df1)
+        if not df1.dtypes.equals(df2.dtypes):
+            return df1.as_type(df2.dtypes).equals(df2)
+        else:
+            return df1.equals(df2)
     return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
 
 
