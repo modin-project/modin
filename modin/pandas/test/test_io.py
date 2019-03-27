@@ -42,14 +42,14 @@ SMALL_ROW_SIZE = 2000
 
 
 def modin_df_equals_pandas(modin_df, pandas_df):
+    df1 = to_pandas(modin_df).sort_index()
+    df2 = pandas_df.sort_index()
     if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
-        df1 = to_pandas(modin_df).sort_index()
-        df2 = pandas_df.sort_index()
         if not df1.dtypes.equals(df2.dtypes):
-            return df1.astype(df2.dtypes).equals(df2)
+            return df2.astype(df1.dtypes).equals(df1)
         else:
             return df1.equals(df2)
-    return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
+    return df1.equals(df2)
 
 
 def setup_parquet_file(row_size, force=False):
