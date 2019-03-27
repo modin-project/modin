@@ -46,7 +46,7 @@ def modin_df_equals_pandas(modin_df, pandas_df):
         df1 = to_pandas(modin_df).sort_index()
         df2 = pandas_df.sort_index()
         if not df1.dtypes.equals(df2.dtypes):
-            return df1.as_type(df2.dtypes).equals(df2)
+            return df1.astype(df2.dtypes).equals(df2)
         else:
             return df1.equals(df2)
     return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
