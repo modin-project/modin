@@ -13,7 +13,7 @@ import sys
 
 from .utils import df_equals
 
-if os.environ.get("MODIN_BACKEND", "Pandas").lower() != "pandas":
+if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
