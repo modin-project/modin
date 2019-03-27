@@ -9,7 +9,7 @@ import ray
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO, open_file
-from modin.data_management.query_compiler import PandasQueryCompiler
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
     PandasOnRayFrameManager,
