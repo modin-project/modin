@@ -47,8 +47,6 @@ def modin_df_equals_pandas(modin_df, pandas_df):
     if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
         if not df1.dtypes.equals(df2.dtypes):
             return df2.astype(df1.dtypes).equals(df1)
-        else:
-            return df1.equals(df2)
     return df1.equals(df2)
 
 
