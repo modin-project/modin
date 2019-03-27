@@ -33,8 +33,8 @@ def _read_csv_with_offset_pyarrow_on_ray(
         kwargs: The kwargs for the pyarrow `read_csv` function.
         header: The header of the file.
      Returns:
-         A list containing the split Pandas DataFrames and the the number of
-         rows of the dataframe as the last element. This is used to determine
+         A list containing the split pyarrow Tables and the the number of
+         rows of the tables as the last element. This is used to determine
          the total length of the DataFrame to build a default Index.
     """
     bio = open(fname, "rb")

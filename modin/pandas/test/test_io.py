@@ -11,12 +11,12 @@ import pyarrow as pa
 import os
 import sys
 
+from .utils import df_equals
+
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() != "pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
-
-from .utils import df_equals
 
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
