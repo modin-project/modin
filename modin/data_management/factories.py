@@ -8,7 +8,7 @@ import warnings
 
 from modin import __execution_engine__ as execution_engine
 from modin import __partition_format__ as partition_format
-from .query_compiler import PandasQueryCompiler
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 
 
 class BaseFactory(object):
@@ -298,7 +298,7 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
         PyarrowOnRayFrameManager,
     )
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
-    from modin.data_management.query_compiler import PyarrowQueryCompiler
+    from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
 
     query_compiler_cls = PyarrowQueryCompiler
     block_partitions_cls = PyarrowOnRayFrameManager

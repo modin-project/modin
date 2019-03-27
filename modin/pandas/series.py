@@ -41,6 +41,14 @@ class SeriesView(object):
         self.parent_df = parent_df
         self._loc = loc
 
+    def _get_index(self):
+        return self.series.index
+
+    def _set_index(self, index):
+        self.series.index = index
+
+    index = property(_get_index, _set_index)
+
     def __repr__(self):
         return repr(self.series)
 
@@ -176,6 +184,9 @@ class SeriesView(object):
             "__arithmetic_op__",
             "__comparisons__",
             "__class__",
+            "index",
+            "_get_index",
+            "_set_index",
         ]
         if item not in default_behaviors:
             method = self.series.__getattribute__(item)

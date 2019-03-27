@@ -6,7 +6,6 @@ import pytest
 import numpy as np
 import pandas
 from modin.pandas.utils import to_pandas
-import modin.pandas as pd
 from pathlib import Path
 import pyarrow as pa
 import os
@@ -15,6 +14,12 @@ import sys
 from .utils import df_equals
 
 from modin import __execution_engine__
+
+if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
+    import modin.pandas as pd
+else:
+    import modin.experimental.pandas as pd
+
 
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
@@ -40,7 +45,12 @@ SMALL_ROW_SIZE = 2000
 
 
 def modin_df_equals_pandas(modin_df, pandas_df):
-    return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
+    df1 = to_pandas(modin_df).sort_index()
+    df2 = pandas_df.sort_index()
+    if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
+        if not df1.dtypes.equals(df2.dtypes):
+            return df2.astype(df1.dtypes).equals(df1)
+    return df1.equals(df2)
 
 
 def setup_parquet_file(row_size, force=False):

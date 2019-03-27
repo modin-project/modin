@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import pandas
 from modin.error_message import ErrorMessage
-from modin.data_management.query_compiler import BaseQueryCompiler
+from modin.backends.base.query_compiler import BaseQueryCompiler
 
 
 class BaseIO(object):

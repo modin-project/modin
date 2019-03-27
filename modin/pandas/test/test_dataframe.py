@@ -2831,6 +2831,60 @@ def test_loc(request, data):
         df_equals(modin_df_copy, pandas_df_copy)
 
 
+def test_loc_multi_index():
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
+    )
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
+    )
+
+    df_equals(modin_df.loc[1], pandas_df.loc[1])
+    assert modin_df.loc[1, "Presidents"].equals(pandas_df.loc[1, "Presidents"])
+    assert modin_df.loc[1, ("Presidents", "Pure mentions")].equals(
+        pandas_df.loc[1, ("Presidents", "Pure mentions")]
+    )
+    assert (
+        modin_df.loc[1, ("Presidents", "Pure mentions", "IND", "all")]
+        == pandas_df.loc[1, ("Presidents", "Pure mentions", "IND", "all")]
+    )
+    df_equals(modin_df.loc[(1, 2), "Presidents"], pandas_df.loc[(1, 2), "Presidents"])
+
+    tuples = [
+        ("bar", "one"),
+        ("bar", "two"),
+        ("bar", "three"),
+        ("bar", "four"),
+        ("baz", "one"),
+        ("baz", "two"),
+        ("baz", "three"),
+        ("baz", "four"),
+        ("foo", "one"),
+        ("foo", "two"),
+        ("foo", "three"),
+        ("foo", "four"),
+        ("qux", "one"),
+        ("qux", "two"),
+        ("qux", "three"),
+        ("qux", "four"),
+    ]
+
+    modin_index = pd.MultiIndex.from_tuples(tuples, names=["first", "second"])
+    pandas_index = pandas.MultiIndex.from_tuples(tuples, names=["first", "second"])
+    frame_data = np.random.randint(0, 100, size=(16, 100))
+    modin_df = pd.DataFrame(
+        frame_data, index=modin_index, columns=["col{}".format(i) for i in range(100)]
+    )
+    pandas_df = pandas.DataFrame(
+        frame_data, index=pandas_index, columns=["col{}".format(i) for i in range(100)]
+    )
+    assert modin_df.loc["bar", "col1"].equals(pandas_df.loc["bar", "col1"])
+    assert modin_df.loc[("bar", "one"), "col1"] == pandas_df.loc[("bar", "one"), "col1"]
+    df_equals(
+        modin_df.loc["bar", ("col1", "col2")], pandas_df.loc["bar", ("col1", "col2")]
+    )
+
+
 def test_lookup():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
