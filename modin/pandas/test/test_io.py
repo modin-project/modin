@@ -45,9 +45,10 @@ SMALL_ROW_SIZE = 2000
 
 def modin_df_equals_pandas(modin_df, pandas_df):
     if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
-        table1 = pa.Table.from_pandas(to_pandas(modin_df).sort_index())
-        table2 = pa.Table.from_pandas(pandas_df.sort_index())
-        return table1.equals(table2)
+        # TODO(pcm): We should find a better solution than this:
+        df1 = to_pandas(modin_df).sort_index()
+        df2 = pandas_df.sort_index()
+        return repr(df1) == repr(df1)
     return to_pandas(modin_df).sort_index().equals(pandas_df.sort_index())
 
 
