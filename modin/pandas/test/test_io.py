@@ -14,6 +14,8 @@ import sys
 
 from .utils import df_equals
 
+from modin import __execution_engine__
+
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
@@ -510,6 +512,7 @@ class FakeS3FS:
             raise Exception("You shouldn't access that! (%s)" % path)
 
 
+@pytest.mark.skipif(__execution_engine__.lower() == "python", reason="Using pandas implementation")
 def test_from_csv_s3(make_csv_file):
     from modin.engines.ray.generic import io
 
