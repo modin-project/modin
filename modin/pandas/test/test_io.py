@@ -522,7 +522,9 @@ class FakeS3FS:
             raise Exception("You shouldn't access that! (%s)" % path)
 
 
-@pytest.mark.skipif(__execution_engine__.lower() == "python", reason="Using pandas implementation")
+@pytest.mark.skipif(
+    __execution_engine__.lower() == "python", reason="Using pandas implementation"
+)
 def test_from_csv_s3(make_csv_file):
     from modin.engines.ray.generic import io
 
