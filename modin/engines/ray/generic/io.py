@@ -2,11 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import s3fs as S3FS
-
 import pandas
 from pandas.io.common import _infer_compression
 
+import s3fs as S3FS
 import inspect
 import os
 import py
@@ -19,10 +18,7 @@ from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
-# match.group(1) == bucket
-# match.group(2) == object
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
-
 s3fs = S3FS.S3FileSystem(anon=False)
 
 
