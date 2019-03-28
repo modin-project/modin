@@ -20,7 +20,6 @@ if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
 else:
     import modin.experimental.pandas as pd
 
-
 # needed to resolve ray-project/ray#3744
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
