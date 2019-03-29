@@ -13,6 +13,8 @@ import sys
 
 from .utils import df_equals
 
+from modin import __execution_engine__
+
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
     import modin.pandas as pd
 else:
@@ -506,6 +508,33 @@ def test_from_csv(make_csv_file):
         modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
         assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+class FakeS3FS:
+    def exists(self, path):
+        return "s3://bucket/path.csv" == path
+
+    def open(self, path, mode="rb"):
+        if "s3://bucket/path.csv" == path:
+            return open(TEST_CSV_FILENAME, mode=mode)
+        else:
+            raise Exception("You shouldn't access that! (%s)" % path)
+
+
+@pytest.mark.skipif(
+    __execution_engine__.lower() == "python", reason="Using pandas implementation"
+)
+def test_from_csv_s3(make_csv_file):
+    from modin.engines.ray.generic import io
+
+    io.s3fs = FakeS3FS()
+
+    make_csv_file()
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
+    modin_df = pd.read_csv("s3://bucket/path.csv")
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
 def test_from_csv_chunksize(make_csv_file):

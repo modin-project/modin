@@ -5,6 +5,7 @@ from __future__ import print_function
 import pandas
 from pandas.io.common import _infer_compression
 
+import s3fs as S3FS
 import inspect
 import os
 import py
@@ -17,6 +18,24 @@ from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
+S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
+s3fs = S3FS.S3FileSystem(anon=False)
+
+
+def file_exists(file_path):
+    if isinstance(file_path, str):
+        match = S3_ADDRESS_REGEX.search(file_path)
+        if match:
+            s3fs.exists(file_path)
+    return os.path.exists(file_path)
+
+
+def open_file(file_path, mode="rb"):
+    if isinstance(file_path, str):
+        match = S3_ADDRESS_REGEX.search(file_path)
+        if match:
+            return s3fs.open(file_path, mode=mode)
+    return open(file_path, mode=mode)
 
 
 @ray.remote
@@ -209,7 +228,9 @@ class RayIO(BaseIO):
         Returns:
             DataFrame or Series constructed from CSV file.
         """
-        empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
+        empty_pd_df = pandas.read_csv(
+            open_file(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+        )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -222,7 +243,7 @@ class RayIO(BaseIO):
             skiprows=None,
             parse_dates=parse_dates,
         )
-        with open(filepath, "rb") as f:
+        with open_file(filepath, "rb") as f:
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
@@ -303,7 +324,11 @@ class RayIO(BaseIO):
 
     @classmethod
     def _read_csv_from_pandas(cls, filepath_or_buffer, kwargs):
-        pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
+        # TODO: Should we try to be smart about how we load files here, or naively default to pandas?
+        if isinstance(filepath_or_buffer, str):
+            pd_obj = pandas.read_csv(open_file(filepath_or_buffer, "rb"), **kwargs)
+        else:
+            pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         elif isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -453,8 +478,8 @@ class RayIO(BaseIO):
             filtered_kwargs = kwargs
 
         if isinstance(filepath_or_buffer, str):
-            if not os.path.exists(filepath_or_buffer):
-                ErrorMessage.default_to_pandas("File not found on disk")
+            if not file_exists(filepath_or_buffer):
+                ErrorMessage.default_to_pandas("File path could not be resolved")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         elif not isinstance(filepath_or_buffer, py.path.local):
             read_from_pandas = True

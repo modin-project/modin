@@ -11,6 +11,7 @@ Jinja2
 pathlib
 tables==3.4.4
 scipy
+s3fs
 pytest==3.9.3
 coverage
 pytest-cov

@@ -8,7 +8,7 @@ from io import BytesIO
 import ray
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.engines.ray.generic.io import RayIO
+from modin.engines.ray.generic.io import RayIO, open_file
 from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
     PandasOnRayFrameManager,
 )
@@ -79,7 +79,7 @@ def _read_csv_with_offset_pandas_on_ray(
             default Index.
     """
     index_col = kwargs.pop("index_col", None)
-    bio = open(fname, "rb")
+    bio = open_file(fname, "rb")
     bio.seek(start)
     to_read = header + bio.read(end - start)
     bio.close()
