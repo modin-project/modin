@@ -10,9 +10,9 @@ import pandas as pd
 from utils import time_logger
 
 
-parser = argparse.ArgumentParser(description='groupby benchmark')
-parser.add_argument('--path', dest='path', help='path to the csv data file')
-parser.add_argument('--logfile', dest='logfile', help='path to the log file')
+parser = argparse.ArgumentParser(description="groupby benchmark")
+parser.add_argument("--path", dest="path", help="path to the csv data file")
+parser.add_argument("--logfile", dest="logfile", help="path to the log file")
 args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
@@ -24,11 +24,11 @@ logging.basicConfig(filename=args.logfile, level=logging.INFO)
 
 df = pd.read_csv(file)
 
-with time_logger("Groupby + sum aggregation on axis=0: {}; Size: {} bytes"
-                 .format(file, file_size)):
-    df_groupby = df.groupby('1')
+with time_logger(
+    "Groupby + sum aggregation on axis=0: {}; Size: {} bytes".format(file, file_size)
+):
+    df_groupby = df.groupby("1")
     df_groupby.sum()
 
-with time_logger("Groupby mean on axis=0: {}; Size: {} bytes"
-                 .format(file, file_size)):
+with time_logger("Groupby mean on axis=0: {}; Size: {} bytes".format(file, file_size)):
     df_groupby.mean()
