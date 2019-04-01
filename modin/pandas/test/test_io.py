@@ -695,6 +695,7 @@ def test_to_dict():
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
 
 
+@pytest.mark.xfail(strict=False)
 def test_to_excel():
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
