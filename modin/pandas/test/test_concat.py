@@ -38,6 +38,29 @@ def generate_dfs():
     )
     return df, df2
 
+@pytest.fixture
+def generate_dfs():
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
+
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
+    return df, df2
+
 
 @pytest.fixture
 def generate_none_dfs():
@@ -168,7 +191,4 @@ def test_mixed_none_concat():
 def test_ignore_index_concat():
     df, df2 = generate_dfs()
 
-    assert modin_df_equals_pandas(
-        pd.concat([df, df2], ignore_index=True),
-        pandas.concat([df, df2], ignore_index=True),
-    )
+    assert modin_df_equals_pandas(pd.concat([df, df2], ignore_index=True), pandas.concat([df, df2], ignore_index=True))

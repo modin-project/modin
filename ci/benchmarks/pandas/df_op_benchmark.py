@@ -10,9 +10,9 @@ import pandas as pd
 from utils import time_logger
 import numpy as np
 
-parser = argparse.ArgumentParser(description="arithmetic benchmark")
-parser.add_argument("--path", dest="path", help="path to the csv data file")
-parser.add_argument("--logfile", dest="logfile", help="path to the log file")
+parser = argparse.ArgumentParser(description='arithmetic benchmark')
+parser.add_argument('--path', dest='path', help='path to the csv data file')
+parser.add_argument('--logfile', dest='logfile', help='path to the log file')
 args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
@@ -49,15 +49,18 @@ with time_logger("write a row: {}; Size: {} bytes".format(file, file_size)):
 
 # element r/w
 
-with time_logger("read an element: {}; Size: {} bytes".format(file, file_size)):
+with time_logger("read an element: {}; Size: {} bytes".format(file,
+                                                              file_size)):
     df.iloc[rand_row_loc(), rand_col_loc()]
 
-with time_logger("write an element: {}; Size: {} bytes".format(file, file_size)):
+with time_logger("write an element: {}; Size: {} bytes".format(
+        file, file_size)):
     df.iloc[rand_row_loc(), rand_col_loc()] = np.random.randint(0, 100)
 
 # appending
 with time_logger("append a row: {}; Size: {} bytes".format(file, file_size)):
     df.append(pd.Series(new_row), ignore_index=True)
 
-with time_logger("append a column: {}; Size: {} bytes".format(file, file_size)):
-    df["new"] = new_col
+with time_logger("append a column: {}; Size: {} bytes".format(file,
+                                                              file_size)):
+    df['new'] = new_col

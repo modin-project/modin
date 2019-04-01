@@ -10,9 +10,9 @@ import pandas as pd
 from utils import time_logger
 
 
-parser = argparse.ArgumentParser(description="read_csv benchmark")
-parser.add_argument("--path", dest="path", help="path to the csv file")
-parser.add_argument("--logfile", dest="logfile", help="path to the log file")
+parser = argparse.ArgumentParser(description='read_csv benchmark')
+parser.add_argument('--path', dest='path', help='path to the csv file')
+parser.add_argument('--logfile', dest='logfile', help='path to the log file')
 args = parser.parse_args()
 file = args.path
 file_size = os.path.getsize(file)
