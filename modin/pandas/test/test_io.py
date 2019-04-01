@@ -10,6 +10,7 @@ from pathlib import Path
 import pyarrow as pa
 import os
 import sys
+from collections import Counter
 
 from .utils import df_equals
 
@@ -511,10 +512,15 @@ def test_from_csv(make_csv_file):
 
 
 class FakeS3FS:
+    def __init__(self):
+        self.calls = Counter()
+
     def exists(self, path):
+        self.calls[self.exists] += 1
         return "s3://bucket/path.csv" == path
 
     def open(self, path, mode="rb"):
+        self.calls[self.open] += 1
         if "s3://bucket/path.csv" == path:
             return open(TEST_CSV_FILENAME, mode=mode)
         else:
