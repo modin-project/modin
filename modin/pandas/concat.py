@@ -109,7 +109,7 @@ def concat(
         objs[1:],
         join=join,
         join_axes=None,
-        ignore_index=False,
+        ignore_index=ignore_index,
         keys=None,
         levels=None,
         names=None,
