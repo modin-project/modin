@@ -125,6 +125,8 @@ class RayIO(BaseIO):
     #
     # Signature: (num_splits, sql, con, index_col, kwargs)
 
+    from pyarrow.parquet import ParquetFile
+
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a DataFrame.
@@ -156,6 +158,7 @@ class RayIO(BaseIO):
             ]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
+    
         # Each item in this list will be a list of column names of the original df
         column_splits = (
             len(columns) // num_partitions
@@ -166,24 +169,48 @@ class RayIO(BaseIO):
             columns[i : i + column_splits]
             for i in range(0, len(columns), column_splits)
         ]
-        # Each item in this list will be a list of columns of original df
-        # partitioned to smaller pieces along rows.
-        # We need to transpose the oids array to fit our schema.
-        blk_partitions = np.array(
-            [
-                cls.read_parquet_remote_task._remote(
-                    args=(path, cols, num_splits, kwargs),
-                    num_return_vals=num_splits + 1,
-                )
-                for cols in col_partitions
-            ]
-        ).T
+     
+        pf = ParquetFile(path)
+        column_names = [
+                  name
+                  for name in pf.metadata.schema.names
+                  if not PQ_INDEX_REGEX.match(name)
+              ]
+
+        num_row_groups = pf.metadata.num_row_groups 
+     
+
+        blocks_step1 =  [ 
+                                 cls.read_parquet_remote_task._remote(
+                                     args=(path,c,1,r,kwargs),
+                                     num_return_vals=2,
+                                 ) 
+                                 for r in range(num_row_groups) for c in columns  ]
+
+        blocks = [ ]
+        col_totals = [ 0 for x in columns]
+        for r in range(num_row_groups):
+          row = []
+          for c_idx, c in enumerate(columns):
+            curr_block = blocks_step1.pop(0)
+            row.append(curr_block[0])
+            col_totals[c_idx] = col_totals[c_idx] + ray.get(curr_block[1])
+          blocks.append(row)
+ 
+                   
+        col_totals_objects = [ ray.put(x) for x in col_totals ] 
+        blocks.append(col_totals_objects)
+
+
+        blk_partitions = blocks
+
         remote_partitions = np.array(
             [
                 [cls.frame_partition_cls(obj) for obj in row]
                 for row in blk_partitions[:-1]
             ]
         )
+
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
