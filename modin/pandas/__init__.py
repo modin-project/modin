@@ -6,7 +6,7 @@ from __future__ import print_function
 # in order to keep all pandas instances across nodes consistent
 import pandas
 
-__pandas_version__ = "0.24.1"
+__pandas_version__ = "0.24.2"
 
 if pandas.__version__ != __pandas_version__:
     raise ImportError(
