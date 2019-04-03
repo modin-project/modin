@@ -5,6 +5,7 @@ from __future__ import print_function
 import inspect
 import pandas
 import re
+from collections import OrderedDict
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
@@ -219,7 +220,11 @@ def read_excel(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
-    return DataFrame(query_compiler=BaseFactory.read_excel(**kwargs))
+    parsed = BaseFactory.read_excel(**kwargs)
+    if isinstance(parsed, OrderedDict):
+        return parsed
+    else:
+        return DataFrame(query_compiler=parsed)
 
 
 def read_hdf(path_or_buf, key=None, mode="r", **kwargs):

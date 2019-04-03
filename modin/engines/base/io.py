@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
+from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 
@@ -310,36 +311,38 @@ class BaseIO(object):
         if skip_footer != 0:
             skipfooter = skip_footer
         ErrorMessage.default_to_pandas("`read_excel`")
-        return cls.from_pandas(
-            pandas.read_excel(
-                io,
-                sheet_name=sheet_name,
-                header=header,
-                names=names,
-                index_col=index_col,
-                parse_cols=parse_cols,
-                usecols=usecols,
-                squeeze=squeeze,
-                dtype=dtype,
-                engine=engine,
-                converters=converters,
-                true_values=true_values,
-                false_values=false_values,
-                skiprows=skiprows,
-                nrows=nrows,
-                na_values=na_values,
-                keep_default_na=keep_default_na,
-                verbose=verbose,
-                parse_dates=parse_dates,
-                date_parser=date_parser,
-                thousands=thousands,
-                comment=comment,
-                skipfooter=skipfooter,
-                convert_float=convert_float,
-                mangle_dupe_cols=mangle_dupe_cols,
-                **kwds
-            )
+        parsed = pandas.read_excel(
+            io,
+            sheet_name=sheet_name,
+            header=header,
+            names=names,
+            index_col=index_col,
+            parse_cols=parse_cols,
+            usecols=usecols,
+            squeeze=squeeze,
+            dtype=dtype,
+            engine=engine,
+            converters=converters,
+            true_values=true_values,
+            false_values=false_values,
+            skiprows=skiprows,
+            nrows=nrows,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            verbose=verbose,
+            parse_dates=parse_dates,
+            date_parser=date_parser,
+            thousands=thousands,
+            comment=comment,
+            skipfooter=skipfooter,
+            convert_float=convert_float,
+            mangle_dupe_cols=mangle_dupe_cols,
+            **kwds
         )
+        if isinstance(parsed, OrderedDict):
+            return parsed
+        else:
+            return cls.from_pandas(parsed)
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
