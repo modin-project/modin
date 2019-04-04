@@ -105,7 +105,9 @@ class BasePandasDataset(object):
                 if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self._query_compiler.columns), len(other))
+                        "given {1}".format(
+                            len(self._query_compiler.columns), len(other)
+                        )
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -114,7 +116,11 @@ class BasePandasDataset(object):
         else:
             other_dtypes = [
                 type(other)
-                for _ in range(len(self._query_compiler.index) if axis else len(self._query_compiler.columns))
+                for _ in range(
+                    len(self._query_compiler.index)
+                    if axis
+                    else len(self._query_compiler.columns)
+                )
             ]
         if hasattr(self, "dtype"):
             self_dtypes = [self.dtype] * len(self)
@@ -177,8 +183,13 @@ class BasePandasDataset(object):
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """Helper method to use default pandas function"""
+        empty_self_str = "" if not self.empty else " for empty DataFrame"
         ErrorMessage.default_to_pandas(
-            "`{}.{}`".format(self.__name__, op if isinstance(op, str) else op.__name__)
+            "`{}.{}`{}".format(
+                self.__name__,
+                op if isinstance(op, str) else op.__name__,
+                empty_self_str,
+            )
         )
         if callable(op):
             result = op(self._to_pandas(), *args, **kwargs)
@@ -344,7 +355,11 @@ class BasePandasDataset(object):
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
                 if hasattr(self, "dtype"):
-                    raise NotImplementedError("{}.{} does not implement numeric_only.".format(self.__name__, "all"))
+                    raise NotImplementedError(
+                        "{}.{} does not implement numeric_only.".format(
+                            self.__name__, "all"
+                        )
+                    )
                 data_for_compute = self[self.columns[self.dtypes == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
@@ -380,7 +395,11 @@ class BasePandasDataset(object):
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
                 if hasattr(self, "dtype"):
-                    raise NotImplementedError("{}.{} does not implement numeric_only.".format(self.__name__, "all"))
+                    raise NotImplementedError(
+                        "{}.{} does not implement numeric_only.".format(
+                            self.__name__, "all"
+                        )
+                    )
                 data_for_compute = self[self.columns[self.dtypes == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=None, skipna=skipna, level=level, **kwargs
@@ -3253,15 +3272,15 @@ class BasePandasDataset(object):
             "__len__",
         ]
         if item not in default_behaviors:
-            if not self.empty:
-                return object.__getattribute__(self, item)
             method = object.__getattribute__(self, item)
             is_callable = callable(method)
-            if not is_callable:
-                return object.__getattribute__(self, item)
+            # We default to pandas on empty DataFrames. This avoids a large amount of
+            # pain in underlying implementation and returns a result immediately rather
+            # than dealing with the edge cases that empty DataFrames have.
+            if self.empty and is_callable:
 
-            def default_handler(*args, **kwargs):
-                return self._default_to_pandas(item, *args, **kwargs)
+                def default_handler(*args, **kwargs):
+                    return self._default_to_pandas(item, *args, **kwargs)
 
-            return default_handler
+                return default_handler
         return object.__getattribute__(self, item)

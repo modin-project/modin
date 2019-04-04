@@ -56,6 +56,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             elif not self._dtype_cache.equals(self.columns):
                 self._dtype_cache.index = self.columns
         if calculate_dtype:
+
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
@@ -63,8 +64,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             reduce_func = self._build_mapreduce_func(dtype_builder)
             # For now we will use a pandas Series for the dtypes.
             self._dtype_cache = (
-                self._full_reduce(0, map_func, reduce_func)
-            ).to_pandas().iloc[0]
+                (self._full_reduce(0, map_func, reduce_func)).to_pandas().iloc[0]
+            )
             # reset name to None because we use "__reduced__" internally
             self._dtype_cache.name = None
         return self._dtype_cache
@@ -940,7 +941,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if sums._is_transposed and counts._is_transposed:
             sums = sums.transpose()
             counts = counts.transpose()
-        result = sums.truediv(counts, axis=axis)
+        result = sums.binary_op("truediv", counts, axis=axis)
         return result.transpose() if axis == 0 else result
 
     def min(self, **kwargs):

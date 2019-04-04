@@ -200,191 +200,37 @@ class BaseQueryCompiler(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    def add(self, other, **kwargs):
-        """Adds this manager with other object (manager or scalar).
+    def binary_op(self, op, other, **kwargs):
+        """Perform an operation between two objects.
 
+        Note: The list of operations is as follows:
+            - add
+            - eq
+            - floordiv
+            - ge
+            - gt
+            - le
+            - lt
+            - mod
+            - mul
+            - ne
+            - pow
+            - rfloordiv
+            - rmod
+            - rpow
+            - rsub
+            - rtruediv
+            - sub
+            - truediv
+            - __and__
+            - __or__
+            - __xor__
         Args:
-            other: The other object (manager or scalar).
+            op: The operation. See list of operations above
+            other: The object to operate against.
 
         Returns:
-            New DataManager with added data and new index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def eq(self, other, **kwargs):
-        """Compares equality (==) with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def floordiv(self, other, **kwargs):
-        """Floordivs this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with floordiv-ed data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def ge(self, other, **kwargs):
-        """Compares this manager >= than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def gt(self, other, **kwargs):
-        """Compares this manager > than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def le(self, other, **kwargs):
-        """Compares this manager < than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def lt(self, other, **kwargs):
-        """Compares this manager <= than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def mod(self, other, **kwargs):
-        """Mods this manager against other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with mod-ed data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def mul(self, other, **kwargs):
-        """Multiplies this manager against other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with multiplied data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def ne(self, other, **kwargs):
-        """Compares this manager != to other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def pow(self, other, **kwargs):
-        """Exponential power of this manager to other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with pow-ed data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def rfloordiv(self, other, **kwargs):
-        """Floordivs this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with floordiv-ed data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def rmod(self, other, **kwargs):
-        """Mods this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with mod data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def rpow(self, other, **kwargs):
-        """Exponential power of other object (manager or scalar) to this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with pow-ed data and new index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def rsub(self, other, **kwargs):
-        """Subtracts other object (manager or scalar) from this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with subtracted data and new index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def sub(self, other, **kwargs):
-        """Subtracts this manager from other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with subtracted data and new index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def truediv(self, other, **kwargs):
-        """Divides this manager with other object (manager or scalar).
-           Functionally same as div
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with divided data and new index.
+            A new QueryCompiler object.
         """
         raise NotImplementedError("Must be implemented in children classes")
 

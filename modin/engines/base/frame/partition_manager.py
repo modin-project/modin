@@ -500,10 +500,12 @@ class BaseFrameManager(object):
             chunk.columns = pandas.RangeIndex(len(chunk.columns))
             return put_func(chunk)
 
-        parts = np.array([
-            [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
-            for i in range(0, len(df), row_chunksize)
-        ])
+        parts = np.array(
+            [
+                [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
+                for i in range(0, len(df), row_chunksize)
+            ]
+        )
         if parts.size == 0:
             parts = np.array([[put_func(df)]])
         return cls(parts)
