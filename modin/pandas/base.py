@@ -96,16 +96,16 @@ class BasePandasDataset(object):
             return other._query_compiler
         elif is_list_like(other):
             if axis == 0:
-                if len(other) != len(self.index):
+                if len(other) != len(self._query_compiler.index):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self.index), len(other))
+                        "given {1}".format(len(self._query_compiler.index), len(other))
                     )
             else:
-                if len(other) != len(self.columns):
+                if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
                         "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self.columns), len(other))
+                        "given {1}".format(len(self._query_compiler.columns), len(other))
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -114,7 +114,7 @@ class BasePandasDataset(object):
         else:
             other_dtypes = [
                 type(other)
-                for _ in range(len(self.index) if axis else len(self.columns))
+                for _ in range(len(self._query_compiler.index) if axis else len(self._query_compiler.columns))
             ]
         if hasattr(self, "dtype"):
             self_dtypes = [self.dtype] * len(self)
@@ -170,8 +170,8 @@ class BasePandasDataset(object):
                 getattr(getattr(pandas, self.__name__), op), other, axis=axis, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
-        new_query_compiler = getattr(self._query_compiler, op)(
-            other=other, axis=axis, **kwargs
+        new_query_compiler = self._query_compiler.binary_op(
+            op, other=other, axis=axis, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler)
 
@@ -3089,7 +3089,7 @@ class BasePandasDataset(object):
         return self.abs()
 
     def __and__(self, other):
-        return self.__bool__() and other
+        return self._binary_op("__and__", other, axis=0)
 
     def __array__(self, dtype=None):
         # TODO: This is very inefficient and needs fix, also see as_matrix
@@ -3188,7 +3188,7 @@ class BasePandasDataset(object):
     __bool__ = __nonzero__
 
     def __or__(self, other):
-        return self.__bool__() or other
+        return self._binary_op("__or__", other, axis=0)
 
     def __sizeof__(self):
         return self._default_to_pandas("__sizeof__")
@@ -3197,7 +3197,7 @@ class BasePandasDataset(object):
         return repr(self)
 
     def __xor__(self, other):
-        return self.__bool__() ^ other
+        return self._binary_op("__xor__", other, axis=0)
 
     @property
     def blocks(self):

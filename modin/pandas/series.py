@@ -103,6 +103,10 @@ class Series(BasePandasDataset):
     def __add__(self, right):
         return self.add(right)
 
+    def __and__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__and__(new_other)
+
     def __array_prepare__(self, result, context=None):
         return self._to_pandas().__array_prepare__(result, context=context)
 
@@ -174,6 +178,10 @@ class Series(BasePandasDataset):
     def __mul__(self, right):
         return self.mul(right)
 
+    def __or__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__or__(new_other)
+
     def __pow__(self, right):
         return self.pow(right)
 
@@ -213,6 +221,10 @@ class Series(BasePandasDataset):
 
     def __truediv__(self, right):
         return self.truediv(right)
+
+    def __xor__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)

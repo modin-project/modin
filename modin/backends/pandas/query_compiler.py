@@ -585,221 +585,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis, other, lambda df: func(df, other, **kwargs)
             )
 
-    def add(self, other, **kwargs):
-        """Adds this manager with other object (manager or scalar).
+    def binary_op(self, op, other, **kwargs):
+        """Perform an operation between two objects.
 
+        Note: The list of operations is as follows:
+            - add
+            - eq
+            - floordiv
+            - ge
+            - gt
+            - le
+            - lt
+            - mod
+            - mul
+            - ne
+            - pow
+            - rfloordiv
+            - rmod
+            - rpow
+            - rsub
+            - rtruediv
+            - sub
+            - truediv
+            - __and__
+            - __or__
+            - __xor__
         Args:
-            other: The other object (manager or scalar).
+            op: The operation. See list of operations above
+            other: The object to operate against.
 
         Returns:
-            New DataManager with added data and new index.
+            A new QueryCompiler object.
         """
-        func = pandas.DataFrame.add
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def eq(self, other, **kwargs):
-        """Compares equality (==) with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.eq
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def floordiv(self, other, **kwargs):
-        """Floordivs this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with floordiv-ed data and index.
-        """
-        func = pandas.DataFrame.floordiv
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def ge(self, other, **kwargs):
-        """Compares this manager >= than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.ge
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def gt(self, other, **kwargs):
-        """Compares this manager > than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.gt
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def le(self, other, **kwargs):
-        """Compares this manager < than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.le
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def lt(self, other, **kwargs):
-        """Compares this manager <= than other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.lt
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def mod(self, other, **kwargs):
-        """Mods this manager against other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with mod-ed data and index.
-        """
-        func = pandas.DataFrame.mod
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def mul(self, other, **kwargs):
-        """Multiplies this manager against other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with multiplied data and index.
-        """
-        func = pandas.DataFrame.mul
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def ne(self, other, **kwargs):
-        """Compares this manager != to other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with compared data and index.
-        """
-        func = pandas.DataFrame.ne
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def pow(self, other, **kwargs):
-        """Exponential power of this manager to other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with pow-ed data and index.
-        """
-        func = pandas.DataFrame.pow
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def rfloordiv(self, other, **kwargs):
-        """Floordivs this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with floordiv-ed data and index.
-        """
-        func = pandas.DataFrame.rfloordiv
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def rmod(self, other, **kwargs):
-        """Mods this manager with other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with mod data and index.
-        """
-        func = pandas.DataFrame.rmod
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def rpow(self, other, **kwargs):
-        """Exponential power of other object (manager or scalar) to this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with pow-ed data and new index.
-        """
-        func = pandas.DataFrame.rpow
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def rsub(self, other, **kwargs):
-        """Subtracts other object (manager or scalar) from this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with subtracted data and new index.
-        """
-        func = pandas.DataFrame.rsub
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def rtruediv(self, other, **kwargs):
-        """Divides other object (manager or scalar) with this manager.
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with divided data and new index.
-        """
-        func = pandas.DataFrame.rtruediv
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def sub(self, other, **kwargs):
-        """Subtracts this manager from other object (manager or scalar).
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with subtracted data and new index.
-        """
-        func = pandas.DataFrame.sub
-        return self._inter_df_op_handler(func, other, **kwargs)
-
-    def truediv(self, other, **kwargs):
-        """Divides this manager with other object (manager or scalar).
-           Functionally same as div
-
-        Args:
-            other: The other object (manager or scalar).
-
-        Returns:
-            New DataManager with divided data and new index.
-        """
-        func = pandas.DataFrame.truediv
+        func = getattr(pandas.DataFrame, op)
         return self._inter_df_op_handler(func, other, **kwargs)
 
     def clip(self, lower, upper, **kwargs):

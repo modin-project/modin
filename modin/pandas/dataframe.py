@@ -1708,7 +1708,7 @@ class DataFrame(BasePandasDataset):
         indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
         if indexer is not None:
             return self._getitem_slice(indexer)
-        if isinstance(key, (pandas.Series, np.ndarray, pandas.Index, list)):
+        if isinstance(key, (Series, np.ndarray, pandas.Index, list)):
             return self._getitem_array(key)
         elif isinstance(key, DataFrame):
             return self.where(key)
@@ -1726,6 +1726,9 @@ class DataFrame(BasePandasDataset):
         return s
 
     def _getitem_array(self, key):
+        # TODO: dont convert to pandas for array indexing
+        if isinstance(key, Series):
+            key = key._to_pandas()
         if is_bool_indexer(key):
             if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
