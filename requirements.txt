@@ -15,7 +15,7 @@ s3fs
 pytest==3.9.3
 coverage
 pytest-cov
-pytest-xdist
+pytest-xdist==1.27.0
 feather-format
 lxml
 openpyxl
