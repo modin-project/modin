@@ -311,7 +311,7 @@ class BaseIO(object):
         if skip_footer != 0:
             skipfooter = skip_footer
         ErrorMessage.default_to_pandas("`read_excel`")
-        parsed = pandas.read_excel(
+        intermediate = pandas.read_excel(
             io,
             sheet_name=sheet_name,
             header=header,
@@ -339,10 +339,13 @@ class BaseIO(object):
             mangle_dupe_cols=mangle_dupe_cols,
             **kwds
         )
-        if isinstance(parsed, OrderedDict):
+        if isinstance(intermediate, OrderedDict):
+            parsed = OrderedDict()
+            for key in intermediate.keys():
+                parsed[key] = cls.from_pandas(intermediate.get(key))
             return parsed
         else:
-            return cls.from_pandas(parsed)
+            return cls.from_pandas(intermediate)
 
     @classmethod
     def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):

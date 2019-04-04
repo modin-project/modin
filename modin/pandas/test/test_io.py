@@ -410,7 +410,7 @@ def test_from_excel_all_sheets():
     assert pandas_df.keys() == modin_df.keys()
 
     for key in pandas_df.keys():
-        assert modin_df.get(key).equals(pandas_df.get(key))
+        assert modin_df_equals_pandas(modin_df.get(key), pandas_df.get(key))
 
     teardown_excel_file()
 

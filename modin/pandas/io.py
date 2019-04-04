@@ -220,11 +220,14 @@ def read_excel(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
-    parsed = BaseFactory.read_excel(**kwargs)
-    if isinstance(parsed, OrderedDict):
+    intermediate = BaseFactory.read_excel(**kwargs)
+    if isinstance(intermediate, OrderedDict):
+        parsed = OrderedDict()
+        for key in intermediate.keys():
+            parsed[key] = DataFrame(query_compiler=intermediate.get(key))
         return parsed
     else:
-        return DataFrame(query_compiler=parsed)
+        return DataFrame(query_compiler=intermediate)
 
 
 def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
