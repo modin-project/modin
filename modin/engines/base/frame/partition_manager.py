@@ -55,8 +55,8 @@ class BaseFrameManager(object):
     _filtered_empties = False
 
     def _get_partitions(self):
-        if not self._filtered_empties:
-            self._partitions_cache = np.array(
+        if not self._filtered_empties and self._partitions_cache.size > 1:
+            new_cache = np.array(
                 [
                     row
                     for row in [
@@ -70,6 +70,10 @@ class BaseFrameManager(object):
                     if len(row)
                 ]
             )
+            if new_cache.size == 0:
+                self._partitions_cache = np.array([[self._partitions_cache[0][0]]])
+            else:
+                self._partitions_cache = new_cache
             self._remove_empty_blocks()
             self._filtered_empties = True
         return self._partitions_cache
@@ -170,9 +174,9 @@ class BaseFrameManager(object):
         return self._widths_cache
 
     def _remove_empty_blocks(self):
-        if self._widths_cache is not None:
+        if self._widths_cache is not None and len(self._widths_cache) > 1:
             self._widths_cache = [width for width in self._widths_cache if width != 0]
-        if self._lengths_cache is not None:
+        if self._lengths_cache is not None and len(self._lengths_cache) > 1:
             self._lengths_cache = np.array(
                 [length for length in self._lengths_cache if length != 0]
             )
@@ -496,11 +500,13 @@ class BaseFrameManager(object):
             chunk.columns = pandas.RangeIndex(len(chunk.columns))
             return put_func(chunk)
 
-        parts = [
+        parts = np.array([
             [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
             for i in range(0, len(df), row_chunksize)
-        ]
-        return cls(np.array(parts))
+        ])
+        if parts.size == 0:
+            parts = np.array([[put_func(df)]])
+        return cls(parts)
 
     def get_indices(self, axis=0, index_func=None, old_blocks=None):
         """This gets the internal indices stored in the partitions.

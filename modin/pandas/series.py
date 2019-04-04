@@ -194,6 +194,8 @@ class Series(BasePandasDataset):
         else:
             len_str = ""
         dtype_str = "dtype: {}".format(temp_str.rsplit("dtype: ", 1)[-1])
+        if len(self) == 0:
+            return "Series([], {}{}".format(name_str, dtype_str)
         return temp_str.rsplit("\nName:", 1)[0] + "\n{}{}{}".format(
             name_str, len_str, dtype_str
         )

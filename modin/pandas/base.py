@@ -342,6 +342,13 @@ class BasePandasDataset(object):
         """
         if axis is not None:
             axis = self._get_axis_number(axis)
+            if bool_only and axis == 0:
+                if hasattr(self, "dtype"):
+                    raise NotImplementedError("{}.{} does not implement numeric_only.".format(self.__name__, "all"))
+                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                return data_for_compute.all(
+                    axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
+                )
             return self._reduce_dimension(
                 self._query_compiler.all(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -371,6 +378,13 @@ class BasePandasDataset(object):
         """
         if axis is not None:
             axis = self._get_axis_number(axis)
+            if bool_only and axis == 0:
+                if hasattr(self, "dtype"):
+                    raise NotImplementedError("{}.{} does not implement numeric_only.".format(self.__name__, "all"))
+                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                return data_for_compute.all(
+                    axis=axis, bool_only=None, skipna=skipna, level=level, **kwargs
+                )
             return self._reduce_dimension(
                 self._query_compiler.any(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -3214,3 +3228,40 @@ class BasePandasDataset(object):
     @property
     def __name__(self):
         return type(self).__name__
+
+    def __getattribute__(self, item):
+        default_behaviors = [
+            "__init__",
+            "__class__",
+            "index",
+            "_get_index",
+            "_set_index",
+            "empty",
+            "index",
+            "columns",
+            "name",
+            "_get_name",
+            "_set_name",
+            "dtypes",
+            "dtype",
+            "_default_to_pandas",
+            "_query_compiler",
+            "_to_pandas",
+            "_build_repr_df",
+            "_reduce_dimension",
+            "__repr__",
+            "__len__",
+        ]
+        if item not in default_behaviors:
+            if not self.empty:
+                return object.__getattribute__(self, item)
+            method = object.__getattribute__(self, item)
+            is_callable = callable(method)
+            if not is_callable:
+                return object.__getattribute__(self, item)
+
+            def default_handler(*args, **kwargs):
+                return self._default_to_pandas(item, *args, **kwargs)
+
+            return default_handler
+        return object.__getattribute__(self, item)
