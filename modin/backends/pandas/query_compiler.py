@@ -1722,19 +1722,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ]
         else:
             exclude = kwargs.get("exclude", None)
-            # This is done to check against the default dtypes with 'in'.
-            # We don't change `include` in kwargs, so we can just use this for the
-            # check.
-            include = []
-            default_excludes = [np.timedelta64, np.datetime64, np.object, np.bool]
-            add_to_excludes = [e for e in default_excludes if e not in include]
-            if isinstance(exclude, list):
-                exclude.extend(add_to_excludes)
-            else:
-                exclude = add_to_excludes
-            kwargs["exclude"] = exclude
-            # Update `new_columns` to reflect the included types
-            new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
+            if exclude is not None:
+                add_to_excludes = [e for e in exclude if e not in include]
+                if isinstance(exclude, list):
+                    exclude.extend(add_to_excludes)
+                else:
+                    exclude = add_to_excludes
+                kwargs["exclude"] = exclude
+                # Update `new_columns` to reflect the included types
+                new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
 
         def describe_builder(df, internal_indices=[], **kwargs):
             return df.iloc[:, internal_indices].describe(**kwargs)
