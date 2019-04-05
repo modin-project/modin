@@ -1723,15 +1723,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             exclude = kwargs.get("exclude", None)
             if exclude is not None:
-                if is_list_like(include):
-                    add_to_excludes = [e for e in exclude if e not in include]
-                else:
-                    add_to_excludes = exclude
-                if isinstance(exclude, list):
-                    exclude.extend(add_to_excludes)
-                else:
-                    exclude = add_to_excludes
-                kwargs["exclude"] = exclude
                 # Update `new_columns` to reflect the included types
                 new_columns = self.dtypes[~self.dtypes.isin(exclude)].index
 
