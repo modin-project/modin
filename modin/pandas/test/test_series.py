@@ -3,1550 +3,1609 @@ from __future__ import division
 from __future__ import print_function
 
 import pytest
+import numpy as np
+import pandas
+import pandas.util.testing as tm
+from pandas.tests.frame.common import TestData
+import matplotlib
 import modin.pandas as pd
+from modin.pandas.utils import to_pandas
+from numpy.testing import assert_array_equal
+import sys
+
+from .utils import (
+    random_state,
+    RAND_LOW,
+    RAND_HIGH,
+    df_equals,
+    df_is_empty,
+    arg_keys,
+    name_contains,
+    test_data_values,
+    test_data_keys,
+    numeric_dfs,
+    no_numeric_dfs,
+    test_func_keys,
+    test_func_values,
+    query_func_keys,
+    query_func_values,
+    agg_func_keys,
+    agg_func_values,
+    numeric_agg_funcs,
+    quantiles_keys,
+    quantiles_values,
+    indices_keys,
+    indices_values,
+    axis_keys,
+    axis_values,
+    bool_arg_keys,
+    bool_arg_values,
+    int_arg_keys,
+    int_arg_values,
+)
 
 pd.DEFAULT_NPARTITIONS = 4
 
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use("Agg")
 
-@pytest.fixture
-def create_test_series():
-    return pd.Series(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_T():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.T
+if sys.version_info[0] < 3:
+    PY2 = True
+else:
+    PY2 = False
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___abs__():
-    ray_series = create_test_series()
+def inter_df_math_helper(modin_series, pandas_series, op):
+    try:
+        pandas_result = getattr(pandas_series, op)(4)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            getattr(modin_series, op)(4)
+    else:
+        modin_result = getattr(modin_series, op)(4)
+        df_equals(modin_result, pandas_result)
 
-    with pytest.raises(NotImplementedError):
-        ray_series.__abs__()
+    try:
+        pandas_result = getattr(pandas_series, op)(4.0)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            getattr(modin_series, op)(4.0)
+    else:
+        modin_result = getattr(modin_series, op)(4.0)
+        df_equals(modin_result, pandas_result)
 
+    # These operations don't support non-scalar `other`
+    if op in ["__divmod__", "divmod", "rdivmod"]:
+        return
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___add__():
-    ray_series = create_test_series()
+    try:
+        pandas_result = getattr(pandas_series, op)(pandas_series)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            getattr(modin_series, op)(modin_series)
+    else:
+        modin_result = getattr(modin_series, op)(modin_series)
+        df_equals(modin_result, pandas_result)
 
-    with pytest.raises(NotImplementedError):
-        ray_series.__add__(None, None)
+    list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
+    try:
+        pandas_result = getattr(pandas_series, op)(list_test)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            getattr(modin_series, op)(list_test)
+    else:
+        modin_result = getattr(modin_series, op)(list_test)
+        df_equals(modin_result, pandas_result)
 
+    series_test_modin = pd.Series(list_test, index=modin_series.index)
+    series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
+    try:
+        pandas_result = getattr(pandas_series, op)(series_test_pandas)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            getattr(modin_series, op)(series_test_modin)
+    else:
+        modin_result = getattr(modin_series, op)(series_test_modin)
+        df_equals(modin_result, pandas_result)
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___and__():
-    ray_series = create_test_series()
+    # Level test
+    new_idx = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_series.index]
+    )
+    modin_df_multi_level = modin_series.copy()
+    modin_df_multi_level.index = new_idx
 
-    with pytest.raises(NotImplementedError):
-        ray_series.__and__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___array__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__array__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___array_prepare__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__array_prepare__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___array_priority__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__array_priority__
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___array_wrap__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__array_wrap__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___bool__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__bool__()
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___bytes__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__bytes__()
+    try:
+        # Defaults to pandas
+        with pytest.warns(UserWarning):
+            # Operation against self for sanity check
+            getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
+    except TypeError:
+        # Some operations don't support multilevel `level` parameter
+        pass
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___class__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__class__(None, None, None, None, None)
+def create_test_series(dict_vals):
+    modin_series = pd.Series(dict_vals[next(iter(dict_vals.keys()))])
+    pandas_series = pandas.Series(dict_vals[next(iter(dict_vals.keys()))])
+    return modin_series, pandas_series
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___contains__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__contains__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_T(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.T, pandas_series.T)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___copy__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__copy__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___abs__(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.__abs__(), pandas_series.__abs__())
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___deepcopy__():
-    ray_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___add__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__add__")
 
-    with pytest.raises(NotImplementedError):
-        ray_series.__deepcopy__(None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___and__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__and__")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___array__(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.__array__()
+    assert_array_equal(modin_result, pandas_series.__array__())
+
+
+@pytest.mark.skip(reason="Defaulting to pandas")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___array_prepare__(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.__array_prepare__()
+    assert_array_equal(modin_result, pandas_series.__array_prepare__())
+
+
+@pytest.mark.skip(reason="Defaulting to pandas")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___array_priority__(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.__array_priority__()
+    assert_array_equal(modin_result, pandas_series.__array_priority__())
+
+
+@pytest.mark.skip(reason="Defaulting to pandas")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___array_wrap__(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.__array_wrap__()
+    assert_array_equal(modin_result, pandas_series.__array_wrap__())
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___bool__(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.__bool__()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.__bool__()
+    else:
+        modin_result = modin_series.__bool__()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___contains__(request, data):
+    modin_series, pandas_series = create_test_series(data)
+
+    result = False
+    key = "Not Exist"
+    assert result == modin_series.__contains__(key)
+    assert result == (key in modin_series)
+
+    if "empty_data" not in request.node.name:
+        result = True
+        key = pandas_series.keys()[0]
+        assert result == modin_series.__contains__(key)
+        assert result == (key in modin_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_copy(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.copy(), modin_series)
+    df_equals(modin_series.copy(), pandas_series.copy())
+    df_equals(modin_series.copy(), pandas_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___deepcopy__(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.__deepcopy__(), modin_series)
+    df_equals(modin_series.__deepcopy__(), pandas_series.__deepcopy__())
+    df_equals(modin_series.__deepcopy__(), pandas_series)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___delitem__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__delitem__(None)
+        modin_series.__delitem__(None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___div__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__div__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___div__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__div__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___divmod__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__divmod__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_divmod(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "divmod")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___doc__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__doc__
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rdivmod(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rdivmod")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___eq__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__eq__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___eq__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__eq__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___finalize__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__finalize__(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___float__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__float__()
+@pytest.mark.skip(reason="Come back to fix")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___floordiv__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__floordiv__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___floordiv__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__floordiv__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___ge__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__ge__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___ge__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__ge__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___getitem__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__getitem__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___getitem__(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series[0], pandas_series[0])
+    df_equals(
+        modin_series[modin_series.index[-1]],
+        pandas_series[pandas_series.index[-1]]
+    )
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___getstate__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__getstate__()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___gt__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__gt__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___gt__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__gt__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___iadd__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__iadd__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___imul__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__imul__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___int__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__int__()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___int__(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = int(pandas_series[0])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            int(modin_series[0])
+    else:
+        assert int(modin_series[0]) == pandas_result
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___invert__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__invert__()
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___ipow__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__ipow__(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___isub__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__isub__(None)
+        modin_series.__invert__()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___iter__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__iter__()
+        modin_series.__iter__()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___itruediv__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__itruediv__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___le__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__le__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___le__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__le__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___len__(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert len(modin_series) == len(pandas_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___len__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__len__()
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___long__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__long__()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___long__(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = long(pandas_series[0])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            long(modin_series[0])
+    else:
+        assert long(modin_series[0]) == pandas_result
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___lt__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__lt__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___lt__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__lt__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___mod__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__mod__(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___mul__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__mul__(None, None)
+@pytest.mark.skip(reason="Come back to fix")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___mod__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__mod__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___ne__():
-    ray_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___mul__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__mul__")
 
-    with pytest.raises(NotImplementedError):
-        ray_series.__ne__(None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___ne__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__ne__")
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___neg__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__neg__()
+        modin_series.__neg__()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___nonzero__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__nonzero__()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___or__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__or__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___or__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__or__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___pow__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__pow__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___pow__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__pow__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___repr__(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert repr(modin_series) == repr(pandas_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___repr__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__repr__()
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___round__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__round__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___round__(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(round(modin_series), round(pandas_series))
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___setitem__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__setitem__(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___setstate__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__setstate__(None)
+        modin_series.__setitem__(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test___sizeof__():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.__sizeof__()
+        modin_series.__sizeof__()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___str__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__str__()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___str__(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert str(modin_series) == str(pandas_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___sub__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__sub__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___sub__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__sub__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___truediv__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__truediv__(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___truediv__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__truediv__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test___xor__():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.__xor__(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___xor__(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "__xor__")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_abs():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.abs()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_abs(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.abs(), pandas_series.abs())
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_add():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.add(None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "add")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_add_prefix():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.add_prefix(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add_prefix(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.add_prefix("PREFIX_ADD_"), pandas_series.add_prefix("PREFIX_ADD_"))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_add_suffix():
-    ray_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        ray_series.add_suffix(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add_suffix(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.add_suffix("SUFFIX_ADD_"), pandas_series.add_suffix("SUFFIX_ADD_"))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_agg():
-    ray_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_agg(data, func):
+    axis = 0
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        ray_series.agg(None, None, None)
+    try:
+        pandas_result = pandas_series.agg(func, axis)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.agg(func, axis)
+    else:
+        modin_result = modin_series.agg(func, axis)
+        df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_aggregate():
-    ray_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_agg_numeric(request, data, func):
+    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
+        request.node.name, numeric_dfs
+    ):
+        axis = 0
+        modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        ray_series.aggregate(None, None, None)
+        try:
+            pandas_result = pandas_series.agg(func, axis)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.agg(func, axis)
+        else:
+            modin_result = modin_series.agg(func, axis)
+            df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_aggregate(request, data, func):
+    axis = 0
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.aggregate(func, axis)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.aggregate(func, axis)
+    else:
+        modin_result = modin_series.aggregate(func, axis)
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_aggregate_numeric(request, data, func):
+    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
+        request.node.name, numeric_dfs
+    ):
+        axis = 0
+        modin_series, pandas_series = create_test_series(data)
+
+        try:
+            pandas_result = pandas_series.agg(func, axis)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.agg(func, axis)
+        else:
+            modin_result = modin_series.agg(func, axis)
+            df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_aggregate_error_checking(data):
+    modin_series, _ = create_test_series(data)
+
+    assert modin_series.aggregate("ndim") == 1
+
+    with pytest.warns(UserWarning):
+        modin_series.aggregate("cumproduct")
+
+    with pytest.raises(ValueError):
+        modin_series.aggregate("NOT_EXISTS")
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_align():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.align(None, None, None, None, None, None, None, None, None)
+        modin_series.align(None, None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_all():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.all(None, None, None, None)
+        modin_series.all(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_any():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.any(None, None, None, None)
+        modin_series.any(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_append():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.append(None, None)
+        modin_series.append(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_apply():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.apply(None, None, None)
+        modin_series.apply(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_argmax():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.argmax(None, None, None)
+        modin_series.argmax(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_argmin():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.argmin(None, None, None)
+        modin_series.argmin(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_argsort():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.argsort(None, None)
+        modin_series.argsort(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_as_blocks():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.as_blocks(None)
+        modin_series.as_blocks(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_as_matrix():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.as_matrix(None)
+        modin_series.as_matrix(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_asfreq():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.asfreq(None, None, None, None)
+        modin_series.asfreq(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_asobject():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.asobject
+        modin_series.asobject
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_asof():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.asof(None)
+        modin_series.asof(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_astype():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.astype(None, None, None)
+        modin_series.astype(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_at():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.at(None)
+        modin_series.at(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_at_time():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.at_time(None)
+        modin_series.at_time(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_autocorr():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.autocorr(None)
+        modin_series.autocorr(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_axes():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.axes
+        modin_series.axes
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_base():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.base
+        modin_series.base
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_between():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.between(None, None)
+        modin_series.between(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_between_time():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.between_time(None, None, None)
+        modin_series.between_time(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_bfill():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.bfill(None, None, None)
+        modin_series.bfill(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_blocks():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.blocks
+        modin_series.blocks
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_bool():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.bool()
+        modin_series.bool()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_clip():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.clip(None, None, None, None)
+        modin_series.clip(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_clip_lower():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.clip_lower(None)
+        modin_series.clip_lower(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_clip_upper():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.clip_upper(None)
+        modin_series.clip_upper(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_combine():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.combine(None, None)
+        modin_series.combine(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_combine_first():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.combine_first(None)
+        modin_series.combine_first(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_compound():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.compound(None, None)
+        modin_series.compound(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_compress():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.compress(None, None)
+        modin_series.compress(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_consolidate():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.consolidate(None)
+        modin_series.consolidate(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_convert_objects():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.convert_objects(None, None, None)
+        modin_series.convert_objects(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_copy():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.copy(None)
+        modin_series.copy(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_corr():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.corr(None, None)
+        modin_series.corr(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_count():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.count(None)
+        modin_series.count(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_cov():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.cov(None)
+        modin_series.cov(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_cummax():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.cummax(None, None, None)
+        modin_series.cummax(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_cummin():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.cummin(None, None, None)
+        modin_series.cummin(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_cumprod():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.cumprod(None, None, None)
+        modin_series.cumprod(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_cumsum():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.cumsum(None, None, None)
+        modin_series.cumsum(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_data():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.data
+        modin_series.data
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_describe():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.describe(None, None)
+        modin_series.describe(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_diff():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.diff(None)
+        modin_series.diff(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_div():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.div(None, None, None)
+        modin_series.div(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_divide():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.divide(None, None, None)
+        modin_series.divide(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_dot():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.dot(None)
+        modin_series.dot(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_drop():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.drop(None, None, None, None)
+        modin_series.drop(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_drop_duplicates():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.drop_duplicates(None)
+        modin_series.drop_duplicates(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_dropna():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.dropna(None, None)
+        modin_series.dropna(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_dtype():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.dtype
+        modin_series.dtype
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_dtypes():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.dtypes
+        modin_series.dtypes
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_duplicated():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.duplicated(None)
+        modin_series.duplicated(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_empty():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.empty
+        modin_series.empty
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_eq():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.eq(None, None, None)
+        modin_series.eq(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_equals():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.equals(None)
+        modin_series.equals(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ewm():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ewm(None, None, None, None, None, None, None, None)
+        modin_series.ewm(None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_expanding():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.expanding(None, None, None)
+        modin_series.expanding(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_factorize():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.factorize(None)
+        modin_series.factorize(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ffill():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ffill(None, None, None)
+        modin_series.ffill(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_fillna():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.fillna(None, None, None, None, None, None)
+        modin_series.fillna(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_filter():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.filter(None, None, None)
+        modin_series.filter(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_first():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.first(None)
+        modin_series.first(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_first_valid_index():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.first_valid_index()
+        modin_series.first_valid_index()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_flags():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.flags
+        modin_series.flags
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_floordiv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.floordiv(None, None, None)
+        modin_series.floordiv(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_from_array():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.from_array(None, None, None, None, None)
+        modin_series.from_array(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_from_csv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.from_csv(None, None, None, None, None, None)
+        modin_series.from_csv(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ftype():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ftype
+        modin_series.ftype
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ftypes():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ftypes
+        modin_series.ftypes
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ge():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ge(None, None, None)
+        modin_series.ge(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_get():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.get(None)
+        modin_series.get(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_get_dtype_counts():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.get_dtype_counts()
+        modin_series.get_dtype_counts()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_get_ftype_counts():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.get_ftype_counts()
+        modin_series.get_ftype_counts()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_get_value():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.get_value(None)
+        modin_series.get_value(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_get_values():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.get_values()
+        modin_series.get_values()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_groupby():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.groupby(None, None, None, None, None, None, None)
+        modin_series.groupby(None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_gt():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.gt(None, None, None)
+        modin_series.gt(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_hasnans():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.hasnans
+        modin_series.hasnans
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_head():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.head(None)
+        modin_series.head(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_hist():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.hist(None, None, None, None, None, None, None, None, None)
+        modin_series.hist(None, None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_iat():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.iat(None)
+        modin_series.iat(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_idxmax():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.idxmax(None, None, None)
+        modin_series.idxmax(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_idxmin():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.idxmin(None, None, None)
+        modin_series.idxmin(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_iloc():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.iloc(None)
+        modin_series.iloc(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_imag():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.imag
+        modin_series.imag
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_index():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.index
+        modin_series.index
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_interpolate():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.interpolate(None, None, None, None, None, None)
+        modin_series.interpolate(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_is_copy():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.is_copy
+        modin_series.is_copy
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_is_monotonic():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.is_monotonic
+        modin_series.is_monotonic
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_is_monotonic_decreasing():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.is_monotonic_decreasing
+        modin_series.is_monotonic_decreasing
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_is_monotonic_increasing():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.is_monotonic_increasing
+        modin_series.is_monotonic_increasing
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_is_unique():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.is_unique
+        modin_series.is_unique
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_isin():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.isin(None)
+        modin_series.isin(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_isnull():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.isnull()
+        modin_series.isnull()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_item():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.item()
+        modin_series.item()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_items():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.items()
+        modin_series.items()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_itemsize():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.itemsize
+        modin_series.itemsize
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_iteritems():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.iteritems()
+        modin_series.iteritems()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ix():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ix(None)
+        modin_series.ix(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_keys():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.keys()
+        modin_series.keys()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_kurt():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.kurt(None, None, None, None)
+        modin_series.kurt(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_kurtosis():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.kurtosis(None, None, None, None)
+        modin_series.kurtosis(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_last():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.last(None)
+        modin_series.last(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_last_valid_index():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.last_valid_index()
+        modin_series.last_valid_index()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_le():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.le(None, None, None)
+        modin_series.le(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_loc():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.loc(None)
+        modin_series.loc(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_lt():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.lt(None, None, None)
+        modin_series.lt(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mad():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mad(None, None)
+        modin_series.mad(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_map():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.map(None)
+        modin_series.map(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mask():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mask(None, None, None, None, None, None)
+        modin_series.mask(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_max():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.max(None, None, None, None)
+        modin_series.max(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mean():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mean(None, None, None, None)
+        modin_series.mean(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_median():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.median(None, None, None, None)
+        modin_series.median(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_memory_usage():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.memory_usage(None)
+        modin_series.memory_usage(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_min():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.min(None, None, None, None)
+        modin_series.min(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mod():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mod(None, None, None)
+        modin_series.mod(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mode():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mode()
+        modin_series.mode()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_mul():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.mul(None, None, None)
+        modin_series.mul(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_multiply():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.multiply(None, None, None)
+        modin_series.multiply(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_name():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.name
+        modin_series.name
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_nbytes():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.nbytes
+        modin_series.nbytes
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ndim():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ndim
+        modin_series.ndim
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ne():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ne(None, None, None)
+        modin_series.ne(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_nlargest():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.nlargest(None)
+        modin_series.nlargest(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_nonzero():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.nonzero()
+        modin_series.nonzero()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_notnull():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.notnull()
+        modin_series.notnull()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_nsmallest():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.nsmallest(None)
+        modin_series.nsmallest(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_nunique():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.nunique(None)
+        modin_series.nunique(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_pct_change():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.pct_change(None, None, None, None)
+        modin_series.pct_change(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_pipe():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.pipe(None, None)
+        modin_series.pipe(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_plot():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.plot(
+        modin_series.plot(
             None,
             None,
             None,
@@ -1575,484 +1634,484 @@ def test_plot():
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_pop():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.pop(None)
+        modin_series.pop(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_pow():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.pow(None, None, None)
+        modin_series.pow(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_prod():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.prod(None, None, None, None)
+        modin_series.prod(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_product():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.product(None, None, None, None)
+        modin_series.product(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ptp():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ptp(None, None, None, None)
+        modin_series.ptp(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_put():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.put(None)
+        modin_series.put(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_quantile():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.quantile(None)
+        modin_series.quantile(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_radd():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.radd(None, None, None)
+        modin_series.radd(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rank():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rank(None, None, None, None, None)
+        modin_series.rank(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_ravel():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.ravel(None)
+        modin_series.ravel(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rdiv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rdiv(None, None, None)
+        modin_series.rdiv(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_real():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.real
+        modin_series.real
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reindex():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reindex(None)
+        modin_series.reindex(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reindex_axis():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reindex_axis(None, None)
+        modin_series.reindex_axis(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reindex_like():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reindex_like(None, None, None, None)
+        modin_series.reindex_like(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rename():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rename(None)
+        modin_series.rename(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rename_axis():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rename_axis(None, None, None)
+        modin_series.rename_axis(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reorder_levels():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reorder_levels(None)
+        modin_series.reorder_levels(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_repeat():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.repeat(None, None)
+        modin_series.repeat(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_replace():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.replace(None, None, None, None, None, None)
+        modin_series.replace(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_resample():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.resample(
+        modin_series.resample(
             None, None, None, None, None, None, None, None, None, None, None, None
         )
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reset_index():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reset_index(None, None, None)
+        modin_series.reset_index(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_reshape():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.reshape(None)
+        modin_series.reshape(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rfloordiv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rfloordiv(None, None, None)
+        modin_series.rfloordiv(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rmod():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rmod(None, None, None)
+        modin_series.rmod(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rmul():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rmul(None, None, None)
+        modin_series.rmul(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rolling():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rolling(None, None, None, None, None, None, None)
+        modin_series.rolling(None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_round():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.round(None, None)
+        modin_series.round(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rpow():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rpow(None, None, None)
+        modin_series.rpow(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rsub():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rsub(None, None, None)
+        modin_series.rsub(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_rtruediv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.rtruediv(None, None, None)
+        modin_series.rtruediv(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sample():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sample(None, None, None, None, None)
+        modin_series.sample(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_searchsorted():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.searchsorted(None, None)
+        modin_series.searchsorted(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_select():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.select(None)
+        modin_series.select(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sem():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sem(None, None, None, None, None)
+        modin_series.sem(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_set_axis():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.set_axis(None, None)
+        modin_series.set_axis(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_set_value():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.set_value(None, None)
+        modin_series.set_value(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_shape():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.shape
+        modin_series.shape
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_shift():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.shift(None, None)
+        modin_series.shift(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_size():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.size
+        modin_series.size
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_skew():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.skew(None, None, None, None)
+        modin_series.skew(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_slice_shift():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.slice_shift(None)
+        modin_series.slice_shift(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sort_index():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sort_index(None, None, None, None, None, None)
+        modin_series.sort_index(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sort_values():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sort_values(None, None, None, None)
+        modin_series.sort_values(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sortlevel():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sortlevel(None, None)
+        modin_series.sortlevel(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_squeeze():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.squeeze(None)
+        modin_series.squeeze(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_std():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.std(None, None, None, None, None)
+        modin_series.std(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_strides():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.strides
+        modin_series.strides
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sub():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sub(None, None, None)
+        modin_series.sub(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_subtract():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.subtract(None, None, None)
+        modin_series.subtract(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_sum():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.sum(None, None, None, None)
+        modin_series.sum(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_swapaxes():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.swapaxes(None, None)
+        modin_series.swapaxes(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_swaplevel():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.swaplevel(None, None)
+        modin_series.swaplevel(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_tail():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.tail(None)
+        modin_series.tail(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_take():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.take(None, None, None, None)
+        modin_series.take(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_clipboard():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_clipboard(None, None)
+        modin_series.to_clipboard(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_csv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_csv(None, None, None, None, None, None, None, None, None, None)
+        modin_series.to_csv(None, None, None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_dense():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_dense()
+        modin_series.to_dense()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_dict():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_dict()
+        modin_series.to_dict()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_excel():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_excel(
+        modin_series.to_excel(
             None,
             None,
             None,
@@ -2072,34 +2131,34 @@ def test_to_excel():
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_frame():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_frame(None)
+        modin_series.to_frame(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_hdf():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_hdf(None, None)
+        modin_series.to_hdf(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_json():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_json(None, None, None, None, None, None, None)
+        modin_series.to_json(None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_latex():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_latex(
+        modin_series.to_latex(
             None,
             None,
             None,
@@ -2123,207 +2182,207 @@ def test_to_latex():
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_msgpack():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_msgpack(None, None)
+        modin_series.to_msgpack(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_period():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_period(None)
+        modin_series.to_period(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_pickle():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_pickle(None)
+        modin_series.to_pickle(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_sparse():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_sparse(None)
+        modin_series.to_sparse(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_sql():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_sql(None, None, None, None, None, None, None, None)
+        modin_series.to_sql(None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_string():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_string(None, None, None, None, None, None, None, None)
+        modin_series.to_string(None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_timestamp():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_timestamp(None, None)
+        modin_series.to_timestamp(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_to_xarray():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.to_xarray()
+        modin_series.to_xarray()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_tolist():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.tolist()
+        modin_series.tolist()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_transform():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.transform(None, None)
+        modin_series.transform(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_transpose():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.transpose(None)
+        modin_series.transpose(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_truediv():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.truediv(None, None, None)
+        modin_series.truediv(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_truncate():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.truncate(None, None, None)
+        modin_series.truncate(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_tshift():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.tshift(None, None)
+        modin_series.tshift(None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_tz_convert():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.tz_convert(None, None, None)
+        modin_series.tz_convert(None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_tz_localize():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.tz_localize(None, None, None, None)
+        modin_series.tz_localize(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_unique():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.unique()
+        modin_series.unique()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_unstack():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.unstack(None)
+        modin_series.unstack(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_update():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.update(None)
+        modin_series.update(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_valid():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.valid(None)
+        modin_series.valid(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_value_counts():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.value_counts(None, None, None, None)
+        modin_series.value_counts(None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_values():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.values
+        modin_series.values
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_var():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.var(None, None, None, None, None)
+        modin_series.var(None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_view():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.view(None)
+        modin_series.view(None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_where():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.where(None, None, None, None, None, None)
+        modin_series.where(None, None, None, None, None, None)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_xs():
-    ray_series = create_test_series()
+    modin_series = create_test_series()
 
     with pytest.raises(NotImplementedError):
-        ray_series.xs(None, None, None)
+        modin_series.xs(None, None, None)

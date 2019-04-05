@@ -237,7 +237,11 @@ class BasePandasDataset(object):
                 return result
 
     def _get_axis_number(self, axis):
-        return getattr(pandas, self.__name__)()._get_axis_number(axis)
+        return (
+            getattr(pandas, self.__name__)()._get_axis_number(axis)
+            if axis is not None
+            else 0
+        )
 
     def __constructor__(self, *args, **kwargs):
         return type(self)(*args, **kwargs)
@@ -432,6 +436,7 @@ class BasePandasDataset(object):
         raw=False,
         reduce=None,
         result_type=None,
+        convert_dtype=True,
         args=(),
         **kwds
     ):
@@ -978,6 +983,17 @@ class BasePandasDataset(object):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
+    def droplevel(self, level, axis=0):
+        """Return index with requested level(s) removed.
+
+        Args:
+            level: The level to drop
+
+        Returns:
+            Index or MultiIndex
+        """
+        return self._default_to_pandas("droplevel", level, axis=axis)
+
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns
 
@@ -1323,7 +1339,7 @@ class BasePandasDataset(object):
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis=0, skipna=True):
+    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
         """Get the index of the first occurrence of the max value of the axis.
 
         Args:
@@ -1341,7 +1357,7 @@ class BasePandasDataset(object):
             self._query_compiler.idxmax(axis=axis, skipna=skipna)
         )
 
-    def idxmin(self, axis=0, skipna=True):
+    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
         """Get the index of the first occurrence of the min value of the axis.
 
         Args:
@@ -1358,6 +1374,9 @@ class BasePandasDataset(object):
         return self._reduce_dimension(
             self._query_compiler.idxmin(axis=axis, skipna=skipna)
         )
+
+    def infer_objects(self):
+        return self._default_to_pandas("infer_objects")
 
     def isin(self, values):
         """Fill a DataFrame with booleans for cells contained in values.
@@ -1659,19 +1678,7 @@ class BasePandasDataset(object):
             "mul", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def multiply(self, other, axis="columns", level=None, fill_value=None):
-        """Synonym for mul.
-
-        Args:
-            other: The object to use to apply the multiply against this.
-            axis: The axis to multiply over.
-            level: The Multilevel index level to apply multiply over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Multiply applied.
-        """
-        return self.mul(other, axis, level, fill_value)
+    multiply = mul
 
     def ne(self, other, axis="columns", level=None):
         """Checks element-wise that this is not equal to other.
@@ -2692,7 +2699,6 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
         self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=False)
-
         return self._reduce_dimension(
             self._query_compiler.sum(
                 axis=axis,
@@ -2753,6 +2759,8 @@ class BasePandasDataset(object):
         doublequote=True,
         escapechar=None,
         decimal=".",
+        *args,
+        **kwargs
     ):  # pragma: no cover
 
         kwargs = {

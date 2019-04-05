@@ -289,7 +289,7 @@ def df_equals(df1, df2):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
     else:
-        assert df1 == df2
+        np.testing.assert_almost_equal(df1, df2)
 
 
 def df_is_empty(df):

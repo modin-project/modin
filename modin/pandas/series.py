@@ -107,11 +107,11 @@ class Series(BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
-    def __array_prepare__(self, result, context=None):
-        return self._to_pandas().__array_prepare__(result, context=context)
+    def __array_prepare__(self, result, context=None):  # pragma: no cover
+        return self._default_to_pandas(pandas.Series.__array_prepare__, result, context=context)
 
     @property
-    def __array_priority__(self):
+    def __array_priority__(self):  # pragma: no cover
         return self._to_pandas().__array_priority__
 
     def __bytes__(self):
@@ -133,7 +133,7 @@ class Series(BasePandasDataset):
         return self.div(right)
 
     def __divmod__(self, right):
-        return self // right, self % right
+        return self.divmod(right)
 
     def __float__(self):
         return float(self.squeeze())
@@ -151,26 +151,14 @@ class Series(BasePandasDataset):
         else:
             return self.iloc[key]
 
-    def __iadd__(self, other):
-        return self.add(other)
-
-    def __imul__(self, other):
-        return self.mul(other)
+    def __getstate__(self):
+        return self._default_to_pandas("__getstate__")
 
     def __int__(self):
         return int(self.squeeze())
 
-    def __ipow__(self, other):
-        return self.pow(other)
-
-    def __isub__(self, other):
-        return self.sub(other)
-
     def __iter__(self):
         return self._to_pandas().__iter__()
-
-    def __itruediv__(self, other):
-        return self.truediv(other)
 
     def __mod__(self, right):
         return self.mod(right)
@@ -221,6 +209,12 @@ class Series(BasePandasDataset):
 
     def __truediv__(self, right):
         return self.truediv(right)
+
+    __iadd__ = __add__
+    __imul__ = __add__
+    __ipow__ = __pow__
+    __isub__ = __sub__
+    __itruediv__ = __truediv__
 
     def __xor__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
@@ -343,16 +337,19 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
-    def argmax(self, axis=None, skipna=True, *args, **kwargs):
+    def argmax(self, axis=0, skipna=True, *args, **kwargs):
         return self.idxmax(axis=axis, skipna=skipna)
 
-    def argmin(self, axis=None, skipna=True, *args, **kwargs):
+    def argmin(self, axis=0, skipna=True, *args, **kwargs):
         return self.idxmin(axis=axis, skipna=skipna)
 
     def argsort(self, axis=0, kind="quicksort", order=None):
         return self._default_to_pandas(
             pandas.Series.argsort, axis=axis, kind=kind, order=order
         )
+
+    def array(self):
+        return self._default_to_pandas(pandas.Series.array)
 
     def autocorr(self, lag=1):
         return self._default_to_pandas(pandas.Series.autocorr, lag=lag)
@@ -370,14 +367,6 @@ class Series(BasePandasDataset):
     def compress(self, condition, *args, **kwargs):
         return self._default_to_pandas(
             pandas.Series.compress, condition, *args, **kwargs
-        )
-
-    def consolidate(self, inplace=False):
-        self._create_or_update_from_compiler(
-            self._default_to_pandas(
-                pandas.Series.consolidate, inplace=inplace
-            )._query_compiler,
-            inplace=inplace,
         )
 
     def convert_objects(
@@ -412,10 +401,12 @@ class Series(BasePandasDataset):
     def diff(self, periods=1):
         return super(Series, self).diff(periods=periods, axis=0)
 
-    def drop(self, labels, axis=0, level=None, inplace=False, errors="raise"):
-        return super(Series, self).drop(
-            labels, axis=axis, level=level, inplace=inplace, errors=errors
-        )
+    def divmod(self, other, level=None, fill_value=None, axis=0):
+        return self._default_to_pandas(
+                pandas.Series.divmod,
+                    other, level=level, fill_value=fill_value, axis=axis
+
+            )
 
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
@@ -495,9 +486,21 @@ class Series(BasePandasDataset):
         sort=True,
         group_keys=True,
         squeeze=False,
+        observed=False,
         **kwargs
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.groupby,
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            **kwargs
+        )
 
     def gt(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -537,10 +540,21 @@ class Series(BasePandasDataset):
         limit=None,
         inplace=False,
         limit_direction="forward",
+        limit_area=None,
         downcast=None,
         **kwargs
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.interpolate,
+            method=method,
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            downcast=downcast,
+            **kwargs
+        )
 
     def item(self):
         return self[0]
@@ -600,6 +614,8 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    multiply = rmul = mul
+
     def ne(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ne(new_other, level=level, axis=axis)
@@ -649,6 +665,30 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    def prod(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return np.nan
+        return super(Series, self).prod(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
+        )
+
+    product = prod
+
     def ptp(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         return self._default_to_pandas(
             pandas.Series.ptp,
@@ -661,6 +701,8 @@ class Series(BasePandasDataset):
 
     def put(self, *args, **kwargs):
         return self._default_to_pandas(pandas.Series.put, *args, **kwargs)
+
+    radd = add
 
     def ravel(self, order="C"):
         return self._default_to_pandas(pandas.Series.ravel, order=order)
@@ -711,8 +753,8 @@ class Series(BasePandasDataset):
     def reorder_levels(self, order):
         return self._default_to_pandas(pandas.Series.reorder_levels, order)
 
-    def repeat(self, repeats, *args, **kwargs):
-        return self._default_to_pandas(pandas.Series.repeat, repeats, *args, **kwargs)
+    def repeat(self, repeats, axis=None):
+        return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
         if drop and level is None:
@@ -737,8 +779,12 @@ class Series(BasePandasDataset):
                 level=level, drop=drop, inplace=inplace
             )
 
-    def reshape(self, *args, **kwargs):
-        return self._default_to_pandas(*args, **kwargs)
+    def rdivmod(self, other, level=None, fill_value=None, axis=0):
+        return self._default_to_pandas(
+            pandas.Series.rdivmod,
+                other, level=level, fill_value=fill_value, axis=axis
+
+        )
 
     def rfloordiv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -770,10 +816,18 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    rdiv = rtruediv
+
     def searchsorted(self, value, side="left", sorter=None):
         return self._default_to_pandas(
             pandas.Series.searchsorted, value, side=side, sorter=sorter
         )
+
+    def set_value(self, label, value, takeable=False):
+        return self._default_to_pandas("set_value", label, value, takeable=takeable)
+
+    def sparse(self, data=None):
+        return self._default_to_pandas(pandas.Series.sparse, data=data)
 
     def squeeze(self, axis=None):
         if axis is not None:
@@ -790,6 +844,33 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    subtract = sub
+
+    def sum(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return np.nan
+        return super(Series, self).sum(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
+        )
+
+    def swaplevel(self, i=-2, j=-1, copy=True):
+        return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
+
     def to_frame(self, name=None):
         from .dataframe import DataFrame
 
@@ -798,8 +879,35 @@ class Series(BasePandasDataset):
             self_cp.name = name
         return DataFrame(self)
 
-    def tolist(self):
+    def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list())
+
+    tolist = to_list
+
+    def to_string(
+        self,
+        buf=None,
+        na_rep="NaN",
+        float_format=None,
+        header=True,
+        index=True,
+        length=False,
+        dtype=False,
+        name=False,
+        max_rows=None,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.to_string,
+            buf=buf,
+            na_rep=na_rep,
+            float_format=float_format,
+            header=header,
+            index=index,
+            length=length,
+            dtype=dtype,
+            name=name,
+            max_rows=max_rows,
+        )
 
     def transpose(self, *args, **kwargs):
         return self
@@ -812,6 +920,8 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    div = divide = truediv
+
     def truncate(self, before=None, after=None, axis=None, copy=True):
         return self._default_to_pandas(
             pandas.Series.truncate, before=before, after=after, axis=axis, copy=copy
@@ -820,8 +930,8 @@ class Series(BasePandasDataset):
     def unique(self):
         return self._default_to_pandas(pandas.Series.unique)
 
-    def upandasate(self, other):
-        return self._default_to_pandas(pandas.Series.upandasate, other)
+    def update(self, other):
+        return self._default_to_pandas(pandas.Series.update, other)
 
     def valid(self, inplace=False, **kwargs):
         return self._default_to_pandas(pandas.Series.valid, inplace=inplace, **kwargs)
@@ -848,8 +958,9 @@ class Series(BasePandasDataset):
         inplace=False,
         axis=None,
         level=None,
+        errors="raise",
         try_cast=False,
-        raise_on_error=True,
+        raise_on_error=None,
     ):
         return self._default_to_pandas(
             cond,
@@ -857,11 +968,12 @@ class Series(BasePandasDataset):
             inplace=inplace,
             axis=axis,
             level=level,
+            errors=errors,
             try_cast=try_cast,
             raise_on_error=raise_on_error,
         )
 
-    def xs(key, axis=0, level=None, drop_level=True):
+    def xs(self, key, axis=0, level=None, drop_level=True):
         raise NotImplementedError("Not Yet implemented.")
 
     @property
@@ -885,12 +997,20 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(base)
 
     @property
+    def cat(self):
+        return self._default_to_pandas(pandas.Series.cat)
+
+    @property
     def data(self):
         # We cannot default to pandas without a named function to call.
         def data(df):
             return df.data
 
         return self._default_to_pandas(data)
+
+    @property
+    def dt(self):
+        return self._default_to_pandas(pandas.Series.dt)
 
     @property
     def dtype(self):
@@ -1009,6 +1129,10 @@ class Series(BasePandasDataset):
             return df.strides
 
         return self._default_to_pandas(strides)
+
+    @property
+    def str(self):
+        return self._default_to_pandas(pandas.Series.str)
 
     def _to_pandas(self):
         df = self._query_compiler.to_pandas()

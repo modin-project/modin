@@ -60,8 +60,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def dtype_builder(df):
                 return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-            map_func = self._build_mapreduce_func(lambda df: df.dtypes)
+            map_func = self._prepare_method(
+                self._build_mapreduce_func(lambda df: df.dtypes)
+            )
             reduce_func = self._build_mapreduce_func(dtype_builder)
+            # obj = self if not self._is_transposed else self.transpose()
             # For now we will use a pandas Series for the dtypes.
             self._dtype_cache = (
                 (self._full_reduce(0, map_func, reduce_func)).to_pandas().iloc[0]
@@ -725,7 +728,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler with updated data and new index.
         """
         if isinstance(scalar, (list, np.ndarray, pandas.Series)):
-            new_data = self._map_across_full_axis(axis, func)
+            new_index = self.index if axis == 0 else self.columns
+
+            def list_like_op(df):
+                if axis == 0:
+                    df.index = new_index
+                else:
+                    df.columns = new_index
+                return func(df)
+
+            new_data = self._map_across_full_axis(axis, list_like_op)
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             return self._map_partitions(func)
@@ -870,24 +882,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 full_frame, index=index, columns=["__reduced__"]
             )
 
-    def _process_min_max(self, func, **kwargs):
-        """Calculates the min or max of the DataFrame.
-
-        Return:
-           A new QueryCompiler object containing the min or max values from each column
-           or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-
-        def min_max_builder(df, **kwargs):
-            if not df.empty:
-                return func(df, **kwargs)
-            else:
-                return pandas.DataFrame()
-
-        return self._full_reduce(axis, min_max_builder)
-
     def _build_mapreduce_func(self, func, **kwargs):
         def _map_reduce_func(df):
             series_result = func(df, **kwargs)
@@ -922,7 +916,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().max(**kwargs)
         mapreduce_func = self._build_mapreduce_func(pandas.DataFrame.max, **kwargs)
-        return self._process_min_max(mapreduce_func, **kwargs)
+        return self._full_reduce(kwargs.get("axis", 0), mapreduce_func)
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -954,7 +948,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().min(**kwargs)
         mapreduce_func = self._build_mapreduce_func(pandas.DataFrame.min, **kwargs)
-        return self._process_min_max(mapreduce_func, **kwargs)
+        return self._full_reduce(kwargs.get("axis", 0), mapreduce_func)
 
     def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
@@ -967,21 +961,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         min_count = kwargs.get("min_count", 0)
-        reduce_index = self.columns if axis else self.index
 
         def sum_prod_builder(df, **kwargs):
-            if not df.empty:
-                return func(df, **kwargs)
-            else:
-                return pandas.DataFrame([])
+            return func(df, **kwargs)
 
         if min_count <= 1:
             return self._full_reduce(axis, sum_prod_builder)
-        elif min_count > len(reduce_index):
-            new_index = self.index if axis else self.columns
-            return pandas.Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
-            )
         else:
             return self._full_axis_reduce(axis, sum_prod_builder)
 
@@ -1030,6 +1015,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing boolean values or boolean.
         """
         if self._is_transposed:
+            # Pandas ignores on axis=1
+            kwargs["bool_only"] = False
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().all(**kwargs)
         return self._process_all_any(lambda df, **kwargs: df.all(**kwargs), **kwargs)
@@ -1041,6 +1028,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing boolean values or boolean.
         """
         if self._is_transposed:
+            if kwargs.get("axis", 0) == 1:
+                # Pandas ignores on axis=1
+                kwargs["bool_only"] = False
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().any(**kwargs)
         return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
@@ -1467,31 +1457,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cummax(self, **kwargs):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cummax(**kwargs)
+            return self.transpose().cummax(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cummax, **kwargs)
 
     def cummin(self, **kwargs):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cummin(**kwargs)
+            return self.transpose().cummin(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cummin, **kwargs)
 
     def cumsum(self, **kwargs):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cumsum(**kwargs)
+            return self.transpose().cumsum(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cumsum, **kwargs)
 
     def cumprod(self, **kwargs):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cumprod(**kwargs)
+            return self.transpose().cumprod(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cumprod, **kwargs)
 
     def diff(self, **kwargs):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().diff(**kwargs)
+            return self.transpose().diff(**kwargs).transpose()
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(pandas.DataFrame.diff, **kwargs)
         new_data = self._map_across_full_axis(axis, func)
@@ -1782,6 +1772,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             DataManager containing quantiles of original DataManager along an axis.
         """
+        if self._is_transposed:
+            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
+            return self.transpose().quantile_for_list_of_values(**kwargs)
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q")
         numeric_only = kwargs.get("numeric_only", True)

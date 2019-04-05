@@ -475,17 +475,6 @@ class DataFrame(BasePandasDataset):
     def cov(self, min_periods=None):
         return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
 
-    def droplevel(self, level, axis=0):
-        """Return index with requested level(s) removed.
-
-        Args:
-            level: The level to drop
-
-        Returns:
-            Index or MultiIndex
-        """
-        return self._default_to_pandas(pandas.DataFrame.droplevel, level, axis=axis)
-
     def eq(self, other, axis="columns", level=None):
         if isinstance(other, Series):
             other = other._to_pandas()
@@ -660,9 +649,6 @@ class DataFrame(BasePandasDataset):
             bins=bins,
             **kwds
         )
-
-    def infer_objects(self):
-        return self._default_to_pandas(pandas.DataFrame.infer_objects)
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -1083,6 +1069,8 @@ class DataFrame(BasePandasDataset):
             other, axis=axis, level=level, fill_value=None
         )
 
+    rmul = multiply = mul
+
     def ne(self, other, axis="columns", level=None):
         if isinstance(other, Series):
             other = other._to_pandas()
@@ -1166,6 +1154,33 @@ class DataFrame(BasePandasDataset):
         return super(DataFrame, self).pow(
             other, axis=axis, level=level, fill_value=None
         )
+
+    def prod(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        return super(DataFrame, self).prod(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
+        )
+
+    product = prod
+    radd = add
 
     def query(self, expr, inplace=False, **kwargs):
         """Queries the Dataframe with a boolean expression
@@ -1290,6 +1305,8 @@ class DataFrame(BasePandasDataset):
         return super(DataFrame, self).rtruediv(
             other, axis=axis, level=level, fill_value=None
         )
+
+    rdiv = rtruediv
 
     def select_dtypes(self, include=None, exclude=None):
         # Validates arguments for whether both include and exclude are None or
@@ -1422,6 +1439,32 @@ class DataFrame(BasePandasDataset):
             other = other._to_pandas()
         return super(DataFrame, self).sub(
             other, axis=axis, level=level, fill_value=None
+        )
+
+    subtract = sub
+
+    def sum(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return Series(
+                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        return super(DataFrame, self).sum(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
         )
 
     def to_feather(self, fname):  # pragma: no cover
@@ -1575,6 +1618,8 @@ class DataFrame(BasePandasDataset):
         return super(DataFrame, self).truediv(
             other, axis=axis, level=level, fill_value=None
         )
+
+    div = divide = truediv
 
     def update(
         self, other, join="left", overwrite=True, filter_func=None, errors="ignore"
@@ -1842,9 +1887,6 @@ class DataFrame(BasePandasDataset):
 
     def __round__(self, decimals=0):
         return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
-
-    def __getstate__(self):
-        return self._default_to_pandas(pandas.DataFrame.__getstate__)
 
     def __setstate__(self, state):
         return self._default_to_pandas(pandas.DataFrame.__setstate__, state)

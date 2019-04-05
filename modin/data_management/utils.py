@@ -100,7 +100,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
             return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     # We do this to restore block partitioning
     chunksize = compute_chunksize(result, num_splits, axis=axis)
-    if axis == 0 or type(result) is pandas.Series:
+    if axis == 0:
         return [
             result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)
         ]
@@ -112,12 +112,10 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 
 def length_fn_pandas(df):
-    assert isinstance(df, (pandas.DataFrame, pandas.Series)), "{}".format(df)
     return len(df)
 
 
 def width_fn_pandas(df):
-    assert isinstance(df, (pandas.DataFrame, pandas.Series)), "{}".format((df))
     if isinstance(df, pandas.DataFrame):
         return len(df.columns)
     else:
