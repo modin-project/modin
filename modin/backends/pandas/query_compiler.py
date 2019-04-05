@@ -1723,7 +1723,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             exclude = kwargs.get("exclude", None)
             if exclude is not None:
-                add_to_excludes = [e for e in exclude if e not in include]
+                if is_list_like(include):
+                    add_to_excludes = [e for e in exclude if e not in include]
+                else:
+                    add_to_excludes = exclude
                 if isinstance(exclude, list):
                     exclude.extend(add_to_excludes)
                 else:
