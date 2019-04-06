@@ -1509,6 +1509,30 @@ def test_describe(data):
         )
 
 
+def test_describe_dtypes():
+    modin_df = pd.DataFrame(
+        {
+            "col1": list("abc"),
+            "col2": list("abc"),
+            "col3": list("abc"),
+            "col4": [1, 2, 3],
+        }
+    )
+    pandas_df = pandas.DataFrame(
+        {
+            "col1": list("abc"),
+            "col2": list("abc"),
+            "col3": list("abc"),
+            "col4": [1, 2, 3],
+        }
+    )
+
+    modin_result = modin_df.describe()
+    pandas_result = pandas_df.describe()
+
+    df_equals(modin_result, pandas_result)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
