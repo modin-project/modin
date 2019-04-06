@@ -1694,7 +1694,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
         # Use pandas to calculate the correct columns
-        new_columns = pandas.DataFrame(columns=self.columns).astype(self.dtypes).describe(**kwargs).columns
+        new_columns = (
+            pandas.DataFrame(columns=self.columns)
+            .astype(self.dtypes)
+            .describe(**kwargs)
+            .columns
+        )
 
         def describe_builder(df, internal_indices=[], **kwargs):
             return df.iloc[:, internal_indices].describe(**kwargs)
