@@ -232,6 +232,59 @@ class DataFrame(BasePandasDataset):
         ErrorMessage.non_verified_udf()
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
+    def apply(
+            self,
+            func,
+            axis=0,
+            broadcast=None,
+            raw=False,
+            reduce=None,
+            result_type=None,
+            convert_dtype=True,
+            args=(),
+            **kwds
+    ):
+        axis = self._get_axis_number(axis)
+        query_compiler = super(DataFrame, self).apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type,
+                                              convert_dtype=convert_dtype, args=args, **kwds)
+        if not isinstance(query_compiler, type(self._query_compiler)):
+            return query_compiler
+        # This is the simplest way to determine the return type, but there are checks
+        # in pandas that verify that some results are created. This is a challenge for
+        # empty DataFrames, but fortunately they only happen when the `func` type is
+        # a list or a dictionary, which means that the return type won't change from
+        # type(self), so we catch that error and use `self.__name__` for the return
+        # type.
+        try:
+            if axis == 0:
+                init_kwargs = {"index": self.index}
+            else:
+                init_kwargs = {"columns": self.columns}
+            return_type = type(
+                getattr(pandas, self.__name__)(**init_kwargs).apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                )
+            ).__name__
+        except ValueError:
+            return_type = self.__name__
+        if return_type not in ["DataFrame", "Series"]:
+            return query_compiler.to_pandas().squeeze()
+        else:
+            result = getattr(sys.modules[self.__module__], return_type)(
+                query_compiler=query_compiler
+            )
+            if hasattr(result, "name"):
+                if axis == 0 and result.name == self.index[0]:
+                    result.name = None
+                elif axis == 1 and result.name == self.columns[0]:
+                    result.name = None
+            return result
+
     def get_value(self, index, col, takeable=False):
         return self._default_to_pandas(
             pandas.DataFrame.get_value, index, col, takeable=takeable
@@ -326,35 +379,6 @@ class DataFrame(BasePandasDataset):
             other = other._to_pandas()
         return super(DataFrame, self).add(
             other, axis=axis, level=level, fill_value=fill_value
-        )
-
-    def align(
-        self,
-        other,
-        join="outer",
-        axis=None,
-        level=None,
-        copy=True,
-        fill_value=None,
-        method=None,
-        limit=None,
-        fill_axis=0,
-        broadcast_axis=None,
-    ):
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        return self._default_to_pandas(
-            pandas.DataFrame.align,
-            other,
-            join=join,
-            axis=axis,
-            level=level,
-            copy=copy,
-            fill_value=fill_value,
-            method=method,
-            limit=limit,
-            fill_axis=fill_axis,
-            broadcast_axis=broadcast_axis,
         )
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=None):

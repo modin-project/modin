@@ -5,6 +5,7 @@ from __future__ import print_function
 import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
+import sys
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
@@ -151,9 +152,6 @@ class Series(BasePandasDataset):
         else:
             return self.iloc[key]
 
-    def __getstate__(self):
-        return self._default_to_pandas("__getstate__")
-
     def __int__(self):
         return int(self.squeeze())
 
@@ -242,21 +240,6 @@ class Series(BasePandasDataset):
         """
         return Series(query_compiler=self._query_compiler.add_suffix(suffix, axis=0))
 
-    def align(
-        self,
-        other,
-        join="outer",
-        axis=None,
-        level=None,
-        copy=True,
-        fill_value=None,
-        method=None,
-        limit=None,
-        fill_axis=0,
-        broadcast_axis=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
     def append(self, to_append, ignore_index=False, verify_integrity=False):
         """Append another DataFrame/list/Series to this one.
 
@@ -291,6 +274,7 @@ class Series(BasePandasDataset):
                 self.name = None
                 for i in range(len(to_append)):
                     to_append[i].name = None
+                    to_append[i] = to_append[i]._query_compiler
             else:
                 # Matching pandas behavior of naming the Series columns 0
                 self.name = 0
@@ -337,10 +321,54 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
+    def apply(self, func, convert_dtype=True, args=(), **kwds):
+        # apply and aggregate have slightly different behaviors, so we have to use
+        # each one separately to determine the correct return type. In the case of
+        # `agg`, the axis is set, but it is not required for the computation, so we use
+        # it to determine which function to run.
+        if kwds.pop("axis", None) is not None:
+            apply_func = "agg"
+        else:
+            apply_func = "apply"
+            # Add this because it only applies for `apply` specifically.
+            kwds["convert_dtype"] = convert_dtype
+        query_compiler = super(Series, self).apply(func, *args, **kwds)
+        # Sometimes we can return a scalar here
+        if not isinstance(query_compiler, type(self._query_compiler)):
+            return query_compiler
+        # This is the simplest way to determine the return type, but there are checks
+        # in pandas that verify that some results are created. This is a challenge for
+        # empty DataFrames, but fortunately they only happen when the `func` type is
+        # a list or a dictionary, which means that the return type won't change from
+        # type(self), so we catch that error and use `self.__name__` for the return
+        # type.
+        return_type = type(
+            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
+                func,
+                *args,
+                **kwds
+            )
+        ).__name__
+        if return_type not in ["DataFrame", "Series"]:
+            return query_compiler.to_pandas().squeeze()
+        else:
+            result = getattr(sys.modules[self.__module__], return_type)(
+                query_compiler=query_compiler
+            )
+            if result.name == self.index[0]:
+                result.name = None
+            return result
+
     def argmax(self, axis=0, skipna=True, *args, **kwargs):
+        # Series and DataFrame have a different behavior for `skipna`
+        if skipna is None:
+            skipna = True
         return self.idxmax(axis=axis, skipna=skipna)
 
     def argmin(self, axis=0, skipna=True, *args, **kwargs):
+        # Series and DataFrame have a different behavior for `skipna`
+        if skipna is None:
+            skipna = True
         return self.idxmin(axis=axis, skipna=skipna)
 
     def argsort(self, axis=0, kind="quicksort", order=None):

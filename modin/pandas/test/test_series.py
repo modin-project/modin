@@ -472,16 +472,14 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    axis = 0
     modin_series, pandas_series = create_test_series(data)
-
     try:
-        pandas_result = pandas_series.agg(func, axis)
+        pandas_result = pandas_series.agg(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.agg(func, axis)
+            modin_series.agg(func)
     else:
-        modin_result = modin_series.agg(func, axis)
+        modin_result = modin_series.agg(func)
         df_equals(modin_result, pandas_result)
 
 
@@ -493,7 +491,6 @@ def test_agg_numeric(request, data, func):
     ):
         axis = 0
         modin_series, pandas_series = create_test_series(data)
-
         try:
             pandas_result = pandas_series.agg(func, axis)
         except Exception as e:
@@ -509,7 +506,6 @@ def test_agg_numeric(request, data, func):
 def test_aggregate(request, data, func):
     axis = 0
     modin_series, pandas_series = create_test_series(data)
-
     try:
         pandas_result = pandas_series.aggregate(func, axis)
     except Exception as e:
@@ -528,7 +524,6 @@ def test_aggregate_numeric(request, data, func):
     ):
         axis = 0
         modin_series, pandas_series = create_test_series(data)
-
         try:
             pandas_result = pandas_series.agg(func, axis)
         except Exception as e:
@@ -544,163 +539,268 @@ def test_aggregate_error_checking(data):
     modin_series, _ = create_test_series(data)
 
     assert modin_series.aggregate("ndim") == 1
-
     with pytest.warns(UserWarning):
         modin_series.aggregate("cumproduct")
-
     with pytest.raises(ValueError):
         modin_series.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_align():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.align(None, None, None, None, None, None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_all():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.all(None, None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_align(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.align(modin_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_any():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.any(None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_append():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.append(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_all(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.all(skipna=skipna), pandas_series.all(skipna=skipna))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_apply():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.apply(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_argmax():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.argmax(None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_any(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.any(skipna=skipna), pandas_series.any(skipna=skipna))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_argmin():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_append(data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.argmin(None, None, None)
+    data_to_append = {"append_a": 2, "append_b": 1000}
+
+    ignore_idx_values = [True, False]
+
+    for ignore in ignore_idx_values:
+        try:
+            pandas_result = pandas_series.append(data_to_append, ignore_index=ignore)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.append(data_to_append, ignore_index=ignore)
+        else:
+            modin_result = modin_series.append(data_to_append, ignore_index=ignore)
+            df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_series.append(pandas_series.iloc[-1])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.append(modin_series.iloc[-1])
+    else:
+        modin_result = modin_series.append(modin_series.iloc[-1])
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_series.append([pandas_series.iloc[-1]])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.append([modin_series.iloc[-1]])
+    else:
+        modin_result = modin_series.append([modin_series.iloc[-1]])
+        df_equals(modin_result, pandas_result)
+
+    verify_integrity_values = [True, False]
+
+    for verify_integrity in verify_integrity_values:
+        try:
+            pandas_result = pandas_series.append(
+                [pandas_series, pandas_series], verify_integrity=verify_integrity
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.append([modin_series, modin_series], verify_integrity=verify_integrity)
+        else:
+            modin_result = modin_series.append(
+                [modin_series, modin_series], verify_integrity=verify_integrity
+            )
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_series.append(
+                pandas_series, verify_integrity=verify_integrity
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.append(modin_series, verify_integrity=verify_integrity)
+        else:
+            modin_result = modin_series.append(modin_series, verify_integrity=verify_integrity)
+            df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_argsort():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_apply(request, data, func):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.argsort(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_as_blocks():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.as_blocks(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_as_matrix():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.as_matrix(None)
+    try:
+        pandas_result = pandas_series.apply(func)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.apply(func)
+    else:
+        modin_result = modin_series.apply(func)
+        df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
+def test_apply_numeric(request, data, func):
+    modin_series, pandas_series = create_test_series(data)
+
+    if name_contains(request.node.name, numeric_dfs):
+        try:
+            pandas_result = pandas_series.apply(func)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.apply(func)
+        else:
+            modin_result = modin_series.apply(func)
+            df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_argmax(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.argmax(skipna=skipna), pandas_series.argmax(skipna=skipna))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_argmin(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.argmin(skipna=skipna), pandas_series.argmin(skipna=skipna))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_argsort(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.argsort()
+    df_equals(modin_result, pandas_series.argsort())
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_as_blocks(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.as_blocks()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_as_matrix(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.as_matrix()
+
+
 def test_asfreq():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.asfreq(None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_asobject():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.asobject
+    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    series = pd.Series([0.0, None, 2.0, 3.0], index=index)
+    with pytest.warns(UserWarning):
+        # We are only testing that this defaults to pandas, so we will just check for
+        # the warning
+        series.asfreq(freq="30S")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_asobject(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        _ = modin_series.asobject
+
+
 def test_asof():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.asof(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_astype():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.astype(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_at():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.at(None)
+    series = pd.Series(
+        [10, 20, 30, 40, 50],
+        index=pd.DatetimeIndex(
+            [
+                "2018-02-27 09:01:00",
+                "2018-02-27 09:02:00",
+                "2018-02-27 09:03:00",
+                "2018-02-27 09:04:00",
+                "2018-02-27 09:05:00",
+            ]
+        ),
+    )
+    with pytest.warns(UserWarning):
+        series.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_astype(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.astype(str)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.astype(str)
+    else:
+        df_equals(modin_series.astype(str), pandas_result)
+
+    try:
+        pandas_result = pandas_series.astype(np.int64)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.astype(np.int64)
+    else:
+        df_equals(modin_series.astype(np.int64), pandas_result)
+
+    try:
+        pandas_result = pandas_series.astype(np.float64)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.astype(np.float64)
+    else:
+        df_equals(modin_series.astype(np.float64), pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_at(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.at[modin_series.index[0]], pandas_series.at[pandas_series.index[0]])
+    df_equals(modin_series.at[modin_series.index[-1]], pandas_series[pandas_series.index[-1]])
+
+
 def test_at_time():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.at_time(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_autocorr():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.autocorr(None)
+    i = pd.date_range("2018-04-09", periods=4, freq="12H")
+    ts = pd.Series([1, 2, 3, 4], index=i)
+    with pytest.warns(UserWarning):
+        ts.at_time("12:00")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_axes():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_autocorr(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.axes
+    with pytest.warns(UserWarning):
+        modin_series.autocorr()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_base():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_axes(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert modin_series.axes[0].equals(pandas_series.axes[0])
+    assert len(modin_series.axes) == len(pandas_series.axes)
 
-    with pytest.raises(NotImplementedError):
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_base(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
         modin_series.base
 
 
@@ -712,12 +812,11 @@ def test_between():
         modin_series.between(None, None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
 def test_between_time():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.between_time(None, None, None)
+    i = pd.date_range("2018-04-09", periods=4, freq="12H")
+    ts = pd.Series([1, 2, 3, 4], index=i)
+    with pytest.warns(UserWarning):
+        ts.between_time("0:15", "0:45")
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

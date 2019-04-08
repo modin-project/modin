@@ -291,11 +291,10 @@ class BasePandasDataset(object):
         )
 
     def agg(self, func, axis=0, *args, **kwargs):
-        return self.aggregate(func, axis, *args, **kwargs)
+        return self.aggregate(func, axis=axis, *args, **kwargs)
 
     def aggregate(self, func, axis=0, *args, **kwargs):
         axis = self._get_axis_number(axis)
-
         result = None
 
         if axis == 0:
@@ -320,7 +319,7 @@ class BasePandasDataset(object):
 
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
-            return self._default_to_pandas(pandas.DataFrame.agg, arg, *args, **kwargs)
+            return self._default_to_pandas("agg", arg, *args, **kwargs)
         elif is_list_like(arg) or callable(arg):
             kwargs.pop("is_transform", None)
             return self.apply(arg, axis=_axis, args=args, **kwargs)
@@ -347,6 +346,35 @@ class BasePandasDataset(object):
             return self._default_to_pandas(pandas.DataFrame.agg, func, *args, **kwargs)
 
         raise ValueError("{} is an unknown string function".format(func))
+
+    def align(
+        self,
+        other,
+        join="outer",
+        axis=None,
+        level=None,
+        copy=True,
+        fill_value=None,
+        method=None,
+        limit=None,
+        fill_axis=0,
+        broadcast_axis=None,
+    ):
+        if isinstance(other, BasePandasDataset):
+            other = other._query_compiler.to_pandas()
+        return self._default_to_pandas(
+            "align",
+            other,
+            join=join,
+            axis=axis,
+            level=level,
+            copy=copy,
+            fill_value=fill_value,
+            method=method,
+            limit=limit,
+            fill_axis=fill_axis,
+            broadcast_axis=broadcast_axis,
+        )
 
     def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
         """Return whether all elements are True over requested axis
@@ -457,7 +485,11 @@ class BasePandasDataset(object):
         if isinstance(func, string_types):
             if axis == 1:
                 kwds["axis"] = axis
-            return getattr(self, func)(*args, **kwds)
+            result = getattr(self, func)(*args, **kwds)
+            # Sometimes we can return a scalar here
+            if isinstance(result, BasePandasDataset):
+                return result._query_compiler
+            return result
         elif isinstance(func, dict):
             if axis == 1:
                 raise TypeError(
@@ -473,48 +505,7 @@ class BasePandasDataset(object):
         elif not callable(func) and not is_list_like(func):
             raise TypeError("{} object is not callable".format(type(func)))
         query_compiler = self._query_compiler.apply(func, axis, *args, **kwds)
-        # This is the simplest way to determine the return type, but there are checks
-        # in pandas that verify that some results are created. This is a challenge for
-        # empty DataFrames, but fortunately they only happen when the `func` type is
-        # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `self.__name__` for the return
-        # type.
-        try:
-            if axis == 0:
-                return_type = type(
-                    getattr(pandas, self.__name__)().apply(
-                        func,
-                        axis=axis,
-                        broadcast=broadcast,
-                        raw=raw,
-                        reduce=reduce,
-                        result_type=result_type,
-                    )
-                ).__name__
-            else:
-                return_type = type(
-                    getattr(pandas, self.__name__)().apply(
-                        func,
-                        axis=axis,
-                        broadcast=broadcast,
-                        raw=raw,
-                        reduce=reduce,
-                        result_type=result_type,
-                    )
-                ).__name__
-        except ValueError:
-            return_type = self.__name__
-        if return_type not in ["DataFrame", "Series"]:
-            return query_compiler.to_pandas().squeeze()
-        result = getattr(sys.modules[self.__module__], return_type)(
-            query_compiler=query_compiler
-        )
-        if hasattr(result, "name"):
-            if axis == 0 and result.name == self.index[0]:
-                result.name = None
-            elif axis == 1 and result.name == self.columns[0]:
-                result.name = None
-        return result
+        return query_compiler
 
     def as_blocks(self, copy=True):
         return self._default_to_pandas("as_blocks", copy=copy)
@@ -1350,7 +1341,7 @@ class BasePandasDataset(object):
             A Series with the index for each maximum value for the axis
                 specified.
         """
-        if not all(d != np.dtype("O") for d in self.dtypes):
+        if not all(d != np.dtype("O") for d in (self.dtypes if not hasattr(self, "dtype") else [self.dtype])):
             raise TypeError("reduction operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1368,7 +1359,7 @@ class BasePandasDataset(object):
             A Series with the index for each minimum value for the axis
                 specified.
         """
-        if not all(d != np.dtype("O") for d in self.dtypes):
+        if not all(d != np.dtype("O") for d in (self.dtypes if not hasattr(self, "dtype") else [self.dtype])):
             raise TypeError("reduction operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -3161,6 +3152,9 @@ class BasePandasDataset(object):
 
     def __ge__(self, other):
         return self.ge(other)
+
+    def __getstate__(self):
+        return self._default_to_pandas("__getstate__")
 
     def __gt__(self, other):
         return self.gt(other)
