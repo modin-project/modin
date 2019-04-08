@@ -67,7 +67,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # obj = self if not self._is_transposed else self.transpose()
             # For now we will use a pandas Series for the dtypes.
             self._dtype_cache = (
-                (self._full_reduce(0, map_func, reduce_func)).to_pandas().iloc[0]
+                self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
             )
             # reset name to None because we use "__reduced__" internally
             self._dtype_cache.name = None
@@ -886,6 +886,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def _map_reduce_func(df):
             series_result = func(df, **kwargs)
             if kwargs.get("axis", 0) == 0 and isinstance(series_result, pandas.Series):
+                # In the case of axis=0, we need to keep the shape of the data
+                # consistent with what we have done. In the case of a reduction, the
+                # data for axis=0 should be a single value for each column. By
+                # transposing the data after we convert to a DataFrame, we ensure that
+                # the columns of the result line up with the columns from the data.
+                # axis=1 does not have this requirement because the index already will
+                # line up with the index of the data based on how pandas creates a
+                # DataFrame from a Series.
                 return pandas.DataFrame(series_result).T
             return pandas.DataFrame(series_result)
 
@@ -1573,6 +1581,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         expect_series = isinstance(columns_copy, pandas.Series)
 
         def eval_builder(df, **kwargs):
+            # pop the `axis` parameter because it was needed to build the mapreduce
+            # function but it is not a parameter used by `eval`.
             kwargs.pop("axis", None)
             df.columns = columns
             result = df.eval(expr, inplace=False, **kwargs)
@@ -2092,6 +2102,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler with new data inserted.
         """
         if is_list_like(value):
+            # TODO make work with modin.pandas.Series.
+            # This will require aligning the indices.
             if isinstance(value, pandas.Series):
                 value = value.reindex(self.index)
             value = list(value)

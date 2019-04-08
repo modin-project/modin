@@ -801,7 +801,7 @@ def test_base(data):
     modin_series, _ = create_test_series(data)
 
     with pytest.warns(UserWarning):
-        modin_series.base
+        _ = modin_series.base
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -819,132 +819,157 @@ def test_between_time():
         ts.between_time("0:15", "0:45")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_bfill():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.bfill(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_blocks():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.blocks
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_bfill(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.bfill(), pandas_series.bfill())
+    #inplace
+    modin_series_cp = modin_series.copy()
+    pandas_series_cp = pandas_series.copy()
+    modin_series_cp.bfill(inplace=True)
+    pandas_series_cp.bfill(inplace=True)
+    df_equals(modin_series_cp, pandas_series_cp)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_bool():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_blocks(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.warns(UserWarning):
+        _ = modin_series.blocks
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_bool(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    with pytest.raises(ValueError):
         modin_series.bool()
+    with pytest.raises(ValueError):
+        modin_series.__bool__()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_clip():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_clip(request, data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.clip(None, None, None, None)
+    if name_contains(request.node.name, numeric_dfs):
+        ind_len = len(modin_series.index)
+        # set bounds
+        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
 
+        # test only upper scalar bound
+        modin_result = modin_series.clip(None, upper)
+        pandas_result = pandas_series.clip(None, upper)
+        df_equals(modin_result, pandas_result)
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_clip_lower():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.clip_lower(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_clip_upper():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.clip_upper(None)
+        # test lower and upper scalar bound
+        modin_result = modin_series.clip(lower, upper)
+        pandas_result = pandas_series.clip(lower, upper)
+        df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_combine():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_clip_lower(request, data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.combine(None, None)
+    if name_contains(request.node.name, numeric_dfs):
+        ind_len = len(modin_series.index)
 
+        # set bounds
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_combine_first():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.combine_first(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_compound():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.compound(None, None)
+        # test lower scalar bound
+        pandas_result = pandas_series.clip_lower(lower)
+        modin_result = modin_series.clip_lower(lower)
+        df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_compress():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_clip_upper(request, data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.compress(None, None)
+    if name_contains(request.node.name, numeric_dfs):
+        ind_len = len(modin_series.index)
+        # set bounds
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
 
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_consolidate():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.consolidate(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_convert_objects():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.convert_objects(None, None, None)
+        # test upper scalar bound
+        modin_result = modin_series.clip_upper(upper)
+        pandas_result = pandas_series.clip_upper(upper)
+        df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_copy():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_combine(data):
+    modin_series, _ = create_test_series(data)
+    modin_series2 = modin_series % (max(modin_series) // 2)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.copy(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_corr():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.corr(None, None)
+    with pytest.warns(UserWarning):
+        modin_series.combine(modin_series2, lambda s1, s2: s1 if s1 < s2 else s2)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_count():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_combine_first(data):
+    modin_series, _ = create_test_series(data)
+    modin_series2 = modin_series % (max(modin_series) // 2)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.count(None)
+    with pytest.warns(UserWarning):
+        modin_series.combine_first(modin_series2)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_cov():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_compound(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.cov(None)
+    with pytest.warns(UserWarning):
+        modin_series.compound()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_compress(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.compress(modin_series > 30)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_convert_objects(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.convert_objects()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_copy(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series, modin_series.copy())
+    df_equals(modin_series.copy(), pandas_series)
+    df_equals(modin_series.copy(), pandas_series.copy())
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_corr(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.corr(modin_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_count(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.count(), pandas_series.count())
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_cov(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.cov(modin_series)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

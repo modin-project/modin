@@ -386,6 +386,9 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(
             pandas.Series.between, left, right, inclusive=inclusive
         )
+    
+    def combine(self, other, func, fill_value=None):
+        return super(Series, self).combine(other, func, fill_value=fill_value)
 
     def compound(self, axis=None, skipna=None, level=None):
         return self._default_to_pandas(
@@ -413,11 +416,15 @@ class Series(BasePandasDataset):
         )
 
     def corr(self, other, method="pearson", min_periods=None):
+        if isinstance(other, BasePandasDataset):
+            other = other._to_pandas()
         return self._default_to_pandas(
             pandas.Series.corr, other, method=method, min_periods=min_periods
         )
 
     def cov(self, other, min_periods=None):
+        if isinstance(other, BasePandasDataset):
+            other = other._to_pandas()
         return self._default_to_pandas(
             pandas.Series.cov, other, min_periods=min_periods
         )

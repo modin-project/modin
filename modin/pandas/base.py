@@ -631,11 +631,11 @@ class BasePandasDataset(object):
     def clip_upper(self, threshold, axis=None, inplace=False):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
-    def combine(self, other, func, fill_value=None, overwrite=True):
+    def combine(self, other, func, fill_value=None, **kwargs):
         if isinstance(other, type(self)):
             other = other._to_pandas()
         return self._default_to_pandas(
-            "combine", other, func, fill_value=fill_value, overwrite=overwrite
+            "combine", other, func, fill_value=fill_value, **kwargs
         )
 
     def combine_first(self, other):

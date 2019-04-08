@@ -469,6 +469,9 @@ class DataFrame(BasePandasDataset):
             **kwds
         )
 
+    def combine(self, other, func, fill_value=None, overwrite=True):
+        return super(DataFrame, self).combine(other, func, fill_value=fill_value, overwrite=overwrite)
+
     def convert_objects(
         self,
         convert_dates=True,
