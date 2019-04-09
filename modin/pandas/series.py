@@ -473,7 +473,7 @@ class Series(BasePandasDataset):
         )
 
     def factorize(self, sort=False, na_sentinel=-1):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel)
 
     def floordiv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)

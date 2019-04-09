@@ -1176,84 +1176,115 @@ def test_drop_duplicates(data):
     df_equals(modin_series, pandas_series.drop_duplicates(inplace=False))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_dropna():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
+def test_dropna(data, how):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.dropna(None, None)
+    with pytest.raises(TypeError):
+        modin_series.dropna(how=None, thresh=None)
 
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_dtype():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.dtype
+    modin_result = modin_series.dropna(how=how)
+    pandas_result = pandas_series.dropna(how=how)
+    df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_dtypes():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_dropna_inplace(data):
+    modin_series, pandas_series = create_test_series(data)
+    pandas_result = pandas_series.dropna()
+    modin_series.dropna(inplace=True)
+    df_equals(modin_series, pandas_result)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.dtypes
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.raises(TypeError):
+        modin_series.dropna(thresh=2, inplace=True)
 
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_duplicated():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.duplicated(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_empty():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.empty
+    modin_series, pandas_series = create_test_series(data)
+    pandas_series.dropna(how="any", inplace=True)
+    modin_series.dropna(how="any", inplace=True)
+    df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_eq():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_dtype(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.dtype, modin_series.dtypes)
+    df_equals(modin_series.dtype, pandas_series.dtype)
+    df_equals(modin_series.dtype, pandas_series.dtypes)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.eq(None, None, None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("keep", ["last", "first"], ids=["last", "first"])
+def test_duplicated(data, keep):
+    modin_series, pandas_series = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.duplicated(keep=keep)
+    df_equals(modin_result, pandas_series.duplicated(keep=keep))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_empty(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert modin_series.empty == pandas_series.empty
+
+
+def test_empty_series():
+    modin_series = pd.Series()
+    assert modin_series.empty
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_eq(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "eq")
+
+
 def test_equals():
-    modin_series = create_test_series()
+    series_data = [2.9, 3, 3, 3]
+    modin_df1 = pd.Series(series_data)
+    modin_df2 = pd.Series(series_data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.equals(None)
+    assert modin_df1.equals(modin_df2)
+    assert modin_df1.equals(pd.Series(modin_df1))
+    df_equals(modin_df1, modin_df2)
+    df_equals(modin_df1, pd.Series(modin_df1))
+
+    series_data = [2, 3, 5, 1]
+    modin_df3 = pd.Series(series_data, index=list("abcd"))
+
+    assert not modin_df1.equals(modin_df3)
+
+    with pytest.raises(AssertionError):
+        df_equals(modin_df3, modin_df1)
+
+    with pytest.raises(AssertionError):
+        df_equals(modin_df3, modin_df2)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_ewm():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_ewm(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.ewm(None, None, None, None, None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_expanding():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.expanding(None, None, None)
+    with pytest.warns(UserWarning):
+        modin_series.ewm(halflife=6)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_factorize():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_expanding(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.factorize(None)
+    with pytest.warns(UserWarning):
+        modin_series.expanding()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_factorize(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.factorize()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

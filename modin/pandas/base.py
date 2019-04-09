@@ -985,7 +985,7 @@ class BasePandasDataset(object):
         """
         return self._default_to_pandas("droplevel", level, axis=axis)
 
-    def drop_duplicates(self, subset=None, keep="first", inplace=False):
+    def drop_duplicates(self, keep="first", inplace=False, **kwargs):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns
 
             Args:
@@ -1003,15 +1003,15 @@ class BasePandasDataset(object):
                 deduplicated : DataFrame
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if subset is not None:
-            duplicates = self.duplicated(subset=subset, keep=keep)
+        if kwargs.get("subset", None) is not None:
+            duplicates = self.duplicated(keep=keep, **kwargs)
         else:
-            duplicates = self.duplicated(subset=subset, keep=keep)
+            duplicates = self.duplicated(keep=keep, **kwargs)
         indices, = duplicates.values.nonzero()
         return self.drop(index=self.index[indices], inplace=inplace)
 
-    def duplicated(self, subset=None, keep="first"):
-        return self._default_to_pandas("duplicated", subset=subset, keep=keep)
+    def duplicated(self, keep="first", **kwargs):
+        return self._default_to_pandas("duplicated", keep=keep, **kwargs)
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.

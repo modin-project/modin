@@ -177,6 +177,9 @@ class DataFrame(BasePandasDataset):
         """
         return self._query_compiler.dtypes
 
+    def duplicated(self, subset=None, keep="first"):
+        return super(DataFrame, self).duplicated(subset=subset, keep=keep)
+
     @property
     def empty(self):
         """Determines if the DataFrame is empty.
