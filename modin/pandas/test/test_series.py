@@ -972,84 +972,172 @@ def test_cov(data):
         modin_series.cov(modin_series)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_cummax():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.cummax(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_cummin():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.cummin(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_cumprod():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.cumprod(None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_cummax(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.cummax(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.cummax(skipna=skipna)
+    else:
+        df_equals(modin_series.cummax(skipna=skipna), pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_cumsum():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.cumsum(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_data():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.data
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_describe():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.describe(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_cummin(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.cummin(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.cummin(skipna=skipna)
+    else:
+        df_equals(modin_series.cummin(skipna=skipna), pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_diff():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.diff(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_div():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.div(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_divide():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.divide(None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_cumprod(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.cumprod(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.cumprod(skipna=skipna)
+    else:
+        df_equals(modin_series.cumprod(skipna=skipna), pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_dot():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+def test_cumsum(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = pandas_series.cumsum(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.cumsum(skipna=skipna)
+    else:
+        df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.dot(None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_data(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        _ = modin_series.data
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_describe(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.describe(), pandas_series.describe())
+    percentiles = [0.10, 0.11, 0.44, 0.78, 0.99]
+    df_equals(
+        modin_series.describe(percentiles=percentiles),
+        pandas_series.describe(percentiles=percentiles),
+    )
+
+    try:
+        pandas_result = pandas_series.describe(exclude=[np.float64])
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.describe(exclude=[np.float64])
+    else:
+        modin_result = modin_series.describe(exclude=[np.float64])
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_series.describe(exclude=np.float64)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.describe(exclude=np.float64)
+    else:
+        modin_result = modin_series.describe(exclude=np.float64)
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_series.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.describe(
+                include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            )
+    else:
+        modin_result = modin_series.describe(
+            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+        )
+        df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.describe(include=str(modin_series.dtypes))
+    pandas_result = pandas_series.describe(include=str(pandas_series.dtypes))
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.describe(include=[np.number])
+    pandas_result = pandas_series.describe(include=[np.number])
+    df_equals(modin_result, pandas_result)
+
+    df_equals(modin_series.describe(include="all"), pandas_series.describe(include="all"))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "periods", int_arg_values, ids=arg_keys("periods", int_arg_keys)
+)
+def test_diff(request, data, periods):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.diff(periods=periods)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.diff(periods=periods)
+    else:
+        modin_result = modin_series.diff(periods=periods)
+        df_equals(modin_result, pandas_result)
+
+    try:
+        pandas_result = pandas_series.T.diff(periods=periods)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.T.diff(periods=periods)
+    else:
+        modin_result = modin_series.T.diff(periods=periods)
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_div(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "div")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_divide(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "divide")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_dot(data):
+    modin_series, _ = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        modin_series.dot(modin_series)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -1060,12 +1148,32 @@ def test_drop():
         modin_series.drop(None, None, None, None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_drop_duplicates():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop_duplicates(data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.drop_duplicates(None)
+    df_equals(
+        modin_series.drop_duplicates(keep="first", inplace=False),
+        pandas_series.drop_duplicates(keep="first", inplace=False),
+    )
+
+    df_equals(
+        modin_series.drop_duplicates(keep="last", inplace=False),
+        pandas_series.drop_duplicates(keep="last", inplace=False),
+    )
+
+    df_equals(
+        modin_series.drop_duplicates(keep=False, inplace=False),
+        pandas_series.drop_duplicates(keep=False, inplace=False),
+    )
+
+    df_equals(
+        modin_series.drop_duplicates(inplace=False),
+        pandas_series.drop_duplicates(inplace=False),
+    )
+
+    modin_series.drop_duplicates(inplace=True)
+    df_equals(modin_series, pandas_series.drop_duplicates(inplace=False))
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

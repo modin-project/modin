@@ -422,6 +422,9 @@ class Series(BasePandasDataset):
             pandas.Series.corr, other, method=method, min_periods=min_periods
         )
 
+    def count(self, level=None):
+        return super(Series, self).count(level=level)
+
     def cov(self, other, min_periods=None):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
