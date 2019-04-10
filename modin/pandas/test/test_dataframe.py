@@ -2000,7 +2000,7 @@ class TestDFPartOne:
         df = pandas.DataFrame(frame_data)
         modin_df = pd.DataFrame(frame_data)
         df_equals(modin_df.fillna(method='pad'), df.fillna(method='pad'))
-    
+
         frame_data = {'A': [pandas.NaT,
                             pandas.Timestamp('2012-11-11 00:00:00+01:00')]}
         df = pandas.DataFrame(frame_data)
@@ -2225,7 +2225,7 @@ class TestDFPartOne:
         df = pandas.DataFrame(frame_data, index=date_range('20130110', periods=3))
         modin_df = pd.DataFrame(frame_data, index=date_range('20130110', periods=3))
         df_equals(modin_df.fillna('?'), df.fillna('?'))
-    
+
         frame_data = {'A': [-1, -2, np.nan],
                       'B': [pandas.Timestamp('2013-01-01'),
                             pandas.Timestamp('2013-01-02'), pandas.NaT],
