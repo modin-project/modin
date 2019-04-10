@@ -4652,6 +4652,32 @@ class TestDFPartTwo:
             pandas_df.__delitem__(last_label)
             df_equals(modin_df, pandas_df)
 
+    def test__options_display(self):
+        frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(1000, 102))
+        pandas_df = pandas.DataFrame(frame_data)
+        modin_df = pd.DataFrame(frame_data)
+
+        pandas.options.display.max_rows = 10
+        pandas.options.display.max_columns = 10
+        x = repr(pandas_df)
+        pd.options.display.max_rows = 5
+        pd.options.display.max_columns = 5
+        y = repr(modin_df)
+        assert x != y
+        pd.options.display.max_rows = 10
+        pd.options.display.max_columns = 10
+        y = repr(modin_df)
+        assert x == y
+
+        # test for old fixed max values
+        pandas.options.display.max_rows = 75
+        pandas.options.display.max_columns = 75
+        x = repr(pandas_df)
+        pd.options.display.max_rows = 75
+        pd.options.display.max_columns = 75
+        y = repr(modin_df)
+        assert x == y
+
     def test___finalize__(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
