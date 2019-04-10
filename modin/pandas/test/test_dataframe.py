@@ -4602,6 +4602,15 @@ def test__options_display():
     y = repr(modin_df)
     assert x == y
 
+    # test for old fixed max values
+    pandas.options.display.max_rows = 75
+    pandas.options.display.max_columns = 75
+    x = repr(pandas_df)
+    pd.options.display.max_rows = 75
+    pd.options.display.max_columns = 75
+    y = repr(modin_df)
+    assert x == y
+
 
 def test__doc__():
     assert pd.DataFrame.__doc__ != pandas.DataFrame.__doc__

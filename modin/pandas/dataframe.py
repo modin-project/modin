@@ -131,9 +131,8 @@ class DataFrame(object):
         return pandas.concat([head_for_repr, tail_for_repr])
 
     def __repr__(self):
-        # In the future, we can have this be configurable, just like Pandas.
-        num_rows = 60
-        num_cols = 30
+        num_rows = pandas.get_option("max_rows")
+        num_cols = pandas.get_option("max_columns")
 
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
