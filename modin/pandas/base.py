@@ -361,7 +361,7 @@ class BasePandasDataset(object):
         broadcast_axis=None,
     ):
         if isinstance(other, BasePandasDataset):
-            other = other._query_compiler.to_pandas()
+            other = other._to_pandas()
         return self._default_to_pandas(
             "align",
             other,
@@ -1281,7 +1281,7 @@ class BasePandasDataset(object):
             The counts of dtypes in this object.
         """
         if hasattr(self, "dtype"):
-            return pandas.Series({self.dtype: 1})
+            return pandas.Series({str(self.dtype): 1})
         result = self.dtypes.value_counts()
         result.index = result.index.map(lambda x: str(x))
         return result
@@ -1497,7 +1497,7 @@ class BasePandasDataset(object):
         raise_on_error=None,
     ):
         if isinstance(other, BasePandasDataset):
-            other = other._query_compiler.to_pandas()
+            other = other._to_pandas()
         return self._default_to_pandas(
             "mask",
             cond,
@@ -2006,7 +2006,7 @@ class BasePandasDataset(object):
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         if isinstance(other, BasePandasDataset):
-            other = other._query_compiler.to_pandas()
+            other = other._to_pandas()
         return self._default_to_pandas(
             "reindex_like",
             other,
@@ -3228,6 +3228,13 @@ class BasePandasDataset(object):
             return df.blocks
 
         return self._default_to_pandas(blocks)
+
+    @property
+    def is_copy(self):
+        warnings.warn("Attribute `is_copy` is deprecated and will be removed in a "
+                      "future version.", FutureWarning)
+        # Pandas doesn't do anything so neither do we.
+        return
 
     @property
     def size(self):

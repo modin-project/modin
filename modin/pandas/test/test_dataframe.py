@@ -2760,7 +2760,7 @@ def test_interpolate():
 
 def test_is_copy():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with pytest.warns(FutureWarning):
         pd.DataFrame(data).is_copy
 
 
@@ -2902,7 +2902,6 @@ def test_last():
 def test_last_valid_index(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
-
     assert modin_df.last_valid_index() == (pandas_df.last_valid_index())
 
 

@@ -6,6 +6,8 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
+import warnings
+
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
@@ -128,7 +130,9 @@ class Series(BasePandasDataset):
         return self.copy(deep=True)
 
     def __delitem__(self, key):
-        raise NotImplementedError("Not Yet implemented.")
+        if key not in self.keys():
+            raise KeyError(key)
+        self.drop(labels=key, inplace=True)
 
     def __div__(self, right):
         return self.div(right)
@@ -363,13 +367,13 @@ class Series(BasePandasDataset):
         # Series and DataFrame have a different behavior for `skipna`
         if skipna is None:
             skipna = True
-        return self.idxmax(axis=axis, skipna=skipna)
+        return self.idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def argmin(self, axis=0, skipna=True, *args, **kwargs):
         # Series and DataFrame have a different behavior for `skipna`
         if skipna is None:
             skipna = True
-        return self.idxmin(axis=axis, skipna=skipna)
+        return self.idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def argsort(self, axis=0, kind="quicksort", order=None):
         return self._default_to_pandas(
@@ -570,6 +574,16 @@ class Series(BasePandasDataset):
             bins=bins,
             **kwds
         )
+
+    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
+        if skipna is None:
+            skipna = True
+        return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
+
+    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
+        if skipna is None:
+            skipna = True
+        return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def interpolate(
         self,
@@ -1087,10 +1101,6 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(imag)
 
     @property
-    def is_copy(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    @property
     def is_monotonic(self):
         # We cannot default to pandas without a named function to call.
         def is_monotonic(df):
@@ -1158,7 +1168,7 @@ class Series(BasePandasDataset):
 
     @property
     def shape(self):
-        return (len(self),)
+        return len(self),
 
     @property
     def strides(self):

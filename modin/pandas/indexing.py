@@ -157,6 +157,8 @@ class _LocationIndexerBase(object):
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
+        if isinstance(self.df, Series) and not self.row_scaler:
+            return self.df.__constructor__(query_compiler=qc_view)
         if isinstance(self.df, Series):
             axis = 0
         elif ndim == 0:

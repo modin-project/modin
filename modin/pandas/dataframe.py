@@ -168,6 +168,9 @@ class DataFrame(BasePandasDataset):
         result = pandas.Series(ftypes, index=self.columns)
         return result
 
+    def drop_duplicates(self, subset=None, keep="first", inplace=False):
+        return super(DataFrame, self).drop_duplicates(subset=subset, keep=keep, inplace=inplace)
+
     @property
     def dtypes(self):
         """Get the dtypes for this DataFrame.
@@ -2032,14 +2035,6 @@ class DataFrame(BasePandasDataset):
             return df.style
 
         return self._default_to_pandas(style)
-
-    @property
-    def is_copy(self):
-        def is_copy(df):
-            """Defined because properties do not have a __name__"""
-            return df.is_copy
-
-        return self._default_to_pandas(is_copy)
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
