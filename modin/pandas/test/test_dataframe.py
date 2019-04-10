@@ -2236,8 +2236,6 @@ class TestDFPartOne:
         df_equals(modin_df.fillna('?'), df.fillna('?'))
     """
 
-
-class TestDFPartTwo:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_filter(self, data):
         modin_df = pd.DataFrame(data)
@@ -2630,6 +2628,8 @@ class TestDFPartTwo:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).kurtosis()
 
+
+class TestDFPartTwo:
     def test_last(self):
         i = pd.date_range("2018-04-09", periods=4, freq="2D")
         ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
