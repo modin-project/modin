@@ -169,7 +169,9 @@ class DataFrame(BasePandasDataset):
         return result
 
     def drop_duplicates(self, subset=None, keep="first", inplace=False):
-        return super(DataFrame, self).drop_duplicates(subset=subset, keep=keep, inplace=inplace)
+        return super(DataFrame, self).drop_duplicates(
+            subset=subset, keep=keep, inplace=inplace
+        )
 
     @property
     def dtypes(self):
@@ -239,20 +241,29 @@ class DataFrame(BasePandasDataset):
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
     def apply(
-            self,
-            func,
-            axis=0,
-            broadcast=None,
-            raw=False,
-            reduce=None,
-            result_type=None,
-            convert_dtype=True,
-            args=(),
-            **kwds
+        self,
+        func,
+        axis=0,
+        broadcast=None,
+        raw=False,
+        reduce=None,
+        result_type=None,
+        convert_dtype=True,
+        args=(),
+        **kwds
     ):
         axis = self._get_axis_number(axis)
-        query_compiler = super(DataFrame, self).apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type,
-                                              convert_dtype=convert_dtype, args=args, **kwds)
+        query_compiler = super(DataFrame, self).apply(
+            func,
+            axis=axis,
+            broadcast=broadcast,
+            raw=raw,
+            reduce=reduce,
+            result_type=result_type,
+            convert_dtype=convert_dtype,
+            args=args,
+            **kwds
+        )
         if not isinstance(query_compiler, type(self._query_compiler)):
             return query_compiler
         # This is the simplest way to determine the return type, but there are checks
@@ -476,7 +487,9 @@ class DataFrame(BasePandasDataset):
         )
 
     def combine(self, other, func, fill_value=None, overwrite=True):
-        return super(DataFrame, self).combine(other, func, fill_value=fill_value, overwrite=overwrite)
+        return super(DataFrame, self).combine(
+            other, func, fill_value=fill_value, overwrite=overwrite
+        )
 
     def convert_objects(
         self,

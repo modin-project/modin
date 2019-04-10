@@ -122,22 +122,18 @@ class BasePandasDataset(object):
                     else len(self._query_compiler.columns)
                 )
             ]
-        if hasattr(self, "dtype"):
-            self_dtypes = [self.dtype] * len(self)
-        else:
-            self_dtypes = self.dtypes
         # Do dtype checking
         if numeric_only:
             if not all(
                 is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
-                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
+                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
             ):
                 raise TypeError("Cannot do operation on non-numeric dtypes")
         elif numeric_or_object_only:
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
-                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
+                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
             ):
                 raise TypeError("Cannot do operation non-numeric dtypes")
         elif comparison_dtypes_only:
@@ -148,7 +144,7 @@ class BasePandasDataset(object):
                     and is_datetime_or_timedelta_dtype(other_dtype)
                 )
                 or is_dtype_equal(self_dtype, other_dtype)
-                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
+                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
             ):
                 raise TypeError(
                     "Cannot do operation non-numeric objects with numeric objects"
@@ -160,7 +156,7 @@ class BasePandasDataset(object):
                     is_datetime_or_timedelta_dtype(self_dtype)
                     and is_datetime_or_timedelta_dtype(other_dtype)
                 )
-                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
+                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
             ):
                 raise TypeError(
                     "Cannot do operation non-numeric objects with numeric objects"
@@ -346,6 +342,12 @@ class BasePandasDataset(object):
             return self._default_to_pandas(pandas.DataFrame.agg, func, *args, **kwargs)
 
         raise ValueError("{} is an unknown string function".format(func))
+    
+    def _get_dtypes(self):
+        if hasattr(self, "dtype"):
+            return [self.dtype]
+        else:
+            return list(self.dtypes)
 
     def align(
         self,
@@ -392,7 +394,7 @@ class BasePandasDataset(object):
                             self.__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                data_for_compute = self[self.columns[self._get_dtypes() == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -432,7 +434,7 @@ class BasePandasDataset(object):
                             self.__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                data_for_compute = self[self.columns[self._get_dtypes() == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=None, skipna=skipna, level=level, **kwargs
                 )
@@ -762,10 +764,6 @@ class BasePandasDataset(object):
 
         Returns: Series/DataFrame of summary statistics
         """
-        if is_list_like(self.dtypes):
-            dtypes_iter = self.dtypes.values
-        else:
-            dtypes_iter = [self.dtypes]
         if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
@@ -781,7 +779,7 @@ class BasePandasDataset(object):
                     not isinstance(inc, np.dtype)
                     and inc.__subclasscheck__(getattr(np, d.__str__()))
                 )
-                for d in dtypes_iter
+                for d in self._get_dtypes()
                 for inc in include
             ):
                 # This is the error that pandas throws.
@@ -796,7 +794,7 @@ class BasePandasDataset(object):
                     not isinstance(exc, np.dtype)
                     and exc.__subclasscheck__(getattr(np, d.__str__()))
                 )
-                for d in dtypes_iter
+                for d in self._get_dtypes()
                 for exc in exclude
             ):
                 # This is the error that pandas throws.
@@ -1342,7 +1340,7 @@ class BasePandasDataset(object):
             A Series with the index for each maximum value for the axis
                 specified.
         """
-        if not all(d != np.dtype("O") for d in (self.dtypes if not hasattr(self, "dtype") else [self.dtype])):
+        if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1360,7 +1358,7 @@ class BasePandasDataset(object):
             A Series with the index for each minimum value for the axis
                 specified.
         """
-        if not all(d != np.dtype("O") for d in (self.dtypes if not hasattr(self, "dtype") else [self.dtype])):
+        if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1831,14 +1829,14 @@ class BasePandasDataset(object):
         if not numeric_only:
             # If not numeric_only and columns, then check all columns are either
             # numeric, timestamp, or timedelta
-            if not axis and not all(check_dtype(t) for t in self.dtypes):
+            if not axis and not all(check_dtype(t) for t in self._get_dtypes()):
                 raise TypeError("can't multiply sequence by non-int of type 'float'")
             # If over rows, then make sure that all dtypes are equal for not
             # numeric_only
             elif axis:
-                for i in range(1, len(self.dtypes)):
-                    pre_dtype = self.dtypes[i - 1]
-                    curr_dtype = self.dtypes[i]
+                for i in range(1, len(self._get_dtypes())):
+                    pre_dtype = self._get_dtypes()[i - 1]
+                    curr_dtype = self._get_dtypes()[i]
                     if not is_dtype_equal(pre_dtype, curr_dtype):
                         raise TypeError(
                             "Cannot compare type '{0}' with type '{1}'".format(
@@ -1849,7 +1847,7 @@ class BasePandasDataset(object):
             # Normally pandas returns this near the end of the quantile, but we
             # can't afford the overhead of running the entire operation before
             # we error.
-            if not any(is_numeric_dtype(t) for t in self.dtypes):
+            if not any(is_numeric_dtype(t) for t in self._get_dtypes()):
                 raise ValueError("need at least one array to concatenate")
 
         # check that all qs are between 0 and 1
@@ -1930,15 +1928,16 @@ class BasePandasDataset(object):
         limit=None,
         tolerance=None,
     ):
+        axis = self._get_axis_number(axis) if axis is not None else 0
         if (
             level is not None
             or (
+                (columns is not None or axis == 1) and
                 isinstance(self.columns, pandas.MultiIndex)
-                and (columns is not None or axis == 1)
             )
             or (
+                (index is not None or axis == 0) and
                 isinstance(self.index, pandas.MultiIndex)
-                and (index is not None or axis == 0)
             )
         ):
             return self._default_to_pandas(
@@ -1954,7 +1953,6 @@ class BasePandasDataset(object):
                 limit=limit,
                 tolerance=tolerance,
             )
-        axis = self._get_axis_number(axis) if axis is not None else 0
         if axis == 0 and labels is not None:
             index = labels
         elif labels is not None:
@@ -3161,14 +3159,10 @@ class BasePandasDataset(object):
         return self.gt(other)
 
     def __invert__(self):
-        if hasattr(self, "dtype"):
-            dtypes = [self.dtype]
-        else:
-            dtypes = list(self.dtypes)
-        if not all(is_numeric_dtype(d) for d in dtypes):
+        if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
             raise TypeError(
                 "bad operand type for unary ~: '{}'".format(
-                    next(d for d in dtypes if not is_numeric_dtype(d))
+                    next(d for d in self._get_dtypes() if not is_numeric_dtype(d))
                 )
             )
         return self.__constructor__(query_compiler=self._query_compiler.invert())
@@ -3231,8 +3225,11 @@ class BasePandasDataset(object):
 
     @property
     def is_copy(self):
-        warnings.warn("Attribute `is_copy` is deprecated and will be removed in a "
-                      "future version.", FutureWarning)
+        warnings.warn(
+            "Attribute `is_copy` is deprecated and will be removed in a "
+            "future version.",
+            FutureWarning,
+        )
         # Pandas doesn't do anything so neither do we.
         return
 

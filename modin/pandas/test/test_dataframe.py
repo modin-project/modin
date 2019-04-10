@@ -789,7 +789,9 @@ class TestDFPartOne:
             df_equals(modin_result, pandas_result)
 
         try:
-            pandas_result = pandas_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
+            pandas_result = pandas_df.T.all(
+                axis=axis, skipna=skipna, bool_only=bool_only
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
@@ -799,7 +801,9 @@ class TestDFPartOne:
 
         # Test when axis is None. This will get repeated but easier than using list in parameterize decorator
         try:
-            pandas_result = pandas_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
+            pandas_result = pandas_df.T.all(
+                axis=None, skipna=skipna, bool_only=bool_only
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
@@ -838,7 +842,9 @@ class TestDFPartOne:
             df_equals(modin_result, pandas_result)
 
         try:
-            pandas_result = pandas_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
+            pandas_result = pandas_df.T.any(
+                axis=axis, skipna=skipna, bool_only=bool_only
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
@@ -847,7 +853,9 @@ class TestDFPartOne:
             df_equals(modin_result, pandas_result)
 
         try:
-            pandas_result = pandas_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
+            pandas_result = pandas_df.T.any(
+                axis=None, skipna=skipna, bool_only=bool_only
+            )
         except Exception as e:
             with pytest.raises(type(e)):
                 modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
@@ -1374,7 +1382,7 @@ class TestDFPartOne:
                 df_equals(modin_result, pandas_result)
 
         if name_contains(request.node.name, ["datetime_timedelta_data"]) and (
-                axis == 0 or axis == "rows"
+            axis == 0 or axis == "rows"
         ):
             with pytest.raises(TypeError):
                 modin_df.T.cumsum(axis=axis, skipna=skipna)
@@ -2254,7 +2262,11 @@ class TestDFPartOne:
 
         # df2 may have different index and columns
         df2 = pandas.DataFrame(
-            {"a": [np.nan, 10, 20, 30, 40], "b": [50, 60, 70, 80, 90], "foo": ["bar"] * 5},
+            {
+                "a": [np.nan, 10, 20, 30, 40],
+                "b": [50, 60, 70, 80, 90],
+                "foo": ["bar"] * 5,
+            },
             index=list("VWXuZ"),
         )
         modin_df2 = pd.DataFrame(df2)
@@ -3361,7 +3373,10 @@ class TestDFPartTwo:
         except Exception:
             with pytest.raises(TypeError):
                 modin_df.T.prod(
-                    axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+                    axis=axis,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
                 )
         else:
             modin_result = modin_df.T.prod(
@@ -4373,7 +4388,10 @@ class TestDFPartTwo:
         except Exception:
             with pytest.raises(TypeError):
                 modin_df.T.sum(
-                    axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+                    axis=axis,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
                 )
         else:
             modin_result = modin_df.T.sum(

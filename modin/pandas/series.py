@@ -111,7 +111,9 @@ class Series(BasePandasDataset):
         return super(Series, new_self).__and__(new_other)
 
     def __array_prepare__(self, result, context=None):  # pragma: no cover
-        return self._default_to_pandas(pandas.Series.__array_prepare__, result, context=context)
+        return self._default_to_pandas(
+            pandas.Series.__array_prepare__, result, context=context
+        )
 
     @property
     def __array_priority__(self):  # pragma: no cover
@@ -348,9 +350,7 @@ class Series(BasePandasDataset):
         # type.
         return_type = type(
             getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
-                func,
-                *args,
-                **kwds
+                func, *args, **kwds
             )
         ).__name__
         if return_type not in ["DataFrame", "Series"]:
@@ -390,7 +390,7 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(
             pandas.Series.between, left, right, inclusive=inclusive
         )
-    
+
     def combine(self, other, func, fill_value=None):
         return super(Series, self).combine(other, func, fill_value=fill_value)
 
@@ -445,10 +445,8 @@ class Series(BasePandasDataset):
 
     def divmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
-                pandas.Series.divmod,
-                    other, level=level, fill_value=fill_value, axis=axis
-
-            )
+            pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
@@ -477,7 +475,9 @@ class Series(BasePandasDataset):
         )
 
     def factorize(self, sort=False, na_sentinel=-1):
-        return self._default_to_pandas(pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel)
+        return self._default_to_pandas(
+            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
+        )
 
     def floordiv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -833,9 +833,7 @@ class Series(BasePandasDataset):
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
-            pandas.Series.rdivmod,
-                other, level=level, fill_value=fill_value, axis=axis
-
+            pandas.Series.rdivmod, other, level=level, fill_value=fill_value, axis=axis
         )
 
     def rfloordiv(self, other, level=None, fill_value=None, axis=0):
@@ -1168,7 +1166,7 @@ class Series(BasePandasDataset):
 
     @property
     def shape(self):
-        return len(self),
+        return (len(self),)
 
     @property
     def strides(self):
