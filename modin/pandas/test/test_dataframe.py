@@ -4585,33 +4585,6 @@ def test_xs():
         df.xs("mammal")
 
 
-def test__options_display():
-    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(1000, 102))
-    pandas_df = pandas.DataFrame(frame_data)
-    modin_df = pd.DataFrame(frame_data)
-
-    pandas.options.display.max_rows = 10
-    pandas.options.display.max_columns = 10
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 5
-    pd.options.display.max_columns = 5
-    y = repr(modin_df)
-    assert x != y
-    pd.options.display.max_rows = 10
-    pd.options.display.max_columns = 10
-    y = repr(modin_df)
-    assert x == y
-
-    # test for old fixed max values
-    pandas.options.display.max_rows = 75
-    pandas.options.display.max_columns = 75
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 75
-    pd.options.display.max_columns = 75
-    y = repr(modin_df)
-    assert x == y
-
-
 def test__doc__():
     assert pd.DataFrame.__doc__ != pandas.DataFrame.__doc__
     assert pd.DataFrame.__init__ != pandas.DataFrame.__init__
@@ -4947,6 +4920,33 @@ def test___repr__():
     modin_df = pd.DataFrame(frame_data)
 
     assert repr(pandas_df) == repr(modin_df)
+
+
+def test__options_display():
+    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(1000, 102))
+    pandas_df = pandas.DataFrame(frame_data)
+    modin_df = pd.DataFrame(frame_data)
+
+    pandas.options.display.max_rows = 10
+    pandas.options.display.max_columns = 10
+    x = repr(pandas_df)
+    pd.options.display.max_rows = 5
+    pd.options.display.max_columns = 5
+    y = repr(modin_df)
+    assert x != y
+    pd.options.display.max_rows = 10
+    pd.options.display.max_columns = 10
+    y = repr(modin_df)
+    assert x == y
+
+    # test for old fixed max values
+    pandas.options.display.max_rows = 75
+    pandas.options.display.max_columns = 75
+    x = repr(pandas_df)
+    pd.options.display.max_rows = 75
+    pd.options.display.max_columns = 75
+    y = repr(modin_df)
+    assert x == y
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
