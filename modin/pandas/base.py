@@ -342,7 +342,7 @@ class BasePandasDataset(object):
             return self._default_to_pandas(pandas.DataFrame.agg, func, *args, **kwargs)
 
         raise ValueError("{} is an unknown string function".format(func))
-    
+
     def _get_dtypes(self):
         if hasattr(self, "dtype"):
             return [self.dtype]
@@ -394,7 +394,7 @@ class BasePandasDataset(object):
                             self.__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self._get_dtypes() == np.bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -434,7 +434,7 @@ class BasePandasDataset(object):
                             self.__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self._get_dtypes() == np.bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool]]
                 return data_for_compute.all(
                     axis=axis, bool_only=None, skipna=skipna, level=level, **kwargs
                 )
@@ -1932,12 +1932,12 @@ class BasePandasDataset(object):
         if (
             level is not None
             or (
-                (columns is not None or axis == 1) and
-                isinstance(self.columns, pandas.MultiIndex)
+                (columns is not None or axis == 1)
+                and isinstance(self.columns, pandas.MultiIndex)
             )
             or (
-                (index is not None or axis == 0) and
-                isinstance(self.index, pandas.MultiIndex)
+                (index is not None or axis == 0)
+                and isinstance(self.index, pandas.MultiIndex)
             )
         ):
             return self._default_to_pandas(

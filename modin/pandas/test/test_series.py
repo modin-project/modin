@@ -1964,8 +1964,12 @@ def test_real(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reindex(data):
     modin_series, pandas_series = create_test_series(data)
-    pandas_result = pandas_series.reindex(list(pandas_series.index) + ["_A_NEW_ROW"], fill_value=0)
-    modin_result = modin_series.reindex(list(modin_series.index) + ["_A_NEW_ROW"], fill_value=0)
+    pandas_result = pandas_series.reindex(
+        list(pandas_series.index) + ["_A_NEW_ROW"], fill_value=0
+    )
+    modin_result = modin_series.reindex(
+        list(modin_series.index) + ["_A_NEW_ROW"], fill_value=0
+    )
     df_equals(pandas_result, modin_result)
 
     frame_data = {
@@ -1981,83 +1985,120 @@ def test_reindex(data):
     for col in pandas_df.columns:
         modin_series = modin_df[col]
         pandas_series = pandas_df[col]
-        df_equals(modin_series.reindex([0, 3, 2, 1]), pandas_series.reindex([0, 3, 2, 1]))
+        df_equals(
+            modin_series.reindex([0, 3, 2, 1]), pandas_series.reindex([0, 3, 2, 1])
+        )
         df_equals(modin_series.reindex([0, 6, 2]), pandas_series.reindex([0, 6, 2]))
-        df_equals(modin_series.reindex(index=[0, 1, 5]), pandas_series.reindex(index=[0, 1, 5]))
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_reindex_axis():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.reindex_axis(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_reindex_like():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.reindex_like(None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rename():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rename(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rename_axis():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rename_axis(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_reorder_levels():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.reorder_levels(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_repeat():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.repeat(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_replace():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.replace(None, None, None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_resample():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.resample(
-            None, None, None, None, None, None, None, None, None, None, None, None
+        df_equals(
+            modin_series.reindex(index=[0, 1, 5]),
+            pandas_series.reindex(index=[0, 1, 5]),
         )
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_reset_index():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reindex_axis(data):
+    modin_series, pandas_series = create_test_series(data)
+    modin_series.reindex_axis(
+        [i for i in modin_series.index[: len(modin_series.index) // 2]]
+    )
 
-    with pytest.raises(NotImplementedError):
-        modin_series.reset_index(None, None, None)
+
+def test_reindex_like():
+    df1 = pd.DataFrame(
+        [
+            [24.3, 75.7, "high"],
+            [31, 87.8, "high"],
+            [22, 71.6, "medium"],
+            [35, 95, "medium"],
+        ],
+        columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
+        index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
+    )
+    df2 = pd.DataFrame(
+        [[28, "low"], [30, "low"], [35.1, "medium"]],
+        columns=["temp_celsius", "windspeed"],
+        index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
+    )
+
+    series1 = df1["windspeed"]
+    series2 = df2["windspeed"]
+    with pytest.warns(UserWarning):
+        series2.reindex_like(series1)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rename(data):
+    modin_series, pandas_series = create_test_series(data)
+    new_name = "NEW_NAME"
+    df_equals(modin_series.rename(new_name), pandas_series.rename(new_name))
+
+    modin_series_cp = modin_series.copy()
+    pandas_series_cp = pandas_series.copy()
+    modin_series_cp.rename(new_name, inplace=True)
+    pandas_series_cp.rename(new_name, inplace=True)
+    df_equals(modin_series_cp, pandas_series_cp)
+
+    modin_result = modin_series.rename("{}__".format)
+    pandas_result = pandas_series.rename("{}__".format)
+    df_equals(modin_result, pandas_result)
+
+
+def test_reorder_levels():
+    series = pd.Series(
+        np.random.randint(1, 100, 12),
+        index=pd.MultiIndex.from_tuples(
+            [
+                (num, letter, color)
+                for num in range(1, 3)
+                for letter in ["a", "b", "c"]
+                for color in ["Red", "Green"]
+            ],
+            names=["Number", "Letter", "Color"],
+        ),
+    )
+    with pytest.warns(UserWarning):
+        series.reorder_levels(["Letter", "Color", "Number"])
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "repeats", [2, 3, 4], ids=["repeats_{}".format(i) for i in [2, 3, 4]]
+)
+def test_repeat(data, repeats):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        df_equals(modin_series.repeat(repeats), pandas_series.repeat(repeats))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_replace(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.replace(0, 5)
+
+
+def test_resample():
+    modin_series = pd.Series([10, 11, 9, 13, 14, 18, 17, 19], index=pd.date_range("01/01/2018", periods=8, freq="W"))
+    with pytest.warns(UserWarning):
+        modin_series.resample("M")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("drop", [True, False], ids=["True", "False"])
+def test_reset_index(data, drop):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.reset_index(drop=drop), pandas_series.reset_index(drop=drop))
+
+    modin_series_cp = modin_series.copy()
+    pandas_series_cp = pandas_series.copy()
+    try:
+        pandas_result = pandas_series_cp.reset_index(drop=drop, inplace=True)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series_cp.reset_index(drop=drop, inplace=True)
+    else:
+        modin_result = modin_series_cp.reset_index(drop=drop, inplace=True)
+        df_equals(pandas_result, modin_result)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

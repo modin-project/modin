@@ -800,7 +800,9 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            return DataFrame(self).rename(index=index, **kwargs).squeeze()
+            result = DataFrame(self).rename(index=index, **kwargs).squeeze()
+            result.name = self.name
+            return result
 
     def reorder_levels(self, order):
         return self._default_to_pandas(pandas.Series.reorder_levels, order)
@@ -819,15 +821,17 @@ class Series(BasePandasDataset):
                 result.index = new_idx
                 result.name = name or self.name
                 return result
-        elif drop and inplace:
+        elif not drop and inplace:
             raise TypeError(
-                "Cannot reset_index inplace on a Series " "to create a DataFrame"
+                "Cannot reset_index inplace on a Series to create a DataFrame"
             )
         else:
             obj = self.copy()
             if name is not None:
                 obj.name = name
-            return super(Series, obj).reset_index(
+            from .dataframe import DataFrame
+
+            return DataFrame(self).reset_index(
                 level=level, drop=drop, inplace=inplace
             )
 
