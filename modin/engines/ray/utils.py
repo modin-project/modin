@@ -1,6 +1,7 @@
-try:
+import sys
+if sys.version_info[0] == 3:
     import builtins
-except ImportError:
+else:
     import __builtin__ as builtins
 
 
