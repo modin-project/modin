@@ -2109,68 +2109,55 @@ def test_reshape():
         modin_series.reshape(None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rfloordiv():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rfloordiv(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rmod():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rmod(None, None, None)
+@pytest.mark.skip(reason="Come back to fix")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rfloordiv(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rfloordiv")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rmul():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rmul(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rolling():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rolling(None, None, None, None, None, None, None)
+@pytest.mark.skip(reason="Come back to fix")
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rmod(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rmod")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_round():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.round(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rmul(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rmul")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rpow():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rpow(None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rsub():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.rsub(None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rolling(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.rolling(10)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_rtruediv():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_round(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.round(), pandas_series.round())
 
-    with pytest.raises(NotImplementedError):
-        modin_series.rtruediv(None, None, None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rpow(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rpow")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rsub(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rsub")
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_rtruediv(data):
+    modin_series, pandas_series = create_test_series(data)
+    inter_df_math_helper(modin_series, pandas_series, "rtruediv")
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
