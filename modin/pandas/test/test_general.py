@@ -13,13 +13,13 @@ def test_isna(data):
 
     pandas_result = pandas.isna(pandas_df)
     modin_result = pd.isna(modin_df)
-
     df_equals(modin_result, pandas_result)
 
     modin_result = pd.isna(pd.Series([1, np.nan, 2]))
     pandas_result = pandas.isna(pandas.Series([1, np.nan, 2]))
+    df_equals(modin_result, pandas_result)
 
-    assert modin_result.equals(pandas_result)
+    assert pd.isna(np.nan) == pandas.isna(np.nan)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -29,13 +29,13 @@ def test_isnull(data):
 
     pandas_result = pandas.isnull(pandas_df)
     modin_result = pd.isnull(modin_df)
-
     df_equals(modin_result, pandas_result)
 
     modin_result = pd.isnull(pd.Series([1, np.nan, 2]))
     pandas_result = pandas.isnull(pandas.Series([1, np.nan, 2]))
+    df_equals(modin_result, pandas_result)
 
-    assert modin_result.equals(pandas_result)
+    assert pd.isna(np.nan) == pandas.isna(np.nan)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -45,13 +45,13 @@ def test_notna(data):
 
     pandas_result = pandas.notna(pandas_df)
     modin_result = pd.notna(modin_df)
-
     df_equals(modin_result, pandas_result)
 
     modin_result = pd.notna(pd.Series([1, np.nan, 2]))
     pandas_result = pandas.notna(pandas.Series([1, np.nan, 2]))
+    df_equals(modin_result, pandas_result)
 
-    assert modin_result.equals(pandas_result)
+    assert pd.isna(np.nan) == pandas.isna(np.nan)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -61,13 +61,13 @@ def test_notnull(data):
 
     pandas_result = pandas.notnull(pandas_df)
     modin_result = pd.notnull(modin_df)
-
     df_equals(modin_result, pandas_result)
 
     modin_result = pd.notnull(pd.Series([1, np.nan, 2]))
     pandas_result = pandas.notnull(pandas.Series([1, np.nan, 2]))
+    df_equals(modin_result, pandas_result)
 
-    assert modin_result.equals(pandas_result)
+    assert pd.isna(np.nan) == pandas.isna(np.nan)
 
 
 def test_merge():
