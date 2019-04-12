@@ -5,6 +5,7 @@ from __future__ import print_function
 import pytest
 import numpy as np
 import pandas
+from collections import OrderedDict
 from modin.pandas.utils import to_pandas
 from pathlib import Path
 import pyarrow as pa
@@ -398,6 +399,23 @@ def test_from_excel():
     teardown_excel_file()
 
 
+def test_from_excel_all_sheets():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
+    modin_df = pd.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
+
+    assert isinstance(pandas_df, OrderedDict)
+    assert isinstance(modin_df, OrderedDict)
+
+    assert pandas_df.keys() == modin_df.keys()
+
+    for key in pandas_df.keys():
+        assert modin_df_equals_pandas(modin_df.get(key), pandas_df.get(key))
+
+    teardown_excel_file()
+
+
 # @pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
 def test_from_feather():
     setup_feather_file(SMALL_ROW_SIZE)
@@ -701,6 +719,7 @@ def test_to_dict():
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
 
 
+@pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
 def test_to_excel():
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()

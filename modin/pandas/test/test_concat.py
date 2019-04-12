@@ -163,3 +163,12 @@ def test_mixed_none_concat():
     mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     assert modin_df_equals_pandas(pd.concat(mixed_dfs), pandas.concat([df, df2, df3]))
+
+
+def test_ignore_index_concat():
+    df, df2 = generate_dfs()
+
+    assert modin_df_equals_pandas(
+        pd.concat([df, df2], ignore_index=True),
+        pandas.concat([df, df2], ignore_index=True),
+    )
