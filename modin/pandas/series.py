@@ -6,7 +6,6 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
-import warnings
 
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
@@ -208,7 +207,9 @@ class Series(BasePandasDataset):
     def __setitem__(self, key, value):
         if key not in self.keys():
             raise KeyError(key)
-        self._create_or_update_from_compiler(self._query_compiler.setitem(1, key, value), inplace=True)
+        self._create_or_update_from_compiler(
+            self._query_compiler.setitem(1, key, value), inplace=True
+        )
 
     def __sub__(self, right):
         return self.sub(right)
@@ -970,9 +971,7 @@ class Series(BasePandasDataset):
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
     def to_period(self, freq=None, copy=True):
-        return self._default_to_pandas(
-            "to_period", freq=freq, copy=copy
-        )
+        return self._default_to_pandas("to_period", freq=freq, copy=copy)
 
     def to_string(
         self,
@@ -1002,9 +1001,7 @@ class Series(BasePandasDataset):
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
     def to_timestamp(self, freq=None, how="start", copy=True):
-        return self._default_to_pandas(
-            "to_timestamp", freq=freq, how=how, copy=copy
-        )
+        return self._default_to_pandas("to_timestamp", freq=freq, how=how, copy=copy)
 
     def transpose(self, *args, **kwargs):
         return self
@@ -1073,7 +1070,7 @@ class Series(BasePandasDataset):
             raise_on_error=raise_on_error,
         )
 
-    def xs(self, key, axis=0, level=None, drop_level=True): # pragma: no cover
+    def xs(self, key, axis=0, level=None, drop_level=True):  # pragma: no cover
         raise NotImplementedError("Not Yet implemented.")
 
     @property

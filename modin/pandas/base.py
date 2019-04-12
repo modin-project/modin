@@ -14,7 +14,6 @@ from pandas.core.dtypes.common import (
 )
 from pandas.util._validators import validate_bool_kwarg
 import re
-import sys
 import warnings
 
 from modin.error_message import ErrorMessage

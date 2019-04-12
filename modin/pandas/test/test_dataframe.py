@@ -4773,7 +4773,7 @@ class TestDFPartTwo:
             pandas_result = ~pandas_df
         except Exception as e:
             with pytest.raises(type(e)):
-                _ = repr(~modin_df)
+                repr(~modin_df)
         else:
             modin_result = ~modin_df
             df_equals(modin_result, pandas_result)

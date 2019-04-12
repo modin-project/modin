@@ -1662,7 +1662,9 @@ class DataFrame(BasePandasDataset):
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
-        return super(DataFrame, self).to_timestamp(freq=freq, how=how, axis=axis, copy=copy)
+        return super(DataFrame, self).to_timestamp(
+            freq=freq, how=how, axis=axis, copy=copy
+        )
 
     def truediv(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):

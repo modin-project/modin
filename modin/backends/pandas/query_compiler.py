@@ -1851,7 +1851,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(1, -n).transpose(),
-                index[:-n],
+                self.index[:-n],
                 self.columns,
                 self._dtype_cache,
             )
@@ -1859,11 +1859,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if n == 0:
                 result = self.__constructor__(
-                    self.data.take(0, 0), self.index[:0], self.columns, self._dtype_cache
+                    self.data.take(0, 0),
+                    self.index[:0],
+                    self.columns,
+                    self._dtype_cache,
                 )
             else:
                 result = self.__constructor__(
-                    self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
+                    self.data.take(0, -n),
+                    self.index[-n:],
+                    self.columns,
+                    self._dtype_cache,
                 )
 
         return result
@@ -2001,7 +2007,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if axis == 0:
             numeric_indices = list(self.columns.get_indexer_for([key]))
         else:
-            numeric_indices =  list(self.index.get_indexer_for([key]))
+            numeric_indices = list(self.index.get_indexer_for([key]))
         prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
             value = list(value)
