@@ -967,6 +967,13 @@ class Series(BasePandasDataset):
 
     tolist = to_list
 
+    # TODO(williamma12): When we implement to_timestamp, have this call the version
+    # in base.py
+    def to_period(self, freq=None, copy=True):
+        return self._default_to_pandas(
+            "to_period", freq=freq, copy=copy
+        )
+
     def to_string(
         self,
         buf=None,
@@ -990,6 +997,13 @@ class Series(BasePandasDataset):
             dtype=dtype,
             name=name,
             max_rows=max_rows,
+        )
+
+    # TODO(williamma12): When we implement to_timestamp, have this call the version
+    # in base.py
+    def to_timestamp(self, freq=None, how="start", copy=True):
+        return self._default_to_pandas(
+            "to_timestamp", freq=freq, how=how, copy=copy
         )
 
     def transpose(self, *args, **kwargs):

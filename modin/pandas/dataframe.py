@@ -1620,6 +1620,9 @@ class DataFrame(BasePandasDataset):
             **kwargs
         )
 
+    def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
+        return super(DataFrame, self).to_period(freq=freq, axis=axis, copy=copy)
+
     def to_records(
         self, index=True, convert_datetime64=None, column_dtypes=None, index_dtypes=None
     ):
@@ -1657,6 +1660,9 @@ class DataFrame(BasePandasDataset):
             version=version,
             convert_strl=convert_strl,
         )
+
+    def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
+        return super(DataFrame, self).to_timestamp(freq=freq, how=how, axis=axis, copy=copy)
 
     def truediv(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):

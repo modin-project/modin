@@ -495,7 +495,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     self.dtypes
                 )
             else:
-                df = pandas.DataFrame(index=self.index)
+                df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
@@ -1848,22 +1848,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # See head for an explanation of the transposed behavior
         if n < 0:
             n = max(0, len(self.index) + n)
-        if n == 0:
-            index = pandas.Index([])
-        else:
-            index = self.index[-n:]
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(1, -n).transpose(),
-                index,
+                index[:-n],
                 self.columns,
                 self._dtype_cache,
             )
             result._is_transposed = True
         else:
-            result = self.__constructor__(
-                self.data.take(0, -n), index, self.columns, self._dtype_cache
-            )
+            if n == 0:
+                result = self.__constructor__(
+                    self.data.take(0, 0), self.index[:0], self.columns, self._dtype_cache
+                )
+            else:
+                result = self.__constructor__(
+                    self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
+                )
 
         return result
 
