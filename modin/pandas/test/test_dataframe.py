@@ -4458,13 +4458,15 @@ class TestDFPartTwo:
         df_equals(modin_df, pandas_df)
 
         modin_df[modin_df.columns[-1]] = pd.DataFrame(modin_df[modin_df.columns[0]])
-        pandas_df[pandas_df.columns[-1]] = pandas.DataFrame(pandas_df[pandas_df.columns[0]])
+        pandas_df[pandas_df.columns[-1]] = pandas.DataFrame(
+            pandas_df[pandas_df.columns[0]]
+        )
         df_equals(modin_df, pandas_df)
 
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        #TODO: These commented out lines are some nasty edge cases we don't support
+        # TODO: These commented out lines are some nasty edge cases we don't support
         # rows = len(modin_df)
         # arr = np.arange(rows*2).reshape(-1,2)
         # modin_df[0] = arr
@@ -4473,7 +4475,6 @@ class TestDFPartTwo:
         #
         # with pytest.raises(ValueError, match=r"Wrong number of items passed in"):
         #     modin_df['___NON EXISTENT COLUMN'] = arr
-
 
         modin_df[modin_df.columns[0]] = np.arange(len(modin_df))
         pandas_df[pandas_df.columns[0]] = np.arange(len(pandas_df))
