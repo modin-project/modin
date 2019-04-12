@@ -3050,7 +3050,9 @@ class BasePandasDataset(object):
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
         result = self.agg(func, axis=axis, *args, **kwargs)
-        if len(result) != len(self):
+        try:
+            assert len(result) == len(self)
+        except Exception:
             raise ValueError("transforms cannot produce aggregated results")
         return result
 

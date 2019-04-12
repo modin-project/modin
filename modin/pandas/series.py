@@ -963,7 +963,7 @@ class Series(BasePandasDataset):
         return DataFrame(self)
 
     def to_list(self):
-        return self._default_to_pandas(pandas.Series.to_list())
+        return self._default_to_pandas(pandas.Series.to_list)
 
     tolist = to_list
 
