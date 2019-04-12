@@ -4765,8 +4765,10 @@ class DataFrame(object):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
                 value = value[value.columns[0]].values
             elif isinstance(value, np.ndarray):
-                assert len(value.shape) < 3, "Shape of new values must be compatible with manager shape"
-                value = value.T.reshape(-1)[:len(self)]
+                assert (
+                    len(value.shape) < 3
+                ), "Shape of new values must be compatible with manager shape"
+                value = value.T.reshape(-1)[: len(self)]
             value = np.array(value)
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
