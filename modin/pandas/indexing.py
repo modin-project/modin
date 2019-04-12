@@ -167,9 +167,9 @@ class _LocationIndexerBase(object):
             axis = (
                 None
                 if self.col_scaler and self.row_scaler
-                else 0
-                if self.col_scaler
                 else 1
+                if self.col_scaler
+                else 0
             )
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
