@@ -535,12 +535,25 @@ def test_from_csv(make_csv_file):
 def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
     pandas_df = pandas.read_csv(dataset_url)
+
+    #This first load is to trigger all the import deprecation warnings
     modin_df = pd.read_csv(dataset_url)
 
-    # This shouldn't default to pandas behavior
+    # This will warn if it defaults to pandas behavior, but it shouldn't
     with pytest.warns(None) as record:
         modin_df = pd.read_csv(dataset_url)
     assert not record.list
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_csv_default(make_csv_file):
+    # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+    dataset_url = "https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv"
+    pandas_df = pandas.read_csv(dataset_url)
+
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_csv(dataset_url)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
