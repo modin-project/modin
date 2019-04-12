@@ -11,7 +11,7 @@ import warnings
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
-from .utils import from_pandas
+from .utils import from_pandas, to_pandas
 
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series, pandas.Series.__init__])
@@ -1059,7 +1059,10 @@ class Series(BasePandasDataset):
         try_cast=False,
         raise_on_error=None,
     ):
+        if isinstance(other, Series):
+            other = to_pandas(other)
         return self._default_to_pandas(
+            pandas.Series.where,
             cond,
             other=other,
             inplace=inplace,
@@ -1070,7 +1073,7 @@ class Series(BasePandasDataset):
             raise_on_error=raise_on_error,
         )
 
-    def xs(self, key, axis=0, level=None, drop_level=True):
+    def xs(self, key, axis=0, level=None, drop_level=True): # pragma: no cover
         raise NotImplementedError("Not Yet implemented.")
 
     @property

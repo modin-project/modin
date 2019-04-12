@@ -2443,7 +2443,7 @@ def test_to_period():
 
     with pytest.warns(UserWarning):
         series.to_period()
-        
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_sparse(data):
@@ -2565,57 +2565,84 @@ def test_update():
         modin_series.update(None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_valid():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_valid(data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.valid(None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_value_counts():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.value_counts(None, None, None, None)
+    with pytest.warns(UserWarning):
+        modin_series.valid()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_values():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_value_counts(data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.values
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_var():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.var(None, None, None, None, None)
+    with pytest.warns(UserWarning):
+        modin_series.value_counts()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_view():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_values(data):
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
+    np.testing.assert_equal(modin_series.values, pandas_series.values)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
+def test_var(data, skipna, ddof):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.var(
+            skipna=skipna, ddof=ddof
+        )
+    except Exception:
+        with pytest.raises(TypeError):
+            modin_series.var(
+                skipna=skipna, ddof=ddof
+            )
+    else:
+        modin_result = modin_series.var(
+            skipna=skipna, ddof=ddof
+        )
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_view(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    with pytest.warns(UserWarning):
         modin_series.view(None)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
 def test_where():
-    modin_series = create_test_series()
+    frame_data = random_state.randn(100)
+    pandas_series = pandas.Series(frame_data)
+    modin_series = pd.Series(frame_data)
+    pandas_cond_series = pandas_series % 5 < 2
+    modin_cond_series = modin_series % 5 < 2
 
-    with pytest.raises(NotImplementedError):
-        modin_series.where(None, None, None, None, None, None)
+    pandas_result = pandas_series.where(pandas_cond_series, -pandas_series)
+    modin_result = modin_series.where(modin_cond_series, -modin_series)
+    assert all((to_pandas(modin_result) == pandas_result))
+
+    other = pandas.Series(random_state.randn(100))
+    pandas_result = pandas_series.where(pandas_cond_series, other, axis=0)
+    modin_result = modin_series.where(modin_cond_series, other, axis=0)
+    assert all(to_pandas(modin_result) == pandas_result)
+
+    pandas_result = pandas_series.where(pandas_series < 2, True)
+    modin_result = modin_series.where(modin_series < 2, True)
+    assert all(to_pandas(modin_result) == pandas_result)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.skip("Deprecated in pandas.")
 def test_xs():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.xs(None, None, None)
+    series = pd.Series([4, 0, "mammal", "cat", "walks"])
+    with pytest.warns(UserWarning):
+        series.xs("mammal")
