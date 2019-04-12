@@ -11,7 +11,6 @@ from pathlib import Path
 import pyarrow as pa
 import os
 import sys
-from collections import Counter
 
 from .utils import df_equals
 
@@ -536,7 +535,7 @@ def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
     pandas_df = pandas.read_csv(dataset_url)
 
-    #This first load is to trigger all the import deprecation warnings
+    # This first load is to trigger all the import deprecation warnings
     modin_df = pd.read_csv(dataset_url)
 
     # This will warn if it defaults to pandas behavior, but it shouldn't

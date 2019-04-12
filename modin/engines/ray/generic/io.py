@@ -37,6 +37,7 @@ def file_open(file_path, mode="rb"):
             return s3fs.open(file_path, mode=mode)
     return open(file_path, mode=mode)
 
+
 def file_size(f):
     cur_pos = f.tell()
     f.seek(0, os.SEEK_END)
