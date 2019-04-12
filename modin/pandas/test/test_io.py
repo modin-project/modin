@@ -529,34 +529,18 @@ def test_from_csv(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
-class FakeS3FS:
-    def __init__(self):
-        self.calls = Counter()
-
-    def exists(self, path):
-        self.calls[self.exists] += 1
-        return "s3://bucket/path.csv" == path
-
-    def open(self, path, mode="rb"):
-        self.calls[self.open] += 1
-        if "s3://bucket/path.csv" == path:
-            return open(TEST_CSV_FILENAME, mode=mode)
-        else:
-            raise Exception("You shouldn't access that! (%s)" % path)
-
-
 @pytest.mark.skipif(
     __execution_engine__.lower() == "python", reason="Using pandas implementation"
 )
 def test_from_csv_s3(make_csv_file):
-    from modin.engines.ray.generic import io
+    dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
+    pandas_df = pandas.read_csv(dataset_url)
+    modin_df = pd.read_csv(dataset_url)
 
-    io.s3fs = FakeS3FS()
-
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv("s3://bucket/path.csv")
+    # This shouldn't default to pandas behavior
+    with pytest.warns(None) as record:
+        modin_df = pd.read_csv(dataset_url)
+    assert not record.list
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
