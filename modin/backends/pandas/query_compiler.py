@@ -20,7 +20,6 @@ from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 
-
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
@@ -2299,7 +2298,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         numeric_indices = list(self.columns.get_indexer_for([key]))
         prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
-            value = list(value)
+            if hasattr(value, 'columns'):
+                value = value[value.columns[0]]
+            else:
+                value = list(value)
             new_data = self.data.apply_func_to_select_indices_along_full_axis(
                 0, prepared_func, numeric_indices, keep_remaining=True
             )
