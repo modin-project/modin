@@ -2290,6 +2290,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
+            df = df.copy()
             if len(internal_indices) == 1:
                 df[df.columns[internal_indices[0]]] = value
             else:
@@ -2299,10 +2300,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         numeric_indices = list(self.columns.get_indexer_for([key]))
         prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
-            if hasattr(value, "columns"):
-                value = value[value.columns[0]]
-            else:
-                value = list(value)
             new_data = self.data.apply_func_to_select_indices_along_full_axis(
                 0, prepared_func, numeric_indices, keep_remaining=True
             )

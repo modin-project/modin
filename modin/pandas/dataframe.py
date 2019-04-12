@@ -4754,12 +4754,20 @@ class DataFrame(object):
         if not isinstance(key, str):
 
             def setitem_without_string_columns(df):
+                df = df.copy(True)
                 df[key] = value
                 return df
 
             return self._update_inplace(
                 self._default_to_pandas(setitem_without_string_columns)._query_compiler
             )
+        if is_list_like(value):
+            if isinstance(value, (pandas.DataFrame, DataFrame)):
+                value = value[value.columns[0]].values
+            elif isinstance(value, np.ndarray):
+                assert len(value.shape) < 3, "Shape of new values must be compatible with manager shape"
+                value = value.T.reshape(-1)[:len(self)]
+            value = np.array(value)
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
         elif len(self.index) == 0:
