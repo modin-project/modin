@@ -2321,7 +2321,7 @@ class BasePandasDataset(object):
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
             # Dataframe in order to sample
-            if isinstance(weights, pandas.Series):
+            if isinstance(weights, BasePandasDataset):
                 weights = weights.reindex(self.axes[axis])
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
@@ -2379,13 +2379,9 @@ class BasePandasDataset(object):
                 "A negative number of rows requested. Please provide positive value."
             )
         if n == 0:
-            # An Empty DataFrame is returned if the number of samples is 0.
-            # The Empty Dataframe should have either columns or index specified
-            # depending on which axis is passed in.
-            return self.__constructor__(
-                columns=[] if axis == 1 else self.columns,
-                index=self.index if axis == 1 else [],
-            )
+            # This returns an empty object, and since it is a weird edge case that
+            # doesn't need to be distributed, we default to pandas for n=0.
+            return self._default_to_pandas("sample", n=n, frac=frac, replace=replace, weights=weights, random_state=random_state, axis=axis)
         if random_state is not None:
             # Get a random number generator depending on the type of
             # random_state that is passed in

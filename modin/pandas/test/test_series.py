@@ -2160,36 +2160,41 @@ def test_rtruediv(data):
     inter_df_math_helper(modin_series, pandas_series, "rtruediv")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_sample():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.sample(None, None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_searchsorted():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.searchsorted(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_select():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.select(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_sample(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.sample(frac=0.5, random_state=21019),
+        pandas_series.sample(frac=0.5, random_state=21019)
+    )
+    df_equals(modin_series.sample(n=12, random_state=21019),
+              pandas_series.sample(n=12, random_state=21019))
+    with pytest.warns(UserWarning):
+        df_equals(modin_series.sample(n=0, random_state=21019),
+                  pandas_series.sample(n=0, random_state=21019))
+    with pytest.raises(ValueError):
+        modin_series.sample(n=-3)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_sem():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_searchsorted(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.searchsorted(3)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.sem(None, None, None, None, None)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_select(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.select(lambda x: x == 4)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_sem(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.sem()
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
