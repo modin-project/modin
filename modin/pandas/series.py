@@ -206,7 +206,9 @@ class Series(BasePandasDataset):
         )
 
     def __setitem__(self, key, value):
-        raise NotImplementedError("Not Yet implemented.")
+        if key not in self.keys():
+            raise KeyError(key)
+        self._create_or_update_from_compiler(self._query_compiler.setitem(1, key, value), inplace=True)
 
     def __sub__(self, right):
         return self.sub(right)
@@ -831,9 +833,7 @@ class Series(BasePandasDataset):
                 obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(self).reset_index(
-                level=level, drop=drop, inplace=inplace
-            )
+            return DataFrame(self).reset_index(level=level, drop=drop, inplace=inplace)
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
@@ -893,9 +893,21 @@ class Series(BasePandasDataset):
         # When we convert to a DataFrame, the name is automatically converted to 0 if it
         # is None, so we do this to avoid a KeyError.
         by = self.name if self.name is not None else 0
-        result = DataFrame(self).sort_values(by=by, ascending=ascending, inplace=False, kind=kind, na_position=na_position).squeeze(axis=1)
+        result = (
+            DataFrame(self)
+            .sort_values(
+                by=by,
+                ascending=ascending,
+                inplace=False,
+                kind=kind,
+                na_position=na_position,
+            )
+            .squeeze(axis=1)
+        )
         result.name = self.name
-        return self._create_or_update_from_compiler(result._query_compiler, inplace=inplace)
+        return self._create_or_update_from_compiler(
+            result._query_compiler, inplace=inplace
+        )
 
     def sparse(self, data=None):
         return self._default_to_pandas(pandas.Series.sparse, data=data)

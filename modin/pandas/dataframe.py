@@ -1904,7 +1904,7 @@ class DataFrame(BasePandasDataset):
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
-            self._update_inplace(self._query_compiler.setitem(key, value))
+            self._update_inplace(self._query_compiler.setitem(0, key, value))
 
     def __unicode__(self):
         return self._default_to_pandas(pandas.DataFrame.__unicode__)

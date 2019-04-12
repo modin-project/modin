@@ -1973,7 +1973,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_index = self.index[key]
         return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
 
-    def setitem(self, key, value):
+    def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
 
         Args:
@@ -1986,21 +1986,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def setitem(df, internal_indices=[]):
             if len(internal_indices) == 1:
-                df[df.columns[internal_indices[0]]] = value
+                if axis == 0:
+                    df[df.columns[internal_indices[0]]] = value
+                else:
+                    df.iloc[internal_indices[0]] = value
             else:
-                df[df.columns[internal_indices]] = value
+                if axis == 0:
+                    df[df.columns[internal_indices]] = value
+                else:
+                    df.iloc[internal_indices] = value
             return df
 
-        numeric_indices = list(self.columns.get_indexer_for([key]))
+        if axis == 0:
+            numeric_indices = list(self.columns.get_indexer_for([key]))
+        else:
+            numeric_indices =  list(self.index.get_indexer_for([key]))
         prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
             value = list(value)
             new_data = self.data.apply_func_to_select_indices_along_full_axis(
-                0, prepared_func, numeric_indices, keep_remaining=True
+                axis, prepared_func, numeric_indices, keep_remaining=True
             )
         else:
             new_data = self.data.apply_func_to_select_indices(
-                0, prepared_func, numeric_indices, keep_remaining=True
+                axis, prepared_func, numeric_indices, keep_remaining=True
             )
         return self.__constructor__(new_data, self.index, self.columns)
 

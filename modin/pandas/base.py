@@ -2381,7 +2381,15 @@ class BasePandasDataset(object):
         if n == 0:
             # This returns an empty object, and since it is a weird edge case that
             # doesn't need to be distributed, we default to pandas for n=0.
-            return self._default_to_pandas("sample", n=n, frac=frac, replace=replace, weights=weights, random_state=random_state, axis=axis)
+            return self._default_to_pandas(
+                "sample",
+                n=n,
+                frac=frac,
+                replace=replace,
+                weights=weights,
+                random_state=random_state,
+                axis=axis,
+            )
         if random_state is not None:
             # Get a random number generator depending on the type of
             # random_state that is passed in
