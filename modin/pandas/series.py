@@ -880,6 +880,23 @@ class Series(BasePandasDataset):
     def set_value(self, label, value, takeable=False):
         return self._default_to_pandas("set_value", label, value, takeable=takeable)
 
+    def sort_values(
+        self,
+        axis=0,
+        ascending=True,
+        inplace=False,
+        kind="quicksort",
+        na_position="last",
+    ):
+        from .dataframe import DataFrame
+
+        # When we convert to a DataFrame, the name is automatically converted to 0 if it
+        # is None, so we do this to avoid a KeyError.
+        by = self.name if self.name is not None else 0
+        result = DataFrame(self).sort_values(by=by, ascending=ascending, inplace=False, kind=kind, na_position=na_position).squeeze(axis=1)
+        result.name = self.name
+        return self._create_or_update_from_compiler(result._query_compiler, inplace=inplace)
+
     def sparse(self, data=None):
         return self._default_to_pandas(pandas.Series.sparse, data=data)
 

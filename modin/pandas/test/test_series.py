@@ -2197,100 +2197,121 @@ def test_sem(data):
         modin_series.sem()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_set_axis():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.set_axis(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_axis(data):
+    modin_series, _ = create_test_series(data)
+    modin_series.set_axis(labels=["{}_{}".format(i, i+1) for i in modin_series.index])
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_set_value():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.set_value(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_shape():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.shape
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_value(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.set_value(5, 6)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_shift():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.shift(None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_shape(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert modin_series.shape == pandas_series.shape
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_size():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.size
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_skew():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.skew(None, None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_shift(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.shift()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_slice_shift():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.slice_shift(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_size(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert modin_series.size == pandas_series.size
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_sort_index():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.sort_index(None, None, None, None, None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_sort_values():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.sort_values(None, None, None, None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+    )
+def test_skew(data, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.skew(skipna=skipna), pandas_series.skew(skipna=skipna))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_sortlevel():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.sortlevel(None, None)
-
-
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_squeeze():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.squeeze(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_slice_shift(data):
+    modin_series, _ = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_series.slice_shift()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_std():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+        "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
+    )
+@pytest.mark.parametrize(
+        "sort_remaining", bool_arg_values, ids=arg_keys("sort_remaining", bool_arg_keys)
+    )
+@pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_index(data, ascending, sort_remaining, na_position):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.sort_index(ascending=ascending, sort_remaining=sort_remaining, na_position=na_position),
+              pandas_series.sort_index(ascending=ascending, sort_remaining=sort_remaining, na_position=na_position))
 
-    with pytest.raises(NotImplementedError):
-        modin_series.std(None, None, None, None, None)
+    modin_series_cp = modin_series.copy()
+    pandas_series_cp = pandas_series.copy()
+    modin_series_cp.sort_index(ascending=ascending, sort_remaining=sort_remaining, na_position=na_position, inplace=True)
+    pandas_series_cp.sort_index(ascending=ascending, sort_remaining=sort_remaining, na_position=na_position,
+                               inplace=True)
+    df_equals(modin_series_cp, pandas_series_cp)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+        "ascending", [True, False], ids=["True", "False"]
+    )
+@pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_values(data, ascending, na_position):
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.sort_values(ascending=ascending, na_position=na_position)
+    pandas_result = pandas_series.sort_values(ascending=ascending, na_position=na_position)
+    # Note: For `ascending=False` only
+    # For some reason, the indexing of Series and DataFrame differ in the underlying
+    # algorithm. The order of values is the same, but the index values are shuffled.
+    # Since we use `DataFrame.sort_values` even for Series, the index can be different
+    # between `pandas.Series.sort_values`. For this reason, we check that the values are
+    # identical instead of the index as well.
+    if ascending:
+        df_equals(modin_result, pandas_result)
+    else:
+        np.testing.assert_equal(modin_result.values, pandas_result.values)
+
+    modin_series_cp = modin_series.copy()
+    pandas_series_cp = pandas_series.copy()
+    modin_series_cp.sort_values(ascending=ascending, na_position=na_position,
+                               inplace=True)
+    pandas_series_cp.sort_values(ascending=ascending, na_position=na_position,
+                                inplace=True)
+    # See above about `ascending=False`
+    if ascending:
+        df_equals(modin_series_cp, pandas_series_cp)
+    else:
+        np.testing.assert_equal(modin_series_cp.values, pandas_series_cp.values)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_squeeze(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.squeeze(None), pandas_series.squeeze(None))
+    df_equals(modin_series.squeeze(0), pandas_series.squeeze(0))
+    with pytest.raises(ValueError):
+        modin_series.squeeze(1)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_std(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.std(), pandas_series.std())
 
 
 @pytest.mark.skip(reason="Using pandas Series.")

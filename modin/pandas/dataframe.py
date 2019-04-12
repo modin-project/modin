@@ -1468,9 +1468,9 @@ class DataFrame(BasePandasDataset):
         axis = self._get_axis_number(axis) if axis is not None else None
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
-        if axis == 0 and len(self.columns) == 1:
+        if axis == 1 and len(self.columns) == 1:
             return Series(query_compiler=self._query_compiler)
-        if axis == 1 and len(self.index) == 1:
+        if axis == 0 and len(self.index) == 1:
             return Series(query_compiler=self._query_compiler)
         else:
             return self.copy()
