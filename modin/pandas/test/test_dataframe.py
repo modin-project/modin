@@ -2736,8 +2736,6 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).kurtosis()
 
-
-class TestDFPartTwo:
     def test_last(self):
         i = pd.date_range("2018-04-09", periods=4, freq="2D")
         ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -2983,6 +2981,8 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+
+class TestDFPartTwo:
     def test_melt(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):

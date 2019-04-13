@@ -393,7 +393,8 @@ def test___repr__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___round__(data):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(round(modin_series), round(pandas_series))
+    if not PY2:
+        df_equals(round(modin_series), round(pandas_series))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
