@@ -338,7 +338,7 @@ class BasePandasDataset(object):
 
         f = getattr(np, func, None)
         if f is not None:
-            return self._default_to_pandas(pandas.DataFrame.agg, func, *args, **kwargs)
+            return self._default_to_pandas("agg", func, *args, **kwargs)
 
         raise ValueError("{} is an unknown string function".format(func))
 
@@ -1035,7 +1035,7 @@ class BasePandasDataset(object):
         axis=0,
     ):
         return self._default_to_pandas(
-            pandas.DataFrame.ewm,
+            "ewm",
             com=com,
             span=span,
             halflife=halflife,
@@ -1048,10 +1048,7 @@ class BasePandasDataset(object):
 
     def expanding(self, min_periods=1, center=False, axis=0):
         return self._default_to_pandas(
-            pandas.DataFrame.expanding,
-            min_periods=min_periods,
-            center=center,
-            axis=axis,
+            "expanding", min_periods=min_periods, center=center, axis=axis
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -1294,7 +1291,7 @@ class BasePandasDataset(object):
         return self.ftypes.value_counts().sort_index()
 
     def get_values(self):
-        return self._default_to_pandas(pandas.DataFrame.get_values)
+        return self._default_to_pandas("get_values")
 
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
