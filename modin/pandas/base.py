@@ -323,23 +323,18 @@ class BasePandasDataset(object):
 
     def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, string_types)
-
         f = getattr(self, func, None)
-
         if f is not None:
             if callable(f):
                 return f(*args, **kwargs)
-
             assert len(args) == 0
             assert (
                 len([kwarg for kwarg in kwargs if kwarg not in ["axis", "_level"]]) == 0
             )
             return f
-
         f = getattr(np, func, None)
         if f is not None:
             return self._default_to_pandas("agg", func, *args, **kwargs)
-
         raise ValueError("{} is an unknown string function".format(func))
 
     def _get_dtypes(self):
@@ -579,11 +574,9 @@ class BasePandasDataset(object):
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='bfill')"""
-        new_df = self.fillna(
+        return self.fillna(
             method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
-        if not inplace:
-            return new_df
 
     def bool(self):
         """Return the bool of a single element PandasObject.
@@ -1054,11 +1047,9 @@ class BasePandasDataset(object):
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for fillna(method='ffill')
         """
-        new_df = self.fillna(
+        return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
-        if not inplace:
-            return new_df
 
     def fillna(
         self,

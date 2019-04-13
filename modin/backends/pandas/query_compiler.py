@@ -64,7 +64,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._build_mapreduce_func(lambda df: df.dtypes)
             )
             reduce_func = self._build_mapreduce_func(dtype_builder)
-            # obj = self if not self._is_transposed else self.transpose()
             # For now we will use a pandas Series for the dtypes.
             self._dtype_cache = (
                 self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
@@ -753,7 +752,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             labels: New labels to conform 'axis' on to.
 
         Returns:
-            A new QueryCompilerwith updated data and new index.
+            A new QueryCompiler with updated data and new index.
         """
 
         # To reindex, we need a function that will be shipped to each of the
@@ -795,7 +794,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Removes all levels from index and sets a default level_0 index.
 
         Returns:
-            A new QueryCompilerwith updated data and reset index.
+            A new QueryCompiler with updated data and reset index.
         """
         drop = kwargs.get("drop", False)
         new_index = pandas.RangeIndex(len(self.index))
@@ -1461,7 +1460,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_data, self.index, self.columns)
 
     def dropna(self, **kwargs):
-        """Returns a new QueryCompilerwith null values dropped along given axis.
+        """Returns a new QueryCompiler with null values dropped along given axis.
         Return:
             a new DataManager
         """
@@ -1528,7 +1527,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.drop(index=rm_from_index, columns=rm_from_columns)
 
     def eval(self, expr, **kwargs):
-        """Returns a new QueryCompilerwith expr evaluated on columns.
+        """Returns a new QueryCompiler with expr evaluated on columns.
 
         Args:
             expr: The string expression to evaluate.
@@ -2423,26 +2422,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             index_map_series,
             column_map_series,
         )
-
-    def squeeze(self, ndim=0, axis=None):
-        to_squeeze = self.to_pandas()
-        # This is the case for 1xN or Nx1 DF - Need to call squeeze
-        if ndim == 1:
-            if axis is None:
-                axis = 0 if self.data.shape[1] > 1 else 1
-            squeezed = pandas.Series(to_squeeze.squeeze())
-            # In the case of `MultiIndex`, we already have the correct index and naming
-            # because we are going from pandas above. This step is to correct the
-            # `Series` to have the correct name and index.
-            if not isinstance(squeezed.index, pandas.MultiIndex):
-                scaler_axis = self.columns if axis else self.index
-                non_scaler_axis = self.index if axis else self.columns
-                squeezed.name = scaler_axis[0]
-                squeezed.index = non_scaler_axis
-            return squeezed
-        # This is the case for a 1x1 DF - We don't need to squeeze
-        else:
-            return to_squeeze.values[0][0]
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
