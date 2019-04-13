@@ -113,7 +113,7 @@ def teardown_parquet_file():
 
 
 @pytest.fixture
-def make_csv_file():
+def make_csv_file(delimiter=","):
     """Pytest fixture factory that makes temp csv files for testing.
 
     Yields:
@@ -125,7 +125,7 @@ def make_csv_file():
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
         force=False,
-        delimiter=",",
+        delimiter=delimiter,
         encoding=None,
     ):
         if os.path.exists(filename) and not force:
@@ -524,6 +524,21 @@ def test_from_csv(make_csv_file):
     if not PY2:
         pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
         modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+
+        assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_table(make_csv_file):
+    make_csv_file(delimiter="\t")
+
+    pandas_df = pandas.read_table(TEST_CSV_FILENAME)
+    modin_df = pd.read_table(TEST_CSV_FILENAME)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    if not PY2:
+        pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
+        modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
 
         assert modin_df_equals_pandas(modin_df, pandas_df)
 

@@ -94,6 +94,8 @@ def _make_parser_func(sep):
         float_precision=None,
     ):
         _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+        if not kwargs.get("sep", sep):
+            kwargs["sep"] = "\t"
         return _read(**kwargs)
 
     return parser_func
