@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 import pandas
 from pandas.io.common import _infer_compression
 
@@ -15,6 +16,7 @@ import numpy as np
 import math
 
 from modin.error_message import ErrorMessage
+import warnings
 from modin.engines.base.io import BaseIO
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
@@ -23,9 +25,14 @@ S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
 
 def get_s3fs(_singleton=[]):
     import s3fs as S3FS
-
+    from botocore.exceptions import NoCredentialsError
     if not _singleton:
-        _singleton.append(S3FS.S3FileSystem(anon=False))
+        try:
+            singleton = S3FS.S3FileSystem(anon=False)
+        except NoCredentialsError as e:
+            warnings.warn("%s, defaulting to S3FS anonymous mode" % str(e))
+            singleton = S3FS.S3FileSystem(anon=True)
+        _singleton.append(singleton)
     return _singleton[0]
 
 
