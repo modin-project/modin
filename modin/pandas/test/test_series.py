@@ -49,7 +49,7 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pandas_result = getattr(pandas_series, op)(4)
     except Exception as e:
         with pytest.raises(type(e)):
-            getattr(modin_series, op)(4)
+            repr(getattr(modin_series, op)(4))  # repr to force materialization
     else:
         modin_result = getattr(modin_series, op)(4)
         df_equals(modin_result, pandas_result)
@@ -58,7 +58,7 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pandas_result = getattr(pandas_series, op)(4.0)
     except Exception as e:
         with pytest.raises(type(e)):
-            getattr(modin_series, op)(4.0)
+            repr(getattr(modin_series, op)(4.0))  # repr to force materialization
     else:
         modin_result = getattr(modin_series, op)(4.0)
         df_equals(modin_result, pandas_result)
@@ -84,7 +84,7 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pandas_result = getattr(pandas_series, op)(pandas_series)
     except Exception as e:
         with pytest.raises(type(e)):
-            getattr(modin_series, op)(modin_series)
+            repr(getattr(modin_series, op)(modin_series))  # repr to force materialization
     else:
         modin_result = getattr(modin_series, op)(modin_series)
         df_equals(modin_result, pandas_result)
@@ -94,7 +94,7 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pandas_result = getattr(pandas_series, op)(list_test)
     except Exception as e:
         with pytest.raises(type(e)):
-            getattr(modin_series, op)(list_test)
+            repr(getattr(modin_series, op)(list_test))  # repr to force materialization
     else:
         modin_result = getattr(modin_series, op)(list_test)
         df_equals(modin_result, pandas_result)
@@ -105,7 +105,7 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pandas_result = getattr(pandas_series, op)(series_test_pandas)
     except Exception as e:
         with pytest.raises(type(e)):
-            getattr(modin_series, op)(series_test_modin)
+            repr(getattr(modin_series, op)(series_test_modin))  # repr to force materialization
     else:
         modin_result = getattr(modin_series, op)(series_test_modin)
         df_equals(modin_result, pandas_result)
@@ -740,7 +740,7 @@ def test_astype(data):
         pandas_result = pandas_series.astype(str)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.astype(str)
+            repr(modin_series.astype(str))  # repr to force materialization
     else:
         df_equals(modin_series.astype(str), pandas_result)
 
@@ -748,7 +748,7 @@ def test_astype(data):
         pandas_result = pandas_series.astype(np.int64)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.astype(np.int64)
+            repr(modin_series.astype(np.int64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.int64), pandas_result)
 
@@ -756,7 +756,7 @@ def test_astype(data):
         pandas_result = pandas_series.astype(np.float64)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.astype(np.float64)
+            repr(modin_series.astype(np.float64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.float64), pandas_result)
 

@@ -237,6 +237,17 @@ def df_equals(df1, df2):
 
     groupby_types = (pandas.core.groupby.DataFrameGroupBy, DataFrameGroupBy)
 
+    # The typing behavior of how pandas treats its index is not consistent when the
+    # length of the DataFrame or Series is 0, so we just verify that the contents are
+    # the same.
+    if hasattr(df1, "index") and hasattr(df2, "index") and len(df1) == 0 and len(df2) == 0:
+        if type(df1).__name__ == type(df2).__name__:
+            if hasattr(df1, "name") and hasattr(df2, "name") and df1.name == df2.name:
+                return
+            if hasattr(df1, "columns") and hasattr(df2, "columns") and df1.columns.equals(df2.columns):
+                return
+        assert False
+
     # Convert to pandas
     if isinstance(df1, pd.DataFrame):
         df1 = to_pandas(df1)
