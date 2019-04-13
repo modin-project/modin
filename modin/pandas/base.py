@@ -486,7 +486,7 @@ class BasePandasDataset(object):
         if isinstance(func, string_types):
             if axis == 1:
                 kwds["axis"] = axis
-            result = getattr(self, func)(*args, **kwds)
+            result = self._string_function(func, *args, **kwds)
             # Sometimes we can return a scalar here
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
