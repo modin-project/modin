@@ -30,7 +30,6 @@ from pandas import (
     Index,
     MultiIndex,
     CategoricalIndex,
-    Series,
     bdate_range,
     DatetimeIndex,
     Timedelta,
@@ -110,6 +109,7 @@ from .io import (
     HDFStore,
 )
 from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
+from .series import Series
 from .general import (
     isna,
     isnull,

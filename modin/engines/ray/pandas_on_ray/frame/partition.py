@@ -4,9 +4,11 @@ from __future__ import print_function
 
 import pandas
 import ray
+from ray.worker import RayTaskError
 
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
+from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
@@ -24,8 +26,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         if len(self.call_queue):
             return self.apply(lambda x: x).get()
-
-        return ray.get(self.oid)
+        try:
+            return ray.get(self.oid)
+        except RayTaskError as e:
+            handle_ray_task_error(e)
 
     def apply(self, func, **kwargs):
         """Apply a function to the object stored in this partition.
@@ -77,7 +81,6 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-
         return dataframe
 
     @classmethod

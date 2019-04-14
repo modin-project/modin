@@ -5,6 +5,7 @@ from __future__ import print_function
 import pandas
 
 from modin.error_message import ErrorMessage
+from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .utils import to_pandas
 
@@ -18,7 +19,7 @@ def isna(obj):
     Returns:
         bool or array-like of bool
     """
-    if isinstance(obj, DataFrame):
+    if isinstance(obj, BasePandasDataset):
         return obj.isna()
     else:
         return pandas.isna(obj)
@@ -28,7 +29,7 @@ isnull = isna
 
 
 def notna(obj):
-    if isinstance(obj, DataFrame):
+    if isinstance(obj, BasePandasDataset):
         return obj.notna()
     else:
         return pandas.notna(obj)
