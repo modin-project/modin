@@ -1848,27 +1848,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
             result = self.__constructor__(
                 self.data.transpose().take(1, -n).transpose(),
-                self.index[:-n],
+                self.index[-n:],
                 self.columns,
                 self._dtype_cache,
             )
             result._is_transposed = True
         else:
-            if n == 0:
-                result = self.__constructor__(
-                    self.data.take(0, 0),
-                    self.index[:0],
-                    self.columns,
-                    self._dtype_cache,
-                )
-            else:
-                result = self.__constructor__(
-                    self.data.take(0, -n),
-                    self.index[-n:],
-                    self.columns,
-                    self._dtype_cache,
-                )
-
+            result = self.__constructor__(
+                self.data.take(0, -n),
+                self.index[-n:],
+                self.columns,
+                self._dtype_cache,
+            )
         return result
 
     def front(self, n):

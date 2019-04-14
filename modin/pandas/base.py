@@ -37,6 +37,8 @@ class BasePandasDataset(object):
         num_rows_for_head = num_rows // 2 + 1
         num_cols_for_front = num_cols // 2 + 1
 
+        if self.empty:
+            return self._query_compiler.to_pandas()
         if len(self.index) <= num_rows:
             head = self._query_compiler
             tail = None
