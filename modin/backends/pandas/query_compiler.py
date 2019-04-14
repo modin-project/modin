@@ -1855,10 +1855,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result._is_transposed = True
         else:
             result = self.__constructor__(
-                self.data.take(0, -n),
-                self.index[-n:],
-                self.columns,
-                self._dtype_cache,
+                self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
             )
         return result
 
