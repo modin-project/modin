@@ -2082,8 +2082,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler with new data inserted.
         """
         if is_list_like(value):
-            # TODO make work with modin.pandas.Series.
-            # This will require aligning the indices.
+            # TODO make work with another querycompiler object as `value`.
+            # This will require aligning the indices with a `reindex` and ensuring that
+            # the data is partitioned identically.
             if isinstance(value, pandas.Series):
                 value = value.reindex(self.index)
             value = list(value)
@@ -2188,6 +2189,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = {idx: func[key] for key in func for idx in index.get_indexer_for([key])}
 
         def dict_apply_builder(df, func_dict={}):
+            # Sometimes `apply` can return a `Series`, but we require that internally
+            # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
 
         result_data = self.data.apply_func_to_select_indices_along_full_axis(
