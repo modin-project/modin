@@ -659,6 +659,11 @@ class DataFrame(BasePandasDataset):
             other = other._to_pandas()
         return super(DataFrame, self).gt(other, axis=axis, level=level)
 
+    def head(self, n=5):
+        if n == 0:
+            return DataFrame(columns=self.columns)
+        return super(DataFrame, self).head(n)
+
     def hist(
         self,
         column=None,
@@ -1510,6 +1515,11 @@ class DataFrame(BasePandasDataset):
             min_count=min_count,
             **kwargs
         )
+
+    def tail(self, n=5):
+        if n == 0:
+            return DataFrame(columns=self.columns)
+        return super(DataFrame, self).tail(n)
 
     def to_feather(self, fname):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_feather, fname)

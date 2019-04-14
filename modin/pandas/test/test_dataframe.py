@@ -4996,6 +4996,12 @@ class TestDFPartTwo:
 
         assert repr(pandas_df) == repr(modin_df)
 
+        # Empty
+        pandas_df = pandas.DataFrame(columns=["col{}".format(i) for i in range(100)])
+        modin_df = pd.DataFrame(columns=["col{}".format(i) for i in range(100)])
+
+        assert repr(pandas_df) == repr(modin_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_reset_index_with_multi_index(self, data):
         modin_df = pd.DataFrame(data)

@@ -178,8 +178,8 @@ class Series(BasePandasDataset):
 
     def __repr__(self):
         # In the future, we can have this be configurable, just like Pandas.
-        num_rows = 60
-        num_cols = 30
+        num_rows = pandas.get_option("max_rows") or 60
+        num_cols = pandas.get_option("max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)
         if isinstance(temp_df, pandas.DataFrame):
             temp_df = temp_df.iloc[:, 0]
@@ -550,6 +550,11 @@ class Series(BasePandasDataset):
     def gt(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).gt(new_other, level=level, axis=axis)
+
+    def head(self, n=5):
+        if n == 0:
+            return Series(dtype=self.dtype)
+        return super(Series, self).head(n)
 
     def hist(
         self,
@@ -954,6 +959,11 @@ class Series(BasePandasDataset):
 
     def swaplevel(self, i=-2, j=-1, copy=True):
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
+
+    def tail(self, n=5):
+        if n == 0:
+            return Series(dtype=self.dtype)
+        return super(Series, self).tail(n)
 
     def to_frame(self, name=None):
         from .dataframe import DataFrame
