@@ -528,6 +528,118 @@ def test_from_csv(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+def test_parse_dates_read_csv():
+    pandas_df = pandas.read_csv("modin/pandas/test/data/test_time_parsing.csv")
+    modin_df = pd.read_csv("modin/pandas/test/data/test_time_parsing.csv")
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=2,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=2,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+
 def test_from_table(make_csv_file):
     make_csv_file(delimiter="\t")
 
