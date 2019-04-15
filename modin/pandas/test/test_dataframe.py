@@ -5015,6 +5015,23 @@ class TestDFPartTwo:
 
             assert modin_cols.equals(pandas_cols)
 
+    def test_reset_index_with_named_index(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
+
+        modin_df.index.name = pandas_df.index.name = "NAME_OF_INDEX"
+        df_equals(modin_df, pandas_df)
+        df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
+
+        modin_df.reset_index(drop=True, inplace=True)
+        pandas_df.reset_index(drop=True, inplace=True)
+        df_equals(modin_df, pandas_df)
+
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
+        modin_df.index.name = pandas_df.index.name = "NEW_NAME"
+        df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_inplace_series_ops(self, data):
         pandas_df = pandas.DataFrame(data)
