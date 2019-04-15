@@ -807,7 +807,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result = self.data.from_pandas(index_data).concat(1, self.data)
                 return self.__constructor__(result, new_index, new_columns)
             else:
-                new_column_name = "index" if "index" not in self.columns else "level_0"
+                new_column_name = (
+                    self.index.name
+                    if self.index.name is not None
+                    else "index"
+                    if "index" not in self.columns
+                    else "level_0"
+                )
                 new_columns = self.columns.insert(0, new_column_name)
                 result = self.insert(0, new_column_name, self.index)
                 return self.__constructor__(result.data, new_index, new_columns)
