@@ -1983,6 +1983,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
+            # This is required because of an Arrow limitation
+            # TODO revisit for Arrow error
             df = df.copy()
             if len(internal_indices) == 1:
                 if axis == 0:
