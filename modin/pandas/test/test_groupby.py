@@ -75,16 +75,11 @@ def test_mixed_dtypes_groupby():
 
     n = 1
 
-    by_values = [
-        ("col1", "col1"),
-        (lambda x: x % 2, lambda x: x % 2),
-        (ray_df.col1, pandas_df.col1),
-        (pd.Grouper("col1", sort=True), pandas.Grouper("col1", sort=True)),
-    ]
+    by_values = ["col1", lambda x: x % 2, pandas_df.col1]
 
     for by in by_values:
-        ray_groupby = ray_df.groupby(by=by[0])
-        pandas_groupby = pandas_df.groupby(by=by[1])
+        ray_groupby = ray_df.groupby(by=by)
+        pandas_groupby = pandas_df.groupby(by=by)
 
         ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
         test_ngroups(ray_groupby, pandas_groupby)
