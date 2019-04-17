@@ -11,7 +11,8 @@ from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
-from .series import SeriesView
+from .base import BasePandasDataset
+from .series import Series
 
 """Indexing Helper Class works as follows:
 
@@ -144,7 +145,7 @@ class _LocationIndexerBase(object):
     """Base class for location indexer like loc and iloc
     """
 
-    def __init__(self, ray_df: DataFrame):
+    def __init__(self, ray_df: BasePandasDataset):
         self.df = ray_df
         self.qc = ray_df._query_compiler
         self.row_scaler = False
@@ -154,18 +155,23 @@ class _LocationIndexerBase(object):
         self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
     ):
         qc_view = self.qc.view(row_lookup, col_lookup)
-
         if ndim == 2:
-            return DataFrame(query_compiler=qc_view)
+            return self.df.__constructor__(query_compiler=qc_view)
+        if isinstance(self.df, Series) and not self.row_scaler:
+            return self.df.__constructor__(query_compiler=qc_view)
+        if isinstance(self.df, Series):
+            axis = 0
         elif ndim == 0:
-            return qc_view.squeeze(ndim=0)
+            axis = None
         else:
-            single_axis = 1 if self.col_scaler else 0
-            return SeriesView(
-                qc_view.squeeze(ndim=1, axis=single_axis),
-                self.df,
-                (row_lookup, col_lookup),
+            axis = (
+                None
+                if self.col_scaler and self.row_scaler
+                else 1
+                if self.col_scaler
+                else 0
             )
+        return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
     def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """
@@ -235,7 +241,7 @@ class _LocIndexer(_LocationIndexerBase):
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
             if (
-                isinstance(result, pandas.Series)
+                isinstance(result, Series)
                 and not isinstance(col_loc, slice)
                 and all(
                     col_loc[i] in result.index.levels[i] for i in range(len(col_loc))

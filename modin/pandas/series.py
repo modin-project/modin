@@ -2,584 +2,410 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import pandas
-import inspect
 import numpy as np
-
-
-# from .utils import _inherit_docstrings
-
-
-def na_op():
-    """Pandas uses a similar function to handle na values.
-    """
-    raise NotImplementedError("Not Yet implemented.")
-
-
-class SeriesView(object):
-    """A wrapper class for pandas Series.
-
-    Note: The main use of this class is to help us implement inplace operations that
-        propagate their changes back to the DataFrame that a Series belongs to. We are
-        only need to use this object when `__getitem__` returns a pandas Series, or when
-        `loc`/`iloc` return a Series as well.
-
-    Important: This is not needed to replace every Series in Modin. For example, when an
-        operation on a Series returns a new Series, it does not need to return an object
-        of this class. It can return a Series because the new object does not have a
-        DataFrame that it is associated with.
-
-    """
-
-    def __init__(self, series, parent_df, loc):
-        assert type(series) is pandas.Series
-        from .dataframe import DataFrame
-
-        assert type(parent_df) is DataFrame
-        assert type(loc) is tuple
-        self.series = series
-        self.parent_df = parent_df
-        self._loc = loc
-
-    def _get_index(self):
-        return self.series.index
-
-    def _set_index(self, index):
-        self.series.index = index
-
-    index = property(_get_index, _set_index)
-
-    def __repr__(self):
-        return repr(self.series)
-
-    def __str__(self):
-        return str(self.series)
-
-    def __dir__(self):
-        return self.series.__dir__()
-
-    def __comparisons__(self, func):
-        def compare_func(other):
-            if hasattr(other, "series"):
-                other = other.series
-            return getattr(self.series, func)(other)
-
-        return compare_func
-
-    def __eq__(self, other):
-        return self.__comparisons__("__eq__")(other)
-
-    def __ge__(self, other):
-        return self.__comparisons__("__ge__")(other)
-
-    def __gt__(self, other):
-        return self.__comparisons__("__gt__")(other)
-
-    def __le__(self, other):
-        return self.__comparisons__("__le__")(other)
-
-    def __lt__(self, other):
-        return self.__comparisons__("__lt__")(other)
-
-    def __ne__(self, other):
-        return self.__comparisons__("__ne__")(other)
-
-    def __arithmetic_op__(self, func):
-        def arithemtic_op(other):
-            if hasattr(other, "series"):
-                other = other.series
-            return getattr(self.series, func)(other)
-
-        return arithemtic_op
-
-    def __add__(self, other):
-        return self.__arithmetic_op__("__add__")(other)
-
-    def __mul__(self, other):
-        return self.__arithmetic_op__("__mul__")(other)
-
-    def __sub__(self, other):
-        return self.__arithmetic_op__("__sub__")(other)
-
-    def __truediv__(self, other):
-        return self.__arithmetic_op__("__truediv__")(other)
-
-    def __floordiv__(self, other):
-        return self.__arithmetic_op__("__floordiv__")(other)
-
-    def __mod__(self, other):
-        return self.__arithmetic_op__("__mod__")(other)
-
-    def __pow__(self, other):
-        return self.__arithmetic_op__("__pow__")(other)
-
-    def __radd__(self, other):
-        return self.__arithmetic_op__("__radd__")(other)
-
-    def __rmul__(self, other):
-        return self.__arithmetic_op__("__rmul__")(other)
-
-    def __rsub__(self, other):
-        return self.__arithmetic_op__("__rsub__")(other)
-
-    def __rtruediv__(self, other):
-        return self.__arithmetic_op__("__rtruediv__")(other)
-
-    def __rfloordiv__(self, other):
-        return self.__arithmetic_op__("__rfloordiv__")(other)
-
-    def __rmod__(self, other):
-        return self.__arithmetic_op__("__rmod__")(other)
-
-    def __rpow__(self, other):
-        return self.__arithmetic_op__("__rpow__")(other)
-
-    def __iadd__(self, other):
-        return self.__arithmetic_op__("__iadd__")(other)
-
-    def __imul__(self, other):
-        return self.__arithmetic_op__("__imul__")(other)
-
-    def __isub__(self, other):
-        return self.__arithmetic_op__("__isub__")(other)
-
-    def __itruediv__(self, other):
-        return self.__arithmetic_op__("__itruediv__")(other)
-
-    def __ifloordiv__(self, other):
-        return self.__arithmetic_op__("__ifloordiv__")(other)
-
-    def __imod__(self, other):
-        return self.__arithmetic_op__("__imod__")(other)
-
-    def __ipow__(self, other):
-        return self.__arithmetic_op__("__ipow__")(other)
-
-    def __neg__(self, other):
-        return self.__arithmetic_op__("__neg__")(other)
-
-    def __abs__(self):
-        return self.series.abs()
-
-    def __iter__(self):
-        return self.series.__iter__()
-
-    def __len__(self):
-        return self.series.__len__()
-
-    def __getitem__(self, item):
-        return self.series.__getitem__(item)
-
-    def __setitem__(self, key, value):
-        return_val = self.series.__setitem__(key, value)
-        self.parent_df.loc[self._loc] = self.series
-        return return_val
-
-    def __getattribute__(self, item):
-        default_behaviors = [
-            "__init__",
-            "series",
-            "parent_df",
-            "_loc",
-            "__arithmetic_op__",
-            "__comparisons__",
-            "__class__",
-            "index",
-            "_get_index",
-            "_set_index",
-        ]
-        if item not in default_behaviors:
-            method = self.series.__getattribute__(item)
-            # Certain operations like `at`, `loc`, `iloc`, etc. are callable because in
-            # pandas they are equivalent to classes. They are verified here because they
-            # cannot be overridden with the functions below. This generally solves the
-            # problem where the instance property is callable, but the class property is
-            # not.
-            # The isclass check is to ensure that we return the correct type. Some of
-            # the objects that are called result in classes being returned, and we don't
-            # want to override with our own function.
-            is_callable = (
-                callable(method)
-                and callable(getattr(type(self.series), item))
-                and not inspect.isclass(getattr(type(self.series), item))
-            )
-            try:
-                has_inplace_param = is_callable and "inplace" in str(
-                    inspect.signature(method)
-                )
-            # This will occur on Python2
-            except AttributeError:
-                has_inplace_param = is_callable and "inplace" in str(
-                    inspect.getargspec(method)
-                )
-
-            if is_callable and has_inplace_param and self.parent_df is not None:
-
-                def inplace_handler(*args, **kwargs):
-                    """Replaces the default behavior of methods with inplace kwarg.
-
-                    Note: This method will modify the DataFrame this Series is attached
-                        to when `inplace` is True. Instead of rewriting or overriding
-                        every method that uses `inplace`, we use this handler.
-
-                        This handler will first check that the keyword argument passed
-                        for `inplace` is True, if not then it will just return the
-                        result of the operation requested.
-
-                        If `inplace` is True, do the operation, keeping track of the
-                        previous length. This is because operations like `dropna` still
-                        propagate back to the DataFrame that holds the Series.
-
-                        If the length did not change, we propagate the inplace changes
-                        of the operation back to the original DataFrame with
-                        `__setitem__`.
-
-                        If the length changed, we just need to do a `reindex` on the
-                        parent DataFrame. This will propagate the inplace operation
-                        (e.g. `dropna`) back to the parent DataFrame.
-
-                        See notes in SeriesView class about when it is okay to return a
-                        pandas Series vs a SeriesView.
-
-                    Returns:
-                        If `inplace` is True: None, else: A new Series.
-                    """
-                    if kwargs.get("inplace", False):
-                        prev_len = len(self.series)
-                        self.series.__getattribute__(item)(*args, **kwargs)
-                        if prev_len == len(self.series):
-                            self.parent_df.loc[self._loc] = self.series
-                        else:
-                            self.parent_df.reindex(index=self.series.index, copy=False)
-                        return None
-                    else:
-                        return self.series.__getattribute__(item)(*args, **kwargs)
-
-                # We replace the method with `inplace_handler` for inplace operations
-                method = inplace_handler
-            elif is_callable:
-
-                def other_handler(*args, **kwargs):
-                    """Replaces the method's args and kwargs with the Series object.
-
-                    Note: This method is needed because sometimes operations like
-                        `df['col0'].equals(df['col1'])` do not return the correct value.
-                        This mostly has occurred in Python2, but overriding of the
-                        method will make the behavior more deterministic for all calls.
-
-                    Returns the result of `__getattribute__` from the Series this wraps.
-                    """
-                    args = tuple(
-                        arg if not isinstance(arg, SeriesView) else arg.series
-                        for arg in args
-                    )
-                    kwargs = {
-                        kw: arg if not isinstance(arg, SeriesView) else arg.series
-                        for kw, arg in kwargs.items()
-                    }
-                    return self.series.__getattribute__(item)(*args, **kwargs)
-
-                method = other_handler
-            return method
-        # We need to do this hack for equality checking.
-        elif item == "__class__":
-            return self.series.__class__
-        else:
-            return object.__getattribute__(self, item)
-
-
-class Series(object):
-    def __init__(self, series_oids):
+import pandas
+from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
+import sys
+
+from .base import BasePandasDataset
+from .iterator import PartitionIterator
+from .utils import _inherit_docstrings
+from .utils import from_pandas, to_pandas
+
+
+@_inherit_docstrings(pandas.Series, excluded=[pandas.Series, pandas.Series.__init__])
+class Series(BasePandasDataset):
+    def __init__(
+        self,
+        data=None,
+        index=None,
+        dtype=None,
+        name=None,
+        copy=False,
+        fastpath=False,
+        query_compiler=None,
+    ):
         """Constructor for a Series object.
 
         Args:
             series_oids ([ObjectID]): The list of remote Series objects.
         """
-        self.series_oids = series_oids
+        if query_compiler is None:
+            if name is None:
+                name = "__reduced__"
+            query_compiler = from_pandas(
+                pandas.DataFrame(
+                    pandas.Series(
+                        data=data,
+                        index=index,
+                        dtype=dtype,
+                        name=name,
+                        copy=copy,
+                        fastpath=fastpath,
+                    )
+                )
+            )._query_compiler
+        if len(query_compiler.columns) != 1:
+            query_compiler = query_compiler.transpose()
+        self._query_compiler = query_compiler
 
-    @property
-    def T(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def _get_name(self):
+        name = self._query_compiler.columns[0]
+        if name == "__reduced__":
+            return None
+        return name
 
-    def __abs__(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def _set_name(self, name):
+        if name is None:
+            name = "__reduced__"
+        self._query_compiler.columns = [name]
 
-    def __add__(self, right, name="__add__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
+    name = property(_get_name, _set_name)
+    _parent = None
+
+    def _reduce_dimension(self, query_compiler):
+        return query_compiler.to_pandas().squeeze()
+
+    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
+        pass
+
+    def _validate_dtypes_min_max(self, axis, numeric_only):
+        pass
+
+    def _validate_dtypes(self, numeric_only=False):
+        pass
+
+    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+        """Returns or updates a DataFrame given new query_compiler"""
+        assert (
+            isinstance(new_query_compiler, type(self._query_compiler))
+            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
+        ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
+        if not inplace and len(new_query_compiler.columns) == 1:
+            return Series(query_compiler=new_query_compiler)
+        elif not inplace:
+            # This can happen with things like `reset_index` where we can add columns.
+            from .dataframe import DataFrame
+
+            return DataFrame(query_compiler=new_query_compiler)
+        else:
+            self._update_inplace(new_query_compiler=new_query_compiler)
+
+    def _prepare_inter_op(self, other):
+        if isinstance(other, Series):
+            new_self = self.copy()
+            new_self.name = "__reduced__"
+            new_other = other.copy()
+            new_other.name = "__reduced__"
+        else:
+            new_self = self
+            new_other = other
+        return new_self, new_other
+
+    def __add__(self, right):
+        return self.add(right)
 
     def __and__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__and__(new_other)
 
-    def __array__(self, result=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __array_prepare__(self, result, context=None):
-        raise NotImplementedError("Not Yet implemented.")
+    def __array_prepare__(self, result, context=None):  # pragma: no cover
+        return self._default_to_pandas(
+            pandas.Series.__array_prepare__, result, context=context
+        )
 
     @property
-    def __array_priority__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __array_wrap__(self, result, context=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __bool__(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def __array_priority__(self):  # pragma: no cover
+        return self._to_pandas().__array_priority__
 
     def __bytes__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __class__(
-        self, data=None, index=None, dtype=None, name=None, copy=False, fastpath=False
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.__bytes__)
 
     def __contains__(self, key):
-        raise NotImplementedError("Not Yet implemented.")
+        return key in self.index
 
     def __copy__(self, deep=True):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.copy(deep=deep)
 
     def __deepcopy__(self, memo=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.copy(deep=True)
 
     def __delitem__(self, key):
-        raise NotImplementedError("Not Yet implemented.")
+        if key not in self.keys():
+            raise KeyError(key)
+        self.drop(labels=key, inplace=True)
 
-    def __dir__(self):
-        return list(type(self).__dict__.keys())
+    def __div__(self, right):
+        return self.div(right)
 
-    def __div__(self, right, name="__truediv__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __divmod__(self, right, name="__divmod__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    @property
-    def __doc__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __eq__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __finalize__(self, other, method=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+    def __divmod__(self, right):
+        return self.divmod(right)
 
     def __float__(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return float(self.squeeze())
 
-    def __floordiv__(self, right, name="__floordiv__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __ge__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
+    def __floordiv__(self, right):
+        return self.floordiv(right)
 
     def __getitem__(self, key):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __getstate__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __gt__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __iadd__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __imul__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+        if (
+            key in self.keys()
+            or is_list_like(key)
+            and all(k in self.keys() for k in key)
+        ):
+            return self.loc[key]
+        else:
+            return self.iloc[key]
 
     def __int__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __invert__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __ipow__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __isub__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+        return int(self.squeeze())
 
     def __iter__(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._to_pandas().__iter__()
 
-    def __itruediv__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+    def __mod__(self, right):
+        return self.mod(right)
 
-    def __le__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __len__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __long__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __lt__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __mod__(self, right, name="__mod__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __mul__(self, right, name="__mul__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __ne__(self, other, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __neg__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __nonzero__(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def __mul__(self, right):
+        return self.mul(right)
 
     def __or__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__or__(new_other)
 
-    def __pow__(self, right, name="__pow__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
+    def __pow__(self, right):
+        return self.pow(right)
 
     def __repr__(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # In the future, we can have this be configurable, just like Pandas.
+        num_rows = pandas.get_option("max_rows") or 60
+        num_cols = pandas.get_option("max_columns") or 20
+        temp_df = self._build_repr_df(num_rows, num_cols)
+        if isinstance(temp_df, pandas.DataFrame):
+            temp_df = temp_df.iloc[:, 0]
+        temp_str = repr(temp_df)
+        if self.name is not None:
+            name_str = "Name: {}, ".format(str(self.name))
+        else:
+            name_str = ""
+        if len(self.index) > num_rows:
+            len_str = "Length: {}, ".format(len(self.index))
+        else:
+            len_str = ""
+        dtype_str = "dtype: {}".format(temp_str.rsplit("dtype: ", 1)[-1])
+        if len(self) == 0:
+            return "Series([], {}{}".format(name_str, dtype_str)
+        return temp_str.rsplit("\nName:", 1)[0] + "\n{}{}{}".format(
+            name_str, len_str, dtype_str
+        )
 
     def __round__(self, decimals=0):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._create_or_update_from_compiler(
+            self._query_compiler.round(decimals=decimals)
+        )
 
     def __setitem__(self, key, value):
-        raise NotImplementedError("Not Yet implemented.")
+        if key not in self.keys():
+            raise KeyError(key)
+        self._create_or_update_from_compiler(
+            self._query_compiler.setitem(1, key, value), inplace=True
+        )
 
-    def __setstate__(self, state):
-        raise NotImplementedError("Not Yet implemented.")
+    def __sub__(self, right):
+        return self.sub(right)
 
-    def __sizeof__(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def __truediv__(self, right):
+        return self.truediv(right)
 
-    def __str__(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __sub__(self, right, name="__sub__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def __truediv__(self, right, name="__truediv__", na_op=na_op):
-        raise NotImplementedError("Not Yet implemented.")
+    __iadd__ = __add__
+    __imul__ = __add__
+    __ipow__ = __pow__
+    __isub__ = __sub__
+    __itruediv__ = __truediv__
 
     def __xor__(self, other):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def abs(self):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).add(
+            new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def add_prefix(self, prefix):
-        raise NotImplementedError("Not Yet implemented.")
+        """Add a prefix to each of the column names.
+
+        Returns:
+            A new Series containing the new column names.
+        """
+        return Series(query_compiler=self._query_compiler.add_prefix(prefix, axis=0))
 
     def add_suffix(self, suffix):
-        raise NotImplementedError("Not Yet implemented.")
+        """Add a suffix to each of the column names.
 
-    def agg(self, func, axis=0, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def aggregate(self, func, axis=0, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def align(
-        self,
-        other,
-        join="outer",
-        axis=None,
-        level=None,
-        copy=True,
-        fill_value=None,
-        method=None,
-        limit=None,
-        fill_axis=0,
-        broadcast_axis=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def all(self, axis=None, bool_only=None, skipna=None, level=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def any(self, axis=None, bool_only=None, skipna=None, level=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        Returns:
+            A new DataFrame containing the new column names.
+        """
+        return Series(query_compiler=self._query_compiler.add_suffix(suffix, axis=0))
 
     def append(self, to_append, ignore_index=False, verify_integrity=False):
-        raise NotImplementedError("Not Yet implemented.")
+        """Append another DataFrame/list/Series to this one.
+
+        Args:
+            to_append: The object to append to this.
+            ignore_index: Ignore the index on appending.
+            verify_integrity: Verify the integrity of the index on completion.
+
+        Returns:
+            A new DataFrame containing the concatenated values.
+        """
+        from .dataframe import DataFrame
+
+        bad_type_msg = (
+            'cannot concatenate object of type "{}"; only pd.Series, '
+            "pd.DataFrame, and pd.Panel (deprecated) objs are valid"
+        )
+        if isinstance(to_append, list):
+            if not all(isinstance(o, BasePandasDataset) for o in to_append):
+                raise TypeError(
+                    bad_type_msg.format(
+                        type(
+                            next(
+                                o
+                                for o in to_append
+                                if not isinstance(o, BasePandasDataset)
+                            )
+                        )
+                    )
+                )
+            elif all(isinstance(o, Series) for o in to_append):
+                self.name = None
+                for i in range(len(to_append)):
+                    to_append[i].name = None
+                    to_append[i] = to_append[i]._query_compiler
+            else:
+                # Matching pandas behavior of naming the Series columns 0
+                self.name = 0
+                for i in range(len(to_append)):
+                    if isinstance(to_append[i], Series):
+                        to_append[i].name = 0
+                        to_append[i] = DataFrame(to_append[i])
+                return DataFrame(self).append(
+                    to_append,
+                    ignore_index=ignore_index,
+                    verify_integrity=verify_integrity,
+                )
+        elif isinstance(to_append, Series):
+            self.name = None
+            to_append.name = None
+            to_append = [to_append._query_compiler]
+        elif isinstance(to_append, DataFrame):
+            self.name = 0
+            return DataFrame(self).append(
+                to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
+            )
+        else:
+            raise TypeError(bad_type_msg.format(type(to_append)))
+        # If ignore_index is False, by definition the Index will be correct.
+        # We also do this first to ensure that we don't waste compute/memory.
+        if verify_integrity and not ignore_index:
+            appended_index = (
+                self.index.append(to_append.index)
+                if not isinstance(to_append, list)
+                else self.index.append([o.index for o in to_append])
+            )
+            is_valid = next((False for idx in appended_index.duplicated() if idx), True)
+            if not is_valid:
+                raise ValueError(
+                    "Indexes have overlapping values: {}".format(
+                        appended_index[appended_index.duplicated()]
+                    )
+                )
+        query_compiler = self._query_compiler.concat(
+            0, to_append, ignore_index=ignore_index, sort=None
+        )
+        if len(query_compiler.columns) > 1:
+            return DataFrame(query_compiler=query_compiler)
+        else:
+            return Series(query_compiler=query_compiler)
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
-        raise NotImplementedError("Not Yet implemented.")
+        # apply and aggregate have slightly different behaviors, so we have to use
+        # each one separately to determine the correct return type. In the case of
+        # `agg`, the axis is set, but it is not required for the computation, so we use
+        # it to determine which function to run.
+        if kwds.pop("axis", None) is not None:
+            apply_func = "agg"
+        else:
+            apply_func = "apply"
+            # Add this because it only applies for `apply` specifically.
+            kwds["convert_dtype"] = convert_dtype
+        query_compiler = super(Series, self).apply(func, *args, **kwds)
+        # Sometimes we can return a scalar here
+        if not isinstance(query_compiler, type(self._query_compiler)):
+            return query_compiler
+        # This is the simplest way to determine the return type, but there are checks
+        # in pandas that verify that some results are created. This is a challenge for
+        # empty DataFrames, but fortunately they only happen when the `func` type is
+        # a list or a dictionary, which means that the return type won't change from
+        # type(self), so we catch that error and use `self.__name__` for the return
+        # type.
+        return_type = type(
+            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
+                func, *args, **kwds
+            )
+        ).__name__
+        if return_type not in ["DataFrame", "Series"]:
+            return query_compiler.to_pandas().squeeze()
+        else:
+            result = getattr(sys.modules[self.__module__], return_type)(
+                query_compiler=query_compiler
+            )
+            if result.name == self.index[0]:
+                result.name = None
+            return result
 
-    def argmax(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+    def argmax(self, axis=0, skipna=True, *args, **kwargs):
+        # Series and DataFrame have a different behavior for `skipna`
+        if skipna is None:
+            skipna = True
+        return self.idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
-    def argmin(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+    def argmin(self, axis=0, skipna=True, *args, **kwargs):
+        # Series and DataFrame have a different behavior for `skipna`
+        if skipna is None:
+            skipna = True
+        return self.idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def argsort(self, axis=0, kind="quicksort", order=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.argsort, axis=axis, kind=kind, order=order
+        )
 
-    def as_blocks(self, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def as_matrix(self, columns=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def asof(self, where, subset=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def astype(self, dtype, copy=True, errors="raise", **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def at(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def at_time(self, time, asof=False):
-        raise NotImplementedError("Not Yet implemented.")
+    def array(self):
+        return self._default_to_pandas(pandas.Series.array)
 
     def autocorr(self, lag=1):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.autocorr, lag=lag)
 
     def between(self, left, right, inclusive=True):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.between, left, right, inclusive=inclusive
+        )
 
-    def between_time(self, start_time, end_time, include_start=True, include_end=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def bool(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def clip(self, lower=None, upper=None, axis=None, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def clip_lower(self, threshold, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def clip_upper(self, threshold, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def combine(self, other, func, fill_value=np.nan):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def combine_first(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+    def combine(self, other, func, fill_value=None):
+        return super(Series, self).combine(other, func, fill_value=fill_value)
 
     def compound(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.compound, axis=axis, skipna=skipna, level=level
+        )
 
     def compress(self, condition, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def consolidate(self, inplace=False):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.compress, condition, *args, **kwargs
+        )
 
     def convert_objects(
         self,
@@ -588,111 +414,79 @@ class Series(object):
         convert_timedeltas=True,
         copy=True,
     ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def copy(self, deep=True):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.convert_objects,
+            convert_dates=convert_dates,
+            convert_numeric=convert_numeric,
+            convert_timedeltas=convert_timedeltas,
+            copy=copy,
+        )
 
     def corr(self, other, method="pearson", min_periods=None):
-        raise NotImplementedError("Not Yet implemented.")
+        if isinstance(other, BasePandasDataset):
+            other = other._to_pandas()
+        return self._default_to_pandas(
+            pandas.Series.corr, other, method=method, min_periods=min_periods
+        )
 
     def count(self, level=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def cummax(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def cummin(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def cumprod(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def cumsum(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        if isinstance(other, BasePandasDataset):
+            other = other._to_pandas()
+        return self._default_to_pandas(
+            pandas.Series.cov, other, min_periods=min_periods
+        )
 
     def describe(self, percentiles=None, include=None, exclude=None):
-        raise NotImplementedError("Not Yet implemented.")
+        # Pandas ignores the `include` and `exclude` for Series for some reason.
+        return super(Series, self).describe(percentiles=percentiles)
 
     def diff(self, periods=1):
-        raise NotImplementedError("Not Yet implemented.")
+        return super(Series, self).diff(periods=periods, axis=0)
 
-    def div(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def divide(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def dot(self, other):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def drop(self, labels, axis=0, level=None, inplace=False, errors="raise"):
-        raise NotImplementedError("Not Yet implemented.")
+    def divmod(self, other, level=None, fill_value=None, axis=0):
+        return self._default_to_pandas(
+            pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def drop_duplicates(self, keep="first", inplace=False):
-        raise NotImplementedError("Not Yet implemented.")
+        return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
 
     def dropna(self, axis=0, inplace=False, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        kwargs.pop("how", None)
+        if kwargs:
+            raise TypeError(
+                "dropna() got an unexpected keyword "
+                'argument "{0}"'.format(list(kwargs.keys())[0])
+            )
+        return super(Series, self).dropna(axis=axis, inplace=inplace)
 
     def duplicated(self, keep="first"):
-        raise NotImplementedError("Not Yet implemented.")
+        return super(Series, self).duplicated(keep=keep)
 
     def eq(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).eq(new_other, level=level, axis=axis)
 
     def equals(self, other):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def ewm(
-        self,
-        com=None,
-        span=None,
-        halflife=None,
-        alpha=None,
-        min_periods=0,
-        freq=None,
-        adjust=True,
-        ignore_na=False,
-        axis=0,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def expanding(self, min_periods=1, freq=None, center=False, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        return (
+            self.name == other.name
+            and self.index.equals(other.index)
+            and self.eq(other).all()
+        )
 
     def factorize(self, sort=False, na_sentinel=-1):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def fillna(
-        self,
-        value=None,
-        method=None,
-        axis=None,
-        inplace=False,
-        limit=None,
-        downcast=None,
-        **kwargs
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def filter(self, items=None, like=None, regex=None, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def first(self, offset):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def first_valid_index(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
+        )
 
     def floordiv(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).floordiv(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def from_array(
         self, arr, index=None, name=None, dtype=None, copy=False, fastpath=False
@@ -709,25 +503,24 @@ class Series(object):
         encoding=None,
         infer_datetime_format=False,
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return super(Series, self).from_csv(
+            path,
+            sep=sep,
+            parse_dates=parse_dates,
+            header=header,
+            index_col=index_col,
+            encoding=encoding,
+            infer_datetime_format=infer_datetime_format,
+        )
 
     def ge(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def get(self, key, default=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def get_dtype_counts(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def get_ftype_counts(self):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).ge(new_other, level=level, axis=axis)
 
     def get_value(self, label, takeable=False):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def get_values(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.get_value, label, takeable=takeable
+        )
 
     def groupby(
         self,
@@ -738,15 +531,30 @@ class Series(object):
         sort=True,
         group_keys=True,
         squeeze=False,
+        observed=False,
         **kwargs
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.groupby,
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            **kwargs
+        )
 
     def gt(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).gt(new_other, level=level, axis=axis)
 
     def head(self, n=5):
-        raise NotImplementedError("Not Yet implemented.")
+        if n == 0:
+            return Series(dtype=self.dtype)
+        return super(Series, self).head(n)
 
     def hist(
         self,
@@ -761,19 +569,29 @@ class Series(object):
         bins=10,
         **kwds
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.hist,
+            by=by,
+            ax=ax,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            figsize=figsize,
+            bins=bins,
+            **kwds
+        )
 
-    def iat(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
+    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
+        if skipna is None:
+            skipna = True
+        return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
-    def idxmax(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def idxmin(self, axis=None, skipna=True, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def iloc(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
+    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
+        if skipna is None:
+            skipna = True
+        return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def interpolate(
         self,
@@ -782,122 +600,96 @@ class Series(object):
         limit=None,
         inplace=False,
         limit_direction="forward",
+        limit_area=None,
         downcast=None,
         **kwargs
     ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def isin(self, values):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def isnull(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.interpolate,
+            method=method,
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            downcast=downcast,
+            **kwargs
+        )
 
     def item(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self[0]
 
     def items(self):
-        raise NotImplementedError("Not Yet implemented.")
+        index_iter = iter(self.index)
+
+        def item_builder(df):
+            s = df.iloc[:, 0]
+            s.index = [next(index_iter)]
+            s.name = self.name
+            return s.items()
+
+        partition_iterator = PartitionIterator(self._query_compiler, 0, item_builder)
+        for v in partition_iterator:
+            yield v
 
     def iteritems(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def ix(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.items()
 
     def keys(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def last(self, offset):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def last_valid_index(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.index
 
     def le(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def loc(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).le(new_other, level=level, axis=axis)
 
     def lt(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def mad(self, axis=None, skipna=None, level=None):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
     def map(self, arg, na_action=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def mask(
-        self,
-        cond,
-        other=np.nan,
-        inplace=False,
-        axis=None,
-        level=None,
-        try_cast=False,
-        raise_on_error=True,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.__constructor__(
+            query_compiler=self._query_compiler._map_partitions(
+                lambda df: pandas.DataFrame(df.iloc[:, 0].map(arg, na_action=na_action))
+            )
+        )
 
     def memory_usage(self, index=True, deep=False):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        if index:
+            result = self._reduce_dimension(
+                self._query_compiler.memory_usage(index=False, deep=deep)
+            )
+            index_value = self.index.memory_usage(deep=deep)
+            return result + index_value
+        return super(Series, self).memory_usage(index=index, deep=deep)
 
     def mod(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def mode(self):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).mod(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def mul(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).mul(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
-    def multiply(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+    multiply = rmul = mul
 
     def ne(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).ne(new_other, level=level, axis=axis)
 
     def nlargest(self, n=5, keep="first"):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
 
     def nonzero(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def notnull(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.to_numpy().nonzero()
 
     def nsmallest(self, n=5, keep="first"):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.nsmallest, n=n, keep=keep)
 
-    def nunique(self, dropna=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def pipe(self, func, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
+    @property
     def plot(
         self,
         kind="line",
@@ -925,188 +717,174 @@ class Series(object):
         secondary_y=False,
         **kwds
     ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def pop(self, item):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._to_pandas().plot
 
     def pow(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).pow(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
-    def prod(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+    def prod(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return np.nan
+        return super(Series, self).prod(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
+        )
 
-    def product(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+    product = prod
 
     def ptp(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.ptp,
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs
+        )
 
     def put(self, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.put, *args, **kwargs)
 
-    def quantile(self, q=0.5, interpolation="linear"):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def radd(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def rank(
-        self,
-        axis=0,
-        method="average",
-        numeric_only=None,
-        na_option="keep",
-        ascending=True,
-        pct=False,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+    radd = add
 
     def ravel(self, order="C"):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def rdiv(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.ravel, order=order)
 
     def reindex(self, index=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        method = kwargs.pop("method", None)
+        level = kwargs.pop("level", None)
+        copy = kwargs.pop("copy", True)
+        limit = kwargs.pop("limit", None)
+        tolerance = kwargs.pop("tolerance", None)
+        fill_value = kwargs.pop("fill_value", None)
+        if kwargs:
+            raise TypeError(
+                "reindex() got an unexpected keyword "
+                'argument "{0}"'.format(list(kwargs.keys())[0])
+            )
+        return super(Series, self).reindex(
+            index=index,
+            method=method,
+            level=level,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+            fill_value=fill_value,
+        )
 
     def reindex_axis(self, labels, axis=0, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
-        raise NotImplementedError("Not Yet implemented.")
+        if axis != 0:
+            raise ValueError("cannot reindex series on non-zero axis!")
+        return self.reindex(index=labels, **kwargs)
 
     def rename(self, index=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        non_mapping = is_scalar(index) or (
+            is_list_like(index) and not is_dict_like(index)
+        )
+        if non_mapping:
+            if kwargs.get("inplace", False):
+                self.name = index
+            else:
+                self_cp = self.copy()
+                self_cp.name = index
+                return self_cp
+        else:
+            from .dataframe import DataFrame
 
-    def rename_axis(self, mapper, axis=0, copy=True, inplace=False):
-        raise NotImplementedError("Not Yet implemented.")
+            result = DataFrame(self).rename(index=index, **kwargs).squeeze()
+            result.name = self.name
+            return result
 
     def reorder_levels(self, order):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.reorder_levels, order)
 
-    def repeat(self, repeats, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def replace(
-        self,
-        to_replace=None,
-        value=None,
-        inplace=False,
-        limit=None,
-        regex=False,
-        method="pad",
-        axis=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def resample(
-        self,
-        rule,
-        how=None,
-        axis=0,
-        fill_method=None,
-        closed=None,
-        label=None,
-        convention="start",
-        kind=None,
-        loffset=None,
-        limit=None,
-        base=0,
-        on=None,
-        level=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+    def repeat(self, repeats, axis=None):
+        return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
-        raise NotImplementedError("Not Yet implemented.")
+        if drop and level is None:
+            new_idx = pandas.RangeIndex(len(self.index))
+            if inplace:
+                self.index = new_idx
+                self.name = name or self.name
+            else:
+                result = self.copy()
+                result.index = new_idx
+                result.name = name or self.name
+                return result
+        elif not drop and inplace:
+            raise TypeError(
+                "Cannot reset_index inplace on a Series to create a DataFrame"
+            )
+        else:
+            obj = self.copy()
+            if name is not None:
+                obj.name = name
+            from .dataframe import DataFrame
 
-    def reshape(self, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+            return DataFrame(self).reset_index(level=level, drop=drop, inplace=inplace)
+
+    def rdivmod(self, other, level=None, fill_value=None, axis=0):
+        return self._default_to_pandas(
+            pandas.Series.rdivmod, other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def rfloordiv(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rfloordiv(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def rmod(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def rmul(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def rolling(
-        self,
-        window,
-        min_periods=None,
-        freq=None,
-        center=False,
-        win_type=None,
-        on=None,
-        axis=0,
-        closed=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def round(self, decimals=0, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rmod(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def rpow(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rpow(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def rsub(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rsub(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def rtruediv(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rtruediv(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
-    def sample(
-        self,
-        n=None,
-        frac=None,
-        replace=False,
-        weights=None,
-        random_state=None,
-        axis=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+    rdiv = rtruediv
 
     def searchsorted(self, value, side="left", sorter=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def select(self, crit, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def set_axis(self, axis, labels):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.searchsorted, value, side=side, sorter=sorter
+        )
 
     def set_value(self, label, value, takeable=False):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def shift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def slice_shift(self, periods=1, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def sort_index(
-        self,
-        axis=0,
-        level=None,
-        ascending=True,
-        inplace=False,
-        kind="quicksort",
-        na_position="last",
-        sort_remaining=True,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas("set_value", label, value, takeable=takeable)
 
     def sort_values(
         self,
@@ -1116,153 +894,94 @@ class Series(object):
         kind="quicksort",
         na_position="last",
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        from .dataframe import DataFrame
 
-    def sortlevel(self, level=0, ascending=True, sort_remaining=True):
-        raise NotImplementedError("Not Yet implemented.")
+        # When we convert to a DataFrame, the name is automatically converted to 0 if it
+        # is None, so we do this to avoid a KeyError.
+        by = self.name if self.name is not None else 0
+        result = (
+            DataFrame(self)
+            .sort_values(
+                by=by,
+                ascending=ascending,
+                inplace=False,
+                kind=kind,
+                na_position=na_position,
+            )
+            .squeeze(axis=1)
+        )
+        result.name = self.name
+        return self._create_or_update_from_compiler(
+            result._query_compiler, inplace=inplace
+        )
+
+    def sparse(self, data=None):
+        return self._default_to_pandas(pandas.Series.sparse, data=data)
 
     def squeeze(self, axis=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        if axis is not None:
+            # Validate `axis`
+            pandas.Series._get_axis_number(axis)
+        if len(self.index) == 1:
+            return self._reduce_dimension(self._query_compiler)
+        else:
+            return self.copy()
 
     def sub(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).sub(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
-    def subtract(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+    subtract = sub
 
-    def sum(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def swapaxes(self, axis1, axis2, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
+    def sum(
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs
+    ):
+        axis = self._get_axis_number(axis)
+        new_index = self.columns if axis else self.index
+        if min_count > len(new_index):
+            return np.nan
+        return super(Series, self).sum(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs
+        )
 
     def swaplevel(self, i=-2, j=-1, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
 
     def tail(self, n=5):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def take(self, indices, axis=0, convert=True, is_copy=False, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_clipboard(self, excel=None, sep=None, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_csv(
-        self,
-        path=None,
-        index=True,
-        sep=",",
-        na_rep="",
-        float_format=None,
-        header=False,
-        index_label=None,
-        mode="w",
-        encoding=None,
-        date_format=None,
-        decimal=".",
-    ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_dense(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_dict(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_excel(
-        self,
-        excel_writer,
-        sheet_name="Sheet1",
-        na_rep="",
-        float_format=None,
-        columns=None,
-        header=True,
-        index=True,
-        index_label=None,
-        startrow=0,
-        startcol=0,
-        engine=None,
-        merge_cells=True,
-        encoding=None,
-        inf_rep="inf",
-        verbose=True,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        if n == 0:
+            return Series(dtype=self.dtype)
+        return super(Series, self).tail(n)
 
     def to_frame(self, name=None):
-        raise NotImplementedError("Not Yet implemented.")
+        from .dataframe import DataFrame
 
-    def to_hdf(self, path_or_buf, key, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        self_cp = self.copy()
+        if name is not None:
+            self_cp.name = name
+        return DataFrame(self)
 
-    def to_json(
-        self,
-        path_or_buf=None,
-        orient=None,
-        date_format=None,
-        double_precision=10,
-        force_ascii=True,
-        date_unit="ms",
-        default_handler=None,
-        lines=False,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+    def to_list(self):
+        return self._default_to_pandas(pandas.Series.to_list)
 
-    def to_latex(
-        self,
-        buf=None,
-        columns=None,
-        col_space=None,
-        header=True,
-        index=True,
-        na_rep="NaN",
-        formatters=None,
-        float_format=None,
-        sparsify=None,
-        index_names=True,
-        bold_rows=False,
-        column_format=None,
-        longtable=None,
-        escape=None,
-        encoding=None,
-        decimal=".",
-        multicolumn=None,
-        multicolumn_format=None,
-        multirow=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+    tolist = to_list
 
-    def to_msgpack(self, path_or_buf=None, encoding="utf-8", **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
-
+    # TODO(williamma12): When we implement to_timestamp, have this call the version
+    # in base.py
     def to_period(self, freq=None, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_pickle(self, path, compression="infer"):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_sparse(self, kind="block", fill_value=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_sql(
-        self,
-        name,
-        con,
-        flavor=None,
-        schema=None,
-        if_exists="fail",
-        index=True,
-        index_label=None,
-        chunksize=None,
-        dtype=None,
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas("to_period", freq=freq, copy=copy)
 
     def to_string(
         self,
@@ -1276,62 +995,65 @@ class Series(object):
         name=False,
         max_rows=None,
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.to_string,
+            buf=buf,
+            na_rep=na_rep,
+            float_format=float_format,
+            header=header,
+            index=index,
+            length=length,
+            dtype=dtype,
+            name=name,
+            max_rows=max_rows,
+        )
 
+    # TODO(williamma12): When we implement to_timestamp, have this call the version
+    # in base.py
     def to_timestamp(self, freq=None, how="start", copy=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def to_xarray(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def tolist(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def transform(self, func, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas("to_timestamp", freq=freq, how=how, copy=copy)
 
     def transpose(self, *args, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self
+
+    T = property(transpose)
 
     def truediv(self, other, level=None, fill_value=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).truediv(
+            new_other, level=level, fill_value=None, axis=axis
+        )
+
+    div = divide = truediv
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def tshift(self, periods=1, freq=None, axis=0):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def tz_convert(self, tz, axis=0, level=None, copy=True):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def tz_localize(self, tz, axis=0, level=None, copy=True, ambiguous="raise"):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.truncate, before=before, after=after, axis=axis, copy=copy
+        )
 
     def unique(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.unique)
 
-    def unstack(self, level=-1, fill_value=None):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def upandasate(self, other):
-        raise NotImplementedError("Not Yet implemented.")
+    def update(self, other):
+        return self._default_to_pandas(pandas.Series.update, other)
 
     def valid(self, inplace=False, **kwargs):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.valid, inplace=inplace, **kwargs)
 
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
     ):
-        raise NotImplementedError("Not Yet implemented.")
-
-    def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(
+            pandas.Series.value_counts,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            bins=bins,
+            dropna=dropna,
+        )
 
     def view(self, dtype=None):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(pandas.Series.view, dtype=dtype)
 
     def where(
         self,
@@ -1340,122 +1062,184 @@ class Series(object):
         inplace=False,
         axis=None,
         level=None,
+        errors="raise",
         try_cast=False,
-        raise_on_error=True,
+        raise_on_error=None,
     ):
-        raise NotImplementedError("Not Yet implemented.")
+        if isinstance(other, Series):
+            other = to_pandas(other)
+        return self._default_to_pandas(
+            pandas.Series.where,
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+            raise_on_error=raise_on_error,
+        )
 
-    def xs(key, axis=0, level=None, drop_level=True):
+    def xs(self, key, axis=0, level=None, drop_level=True):  # pragma: no cover
         raise NotImplementedError("Not Yet implemented.")
 
     @property
     def asobject(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def asobject(df):
+            return df.asobject
+
+        return self._default_to_pandas(asobject)
 
     @property
     def axes(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return [self.index]
 
     @property
     def base(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def base(df):
+            return df.base
+
+        return self._default_to_pandas(base)
 
     @property
-    def blocks(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def cat(self):
+        return self._default_to_pandas(pandas.Series.cat)
 
     @property
     def data(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def data(df):
+            return df.data
+
+        return self._default_to_pandas(data)
+
+    @property
+    def dt(self):
+        return self._default_to_pandas(pandas.Series.dt)
 
     @property
     def dtype(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._query_compiler.dtypes.squeeze()
 
-    @property
-    def dtypes(self):
-        raise NotImplementedError("Not Yet implemented.")
+    dtypes = dtype
 
     @property
     def empty(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return len(self.index) == 0
 
     @property
     def flags(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def flags(df):
+            return df.flags
+
+        return self._default_to_pandas(flags)
 
     @property
     def ftype(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return "{}:dense".format(self.dtype)
 
-    @property
-    def ftypes(self):
-        raise NotImplementedError("Not Yet implemented.")
+    ftypes = ftype
 
     @property
     def hasnans(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self.isna().sum() > 0
 
     @property
     def imag(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def imag(df):
+            return df.imag
 
-    @property
-    def index(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    @property
-    def is_copy(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(imag)
 
     @property
     def is_monotonic(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def is_monotonic(df):
+            return df.is_monotonic
+
+        return self._default_to_pandas(is_monotonic)
 
     @property
     def is_monotonic_decreasing(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def is_monotonic_decreasing(df):
+            return df.is_monotonic
+
+        return self._default_to_pandas(is_monotonic_decreasing)
 
     @property
     def is_monotonic_increasing(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def is_monotonic_increasing(df):
+            return df.is_monotonic
+
+        return self._default_to_pandas(is_monotonic_increasing)
 
     @property
     def is_unique(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def is_unique(df):
+            return df.is_unique
+
+        return self._default_to_pandas(is_unique)
 
     @property
     def itemsize(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def itemsize(df):
+            return df.itemsize
 
-    @property
-    def name(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return self._default_to_pandas(itemsize)
 
     @property
     def nbytes(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def nbytes(df):
+            return df.nbytes
+
+        return self._default_to_pandas(nbytes)
 
     @property
     def ndim(self):
-        raise NotImplementedError("Not Yet implemented.")
+        """Get the number of dimensions for this DataFrame.
+
+        Returns:
+            The number of dimensions for this Series.
+        """
+        # Series have an invariant that requires they be 1 dimension.
+        return 1
 
     @property
     def real(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def real(df):
+            return df.real
+
+        return self._default_to_pandas(real)
 
     @property
     def shape(self):
-        raise NotImplementedError("Not Yet implemented.")
-
-    @property
-    def size(self):
-        raise NotImplementedError("Not Yet implemented.")
+        return (len(self),)
 
     @property
     def strides(self):
-        raise NotImplementedError("Not Yet implemented.")
+        # We cannot default to pandas without a named function to call.
+        def strides(df):
+            return df.strides
+
+        return self._default_to_pandas(strides)
 
     @property
-    def values(self):
-        raise NotImplementedError("Not Yet implemented.")
+    def str(self):
+        return self._default_to_pandas(pandas.Series.str)
+
+    def _to_pandas(self):
+        df = self._query_compiler.to_pandas()
+        series = df[df.columns[0]]
+        if series.name == "__reduced__":
+            series.name = None
+        return series

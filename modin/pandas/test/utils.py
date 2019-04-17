@@ -237,10 +237,34 @@ def df_equals(df1, df2):
 
     groupby_types = (pandas.core.groupby.DataFrameGroupBy, DataFrameGroupBy)
 
+    # The typing behavior of how pandas treats its index is not consistent when the
+    # length of the DataFrame or Series is 0, so we just verify that the contents are
+    # the same.
+    if (
+        hasattr(df1, "index")
+        and hasattr(df2, "index")
+        and len(df1) == 0
+        and len(df2) == 0
+    ):
+        if type(df1).__name__ == type(df2).__name__:
+            if hasattr(df1, "name") and hasattr(df2, "name") and df1.name == df2.name:
+                return
+            if (
+                hasattr(df1, "columns")
+                and hasattr(df2, "columns")
+                and df1.columns.equals(df2.columns)
+            ):
+                return
+        assert False
+
     # Convert to pandas
     if isinstance(df1, pd.DataFrame):
         df1 = to_pandas(df1)
     if isinstance(df2, pd.DataFrame):
+        df2 = to_pandas(df2)
+    if isinstance(df1, pd.Series):
+        df1 = to_pandas(df1)
+    if isinstance(df2, pd.Series):
         df2 = to_pandas(df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
@@ -285,7 +309,10 @@ def df_equals(df1, df2):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
     else:
-        assert df1 == df2
+        if df1 != df2:
+            print(df1)
+            print(df2)
+            np.testing.assert_almost_equal(df1, df2)
 
 
 def df_is_empty(df):

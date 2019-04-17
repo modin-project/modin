@@ -78,7 +78,7 @@ def _read_csv_with_offset_pandas_on_ray(
             This is used to determine the total length of the DataFrame to build a
             default Index.
     """
-    index_col = kwargs.pop("index_col", None)
+    index_col = kwargs.get("index_col", None)
     bio = open_file(fname, "rb")
     bio.seek(start)
     to_read = header + bio.read(end - start)

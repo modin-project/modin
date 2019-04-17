@@ -87,6 +87,7 @@ script:
   - if [[ "$MODIN_DF_TEST" == "ONE" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartOne --cov-append; fi
   - if [[ "$MODIN_DF_TEST" == "TWO" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartTwo --cov-append; fi
   - if [[ "$MODIN_DF_TEST" == "ALL" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py --cov-append; fi
+  - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_series.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_reshape.py --cov-append

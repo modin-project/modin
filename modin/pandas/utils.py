@@ -18,14 +18,16 @@ def from_pandas(df):
     return DataFrame(query_compiler=BaseFactory.from_pandas(df))
 
 
-def to_pandas(df):
-    """Converts a Ray DataFrame to a pandas DataFrame/Series.
+def to_pandas(modin_obj):
+    """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
+
     Args:
-        df (modin.DataFrame): The Ray DataFrame to convert.
+        obj {modin.DataFrame, modin.Series}: The Ray DataFrame/Series to convert.
+
     Returns:
-        A new pandas DataFrame.
+        A new pandas DataFrame or Series.
     """
-    return df._query_compiler.to_pandas()
+    return modin_obj._to_pandas()
 
 
 def _inherit_docstrings(parent, excluded=[]):

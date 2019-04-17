@@ -10,7 +10,6 @@ from pandas.tests.frame.common import TestData
 import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
-from modin.pandas.series import SeriesView
 from numpy.testing import assert_array_equal
 import sys
 
@@ -113,14 +112,15 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(list_test, axis=1)
             df_equals(modin_result, pandas_result)
 
-        list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_df.shape[0]))
+        series_test_modin = modin_df[modin_df.columns[0]]
+        series_test_pandas = pandas_df[pandas_df.columns[0]]
         try:
-            pandas_result = getattr(pandas_df, op)(list_test, axis=0)
+            pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
         except Exception as e:
             with pytest.raises(type(e)):
-                getattr(modin_df, op)(list_test, axis=0)
+                getattr(modin_df, op)(series_test_modin, axis=0)
         else:
-            modin_result = getattr(modin_df, op)(list_test, axis=0)
+            modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
             df_equals(modin_result, pandas_result)
 
         # Level test
@@ -129,7 +129,6 @@ class TestDFPartOne:
         )
         modin_df_multi_level = modin_df.copy()
         modin_df_multi_level.index = new_idx
-
         # Defaults to pandas
         with pytest.warns(UserWarning):
             # Operation against self for sanity check
@@ -789,6 +788,29 @@ class TestDFPartOne:
             modin_result = modin_df.all(axis=None, skipna=skipna, bool_only=bool_only)
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.all(
+                axis=axis, skipna=skipna, bool_only=bool_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
+        else:
+            modin_result = modin_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
+            df_equals(modin_result, pandas_result)
+
+        # Test when axis is None. This will get repeated but easier than using list in parameterize decorator
+        try:
+            pandas_result = pandas_df.T.all(
+                axis=None, skipna=skipna, bool_only=bool_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
+        else:
+            modin_result = modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -817,6 +839,28 @@ class TestDFPartOne:
                 modin_df.any(axis=None, skipna=skipna, bool_only=bool_only)
         else:
             modin_result = modin_df.any(axis=None, skipna=skipna, bool_only=bool_only)
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.any(
+                axis=axis, skipna=skipna, bool_only=bool_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
+        else:
+            modin_result = modin_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.any(
+                axis=None, skipna=skipna, bool_only=bool_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
+        else:
+            modin_result = modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
             df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1221,6 +1265,10 @@ class TestDFPartOne:
         pandas_result = pandas_df.count(axis=axis, numeric_only=numeric_only)
         df_equals(modin_result, pandas_result)
 
+        modin_result = modin_df.T.count(axis=axis, numeric_only=numeric_only)
+        pandas_result = pandas_df.T.count(axis=axis, numeric_only=numeric_only)
+        df_equals(modin_result, pandas_result)
+
     def test_cov(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -1244,6 +1292,15 @@ class TestDFPartOne:
             modin_result = modin_df.cummax(axis=axis, skipna=skipna)
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.cummax(axis=axis, skipna=skipna)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.cummax(axis=axis, skipna=skipna)
+        else:
+            modin_result = modin_df.T.cummax(axis=axis, skipna=skipna)
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -1262,6 +1319,15 @@ class TestDFPartOne:
             modin_result = modin_df.cummin(axis=axis, skipna=skipna)
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.cummin(axis=axis, skipna=skipna)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.cummin(axis=axis, skipna=skipna)
+        else:
+            modin_result = modin_df.T.cummin(axis=axis, skipna=skipna)
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -1278,6 +1344,15 @@ class TestDFPartOne:
                 modin_df.cumprod(axis=axis, skipna=skipna)
         else:
             modin_result = modin_df.cumprod(axis=axis, skipna=skipna)
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.cumprod(axis=axis, skipna=skipna)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.cumprod(axis=axis, skipna=skipna)
+        else:
+            modin_result = modin_df.T.cumprod(axis=axis, skipna=skipna)
             df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1304,6 +1379,21 @@ class TestDFPartOne:
                     modin_df.cumsum(axis=axis, skipna=skipna)
             else:
                 modin_result = modin_df.cumsum(axis=axis, skipna=skipna)
+                df_equals(modin_result, pandas_result)
+
+        if name_contains(request.node.name, ["datetime_timedelta_data"]) and (
+            axis == 0 or axis == "rows"
+        ):
+            with pytest.raises(TypeError):
+                modin_df.T.cumsum(axis=axis, skipna=skipna)
+        else:
+            try:
+                pandas_result = pandas_df.T.cumsum(axis=axis, skipna=skipna)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.T.cumsum(axis=axis, skipna=skipna)
+            else:
+                modin_result = modin_df.T.cumsum(axis=axis, skipna=skipna)
                 df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1414,6 +1504,15 @@ class TestDFPartOne:
                 modin_df.diff(axis=axis, periods=periods)
         else:
             modin_result = modin_df.diff(axis=axis, periods=periods)
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.diff(axis=axis, periods=periods)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.diff(axis=axis, periods=periods)
+        else:
+            modin_result = modin_df.T.diff(axis=axis, periods=periods)
             df_equals(modin_result, pandas_result)
 
     def test_drop(self):
@@ -1864,7 +1963,7 @@ class TestDFPartOne:
             "arctan2(sin(a), b)", engine="python", parser="pandas"
         )
 
-        assert isinstance(tmp_modin, (pandas.Series, SeriesView))
+        assert isinstance(tmp_modin, pd.Series)
         df_equals(tmp_modin, tmp_pandas)
 
         # Test not inplace assignments
@@ -2150,7 +2249,7 @@ class TestDFPartOne:
         )
 
         # Series treated same as dict
-        df_equals(modin_df.fillna(df.max()), df.fillna(df.max()))
+        df_equals(modin_df.fillna(modin_df.max()), df.fillna(df.max()))
 
     def test_fillna_dataframe(self):
         frame_data = {
@@ -2170,9 +2269,10 @@ class TestDFPartOne:
             },
             index=list("VWXuZ"),
         )
+        modin_df2 = pd.DataFrame(df2)
 
         # only those columns and indices which are shared get filled
-        df_equals(modin_df.fillna(df2), df.fillna(df2))
+        df_equals(modin_df.fillna(modin_df2), df.fillna(df2))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_fillna_columns(self, data):
@@ -2354,6 +2454,10 @@ class TestDFPartOne:
         modin_result = modin_df.idxmax(axis=axis, skipna=skipna)
         df_equals(modin_result, pandas_result)
 
+        pandas_result = pandas_df.T.idxmax(axis=axis, skipna=skipna)
+        modin_result = modin_df.T.idxmax(axis=axis, skipna=skipna)
+        df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -2365,6 +2469,10 @@ class TestDFPartOne:
 
         modin_result = modin_df.idxmin(axis=axis, skipna=skipna)
         pandas_result = pandas_df.idxmin(axis=axis, skipna=skipna)
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.idxmin(axis=axis, skipna=skipna)
+        pandas_result = pandas_df.T.idxmin(axis=axis, skipna=skipna)
         df_equals(modin_result, pandas_result)
 
     def test_infer_objects(self):
@@ -2507,8 +2615,8 @@ class TestDFPartOne:
 
     def test_is_copy(self):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).is_copy
+        with pytest.warns(FutureWarning):
+            assert pd.DataFrame(data).is_copy == pandas.DataFrame(data).is_copy
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_items(self, data):
@@ -2628,8 +2736,6 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).kurtosis()
 
-
-class TestDFPartTwo:
     def test_last(self):
         i = pd.date_range("2018-04-09", periods=4, freq="2D")
         ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
@@ -2687,9 +2793,10 @@ class TestDFPartTwo:
         )
 
         df_equals(modin_df.loc[1], pandas_df.loc[1])
-        assert modin_df.loc[1, "Presidents"].equals(pandas_df.loc[1, "Presidents"])
-        assert modin_df.loc[1, ("Presidents", "Pure mentions")].equals(
-            pandas_df.loc[1, ("Presidents", "Pure mentions")]
+        df_equals(modin_df.loc[1, "Presidents"], pandas_df.loc[1, "Presidents"])
+        df_equals(
+            modin_df.loc[1, ("Presidents", "Pure mentions")],
+            pandas_df.loc[1, ("Presidents", "Pure mentions")],
         )
         assert (
             modin_df.loc[1, ("Presidents", "Pure mentions", "IND", "all")]
@@ -2731,7 +2838,7 @@ class TestDFPartTwo:
             index=pandas_index,
             columns=["col{}".format(i) for i in range(100)],
         )
-        assert modin_df.loc["bar", "col1"].equals(pandas_df.loc["bar", "col1"])
+        df_equals(modin_df.loc["bar", "col1"], pandas_df.loc["bar", "col1"])
         assert (
             modin_df.loc[("bar", "one"), "col1"]
             == pandas_df.loc[("bar", "one"), "col1"]
@@ -2778,11 +2885,22 @@ class TestDFPartTwo:
             )
         except Exception:
             with pytest.raises(TypeError):
-                modin_result = modin_df.max(
-                    axis=axis, skipna=skipna, numeric_only=numeric_only
-                )
+                modin_df.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
         else:
             modin_result = modin_df.max(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.max(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
+        else:
+            modin_result = modin_df.T.max(
                 axis=axis, skipna=skipna, numeric_only=numeric_only
             )
             df_equals(modin_result, pandas_result)
@@ -2812,6 +2930,19 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.mean(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.mean(axis=axis, skipna=skipna, numeric_only=numeric_only)
+        else:
+            modin_result = modin_df.T.mean(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -2837,6 +2968,21 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.median(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.median(axis=axis, skipna=skipna, numeric_only=numeric_only)
+        else:
+            modin_result = modin_df.T.median(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+            df_equals(modin_result, pandas_result)
+
+
+class TestDFPartTwo:
     def test_melt(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -2944,6 +3090,19 @@ class TestDFPartTwo:
                 modin_df.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
         else:
             modin_result = modin_df.min(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = pandas_df.T.min(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
+        else:
+            modin_result = modin_df.T.min(
                 axis=axis, skipna=skipna, numeric_only=numeric_only
             )
             df_equals(modin_result, pandas_result)
@@ -3062,6 +3221,10 @@ class TestDFPartTwo:
 
         modin_result = modin_df.nunique(axis=axis, dropna=dropna)
         pandas_result = pandas_df.nunique(axis=axis, dropna=dropna)
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.nunique(axis=axis, dropna=dropna)
+        pandas_result = pandas_df.T.nunique(axis=axis, dropna=dropna)
         df_equals(modin_result, pandas_result)
 
     def test_pct_change(self):
@@ -3203,6 +3366,24 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.prod(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.prod(
+                    axis=axis,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                )
+        else:
+            modin_result = modin_df.T.prod(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+            )
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -3257,6 +3438,22 @@ class TestDFPartTwo:
         else:
             with pytest.raises(ValueError):
                 modin_df.quantile(q)
+
+        if not name_contains(request.node.name, no_numeric_dfs):
+            df_equals(modin_df.T.quantile(q), pandas_df.T.quantile(q))
+            df_equals(modin_df.T.quantile(q, axis=1), pandas_df.T.quantile(q, axis=1))
+
+            try:
+                pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.T.quantile(q, axis=1, numeric_only=False)
+            else:
+                modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)
+                df_equals(modin_result, pandas_result)
+        else:
+            with pytest.raises(ValueError):
+                modin_df.T.quantile(q)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
@@ -3395,7 +3592,7 @@ class TestDFPartTwo:
         )
 
         # have to pass something
-        pytest.raises(TypeError, modin_df.rename)
+        pytest.raises(TypeError, modin_df.rename())
 
         # partial columns
         renamed = test_data.frame.rename(columns={"C": "foo", "D": "bar"})
@@ -3901,6 +4098,19 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.skew(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.skew(axis=axis, skipna=skipna, numeric_only=numeric_only)
+        else:
+            modin_result = modin_df.T.skew(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
+            df_equals(modin_result, pandas_result)
+
     def test_slice_shift(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -4119,6 +4329,21 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.std(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.T.std(
+                    axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+                )
+        else:
+            modin_result = modin_df.T.std(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+            )
+            df_equals(modin_result, pandas_result)
+
     def test_style(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -4153,6 +4378,23 @@ class TestDFPartTwo:
                 )
         else:
             modin_result = modin_df.sum(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+            )
+            df_equals(modin_result, pandas_result)
+        try:
+            pandas_result = pandas_df.T.sum(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.sum(
+                    axis=axis,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                )
+        else:
+            modin_result = modin_df.T.sum(
                 axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
             )
             df_equals(modin_result, pandas_result)
@@ -4200,13 +4442,6 @@ class TestDFPartTwo:
         )
         with pytest.warns(UserWarning):
             df.take([0, 3])
-
-    def test_to_datetime(self):
-        frame_data = {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
-        modin_df = pd.DataFrame(frame_data)
-        pd_df = pandas.DataFrame(frame_data)
-
-        df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pd_df))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_records(self, request, data):
@@ -4369,6 +4604,21 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        try:
+            pandas_result = pandas_df.T.var(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+            )
+        except Exception:
+            with pytest.raises(TypeError):
+                modin_df.T.var(
+                    axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+                )
+        else:
+            modin_result = modin_df.T.var(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
+            )
+            df_equals(modin_result, pandas_result)
+
     def test_where(self):
         frame_data = random_state.randn(100, 10)
         pandas_df = pandas.DataFrame(frame_data, columns=list("abcdefghij"))
@@ -4407,15 +4657,6 @@ class TestDFPartTwo:
         with pytest.warns(UserWarning):
             df.xs("mammal")
 
-    def test__doc__(self):
-        assert pd.DataFrame.__doc__ != pandas.DataFrame.__doc__
-        assert pd.DataFrame.__init__ != pandas.DataFrame.__init__
-        for attr, obj in pd.DataFrame.__dict__.items():
-            if (callable(obj) or isinstance(obj, property)) and attr != "__init__":
-                pd_obj = getattr(pandas.DataFrame, attr, None)
-                if callable(pd_obj) or isinstance(pd_obj, property):
-                    assert obj.__doc__ == pd_obj.__doc__
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___getitem__(self, request, data):
         modin_df = pd.DataFrame(data)
@@ -4424,7 +4665,7 @@ class TestDFPartTwo:
         if "empty_data" not in request.node.name:
             key = modin_df.columns[0]
             modin_col = modin_df.__getitem__(key)
-            assert isinstance(modin_col, (pandas.Series, SeriesView))
+            assert isinstance(modin_col, pd.Series)
 
             pd_col = pandas_df[key]
             df_equals(pd_col, modin_col)
@@ -4439,10 +4680,10 @@ class TestDFPartTwo:
             col = modin_df.__getattr__(key)
 
             col = modin_df.__getattr__("col1")
-            assert isinstance(col, (pandas.Series, SeriesView))
+            assert isinstance(col, pd.Series)
 
             col = getattr(modin_df, "col1")
-            assert isinstance(col, (pandas.Series, SeriesView))
+            assert isinstance(col, pd.Series)
 
             # Check that lookup in column doesn't override other attributes
             df2 = modin_df.rename(index=str, columns={key: "columns"})
@@ -4544,13 +4785,18 @@ class TestDFPartTwo:
             modin_result = modin_df.__neg__()
             df_equals(modin_result, pandas_result)
 
-    def test___invert__(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            try:
-                pd.DataFrame(data).__invert__()
-            except TypeError:
-                pass
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test___invert__(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        try:
+            pandas_result = ~pandas_df
+        except Exception as e:
+            with pytest.raises(type(e)):
+                repr(~modin_df)
+        else:
+            modin_result = ~modin_df
+            df_equals(modin_result, pandas_result)
 
     def test___hash__(self):
         data = test_data_values[0]
@@ -4770,6 +5016,12 @@ class TestDFPartTwo:
 
         assert repr(pandas_df) == repr(modin_df)
 
+        # Empty
+        pandas_df = pandas.DataFrame(columns=["col{}".format(i) for i in range(100)])
+        modin_df = pd.DataFrame(columns=["col{}".format(i) for i in range(100)])
+
+        assert repr(pandas_df) == repr(modin_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_reset_index_with_multi_index(self, data):
         modin_df = pd.DataFrame(data)
@@ -4782,6 +5034,23 @@ class TestDFPartTwo:
             pandas_cols = pandas_df.groupby([col0, col1]).count().reset_index().columns
 
             assert modin_cols.equals(pandas_cols)
+
+    def test_reset_index_with_named_index(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
+
+        modin_df.index.name = pandas_df.index.name = "NAME_OF_INDEX"
+        df_equals(modin_df, pandas_df)
+        df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
+
+        modin_df.reset_index(drop=True, inplace=True)
+        pandas_df.reset_index(drop=True, inplace=True)
+        df_equals(modin_df, pandas_df)
+
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
+        modin_df.index.name = pandas_df.index.name = "NEW_NAME"
+        df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_inplace_series_ops(self, data):
