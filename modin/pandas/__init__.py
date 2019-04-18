@@ -75,6 +75,7 @@ from pandas import (
     SparseArray,
     SparseSeries,
     SparseDataFrame,
+    datetime,
 )
 import threading
 import os
@@ -288,6 +289,7 @@ __all__ = [
     "SparseArray",
     "SparseSeries",
     "SparseDataFrame",
+    "datetime",
 ]
 
 del pandas
