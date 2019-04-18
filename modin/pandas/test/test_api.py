@@ -26,7 +26,6 @@ def test_top_level_api_equality():
         "get_option",
         "option_context",
         "reset_option",
-        "options",
     ]
 
     assert not len(
@@ -34,7 +33,7 @@ def test_top_level_api_equality():
     ), "Differences found in API: {}".format(missing_from_modin - set(ignore))
 
     difference = []
-    allowed_different = ["Interval"]
+    allowed_different = ["Interval", "datetime"]
 
     for m in set(pandas_dir) - set(ignore):
         if m in allowed_different:
