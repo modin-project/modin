@@ -2535,7 +2535,10 @@ class TestDFPartOne:
         df_equals(modin_df.iloc[0], pandas_df.iloc[0])
         df_equals(modin_df.loc[0], pandas_df.loc[0])
         df_equals(modin_df.iloc[0, 0:4], pandas_df.iloc[0, 0:4])
-        df_equals(modin_df.loc[0, modin_df.columns[0:4]], pandas_df.loc[0, pandas_df.columns[0:4]])
+        df_equals(
+            modin_df.loc[0, modin_df.columns[0:4]],
+            pandas_df.loc[0, pandas_df.columns[0:4]],
+        )
 
     def test_info(self):
         data = test_data_values[0]
