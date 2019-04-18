@@ -1854,7 +1854,12 @@ class DataFrame(BasePandasDataset):
             # of indices, and RangeIndex will give us the exact indices of each boolean
             # requested.
             key = pandas.RangeIndex(len(self.index))[key]
-            return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
+            if len(key):
+                return DataFrame(
+                    query_compiler=self._query_compiler.getitem_row_array(key)
+                )
+            else:
+                return DataFrame(columns=self.columns)
         else:
             if any(k not in self.columns for k in key):
                 raise KeyError(
