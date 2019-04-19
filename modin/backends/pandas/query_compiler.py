@@ -2408,9 +2408,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             np.arange(len(self.columns)), index=self.columns
         )
         if index is not None:
-            index_map_series = index_map_series.reindex(index)
+            index_map_series = index_map_series.iloc[index]
         if columns is not None:
-            column_map_series = column_map_series.reindex(columns)
+            column_map_series = column_map_series.iloc[columns]
         return PandasQueryCompilerView(
             self.data,
             index_map_series.index,

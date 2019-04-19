@@ -2524,6 +2524,22 @@ class TestDFPartOne:
         pandas_df_cp.index = [str(i) for i in pandas_df_cp.index]
         df_equals(modin_df_cp.index, pandas_df_cp.index)
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_indexing_duplicate_axis(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        modin_df.index = pandas_df.index = [i // 3 for i in range(len(modin_df))]
+        assert any(modin_df.index.duplicated())
+        assert any(pandas_df.index.duplicated())
+
+        df_equals(modin_df.iloc[0], pandas_df.iloc[0])
+        df_equals(modin_df.loc[0], pandas_df.loc[0])
+        df_equals(modin_df.iloc[0, 0:4], pandas_df.iloc[0, 0:4])
+        df_equals(
+            modin_df.loc[0, modin_df.columns[0:4]],
+            pandas_df.loc[0, pandas_df.columns[0:4]],
+        )
+
     def test_info(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
