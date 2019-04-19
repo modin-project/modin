@@ -772,17 +772,6 @@ def test_from_csv_index_col(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
-    print("pandas cols", pandas_df.columns)
-    print("modin cols", modin_df.columns)
-    print("pandas index", pandas_df.index)
-    print("modin index", modin_df.index)
-    assert (pandas_df.columns == modin_df.columns).all()
-    print(len(pandas_df.index))
-    print(len(modin_df.index))
-    for x, y in zip(pandas_df.index, modin_df.index):
-        print(x, y)
-    assert (pandas_df.index == modin_df.index).all()
-    modin_df.__repr__()
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
