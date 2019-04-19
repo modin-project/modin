@@ -252,6 +252,19 @@ class RayIO(BaseIO):
         Returns:
             DataFrame or Series constructed from CSV file.
         """
+        names = kwargs.get("names", None)
+        index_col = kwargs.get("index_col", None)
+        if names is None:
+            # For the sake of the empty df, we assume no `index_col` to get the correct
+            # column names before we build the index. Because we pass `names` in, this
+            # step has to happen without removing the `index_col` otherwise it will not
+            # be assigned correctly
+            kwargs["index_col"] = None
+            names = pandas.read_csv(
+                file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+            ).columns
+            kwargs["index_col"] = index_col
+
         empty_pd_df = pandas.read_csv(
             file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
         )
@@ -262,7 +275,7 @@ class RayIO(BaseIO):
         partition_kwargs = dict(
             kwargs,
             header=None,
-            names=column_names,
+            names=names,
             skipfooter=0,
             skiprows=None,
             parse_dates=parse_dates,
@@ -312,7 +325,6 @@ class RayIO(BaseIO):
                 )
                 index_ids.append(partition_id[-1])
 
-        index_col = kwargs.get("index_col", None)
         if index_col is None:
             new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
         else:

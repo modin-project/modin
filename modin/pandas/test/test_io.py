@@ -113,7 +113,7 @@ def teardown_parquet_file():
 
 
 @pytest.fixture
-def make_csv_file():
+def make_csv_file(delimiter=","):
     """Pytest fixture factory that makes temp csv files for testing.
 
     Yields:
@@ -125,7 +125,7 @@ def make_csv_file():
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
         force=False,
-        delimiter=",",
+        delimiter=delimiter,
         encoding=None,
     ):
         if os.path.exists(filename) and not force:
@@ -528,6 +528,133 @@ def test_from_csv(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+def test_parse_dates_read_csv():
+    pandas_df = pandas.read_csv("modin/pandas/test/data/test_time_parsing.csv")
+    modin_df = pd.read_csv("modin/pandas/test/data/test_time_parsing.csv")
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=0,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=2,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_time_parsing.csv",
+        names=[
+            "timestamp",
+            "symbol",
+            "high",
+            "low",
+            "open",
+            "close",
+            "spread",
+            "volume",
+        ],
+        header=0,
+        index_col=2,
+        parse_dates=["timestamp"],
+        encoding="utf-8",
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_table(make_csv_file):
+    make_csv_file(delimiter="\t")
+
+    pandas_df = pandas.read_table(TEST_CSV_FILENAME)
+    modin_df = pd.read_table(TEST_CSV_FILENAME)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    if not PY2:
+        pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
+        modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
+
+        assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
 @pytest.mark.skipif(
     __execution_engine__.lower() == "python", reason="Using pandas implementation"
 )
@@ -645,7 +772,17 @@ def test_from_csv_index_col(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
-
+    print("pandas cols", pandas_df.columns)
+    print("modin cols", modin_df.columns)
+    print("pandas index", pandas_df.index)
+    print("modin index", modin_df.index)
+    assert (pandas_df.columns == modin_df.columns).all()
+    print(len(pandas_df.index))
+    print(len(modin_df.index))
+    for x, y in zip(pandas_df.index, modin_df.index):
+        print(x, y)
+    assert (pandas_df.index == modin_df.index).all()
+    modin_df.__repr__()
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
@@ -962,5 +1099,68 @@ def test_fwf_file():
     with pytest.warns(UserWarning):
         df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
         assert isinstance(df, pd.DataFrame)
+
+    teardown_fwf_file()
+
+
+def test_fwf_file_kwargs():
+    fwf_data = """ACW000116041961TAVG -142  k  183  k  419  k  720  k 1075  k 1546  k 1517  k 1428  k 1360  k 1121  k  457  k  -92  k
+ACW000116041962TAVG   60  k   32  k -207  k  582  k  855  k 1328  k 1457  k 1340  k 1110  k  941  k  270  k -179  k
+ACW000116041963TAVG -766  k -606  k -152  k  488  k 1171  k 1574  k 1567  k 1543  k 1279  k  887  k  513  k -161  k
+ACW000116041964TAVG    9  k -138  k    2  k  685  k 1166  k 1389  k 1453  k 1504  k 1168  k  735  k  493  k   59  k
+ACW000116041965TAVG   -9  k -158  k  -15  k  537  k  934  k 1447  k 1434  k 1424  k 1324  k  921  k  -22  k -231  k
+ACW000116041966TAVG -490  k -614  k  108  k  246  k 1082  k 1642  k 1620  k 1471  k 1195  k  803  k  329  k    2  k
+ACW000116041967TAVG -270  k   36  k  397  k  481  k 1052  k 1373  k 1655  k 1598  k 1318  k  997  k  559  k  -96  k
+ACW000116041968TAVG -306  k -183  k  220  k  714  k  935  k 1635  k 1572  k 1718  k 1331  k  781  k  180  k  -56  k
+ACW000116041969TAVG -134  k -494  k -185  k  497  k  962  k 1634  k 1687  k 1773  k 1379  k  932  k  321  k -275  k
+ACW000116041970TAVG -483  k -704  k  -75  k  261  k 1093  k 1724  k 1470  k 1609  k 1163  k  836  k  300  k   73  k
+ACW000116041971TAVG   -6  k   83  k  -40  k  472  k 1180  k 1411  k 1700  k 1600  k 1165  k  908  k  361  k  383  k
+ACW000116041972TAVG -377  k   -4  k  250  k  556  k 1117  k 1444  k 1778  k 1545  k 1073  k  797  k  481  k  404  k
+ACW000116041973TAVG   61  k  169  k  453  k  472  k 1075  k 1545  k 1866  k 1579  k 1199  k  563  k  154  k   11  k
+ACW000116041974TAVG  191  k  209  k  339  k  748  k 1094  k 1463  k 1498  k 1541  k 1319  k  585  k  428  k  335  k
+ACW000116041975TAVG  346  k   88  k  198  k  488  k 1165  k 1483  k 1756  k 1906  k 1374  k  845  k  406  k  387  k
+ACW000116041976TAVG -163  k  -62  k -135  k  502  k 1128  k 1461  k 1822  k 1759  k 1136  k  715  k  458  k -205  k
+ACW000116041977TAVG -192  k -279  k  234  k  332  k 1128  k 1566  k 1565  k 1556  k 1126  k  949  k  421  k  162  k
+ACW000116041978TAVG   55  k -354  k   66  k  493  k 1155  k 1552  k 1564  k 1555  k 1061  k  932  k  688  k -464  k
+ACW000116041979TAVG -618  k -632  k   35  k  474  k  993  k 1566  k 1484  k 1483  k 1229  k  647  k  412  k  -40  k
+ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502  k 1269  k  660  k  138  k  125  k"""
+    with open(TEST_FWF_FILENAME, "w") as f:
+        f.write(fwf_data)
+
+    column_specs = [
+        (0, 11),
+        (11, 15),
+        (19, 24),
+        (27, 32),
+        (35, 40),
+        (43, 48),
+        (51, 56),
+        (59, 64),
+        (67, 72),
+        (75, 80),
+        (83, 88),
+        (91, 96),
+        (99, 104),
+        (107, 112),
+    ]
+    column_names = ["stationID", "year", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    nan_values = ["-9999"]
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_fwf(
+            TEST_FWF_FILENAME,
+            colspecs=column_specs,
+            names=column_names,
+            na_values=nan_values,
+            index_col=["stationID", "year"],
+        )
+    pandas_df = pd.read_fwf(
+        TEST_FWF_FILENAME,
+        colspecs=column_specs,
+        names=column_names,
+        na_values=nan_values,
+        index_col=["stationID", "year"],
+    )
+
+    df_equals(modin_df, pandas_df)
 
     teardown_fwf_file()

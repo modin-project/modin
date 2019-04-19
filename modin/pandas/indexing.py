@@ -11,7 +11,8 @@ from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
-from .series import SeriesView
+from .base import BasePandasDataset
+from .series import Series
 
 """Indexing Helper Class works as follows:
 
@@ -144,7 +145,7 @@ class _LocationIndexerBase(object):
     """Base class for location indexer like loc and iloc
     """
 
-    def __init__(self, ray_df: DataFrame):
+    def __init__(self, ray_df: BasePandasDataset):
         self.df = ray_df
         self.qc = ray_df._query_compiler
         self.row_scaler = False
@@ -154,18 +155,23 @@ class _LocationIndexerBase(object):
         self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
     ):
         qc_view = self.qc.view(row_lookup, col_lookup)
-
         if ndim == 2:
-            return DataFrame(query_compiler=qc_view)
+            return self.df.__constructor__(query_compiler=qc_view)
+        if isinstance(self.df, Series) and not self.row_scaler:
+            return self.df.__constructor__(query_compiler=qc_view)
+        if isinstance(self.df, Series):
+            axis = 0
         elif ndim == 0:
-            return qc_view.squeeze(ndim=0)
+            axis = None
         else:
-            single_axis = 1 if self.col_scaler else 0
-            return SeriesView(
-                qc_view.squeeze(ndim=1, axis=single_axis),
-                self.df,
-                (row_lookup, col_lookup),
+            axis = (
+                None
+                if self.col_scaler and self.row_scaler
+                else 1
+                if self.col_scaler
+                else 0
             )
+        return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
     def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
         """
@@ -218,9 +224,7 @@ class _LocationIndexerBase(object):
     def _write_items(self, row_lookup, col_lookup, item):
         """Perform remote write and replace blocks.
         """
-        row_numeric_idx = self.qc.global_idx_to_numeric_idx("row", row_lookup)
-        col_numeric_idx = self.qc.global_idx_to_numeric_idx("col", col_lookup)
-        self.qc.write_items(row_numeric_idx, col_numeric_idx, item)
+        self.qc.write_items(row_lookup, col_lookup, item)
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -235,7 +239,7 @@ class _LocIndexer(_LocationIndexerBase):
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
             if (
-                isinstance(result, pandas.Series)
+                isinstance(result, Series)
                 and not isinstance(col_loc, slice)
                 and all(
                     col_loc[i] in result.index.levels[i] for i in range(len(col_loc))
@@ -320,17 +324,21 @@ class _LocIndexer(_LocationIndexerBase):
                 row_loc = [pandas.to_datetime(row_loc[0])]
 
         if isinstance(row_loc, slice):
-            row_lookup = self.qc.index.to_series().loc[row_loc].values
+            row_lookup = self.qc.index.get_indexer_for(
+                self.qc.index.to_series().loc[row_loc]
+            )
         elif isinstance(self.qc.index, pandas.MultiIndex):
-            row_lookup = self.qc.index[self.qc.index.get_locs(row_loc)]
+            row_lookup = self.qc.index.get_locs(row_loc)
         else:
-            row_lookup = self.qc.index[self.qc.index.get_indexer_for(row_loc)]
+            row_lookup = self.qc.index.get_indexer_for(row_loc)
         if isinstance(col_loc, slice):
-            col_lookup = self.qc.columns.to_series().loc[col_loc].values
+            col_lookup = self.qc.columns.get_indexer_for(
+                self.qc.columns.to_series().loc[col_loc]
+            )
         elif isinstance(self.qc.columns, pandas.MultiIndex):
-            col_lookup = self.qc.columns[self.qc.columns.get_locs(col_loc)]
+            col_lookup = self.qc.columns.get_locs(col_loc)
         else:
-            col_lookup = self.qc.columns[self.qc.columns.get_indexer_for(col_loc)]
+            col_lookup = self.qc.columns.get_indexer_for(col_loc)
         return row_lookup, col_lookup
 
 
@@ -355,8 +363,12 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
-        row_lookup = self.qc.index.to_series().iloc[row_loc].index
-        col_lookup = self.qc.columns.to_series().iloc[col_loc].index
+        row_lookup = (
+            pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
+        )
+        col_lookup = (
+            pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
+        )
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):

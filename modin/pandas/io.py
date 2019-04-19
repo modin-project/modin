@@ -94,6 +94,8 @@ def _make_parser_func(sep):
         float_precision=None,
     ):
         _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+        if not kwargs.get("sep", sep):
+            kwargs["sep"] = "\t"
         return _read(**kwargs)
 
     return parser_func
@@ -326,6 +328,7 @@ def read_fwf(
     filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    kwargs.update(kwargs.pop("kwds", {}))
     return DataFrame(query_compiler=BaseFactory.read_fwf(**kwargs))
 
 

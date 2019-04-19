@@ -30,7 +30,6 @@ from pandas import (
     Index,
     MultiIndex,
     CategoricalIndex,
-    Series,
     bdate_range,
     DatetimeIndex,
     Timedelta,
@@ -76,6 +75,7 @@ from pandas import (
     SparseArray,
     SparseSeries,
     SparseDataFrame,
+    datetime,
 )
 import threading
 import os
@@ -110,6 +110,7 @@ from .io import (
     HDFStore,
 )
 from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
+from .series import Series
 from .general import (
     isna,
     isnull,
@@ -288,6 +289,7 @@ __all__ = [
     "SparseArray",
     "SparseSeries",
     "SparseDataFrame",
+    "datetime",
 ]
 
 del pandas
