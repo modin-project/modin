@@ -2,12 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from botocore.exceptions import NoCredentialsError
-
 import pandas
 from pandas.io.common import _infer_compression
 
-import s3fs as S3FS
 import inspect
 import os
 import py
@@ -17,7 +14,6 @@ import numpy as np
 import math
 
 from modin.error_message import ErrorMessage
-import warnings
 from modin.engines.base.io import BaseIO
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
@@ -29,6 +25,7 @@ def file_exists(file_path):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
             import s3fs as S3FS
+            from botocore.exceptions import NoCredentialsError
 
             s3fs = S3FS.S3FileSystem(anon=False)
             try:
@@ -44,6 +41,7 @@ def file_open(file_path, mode="rb"):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
             import s3fs as S3FS
+            from botocore.exceptions import NoCredentialsError
 
             s3fs = S3FS.S3FileSystem(anon=False)
             try:
