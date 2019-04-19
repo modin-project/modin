@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from botocore.exceptions import NoCredentialsError
 
 import pandas
 from pandas.io.common import _infer_compression
@@ -22,35 +23,31 @@ from modin.engines.base.io import BaseIO
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
 
-
-def get_s3fs(_singleton=[]):
-    import s3fs as S3FS
-    from botocore.exceptions import NoCredentialsError
-    if not _singleton:
-        try:
-            singleton = S3FS.S3FileSystem(anon=False)
-        except NoCredentialsError as e:
-            warnings.warn("%s, defaulting to S3FS anonymous mode" % str(e))
-            singleton = S3FS.S3FileSystem(anon=True)
-        _singleton.append(singleton)
-    return _singleton[0]
-
-
 def file_exists(file_path):
-    s3fs = get_s3fs()
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
-            return s3fs.exists(file_path)
+            import s3fs as S3FS
+            s3fs = S3FS.S3FileSystem(anon=False)
+            try:
+                return s3fs.exists(file_path)
+            except NoCredentialsError:
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return s3fs.exists(file_path)
     return os.path.exists(file_path)
 
 
 def file_open(file_path, mode="rb"):
-    s3fs = get_s3fs()
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
-            return s3fs.open(file_path, mode=mode)
+            import s3fs as S3FS
+            s3fs = S3FS.S3FileSystem(anon=False)
+            try:
+                return s3fs.open(file_path)
+            except NoCredentialsError:
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return s3fs.open(file_path)
     return open(file_path, mode=mode)
 
 
