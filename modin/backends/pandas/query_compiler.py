@@ -1983,6 +1983,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
+            df = df.copy()
             if len(internal_indices) == 1:
                 if axis == 0:
                     df[df.columns[internal_indices[0]]] = value
