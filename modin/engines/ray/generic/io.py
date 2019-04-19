@@ -23,11 +23,13 @@ from modin.engines.base.io import BaseIO
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
 
+
 def file_exists(file_path):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
             import s3fs as S3FS
+
             s3fs = S3FS.S3FileSystem(anon=False)
             try:
                 return s3fs.exists(file_path)
@@ -42,6 +44,7 @@ def file_open(file_path, mode="rb"):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
             import s3fs as S3FS
+
             s3fs = S3FS.S3FileSystem(anon=False)
             try:
                 return s3fs.open(file_path)
