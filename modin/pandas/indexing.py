@@ -324,13 +324,17 @@ class _LocIndexer(_LocationIndexerBase):
                 row_loc = [pandas.to_datetime(row_loc[0])]
 
         if isinstance(row_loc, slice):
-            row_lookup = self.qc.index.get_indexer_for(self.qc.index.to_series().loc[row_loc])
+            row_lookup = self.qc.index.get_indexer_for(
+                self.qc.index.to_series().loc[row_loc]
+            )
         elif isinstance(self.qc.index, pandas.MultiIndex):
             row_lookup = self.qc.index.get_locs(row_loc)
         else:
             row_lookup = self.qc.index.get_indexer_for(row_loc)
         if isinstance(col_loc, slice):
-            col_lookup = self.qc.columns.get_indexer_for(self.qc.columns.to_series().loc[col_loc])
+            col_lookup = self.qc.columns.get_indexer_for(
+                self.qc.columns.to_series().loc[col_loc]
+            )
         elif isinstance(self.qc.columns, pandas.MultiIndex):
             col_lookup = self.qc.columns.get_locs(col_loc)
         else:
@@ -359,8 +363,12 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
-        row_lookup = pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
-        col_lookup = pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
+        row_lookup = (
+            pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
+        )
+        col_lookup = (
+            pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
+        )
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):
