@@ -1983,7 +1983,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
-            df = df.copy()
+            # We have this try-except block because there are sometimes that
+            # arrow throws a ValueError that the partitions are read-only while
+            # other times there is no error. Thus, we check with an identity
+            # function to make sure that the partition is not read-only.
+            try:
+                df.iloc[0, 0] = df.iloc[0, 0]
+            except ValueError:
+                df = df.copy()
             if len(internal_indices) == 1:
                 if axis == 0:
                     df[df.columns[internal_indices[0]]] = value
