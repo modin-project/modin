@@ -1585,7 +1585,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
         new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
-        new_dtypes = self._get_dtype().copy()
+        new_dtypes = self._dtype_cache
         new_dtypes.index = new_columns
         return self.__constructor__(
             new_data, new_index, new_columns, new_dtypes
@@ -2523,11 +2523,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             self._dtype_cache = self._dtype_cache.reindex(self.columns)
         return self._dtype_cache
 
-    def _set_dtype(self, dtypes):
-        assert False, "You can't do that"
-        # self._dtype_cache = dtypes
-
-    dtypes = property(_get_dtype, _set_dtype)
+    dtypes = property(_get_dtype)
 
     def _get_data(self) -> BaseFrameManager:
         """Perform the map step
