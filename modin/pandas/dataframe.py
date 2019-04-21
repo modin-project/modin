@@ -1920,11 +1920,21 @@ class DataFrame(BasePandasDataset):
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
                 if value.shape[1] != 1 and key not in self.columns:
-                    raise ValueError("Wrong number of items passed %i, placement implies 1" % value.shape[1])
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
                 value = value[value.columns[0]].values
             elif isinstance(value, np.ndarray):
-                if len(value.shape) > 1 and value.shape[1] != 1 and key not in self.columns:
-                    raise ValueError("Wrong number of items passed %i, placement implies 1" % value.shape[1])
+                if (
+                    len(value.shape) > 1
+                    and value.shape[1] != 1
+                    and key not in self.columns
+                ):
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
                 assert (
                     len(value.shape) < 3
                 ), "Shape of new values must be compatible with manager shape"
