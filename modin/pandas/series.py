@@ -6,6 +6,7 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
+import warnings
 
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
@@ -31,6 +32,9 @@ class Series(BasePandasDataset):
             series_oids ([ObjectID]): The list of remote Series objects.
         """
         if query_compiler is None:
+            warnings.warn(
+                "Distributing {} object. This may take some time.".format(type(data))
+            )
             if name is None:
                 name = "__reduced__"
             query_compiler = from_pandas(
