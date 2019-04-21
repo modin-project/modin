@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import pytest
 import pandas
+
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
@@ -172,3 +174,15 @@ def test_ignore_index_concat():
         pd.concat([df, df2], ignore_index=True),
         pandas.concat([df, df2], ignore_index=True),
     )
+
+
+def test_concat_non_subscriptable_keys():
+    frame_data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 6))
+    df = pd.DataFrame(frame_data).add_prefix("col")
+    pdf = pandas.DataFrame(frame_data).add_prefix("col")
+
+    modin_dict = {"c": df.copy(), "b": df.copy()}
+    pandas_dict = {"c": pdf.copy(), "b": pdf.copy()}
+    modin_result = pd.concat(modin_dict.values(), keys=modin_dict.keys())
+    pandas_result = pandas.concat(pandas_dict.values(), keys=pandas_dict.keys())
+    modin_df_equals_pandas(modin_result, pandas_result)

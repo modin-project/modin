@@ -5,7 +5,6 @@ from __future__ import print_function
 import pandas
 from pandas.io.common import _infer_compression
 
-import s3fs as S3FS
 import inspect
 import os
 import py
@@ -19,23 +18,46 @@ from modin.engines.base.io import BaseIO
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
-s3fs = S3FS.S3FileSystem(anon=False)
 
 
 def file_exists(file_path):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
-            s3fs.exists(file_path)
+            import s3fs as S3FS
+            from botocore.exceptions import NoCredentialsError
+
+            s3fs = S3FS.S3FileSystem(anon=False)
+            try:
+                return s3fs.exists(file_path)
+            except NoCredentialsError:
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return s3fs.exists(file_path)
     return os.path.exists(file_path)
 
 
-def open_file(file_path, mode="rb"):
+def file_open(file_path, mode="rb"):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
-            return s3fs.open(file_path, mode=mode)
+            import s3fs as S3FS
+            from botocore.exceptions import NoCredentialsError
+
+            s3fs = S3FS.S3FileSystem(anon=False)
+            try:
+                return s3fs.open(file_path)
+            except NoCredentialsError:
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return s3fs.open(file_path)
     return open(file_path, mode=mode)
+
+
+def file_size(f):
+    cur_pos = f.tell()
+    f.seek(0, os.SEEK_END)
+    size = f.tell()
+    f.seek(cur_pos, os.SEEK_SET)
+    return size
 
 
 @ray.remote
@@ -237,12 +259,12 @@ class RayIO(BaseIO):
             # be assigned correctly
             kwargs["index_col"] = None
             names = pandas.read_csv(
-                open_file(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+                file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
             ).columns
             kwargs["index_col"] = index_col
 
         empty_pd_df = pandas.read_csv(
-            open_file(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+            file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
         )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
@@ -256,7 +278,7 @@ class RayIO(BaseIO):
             skiprows=None,
             parse_dates=parse_dates,
         )
-        with open_file(filepath, "rb") as f:
+        with file_open(filepath, "rb") as f:
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
@@ -273,7 +295,7 @@ class RayIO(BaseIO):
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
-            total_bytes = os.path.getsize(filepath)
+            total_bytes = file_size(f)
             # Max number of partitions available
             num_parts = cls.frame_mgr_cls._compute_num_partitions()
             # This is the number of splits for the columns
@@ -337,10 +359,7 @@ class RayIO(BaseIO):
     @classmethod
     def _read_csv_from_pandas(cls, filepath_or_buffer, kwargs):
         # TODO: Should we try to be smart about how we load files here, or naively default to pandas?
-        if isinstance(filepath_or_buffer, str):
-            pd_obj = pandas.read_csv(open_file(filepath_or_buffer, "rb"), **kwargs)
-        else:
-            pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
+        pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         elif isinstance(pd_obj, pandas.io.parsers.TextFileReader):
