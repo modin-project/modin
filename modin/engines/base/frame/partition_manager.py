@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Tuple
-
 import numpy as np
 import pandas
 
@@ -178,7 +176,7 @@ class BaseFrameManager(object):
             )
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self):
         return int(np.sum(self.block_lengths)), int(np.sum(self.block_widths))
 
     def full_reduce(self, map_func, reduce_func, axis):
