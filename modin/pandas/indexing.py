@@ -7,7 +7,6 @@ import pandas
 from pandas.api.types import is_scalar, is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer
 from pandas.core.indexing import IndexingError
-from typing import Tuple
 from warnings import warn
 
 from .dataframe import DataFrame
@@ -315,7 +314,7 @@ class _LocIndexer(_LocationIndexerBase):
             )
         return nan_labels
 
-    def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
+    def _compute_lookup(self, row_loc, col_loc):
         if is_list_like(row_loc) and len(row_loc) == 1:
             if (
                 isinstance(self.qc.index.values[0], np.datetime64)
@@ -362,7 +361,7 @@ class _iLocIndexer(_LocationIndexerBase):
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
-    def _compute_lookup(self, row_loc, col_loc) -> Tuple[pandas.Index, pandas.Index]:
+    def _compute_lookup(self, row_loc, col_loc):
         row_lookup = (
             pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
         )
