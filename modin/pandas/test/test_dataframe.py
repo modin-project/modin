@@ -4691,7 +4691,6 @@ class TestDFPartTwo:
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___setitem__(self, data):
-        data = {"A": list(range(5)), "B": [str(x) for x in range(5)]}
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
