@@ -1586,7 +1586,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
         new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
         new_dtypes = self._dtype_cache
-        if new_dtypes:
+        if new_dtypes is not None:
             new_dtypes.index = new_columns
         return self.__constructor__(
             new_data, new_index, new_columns, new_dtypes
