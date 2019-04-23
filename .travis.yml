@@ -24,6 +24,13 @@ matrix:
     - os: linux
       dist: trusty
       env:
+      - PYTHON=2.7
+      - MODIN_ENGINE=ray
+      - MODIN_DF_TEST=NONE
+
+    - os: linux
+      dist: trusty
+      env:
         - PYTHON=3.6
         - MODIN_ENGINE=ray
         - MODIN_DF_TEST=ONE
@@ -34,6 +41,13 @@ matrix:
         - PYTHON=3.6
         - MODIN_ENGINE=ray
         - MODIN_DF_TEST=TWO
+
+    - os: linux
+      dist: trusty
+      env:
+      - PYTHON=3.6
+      - MODIN_ENGINE=ray
+      - MODIN_DF_TEST=NONE
 
     - os: linux
       dist: trusty
@@ -84,8 +98,8 @@ script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - if [[ "$PYTHON" == "2.7" ]]; then python ./ci/travis/strip-type-hints.py; fi
   - curl -s https://codecov.io/bash > codecov.sh
-  - if [[ "$MODIN_DF_TEST" == "ONE" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartOne --cov-append; fi
-  - if [[ "$MODIN_DF_TEST" == "TWO" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartTwo --cov-append; fi
+  - if [[ "$MODIN_DF_TEST" == "ONE" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartOne --cov-append; bash codecov.sh; exit; fi
+  - if [[ "$MODIN_DF_TEST" == "TWO" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartTwo --cov-append; bash codecov.sh; exit; fi
   - if [[ "$MODIN_DF_TEST" == "ALL" ]]; then python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py --cov-append; fi
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_series.py --cov-append
   - python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
