@@ -56,7 +56,7 @@ def _read_parquet_columns(path, columns, num_splits,rowgroup,kwargs):  # pragma:
     if(rowgroup>=0):
       pf = ParquetFile(path)
       df = pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
-      return _split_result_for_readers(0, 1, df) + [len(df.index)] 
+      return [df] + [len(df.index)] 
     else:
       df = pq.read_pandas(path, columns=columns, **kwargs).to_pandas()
     

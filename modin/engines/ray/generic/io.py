@@ -125,7 +125,6 @@ class RayIO(BaseIO):
     #
     # Signature: (num_splits, sql, con, index_col, kwargs)
 
-    from pyarrow.parquet import ParquetFile
 
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
@@ -145,7 +144,6 @@ class RayIO(BaseIO):
         """
 
         from pyarrow.parquet import ParquetFile
-
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
@@ -158,7 +156,6 @@ class RayIO(BaseIO):
             ]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
-    
         # Each item in this list will be a list of column names of the original df
         column_splits = (
             len(columns) // num_partitions
@@ -169,54 +166,40 @@ class RayIO(BaseIO):
             columns[i : i + column_splits]
             for i in range(0, len(columns), column_splits)
         ]
-     
         pf = ParquetFile(path)
-        column_names = [
-                  name
-                  for name in pf.metadata.schema.names
-                  if not PQ_INDEX_REGEX.match(name)
-              ]
-
         num_row_groups = pf.metadata.num_row_groups 
-     
-
-        blocks_step1 =  [ 
-                                 cls.read_parquet_remote_task._remote(
-                                     args=(path,c,1,r,kwargs),
-                                     num_return_vals=2,
-                                 ) 
-                                 for r in range(num_row_groups) for c in columns  ]
-
-        blocks = [ ]
-        col_totals = [ 0 for x in columns]
-        for r in range(num_row_groups):
-          row = []
-          for c_idx, c in enumerate(columns):
-            curr_block = blocks_step1.pop(0)
-            row.append(curr_block[0])
-            col_totals[c_idx] = col_totals[c_idx] + ray.get(curr_block[1])
-          blocks.append(row)
- 
-                   
-        col_totals_objects = [ ray.put(x) for x in col_totals ] 
-        blocks.append(col_totals_objects)
-
-
+      
+        blocks_with_lengths = [
+            [
+              cls.read_parquet_remote_task._remote(
+                  args=(path,c, 1, j, kwargs),
+                        num_return_vals=2) for c in columns
+            ]
+            for j in range(num_row_groups)
+        ]         
+        blocks = [
+            [ 
+                blocks_with_lengths[i][j][0] for j in range(len(columns))
+            ]
+            for i in range(num_row_groups)
+        ]
+        # sum count of rows across all row groups
+        row_total = ray.put(sum([ ray.get(blocks_with_lengths[j][0][1]) for j in range(num_row_groups) ]))
+        
+        # Append blocks with another row containing with the total count of rows, repeated for each column
+        blocks.append( [row_total for c in columns] )
         blk_partitions = blocks
-
         remote_partitions = np.array(
             [
                 [cls.frame_partition_cls(obj) for obj in row]
                 for row in blk_partitions[:-1]
             ]
         )
-
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_mgr_cls(remote_partitions), index, columns
         )
-
         return new_query_compiler
 
     # CSV
