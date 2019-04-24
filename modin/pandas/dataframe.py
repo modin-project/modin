@@ -61,7 +61,10 @@ class DataFrame(BasePandasDataset):
             if isinstance(data, Series) and data.name is None:
                 self.columns = [0]
         # Check type of data and use appropriate constructor
-        elif data is not None or query_compiler is None:
+        elif query_compiler is None:
+            warnings.warn(
+                "Distributing {} object. This may take some time.".format(type(data))
+            )
             pandas_df = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )

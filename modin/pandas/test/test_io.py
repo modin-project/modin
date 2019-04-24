@@ -655,29 +655,31 @@ def test_from_table(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
-class FakeS3FS:
-    def exists(self, path):
-        return "s3://bucket/path.csv" == path
-
-    def open(self, path, mode="rb"):
-        if "s3://bucket/path.csv" == path:
-            return open(TEST_CSV_FILENAME, mode=mode)
-        else:
-            raise Exception("You shouldn't access that! (%s)" % path)
-
-
 @pytest.mark.skipif(
     __execution_engine__.lower() == "python", reason="Using pandas implementation"
 )
 def test_from_csv_s3(make_csv_file):
-    from modin.engines.ray.generic import io
+    dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
+    pandas_df = pandas.read_csv(dataset_url)
 
-    io.s3fs = FakeS3FS()
+    # This first load is to trigger all the import deprecation warnings
+    modin_df = pd.read_csv(dataset_url)
 
-    make_csv_file()
+    # This will warn if it defaults to pandas behavior, but it shouldn't
+    with pytest.warns(None) as record:
+        modin_df = pd.read_csv(dataset_url)
+    assert not record.list
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv("s3://bucket/path.csv")
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_csv_default(make_csv_file):
+    # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+    dataset_url = "https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv"
+    pandas_df = pandas.read_csv(dataset_url)
+
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_csv(dataset_url)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
@@ -770,7 +772,6 @@ def test_from_csv_index_col(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
-
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
