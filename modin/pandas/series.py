@@ -73,10 +73,10 @@ class Series(BasePandasDataset):
         return query_compiler.to_pandas().squeeze()
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
-        pass
+        return self
 
     def _validate_dtypes_min_max(self, axis, numeric_only):
-        pass
+        return self
 
     def _validate_dtypes(self, numeric_only=False):
         pass
