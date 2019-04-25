@@ -2012,6 +2012,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
+        if self._is_transposed:
+            return self.transpose().drop(index=columns, columns=index).transpose()
         if index is None:
             new_data = self.data
             new_index = self.index
