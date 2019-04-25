@@ -2115,6 +2115,8 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
+        # non-numeric columns if `axis` is 0.
         if numeric_only and axis == 0:
             return self[
                 [i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])]
@@ -2153,6 +2155,8 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
+        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
+        # non-numeric columns if `axis` is 0.
         if numeric_only and axis == 0:
             return self.drop(
                 columns=[
