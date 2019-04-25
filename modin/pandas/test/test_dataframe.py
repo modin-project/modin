@@ -4415,6 +4415,13 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_sum_single_column(self, data):
+        modin_df = pd.DataFrame(data).iloc[:, [0]]
+        pandas_df = pandas.DataFrame(data).iloc[:, [0]]
+        df_equals(modin_df.sum(), pandas_df.sum())
+        df_equals(modin_df.sum(axis=1), pandas_df.sum(axis=1))
+
     def test_swapaxes(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
