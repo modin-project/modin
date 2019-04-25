@@ -49,7 +49,9 @@ class Series(BasePandasDataset):
                     )
                 )
             )._query_compiler
-        if len(query_compiler.index) == 1 and query_compiler.index[0] == "__reduced__":
+        if len(query_compiler.columns) != 1 or (
+            len(query_compiler.index) == 1 and query_compiler.index[0] == "__reduced__"
+        ):
             query_compiler = query_compiler.transpose()
         self._query_compiler = query_compiler
 
