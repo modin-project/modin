@@ -801,3 +801,14 @@ def test_groupby_on_index_values_with_loop():
 
     for k in modin_dict:
         ray_df_equals_pandas(modin_dict[k], pandas_dict[k])
+
+
+def test_groupby_multiindex():
+    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    modin_df = pd.DataFrame(frame_data)
+    new_columns = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.columns]
+    )
+    modin_df.columns = new_columns
+    with pytest.warns(UserWarning):
+        modin_df.groupby(level=0).sum()
