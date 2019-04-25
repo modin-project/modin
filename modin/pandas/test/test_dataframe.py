@@ -1618,6 +1618,22 @@ class TestDFPartOne:
         with pytest.raises(ValueError):
             modin_df.drop(axis=1)
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_drop_transpose(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        modin_result = modin_df.T.drop(columns=[0, 1, 2])
+        pandas_result = pandas_df.T.drop(columns=[0, 1, 2])
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.drop(index=["col3", "col1"])
+        pandas_result = pandas_df.T.drop(index=["col3", "col1"])
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.drop(columns=[0, 1, 2], index=["col3", "col1"])
+        pandas_result = pandas_df.T.drop(columns=[0, 1, 2], index=["col3", "col1"])
+        df_equals(modin_result, pandas_result)
+
     def test_droplevel(self):
         df = (
             pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
