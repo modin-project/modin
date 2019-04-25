@@ -40,10 +40,14 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
-        # This tells us whether or not there are multiple columns/rows in the groupby
-        self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+        if level is None:
+            # This tells us whether or not there are multiple columns/rows in the groupby
+            self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+        else:
+            self._is_multi_by = False
         self._level = level
         self._kwargs = {
+            "level": level,
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
@@ -410,7 +414,7 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
-        if self._is_multi_by:
+        if self._is_multi_by or self._level is not None:
             return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to

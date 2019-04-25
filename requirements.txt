@@ -2,10 +2,9 @@ pandas==0.24.2
 numpy
 dask[complete]==1.1.0
 distributed==1.25.0
-ray==0.6.2
+ray==0.6.6
 psutil==5.4.8
 strip_hints==0.1.1
-typing
 xarray
 Jinja2
 pathlib
