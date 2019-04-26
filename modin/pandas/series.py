@@ -162,11 +162,13 @@ class Series(BasePandasDataset):
         if is_bool_indexer(key):
             return self.loc[self.index[key]]
         else:
+            # The check for whether or not `key` is in `keys()` will throw a TypeError
+            # if the object is not hashable. When that happens, we just use the `iloc`.
             try:
                 if (
-                    key in self.keys()
-                    or is_list_like(key)
+                    is_list_like(key)
                     and all(k in self.keys() for k in key)
+                    or key in self.keys()
                 ):
                     return self.loc[key]
             except TypeError:
