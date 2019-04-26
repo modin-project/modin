@@ -1908,8 +1908,8 @@ class DataFrame(BasePandasDataset):
         if not isinstance(key, str):
 
             def setitem_without_string_columns(df):
-                # This is required because of an Arrow limitation
-                # TODO revisit for Arrow error
+                # Arrow makes memory-mapped objects immutable, so copy will allow them
+                # to be mutable again.
                 df = df.copy(True)
                 df[key] = value
                 return df

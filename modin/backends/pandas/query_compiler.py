@@ -1983,20 +1983,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
-            try:
-                if len(internal_indices) == 1:
-                    if axis == 0:
-                        df[df.columns[internal_indices[0]]] = value
-                    else:
-                        df.iloc[internal_indices[0]] = value
-                else:
-                    if axis == 0:
-                        df[df.columns[internal_indices]] = value
-                    else:
-                        df.iloc[internal_indices] = value
-            except Exception:
-                # TODO: This is a workaround for a pyarrow serialization issue
-                df = df.copy()
+            def _setitem():
                 if len(internal_indices) == 1:
                     if axis == 0:
                         df[df.columns[internal_indices[0]]] = value
@@ -2008,6 +1995,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     else:
                         df.iloc[internal_indices] = value
 
+            try:
+                _setitem()
+            except ValueError:
+                # TODO: This is a workaround for a pyarrow serialization issue
+                df = df.copy()
+                _setitem()
             return df
 
         if axis == 0:
