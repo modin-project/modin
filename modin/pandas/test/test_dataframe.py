@@ -4769,6 +4769,24 @@ class TestDFPartTwo:
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
+        modin_df[modin_df.columns[-1]] = pd.DataFrame(modin_df[modin_df.columns[0]])
+        pandas_df[pandas_df.columns[-1]] = pandas.DataFrame(
+            pandas_df[pandas_df.columns[0]]
+        )
+        df_equals(modin_df, pandas_df)
+
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+
+        rows = len(modin_df)
+        arr = np.arange(rows * 2).reshape(-1, 2)
+        modin_df[modin_df.columns[-1]] = arr
+        pandas_df[pandas_df.columns[-1]] = arr
+        df_equals(pandas_df, modin_df)
+
+        with pytest.raises(ValueError, match=r"Wrong number of items passed"):
+            modin_df["___NON EXISTENT COLUMN"] = arr
+
         modin_df[modin_df.columns[0]] = np.arange(len(modin_df))
         pandas_df[pandas_df.columns[0]] = np.arange(len(pandas_df))
         df_equals(modin_df, pandas_df)

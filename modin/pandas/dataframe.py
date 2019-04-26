@@ -1916,12 +1916,38 @@ class DataFrame(BasePandasDataset):
         if not isinstance(key, str):
 
             def setitem_without_string_columns(df):
+                # Arrow makes memory-mapped objects immutable, so copy will allow them
+                # to be mutable again.
+                df = df.copy(True)
                 df[key] = value
                 return df
 
             return self._update_inplace(
                 self._default_to_pandas(setitem_without_string_columns)._query_compiler
             )
+        if is_list_like(value):
+            if isinstance(value, (pandas.DataFrame, DataFrame)):
+                if value.shape[1] != 1 and key not in self.columns:
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
+                value = value[value.columns[0]].values
+            elif isinstance(value, np.ndarray):
+                if (
+                    len(value.shape) > 1
+                    and value.shape[1] != 1
+                    and key not in self.columns
+                ):
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
+                assert (
+                    len(value.shape) < 3
+                ), "Shape of new values must be compatible with manager shape"
+                value = value.T.reshape(-1)[: len(self)]
+            value = np.array(value)
         if key not in self.columns:
             self.insert(loc=len(self.columns), column=key, value=value)
         elif len(self.index) == 0:

@@ -1970,16 +1970,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem(df, internal_indices=[]):
-            if len(internal_indices) == 1:
-                if axis == 0:
-                    df[df.columns[internal_indices[0]]] = value
+            def _setitem():
+                if len(internal_indices) == 1:
+                    if axis == 0:
+                        df[df.columns[internal_indices[0]]] = value
+                    else:
+                        df.iloc[internal_indices[0]] = value
                 else:
-                    df.iloc[internal_indices[0]] = value
-            else:
-                if axis == 0:
-                    df[df.columns[internal_indices]] = value
-                else:
-                    df.iloc[internal_indices] = value
+                    if axis == 0:
+                        df[df.columns[internal_indices]] = value
+                    else:
+                        df.iloc[internal_indices] = value
+
+            try:
+                _setitem()
+            except ValueError:
+                # TODO: This is a workaround for a pyarrow serialization issue
+                df = df.copy()
+                _setitem()
             return df
 
         if axis == 0:
@@ -1988,7 +1996,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             numeric_indices = list(self.index.get_indexer_for([key]))
         prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
-            value = list(value)
             new_data = self.data.apply_func_to_select_indices_along_full_axis(
                 axis, prepared_func, numeric_indices, keep_remaining=True
             )
