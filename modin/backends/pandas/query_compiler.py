@@ -720,7 +720,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.columns = new_index
                 return func(df)
 
-            new_data = self._map_across_full_axis(axis, self._prepare_method(list_like_op))
+            new_data = self._map_across_full_axis(
+                axis, self._prepare_method(list_like_op)
+            )
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             return self._map_partitions(self._prepare_method(func))
