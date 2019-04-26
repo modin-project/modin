@@ -4557,6 +4557,8 @@ class TestDFPartTwo:
 
         df_equals(modin_df.T, pandas_df.T)
         df_equals(modin_df.transpose(), pandas_df.transpose())
+
+        df_equals(modin_df.isna().sum() / len(modin_df), pandas_df.isna().sum() / len(pandas_df))
         # Uncomment below once #165 is merged
         # Test for map across full axis for select indices
         # df_equals(modin_df.T.dropna(), pandas_df.T.dropna())
