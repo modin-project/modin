@@ -75,16 +75,11 @@ def test_mixed_dtypes_groupby():
 
     n = 1
 
-    by_values = [
-        ("col1", "col1"),
-        (lambda x: x % 2, lambda x: x % 2),
-        (ray_df.col1, pandas_df.col1),
-        (pd.Grouper("col1", sort=True), pandas.Grouper("col1", sort=True)),
-    ]
+    by_values = ["col1", lambda x: x % 2, pandas_df.col1]
 
     for by in by_values:
-        ray_groupby = ray_df.groupby(by=by[0])
-        pandas_groupby = pandas_df.groupby(by=by[1])
+        ray_groupby = ray_df.groupby(by=by)
+        pandas_groupby = pandas_df.groupby(by=by)
 
         ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
         test_ngroups(ray_groupby, pandas_groupby)
@@ -806,3 +801,14 @@ def test_groupby_on_index_values_with_loop():
 
     for k in modin_dict:
         ray_df_equals_pandas(modin_dict[k], pandas_dict[k])
+
+
+def test_groupby_multiindex():
+    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    modin_df = pd.DataFrame(frame_data)
+    new_columns = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.columns]
+    )
+    modin_df.columns = new_columns
+    with pytest.warns(UserWarning):
+        modin_df.groupby(level=0).sum()

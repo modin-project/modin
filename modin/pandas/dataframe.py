@@ -61,7 +61,10 @@ class DataFrame(BasePandasDataset):
             if isinstance(data, Series) and data.name is None:
                 self.columns = [0]
         # Check type of data and use appropriate constructor
-        elif data is not None or query_compiler is None:
+        elif query_compiler is None:
+            warnings.warn(
+                "Distributing {} object. This may take some time.".format(type(data))
+            )
             pandas_df = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )
@@ -1854,7 +1857,12 @@ class DataFrame(BasePandasDataset):
             # of indices, and RangeIndex will give us the exact indices of each boolean
             # requested.
             key = pandas.RangeIndex(len(self.index))[key]
-            return DataFrame(query_compiler=self._query_compiler.getitem_row_array(key))
+            if len(key):
+                return DataFrame(
+                    query_compiler=self._query_compiler.getitem_row_array(key)
+                )
+            else:
+                return DataFrame(columns=self.columns)
         else:
             if any(k not in self.columns for k in key):
                 raise KeyError(

@@ -40,14 +40,14 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
-        # This tells us whether or not there are multiple columns/rows in the groupby
-        self._is_multi_by = (
-            is_list_like(self._by)
-            and all(obj in self._df for obj in self._by)
-            and axis == 0
-        )
+        if level is None:
+            # This tells us whether or not there are multiple columns/rows in the groupby
+            self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+        else:
+            self._is_multi_by = False
         self._level = level
         self._kwargs = {
+            "level": level,
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
@@ -84,19 +84,17 @@ class DataFrameGroupBy(object):
     @property
     def _index_grouped(self):
         if self._index_grouped_cache is None:
-            if self._is_multi_by or isinstance(self._by, pandas.Grouper):
+            if self._is_multi_by:
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
                 # aware.
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
-                ErrorMessage.default_to_pandas(
-                    "Groupby with multiple columns or Grouper object"
-                )
+                ErrorMessage.default_to_pandas("Groupby with multiple columns")
                 self._index_grouped_cache = {
                     k: v.index
-                    for k, v in self._df._query_compiler.to_pandas().groupby(
-                        by=self._by
-                    )
+                    for k, v in self._df._query_compiler.getitem_column_array(self._by)
+                    .to_pandas()
+                    .groupby(by=self._by)
                 }
             else:
                 if self._axis == 0:
@@ -329,13 +327,6 @@ class DataFrameGroupBy(object):
         )
 
     def ngroup(self, ascending=True):
-        if self._is_multi_by or isinstance(self._by, pandas.Grouper):
-            ErrorMessage.default_to_pandas(
-                "Gropuby with multiple columns or Grouper object"
-            )
-            return self._df._default_to_pandas(
-                lambda df: df.groupby(by=self._by).ngroup()
-            )
         index = self._index if not self._axis else self._columns
         return (
             pandas.Series(index=index)
@@ -423,7 +414,7 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
-        if self._is_multi_by or isinstance(self._by, pandas.Grouper):
+        if self._is_multi_by or self._level is not None:
             return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to

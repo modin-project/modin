@@ -96,10 +96,8 @@ def concat(
     if keys is not None:
         objs = [objs[i] for i in range(min(len(objs), len(keys)))]
         new_idx_labels = {
-            keys[i]: objs[i].index if axis == 0 else objs[i].columns
-            for i in range(len(objs))
+            k: v.index if axis == 0 else v.columns for k, v in zip(keys, objs)
         }
-        print(new_idx_labels)
         tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
         new_idx = pandas.MultiIndex.from_tuples(tuples)
     else:
