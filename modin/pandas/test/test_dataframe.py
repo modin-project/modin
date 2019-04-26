@@ -1063,6 +1063,10 @@ class TestDFPartOne:
         expected_df_casted = expected_df.astype(str)
         df_equals(modin_df_casted, expected_df_casted)
 
+        modin_df_casted = modin_df.astype("category")
+        expected_df_casted = expected_df.astype("category")
+        df_equals(modin_df_casted, expected_df_casted)
+
         dtype_dict = {"A": np.int32, "B": np.int64, "C": str}
         modin_df_casted = modin_df.astype(dtype_dict)
         expected_df_casted = expected_df.astype(dtype_dict)
