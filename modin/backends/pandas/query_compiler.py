@@ -1103,14 +1103,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_dtypes = self.dtypes.copy()
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
-            if dtype != self.dtypes[column]:
+            if (
+                not isinstance(dtype, type(self.dtypes[column]))
+                or dtype != self.dtypes[column]
+            ):
                 # Only add dtype only if different
                 if dtype in dtype_indices.keys():
                     dtype_indices[dtype].append(numeric_indices[i])
                 else:
                     dtype_indices[dtype] = [numeric_indices[i]]
                 # Update the new dtype series to the proper pandas dtype
-                new_dtype = np.dtype(dtype)
+                try:
+                    new_dtype = np.dtype(dtype)
+                except TypeError:
+                    new_dtype = dtype
                 if dtype != np.int32 and new_dtype == np.int32:
                     new_dtype = np.dtype("int64")
                 elif dtype != np.float32 and new_dtype == np.float32:
