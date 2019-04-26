@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import pandas
+from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
 import warnings
@@ -154,14 +155,25 @@ class Series(BasePandasDataset):
         return self.floordiv(right)
 
     def __getitem__(self, key):
-        if (
-            key in self.keys()
-            or is_list_like(key)
-            and all(k in self.keys() for k in key)
-        ):
-            return self.loc[key]
+        if isinstance(key, Series) and key.dtype == np.bool:
+            # This ends up being significantly faster than looping through and getting
+            # each item individually.
+            key = key._to_pandas()
+        if is_bool_indexer(key):
+            return self.loc[self.index[key]]
         else:
-            return self.iloc[key]
+            # The check for whether or not `key` is in `keys()` will throw a TypeError
+            # if the object is not hashable. When that happens, we just use the `iloc`.
+            try:
+                if (
+                    is_list_like(key)
+                    and all(k in self.keys() for k in key)
+                    or key in self.keys()
+                ):
+                    return self.loc[key]
+            except TypeError:
+                pass
+        return self.iloc[key]
 
     def __int__(self):
         return int(self.squeeze())
