@@ -2115,6 +2115,16 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
+        # non-numeric columns if `axis` is 0.
+        if numeric_only and axis == 0:
+            return self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
+        else:
+            return self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """Raises TypeErrors for sum, prod, and mean where necessary"""
@@ -2147,6 +2157,16 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
+        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
+        # non-numeric columns if `axis` is 0.
+        if numeric_only and axis == 0:
+            return self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
+        else:
+            return self
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
