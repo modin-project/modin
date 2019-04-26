@@ -2118,9 +2118,11 @@ class DataFrame(BasePandasDataset):
         # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
         # non-numeric columns if `axis` is 0.
         if numeric_only and axis == 0:
-            return self[
-                [i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])]
-            ]
+            return self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
         else:
             return self
 
