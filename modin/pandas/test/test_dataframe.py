@@ -58,6 +58,7 @@ else:
 class TestDFPartOne:
     # Test inter df math functions
     def inter_df_math_helper(self, modin_df, pandas_df, op):
+        # Test dataframe to datframe
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df)
         except Exception as e:
@@ -67,6 +68,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(modin_df)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to int
         try:
             pandas_result = getattr(pandas_df, op)(4)
         except Exception as e:
@@ -76,6 +78,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(4)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to float
         try:
             pandas_result = getattr(pandas_df, op)(4.0)
         except Exception as e:
@@ -83,6 +86,16 @@ class TestDFPartOne:
                 getattr(modin_df, op)(4.0)
         else:
             modin_result = getattr(modin_df, op)(4.0)
+            df_equals(modin_result, pandas_result)
+
+        # Test transposed dataframes to float
+        try:
+            pandas_result = getattr(pandas_df.T, op)(4.0)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df.T, op)(4.0)
+        else:
+            modin_result = getattr(modin_df.T, op)(4.0)
             df_equals(modin_result, pandas_result)
 
         frame_data = {
@@ -93,6 +106,7 @@ class TestDFPartOne:
         modin_df2 = pd.DataFrame(frame_data)
         pandas_df2 = pandas.DataFrame(frame_data)
 
+        # Test dataframe to different dataframe shape
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df2)
         except Exception as e:
@@ -102,6 +116,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(modin_df2)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to list
         list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_df.shape[1]))
         try:
             pandas_result = getattr(pandas_df, op)(list_test, axis=1)
@@ -112,6 +127,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(list_test, axis=1)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to series
         series_test_modin = modin_df[modin_df.columns[0]]
         series_test_pandas = pandas_df[pandas_df.columns[0]]
         try:
@@ -4558,10 +4574,6 @@ class TestDFPartTwo:
         df_equals(modin_df.T, pandas_df.T)
         df_equals(modin_df.transpose(), pandas_df.transpose())
 
-        df_equals(
-            modin_df.isna().sum() / len(modin_df),
-            pandas_df.isna().sum() / len(pandas_df),
-        )
         # Uncomment below once #165 is merged
         # Test for map across full axis for select indices
         # df_equals(modin_df.T.dropna(), pandas_df.T.dropna())
