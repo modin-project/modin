@@ -1712,7 +1712,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs["ascending"] = ascending
 
         def sort_index_builder(df, **kwargs):
-            print(df)
             if axis:
                 df.columns = index
             else:
