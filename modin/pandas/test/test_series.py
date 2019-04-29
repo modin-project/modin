@@ -281,6 +281,7 @@ def test___getitem__(data):
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
 
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___gt__(data):
     modin_series, pandas_series = create_test_series(data)
