@@ -1796,7 +1796,7 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
-    def getitem(self, key):
+    def _getitem(self, key):
         """Get the column specified by key for this DataFrame.
 
         Args:

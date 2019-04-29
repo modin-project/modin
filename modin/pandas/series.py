@@ -154,7 +154,7 @@ class Series(BasePandasDataset):
     def __floordiv__(self, right):
         return self.floordiv(right)
 
-    def getitem(self, key):
+    def _getitem(self, key):
         if isinstance(key, Series) and key.dtype == np.bool:
             # This ends up being significantly faster than looping through and getting
             # each item individually.
