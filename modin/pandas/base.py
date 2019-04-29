@@ -3147,6 +3147,12 @@ class BasePandasDataset(object):
     def __ge__(self, other):
         return self.ge(other)
 
+    def __getitem__(self, key):
+        if len(self) == 0:
+            return self._default_to_pandas("__getitem__", key)
+        else:
+            return self._getitem(key)
+
     def __getstate__(self):
         return self._default_to_pandas("__getstate__")
 

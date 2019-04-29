@@ -4718,17 +4718,19 @@ class TestDFPartTwo:
             df.xs("mammal")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___getitem__(self, request, data):
+    def test___getitem__(self, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        if "empty_data" not in request.node.name:
-            key = modin_df.columns[0]
-            modin_col = modin_df.__getitem__(key)
-            assert isinstance(modin_col, pd.Series)
+        key = modin_df.columns[0]
+        modin_col = modin_df.__getitem__(key)
+        assert isinstance(modin_col, pd.Series)
 
-            pd_col = pandas_df[key]
-            df_equals(pd_col, modin_col)
+        pd_col = pandas_df[key]
+        df_equals(pd_col, modin_col)
+
+        # Test empty
+        df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
 
     def test_getitem_empty_mask(self):
         # modin-project/modin#517
