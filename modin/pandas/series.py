@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import pandas
+from pandas.compat import string_types
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
@@ -357,12 +358,25 @@ class Series(BasePandasDataset):
             apply_func = "agg"
         else:
             apply_func = "apply"
-            # Add this because it only applies for `apply` specifically.
-            kwds["convert_dtype"] = convert_dtype
-        query_compiler = super(Series, self).apply(func, *args, **kwds)
-        # Sometimes we can return a scalar here
-        if not isinstance(query_compiler, type(self._query_compiler)):
-            return query_compiler
+
+        if isinstance(func, string_types) or is_list_like(func):
+            query_compiler = super(Series, self).apply(func, *args, **kwds)
+            # Sometimes we can return a scalar here
+            if not isinstance(query_compiler, type(self._query_compiler)):
+                return query_compiler
+        else:
+            # handle ufuncs and lambdas
+            if kwds or args and not isinstance(func, np.ufunc):
+
+                def f(x):
+                    return func(x, *args, **kwds)
+
+            else:
+                f = func
+            with np.errstate(all="ignore"):
+                if isinstance(f, np.ufunc):
+                    return f(self)
+                query_compiler = self.map(f)._query_compiler
         # This is the simplest way to determine the return type, but there are checks
         # in pandas that verify that some results are created. This is a challenge for
         # empty DataFrames, but fortunately they only happen when the `func` type is
@@ -371,7 +385,7 @@ class Series(BasePandasDataset):
         # type.
         return_type = type(
             getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
-                func, *args, **kwds
+                func, convert_dtype=convert_dtype, *args, **kwds
             )
         ).__name__
         if return_type not in ["DataFrame", "Series"]:
