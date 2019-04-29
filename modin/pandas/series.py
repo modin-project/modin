@@ -385,7 +385,7 @@ class Series(BasePandasDataset):
         # type.
         return_type = type(
             getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
-                func, convert_dtype=convert_dtype, *args, **kwds
+                func, *args, **kwds
             )
         ).__name__
         if return_type not in ["DataFrame", "Series"]:
