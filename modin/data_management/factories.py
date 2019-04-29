@@ -275,6 +275,12 @@ class ExperimentalBaseFactory(BaseFactory):
                         "Distributed read_sql() was only implemented for Ray engine."
                     )
                 del kwargs["upper_bound"]
+            if "max_sessions" in kwargs:
+                if kwargs["max_sessions"] is not None:
+                    warnings.warn(
+                        "Distributed read_sql() was only implemented for Ray engine."
+                    )
+                del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
 
