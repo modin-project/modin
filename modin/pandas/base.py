@@ -2586,7 +2586,7 @@ class BasePandasDataset(object):
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
         if axis == 0:
-            broadcast_value_dict = {col: self[col] for col in by}
+            broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
             broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
             new_index = broadcast_values.sort_values(
                 by=by,

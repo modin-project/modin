@@ -3565,24 +3565,24 @@ class TestDFPartTwo:
         modin_df = pd.DataFrame(frame_data)
 
         df_equals(modin_df.reindex([0, 3, 2, 1]), pandas_df.reindex([0, 3, 2, 1]))
-
         df_equals(modin_df.reindex([0, 6, 2]), pandas_df.reindex([0, 6, 2]))
-
         df_equals(
             modin_df.reindex(["col1", "col3", "col4", "col2"], axis=1),
             pandas_df.reindex(["col1", "col3", "col4", "col2"], axis=1),
         )
-
         df_equals(
             modin_df.reindex(["col1", "col7", "col4", "col8"], axis=1),
             pandas_df.reindex(["col1", "col7", "col4", "col8"], axis=1),
         )
-
         df_equals(
             modin_df.reindex(index=[0, 1, 5], columns=["col1", "col7", "col4", "col8"]),
             pandas_df.reindex(
                 index=[0, 1, 5], columns=["col1", "col7", "col4", "col8"]
             ),
+        )
+        df_equals(
+            modin_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
+            pandas_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
         )
 
     def test_reindex_axis(self):
