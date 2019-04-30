@@ -359,7 +359,22 @@ class Series(BasePandasDataset):
         else:
             apply_func = "apply"
 
-        if isinstance(func, string_types) or is_list_like(func):
+        # This is the simplest way to determine the return type, but there are checks
+        # in pandas that verify that some results are created. This is a challenge for
+        # empty DataFrames, but fortunately they only happen when the `func` type is
+        # a list or a dictionary, which means that the return type won't change from
+        # type(self), so we catch that error and use `self.__name__` for the return
+        # type.
+        return_type = type(
+            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
+                func, *args, **kwds
+            )
+        ).__name__
+        if (
+            isinstance(func, string_types)
+            or is_list_like(func)
+            or return_type not in ["DataFrame", "Series"]
+        ):
             query_compiler = super(Series, self).apply(func, *args, **kwds)
             # Sometimes we can return a scalar here
             if not isinstance(query_compiler, type(self._query_compiler)):
@@ -377,17 +392,6 @@ class Series(BasePandasDataset):
                 if isinstance(f, np.ufunc):
                     return f(self)
                 query_compiler = self.map(f)._query_compiler
-        # This is the simplest way to determine the return type, but there are checks
-        # in pandas that verify that some results are created. This is a challenge for
-        # empty DataFrames, but fortunately they only happen when the `func` type is
-        # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `self.__name__` for the return
-        # type.
-        return_type = type(
-            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
-                func, *args, **kwds
-            )
-        ).__name__
         if return_type not in ["DataFrame", "Series"]:
             return query_compiler.to_pandas().squeeze()
         else:
