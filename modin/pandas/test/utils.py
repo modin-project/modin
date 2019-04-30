@@ -138,6 +138,7 @@ query_func_values = list(query_func.values())
 agg_func = {
     "sum": "sum",
     "df sum": lambda df: df.sum(),
+    "str": str,
     "sum mean": ["sum", "mean"],
     "sum sum": ["sum", "sum"],
     "sum df sum": ["sum", lambda df: df.sum()],

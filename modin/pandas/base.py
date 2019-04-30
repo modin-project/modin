@@ -299,11 +299,9 @@ class BasePandasDataset(object):
                 result = self._aggregate(func, _axis=axis, *args, **kwargs)
             except TypeError:
                 pass
-
         if result is None:
             kwargs.pop("is_transform", None)
             return self.apply(func, axis=axis, args=args, **kwargs)
-
         return result
 
     def _aggregate(self, arg, *args, **kwargs):

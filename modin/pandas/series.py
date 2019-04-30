@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import pandas
+from pandas.compat import string_types
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like, is_scalar
 import sys
@@ -357,12 +358,7 @@ class Series(BasePandasDataset):
             apply_func = "agg"
         else:
             apply_func = "apply"
-            # Add this because it only applies for `apply` specifically.
-            kwds["convert_dtype"] = convert_dtype
-        query_compiler = super(Series, self).apply(func, *args, **kwds)
-        # Sometimes we can return a scalar here
-        if not isinstance(query_compiler, type(self._query_compiler)):
-            return query_compiler
+
         # This is the simplest way to determine the return type, but there are checks
         # in pandas that verify that some results are created. This is a challenge for
         # empty DataFrames, but fortunately they only happen when the `func` type is
@@ -374,6 +370,28 @@ class Series(BasePandasDataset):
                 func, *args, **kwds
             )
         ).__name__
+        if (
+            isinstance(func, string_types)
+            or is_list_like(func)
+            or return_type not in ["DataFrame", "Series"]
+        ):
+            query_compiler = super(Series, self).apply(func, *args, **kwds)
+            # Sometimes we can return a scalar here
+            if not isinstance(query_compiler, type(self._query_compiler)):
+                return query_compiler
+        else:
+            # handle ufuncs and lambdas
+            if kwds or args and not isinstance(func, np.ufunc):
+
+                def f(x):
+                    return func(x, *args, **kwds)
+
+            else:
+                f = func
+            with np.errstate(all="ignore"):
+                if isinstance(f, np.ufunc):
+                    return f(self)
+                query_compiler = self.map(f)._query_compiler
         if return_type not in ["DataFrame", "Series"]:
             return query_compiler.to_pandas().squeeze()
         else:
