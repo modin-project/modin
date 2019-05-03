@@ -5200,3 +5200,13 @@ class TestDFPartTwo:
         modin_result = modin_df.isnull()
 
         df_equals(modin_result, pandas_result)
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_constructor(self, data):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
+        df_equals(pandas_df, modin_df)
+
+        pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
+        modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
+        df_equals(pandas_df, modin_df)
