@@ -67,7 +67,9 @@ class DataFrame(BasePandasDataset):
                 data = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
-            elif is_dict_like(data) and not isinstance(data, (pandas.Series, Series)):
+            elif is_dict_like(data) and not isinstance(
+                data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
+            ):
                 data = {
                     k: v._to_pandas() if isinstance(v, Series) else v
                     for k, v in data.items()
