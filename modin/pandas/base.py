@@ -123,8 +123,11 @@ class BasePandasDataset(object):
                     else len(self._query_compiler.columns)
                 )
             ]
-        # Do dtype checking
-        if numeric_only:
+        # Do dtype checking.
+        if is_scalar(other):
+            # We skip dtype checking if other is a scalar.
+            continue
+        elif numeric_only:
             if not all(
                 is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
                 for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
