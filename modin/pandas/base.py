@@ -91,6 +91,9 @@ class BasePandasDataset(object):
         comparison_dtypes_only=False,
     ):
         """Helper method to check validity of other in inter-df operations"""
+        # We skip dtype checking if the other is a scalar.
+        if is_scalar(other):
+            return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
         if isinstance(other, BasePandasDataset):
@@ -123,7 +126,7 @@ class BasePandasDataset(object):
                     else len(self._query_compiler.columns)
                 )
             ]
-        # Do dtype checking
+        # Do dtype checking.
         if numeric_only:
             if not all(
                 is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
