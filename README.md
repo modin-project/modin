@@ -2,7 +2,7 @@
 <h2 align="center">Scale your pandas workflows by changing one line of code</h2>
 
 <p align="center">
-<a href="https://github.com/ray-project/ray"><img src="docs/img/powered_by_ray_big.svg">
+<a href="https://github.com/ray-project/ray"><img src="docs/img/powered_by_ray_small.svg"></a>
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white"></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" /></a>
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master"></a>
