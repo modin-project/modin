@@ -16,9 +16,7 @@ class BaseQueryCompiler(object):
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
-    def __init__(
-        self, block_partitions_object: BaseFrameManager, index, columns, dtypes=None
-    ):
+    def __init__(self, block_partitions_object, index, columns, dtypes=None):
         raise NotImplementedError("Must be implemented in children classes")
 
     # Dtypes and Indexing Abstract Methods
@@ -846,7 +844,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
     # treated differently.
     def __init__(
         self,
-        block_partitions_object: BaseFrameManager,
+        block_partitions_object,
         index,
         column,
         dtypes=None,
@@ -877,7 +875,7 @@ class BaseQueryCompilerView(BaseQueryCompiler):
 
     dtypes = property(_get_dtype, _set_dtype)
 
-    def _get_data(self) -> BaseFrameManager:
+    def _get_data(self):
         """Perform the map step
 
         Returns:
