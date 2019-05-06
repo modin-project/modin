@@ -10,7 +10,6 @@ from pandas.core.indexing import IndexingError
 from warnings import warn
 
 from .dataframe import DataFrame
-from .base import BasePandasDataset
 from .series import Series
 
 """Indexing Helper Class works as follows:
@@ -144,15 +143,13 @@ class _LocationIndexerBase(object):
     """Base class for location indexer like loc and iloc
     """
 
-    def __init__(self, ray_df: BasePandasDataset):
+    def __init__(self, ray_df):
         self.df = ray_df
         self.qc = ray_df._query_compiler
         self.row_scaler = False
         self.col_scaler = False
 
-    def __getitem__(
-        self, row_lookup: pandas.Index, col_lookup: pandas.Index, ndim: int
-    ):
+    def __getitem__(self, row_lookup, col_lookup, ndim):
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
@@ -172,7 +169,7 @@ class _LocationIndexerBase(object):
             )
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
-    def __setitem__(self, row_lookup: pandas.Index, col_lookup: pandas.Index, item):
+    def __setitem__(self, row_lookup, col_lookup, item):
         """
         Args:
             row_lookup: the global row index to write item to

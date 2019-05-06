@@ -25,12 +25,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(
-        self,
-        block_partitions_object: BaseFrameManager,
-        index: pandas.Index,
-        columns: pandas.Index,
-        dtypes=None,
-        is_transposed=False,
+        self, block_partitions_object, index, columns, dtypes=None, is_transposed=False
     ):
         assert isinstance(block_partitions_object, BaseFrameManager)
         self.data = block_partitions_object
@@ -2509,12 +2504,12 @@ class PandasQueryCompilerView(PandasQueryCompiler):
 
     def __init__(
         self,
-        block_partitions_object: BaseFrameManager,
-        index: pandas.Index,
-        columns: pandas.Index,
+        block_partitions_object,
+        index,
+        columns,
         dtypes=None,
-        index_map_series: pandas.Series = None,
-        columns_map_series: pandas.Series = None,
+        index_map_series=None,
+        columns_map_series=None,
     ):
         """
         Args:
@@ -2540,7 +2535,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         """Return parent object when getting the constructor."""
         return PandasQueryCompiler
 
-    def _get_data(self) -> BaseFrameManager:
+    def _get_data(self):
         """Perform the map step
 
         Returns:
