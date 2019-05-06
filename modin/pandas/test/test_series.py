@@ -273,6 +273,13 @@ def test___getitem__(data):
     df_equals(
         modin_series[modin_series.index[-1]], pandas_series[pandas_series.index[-1]]
     )
+    modin_series = pd.Series(list(range(1000)))
+    pandas_series = pandas.Series(list(range(1000)))
+    df_equals(modin_series[:30], pandas_series[:30])
+    df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
+
+    # Test empty series
+    df_equals(pd.Series([])[:30], pandas.Series([])[:30])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

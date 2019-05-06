@@ -44,6 +44,10 @@ from .utils import (
     int_arg_values,
 )
 
+# TODO remove once modin-project/modin#469 is resolved
+agg_func_keys.remove("str")
+agg_func_values.remove(str)
+
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
@@ -58,6 +62,7 @@ else:
 class TestDFPartOne:
     # Test inter df math functions
     def inter_df_math_helper(self, modin_df, pandas_df, op):
+        # Test dataframe to datframe
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df)
         except Exception as e:
@@ -67,6 +72,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(modin_df)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to int
         try:
             pandas_result = getattr(pandas_df, op)(4)
         except Exception as e:
@@ -76,6 +82,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(4)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to float
         try:
             pandas_result = getattr(pandas_df, op)(4.0)
         except Exception as e:
@@ -83,6 +90,16 @@ class TestDFPartOne:
                 getattr(modin_df, op)(4.0)
         else:
             modin_result = getattr(modin_df, op)(4.0)
+            df_equals(modin_result, pandas_result)
+
+        # Test transposed dataframes to float
+        try:
+            pandas_result = getattr(pandas_df.T, op)(4.0)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df.T, op)(4.0)
+        else:
+            modin_result = getattr(modin_df.T, op)(4.0)
             df_equals(modin_result, pandas_result)
 
         frame_data = {
@@ -93,6 +110,7 @@ class TestDFPartOne:
         modin_df2 = pd.DataFrame(frame_data)
         pandas_df2 = pandas.DataFrame(frame_data)
 
+        # Test dataframe to different dataframe shape
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df2)
         except Exception as e:
@@ -102,6 +120,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(modin_df2)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to list
         list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_df.shape[1]))
         try:
             pandas_result = getattr(pandas_df, op)(list_test, axis=1)
@@ -112,6 +131,7 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(list_test, axis=1)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to series
         series_test_modin = modin_df[modin_df.columns[0]]
         series_test_pandas = pandas_df[pandas_df.columns[0]]
         try:
@@ -328,6 +348,15 @@ class TestDFPartOne:
                 getattr(modin_df, op)(4.0)
         else:
             modin_result = getattr(modin_df, op)(4.0)
+            df_equals(modin_result, pandas_result)
+
+        try:
+            pandas_result = getattr(pandas_df, op)("a")
+        except TypeError:
+            with pytest.raises(TypeError):
+                getattr(modin_df, op)("a")
+        else:
+            modin_result = getattr(modin_df, op)("a")
             df_equals(modin_result, pandas_result)
 
         frame_data = {
@@ -1061,6 +1090,10 @@ class TestDFPartOne:
 
         modin_df_casted = modin_df.astype(str)
         expected_df_casted = expected_df.astype(str)
+        df_equals(modin_df_casted, expected_df_casted)
+
+        modin_df_casted = modin_df.astype("category")
+        expected_df_casted = expected_df.astype("category")
         df_equals(modin_df_casted, expected_df_casted)
 
         dtype_dict = {"A": np.int32, "B": np.int64, "C": str}
@@ -3545,24 +3578,24 @@ class TestDFPartTwo:
         modin_df = pd.DataFrame(frame_data)
 
         df_equals(modin_df.reindex([0, 3, 2, 1]), pandas_df.reindex([0, 3, 2, 1]))
-
         df_equals(modin_df.reindex([0, 6, 2]), pandas_df.reindex([0, 6, 2]))
-
         df_equals(
             modin_df.reindex(["col1", "col3", "col4", "col2"], axis=1),
             pandas_df.reindex(["col1", "col3", "col4", "col2"], axis=1),
         )
-
         df_equals(
             modin_df.reindex(["col1", "col7", "col4", "col8"], axis=1),
             pandas_df.reindex(["col1", "col7", "col4", "col8"], axis=1),
         )
-
         df_equals(
             modin_df.reindex(index=[0, 1, 5], columns=["col1", "col7", "col4", "col8"]),
             pandas_df.reindex(
                 index=[0, 1, 5], columns=["col1", "col7", "col4", "col8"]
             ),
+        )
+        df_equals(
+            modin_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
+            pandas_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
         )
 
     def test_reindex_axis(self):
@@ -4557,6 +4590,7 @@ class TestDFPartTwo:
 
         df_equals(modin_df.T, pandas_df.T)
         df_equals(modin_df.transpose(), pandas_df.transpose())
+
         # Uncomment below once #165 is merged
         # Test for map across full axis for select indices
         # df_equals(modin_df.T.dropna(), pandas_df.T.dropna())
@@ -4697,17 +4731,19 @@ class TestDFPartTwo:
             df.xs("mammal")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___getitem__(self, request, data):
+    def test___getitem__(self, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        if "empty_data" not in request.node.name:
-            key = modin_df.columns[0]
-            modin_col = modin_df.__getitem__(key)
-            assert isinstance(modin_col, pd.Series)
+        key = modin_df.columns[0]
+        modin_col = modin_df.__getitem__(key)
+        assert isinstance(modin_col, pd.Series)
 
-            pd_col = pandas_df[key]
-            df_equals(pd_col, modin_col)
+        pd_col = pandas_df[key]
+        df_equals(pd_col, modin_col)
+
+        # Test empty
+        df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
 
     def test_getitem_empty_mask(self):
         # modin-project/modin#517
@@ -5173,3 +5209,13 @@ class TestDFPartTwo:
         modin_result = modin_df.isnull()
 
         df_equals(modin_result, pandas_result)
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_constructor(self, data):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
+        df_equals(pandas_df, modin_df)
+
+        pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
+        modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
+        df_equals(pandas_df, modin_df)

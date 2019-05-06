@@ -7,6 +7,7 @@ from pandas.compat import string_types
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
+    is_dict_like,
     is_list_like,
     is_numeric_dtype,
 )
@@ -62,6 +63,17 @@ class DataFrame(BasePandasDataset):
                 self.columns = [0]
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
+            if is_list_like(data) and not is_dict_like(data):
+                data = [
+                    obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
+                ]
+            elif is_dict_like(data) and not isinstance(
+                data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
+            ):
+                data = {
+                    k: v._to_pandas() if isinstance(v, Series) else v
+                    for k, v in data.items()
+                }
             warnings.warn(
                 "Distributing {} object. This may take some time.".format(type(data))
             )
@@ -1796,7 +1808,7 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
-    def __getitem__(self, key):
+    def _getitem(self, key):
         """Get the column specified by key for this DataFrame.
 
         Args:

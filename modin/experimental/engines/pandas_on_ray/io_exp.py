@@ -22,6 +22,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         partition_column=None,
         lower_bound=None,
         upper_bound=None,
+        max_sessions=None,
     ):
         """ Read SQL query or database table into a DataFrame.
 
@@ -49,6 +50,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             partition_column: column used to share the data between the workers (MUST be a INTEGER column)
             lower_bound: the minimum value to be requested from the partition_column
             upper_bound: the maximum value to be requested from the partition_column
+            max_sessions: the maximum number of simultaneous connections allowed to use
 
         Returns:
             Pandas Dataframe
@@ -69,7 +71,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = cls.frame_mgr_cls._compute_num_partitions()
+        num_parts = min(cls.frame_mgr_cls._compute_num_partitions(), max_sessions)
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts

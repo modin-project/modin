@@ -91,6 +91,9 @@ class BasePandasDataset(object):
         comparison_dtypes_only=False,
     ):
         """Helper method to check validity of other in inter-df operations"""
+        # We skip dtype checking if the other is a scalar.
+        if is_scalar(other):
+            return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
         if isinstance(other, BasePandasDataset):
@@ -123,7 +126,7 @@ class BasePandasDataset(object):
                     else len(self._query_compiler.columns)
                 )
             ]
-        # Do dtype checking
+        # Do dtype checking.
         if numeric_only:
             if not all(
                 is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
@@ -299,11 +302,9 @@ class BasePandasDataset(object):
                 result = self._aggregate(func, _axis=axis, *args, **kwargs)
             except TypeError:
                 pass
-
         if result is None:
             kwargs.pop("is_transform", None)
             return self.apply(func, axis=axis, args=args, **kwargs)
-
         return result
 
     def _aggregate(self, arg, *args, **kwargs):
@@ -2586,7 +2587,7 @@ class BasePandasDataset(object):
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
         if axis == 0:
-            broadcast_value_dict = {col: self[col] for col in by}
+            broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
             broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
             new_index = broadcast_values.sort_values(
                 by=by,
@@ -3146,6 +3147,12 @@ class BasePandasDataset(object):
 
     def __ge__(self, other):
         return self.ge(other)
+
+    def __getitem__(self, key):
+        if len(self) == 0:
+            return self._default_to_pandas("__getitem__", key)
+        else:
+            return self._getitem(key)
 
     def __getstate__(self):
         return self._default_to_pandas("__getstate__")
