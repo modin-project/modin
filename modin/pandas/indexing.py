@@ -10,7 +10,6 @@ from pandas.core.indexing import IndexingError
 from warnings import warn
 
 from .dataframe import DataFrame
-from .base import BasePandasDataset
 from .series import Series
 
 """Indexing Helper Class works as follows:

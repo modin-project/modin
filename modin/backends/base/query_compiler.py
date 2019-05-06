@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from modin.engines.base.frame.partition_manager import BaseFrameManager
-
 
 class BaseQueryCompiler(object):
     """Abstract Class that handles the queries to Modin dataframes.
