@@ -2,7 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from itertools import groupby
 import numpy as np
+from operator import itemgetter
 import pandas
 
 from modin.error_message import ErrorMessage
@@ -633,39 +635,63 @@ class BaseFrameManager(object):
             For unordered: a dictionary of {block index: list of local indices}.
             For ordered: a list of tuples mapping block index: list of local indices.
         """
-        # Get the internal index and create a dictionary so we only have to
-        # travel to each partition once.
-        all_partitions_and_idx = [
-            self._get_blocks_containing_index(axis, i) for i in indices
-        ]
+        if not ordered:
+            indices = np.sort(indices)
+        else:
+            indices = np.array(indices)
+        if not axis:
+            cumulative = np.array(self.block_widths).cumsum()
+        else:
+            cumulative = np.array(self.block_lengths).cumsum()
 
+        def internal(block_idx, global_index):
+            return (
+                global_index
+                if not block_idx
+                else np.subtract(
+                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
+                )
+            )
+
+        partition_ids = np.digitize(indices, cumulative)
+        # If the output order doesn't matter or if the indices are monotonically
+        # increasing, the computation is significantly simpler and faster than doing
+        # the zip and groupby.
+        if not ordered or np.all(np.diff(indices) > 0):
+            count_for_each_partition = np.array(
+                [(partition_ids == i).sum() for i in range(len(cumulative))]
+            ).cumsum()
+            # compute the internal indices and pair those with the partition index.
+            partition_ids_with_indices = [
+                (0, internal(0, indices[slice(count_for_each_partition[0])]))
+            ] + [
+                (
+                    i,
+                    internal(
+                        i,
+                        indices[
+                            slice(
+                                count_for_each_partition[i - 1],
+                                count_for_each_partition[i],
+                            )
+                        ],
+                    ),
+                )
+                for i in range(1, len(cumulative))
+            ]
+            return (
+                dict(partition_ids_with_indices)
+                if not ordered
+                else partition_ids_with_indices
+            )
+
+        all_partitions_and_idx = zip(partition_ids, indices)
         # In ordered, we have to maintain the order of the list of indices provided.
         # This means that we need to return a list instead of a dictionary.
-        if ordered:
-            # In ordered, the partitions dict is a list of tuples
-            partitions_dict = []
-            # This variable is used to store the most recent partition that we added to
-            # the partitions_dict. This allows us to only visit a partition once when we
-            # have multiple values that will be operated on in that partition.
-            last_part = -1
-            for part_idx, internal_idx in all_partitions_and_idx:
-                if part_idx == last_part:
-                    # We append to the list, which is the value part of the tuple.
-                    partitions_dict[-1][-1].append(internal_idx)
-                else:
-                    # This is where we add new values.
-                    partitions_dict.append((part_idx, [internal_idx]))
-                last_part = part_idx
-        else:
-            # For unordered, we can just return a dictionary mapping partition to the
-            # list of indices being operated on.
-            partitions_dict = {}
-            for part_idx, internal_idx in all_partitions_and_idx:
-                if part_idx not in partitions_dict:
-                    partitions_dict[part_idx] = [internal_idx]
-                else:
-                    partitions_dict[part_idx].append(internal_idx)
-        return partitions_dict
+        return [
+            (k, internal(k, [x for _, x in v]))
+            for k, v in groupby(all_partitions_and_idx, itemgetter(0))
+        ]
 
     def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
         """Applies a function to a list of remote partitions.
@@ -903,6 +929,21 @@ class BaseFrameManager(object):
         return (
             self.__constructor__(result.T) if not axis else self.__constructor__(result)
         )
+
+    def mask(self, row_indices=None, col_indices=None):
+        if row_indices is not None:
+            row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
+        else:
+            row_partitions_list = []
+
+        if col_indices is not None:
+            col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
+        else:
+            col_partitions_list = []
+
+        if len(row_partitions_list) > 0:
+
+        return [[(obj, r) for obj, r in zip(row_partitions_list, col_partitions_list)]]
 
     def apply_func_to_indices_both_axis(
         self,
