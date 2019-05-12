@@ -940,9 +940,6 @@ class BaseFrameManager(object):
             col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
         else:
             col_partitions_list = []
-
-        if len(row_partitions_list) > 0:
-
         return [[(obj, r) for obj, r in zip(row_partitions_list, col_partitions_list)]]
 
     def apply_func_to_indices_both_axis(
