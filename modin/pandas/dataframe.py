@@ -1887,6 +1887,21 @@ class DataFrame(BasePandasDataset):
             )
 
     def _getitem_slice(self, key):
+        # If there is no step, we can fasttrack the codepath to use existing logic from
+        # head and tail, which is already pretty fast.
+        if key.step is None:
+            if key.start is None and key.stop is None:
+                return self.copy()
+
+            def compute_offset(value):
+                return value - len(self) if value >= 0 else value
+
+            # Head is a negative number, Tail is a positive number
+            if key.start is None:
+                return self.head(compute_offset(key.stop))
+            elif key.stop is None:
+                return self.tail(-compute_offset(key.start))
+            return self.head(compute_offset(key.stop)).tail(-compute_offset(key.start))
         # We convert to a RangeIndex because getitem_row_array is expecting a list
         # of indices, and RangeIndex will give us the exact indices of each boolean
         # requested.
