@@ -60,6 +60,15 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def mask(self, row_indices, col_indices):
+        """
+
+        :param row_indices:
+        :param col_indices:
+        :return:
+        """
+        raise NotImplementedError("Must be implemented in child class")
+
     @classmethod
     def put(cls, obj):
         """A factory classmethod to format a given object.

@@ -1943,9 +1943,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df.iloc[:, internal_indices]
 
         prepared_func = self._prepare_method(getitem)
-        result = self.data.apply_func_to_select_indices(
-            0, prepared_func, numeric_indices, keep_remaining=False
-        )
+        result = self.data.mask(col_indices=numeric_indices)
+        # result = self.data.apply_func_to_select_indices(
+        #     0, prepared_func, numeric_indices, keep_remaining=False
+        # )
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
         new_columns = self.columns[numeric_indices]

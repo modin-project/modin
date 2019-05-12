@@ -44,8 +44,6 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A RayRemotePartition object.
         """
-        oid = self.oid
-        self.call_queue.append((func, kwargs))
 
         def call_queue_closure(oid_obj, call_queues):
 
@@ -59,11 +57,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
             return oid_obj
 
+        oid = self.oid
+        call_queue = self.call_queue + [(func, kwargs)]
         oid = deploy_ray_func.remote(
-            call_queue_closure, oid, kwargs={"call_queues": self.call_queue}
+            call_queue_closure, oid, kwargs={"call_queues": call_queue}
         )
-        self.call_queue = []
-
+        # oid = deploy_ray_func.remote(func, oid, kwargs)
         return PandasOnRayFramePartition(oid)
 
     def add_to_apply_calls(self, func, **kwargs):
@@ -82,6 +81,11 @@ class PandasOnRayFramePartition(BaseFramePartition):
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
+
+    def mask(self, row_indices, col_indices):
+        new_obj = PandasOnRayFramePartition(self.oid)
+        new_obj.add_to_apply_calls(lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices]))
+        return new_obj
 
     @classmethod
     def put(cls, obj):
