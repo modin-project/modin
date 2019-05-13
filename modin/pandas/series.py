@@ -366,7 +366,7 @@ class Series(BasePandasDataset):
         # type(self), so we catch that error and use `self.__name__` for the return
         # type.
         return_type = type(
-            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
+            getattr(self.head(1)._to_pandas(), apply_func)(
                 func, *args, **kwds
             )
         ).__name__
