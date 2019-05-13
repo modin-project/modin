@@ -84,7 +84,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def mask(self, row_indices, col_indices):
         new_obj = PandasOnRayFramePartition(self.oid)
-        new_obj.add_to_apply_calls(lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices]))
+        new_obj.add_to_apply_calls(
+            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+        )
         return new_obj
 
     @classmethod

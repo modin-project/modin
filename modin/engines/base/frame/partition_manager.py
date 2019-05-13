@@ -931,19 +931,41 @@ class BaseFrameManager(object):
         )
 
     def mask(self, row_indices=None, col_indices=None):
-        ErrorMessage.catch_bugs_and_request_email(row_indices is None and col_indices is None)
+        ErrorMessage.catch_bugs_and_request_email(
+            row_indices is None and col_indices is None
+        )
         if row_indices is not None:
-            row_partitions_list = self._get_dict_of_block_index(1, row_indices, ordered=True)
+            row_partitions_list = self._get_dict_of_block_index(
+                1, row_indices, ordered=True
+            )
         else:
-            row_partitions_list = [(i, range(self.block_lengths[i])) for i in range(len(self.block_lengths))]
+            row_partitions_list = [
+                (i, range(self.block_lengths[i]))
+                for i in range(len(self.block_lengths))
+            ]
 
         if col_indices is not None:
-            col_partitions_list = self._get_dict_of_block_index(0, col_indices, ordered=True)
+            col_partitions_list = self._get_dict_of_block_index(
+                0, col_indices, ordered=True
+            )
         else:
-            col_partitions_list = [(i, range(self.block_widths[i])) for i in range(len(self.block_widths))]
+            col_partitions_list = [
+                (i, range(self.block_widths[i])) for i in range(len(self.block_widths))
+            ]
 
-        new_partitions = self.__constructor__(np.array([[self.partitions[row_idx][col_idx].mask(row_internal_indices, col_internal_indices) for col_idx, col_internal_indices in col_partitions_list] for row_idx, row_internal_indices in row_partitions_list]))
-        return new_partitions
+        return self.__constructor__(
+            np.array(
+                [
+                    [
+                        self.partitions[row_idx][col_idx].mask(
+                            row_internal_indices, col_internal_indices
+                        )
+                        for col_idx, col_internal_indices in col_partitions_list
+                    ]
+                    for row_idx, row_internal_indices in row_partitions_list
+                ]
+            )
+        )
 
     def apply_func_to_indices_both_axis(
         self,
