@@ -1962,16 +1962,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        # Convert to list for type checking
-        key = list(key)
 
         def getitem(df, internal_indices=[]):
             return df.iloc[internal_indices]
 
         prepared_func = self._prepare_method(getitem)
-        result = self.data.apply_func_to_select_indices(
-            1, prepared_func, key, keep_remaining=False
-        )
+        # result = self.data.apply_func_to_select_indices(
+        #     1, prepared_func, key, keep_remaining=False
+        # )
+        result = self.data.mask(row_indices=key)
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
         new_index = self.index[key]

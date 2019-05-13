@@ -39,6 +39,8 @@ class RayFrameManager(BaseFrameManager):
                 )
             except RayTaskError as e:
                 handle_ray_task_error(e)
+            except AttributeError:
+                self._lengths_cache = np.array([obj.length() for obj in self._partitions_cache.T[0]])
         return self._lengths_cache
 
     @property
@@ -60,4 +62,6 @@ class RayFrameManager(BaseFrameManager):
                 )
             except RayTaskError as e:
                 handle_ray_task_error(e)
+            except AttributeError:
+                self._widths_cache = np.array([obj.width() for obj in self._partitions_cache[0]])
         return self._widths_cache

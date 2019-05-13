@@ -12,11 +12,13 @@ from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id):
+    def __init__(self, object_id, length=None, width=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
         self.call_queue = []
+        self._length_cache = length
+        self._width_cache = width
 
     def get(self):
         """Gets the object out of the plasma store.
@@ -59,11 +61,11 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        oid = deploy_ray_func.remote(
+        oid, length, width = deploy_ray_func.remote(
             call_queue_closure, oid, kwargs={"call_queues": call_queue}
         )
         # oid = deploy_ray_func.remote(func, oid, kwargs)
-        return PandasOnRayFramePartition(oid)
+        return PandasOnRayFramePartition(oid, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width))
 
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
@@ -83,7 +85,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return dataframe
 
     def mask(self, row_indices, col_indices):
-        new_obj = PandasOnRayFramePartition(self.oid)
+        new_obj = PandasOnRayFramePartition(self.oid, len(row_indices), len(col_indices))
         new_obj.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
@@ -99,7 +101,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PandasOnRayFramePartition(ray.put(obj))
+        return PandasOnRayFramePartition(ray.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -126,7 +128,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote
+@ray.remote(num_return_vals=3)
 def deploy_ray_func(func, partition, kwargs):  # pragma: no cover
     """Deploy a function to a partition in Ray.
 
@@ -141,9 +143,10 @@ def deploy_ray_func(func, partition, kwargs):  # pragma: no cover
         The result of the function.
     """
     try:
-        return func(partition, **kwargs)
+        result = func(partition, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate
     # on it. We don't want the error to propagate to the user, and we want to
     # avoid copying unless we absolutely have to.
     except ValueError:
-        return func(partition.copy(), **kwargs)
+        result = func(partition.copy(), **kwargs)
+    return result, len(result) if hasattr(result, "__len__") else 0, len(result.columns) if hasattr(result, "columns") else 0
