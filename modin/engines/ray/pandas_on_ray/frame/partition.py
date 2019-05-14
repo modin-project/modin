@@ -46,33 +46,19 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A RayRemotePartition object.
         """
-
-        def call_queue_closure(oid_obj, call_queues):
-
-            for func, kwargs in call_queues:
-                if isinstance(func, ray.ObjectID):
-                    func = ray.get(func)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-
-                oid_obj = func(oid_obj, **kwargs)
-
-            return oid_obj
-
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        oid, length, width = deploy_ray_func.remote(
-            call_queue_closure, oid, kwargs={"call_queues": call_queue}
-        )
-        # oid = deploy_ray_func.remote(func, oid, kwargs)
-        return PandasOnRayFramePartition(oid, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width))
+        new_obj, result, length, width = deploy_ray_func.remote(call_queue, oid)
+        if len(self.call_queue) > 0:
+            self.oid = new_obj
+            self.call_queue = []
+        return PandasOnRayFramePartition(result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width))
 
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
-        return self
 
     def __copy__(self):
-        return PandasOnRayFramePartition(object_id=self.oid)
+        return PandasOnRayFramePartition(self.oid, self._length_cache, self._width_cache)
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -86,6 +72,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def mask(self, row_indices, col_indices):
         new_obj = PandasOnRayFramePartition(self.oid, len(row_indices), len(col_indices))
+        if len(self.call_queue) > 0:
+            [new_obj.add_to_apply_calls(call, **kwargs) for call, kwargs in self.call_queue]
         new_obj.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
@@ -128,8 +116,28 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
+@ray.remote(num_return_vals=4)
+def deploy_ray_func(call_queue, oid_obj):
+
+    def deserialize(obj):
+        if isinstance(obj, ray.ObjectID):
+            return ray.get(obj)
+        return obj
+
+    if len(call_queue) > 1:
+        for func, kwargs in call_queue[:-1]:
+            func = deserialize(func)
+            kwargs = deserialize(kwargs)
+            oid_obj = func(oid_obj, **kwargs)
+    func, kwargs = call_queue[-1]
+    func = deserialize(func)
+    kwargs = deserialize(kwargs)
+    result = func(oid_obj, **kwargs)
+    return oid_obj if len(call_queue) > 1 else None, result, len(result) if hasattr(result, "__len__") else 0, len(result.columns) if hasattr(result, "columns") else 0
+
+
 @ray.remote(num_return_vals=3)
-def deploy_ray_func(func, partition, kwargs):  # pragma: no cover
+def _deploy_ray_func(func, partition, kwargs):  # pragma: no cover
     """Deploy a function to a partition in Ray.
 
     Note: Ray functions are not detected by codecov (thus pragma: no cover)

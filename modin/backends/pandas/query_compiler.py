@@ -1950,7 +1950,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
         new_columns = self.columns[numeric_indices]
-        new_dtypes = self.dtypes[numeric_indices]
+        if self._dtype_cache is not None:
+            new_dtypes = self.dtypes[numeric_indices]
+        else:
+            new_dtypes = None
         return self.__constructor__(result, self.index, new_columns, new_dtypes)
 
     def getitem_row_array(self, key):
