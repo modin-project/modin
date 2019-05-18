@@ -273,7 +273,9 @@ class RayIO(BaseIO):
         partition_kwargs = dict(
             kwargs,
             header=None,
-            names=names,
+            names=names
+            if kwargs.get("usecols") is None or kwargs.get("names") is not None
+            else None,
             skipfooter=0,
             skiprows=None,
             parse_dates=parse_dates,
