@@ -52,13 +52,17 @@ class PandasOnRayFramePartition(BaseFramePartition):
         if len(self.call_queue) > 0:
             self.oid = new_obj
             self.call_queue = []
-        return PandasOnRayFramePartition(result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width))
+        return PandasOnRayFramePartition(
+            result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width)
+        )
 
     def add_to_apply_calls(self, func, **kwargs):
         self.call_queue.append((func, kwargs))
 
     def __copy__(self):
-        return PandasOnRayFramePartition(self.oid, self._length_cache, self._width_cache)
+        return PandasOnRayFramePartition(
+            self.oid, self._length_cache, self._width_cache
+        )
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -71,9 +75,14 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return dataframe
 
     def mask(self, row_indices, col_indices):
-        new_obj = PandasOnRayFramePartition(self.oid, len(row_indices), len(col_indices))
+        new_obj = PandasOnRayFramePartition(
+            self.oid, len(row_indices), len(col_indices)
+        )
         if len(self.call_queue) > 0:
-            [new_obj.add_to_apply_calls(call, **kwargs) for call, kwargs in self.call_queue]
+            [
+                new_obj.add_to_apply_calls(call, **kwargs)
+                for call, kwargs in self.call_queue
+            ]
         new_obj.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
@@ -117,8 +126,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
 
 @ray.remote(num_return_vals=4)
-def deploy_ray_func(call_queue, oid_obj):
-
+def deploy_ray_func(call_queue, oid_obj):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
             return ray.get(obj)
@@ -132,29 +140,16 @@ def deploy_ray_func(call_queue, oid_obj):
     func, kwargs = call_queue[-1]
     func = deserialize(func)
     kwargs = deserialize(kwargs)
-    result = func(oid_obj, **kwargs)
-    return oid_obj if len(call_queue) > 1 else None, result, len(result) if hasattr(result, "__len__") else 0, len(result.columns) if hasattr(result, "columns") else 0
-
-
-@ray.remote(num_return_vals=3)
-def _deploy_ray_func(func, partition, kwargs):  # pragma: no cover
-    """Deploy a function to a partition in Ray.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
-
-    Args:
-        func: The function to apply.
-        partition: The partition to apply the function to.
-        kwargs: A dictionary of keyword arguments for the function.
-
-    Returns:
-        The result of the function.
-    """
     try:
-        result = func(partition, **kwargs)
+        result = func(oid_obj, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate
     # on it. We don't want the error to propagate to the user, and we want to
     # avoid copying unless we absolutely have to.
     except ValueError:
-        result = func(partition.copy(), **kwargs)
-    return result, len(result) if hasattr(result, "__len__") else 0, len(result.columns) if hasattr(result, "columns") else 0
+        result = func(oid_obj.copy(), **kwargs)
+    return (
+        oid_obj if len(call_queue) > 1 else None,
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+    )

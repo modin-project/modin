@@ -55,7 +55,11 @@ class BaseFrameManager(object):
     _filtered_empties = False
 
     def _get_partitions(self):
-        if not self._filtered_empties and self._lengths_cache is not None and self._widths_cache is not None:
+        if (
+            not self._filtered_empties
+            and self._lengths_cache is not None
+            and self._widths_cache is not None
+        ):
             self._partitions_cache = np.array(
                 [
                     row

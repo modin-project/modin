@@ -1934,19 +1934,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
+        if self._is_transposed:
+            return (
+                self.transpose()
+                .getitem_row_array(self.columns.get_indexer_for(key))
+                .transpose()
+            )
         # Convert to list for type checking
-        numeric_indices = list(self.columns.get_indexer_for(key))
-
-        # Internal indices is left blank and the internal
-        # `apply_func_to_select_indices` will do the conversion and pass it in.
-        def getitem(df, internal_indices=[]):
-            return df.iloc[:, internal_indices]
-
-        prepared_func = self._prepare_method(getitem)
+        numeric_indices = self.columns.get_indexer_for(key)
         result = self.data.mask(col_indices=numeric_indices)
-        # result = self.data.apply_func_to_select_indices(
-        #     0, prepared_func, numeric_indices, keep_remaining=False
-        # )
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
         new_columns = self.columns[numeric_indices]
@@ -1965,14 +1961,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-
-        def getitem(df, internal_indices=[]):
-            return df.iloc[internal_indices]
-
-        prepared_func = self._prepare_method(getitem)
-        # result = self.data.apply_func_to_select_indices(
-        #     1, prepared_func, key, keep_remaining=False
-        # )
+        if self._is_transposed:
+            return self.transpose().getitem_column_array(key).transpose()
         result = self.data.mask(row_indices=key)
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
