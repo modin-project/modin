@@ -2033,35 +2033,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
             return self.transpose().drop(index=columns, columns=index).transpose()
         if index is None:
-            new_data = self.data
             new_index = self.index
+            idx_numeric_indices = None
         else:
-
-            def delitem(df, internal_indices=[]):
-                return df.drop(index=df.index[internal_indices])
-
-            numeric_indices = list(self.index.get_indexer_for(index))
-            new_data = self.data.apply_func_to_select_indices(
-                1, delitem, numeric_indices, keep_remaining=True
-            )
-            # We can't use self.index.drop with duplicate keys because in Pandas
-            # it throws an error.
+            idx_numeric_indices = pandas.RangeIndex(len(self.index)).drop(self.index.get_indexer_for(index))
             new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
-            new_dtypes = self.dtypes
+            new_dtypes = self._dtype_cache
+            col_numeric_indices = None
         else:
-
-            def delitem(df, internal_indices=[]):
-                return df.drop(columns=df.columns[internal_indices])
-
-            numeric_indices = list(self.columns.get_indexer_for(columns))
-            new_data = new_data.apply_func_to_select_indices(
-                0, delitem, numeric_indices, keep_remaining=True
-            )
-
+            col_numeric_indices = pandas.RangeIndex(len(self.columns)).drop(self.columns.get_indexer_for(columns))
             new_columns = self.columns[~self.columns.isin(columns)]
-            new_dtypes = self.dtypes.drop(columns)
+            if self._dtype_cache is not None:
+                new_dtypes = self.dtypes.drop(columns)
+            else:
+                new_dtypes = None
+        new_data = self.data.mask(row_indices=idx_numeric_indices, col_indices=col_numeric_indices)
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
     # END Drop

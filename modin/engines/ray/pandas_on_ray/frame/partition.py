@@ -136,15 +136,18 @@ def deploy_ray_func(call_queue, oid_obj):  # pragma: no cover
         for func, kwargs in call_queue[:-1]:
             func = deserialize(func)
             kwargs = deserialize(kwargs)
-            oid_obj = func(oid_obj, **kwargs)
+            try:
+                oid_obj = func(oid_obj, **kwargs)
+            except ValueError:
+                oid_obj = func(oid_obj.copy(), **kwargs)
     func, kwargs = call_queue[-1]
     func = deserialize(func)
     kwargs = deserialize(kwargs)
     try:
         result = func(oid_obj, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate
-    # on it. We don't want the error to propagate to the user, and we want to
-    # avoid copying unless we absolutely have to.
+    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+    # don't want the error to propagate to the user, and we want to avoid copying unless
+    # we absolutely have to.
     except ValueError:
         result = func(oid_obj.copy(), **kwargs)
     return (
