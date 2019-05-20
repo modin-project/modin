@@ -12,11 +12,11 @@ from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id, length=None, width=None):
+    def __init__(self, object_id, length=None, width=None, call_queue=[]):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
-        self.call_queue = []
+        self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
 
@@ -27,7 +27,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             The object from the plasma store.
         """
         if len(self.call_queue):
-            return self.apply(lambda x: x).get()
+            self.drain_call_queue()
         try:
             return ray.get(self.oid)
         except RayTaskError as e:
@@ -57,7 +57,19 @@ class PandasOnRayFramePartition(BaseFramePartition):
         )
 
     def add_to_apply_calls(self, func, **kwargs):
-        self.call_queue.append((func, kwargs))
+        return PandasOnRayFramePartition(self.oid, call_queue=self.call_queue + [(func, kwargs)])
+
+    def drain_call_queue(self):
+        if len(self.call_queue) == 0:
+            return
+        oid = self.oid
+        call_queue = self.call_queue
+        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid)
+        self.call_queue = []
+        if self._length_cache is None:
+            self._length_cache = PandasOnRayFramePartition(length)
+        if self._width_cache is None:
+            self._width_cache = PandasOnRayFramePartition(width)
 
     def __copy__(self):
         return PandasOnRayFramePartition(
@@ -75,17 +87,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return dataframe
 
     def mask(self, row_indices, col_indices):
-        new_obj = PandasOnRayFramePartition(
-            self.oid, len(row_indices), len(col_indices)
-        )
-        if len(self.call_queue) > 0:
-            [
-                new_obj.add_to_apply_calls(call, **kwargs)
-                for call, kwargs in self.call_queue
-            ]
-        new_obj.add_to_apply_calls(
+        new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
+        new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
         return new_obj
 
     @classmethod

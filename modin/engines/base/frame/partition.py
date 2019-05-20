@@ -49,6 +49,9 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def drain_call_queue(self):
+        """Execute all functionality stored in the call queue."""
+
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
 
