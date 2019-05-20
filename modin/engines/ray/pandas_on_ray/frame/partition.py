@@ -126,7 +126,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
 
 @ray.remote(num_return_vals=4)
-def deploy_ray_func(call_queue, oid_obj):  # pragma: no cover
+def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
             return ray.get(obj)
@@ -137,21 +137,21 @@ def deploy_ray_func(call_queue, oid_obj):  # pragma: no cover
             func = deserialize(func)
             kwargs = deserialize(kwargs)
             try:
-                oid_obj = func(oid_obj, **kwargs)
+                partition = func(partition, **kwargs)
             except ValueError:
-                oid_obj = func(oid_obj.copy(), **kwargs)
+                partition = func(partition.copy(), **kwargs)
     func, kwargs = call_queue[-1]
     func = deserialize(func)
     kwargs = deserialize(kwargs)
     try:
-        result = func(oid_obj, **kwargs)
+        result = func(partition, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
     # don't want the error to propagate to the user, and we want to avoid copying unless
     # we absolutely have to.
     except ValueError:
-        result = func(oid_obj.copy(), **kwargs)
+        result = func(partition.copy(), **kwargs)
     return (
-        oid_obj if len(call_queue) > 1 else None,
+        partition if len(call_queue) > 1 else None,
         result,
         len(result) if hasattr(result, "__len__") else 0,
         len(result.columns) if hasattr(result, "columns") else 0,

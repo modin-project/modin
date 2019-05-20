@@ -2522,16 +2522,9 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         Returns:
             A BaseFrameManager object.
         """
-
-        def iloc(partition, row_internal_indices, col_internal_indices):
-            return partition.iloc[row_internal_indices, col_internal_indices]
-
-        masked_data = self.parent_data.apply_func_to_indices_both_axis(
-            func=iloc,
+        masked_data = self.parent_data.mask(
             row_indices=self.index_map.values,
             col_indices=self.columns_map.values,
-            lazy=False,
-            keep_remaining=False,
         )
         return masked_data
 

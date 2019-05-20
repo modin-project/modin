@@ -956,7 +956,6 @@ class BaseFrameManager(object):
             col_partitions_list = [
                 (i, range(self.block_widths[i])) for i in range(len(self.block_widths))
             ]
-
         return self.__constructor__(
             np.array(
                 [
@@ -965,9 +964,9 @@ class BaseFrameManager(object):
                             row_internal_indices, col_internal_indices
                         )
                         for col_idx, col_internal_indices in col_partitions_list
-                    ]
+                    if len(col_internal_indices) > 0]
                     for row_idx, row_internal_indices in row_partitions_list
-                ]
+                if len(row_internal_indices) > 0]
             )
         )
 
