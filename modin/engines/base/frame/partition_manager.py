@@ -681,7 +681,8 @@ class BaseFrameManager(object):
                         ],
                     ),
                 )
-                for i in range(1, len(cumulative))
+                for i in range(1, len(count_for_each_partition))
+                if count_for_each_partition[i] > count_for_each_partition[i - 1]
             ]
             return (
                 dict(partition_ids_with_indices)
