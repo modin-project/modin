@@ -64,11 +64,14 @@ class BaseFramePartition(object):  # pragma: no cover
         raise NotImplementedError("Must be implemented in child class")
 
     def mask(self, row_indices, col_indices):
-        """
+        """Lazily create a mask that extracts the indices provided.
 
-        :param row_indices:
-        :param col_indices:
-        :return:
+        Args:
+            row_indices: The indices for the rows to extract.
+            col_indices: The indices for the columns to extract.
+
+        Returns:
+            A `BaseFramePartition` object.
         """
         raise NotImplementedError("Must be implemented in child class")
 
@@ -80,7 +83,7 @@ class BaseFramePartition(object):  # pragma: no cover
             obj: An object.
 
         Returns:
-            A `RemotePartitions` object.
+            A `BaseFramePartition` object.
         """
         raise NotImplementedError("Must be implemented in child class")
 
