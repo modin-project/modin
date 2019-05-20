@@ -2030,26 +2030,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
+        if index is None and columns is None:
+            return self.copy()
         if self._is_transposed:
             return self.transpose().drop(index=columns, columns=index).transpose()
         if index is None:
             new_index = self.index
             idx_numeric_indices = None
         else:
-            idx_numeric_indices = pandas.RangeIndex(len(self.index)).drop(self.index.get_indexer_for(index))
+            idx_numeric_indices = pandas.RangeIndex(len(self.index)).drop(
+                self.index.get_indexer_for(index)
+            )
             new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
             new_dtypes = self._dtype_cache
             col_numeric_indices = None
         else:
-            col_numeric_indices = pandas.RangeIndex(len(self.columns)).drop(self.columns.get_indexer_for(columns))
+            col_numeric_indices = pandas.RangeIndex(len(self.columns)).drop(
+                self.columns.get_indexer_for(columns)
+            )
             new_columns = self.columns[~self.columns.isin(columns)]
             if self._dtype_cache is not None:
                 new_dtypes = self.dtypes.drop(columns)
             else:
                 new_dtypes = None
-        new_data = self.data.mask(row_indices=idx_numeric_indices, col_indices=col_numeric_indices)
+        new_data = self.data.mask(
+            row_indices=idx_numeric_indices, col_indices=col_numeric_indices
+        )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
     # END Drop
@@ -2523,8 +2531,7 @@ class PandasQueryCompilerView(PandasQueryCompiler):
             A BaseFrameManager object.
         """
         masked_data = self.parent_data.mask(
-            row_indices=self.index_map.values,
-            col_indices=self.columns_map.values,
+            row_indices=self.index_map.values, col_indices=self.columns_map.values
         )
         return masked_data
 

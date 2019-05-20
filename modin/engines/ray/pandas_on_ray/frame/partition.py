@@ -57,7 +57,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
         )
 
     def add_to_apply_calls(self, func, **kwargs):
-        return PandasOnRayFramePartition(self.oid, call_queue=self.call_queue + [(func, kwargs)])
+        return PandasOnRayFramePartition(
+            self.oid, call_queue=self.call_queue + [(func, kwargs)]
+        )
 
     def drain_call_queue(self):
         if len(self.call_queue) == 0:

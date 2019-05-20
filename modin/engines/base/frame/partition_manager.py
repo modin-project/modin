@@ -964,9 +964,11 @@ class BaseFrameManager(object):
                             row_internal_indices, col_internal_indices
                         )
                         for col_idx, col_internal_indices in col_partitions_list
-                    if len(col_internal_indices) > 0]
+                        if len(col_internal_indices) > 0
+                    ]
                     for row_idx, row_internal_indices in row_partitions_list
-                if len(row_internal_indices) > 0]
+                    if len(row_internal_indices) > 0
+                ]
             )
         )
 

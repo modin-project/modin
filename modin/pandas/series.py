@@ -161,7 +161,11 @@ class Series(BasePandasDataset):
             # each item individually.
             key = key._to_pandas()
         if is_bool_indexer(key):
-            return self.__constructor__(query_compiler=self._query_compiler.getitem_row_array(pandas.RangeIndex(len(self.index))[key]))
+            return self.__constructor__(
+                query_compiler=self._query_compiler.getitem_row_array(
+                    pandas.RangeIndex(len(self.index))[key]
+                )
+            )
         else:
             if not is_list_like(key):
                 reduce_dimension = True
@@ -172,7 +176,11 @@ class Series(BasePandasDataset):
             # if the object is not hashable. When that happens, we just use the `iloc`.
             try:
                 if all(k in self.keys() for k in key):
-                    result = self._query_compiler.getitem_row_array(self.index.get_indexer_for(key))
+                    result = self._query_compiler.getitem_row_array(
+                        self.index.get_indexer_for(key)
+                    )
+                else:
+                    result = self._query_compiler.getitem_row_array(key)
             except TypeError:
                 result = self._query_compiler.getitem_row_array(key)
         if reduce_dimension:
