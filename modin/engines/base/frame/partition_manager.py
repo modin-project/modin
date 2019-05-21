@@ -647,11 +647,11 @@ class BaseFrameManager(object):
             # INT_MAX to make sure we don't try to compute on partitions that don't
             # exist.
             cumulative = np.array(
-                self.block_widths[:-1] + [np.iinfo(np.int32).max]
+                np.append(self.block_widths[:-1], np.iinfo(np.int32).max)
             ).cumsum()
         else:
             cumulative = np.array(
-                self.block_lengths[:-1] + [np.iinfo(np.int32).max]
+                np.append(self.block_lengths[:-1], np.iinfo(np.int32).max)
             ).cumsum()
 
         def internal(block_idx, global_index):
