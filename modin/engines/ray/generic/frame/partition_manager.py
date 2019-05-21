@@ -48,7 +48,7 @@ class RayFrameManager(BaseFrameManager):
                             obj.length()
                             if isinstance(obj.length(), int)
                             else ray.get(obj.length().oid)
-                            for obj in self._partitions_cache[0]
+                            for obj in self._partitions_cache.T[0]
                         ]
                     )
             else:
