@@ -58,9 +58,11 @@ class DataFrame(BasePandasDataset):
             query_compiler: A query compiler object to manage distributed computation.
         """
         if isinstance(data, (DataFrame, Series)):
-            self._query_compiler = data._query_compiler.copy()
+            self._query_compiler = data._query_compiler
             if isinstance(data, Series) and data.name is None:
                 self.columns = [0]
+            else:
+                data._add_sibling(self)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             if is_list_like(data) and not is_dict_like(data):

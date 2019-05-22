@@ -631,6 +631,13 @@ class TestDFPartOne:
         assert new_modin_df is not modin_df
         df_equals(new_modin_df, modin_df)
 
+        # Shallow copy tests
+        modin_df = pd.DataFrame(data)
+        modin_df_cp = modin_df.copy(False)
+
+        modin_df[modin_df.columns[0]] = 0
+        df_equals(modin_df, modin_df_cp)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dtypes(self, data):
         modin_df = pd.DataFrame(data)
