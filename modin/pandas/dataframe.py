@@ -65,6 +65,9 @@ class DataFrame(BasePandasDataset):
                 data._add_sibling(self)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
+            warnings.warn(
+                "Distributing {} object. This may take some time.".format(type(data))
+            )
             if is_list_like(data) and not is_dict_like(data):
                 data = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
@@ -76,9 +79,6 @@ class DataFrame(BasePandasDataset):
                     k: v._to_pandas() if isinstance(v, Series) else v
                     for k, v in data.items()
                 }
-            warnings.warn(
-                "Distributing {} object. This may take some time.".format(type(data))
-            )
             pandas_df = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )

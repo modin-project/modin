@@ -31,6 +31,8 @@ class BasePandasDataset(object):
         behavior of those objects and then use those objects to define the output type.
     """
 
+    # Siblings are other objects that share the same query compiler. We use this list
+    # to update inplace when there is a shallow copy.
     _siblings = []
 
     def _add_sibling(self, sibling):
