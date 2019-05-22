@@ -378,7 +378,9 @@ class Series(BasePandasDataset):
         # type.
         try:
             return_type = type(
-                getattr(pandas.Series(), apply_func)(func, *args, **kwds)
+                getattr(pandas.Series([""], index=self.index[:1]), apply_func)(
+                    func, *args, **kwds
+                )
             ).__name__
         except Exception:
             return_type = self.__name__
