@@ -376,11 +376,16 @@ class Series(BasePandasDataset):
         # a list or a dictionary, which means that the return type won't change from
         # type(self), so we catch that error and use `self.__name__` for the return
         # type.
-        return_type = type(
-            getattr(getattr(pandas, self.__name__)(index=self.index), apply_func)(
-                func, *args, **kwds
-            )
-        ).__name__
+        # Because a `Series` cannot be empty in pandas, we create a "dummy" `Series` to
+        # do the error checking and determining the return type.
+        try:
+            return_type = type(
+                getattr(pandas.Series([""], index=self.index[:1]), apply_func)(
+                    func, *args, **kwds
+                )
+            ).__name__
+        except Exception:
+            return_type = self.__name__
         if (
             isinstance(func, string_types)
             or is_list_like(func)

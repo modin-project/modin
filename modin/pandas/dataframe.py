@@ -300,7 +300,7 @@ class DataFrame(BasePandasDataset):
                     result_type=result_type,
                 )
             ).__name__
-        except ValueError:
+        except Exception:
             return_type = self.__name__
         if return_type not in ["DataFrame", "Series"]:
             return query_compiler.to_pandas().squeeze()

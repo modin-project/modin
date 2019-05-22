@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pytest
 import numpy as np
+import json
 import pandas
 import matplotlib
 import modin.pandas as pd
@@ -480,7 +481,7 @@ def test_agg(data, func):
         pandas_result = pandas_series.agg(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.agg(func)
+            repr(modin_series.agg(func))
     else:
         modin_result = modin_series.agg(func)
         df_equals(modin_result, pandas_result)
@@ -513,7 +514,7 @@ def test_aggregate(request, data, func):
         pandas_result = pandas_series.aggregate(func, axis)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.aggregate(func, axis)
+            repr(modin_series.aggregate(func, axis))
     else:
         modin_result = modin_series.aggregate(func, axis)
         df_equals(modin_result, pandas_result)
@@ -650,10 +651,30 @@ def test_apply(request, data, func):
         pandas_result = pandas_series.apply(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.apply(func)
+            repr(modin_series.apply(func))
     else:
         modin_result = modin_series.apply(func)
         df_equals(modin_result, pandas_result)
+
+
+def test_apply_external_lib():
+    json_string = """
+    {
+        "researcher": {
+            "name": "Ford Prefect",
+            "species": "Betelgeusian",
+            "relatives": [
+                {
+                    "name": "Zaphod Beeblebrox",
+                    "species": "Betelgeusian"
+                }
+            ]
+        }
+    }
+    """
+    modin_result = pd.DataFrame.from_dict({"a": [json_string]}).a.apply(json.loads)
+    pandas_result = pandas.DataFrame.from_dict({"a": [json_string]}).a.apply(json.loads)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -666,7 +687,7 @@ def test_apply_numeric(request, data, func):
             pandas_result = pandas_series.apply(func)
         except Exception as e:
             with pytest.raises(type(e)):
-                modin_series.apply(func)
+                repr(modin_series.apply(func))
         else:
             modin_result = modin_series.apply(func)
             df_equals(modin_result, pandas_result)
@@ -2471,7 +2492,7 @@ def test_transform(data, func):
         pandas_result = pandas_series.transform(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.transform(func)
+            repr(modin_series.transform(func))
     else:
         df_equals(modin_series.transform(func), pandas_result)
 
