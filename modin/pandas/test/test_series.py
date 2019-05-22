@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pytest
 import numpy as np
+import json
 import pandas
 import matplotlib
 import modin.pandas as pd
@@ -654,6 +655,26 @@ def test_apply(request, data, func):
     else:
         modin_result = modin_series.apply(func)
         df_equals(modin_result, pandas_result)
+
+
+def test_apply_external_lib():
+    json_string = """
+    {
+        "researcher": {
+            "name": "Ford Prefect",
+            "species": "Betelgeusian",
+            "relatives": [
+                {
+                    "name": "Zaphod Beeblebrox",
+                    "species": "Betelgeusian"
+                }
+            ]
+        }
+    }
+    """
+    modin_result = pd.DataFrame.from_dict({"a": [json_string]}).a.apply(json.loads)
+    pandas_result = pandas.DataFrame.from_dict({"a": [json_string]}).a.apply(json.loads)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
