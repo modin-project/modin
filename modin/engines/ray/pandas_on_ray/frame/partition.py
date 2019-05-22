@@ -12,11 +12,13 @@ from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id):
+    def __init__(self, object_id, length=None, width=None, call_queue=[]):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
-        self.call_queue = []
+        self.call_queue = call_queue
+        self._length_cache = length
+        self._width_cache = width
 
     def get(self):
         """Gets the object out of the plasma store.
@@ -25,7 +27,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             The object from the plasma store.
         """
         if len(self.call_queue):
-            return self.apply(lambda x: x).get()
+            self.drain_call_queue()
         try:
             return ray.get(self.oid)
         except RayTaskError as e:
@@ -45,33 +47,36 @@ class PandasOnRayFramePartition(BaseFramePartition):
             A RayRemotePartition object.
         """
         oid = self.oid
-        self.call_queue.append((func, kwargs))
-
-        def call_queue_closure(oid_obj, call_queues):
-
-            for func, kwargs in call_queues:
-                if isinstance(func, ray.ObjectID):
-                    func = ray.get(func)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-
-                oid_obj = func(oid_obj, **kwargs)
-
-            return oid_obj
-
-        oid = deploy_ray_func.remote(
-            call_queue_closure, oid, kwargs={"call_queues": self.call_queue}
+        call_queue = self.call_queue + [(func, kwargs)]
+        new_obj, result, length, width = deploy_ray_func.remote(call_queue, oid)
+        if len(self.call_queue) > 0:
+            self.oid = new_obj
+            self.call_queue = []
+        return PandasOnRayFramePartition(
+            result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width)
         )
-        self.call_queue = []
-
-        return PandasOnRayFramePartition(oid)
 
     def add_to_apply_calls(self, func, **kwargs):
-        self.call_queue.append((func, kwargs))
-        return self
+        return PandasOnRayFramePartition(
+            self.oid, call_queue=self.call_queue + [(func, kwargs)]
+        )
+
+    def drain_call_queue(self):
+        if len(self.call_queue) == 0:
+            return
+        oid = self.oid
+        call_queue = self.call_queue
+        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid)
+        self.call_queue = []
+        if self._length_cache is None:
+            self._length_cache = PandasOnRayFramePartition(length)
+        if self._width_cache is None:
+            self._width_cache = PandasOnRayFramePartition(width)
 
     def __copy__(self):
-        return PandasOnRayFramePartition(object_id=self.oid)
+        return PandasOnRayFramePartition(
+            self.oid, self._length_cache, self._width_cache
+        )
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -83,6 +88,13 @@ class PandasOnRayFramePartition(BaseFramePartition):
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
 
+    def mask(self, row_indices, col_indices):
+        new_obj = self.add_to_apply_calls(
+            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+        )
+        new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
+        return new_obj
+
     @classmethod
     def put(cls, obj):
         """Put an object in the Plasma store and wrap it in this object.
@@ -93,7 +105,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PandasOnRayFramePartition(ray.put(obj))
+        return PandasOnRayFramePartition(ray.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -120,24 +132,34 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote
-def deploy_ray_func(func, partition, kwargs):  # pragma: no cover
-    """Deploy a function to a partition in Ray.
+@ray.remote(num_return_vals=4)
+def deploy_ray_func(call_queue, partition):  # pragma: no cover
+    def deserialize(obj):
+        if isinstance(obj, ray.ObjectID):
+            return ray.get(obj)
+        return obj
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
-
-    Args:
-        func: The function to apply.
-        partition: The partition to apply the function to.
-        kwargs: A dictionary of keyword arguments for the function.
-
-    Returns:
-        The result of the function.
-    """
+    if len(call_queue) > 1:
+        for func, kwargs in call_queue[:-1]:
+            func = deserialize(func)
+            kwargs = deserialize(kwargs)
+            try:
+                partition = func(partition, **kwargs)
+            except ValueError:
+                partition = func(partition.copy(), **kwargs)
+    func, kwargs = call_queue[-1]
+    func = deserialize(func)
+    kwargs = deserialize(kwargs)
     try:
-        return func(partition, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate
-    # on it. We don't want the error to propagate to the user, and we want to
-    # avoid copying unless we absolutely have to.
+        result = func(partition, **kwargs)
+    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+    # don't want the error to propagate to the user, and we want to avoid copying unless
+    # we absolutely have to.
     except ValueError:
-        return func(partition.copy(), **kwargs)
+        result = func(partition.copy(), **kwargs)
+    return (
+        partition if len(call_queue) > 1 else None,
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+    )

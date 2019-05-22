@@ -1934,22 +1934,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
+        if self._is_transposed:
+            return (
+                self.transpose()
+                .getitem_row_array(self.columns.get_indexer_for(key))
+                .transpose()
+            )
         # Convert to list for type checking
-        numeric_indices = list(self.columns.get_indexer_for(key))
-
-        # Internal indices is left blank and the internal
-        # `apply_func_to_select_indices` will do the conversion and pass it in.
-        def getitem(df, internal_indices=[]):
-            return df.iloc[:, internal_indices]
-
-        prepared_func = self._prepare_method(getitem)
-        result = self.data.apply_func_to_select_indices(
-            0, prepared_func, numeric_indices, keep_remaining=False
-        )
+        numeric_indices = self.columns.get_indexer_for(key)
+        result = self.data.mask(col_indices=numeric_indices)
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
         new_columns = self.columns[numeric_indices]
-        new_dtypes = self.dtypes[numeric_indices]
+        if self._dtype_cache is not None:
+            new_dtypes = self.dtypes[numeric_indices]
+        else:
+            new_dtypes = None
         return self.__constructor__(result, self.index, new_columns, new_dtypes)
 
     def getitem_row_array(self, key):
@@ -1961,16 +1961,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        # Convert to list for type checking
-        key = list(key)
-
-        def getitem(df, internal_indices=[]):
-            return df.iloc[internal_indices]
-
-        prepared_func = self._prepare_method(getitem)
-        result = self.data.apply_func_to_select_indices(
-            1, prepared_func, key, keep_remaining=False
-        )
+        if self._is_transposed:
+            return self.transpose().getitem_column_array(key).transpose()
+        result = self.data.mask(row_indices=key)
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
         new_index = self.index[key]
@@ -2037,38 +2030,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
+        if index is None and columns is None:
+            return self.copy()
         if self._is_transposed:
             return self.transpose().drop(index=columns, columns=index).transpose()
         if index is None:
-            new_data = self.data
             new_index = self.index
+            idx_numeric_indices = None
         else:
-
-            def delitem(df, internal_indices=[]):
-                return df.drop(index=df.index[internal_indices])
-
-            numeric_indices = list(self.index.get_indexer_for(index))
-            new_data = self.data.apply_func_to_select_indices(
-                1, delitem, numeric_indices, keep_remaining=True
+            idx_numeric_indices = pandas.RangeIndex(len(self.index)).drop(
+                self.index.get_indexer_for(index)
             )
-            # We can't use self.index.drop with duplicate keys because in Pandas
-            # it throws an error.
             new_index = self.index[~self.index.isin(index)]
         if columns is None:
             new_columns = self.columns
-            new_dtypes = self.dtypes
+            new_dtypes = self._dtype_cache
+            col_numeric_indices = None
         else:
-
-            def delitem(df, internal_indices=[]):
-                return df.drop(columns=df.columns[internal_indices])
-
-            numeric_indices = list(self.columns.get_indexer_for(columns))
-            new_data = new_data.apply_func_to_select_indices(
-                0, delitem, numeric_indices, keep_remaining=True
+            col_numeric_indices = pandas.RangeIndex(len(self.columns)).drop(
+                self.columns.get_indexer_for(columns)
             )
-
             new_columns = self.columns[~self.columns.isin(columns)]
-            new_dtypes = self.dtypes.drop(columns)
+            if self._dtype_cache is not None:
+                new_dtypes = self.dtypes.drop(columns)
+            else:
+                new_dtypes = None
+        new_data = self.data.mask(
+            row_indices=idx_numeric_indices, col_indices=col_numeric_indices
+        )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
     # END Drop
@@ -2541,16 +2530,8 @@ class PandasQueryCompilerView(PandasQueryCompiler):
         Returns:
             A BaseFrameManager object.
         """
-
-        def iloc(partition, row_internal_indices, col_internal_indices):
-            return partition.iloc[row_internal_indices, col_internal_indices]
-
-        masked_data = self.parent_data.apply_func_to_indices_both_axis(
-            func=iloc,
-            row_indices=self.index_map.values,
-            col_indices=self.columns_map.values,
-            lazy=False,
-            keep_remaining=False,
+        masked_data = self.parent_data.mask(
+            row_indices=self.index_map.values, col_indices=self.columns_map.values
         )
         return masked_data
 

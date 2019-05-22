@@ -49,6 +49,9 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def drain_call_queue(self):
+        """Execute all functionality stored in the call queue."""
+
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
 
@@ -60,6 +63,18 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def mask(self, row_indices, col_indices):
+        """Lazily create a mask that extracts the indices provided.
+
+        Args:
+            row_indices: The indices for the rows to extract.
+            col_indices: The indices for the columns to extract.
+
+        Returns:
+            A `BaseFramePartition` object.
+        """
+        raise NotImplementedError("Must be implemented in child class")
+
     @classmethod
     def put(cls, obj):
         """A factory classmethod to format a given object.
@@ -68,7 +83,7 @@ class BaseFramePartition(object):  # pragma: no cover
             obj: An object.
 
         Returns:
-            A `RemotePartitions` object.
+            A `BaseFramePartition` object.
         """
         raise NotImplementedError("Must be implemented in child class")
 
@@ -115,7 +130,6 @@ class BaseFramePartition(object):  # pragma: no cover
             cls = type(self)
             func = cls.length_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
-
             self._length_cache = self.apply(preprocessed_func)
         return self._length_cache
 
@@ -124,7 +138,6 @@ class BaseFramePartition(object):  # pragma: no cover
             cls = type(self)
             func = cls.width_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
-
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
 

@@ -354,7 +354,7 @@ class TestDFPartOne:
             pandas_result = getattr(pandas_df, op)("a")
         except TypeError:
             with pytest.raises(TypeError):
-                getattr(modin_df, op)("a")
+                repr(getattr(modin_df, op)("a"))
         else:
             modin_result = getattr(modin_df, op)("a")
             df_equals(modin_result, pandas_result)
