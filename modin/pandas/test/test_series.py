@@ -687,7 +687,7 @@ def test_apply_numeric(request, data, func):
             pandas_result = pandas_series.apply(func)
         except Exception as e:
             with pytest.raises(type(e)):
-                modin_series.apply(func)
+                repr(modin_series.apply(func))
         else:
             modin_result = modin_series.apply(func)
             df_equals(modin_result, pandas_result)
@@ -2492,7 +2492,7 @@ def test_transform(data, func):
         pandas_result = pandas_series.transform(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.transform(func)
+            repr(modin_series.transform(func))
     else:
         df_equals(modin_series.transform(func), pandas_result)
 
