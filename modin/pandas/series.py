@@ -855,7 +855,7 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            result = DataFrame(self).rename(index=index, **kwargs).squeeze()
+            result = DataFrame(self.copy()).rename(index=index, **kwargs).squeeze()
             result.name = self.name
             return result
 
