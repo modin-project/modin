@@ -2,7 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from itertools import groupby
 import numpy as np
+from operator import itemgetter
 import pandas
 
 from modin.error_message import ErrorMessage
@@ -53,7 +55,11 @@ class BaseFrameManager(object):
     _filtered_empties = False
 
     def _get_partitions(self):
-        if not self._filtered_empties:
+        if (
+            not self._filtered_empties
+            and self._lengths_cache is not None
+            and self._widths_cache is not None
+        ):
             self._partitions_cache = np.array(
                 [
                     row
@@ -633,39 +639,70 @@ class BaseFrameManager(object):
             For unordered: a dictionary of {block index: list of local indices}.
             For ordered: a list of tuples mapping block index: list of local indices.
         """
-        # Get the internal index and create a dictionary so we only have to
-        # travel to each partition once.
-        all_partitions_and_idx = [
-            self._get_blocks_containing_index(axis, i) for i in indices
-        ]
+        if not ordered:
+            indices = np.sort(indices)
+        else:
+            indices = np.array(indices)
+        if not axis:
+            # INT_MAX to make sure we don't try to compute on partitions that don't
+            # exist.
+            cumulative = np.array(
+                np.append(self.block_widths[:-1], np.iinfo(np.int32).max)
+            ).cumsum()
+        else:
+            cumulative = np.array(
+                np.append(self.block_lengths[:-1], np.iinfo(np.int32).max)
+            ).cumsum()
 
+        def internal(block_idx, global_index):
+            return (
+                global_index
+                if not block_idx
+                else np.subtract(
+                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
+                )
+            )
+
+        partition_ids = np.digitize(indices, cumulative)
+        # If the output order doesn't matter or if the indices are monotonically
+        # increasing, the computation is significantly simpler and faster than doing
+        # the zip and groupby.
+        if not ordered or np.all(np.diff(indices) > 0):
+            count_for_each_partition = np.array(
+                [(partition_ids == i).sum() for i in range(len(cumulative))]
+            ).cumsum()
+            # compute the internal indices and pair those with the partition index.
+            partition_ids_with_indices = [
+                (0, internal(0, indices[slice(count_for_each_partition[0])]))
+            ] + [
+                (
+                    i,
+                    internal(
+                        i,
+                        indices[
+                            slice(
+                                count_for_each_partition[i - 1],
+                                count_for_each_partition[i],
+                            )
+                        ],
+                    ),
+                )
+                for i in range(1, len(count_for_each_partition))
+                if count_for_each_partition[i] > count_for_each_partition[i - 1]
+            ]
+            return (
+                dict(partition_ids_with_indices)
+                if not ordered
+                else partition_ids_with_indices
+            )
+
+        all_partitions_and_idx = zip(partition_ids, indices)
         # In ordered, we have to maintain the order of the list of indices provided.
         # This means that we need to return a list instead of a dictionary.
-        if ordered:
-            # In ordered, the partitions dict is a list of tuples
-            partitions_dict = []
-            # This variable is used to store the most recent partition that we added to
-            # the partitions_dict. This allows us to only visit a partition once when we
-            # have multiple values that will be operated on in that partition.
-            last_part = -1
-            for part_idx, internal_idx in all_partitions_and_idx:
-                if part_idx == last_part:
-                    # We append to the list, which is the value part of the tuple.
-                    partitions_dict[-1][-1].append(internal_idx)
-                else:
-                    # This is where we add new values.
-                    partitions_dict.append((part_idx, [internal_idx]))
-                last_part = part_idx
-        else:
-            # For unordered, we can just return a dictionary mapping partition to the
-            # list of indices being operated on.
-            partitions_dict = {}
-            for part_idx, internal_idx in all_partitions_and_idx:
-                if part_idx not in partitions_dict:
-                    partitions_dict[part_idx] = [internal_idx]
-                else:
-                    partitions_dict[part_idx].append(internal_idx)
-        return partitions_dict
+        return [
+            (k, internal(k, [x for _, x in v]))
+            for k, v in groupby(all_partitions_and_idx, itemgetter(0))
+        ]
 
     def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
         """Applies a function to a list of remote partitions.
@@ -902,6 +939,44 @@ class BaseFrameManager(object):
                 )
         return (
             self.__constructor__(result.T) if not axis else self.__constructor__(result)
+        )
+
+    def mask(self, row_indices=None, col_indices=None):
+        ErrorMessage.catch_bugs_and_request_email(
+            row_indices is None and col_indices is None
+        )
+        if row_indices is not None:
+            row_partitions_list = self._get_dict_of_block_index(
+                1, row_indices, ordered=True
+            )
+        else:
+            row_partitions_list = [
+                (i, range(self.block_lengths[i]))
+                for i in range(len(self.block_lengths))
+            ]
+
+        if col_indices is not None:
+            col_partitions_list = self._get_dict_of_block_index(
+                0, col_indices, ordered=True
+            )
+        else:
+            col_partitions_list = [
+                (i, range(self.block_widths[i])) for i in range(len(self.block_widths))
+            ]
+        return self.__constructor__(
+            np.array(
+                [
+                    [
+                        self.partitions[row_idx][col_idx].mask(
+                            row_internal_indices, col_internal_indices
+                        )
+                        for col_idx, col_internal_indices in col_partitions_list
+                        if len(col_internal_indices) > 0
+                    ]
+                    for row_idx, row_internal_indices in row_partitions_list
+                    if len(row_internal_indices) > 0
+                ]
+            )
         )
 
     def apply_func_to_indices_both_axis(

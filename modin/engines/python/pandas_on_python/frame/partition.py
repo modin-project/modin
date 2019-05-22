@@ -16,9 +16,11 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         subclasses. There is no logic for updating inplace.
     """
 
-    def __init__(self, data):
+    def __init__(self, data, length=None, width=None, call_queue=[]):
         self.data = data
-        self.call_queue = []
+        self.call_queue = call_queue
+        self._length_cache = length
+        self._width_cache = width
 
     def get(self):
         """Flushes the call_queue and returns the data.
@@ -28,10 +30,8 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         Returns:
             The object that was `put`.
         """
-        if self.call_queue:
-            return self.apply(lambda df: df).data
-        else:
-            return self.data.copy()
+        self.drain_call_queue()
+        return self.data.copy()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -47,7 +47,6 @@ class PandasOnPythonFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-        self.call_queue.append((func, kwargs))
 
         def call_queue_closure(data, call_queues):
             result = data.copy()
@@ -59,18 +58,26 @@ class PandasOnPythonFramePartition(BaseFramePartition):
                     raise e
             return result
 
-        new_data = call_queue_closure(self.data, self.call_queue)
+        self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(new_data)
+        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
 
     def add_to_apply_calls(self, func, **kwargs):
-        """Add the function to the apply function call stack.
+        return PandasOnPythonFramePartition(
+            self.data.copy(), call_queue=self.call_queue + [(func, kwargs)]
+        )
 
-        This function will be executed when apply is called. It will be executed
-        in the order inserted; apply's func operates the last and return
-        """
-        self.call_queue.append((func, kwargs))
-        return self
+    def drain_call_queue(self):
+        if len(self.call_queue) == 0:
+            return
+        self.apply(lambda x: x)
+
+    def mask(self, row_indices=None, col_indices=None):
+        new_obj = self.add_to_apply_calls(
+            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+        )
+        new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
+        return new_obj
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.

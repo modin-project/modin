@@ -640,6 +640,28 @@ def test_parse_dates_read_csv():
     modin_df_equals_pandas(modin_df, pandas_df)
 
 
+def test_from_csv_with_args():
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
+    modin_df = pd.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
+    )
+    modin_df_equals_pandas(modin_df, pandas_df)
+
+
 def test_from_table(make_csv_file):
     make_csv_file(delimiter="\t")
 

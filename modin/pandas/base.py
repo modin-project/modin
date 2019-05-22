@@ -12,6 +12,7 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
 )
+from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg
 import re
 import warnings
@@ -3151,8 +3152,39 @@ class BasePandasDataset(object):
     def __getitem__(self, key):
         if len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
+        # see if we can slice the rows
+        # This lets us reuse code in Pandas to error check
+        indexer = convert_to_index_sliceable(
+            getattr(pandas, self.__name__)(index=self.index), key
+        )
+        if indexer is not None:
+            return self._getitem_slice(indexer)
         else:
             return self._getitem(key)
+
+    def _getitem_slice(self, key):
+        # If there is no step, we can fasttrack the codepath to use existing logic from
+        # head and tail, which is already pretty fast.
+        if key.step is None:
+            if key.start is None and key.stop is None:
+                return self.copy()
+
+            def compute_offset(value):
+                return value - len(self) if value >= 0 else value
+
+            # Head is a negative number, Tail is a positive number
+            if key.start is None:
+                return self.head(compute_offset(key.stop))
+            elif key.stop is None:
+                return self.tail(-compute_offset(key.start))
+            return self.head(compute_offset(key.stop)).tail(-compute_offset(key.start))
+        # We convert to a RangeIndex because getitem_row_array is expecting a list
+        # of indices, and RangeIndex will give us the exact indices of each boolean
+        # requested.
+        key = pandas.RangeIndex(len(self.index))[key]
+        return self.__constructor__(
+            query_compiler=self._query_compiler.getitem_row_array(key)
+        )
 
     def __getstate__(self):
         return self._default_to_pandas("__getstate__")
