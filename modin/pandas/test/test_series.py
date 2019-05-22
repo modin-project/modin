@@ -514,7 +514,7 @@ def test_aggregate(request, data, func):
         pandas_result = pandas_series.aggregate(func, axis)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.aggregate(func, axis)
+            repr(modin_series.aggregate(func, axis))
     else:
         modin_result = modin_series.aggregate(func, axis)
         df_equals(modin_result, pandas_result)
