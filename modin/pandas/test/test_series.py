@@ -481,7 +481,7 @@ def test_agg(data, func):
         pandas_result = pandas_series.agg(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.agg(func)
+            repr(modin_series.agg(func))
     else:
         modin_result = modin_series.agg(func)
         df_equals(modin_result, pandas_result)
@@ -651,7 +651,7 @@ def test_apply(request, data, func):
         pandas_result = pandas_series.apply(func)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.apply(func)
+            repr(modin_series.apply(func))
     else:
         modin_result = modin_series.apply(func)
         df_equals(modin_result, pandas_result)
