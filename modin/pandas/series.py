@@ -321,7 +321,7 @@ class Series(BasePandasDataset):
                     if isinstance(to_append[i], Series):
                         to_append[i].name = 0
                         to_append[i] = DataFrame(to_append[i])
-                return DataFrame(self).append(
+                return DataFrame(self.copy()).append(
                     to_append,
                     ignore_index=ignore_index,
                     verify_integrity=verify_integrity,
@@ -332,7 +332,7 @@ class Series(BasePandasDataset):
             to_append = [to_append._query_compiler]
         elif isinstance(to_append, DataFrame):
             self.name = 0
-            return DataFrame(self).append(
+            return DataFrame(self.copy()).append(
                 to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
             )
         else:
@@ -860,7 +860,7 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            result = DataFrame(self).rename(index=index, **kwargs).squeeze()
+            result = DataFrame(self.copy()).rename(index=index, **kwargs).squeeze()
             result.name = self.name
             return result
 
@@ -891,7 +891,9 @@ class Series(BasePandasDataset):
                 obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(self).reset_index(level=level, drop=drop, inplace=inplace)
+            return DataFrame(self.copy()).reset_index(
+                level=level, drop=drop, inplace=inplace
+            )
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
@@ -952,7 +954,7 @@ class Series(BasePandasDataset):
         # is None, so we do this to avoid a KeyError.
         by = self.name if self.name is not None else 0
         result = (
-            DataFrame(self)
+            DataFrame(self.copy())
             .sort_values(
                 by=by,
                 ascending=ascending,
@@ -1023,7 +1025,7 @@ class Series(BasePandasDataset):
         self_cp = self.copy()
         if name is not None:
             self_cp.name = name
-        return DataFrame(self)
+        return DataFrame(self.copy())
 
     def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list)

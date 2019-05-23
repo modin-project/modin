@@ -31,6 +31,16 @@ class BasePandasDataset(object):
         behavior of those objects and then use those objects to define the output type.
     """
 
+    # Siblings are other objects that share the same query compiler. We use this list
+    # to update inplace when there is a shallow copy.
+    _siblings = []
+
+    def _add_sibling(self, sibling):
+        sibling._siblings = self._siblings + [self]
+        self._siblings += [sibling]
+        for sib in self._siblings:
+            sib._siblings += [sibling]
+
     def _build_repr_df(self, num_rows, num_cols):
         # Add one here so that pandas automatically adds the dots
         # It turns out to be faster to extract 2 extra rows and columns than to
@@ -80,6 +90,8 @@ class BasePandasDataset(object):
         """
         old_query_compiler = self._query_compiler
         self._query_compiler = new_query_compiler
+        for sib in self._siblings:
+            sib._query_compiler = new_query_compiler
         old_query_compiler.free()
 
     def _validate_other(
@@ -652,7 +664,11 @@ class BasePandasDataset(object):
         Returns:
             A new DataFrame pointing to the same partitions as this one.
         """
-        return self.__constructor__(query_compiler=self._query_compiler.copy())
+        if deep:
+            return self.__constructor__(query_compiler=self._query_compiler.copy())
+        new_obj = self.__constructor__(query_compiler=self._query_compiler)
+        self._add_sibling(new_obj)
+        return new_obj
 
     def count(self, axis=0, level=None, numeric_only=False):
         """Get the count of non-null objects in the DataFrame.
