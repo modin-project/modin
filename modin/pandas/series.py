@@ -886,7 +886,9 @@ class Series(BasePandasDataset):
                 obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(self.copy()).reset_index(level=level, drop=drop, inplace=inplace)
+            return DataFrame(self.copy()).reset_index(
+                level=level, drop=drop, inplace=inplace
+            )
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
