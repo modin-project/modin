@@ -378,7 +378,7 @@ def test_from_parquet(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet_with_columns(make_parquet_file):
@@ -386,7 +386,7 @@ def test_from_parquet_with_columns(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet_partition(make_parquet_file):
@@ -394,7 +394,7 @@ def test_from_parquet_partition(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet_partition_with_columns(make_parquet_file):
@@ -402,7 +402,7 @@ def test_from_parquet_partition_with_columns(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet_partitioned_columns(make_parquet_file):
@@ -410,7 +410,7 @@ def test_from_parquet_partitioned_columns(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
@@ -418,7 +418,7 @@ def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_json():

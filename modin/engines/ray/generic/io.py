@@ -147,17 +147,33 @@ class RayIO(BaseIO):
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
-        directory = False
+        if os.path.isdir(path):
+            directory = True
+            partitioned_columns = list(set(column_value.split("=")[0] for (_, dir_names, _) in os.walk(path) for column_value in dir_names))
+        else:
+            directory = False
+
         if not columns:
             if os.path.isdir(path):
                 pd = ParquetDataset(path)
-                partitioned_columns = list(set(column_value.split("=")[0] for (_, dir_names, _) in os.walk(path) for column_value in dir_names))
                 column_names = pd.schema.names
-                directory = True
             else:
                 pf = ParquetFile(path)
                 column_names = pf.metadata.schema.names
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
+
+        # Cannot read in parquet file by only reading in the partitioned column.
+        # Thus, we have to remove the partition columns from the columns to
+        # ensure that when we do the math for the blocks, the partition column
+        # will be read in along with a non partition column.
+        if columns and directory and any(col in partitioned_columns for col in columns):
+            partitioned_columns = [col for col in columns if col in partitioned_columns]
+            columns = [col for col in columns if col not in partitioned_columns]
+            # If all of the columns wanted are partition columns, return an
+            # empty dataframe with the desired columns.
+            if len(columns) == 0:
+                return cls.query_compiler_cls.from_pandas(pandas.DataFrame(columns=partitioned_columns), block_partitions_cls=cls.frame_mgr_cls)
+
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
