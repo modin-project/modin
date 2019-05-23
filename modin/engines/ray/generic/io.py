@@ -149,11 +149,14 @@ class RayIO(BaseIO):
 
         if not columns:
             if os.path.isdir(path):
-                pf = ParquetDataset(path)
-                column_names = pf.schema.names
+                pd = ParquetDataset(path)
+                partitioned_columns = list(set(column_value.split("=")[0] for (_, dir_names, _) in os.walk(path) for column_value in dir_names))
+                column_names = pd.schema.names
+                directory = True
             else:
                 pf = ParquetFile(path)
                 column_names = pf.metadata.schema.names
+                directory = False
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
@@ -173,6 +176,10 @@ class RayIO(BaseIO):
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
+                    args=(path, cols+partitioned_columns, num_splits, kwargs),
+                    num_return_vals=num_splits + 1,
+                ) if directory and cols == col_partitions[len(col_partitions)-1]
+                else cls.read_parquet_remote_task._remote(
                     args=(path, cols, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
                 )
@@ -187,6 +194,8 @@ class RayIO(BaseIO):
         )
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
+        if directory:
+            columns += partitioned_columns
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_mgr_cls(remote_partitions), index, columns
         )
