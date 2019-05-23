@@ -147,6 +147,7 @@ class RayIO(BaseIO):
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
+        directory = False
         if not columns:
             if os.path.isdir(path):
                 pd = ParquetDataset(path)
@@ -156,7 +157,6 @@ class RayIO(BaseIO):
             else:
                 pf = ParquetFile(path)
                 column_names = pf.metadata.schema.names
-                directory = False
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)

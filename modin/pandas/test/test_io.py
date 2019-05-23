@@ -62,7 +62,16 @@ def make_parquet_file():
         Function that generates a parquet file/dir
     """
 
-    def _make_parquet_file(row_size=SMALL_ROW_SIZE, force=False, directory=False):
+    def _make_parquet_file(row_size=SMALL_ROW_SIZE, force=False, directory=False, partitioned_columns=[]):
+        """Helper function to generate parquet files/directories.
+
+        Args:
+            row_size: Number of rows for the dataframe.
+            force: Create a new file/directory even if one already exists.
+            directory: Create a partitioned directory using pyarrow.
+            partitioned_columns: Create a partitioned directory using pandas.
+            Will be ignored if directory=True.
+        """
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
@@ -75,6 +84,8 @@ def make_parquet_file():
                 os.mkdir(TEST_PARQUET_FILENAME)
             table = pa.Table.from_pandas(df)
             pa.parquet.write_to_dataset(table, root_path=TEST_PARQUET_FILENAME)
+        elif len(partitioned_columns) > 0:
+            df.to_parquet(TEST_PARQUET_FILENAME, partition_cols=partitioned_columns)
         else:
             df.to_parquet(TEST_PARQUET_FILENAME)
 
@@ -388,6 +399,22 @@ def test_from_parquet_partition(make_parquet_file):
 
 def test_from_parquet_partition_with_columns(make_parquet_file):
     make_parquet_file(SMALL_ROW_SIZE, directory=True)
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_parquet_partitioned_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
+def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
