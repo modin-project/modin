@@ -154,11 +154,7 @@ class RayIO(BaseIO):
             else:
                 pf = ParquetFile(path)
                 column_names = pf.metadata.schema.names
-            columns = [
-                name
-                for name in column_names
-                if not PQ_INDEX_REGEX.match(name)
-            ]
+            columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df

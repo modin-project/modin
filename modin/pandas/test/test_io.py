@@ -53,6 +53,7 @@ def modin_df_equals_pandas(modin_df, pandas_df):
             return df2.astype(df1.dtypes).equals(df1)
     return df1.equals(df2)
 
+
 @pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
@@ -61,11 +62,7 @@ def make_parquet_file():
         Function that generates a parquet file/dir
     """
 
-    def _make_parquet_file(
-        row_size=SMALL_ROW_SIZE,
-        force=False,
-        directory=False,
-    ):
+    def _make_parquet_file(row_size=SMALL_ROW_SIZE, force=False, directory=False):
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
