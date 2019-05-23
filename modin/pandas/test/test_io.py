@@ -28,7 +28,6 @@ pd.DEFAULT_NPARTITIONS = 4
 
 PY2 = sys.version_info[0] == 2
 TEST_PARQUET_FILENAME = "test.parquet"
-TEST_PARQUET_DIRNAME = "test_parquet"
 TEST_CSV_FILENAME = "test.csv"
 TEST_JSON_FILENAME = "test.json"
 TEST_HTML_FILENAME = "test.html"
@@ -56,41 +55,39 @@ def modin_df_equals_pandas(modin_df, pandas_df):
 
 @pytest.fixture
 def make_parquet_file():
-    """Pytest fixture factory that makes temp parquet files for testing.
+    """Pytest fixture factory that makes a parquet file/dir for testing.
 
     Yields:
-        Function that generates a parquet file
+        Function that generates a parquet file/dir
     """
-    path = ""
 
     def _make_parquet_file(
         row_size=SMALL_ROW_SIZE,
         force=False,
         directory=False,
     ):
-        path = TEST_PARQUET_FILENAME if not directory else TEST_PARQUET_DIRNAME
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
-        if os.path.exists(path) and not force:
+        if os.path.exists(TEST_PARQUET_FILENAME) and not force:
             pass
         elif directory:
-            if os.path.exists(path):
-                shutil.rmtree(path)
+            if os.path.exists(TEST_PARQUET_FILENAME):
+                shutil.rmtree(TEST_PARQUET_FILENAME)
             else:
-                os.mkdir(path)
+                os.mkdir(TEST_PARQUET_FILENAME)
             table = pa.Table.from_pandas(df)
-            pa.parquet.write_to_dataset(table, root_path=path)
+            pa.parquet.write_to_dataset(table, root_path=TEST_PARQUET_FILENAME)
         else:
-            df.to_parquet(path)
+            df.to_parquet(TEST_PARQUET_FILENAME)
 
     # Return function that generates csv files
     yield _make_parquet_file
 
     # Delete parquet file that was created
-    if os.path.exists(path):
-        if os.path.isdir(path):
-            shutil.rmtree(path)
+    if os.path.exists(TEST_PARQUET_FILENAME):
+        if os.path.isdir(TEST_PARQUET_FILENAME):
+            shutil.rmtree(TEST_PARQUET_FILENAME)
         else:
             os.remove(TEST_PARQUET_FILENAME)
 
