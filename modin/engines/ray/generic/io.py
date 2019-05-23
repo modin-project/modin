@@ -142,16 +142,21 @@ class RayIO(BaseIO):
             https://arrow.apache.org/docs/python/parquet.html
         """
 
-        from pyarrow.parquet import ParquetFile
+        from pyarrow.parquet import ParquetFile, ParquetDataset
 
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
         if not columns:
-            pf = ParquetFile(path)
+            if os.path.isdir(path):
+                pf = ParquetDataset(path)
+                column_names = pf.schema.names
+            else:
+                pf = ParquetFile(path)
+                column_names = pf.metadata.schema.names
             columns = [
                 name
-                for name in pf.metadata.schema.names
+                for name in column_names
                 if not PQ_INDEX_REGEX.match(name)
             ]
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
