@@ -62,7 +62,9 @@ def make_parquet_file():
         Function that generates a parquet file/dir
     """
 
-    def _make_parquet_file(row_size=SMALL_ROW_SIZE, force=False, directory=False, partitioned_columns=[]):
+    def _make_parquet_file(
+        row_size=SMALL_ROW_SIZE, force=False, directory=False, partitioned_columns=[]
+    ):
         """Helper function to generate parquet files/directories.
 
         Args:

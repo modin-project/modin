@@ -149,7 +149,13 @@ class RayIO(BaseIO):
 
         if os.path.isdir(path):
             directory = True
-            partitioned_columns = list(set(column_value.split("=")[0] for (_, dir_names, _) in os.walk(path) for column_value in dir_names))
+            partitioned_columns = list(
+                set(
+                    column_value.split("=")[0]
+                    for (_, dir_names, _) in os.walk(path)
+                    for column_value in dir_names
+                )
+            )
         else:
             directory = False
 
@@ -172,7 +178,10 @@ class RayIO(BaseIO):
             # If all of the columns wanted are partition columns, return an
             # empty dataframe with the desired columns.
             if len(columns) == 0:
-                return cls.query_compiler_cls.from_pandas(pandas.DataFrame(columns=partitioned_columns), block_partitions_cls=cls.frame_mgr_cls)
+                return cls.query_compiler_cls.from_pandas(
+                    pandas.DataFrame(columns=partitioned_columns),
+                    block_partitions_cls=cls.frame_mgr_cls,
+                )
 
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
@@ -192,9 +201,10 @@ class RayIO(BaseIO):
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
-                    args=(path, cols+partitioned_columns, num_splits, kwargs),
+                    args=(path, cols + partitioned_columns, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
-                ) if directory and cols == col_partitions[len(col_partitions)-1]
+                )
+                if directory and cols == col_partitions[len(col_partitions) - 1]
                 else cls.read_parquet_remote_task._remote(
                     args=(path, cols, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
