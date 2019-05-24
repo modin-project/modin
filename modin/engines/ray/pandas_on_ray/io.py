@@ -51,9 +51,7 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
     """
     import pyarrow.parquet as pq
 
-    df = pq.ParquetDataset(path, **kwargs) \
-           .read(columns=columns) \
-           .to_pandas()
+    df = pq.ParquetDataset(path, **kwargs).read(columns=columns).to_pandas()
 
     # Append the length of the index here to build it externally
     return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
