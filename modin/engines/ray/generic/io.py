@@ -150,7 +150,7 @@ class RayIO(BaseIO):
         if os.path.isdir(path):
             directory = True
             partitioned_columns = list(
-                set(
+                set(  # noqa: C401
                     column_value.split("=")[0]
                     for (_, dir_names, _) in os.walk(path)
                     for column_value in dir_names
