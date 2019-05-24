@@ -198,6 +198,8 @@ class RayIO(BaseIO):
         # Each item in this list will be a list of columns of original df
         # partitioned to smaller pieces along rows.
         # We need to transpose the oids array to fit our schema.
+        # TODO (williamma12): This part can be parallelized even more if we
+        # separate the partitioned parquet file code path from the default one.
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
