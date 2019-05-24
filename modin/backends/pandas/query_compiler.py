@@ -1930,6 +1930,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Args:
             key: Target labels by which to retrieve data.
+            numeric: A boolean representing whether or not the key passed in represents
+                the numeric index or the named index.
 
         Returns:
             A new QueryCompiler.
