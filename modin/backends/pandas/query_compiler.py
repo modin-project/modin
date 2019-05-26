@@ -1925,11 +1925,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # End Head/Tail/Front/Back
 
     # __getitem__ methods
-    def getitem_column_array(self, key):
+    def getitem_column_array(self, key, numeric=False):
         """Get column data for target labels.
 
         Args:
             key: Target labels by which to retrieve data.
+            numeric: A boolean representing whether or not the key passed in represents
+                the numeric index or the named index.
 
         Returns:
             A new QueryCompiler.
@@ -1941,7 +1943,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 .transpose()
             )
         # Convert to list for type checking
-        numeric_indices = self.columns.get_indexer_for(key)
+        if not numeric:
+            numeric_indices = self.columns.get_indexer_for(key)
+        else:
+            numeric_indices = key
         result = self.data.mask(col_indices=numeric_indices)
         # We can't just set the columns to key here because there may be
         # multiple instances of a key.
@@ -1962,7 +1967,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler.
         """
         if self._is_transposed:
-            return self.transpose().getitem_column_array(key).transpose()
+            return self.transpose().getitem_column_array(key, numeric=True).transpose()
         result = self.data.mask(row_indices=key)
         # We can't just set the index to key here because there may be multiple
         # instances of a key.

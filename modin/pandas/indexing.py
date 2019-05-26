@@ -227,6 +227,19 @@ class _LocIndexer(_LocationIndexerBase):
     """A indexer for ray_df.loc[] functionality"""
 
     def __getitem__(self, key):
+        # When getting along a single axis,
+        if not isinstance(key, tuple):
+            # Try to fasttrack the code through already optimized path
+            try:
+                return self.df.__getitem__(key)
+            # This can happen if it is a list of rows
+            except KeyError:
+                pass
+        else:
+            if len(key) > self.df.ndim:
+                raise IndexingError("Too many indexers")
+            if key[0] == slice(None):
+                return self.df.__getitem__(key[1])
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
