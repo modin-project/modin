@@ -150,6 +150,10 @@ class RayIO(BaseIO):
         if os.path.isdir(path):
             directory = True
             partitioned_columns = set()
+            # We do a tree walk of the path directory because partitioned
+            # parquet directories have a unique column at each directory level.
+            # Thus, we can use os.walk(), which does a dfs search, to walk
+            # through the different columns that the data is partitioned on 
             for (root, dir_names, files) in os.walk(path):
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
