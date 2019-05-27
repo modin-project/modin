@@ -589,7 +589,11 @@ class RayIO(BaseIO):
 
         columns = kwargs.get("columns", None)
         if not columns:
-            empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
+            start = kwargs.pop("start", None)
+            stop = kwargs.pop("stop", None)
+            empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0, **kwargs)
+            kwargs["start"] = start
+            kwargs["stop"] = stop
             columns = empty_pd_df.columns
 
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
