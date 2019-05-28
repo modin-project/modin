@@ -142,18 +142,54 @@ class RayIO(BaseIO):
             https://arrow.apache.org/docs/python/parquet.html
         """
 
-        from pyarrow.parquet import ParquetFile
+        from pyarrow.parquet import ParquetFile, ParquetDataset
 
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
+        if os.path.isdir(path):
+            directory = True
+            partitioned_columns = set()
+            # We do a tree walk of the path directory because partitioned
+            # parquet directories have a unique column at each directory level.
+            # Thus, we can use os.walk(), which does a dfs search, to walk
+            # through the different columns that the data is partitioned on
+            for (root, dir_names, files) in os.walk(path):
+                if dir_names:
+                    partitioned_columns.add(dir_names[0].split("=")[0])
+                if files:
+                    file_path = os.path.join(root, files[0])
+                    break
+            partitioned_columns = list(partitioned_columns)
+        else:
+            directory = False
+
         if not columns:
-            pf = ParquetFile(path)
-            columns = [
-                name
-                for name in pf.metadata.schema.names
-                if not PQ_INDEX_REGEX.match(name)
-            ]
+            if directory:
+                # Path of the sample file that we will read to get the remaining
+                # columns.
+                pd = ParquetDataset(file_path)
+                column_names = pd.schema.names
+            else:
+                pf = ParquetFile(path)
+                column_names = pf.metadata.schema.names
+            columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
+
+        # Cannot read in parquet file by only reading in the partitioned column.
+        # Thus, we have to remove the partition columns from the columns to
+        # ensure that when we do the math for the blocks, the partition column
+        # will be read in along with a non partition column.
+        if columns and directory and any(col in partitioned_columns for col in columns):
+            # partitioned_columns = [col for col in columns if col in partitioned_columns]
+            columns = [col for col in columns if col not in partitioned_columns]
+            # If all of the columns wanted are partition columns, return an
+            # empty dataframe with the desired columns.
+            if len(columns) == 0:
+                return cls.query_compiler_cls.from_pandas(
+                    pandas.DataFrame(columns=partitioned_columns),
+                    block_partitions_cls=cls.frame_mgr_cls,
+                )
+
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
@@ -169,9 +205,16 @@ class RayIO(BaseIO):
         # Each item in this list will be a list of columns of original df
         # partitioned to smaller pieces along rows.
         # We need to transpose the oids array to fit our schema.
+        # TODO (williamma12): This part can be parallelized even more if we
+        # separate the partitioned parquet file code path from the default one.
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
+                    args=(path, cols + partitioned_columns, num_splits, kwargs),
+                    num_return_vals=num_splits + 1,
+                )
+                if directory and cols == col_partitions[len(col_partitions) - 1]
+                else cls.read_parquet_remote_task._remote(
                     args=(path, cols, num_splits, kwargs),
                     num_return_vals=num_splits + 1,
                 )
@@ -186,6 +229,8 @@ class RayIO(BaseIO):
         )
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
+        if directory:
+            columns += partitioned_columns
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_mgr_cls(remote_partitions), index, columns
         )

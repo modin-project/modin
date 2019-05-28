@@ -10,6 +10,7 @@ from modin.pandas.utils import to_pandas
 from pathlib import Path
 import pyarrow as pa
 import os
+import shutil
 import sys
 
 from .utils import df_equals
@@ -53,13 +54,52 @@ def modin_df_equals_pandas(modin_df, pandas_df):
     return df1.equals(df2)
 
 
-def setup_parquet_file(row_size, force=False):
-    if os.path.exists(TEST_PARQUET_FILENAME) and not force:
-        pass
-    else:
-        pandas.DataFrame(
+@pytest.fixture
+def make_parquet_file():
+    """Pytest fixture factory that makes a parquet file/dir for testing.
+
+    Yields:
+        Function that generates a parquet file/dir
+    """
+
+    def _make_parquet_file(
+        row_size=SMALL_ROW_SIZE, force=False, directory=False, partitioned_columns=[]
+    ):
+        """Helper function to generate parquet files/directories.
+
+        Args:
+            row_size: Number of rows for the dataframe.
+            force: Create a new file/directory even if one already exists.
+            directory: Create a partitioned directory using pyarrow.
+            partitioned_columns: Create a partitioned directory using pandas.
+            Will be ignored if directory=True.
+        """
+        df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        ).to_parquet(TEST_PARQUET_FILENAME)
+        )
+        if os.path.exists(TEST_PARQUET_FILENAME) and not force:
+            pass
+        elif directory:
+            if os.path.exists(TEST_PARQUET_FILENAME):
+                shutil.rmtree(TEST_PARQUET_FILENAME)
+            else:
+                os.mkdir(TEST_PARQUET_FILENAME)
+            table = pa.Table.from_pandas(df)
+            pa.parquet.write_to_dataset(table, root_path=TEST_PARQUET_FILENAME)
+        elif len(partitioned_columns) > 0:
+            df.to_parquet(TEST_PARQUET_FILENAME, partition_cols=partitioned_columns)
+        else:
+            df.to_parquet(TEST_PARQUET_FILENAME)
+
+    # Return function that generates csv files
+    yield _make_parquet_file
+
+    # Delete parquet file that was created
+    if os.path.exists(TEST_PARQUET_FILENAME):
+        if os.path.isdir(TEST_PARQUET_FILENAME):
+            shutil.rmtree(TEST_PARQUET_FILENAME)
+        else:
+            os.remove(TEST_PARQUET_FILENAME)
 
 
 def create_test_ray_dataframe():
@@ -335,24 +375,52 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
-def test_from_parquet():
-    setup_parquet_file(SMALL_ROW_SIZE)
+def test_from_parquet(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    teardown_parquet_file()
+    df_equals(modin_df, pandas_df)
 
 
-def test_from_parquet_with_columns():
-    setup_parquet_file(SMALL_ROW_SIZE)
+def test_from_parquet_with_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
-    teardown_parquet_file()
+
+def test_from_parquet_partition(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, directory=True)
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_parquet_partition_with_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, directory=True)
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_parquet_partitioned_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
+    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
+
+    pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_json():
