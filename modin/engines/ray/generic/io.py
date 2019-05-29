@@ -149,26 +149,19 @@ class RayIO(BaseIO):
 
         if os.path.isdir(path):
             directory = True
-            partitioned_columns = set()
-            # We do a tree walk of the path directory because partitioned
-            # parquet directories have a unique column at each directory level.
-            # Thus, we can use os.walk(), which does a dfs search, to walk
-            # through the different columns that the data is partitioned on
-            for (root, dir_names, files) in os.walk(path):
-                if dir_names:
-                    partitioned_columns.add(dir_names[0].split("=")[0])
-                if files:
-                    file_path = os.path.join(root, files[0])
-                    break
-            partitioned_columns = list(partitioned_columns)
+            partitioned_columns = list(
+                set(  # noqa: C401
+                    column_value.split("=")[0]
+                    for (_, dir_names, _) in os.walk(path)
+                    for column_value in dir_names
+                )
+            )
         else:
             directory = False
 
         if not columns:
-            if directory:
-                # Path of the sample file that we will read to get the remaining
-                # columns.
-                pd = ParquetDataset(file_path)
+            if os.path.isdir(path):
+                pd = ParquetDataset(path)
                 column_names = pd.schema.names
             else:
                 pf = ParquetFile(path)
@@ -180,7 +173,7 @@ class RayIO(BaseIO):
         # ensure that when we do the math for the blocks, the partition column
         # will be read in along with a non partition column.
         if columns and directory and any(col in partitioned_columns for col in columns):
-            # partitioned_columns = [col for col in columns if col in partitioned_columns]
+            partitioned_columns = [col for col in columns if col in partitioned_columns]
             columns = [col for col in columns if col not in partitioned_columns]
             # If all of the columns wanted are partition columns, return an
             # empty dataframe with the desired columns.
@@ -634,11 +627,7 @@ class RayIO(BaseIO):
 
         columns = kwargs.get("columns", None)
         if not columns:
-            start = kwargs.pop("start", None)
-            stop = kwargs.pop("stop", None)
-            empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0, **kwargs)
-            kwargs["start"] = start
-            kwargs["stop"] = stop
+            empty_pd_df = pandas.read_hdf(path_or_buf, start=0, stop=0)
             columns = empty_pd_df.columns
 
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
