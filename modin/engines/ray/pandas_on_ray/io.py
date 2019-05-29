@@ -50,9 +50,9 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
             default Index.
     """
     import pyarrow.parquet as pq
+
     kwargs["use_pandas_metadata"] = True
     df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
-
     # Append the length of the index here to build it externally
     return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 

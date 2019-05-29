@@ -7,7 +7,33 @@ from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
 
+@ray.remote
+def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
+    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
+    Args:
+        path: The path of the Parquet file.
+        columns: The list of column names to read.
+        num_splits: The number of partitions to split the column into.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element. If there is not `index_col` set, then we just return the length.
+            This is used to determine the total length of the DataFrame to build a
+            default Index.
+    """
+    import pyarrow.parquet as pq
+
+    df = pq.ParquetDataset(path, **kwargs).read(columns=columns, use_pandas_metadata=True).to_pandas()
+    # Append the length of the index here to build it externally
+    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
+
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
+
+    read_parquet_remote_task = _read_parquet_columns
+
     @classmethod
     def read_sql(
         cls,
