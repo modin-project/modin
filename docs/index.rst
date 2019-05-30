@@ -94,6 +94,7 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    using_modin.rst
    out_of_core.rst
    pandas_supported.rst
+   dataframe_supported.rst
 
 .. toctree::
    :maxdepth: 1
