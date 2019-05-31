@@ -159,7 +159,11 @@ class RayIO(BaseIO):
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
+                    # Metadata files, git files, .DSStore
+                    if files[0][0] == ".":
+                        continue
                     file_path = os.path.join(root, files[0])
+                    break
             partitioned_columns = list(partitioned_columns)
         else:
             directory = False
