@@ -169,7 +169,12 @@ class RayIO(BaseIO):
             if directory:
                 # Path of the sample file that we will read to get the remaining
                 # columns.
-                pd = ParquetDataset(file_path)
+                from pyarrow import ArrowIOError
+
+                try:
+                    pd = ParquetDataset(file_path)
+                except ArrowIOError:
+                    pd = ParquetDataset(path)
                 column_names = pd.schema.names
             else:
                 pf = ParquetFile(path)
