@@ -147,6 +147,7 @@ class RayIO(BaseIO):
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
 
+        file_path = path
         if os.path.isdir(path):
             directory = True
             partitioned_columns = set()
@@ -158,6 +159,9 @@ class RayIO(BaseIO):
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
+                    # Metadata files, git files, .DSStore
+                    if files[0][0] == ".":
+                        continue
                     file_path = os.path.join(root, files[0])
                     break
             partitioned_columns = list(partitioned_columns)
@@ -168,7 +172,12 @@ class RayIO(BaseIO):
             if directory:
                 # Path of the sample file that we will read to get the remaining
                 # columns.
-                pd = ParquetDataset(file_path)
+                from pyarrow import ArrowIOError
+
+                try:
+                    pd = ParquetDataset(file_path)
+                except ArrowIOError:
+                    pd = ParquetDataset(path)
                 column_names = pd.schema.names
             else:
                 pf = ParquetFile(path)
@@ -180,7 +189,6 @@ class RayIO(BaseIO):
         # ensure that when we do the math for the blocks, the partition column
         # will be read in along with a non partition column.
         if columns and directory and any(col in partitioned_columns for col in columns):
-            # partitioned_columns = [col for col in columns if col in partitioned_columns]
             columns = [col for col in columns if col not in partitioned_columns]
             # If all of the columns wanted are partition columns, return an
             # empty dataframe with the desired columns.
