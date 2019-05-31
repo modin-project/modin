@@ -160,7 +160,6 @@ class RayIO(BaseIO):
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     file_path = os.path.join(root, files[0])
-                    break
             partitioned_columns = list(partitioned_columns)
         else:
             directory = False
