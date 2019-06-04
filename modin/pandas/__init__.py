@@ -196,7 +196,7 @@ elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
 # DEFAULT_NPARTITIONS = max(4, int(num_cpus))
-DEFAULT_NPARTITIONS = 8
+DEFAULT_NPARTITIONS = 16
 
 __all__ = [
     "DataFrame",
