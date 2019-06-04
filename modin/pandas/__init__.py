@@ -135,6 +135,7 @@ def initialize_ray():
     if threading.current_thread().name == "MainThread":
         plasma_directory = None
         object_store_memory = os.environ.get("MODIN_MEMORY", None)
+        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
         if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
             from tempfile import gettempdir
 
@@ -162,6 +163,7 @@ def initialize_ray():
             ignore_reinit_error=True,
             plasma_directory=plasma_directory,
             object_store_memory=object_store_memory,
+            redis_address=redis_address,
         )
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
