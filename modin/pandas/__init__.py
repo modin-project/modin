@@ -158,6 +158,7 @@ def initialize_ray():
                 object_store_memory = None
         else:
             object_store_memory = int(object_store_memory)
+        print(redis_address)
         ray.init(
             include_webui=False,
             ignore_reinit_error=True,
