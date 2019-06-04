@@ -147,11 +147,6 @@ def teardown_test_file(test_path):
         os.remove(test_path)
 
 
-def teardown_parquet_file():
-    if os.path.exists(TEST_PARQUET_FILENAME):
-        os.remove(TEST_PARQUET_FILENAME)
-
-
 @pytest.fixture
 def make_csv_file(delimiter=","):
     """Pytest fixture factory that makes temp csv files for testing.
