@@ -154,7 +154,6 @@ def initialize_ray():
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
                 redis_address=redis_address,
-                redis_max_memory=20 * 10 ** 9
             )
         else:
             if object_store_memory is None:
