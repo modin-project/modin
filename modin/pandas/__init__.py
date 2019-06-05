@@ -135,6 +135,7 @@ def initialize_ray():
     if threading.current_thread().name == "MainThread":
         plasma_directory = None
         object_store_memory = os.environ.get("MODIN_MEMORY", None)
+        cluster = os.environ.get("MODIN_CLUSTER", None)
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
         if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
             from tempfile import gettempdir
@@ -148,14 +149,14 @@ def initialize_ray():
                 # Default to 8x memory for out of core
                 object_store_memory = 8 * mem_bytes
         # In case anything failed above, we can still improve the memory for Modin.
-        if redis_address is not None:
+        if cluster == "1" and redis_address is not None:
             ray.init(
                 include_webui=False,
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
                 redis_address=redis_address,
             )
-        else:
+        elif cluster is None:
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
                 object_store_memory = int(
