@@ -740,6 +740,14 @@ def test_from_table(make_csv_file):
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
+def test_from_csv_with_usecols(usecols):
+    fname = "modin/pandas/test/data/test_usecols.csv"
+    pandas_df = pandas.read_csv(fname, usecols=usecols)
+    modin_df = pd.read_csv(fname, usecols=usecols)
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.skipif(
     __execution_engine__.lower() == "python", reason="Using pandas implementation"
 )

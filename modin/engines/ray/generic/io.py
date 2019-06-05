@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import pandas
 from pandas.io.common import _infer_compression
+from pandas.io.parsers import _validate_usecols_arg
 
 import inspect
 import os
@@ -322,6 +323,15 @@ class RayIO(BaseIO):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
+
+        usecols = kwargs.get("usecols", None)
+        usecols_md = _validate_usecols_arg(kwargs.get("usecols", None))
+        if usecols is not None and usecols_md[1] != "integer":
+            del kwargs["usecols"]
+            all_cols = pandas.read_csv(
+                file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+            ).columns
+            usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
             kwargs,
@@ -332,6 +342,7 @@ class RayIO(BaseIO):
             skipfooter=0,
             skiprows=None,
             parse_dates=parse_dates,
+            usecols=usecols,
         )
         with file_open(filepath, "rb") as f:
             # Get the BOM if necessary
