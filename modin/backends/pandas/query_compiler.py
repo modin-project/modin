@@ -869,7 +869,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             reduce_func = map_func
 
         mapped_parts = self.data.map_across_blocks(map_func)
+        print("FINISHED MAPPING")
         full_frame = mapped_parts.map_across_full_axis(axis, reduce_func)
+        print("FINISHED REDUCING")
         if axis == 0:
             columns = self.columns
             return self.__constructor__(
@@ -970,8 +972,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         min_count = kwargs.get("min_count", 0)
 
         def sum_prod_builder(df, **kwargs):
-            import time
-            print(time.ctime())
             return func(df, **kwargs)
 
         builder_func = self._build_mapreduce_func(sum_prod_builder, **kwargs)
