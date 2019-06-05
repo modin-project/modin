@@ -149,32 +149,31 @@ def initialize_ray():
                 # Default to 8x memory for out of core
                 object_store_memory = 8 * mem_bytes
         # In case anything failed above, we can still improve the memory for Modin.
-        print(cluster)
-        if cluster == "1" and redis_address is not None:
-            ray.init(
-                include_webui=False,
-                ignore_reinit_error=True,
-                plasma_directory=plasma_directory,
-                redis_address=redis_address,
-            )
-        elif cluster is None:
-            if object_store_memory is None:
-                # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                )
-                # If the memory pool is smaller than 2GB, just use the default in ray.
-                if object_store_memory == 0:
-                    object_store_memory = None
-            else:
-                object_store_memory = int(object_store_memory)
-            ray.init(
-                include_webui=False,
-                ignore_reinit_error=True,
-                plasma_directory=plasma_directory,
-                object_store_memory=object_store_memory,
-                redis_address=redis_address,
-            )
+        # if cluster == "1" and redis_address is not None:
+        #     ray.init(
+        #         include_webui=False,
+        #         ignore_reinit_error=True,
+        #         plasma_directory=plasma_directory,
+        #         redis_address=redis_address,
+        #     )
+        # elif cluster is None:
+        #     if object_store_memory is None:
+        #         # Round down to the nearest Gigabyte.
+        #         object_store_memory = int(
+        #             0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+        #         )
+        #         # If the memory pool is smaller than 2GB, just use the default in ray.
+        #         if object_store_memory == 0:
+        #             object_store_memory = None
+        #     else:
+        #         object_store_memory = int(object_store_memory)
+        #     ray.init(
+        #         include_webui=False,
+        #         ignore_reinit_error=True,
+        #         plasma_directory=plasma_directory,
+        #         object_store_memory=object_store_memory,
+        #         redis_address=redis_address,
+        #     )
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
         ray.register_custom_serializer(types.MethodType, use_pickle=True)
