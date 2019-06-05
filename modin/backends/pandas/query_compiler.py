@@ -972,10 +972,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def sum_prod_builder(df, **kwargs):
             return func(df, **kwargs)
 
+        builder = self._build_mapreduce_func(sum_prod_builder)
         if min_count <= 1:
-            return self._full_reduce(axis, sum_prod_builder)
+            return self._full_reduce(axis, builder)
         else:
-            return self._full_axis_reduce(axis, sum_prod_builder)
+            return self._full_axis_reduce(axis, builder)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -986,9 +987,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().prod(**kwargs)
-        return self._process_sum_prod(
-            self._build_mapreduce_func(pandas.DataFrame.prod, **kwargs), **kwargs
-        )
+        return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -999,9 +998,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().sum(**kwargs)
-        return self._process_sum_prod(
-            self._build_mapreduce_func(pandas.DataFrame.sum, **kwargs), **kwargs
-        )
+        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
 
     def _process_all_any(self, func, **kwargs):
         """Calculates if any or all the values are true.
