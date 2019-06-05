@@ -970,7 +970,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         min_count = kwargs.get("min_count", 0)
 
         def sum_prod_builder(df, **kwargs):
-            print("GOT HERE")
+            import time
+            print(time.ctime())
             return func(df, **kwargs)
 
         builder_func = self._build_mapreduce_func(sum_prod_builder, **kwargs)
