@@ -135,7 +135,7 @@ def initialize_ray():
     if threading.current_thread().name == "MainThread":
         plasma_directory = None
         object_store_memory = os.environ.get("MODIN_MEMORY", None)
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
+        cluster = os.environ.get("MODIN_RAY_CLUSTER_HEAD", None)
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
         if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
             from tempfile import gettempdir
@@ -148,8 +148,8 @@ def initialize_ray():
                 mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
                 # Default to 8x memory for out of core
                 object_store_memory = 8 * mem_bytes
-        # In case anything failed above, we can still improve the memory for Modin.
         if cluster == "1" and redis_address is not None:
+            # We only start ray in a cluster setting for the head node.
             ray.init(
                 include_webui=False,
                 ignore_reinit_error=True,
@@ -157,6 +157,7 @@ def initialize_ray():
                 redis_address=redis_address,
             )
         elif cluster is None:
+            # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
                 object_store_memory = int(
@@ -180,7 +181,7 @@ def initialize_ray():
 
 
 if execution_engine == "Ray":
-    # initialize_ray()
+    initialize_ray()
     num_cpus = ray.global_state.cluster_resources()["CPU"]
 elif execution_engine == "Dask":  # pragma: no cover
     from distributed.client import _get_global_client
