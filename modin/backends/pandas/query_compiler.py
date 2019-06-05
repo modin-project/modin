@@ -966,18 +966,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with sum or prod of the object.
         """
-        print("PROCESSOR")
         axis = kwargs.get("axis", 0)
         min_count = kwargs.get("min_count", 0)
-        print("GOT KWARGS")
 
         def sum_prod_builder(df, **kwargs):
+            print("GOT HERE")
             return func(df, **kwargs)
 
         builder_func = self._build_mapreduce_func(sum_prod_builder, **kwargs)
-        print("FINISHED BUILDER FUNC")
         if min_count <= 1:
-            print("SENDING TO FULL REDUCE")
             return self._full_reduce(axis, builder_func)
         else:
             return self._full_axis_reduce(axis, builder_func)
@@ -999,7 +996,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the sum of each numerical column or row.
         """
-        print("SUM FUCNTION")
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
             return self.transpose().sum(**kwargs)
