@@ -476,17 +476,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Pandas DataFrame of the DataManager.
         """
-        print("STARTED TO_PANDAS")
         df = self.data.to_pandas(is_transposed=self._is_transposed)
-        print("CONVERTED TO PANDAS")
         if df.empty:
-            print("EMPTY")
             if len(self.columns) != 0:
                 df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            print("NOT EMPTY")
             ErrorMessage.catch_bugs_and_request_email(
                 len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
             )
