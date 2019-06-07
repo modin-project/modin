@@ -12,7 +12,7 @@ max_workers: 5
 # The initial number of worker nodes to launch in addition to the head
 # node. When the cluster is first brought up (or when it is refreshed with a
 # subsequent `ray up`) this number of nodes will be started.
-initial_workers: 3
+initial_workers: 2
 
 # This executes all commands on all nodes in the docker container,
 # and opens all the necessary ports to support the Ray cluster.
@@ -106,7 +106,7 @@ initialization_commands: []
 setup_commands:
     - pip install s3fs
     - pip install git+https://github.com/williamma12/modin.git@cluster
-    - echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
+    - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
@@ -115,6 +115,8 @@ setup_commands:
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands:
     - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
+    - echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
+    - echo 'export MODIN_OUT_OF_CORE="True"' >> ~/.bashrc
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []
@@ -122,9 +124,13 @@ worker_setup_commands: []
 # Command to start ray on the head node. You don't need to change this.
 head_start_ray_commands:
     - ray stop
-    - ulimit -n 65536; ray start --head --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml
+    - echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024}" /proc/meminfo)' >> ~/.bashrc
+    - echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
+    - ulimit -n 65536; ray start --head --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
 
 # Command to start ray on worker nodes. You don't need to change this.
 worker_start_ray_commands:
     - ray stop
-    - ulimit -n 65536; ray start --redis-address=$RAY_HEAD_IP:6379 --object-manager-port=8076
+    - echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024}" /proc/meminfo)' >> ~/.bashrc
+    - echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
+    - ulimit -n 65536; ray start --redis-address=$RAY_HEAD_IP:6379 --object-manager-port=8076 --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
