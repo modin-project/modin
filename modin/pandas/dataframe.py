@@ -352,11 +352,12 @@ class DataFrame(BasePandasDataset):
             by = by(self.index)
         elif isinstance(by, string_types):
             idx_name = by
-            by = self.__getitem__(by).values.tolist()
+            by = self.__getitem__(by)._query_compiler
+            # by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
             if isinstance(by, pandas.Series):
                 idx_name = by.name
-                by = by.values.tolist()
+                # by = by.values.tolist()
 
             mismatch = (
                 len(by) != len(self) if axis == 0 else len(by) != len(self.columns)

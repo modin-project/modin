@@ -2274,6 +2274,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.data.manual_shuffle(axis, func)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
+        import ray
+        from operator import itemgetter
+        from itertools import groupby, chain
+        from modin.engines.ray.pandas_on_ray.frame.partition import (
+            PandasOnRayFramePartition,
+        )
+
+        if isinstance(by, type(self)):
+
+            @ray.remote
+            def func(df, f, other):
+                return f(df.groupby(other.squeeze()))
+
+            p = np.squeeze(by.data.partitions)
+            [obj.drain_call_queue() for obj in p]
+            new_partitions = self.data.__constructor__(
+                np.array(
+                    [
+                        [
+                            PandasOnRayFramePartition(
+                                func.remote(part.oid, agg_func, p[i].oid)
+                            )
+                            for part in self.data.partitions[i]
+                        ]
+                        for i in range(len(self.data.partitions))
+                    ]
+                )
+            )
+            a = new_partitions.map_across_full_axis(
+                0, lambda df: df.groupby(df.index).sum()
+            )
+            return self.__constructor__(a, pandas.RangeIndex(100), self.columns)
         remote_index = self.index if not axis else self.columns
 
         def groupby_agg_builder(df):

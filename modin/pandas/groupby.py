@@ -42,7 +42,8 @@ class DataFrameGroupBy(object):
         self._by = by
         if level is None:
             # This tells us whether or not there are multiple columns/rows in the groupby
-            self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+            # self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+            self._is_multi_by = False
         else:
             self._is_multi_by = False
         self._level = level
