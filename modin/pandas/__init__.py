@@ -134,35 +134,46 @@ def initialize_ray():
     """Initializes ray based on environment variables and internal defaults."""
     if threading.current_thread().name == "MainThread":
         plasma_directory = None
-        object_store_memory = os.environ.get("MODIN_MEMORY", None)
-        if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
-            from tempfile import gettempdir
+        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
+        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
+        if cluster == "True" and redis_address is not None:
+            # We only start ray in a cluster setting for the head node.
+            ray.init(
+                include_webui=False,
+                ignore_reinit_error=True,
+                redis_address=redis_address,
+            )
+        elif cluster is None:
+            object_store_memory = os.environ.get("MODIN_MEMORY", None)
+            if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
+                from tempfile import gettempdir
 
-            plasma_directory = gettempdir()
-            # We may have already set the memory from the environment variable, we don't
-            # want to overwrite that value if we have.
+                plasma_directory = gettempdir()
+                # We may have already set the memory from the environment variable, we don't
+                # want to overwrite that value if we have.
+                if object_store_memory is None:
+                    # Round down to the nearest Gigabyte.
+                    mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+                    # Default to 8x memory for out of core
+                    object_store_memory = 8 * mem_bytes
+            # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
-                mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                # Default to 8x memory for out of core
-                object_store_memory = 8 * mem_bytes
-        # In case anything failed above, we can still improve the memory for Modin.
-        if object_store_memory is None:
-            # Round down to the nearest Gigabyte.
-            object_store_memory = int(
-                0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+                object_store_memory = int(
+                    0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+                )
+                # If the memory pool is smaller than 2GB, just use the default in ray.
+                if object_store_memory == 0:
+                    object_store_memory = None
+            else:
+                object_store_memory = int(object_store_memory)
+            ray.init(
+                include_webui=False,
+                ignore_reinit_error=True,
+                plasma_directory=plasma_directory,
+                object_store_memory=object_store_memory,
+                redis_address=redis_address,
             )
-            # If the memory pool is smaller than 2GB, just use the default in ray.
-            if object_store_memory == 0:
-                object_store_memory = None
-        else:
-            object_store_memory = int(object_store_memory)
-        ray.init(
-            include_webui=False,
-            ignore_reinit_error=True,
-            plasma_directory=plasma_directory,
-            object_store_memory=object_store_memory,
-        )
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
         ray.register_custom_serializer(types.MethodType, use_pickle=True)
