@@ -56,11 +56,17 @@ If you would like to request a particular method be implemented, feel free to `o
 issue`_. Before you open an issue please make sure that someone else has not already
 requested that functionality.
 
-Using Modin on a Cluster
-------------------------
+Using Modin on a Cluster (experimental)
+---------------------------------------
 
-Modin can be run on a cluster, but the setup process is quite complex. We are working on
-a solution to make Modin run on a cluster with a simple setup. More on this coming soon!
+Modin is able to utilize Ray's built-in autoscaled cluster. However, this usage
+is still under heavy development. To launch a Ray autoscaled cluster using
+Amazon Web Service (AWS), you can use the file `examples/cluster/aws_example.yaml`
+as the config file when launching an autoscaled Ray cluster. For the commands,
+refer to the `autoscaler documentation`_.
+
+We will provide a sample config file for private servers and other cloud service
+providers as we continue to develop and improve Modin's cluster support.
 
 Advanced usage (experimental)
 -----------------------------
@@ -112,6 +118,7 @@ used to create the blog post.
 .. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
 .. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: http://github.com/modin-project/modin/issues
+.. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
