@@ -1277,19 +1277,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.transpose().memory_usage(axis=1, **kwargs)
 
         def memory_usage_builder(df, **kwargs):
+            axis = kwargs.pop("axis")
             if axis:
-                return df.T.memory_usage(**kwargs).to_frame()
-            else:
-                return df.memory_usage(**kwargs)
+                df = df.T
+            result = df.memory_usage(**kwargs)
+            kwargs["axis"] = axis
+            return result
 
-        def sum_memory_usage(df):
-            if axis:
-                return df.sum(axis=axis).to_frame()
-            else:
-                return df.sum()
+        def sum_memory_usage(df, **kwargs):
+            axis = kwargs.pop("axis")
+            return df.sum(axis=axis)
 
+        kwargs["axis"] = axis
         map_func = self._build_mapreduce_func(memory_usage_builder, **kwargs)
-        reduce_func = self._build_mapreduce_func(sum_memory_usage)
+        reduce_func = self._build_mapreduce_func(sum_memory_usage, **kwargs)
         result = self._full_reduce(axis, map_func, reduce_func)
         return result
 
