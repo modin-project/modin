@@ -85,44 +85,44 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    :maxdepth: 1
    :caption: Installation
 
-   installation.rst
+   installation
 
 .. toctree::
    :maxdepth: 1
    :caption: Using Modin
 
-   using_modin.rst
-   out_of_core.rst
-   pandas_supported.rst
-   UsingPandasonRay
-   UsingPandasonDask
-   UsingPyarrowonRay
+   using_modin
+   out_of_core
+   pandas_supported
+   UsingPandasonRay/index
+   UsingPandasonDask/index
+   UsingPyarrowonRay/index
 
 .. toctree::
    :maxdepth: 1
    :caption: Contributing to Modin
 
-   contributing.rst
+   contributing
 
 .. toctree::
    :maxdepth: 1
    :caption: Architecture and Optimizations
 
-   architecture.rst
-   pandas_on_ray.rst
+   architecture
+   pandas_on_ray
 
 .. toctree::
    :maxdepth: 1
    :caption: Help
 
-   troubleshooting.rst
-   contact.rst
+   troubleshooting
+   contact
 
 .. toctree::
    :maxdepth: 1
    :caption: SQL on Ray
 
-   sql_on_ray.rst
+   sql_on_ray
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
