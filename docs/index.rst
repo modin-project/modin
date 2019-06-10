@@ -82,13 +82,12 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
 
 
 .. toctree::
-   :maxdepth: 1
    :caption: Installation
 
    installation
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Using Modin
 
    using_modin
@@ -99,27 +98,23 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    UsingPyarrowonRay/index
 
 .. toctree::
-   :maxdepth: 1
    :caption: Contributing to Modin
 
    contributing
 
 .. toctree::
-   :maxdepth: 1
    :caption: Architecture and Optimizations
 
    architecture
    pandas_on_ray
 
 .. toctree::
-   :maxdepth: 1
    :caption: Help
 
    troubleshooting
    contact
 
 .. toctree::
-   :maxdepth: 1
    :caption: SQL on Ray
 
    sql_on_ray
