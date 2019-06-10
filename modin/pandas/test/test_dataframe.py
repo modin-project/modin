@@ -3061,7 +3061,9 @@ class TestDFPartTwo:
             pd.DataFrame(data).melt()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("index", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "index", bool_arg_values, ids=arg_keys("index", bool_arg_keys)
+    )
     def test_memory_usage(self, data, index):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)  # noqa F841
