@@ -3061,15 +3061,15 @@ class TestDFPartTwo:
             pd.DataFrame(data).melt()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_memory_usage(self, data):
+    @pytest.mark.parametrize("index", test_data_values, ids=test_data_keys)
+    def test_memory_usage(self, data, index):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)  # noqa F841
 
-        assert modin_df.memory_usage(index=True).at["Index"] is not None
-        assert (
-            modin_df.memory_usage(deep=True).sum()
-            >= modin_df.memory_usage(deep=False).sum()
-        )
+        modin_result = modin_df.memory_usage(index=index)
+        pandas_result = pandas_df.memory_usage(index=index)
+
+        df_equals(modin_result, pandas_result)
 
     def test_merge(self):
         frame_data = {
