@@ -207,7 +207,6 @@ class Series(BasePandasDataset):
         return self.pow(right)
 
     def __repr__(self):
-        # In the future, we can have this be configurable, just like Pandas.
         num_rows = pandas.get_option("max_rows") or 60
         num_cols = pandas.get_option("max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)

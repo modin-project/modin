@@ -183,6 +183,11 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
 
+        partitions = [part for part in partitions if not part.empty]
+        if len(partitions) == 0:
+            part = partitions
+            return [pandas.DataFrame() for _ in range(num_splits)]
+
         dataframe = pandas.concat(partitions, axis=axis, copy=False)
         result = func(dataframe, **kwargs)
         if isinstance(result, pandas.Series):
