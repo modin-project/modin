@@ -1267,22 +1267,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = self._build_mapreduce_func(pandas.DataFrame.median, **kwargs)
         return self._full_axis_reduce(axis, func)
 
-    def memory_usage(self, **kwargs):
+    def memory_usage(self, axis=0, **kwargs):
         """Returns the memory usage of each column.
 
         Returns:
             A new QueryCompiler object containing the memory usage of each column.
         """
+        if self._is_transposed:
+            return self.transpose().memory_usage(axis=1, **kwargs)
 
         def memory_usage_builder(df, **kwargs):
-            return df.memory_usage(**kwargs)
+            if axis:
+                return df.T.memory_usage(**kwargs).to_frame()
+            else:
+                return df.memory_usage(**kwargs)
 
         def sum_memory_usage(df):
-            return df.sum()
+            if axis:
+                return df.sum(axis=axis).to_frame()
+            else:
+                return df.sum()
 
         map_func = self._build_mapreduce_func(memory_usage_builder, **kwargs)
         reduce_func = self._build_mapreduce_func(sum_memory_usage)
-        return self._full_reduce(0, map_func, reduce_func)
+        result = self._full_reduce(axis, map_func, reduce_func)
+        return result
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
