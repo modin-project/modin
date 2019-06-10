@@ -67,7 +67,7 @@ class BaseFrameManager(object):
                         [
                             self._partitions_cache[i][j]
                             for j in range(len(self._partitions_cache[i]))
-                            if self.block_lengths[i] != 0 and self.block_widths[j] != 0
+                            if self.block_lengths[i] != 0 or self.block_widths[j] != 0
                         ]
                         for i in range(len(self._partitions_cache))
                     ]
