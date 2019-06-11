@@ -1,5 +1,5 @@
 pandas Utilities Supported
-=========================
+==========================
 
 If you ``import modin.pandas as pd`` the following operations are available from
 ``pd.<op>``, e.g. ``pd.concat``. If you do not see an operation that pandas enables and
@@ -15,45 +15,87 @@ default to pandas.
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| concat                    | Y                               |                                                    |
+| ``pd.concat``             | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| eval                      | Y                               |                                                    |
+| ``pd.eval``               | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| unique                    | D                               |                                                    |
+| ``pd.unique``             | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| value_counts              | D                               |                                                    |
+| ``pd.value_counts``       | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| cut                       | D                               |                                                    |
+| ``pd.cut``                | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| to_numeric                | D                               |                                                    |
+| ``pd.to_numeric``         | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-|
+| ``pd.factorize``          | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.qcut``               | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.match``              | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.to_datetime``        | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.get_dummies``        | Y                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.date_range``         | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.bdate_range``        | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.to_timedelta``       | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.options``            | Y                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| ``pd.datetime``           | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
 
-* ``pd.concat``
-* ``pd.eval``
-* ``pd.unique``
-* ``pd.value_counts``
-* ``pd.cut``
-* ``pd.to_numeric``
-* ``pd.factorize``
-* ``pd.test``
-* ``pd.qcut``
-* ``pd.match``
-* ``pd.to_datetime``
-* ``pd.get_dummies``
-* ``pd.Panel``
-* ``pd.date_range``
-* ``pd.Index``
-* ``pd.MultiIndex``
-* ``pd.Series``
-* ``pd.bdate_range``
-* ``pd.DatetimeIndex``
-* ``pd.to_timedelta``
-* ``pd.set_eng_float_format``
-* ``pd.set_option``
-* ``pd.CategoricalIndex``
-* ``pd.Timedelta``
-* ``pd.Timestamp``
-* ``pd.NaT``
-* ``pd.PeriodIndex``
-* ``pd.Categorical``
+Other objects & structures
+--------------------------
+
+This list is a list of objects not currently distributed by Modin. All of these objects
+are compatible with the distributed components of Modin. If you are interested in
+contributing a distributed version of any of these objects, feel free to open a
+`pull request`_.
+
+* Panel
+* Index
+* MultiIndex
+* CategoricalIndex
+* DatetimeIndex
+* Timedelta
+* Timestamp
+* NaT
+* PeriodIndex
+* Categorical
+* Interval
+* UInt8Dtype
+* UInt16Dtype
+* UInt32Dtype
+* UInt64Dtype
+* SparseDtype
+* Int8Dtype
+* Int16Dtype
+* Int32Dtype
+* Int64Dtype
+* CategoricalDtype
+* DatetimeTZDtype
+* IntervalDtype
+* PeriodDtype
+* RangeIndex
+* Int64Index
+* UInt64Index
+* Float64Index
+* TimedeltaIndex
+* IntervalIndex
+* IndexSlice
+* TimeGrouper
+* Grouper
+* array
+* Period
+* DateOffset
+* ExcelWriter
+* SparseArray
+* SparseSeries
+* SparseDataFrame
+
+.. _open an issue: https://github.com/modin-project/modin/issues
+.. _pull request: https://github.com/modin-project/modin/pulls
