@@ -28,6 +28,13 @@ following environment variables:
    export MODIN_ENGINE=ray
    export MODIN_BACKEND=pandas
 
+.. toctree::
+   :maxdepth: 1
+   dataframe_supported
+   series_supported
+   utilities_supported
+   io_supported
+
 .. _DataFrame: dataframe_supported.html
 .. _Series: series_supported.html
 .. _utilities: utilities_supported.html
