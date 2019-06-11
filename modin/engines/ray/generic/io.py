@@ -218,29 +218,28 @@ class RayIO(BaseIO):
         ]
 
         # Only read row groups in parallel if parquet files are not in a partitioned within a directory
-        if(not directory):
+        if not directory:
             pf = ParquetFile(path, memory_map=False)
             num_row_groups = pf.metadata.num_row_groups
             blocks_with_lengths = [
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, col_partitions[i], 1, j, kwargs),
-                        num_return_vals=2)
+                        args=(path, col_partitions[i], 1, j, kwargs), num_return_vals=2
+                    )
                     for i in range(len(col_partitions))
                 ]
                 for j in range(num_row_groups)
             ]
 
             blk_partitions = [
-                [
-                    blocks_with_lengths[i][j][0] for j in range(len(col_partitions))
-                ]
+                [blocks_with_lengths[i][j][0] for j in range(len(col_partitions))]
                 for i in range(num_row_groups)
             ]
 
             row_total = ray.put(
-                sum([ray.get(blocks_with_lengths[j][0][1])
-                    for j in range(num_row_groups)])
+                sum(
+                    ray.get(blocks_with_lengths[j][0][1]) for j in range(num_row_groups)
+                )
             )
 
             blk_partitions.append([row_total for c in columns])
