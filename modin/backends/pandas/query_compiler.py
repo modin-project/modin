@@ -840,7 +840,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Transposed new DataManager.
         """
         new_data = self.data.transpose(*args, **kwargs)
-        # Switch the index and columns and transpose the
+        # Switch the index and columns and transpose the data within the blocks.
         new_manager = self.__constructor__(
             new_data, self.columns, self.index, is_transposed=self._is_transposed ^ 1
         )
@@ -1277,8 +1277,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def memory_usage_builder(df, **kwargs):
             return df.memory_usage(**kwargs)
 
-        func = self._build_mapreduce_func(memory_usage_builder, **kwargs)
-        return self._full_axis_reduce(0, func)
+        def sum_memory_usage(df):
+            return df.sum()
+
+        map_func = self._build_mapreduce_func(memory_usage_builder, **kwargs)
+        reduce_func = self._build_mapreduce_func(sum_memory_usage)
+        return self._full_reduce(0, map_func, reduce_func)
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
