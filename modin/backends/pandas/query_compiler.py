@@ -2284,19 +2284,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_args=None,
         numeric_only=True,
     ):
-
         def _map(df, other):
             return map_func(
-                df.groupby(by=other.squeeze(), axis=axis, **groupby_args),
-                **map_args
+                df.groupby(by=other.squeeze(), axis=axis, **groupby_args), **map_args
             )
 
         if reduce_func is not None:
 
             def _reduce(df):
                 return reduce_func(
-                    df.groupby(by=df.index, axis=axis, **groupby_args),
-                    **reduce_args
+                    df.groupby(by=df.index, axis=axis, **groupby_args), **reduce_args
                 )
 
         else:
@@ -2308,16 +2305,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
         if axis == 0:
-            new_columns = self.columns if not numeric_only else self.numeric_columns(True)
+            new_columns = (
+                self.columns if not numeric_only else self.numeric_columns(True)
+            )
             new_index = self.compute_index(axis, new_data, False)
         else:
             new_columns = self.compute_index(axis, new_data, False)
             new_index = self.index
-        return self.__constructor__(
-            new_data,
-            new_index,
-            new_columns,
-        )
+        return self.__constructor__(new_data, new_index, new_columns)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
 

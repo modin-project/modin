@@ -179,7 +179,9 @@ class DataFrameGroupBy(object):
         return self._index_grouped
 
     def min(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.min(**kwargs), None, numeric_only=False)
+        return self._groupby_reduce(
+            lambda df: df.min(**kwargs), None, numeric_only=False
+        )
 
     def idxmax(self):
         return self._default_to_pandas(lambda df: df.idxmax())
@@ -277,7 +279,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.pad(limit=limit))
 
     def max(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.max(**kwargs), None, numeric_only=False)
+        return self._groupby_reduce(
+            lambda df: df.max(**kwargs), None, numeric_only=False
+        )
 
     def var(self, ddof=1, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.var(ddof, *args, **kwargs))
@@ -289,7 +293,9 @@ class DataFrameGroupBy(object):
         return len(self._index_grouped)
 
     def all(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.all(**kwargs), None, numeric_only=False)
+        return self._groupby_reduce(
+            lambda df: df.all(**kwargs), None, numeric_only=False
+        )
 
     def size(self):
         return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
@@ -369,7 +375,9 @@ class DataFrameGroupBy(object):
 
     def count(self, **kwargs):
         return self._groupby_reduce(
-            lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs), numeric_only=False
+            lambda df: df.count(**kwargs),
+            lambda df: df.sum(**kwargs),
+            numeric_only=False,
         )
 
     def pipe(self, func, *args, **kwargs):
@@ -404,9 +412,12 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
-    def _groupby_reduce(self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs):
+    def _groupby_reduce(
+        self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
+    ):
 
         from .series import Series
+
         if not isinstance(self._by, Series):
             return self._apply_agg_function(map_func, drop=drop, **kwargs)
 
@@ -459,9 +470,7 @@ class DataFrameGroupBy(object):
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler
-        new_manager = groupby_qc.groupby_agg(
-            by, self._axis, f, self._kwargs, kwargs
-        )
+        new_manager = groupby_qc.groupby_agg(by, self._axis, f, self._kwargs, kwargs)
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
         return DataFrame(query_compiler=new_manager)
@@ -481,6 +490,5 @@ class DataFrameGroupBy(object):
             by = self._by
 
         return self._df._default_to_pandas(
-            lambda df: f(df.groupby(by=by, axis=self._axis, **self._kwargs)),
-            **kwargs
+            lambda df: f(df.groupby(by=by, axis=self._axis, **self._kwargs)), **kwargs
         )
