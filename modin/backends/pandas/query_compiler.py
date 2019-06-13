@@ -2282,6 +2282,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         map_args,
         reduce_func=None,
         reduce_args=None,
+        numeric_only=True,
     ):
 
         def _map(df, other):
@@ -2307,7 +2308,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
         if axis == 0:
-            new_columns = self.columns
+            new_columns = self.columns if not numeric_only else self.numeric_columns(True)
             new_index = self.compute_index(axis, new_data, False)
         else:
             new_columns = self.compute_index(axis, new_data, False)
