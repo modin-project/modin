@@ -2273,39 +2273,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
-        import ray
-        from operator import itemgetter
-        from itertools import groupby, chain
-        from modin.engines.ray.pandas_on_ray.frame.partition import (
-            PandasOnRayFramePartition,
+    def groupby_reduce(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_func,
+        map_args,
+        reduce_func=None,
+        reduce_args=None,
+    ):
+
+        def _map(df, other):
+            return map_func(
+                df.groupby(by=other.squeeze(), axis=axis, **groupby_args),
+                **map_args
+            )
+
+        if reduce_func is not None:
+
+            def _reduce(df):
+                return reduce_func(
+                    df.groupby(by=df.index, axis=axis, **groupby_args),
+                    **reduce_args
+                )
+
+        else:
+
+            def _reduce(df):
+                return map_func(
+                    df.groupby(by=df.index, axis=axis, **groupby_args), **map_args
+                )
+
+        new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
+        if axis == 0:
+            new_columns = self.columns
+            new_index = self.compute_index(axis, new_data, False)
+        else:
+            new_columns = self.compute_index(axis, new_data, False)
+            new_index = self.index
+        return self.__constructor__(
+            new_data,
+            new_index,
+            new_columns,
         )
 
-        if isinstance(by, type(self)):
+    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
 
-            @ray.remote
-            def func(df, f, other):
-                return f(df.groupby(other.squeeze()))
-
-            p = np.squeeze(by.data.partitions)
-            [obj.drain_call_queue() for obj in p]
-            new_partitions = self.data.__constructor__(
-                np.array(
-                    [
-                        [
-                            PandasOnRayFramePartition(
-                                func.remote(part.oid, agg_func, p[i].oid)
-                            )
-                            for part in self.data.partitions[i]
-                        ]
-                        for i in range(len(self.data.partitions))
-                    ]
-                )
-            )
-            a = new_partitions.map_across_full_axis(
-                0, lambda df: df.groupby(df.index).sum()
-            )
-            return self.__constructor__(a, pandas.RangeIndex(100), self.columns)
         remote_index = self.index if not axis else self.columns
 
         def groupby_agg_builder(df):
