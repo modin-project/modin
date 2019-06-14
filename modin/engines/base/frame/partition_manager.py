@@ -222,6 +222,19 @@ class BaseFrameManager(object):
         return new_partitions.map_across_full_axis(axis, reduce_func)
 
     def _broadcast_values(self, axis, values, block_idx):
+        """Splits the values to the size of the partitions.
+
+        Args:
+            axis: Axis value of the axis the function is being applied on.
+            values: Numpy array of values to broadcast.
+            block_idx: Index of the partition to give the values to.
+
+        Returns:
+            A numpy array of values to be associated with the block_idx.
+        """
+        axis_len = sum(self.block_widths if axis else self.block_lengths)
+        if len(values) != axis_len:
+            raise ValueError("Length of broadcast values is {} while the axis length is {}".format(len(values), axis_len))
         external_lengths = np.insert(np.cumsum(self.block_lengths), 0, 0)
         external_widths = np.insert(np.cumsum(self.block_widths), 0, 0)
         indices = external_widths if axis else external_lengths
