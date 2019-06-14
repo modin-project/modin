@@ -148,18 +148,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if self._is_transposed:
 
-            def helper(df, internal_indices=[]):
+            def helper(df, internal_indices=[], broadcast_values=[]):
                 if len(internal_indices) > 0:
-                    return pandas_func(
-                        df.T, internal_indices=internal_indices, **kwargs
-                    )
+                    kwargs["internal_indices"] = internal_indices
+                if len(broadcast_values) > 0:
+                    kwargs["broadcast_values"] = broadcast_values
                 return pandas_func(df.T, **kwargs)
 
         else:
 
-            def helper(df, internal_indices=[]):
+            def helper(df, internal_indices=[], broadcast_values=[]):
                 if len(internal_indices) > 0:
-                    return pandas_func(df, internal_indices=internal_indices, **kwargs)
+                    kwargs["internal_indices"] = internal_indices
+                if len(broadcast_values) > 0:
+                    kwargs["broadcast_values"] = broadcast_values
                 return pandas_func(df, **kwargs)
 
         return helper
