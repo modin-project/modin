@@ -3070,6 +3070,19 @@ class TestDFPartTwo:
 
         modin_result = modin_df.memory_usage(index=index)
         pandas_result = pandas_df.memory_usage(index=index)
+        # We do not compare the indicies because pandas and modin handles the
+        # indicies slightly differently
+        if index:
+            modin_result = modin_result[1:]
+            pandas_result = pandas_result[1:]
+
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.memory_usage(index=index)
+        pandas_result = pandas_df.T.memory_usage(index=index)
+        if index:
+            modin_result = modin_result[1:]
+            pandas_result = pandas_result[1:]
 
         df_equals(modin_result, pandas_result)
 
