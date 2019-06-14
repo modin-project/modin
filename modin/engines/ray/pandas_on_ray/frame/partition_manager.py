@@ -24,7 +24,11 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         map_func = ray.put(map_func)
         p = np.squeeze(by.partitions)
-        [obj.drain_call_queue() for obj in p]
+        for obj in p:
+                obj.drain_call_queue()
+        for part in self.partitions:
+            for obj in part:
+                obj.drain_call_queue()
         new_partitions = self.__constructor__(
             np.array(
                 [
