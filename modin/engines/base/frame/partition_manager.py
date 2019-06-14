@@ -234,7 +234,11 @@ class BaseFrameManager(object):
         """
         axis_len = sum(self.block_widths if axis else self.block_lengths)
         if len(values) != axis_len:
-            raise ValueError("Length of broadcast values is {} while the axis length is {}".format(len(values), axis_len))
+            raise ValueError(
+                "Length of broadcast values is {} while the axis length is {}".format(
+                    len(values), axis_len
+                )
+            )
         external_lengths = np.insert(np.cumsum(self.block_lengths), 0, 0)
         external_widths = np.insert(np.cumsum(self.block_widths), 0, 0)
         indices = external_widths if axis else external_lengths
