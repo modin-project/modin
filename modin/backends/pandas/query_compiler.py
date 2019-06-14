@@ -1284,9 +1284,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis:
                 df = df.T
             result = df.memory_usage(**kwargs)
-            # We add back in the axis kwarg for the sum_memory_usage reduction
-            # function.
-            kwargs["axis"] = axis
             return result
 
         def sum_memory_usage(df, **kwargs):
@@ -1296,9 +1293,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Even though memory_usage does not take in an axis argument, we have to
         # pass in an axis kwargs for _build_mapreduce_func to properly arrange
         # the results.
-        kwargs["axis"] = axis
-        map_func = self._build_mapreduce_func(memory_usage_builder, **kwargs)
-        reduce_func = self._build_mapreduce_func(sum_memory_usage, **kwargs)
+        map_func = self._build_mapreduce_func(memory_usage_builder, axis=axis, **kwargs)
+        reduce_func = self._build_mapreduce_func(sum_memory_usage, axis=axis, **kwargs)
         return self._full_reduce(axis, map_func, reduce_func)
 
     def nunique(self, **kwargs):
