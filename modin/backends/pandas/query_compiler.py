@@ -1903,8 +1903,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             }
 
             def fillna_dict_builder(df, func_dict={}):
-                print(df)
-                print(broadcast_values)
                 # We do this to ensure that no matter the state of the columns we get
                 # the correct ones.
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
