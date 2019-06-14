@@ -221,8 +221,17 @@ class BaseFrameManager(object):
         )
         return new_partitions.map_across_full_axis(axis, reduce_func)
 
-    # def map_across_blocks(self, map_func, indices=False):
-    def map_across_blocks(self, map_func, broadcast_axis=None, broadcast_values=None):
+    def _broadcast_values(self, axis, values, block_col_idx, block_row_idx):
+        external_lengths = np.insert(np.cumsum(self.block_lengths), 0, 0)
+        external_widths = np.insert(np.cumsum(self.block_widths), 0, 0)
+        indices = external_widths if axis else external_lengths
+        lengths = self.block_widths if axis else self.block_lengths
+        if axis:
+            return values[:, indices[block_col_idx]:indices[block_col_idx]+lengths[block_col_idx]]
+        else:
+            return values[indices[block_row_idx]:indices[block_row_idx]+lengths[block_row_idx], :]
+
+    def map_across_blocks(self, map_func, broadcast_axis=None, broadcast_values=None, kwargs={}, lazy=False):
         """Applies `map_func` to every partition.
 
         Args:
@@ -233,38 +242,18 @@ class BaseFrameManager(object):
         """
         preprocessed_map_func = self.preprocess_func(map_func)
         new_partitions = []
-        if broadcast_axis is not None:
-            external_lengths = np.insert(np.cumsum(self.block_lengths), 0, 0)
-            external_widths = np.insert(np.cumsum(self.block_widths), 0, 0)
-            indices = external_widths if broadcast_axis else external_lengths
-            lengths = self.block_widths if broadcast_axis else self.block_lengths
         for row_idx, row_of_parts in enumerate(self.partitions):
             new_partitions_row = []
             for col_idx, part in enumerate(row_of_parts):
                 if broadcast_axis is not None:
-                    if broadcast_axis:
-                        partition_values = broadcast_values[:, indices[col_idx]:indices[col_idx]+lengths[col_idx]]
-                    else:
-                        partition_values = broadcast_values[indices[row_idx]:indices[row_idx]+lengths[row_idx], :]
-                    new_block = part.apply(preprocessed_map_func, broadcast_values=partition_values)
+                    kwargs["broadcast_values"] = self._broadcast_values(broadcast_axis, broadcast_values, col_idx, row_idx)
+                if lazy:
+                    new_block = part.add_to_apply_calls(preprocessed_map_func, **kwargs)
                 else:
-                    new_block = part.apply(preprocessed_map_func)
+                    new_block = part.apply(preprocessed_map_func, **kwargs)
                 new_partitions_row.append(new_block)
             new_partitions.append(new_partitions_row)
         return self.__constructor__(np.array(new_partitions))
-
-    def lazy_map_across_blocks(self, map_func, kwargs):
-        preprocessed_map_func = self.preprocess_func(map_func)
-        new_partitions = np.array(
-            [
-                [
-                    part.add_to_apply_calls(preprocessed_map_func, kwargs)
-                    for part in row_of_parts
-                ]
-                for row_of_parts in self.partitions
-            ]
-        )
-        return self.__constructor__(new_partitions)
 
     def copartition_datasets(self, axis, other, left_func, right_func):
         """Copartition two BlockPartitions objects.
