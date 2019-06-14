@@ -221,15 +221,15 @@ class BaseFrameManager(object):
         )
         return new_partitions.map_across_full_axis(axis, reduce_func)
 
-    def _broadcast_values(self, axis, values, block_col_idx, block_row_idx):
+    def _broadcast_values(self, axis, values, block_idx):
         external_lengths = np.insert(np.cumsum(self.block_lengths), 0, 0)
         external_widths = np.insert(np.cumsum(self.block_widths), 0, 0)
         indices = external_widths if axis else external_lengths
         lengths = self.block_widths if axis else self.block_lengths
         if axis:
-            return values[:, indices[block_col_idx]:indices[block_col_idx]+lengths[block_col_idx]]
+            return values[:, indices[block_idx]:indices[block_idx]+lengths[block_idx]]
         else:
-            return values[indices[block_row_idx]:indices[block_row_idx]+lengths[block_row_idx], :]
+            return values[indices[block_idx]:indices[block_idx]+lengths[block_idx], :]
 
     def map_across_blocks(self, map_func, broadcast_axis=None, broadcast_values=None, kwargs={}, lazy=False):
         """Applies `map_func` to every partition.
@@ -246,7 +246,7 @@ class BaseFrameManager(object):
             new_partitions_row = []
             for col_idx, part in enumerate(row_of_parts):
                 if broadcast_axis is not None:
-                    kwargs["broadcast_values"] = self._broadcast_values(broadcast_axis, broadcast_values, col_idx, row_idx)
+                    kwargs["broadcast_values"] = self._broadcast_values(broadcast_axis, broadcast_values, col_idx if broadcast_axis else row_idx)
                 if lazy:
                     new_block = part.add_to_apply_calls(preprocessed_map_func, **kwargs)
                 else:
@@ -733,7 +733,7 @@ class BaseFrameManager(object):
             for k, v in groupby(all_partitions_and_idx, itemgetter(0))
         ]
 
-    def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
+    def _apply_func_to_list_of_partitions(self, func, partitions, broadcast_axis=None, broadcast_values=None, **kwargs):
         """Applies a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
@@ -746,9 +746,14 @@ class BaseFrameManager(object):
             A list of BaseFramePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+        result = []
+        for ind, obj in enumerate(partitions):
+            if broadcast_values is not None:
+                kwargs["broadcast_values"] = self._broadcast_values(broadcast_axis, broadcast_values, ind)
+            result.append(obj.apply(preprocessed_func, **kwargs))
+        return result
 
-    def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False):
+    def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False, broadcast_values=None):
         """Applies a function to select indices.
 
         Note: Your internal function must take a kwarg `internal_indices` for
@@ -786,6 +791,7 @@ class BaseFrameManager(object):
             partitions_for_apply = self.partitions.T
         else:
             partitions_for_apply = self.partitions
+
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
@@ -807,6 +813,8 @@ class BaseFrameManager(object):
                         self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[o_idx],
+                            broadcast_axis=axis,
+                            broadcast_values=broadcast_values,
                             func_dict={
                                 i_idx: dict_indices[local_to_global_idx(o_idx, i_idx)]
                                 for i_idx in list_to_apply
@@ -824,6 +832,8 @@ class BaseFrameManager(object):
                         else self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[i],
+                            broadcast_axis=axis,
+                            broadcast_values=broadcast_values,
                             func_dict={
                                 idx: dict_indices[local_to_global_idx(i, idx)]
                                 for idx in partitions_dict[i]
@@ -844,6 +854,8 @@ class BaseFrameManager(object):
                         self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[idx],
+                            broadcast_axis=axis,
+                            broadcast_values=broadcast_values,
                             internal_indices=list_to_apply,
                         )
                         for idx, list_to_apply in partitions_dict
@@ -859,6 +871,8 @@ class BaseFrameManager(object):
                         else self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[i],
+                            broadcast_axis=axis,
+                            broadcast_values=broadcast_values,
                             internal_indices=partitions_dict[i],
                         )
                         for i in range(len(partitions_for_apply))
