@@ -353,17 +353,14 @@ class DataFrame(BasePandasDataset):
         elif isinstance(by, string_types):
             idx_name = by
             by = self.__getitem__(by)._query_compiler
-            # by = self.__getitem__(by).values.tolist()
         elif is_list_like(by):
-            if isinstance(by, pandas.Series):
+            if isinstance(by, Series):
                 idx_name = by.name
-                # by = by.values.tolist()
-
+                by = by.values
             mismatch = (
                 len(by) != len(self) if axis == 0 else len(by) != len(self.columns)
             )
-
-            if all(obj in self for obj in by) and mismatch:
+            if mismatch and all(obj in self for obj in by):
                 # In the future, we will need to add logic to handle this, but for now
                 # we default to pandas in this case.
                 pass

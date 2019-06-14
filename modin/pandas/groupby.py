@@ -415,10 +415,7 @@ class DataFrameGroupBy(object):
     def _groupby_reduce(
         self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
     ):
-
-        from .series import Series
-
-        if not isinstance(self._by, Series):
+        if not isinstance(self._by, type(self._query_compiler)):
             return self._apply_agg_function(map_func, drop=drop, **kwargs)
 
         # For aggregations, pandas behavior does this for the result.
