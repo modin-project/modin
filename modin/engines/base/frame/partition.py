@@ -25,7 +25,7 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, other=None, **kwargs):
         """Apply some callable function to the data in this partition.
 
         Note: It is up to the implementation how kwargs are handled. They are
@@ -41,7 +41,7 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, other=None, **kwargs):
         """Add the function to the apply function call stack.
 
         This function will be executed when apply is called. It will be executed

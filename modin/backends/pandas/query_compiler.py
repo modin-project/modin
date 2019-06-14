@@ -148,21 +148,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if self._is_transposed:
 
-            def helper(df, internal_indices=[], broadcast_values=[]):
+            def helper(df, other=None, internal_indices=[]):
                 if len(internal_indices) > 0:
                     kwargs["internal_indices"] = internal_indices
-                if len(broadcast_values) > 0:
-                    kwargs["broadcast_values"] = broadcast_values
-                return pandas_func(df.T, **kwargs)
+                if other is None:
+                    return pandas_func(df.T, **kwargs)
+                else:
+                    return pandas_func(df.T, other, **kwargs)
 
         else:
 
-            def helper(df, internal_indices=[], broadcast_values=[]):
+            def helper(df, other=None, internal_indices=[]):
                 if len(internal_indices) > 0:
                     kwargs["internal_indices"] = internal_indices
-                if len(broadcast_values) > 0:
-                    kwargs["broadcast_values"] = broadcast_values
-                return pandas_func(df, **kwargs)
+                if other is None:
+                    return pandas_func(df, **kwargs)
+                else:
+                    return pandas_func(df, other, **kwargs)
 
         return helper
 
@@ -1087,7 +1089,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations are operations that apply a function to every partition.
     def _map_partitions(self, func, new_dtypes=None):
         return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
+            # self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
+            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([[i] for i in range(50)])), self.index, self.columns, new_dtypes
         )
 
     def abs(self):
@@ -1905,6 +1908,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def fillna_dict_builder(df, func_dict={}):
                 # We do this to ensure that no matter the state of the columns we get
                 # the correct ones.
+                print(df)
+                print(other)
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 

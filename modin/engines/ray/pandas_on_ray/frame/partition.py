@@ -33,7 +33,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         except RayTaskError as e:
             handle_ray_task_error(e)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, other=None, **kwargs):
         """Apply a function to the object stored in this partition.
 
         Note: It does not matter if func is callable or an ObjectID. Ray will
@@ -47,8 +47,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             A RayRemotePartition object.
         """
         oid = self.oid
-        call_queue = self.call_queue + [(func, kwargs)]
-        new_obj, result, length, width = deploy_ray_func.remote(call_queue, oid)
+        new_obj, result, length, width = deploy_ray_func.remote(self.call_queue, oid, func, other, kwargs)
         if len(self.call_queue) > 0:
             self.oid = new_obj
             self.call_queue = []
@@ -56,9 +55,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width)
         )
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, other=None, **kwargs):
         return PandasOnRayFramePartition(
-            self.oid, call_queue=self.call_queue + [(func, kwargs)]
+            self.oid, call_queue=self.call_queue + [(func, other, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -66,7 +65,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid)
+        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid, None, None, None)
         self.call_queue = []
         if self._length_cache is None:
             self._length_cache = PandasOnRayFramePartition(length)
@@ -133,30 +132,33 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
 
 @ray.remote(num_return_vals=4)
-def deploy_ray_func(call_queue, partition):  # pragma: no cover
+def deploy_ray_func(call_queue, partition, func, other, kwargs):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
             return ray.get(obj)
         return obj
 
     if len(call_queue) > 1:
-        for func, kwargs in call_queue[:-1]:
-            func = deserialize(func)
-            kwargs = deserialize(kwargs)
+        for queued_func, queued_other, queued_kwargs in call_queue[:-1]:
+            queued_func = deserialize(queued_func)
+            queued_other = deserialize(other)
+            queued_kwargs = deserialize(queued_kwargs)
+            if queued_other is not None:
+                queued_kwargs["other"] = other
             try:
-                partition = func(partition, **kwargs)
+                result = queued_func(partition, **queued_kwargs)
             except ValueError:
-                partition = func(partition.copy(), **kwargs)
-    func, kwargs = call_queue[-1]
-    func = deserialize(func)
-    kwargs = deserialize(kwargs)
-    try:
-        result = func(partition, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-    # don't want the error to propagate to the user, and we want to avoid copying unless
-    # we absolutely have to.
-    except ValueError:
-        result = func(partition.copy(), **kwargs)
+                result = queued_func(partition, **queued_kwargs)
+    if func is not None:
+        if other is not None:
+            kwargs["other"] = other
+        try:
+            result = func(partition, **kwargs)
+        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+        # don't want the error to propagate to the user, and we want to avoid copying unless
+        # we absolutely have to.
+        except ValueError:
+            result = func(partition, **kwargs)
     return (
         partition if len(call_queue) > 1 else None,
         result,
