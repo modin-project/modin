@@ -765,7 +765,8 @@ class BaseFrameManager(object):
             A list of BaseFramePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        other = self._broadcast_values(broadcast_axis, broadcast_values)
+        if broadcast_values is not None:
+            other = self._broadcast_values(broadcast_axis, broadcast_values)
         result = []
         for ind, obj in enumerate(partitions):
             if broadcast_values is not None:

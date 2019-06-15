@@ -114,22 +114,24 @@ class RayFrameManager(BaseFrameManager):
             A numpy array of values to be associated with the block_idx.
         """
         axis_lengths = self.block_widths if axis else self.block_lengths
-        if len(values) != sum(axis_lengths):
-            raise ValueError(
-                "Length of broadcast values is {} while the axis length is {}".format(
-                    len(values), sum(axis_lengths)
-                )
-            )
+        # if len(values) != sum(axis_lengths):
+        #     raise ValueError(
+        #         "Length of broadcast values is {} while the axis length is {}".format(
+        #             len(values), sum(axis_lengths)
+        #         )
+        #     )
         broadcast_values = []
         for block_idx in range(len(axis_lengths)):
-            external_lengths = np.insert(np.cumsum(axis_lengths), 0, 0)
-            indices = external_widths if axis else external_lengths
+            cumulative_axis = np.cumsum(axis_lengths)
+            print(cumulative_axis[block_idx-1])
+            print(axis_lengths[block_idx])
+            print(self.block_widths)
             if axis:
                 broadcast_values.append(ray.put(values[
-                    :, indices[block_idx] : indices[block_idx] + axis_lengths[block_idx]
+                    :, cumulative_axis[block_idx-1] : cumulative_axis[block_idx-1] + axis_lengths[block_idx]
                 ]))
             else:
                 broadcast_values.append(ray.put(values[
-                    indices[block_idx] : indices[block_idx] + axis_lengths[block_idx], :
+                    cumulative_axis[block_idx-1] : cumulative_axis[block_idx-1] + axis_lengths[block_idx], :
                 ]))
         return broadcast_values

@@ -502,7 +502,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
+        df = self.data.to_pandas()
         if df.empty:
             if len(self.columns) != 0:
                 df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
@@ -1090,11 +1090,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _map_partitions(self, func, new_dtypes=None):
         return self.__constructor__(
             # self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([[i] for i in range(50)])), self.index, self.columns, new_dtypes
+            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([[i] for i in range(4)])), self.index, self.columns, new_dtypes
         )
 
     def abs(self):
-        func = self._prepare_method(pandas.DataFrame.abs)
+        # func = self._prepare_method(pandas.DataFrame.abs)
+        # return self._map_partitions(func, new_dtypes=self.dtypes.copy())
+        def abs_builder(df, other):
+            print(df)
+            print(other)
+            return df.abs()
+        func = self._prepare_method(abs_builder)
         return self._map_partitions(func, new_dtypes=self.dtypes.copy())
 
     def applymap(self, func):
@@ -1905,7 +1911,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 idx: value[key] for key in value for idx in index.get_indexer_for([key])
             }
 
-            def fillna_dict_builder(df, func_dict={}):
+            def fillna_dict_builder(df, other, func_dict={}):
                 # We do this to ensure that no matter the state of the columns we get
                 # the correct ones.
                 print(df)
