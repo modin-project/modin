@@ -19,21 +19,30 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     def groupby_reduce(self, axis, by, map_func, reduce_func):
         @ray.remote
-        def func(df, other):
+        def func(df, other, map_func, call_queue_df=[], call_queue_other=[]):
+            if len(call_queue_df) > 0:
+                for call, kwargs in call_queue_df:
+                    df = call(df, **kwargs)
+            if len(call_queue_other) > 0:
+                for call, kwargs in call_queue_other:
+                    other = call(other, **kwargs)
             return map_func(df, other)
 
         map_func = ray.put(map_func)
-        p = np.squeeze(by.partitions)
-        for obj in p:
-                obj.drain_call_queue()
-        for part in self.partitions:
-            for obj in part:
-                obj.drain_call_queue()
+        by_parts = np.squeeze(by.partitions)
         new_partitions = self.__constructor__(
             np.array(
                 [
                     [
-                        PandasOnRayFramePartition(func.remote(part.oid, p[i].oid))
+                        PandasOnRayFramePartition(
+                            func.remote(
+                                part.oid,
+                                by_parts[i].oid,
+                                map_func,
+                                part.call_queue,
+                                by_parts[i].call_queue,
+                            )
+                        )
                         for part in self.partitions[i]
                     ]
                     for i in range(len(self.partitions))
