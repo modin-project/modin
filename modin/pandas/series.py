@@ -89,7 +89,9 @@ class Series(BasePandasDataset):
             isinstance(new_query_compiler, type(self._query_compiler))
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
-        if not inplace and (len(new_query_compiler.columns) == 1 or len(new_query_compiler.index) == 1):
+        if not inplace and (
+            len(new_query_compiler.columns) == 1 or len(new_query_compiler.index) == 1
+        ):
             return Series(query_compiler=new_query_compiler)
         elif not inplace:
             # This can happen with things like `reset_index` where we can add columns.
