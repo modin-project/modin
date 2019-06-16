@@ -1741,7 +1741,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 df.index = index
             return df.sort_index(axis=axis, **kwargs)
 
-        new_data = self._map_across_full_axis(axis, sort_index_builder)
+        func = self._prepare_method(sort_index_builder, **kwargs)
+        new_data = self._map_across_full_axis(axis, func)
         if axis:
             new_columns = pandas.Series(self.columns).sort_values(**kwargs)
             new_index = self.index
