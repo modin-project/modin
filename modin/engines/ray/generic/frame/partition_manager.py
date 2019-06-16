@@ -107,31 +107,20 @@ class RayFrameManager(BaseFrameManager):
 
         Args:
             axis: Axis value of the axis the function is being applied on.
-            values: Numpy array of values to broadcast.
+            values: List-like of values to broadcast.
             block_idx: Index of the partition to give the values to.
 
         Returns:
-            A numpy array of values to be associated with the block_idx.
+            A list-like of values to be associated with the block_idx.
         """
         axis_lengths = self.block_widths if axis else self.block_lengths
-        # if len(values) != sum(axis_lengths):
-        #     raise ValueError(
-        #         "Length of broadcast values is {} while the axis length is {}".format(
-        #             len(values), sum(axis_lengths)
-        #         )
-        #     )
         broadcast_values = []
         for block_idx in range(len(axis_lengths)):
-            cumulative_axis = np.cumsum(axis_lengths)
-            print(cumulative_axis[block_idx-1])
-            print(axis_lengths[block_idx])
-            print(self.block_widths)
-            if axis:
-                broadcast_values.append(ray.put(values[
-                    :, cumulative_axis[block_idx-1] : cumulative_axis[block_idx-1] + axis_lengths[block_idx]
-                ]))
-            else:
-                broadcast_values.append(ray.put(values[
-                    cumulative_axis[block_idx-1] : cumulative_axis[block_idx-1] + axis_lengths[block_idx], :
-                ]))
+            cumulative_axis = np.insert(np.cumsum(axis_lengths), 0, 0)
+            broadcast_values.append(ray.put(values[
+                cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
+            ]))
+            print(values[
+                cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
+            ])
         return broadcast_values

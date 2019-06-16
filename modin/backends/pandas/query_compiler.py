@@ -1090,7 +1090,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _map_partitions(self, func, new_dtypes=None):
         return self.__constructor__(
             # self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([[i] for i in range(4)])), self.index, self.columns, new_dtypes
+            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([i for i in range(50)])), self.index, self.columns, new_dtypes
         )
 
     def abs(self):
@@ -1914,8 +1914,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def fillna_dict_builder(df, other, func_dict={}):
                 # We do this to ensure that no matter the state of the columns we get
                 # the correct ones.
-                print(df)
-                print(other)
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 
