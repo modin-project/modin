@@ -526,7 +526,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New DataManager with new data and index.
         """
         reindexed_self, reindexed_other_list, joined_index = self.copartition(
-            0, other, how_to_join, False
+            0, other, how_to_join, sort=False
         )
         # unwrap list returned by `copartition`.
         reindexed_other = reindexed_other_list[0]
@@ -569,6 +569,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if isinstance(other, type(self)):
+            # If this QueryCompiler is transposed, copartition can sometimes fail to
+            # properly co-locate the data. It does not fail if other is transposed, so
+            # if this object is transposed, we will transpose both and do the operation,
+            # then transpose at the end.
+            if self._is_transposed:
+                return (
+                    self.transpose()
+                    ._inter_manager_operations(
+                        other.transpose(), "outer", lambda x, y: func(x, y, **kwargs)
+                    )
+                    .transpose()
+                )
             return self._inter_manager_operations(
                 other, "outer", lambda x, y: func(x, y, **kwargs)
             )
