@@ -17,7 +17,7 @@ class PandasOnRayFrameManager(RayFrameManager):
     _column_partitions_class = PandasOnRayFrameColumnPartition
     _row_partition_class = PandasOnRayFrameRowPartition
 
-    def groupby_reduce(self, axis, by, map_func, reduce_func):
+    def groupby_reduce(self, axis, by, map_func, reduce_func):  # pragma: no cover
         @ray.remote
         def func(df, other, map_func, call_queue_df=[], call_queue_other=[]):
             if len(call_queue_df) > 0:
