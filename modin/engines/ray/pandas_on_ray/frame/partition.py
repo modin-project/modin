@@ -139,7 +139,7 @@ def deploy_ray_func(call_queue, partition, func, other, kwargs):  # pragma: no c
         return obj
 
     if len(call_queue) > 1:
-        for queued_func, queued_other, queued_kwargs in call_queue[:-1]:
+        for queued_func, queued_other, queued_kwargs in call_queue:
             queued_func = deserialize(queued_func)
             queued_other = deserialize(other)
             queued_kwargs = deserialize(queued_kwargs)
@@ -159,6 +159,8 @@ def deploy_ray_func(call_queue, partition, func, other, kwargs):  # pragma: no c
         # we absolutely have to.
         except ValueError:
             result = func(partition, **kwargs)
+    else:
+        result = partition
     return (
         partition if len(call_queue) > 1 else None,
         result,
