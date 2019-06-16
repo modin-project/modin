@@ -204,13 +204,13 @@ class BaseFrameManager(object):
         raise NotImplementedError("Blocked on Distributed Series")
 
     def groupby_reduce(self, axis, by, map_func, reduce_func):
-        p = np.squeeze(by.partitions)
-        [obj.drain_call_queue() for obj in p]
+        by_parts = np.squeeze(by.partitions)
+        [obj.drain_call_queue() for obj in by_parts]
         new_partitions = self.__constructor__(
             np.array(
                 [
                     [
-                        part.apply(map_func, other=p[i].get())
+                        part.apply(map_func, other=by_parts[i].get())
                         for part in self.partitions[i]
                     ]
                     for i in range(len(self.partitions))
