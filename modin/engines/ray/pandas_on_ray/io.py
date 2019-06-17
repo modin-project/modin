@@ -80,10 +80,11 @@ def _read_csv_with_offset_pandas_on_ray(
             default Index.
     """
     index_col = kwargs.get("index_col", None)
-    bio = file_open(fname, "rb")
+    bio = file_open(fname, "rb", kwargs)
     bio.seek(start)
     to_read = header + bio.read(end - start)
     bio.close()
+    kwargs["compression"] = 'infer'
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
     pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     if index_col is not None:
