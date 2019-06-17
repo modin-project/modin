@@ -1722,6 +1722,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             DataManager containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
+        if self._is_transposed:
+            return self.transpose().sort_index(axis=axis ^ 1, **kwargs).transpose()
         index = self.columns if axis else self.index
 
         # sort_index can have ascending be None and behaves as if it is False.
