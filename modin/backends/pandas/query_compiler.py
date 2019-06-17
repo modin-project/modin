@@ -321,6 +321,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
             others = [others]
+        if self._is_transposed:
+            # If others are transposed, we handle that behavior correctly in
+            # `copartition`, but it is not handled correctly in the case that `self` is
+            # transposed.
+            return (
+                self.transpose()
+                ._append_list_of_managers(
+                    [o.transpose() for o in others], axis ^ 1, **kwargs
+                )
+                .transpose()
+            )
         assert all(
             isinstance(other, type(self)) for other in others
         ), "Different Manager objects are being used. This is not allowed"
