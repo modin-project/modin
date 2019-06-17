@@ -321,8 +321,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
             others = [others]
-
         if self._is_transposed:
+            # If others are transposed, we handle that behavior correctly in
+            # `copartition`, but it is not handled correctly in the case that `self` is
+            # transposed.
             return (
                 self.transpose()
                 ._append_list_of_managers(
