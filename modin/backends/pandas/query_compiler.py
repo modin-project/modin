@@ -49,9 +49,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             reduce_func = self._build_mapreduce_func(dtype_builder)
             # For now we will use a pandas Series for the dtypes.
-            self._dtype_cache = (
-                self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
-            )
+            if len(self.data.partitions) > 0:
+                self._dtype_cache = (
+                    self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+                )
+            else:
+                self._dtype_cache = pandas.Series([])
             # reset name to None because we use "__reduced__" internally
             self._dtype_cache.name = None
         return self._dtype_cache
