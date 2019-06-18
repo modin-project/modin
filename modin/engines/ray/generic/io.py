@@ -36,7 +36,7 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 
-def file_open(file_path, mode="rb", kwargs=None):
+def file_open(file_path, mode="rb", compression="infer"):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
