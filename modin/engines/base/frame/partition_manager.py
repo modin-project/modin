@@ -686,9 +686,16 @@ class BaseFrameManager(object):
                 [(partition_ids == i).sum() for i in range(len(cumulative))]
             ).cumsum()
             # compute the internal indices and pair those with the partition index.
-            partition_ids_with_indices = [
-                (0, internal(0, indices[slice(count_for_each_partition[0])]))
-            ] + [
+            # If the first partition has any values we need to return, compute those
+            # first to make the list comprehension easier. Otherwise, just append the
+            # rest of the values to an empty list.
+            if count_for_each_partition[0] > 0:
+                first_partition_indices = [
+                    (0, internal(0, indices[slice(count_for_each_partition[0])]))
+                ]
+            else:
+                first_partition_indices = []
+            partition_ids_with_indices = first_partition_indices + [
                 (
                     i,
                     internal(
