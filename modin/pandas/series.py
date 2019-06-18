@@ -168,6 +168,8 @@ class Series(BasePandasDataset):
                     pandas.RangeIndex(len(self.index))[key]
                 )
             )
+        if isinstance(key, tuple):
+            return self._default_to_pandas(pandas.Series.__getitem__, key)
         else:
             if not is_list_like(key):
                 reduce_dimension = True
