@@ -685,7 +685,7 @@ class BaseFrameManager(object):
             count_for_each_partition = np.array(
                 [(partition_ids == i).sum() for i in range(len(cumulative))]
             ).cumsum()
-            # compute the internal indices and pair those with the partition index.
+            # Compute the internal indices and pair those with the partition index.
             # If the first partition has any values we need to return, compute those
             # first to make the list comprehension easier. Otherwise, just append the
             # rest of the values to an empty list.
