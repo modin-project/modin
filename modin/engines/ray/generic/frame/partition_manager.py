@@ -53,7 +53,12 @@ class RayFrameManager(BaseFrameManager):
                     )
             else:
                 self._lengths_cache = np.array(
-                    [obj.length() for obj in self._partitions_cache.T[0]]
+                    [
+                        obj.length()
+                        if isinstance(obj.length(), int)
+                        else ray.get(obj.length().oid)
+                        for obj in self._partitions_cache.T[0]
+                    ]
                 )
         return self._lengths_cache
 
@@ -88,6 +93,11 @@ class RayFrameManager(BaseFrameManager):
                     )
             else:
                 self._widths_cache = np.array(
-                    [obj.width() for obj in self._partitions_cache[0]]
+                    [
+                        obj.width()
+                        if isinstance(obj.width(), int)
+                        else ray.get(obj.width().oid)
+                        for obj in self._partitions_cache[0]
+                    ]
                 )
         return self._widths_cache
