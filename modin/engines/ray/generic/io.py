@@ -306,7 +306,7 @@ class RayIO(BaseIO):
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
             kwargs["index_col"] = None
-            f = file_open(filepath, "rb", kwargs)
+            f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
             kwargs_uncompressed = kwargs.copy()
             kwargs_uncompressed["compression"] = None
             names = pandas.read_csv(
