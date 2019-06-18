@@ -334,7 +334,7 @@ class RayIO(BaseIO):
             skiprows=None,
             parse_dates=parse_dates,
         )
-        with file_open(filepath, "rb", kwargs) as f:
+        with file_open(filepath, "rb", kwargs.get("compression", "infer")) as f:
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
