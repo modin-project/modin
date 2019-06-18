@@ -168,6 +168,7 @@ class Series(BasePandasDataset):
                     pandas.RangeIndex(len(self.index))[key]
                 )
             )
+        # TODO: More efficiently handle `tuple` case for `Series.__getitem__`
         if isinstance(key, tuple):
             return self._default_to_pandas(pandas.Series.__getitem__, key)
         else:
