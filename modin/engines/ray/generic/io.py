@@ -51,7 +51,7 @@ def file_open(file_path, mode="rb", compression="infer"):
                 return s3fs.open(file_path)
         elif compression == "gzip":
             import gzip
-                return gzip.open(file_path, mode=mode)
+            return gzip.open(file_path, mode=mode)
     return open(file_path, mode=mode)
 
 
