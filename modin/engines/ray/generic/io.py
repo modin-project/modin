@@ -49,7 +49,7 @@ def file_open(file_path, mode="rb", compression="infer"):
             except NoCredentialsError:
                 s3fs = S3FS.S3FileSystem(anon=True)
                 return s3fs.open(file_path)
-        elif "compression" in kwargs:
+        elif compression == "gzip":
             if kwargs["compression"] == "gzip":
                 import gzip
                 return gzip.open(file_path, mode=mode)
