@@ -308,15 +308,15 @@ class RayIO(BaseIO):
             kwargs["index_col"] = None
             f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
             kwargs_uncompressed = kwargs.copy()
-            kwargs_uncompressed["compression"] = None
+            kwargs_uncompressed["compression"] = "infer"
             names = pandas.read_csv(
                 f, **dict(kwargs_uncompressed, nrows=0, skipfooter=0)
             ).columns
             kwargs["index_col"] = index_col
 
-        f = file_open(filepath, "rb", kwargs)
+        f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
         kwargs_uncompressed = kwargs.copy()
-        kwargs_uncompressed["compression"] = None
+        kwargs_uncompressed["compression"] = "infer"
         empty_pd_df = pandas.read_csv(
             f, **dict(kwargs_uncompressed, nrows=0, skipfooter=0)
         )
