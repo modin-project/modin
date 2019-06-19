@@ -51,6 +51,7 @@ def file_open(file_path, mode="rb", compression="infer"):
                 return s3fs.open(file_path)
         elif compression == "gzip":
             import gzip
+
             return gzip.open(file_path, mode=mode)
     return open(file_path, mode=mode)
 
@@ -306,20 +307,18 @@ class RayIO(BaseIO):
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
             kwargs["index_col"] = None
-            f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
-            kwargs_uncompressed = kwargs.copy()
-            kwargs_uncompressed["compression"] = "infer"
+            # f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
+            # kwargs_uncompressed = kwargs.copy()
+            # kwargs_uncompressed["compression"] = "infer"
             names = pandas.read_csv(
-                f, **dict(kwargs_uncompressed, nrows=0, skipfooter=0)
+                filepath, **dict(kwargs, nrows=0, skipfooter=0)
             ).columns
             kwargs["index_col"] = index_col
 
-        f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
-        kwargs_uncompressed = kwargs.copy()
-        kwargs_uncompressed["compression"] = "infer"
-        empty_pd_df = pandas.read_csv(
-            f, **dict(kwargs_uncompressed, nrows=0, skipfooter=0)
-        )
+        # f = file_open(filepath, "rb", kwargs.get("compression", "infer"))
+        # kwargs_uncompressed = kwargs.copy()
+        # kwargs_uncompressed["compression"] = "infer"
+        empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -585,7 +584,10 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
-            if _infer_compression(filepath_or_buffer, kwargs.get("compression")) == "gzip":
+            if (
+                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
+                == "gzip"
+            ):
                 filtered_kwargs["compression"] = "gzip"
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")
