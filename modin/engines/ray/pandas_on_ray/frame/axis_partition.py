@@ -32,7 +32,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_return_vals=num_splits,
+            num_return_vals=num_splits * 3,
         )
 
     @classmethod
@@ -49,8 +49,21 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 kwargs,
             )
             + tuple(partitions),
-            num_return_vals=num_splits,
+            num_return_vals=num_splits * 3,
         )
+
+    def _wrap_partitions(self, partitions):
+        if isinstance(partitions, self.instance_type):
+            return [self.partition_type(partitions)]
+        else:
+            return [
+                self.partition_type(
+                    partitions[i],
+                    self.partition_type(partitions[i + 1]),
+                    self.partition_type(partitions[i + 2]),
+                )
+                for i in range(0, len(partitions), 3)
+            ]
 
 
 class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
@@ -83,4 +96,5 @@ def deploy_ray_func(func, *args):  # pragma: no cover
     Returns:
         The result of the function `func`.
     """
-    return func(*args)
+    result = func(*args)
+    return [i for r in result for i in [r, len(r), len(r.columns)]]
