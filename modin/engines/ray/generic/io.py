@@ -104,6 +104,12 @@ class RayIO(BaseIO):
     #
     # Signature: (filepath, num_splits, start, stop, kwargs, prefix_id)
 
+    read_json_remote_task = None
+    # For reading JSON files and other text files in parallel, this task should read
+    # based ...
+    #
+    # Signature: 
+
     read_hdf_remote_task = None
     # For reading HDF5 files in parallel, this task should read based on the `columns`
     # parameter in the task signature. Each task will read a subset of the columns.
@@ -615,6 +621,47 @@ class RayIO(BaseIO):
             return cls._read_csv_from_file_pandas_on_ray(
                 filepath_or_buffer, filtered_kwargs
             )
+    
+    @classmethod
+    def read_json(
+        path_or_buf=None,
+        orient=None,
+        typ="frame",
+        dtype=True,
+        convert_axes=True,
+        convert_dates=True,
+        keep_default_dates=True,
+        numpy=False,
+        precise_float=False,
+        date_unit=None,
+        encoding=None,
+        lines=False,
+        chunksize=None,
+        compression="infer",
+    ):
+        kwargs = {
+            "path_or_buf": path_or_buf,
+            "orient": orient,
+            "typ": typ,
+            "dtype": dtype,
+            "convert_axes": convert_axes,
+            "convert_dates": convert_dates,
+            "keep_default_dates": keep_default_dates,
+            "numpy": numpy,
+            "precise_float": precise_float,
+            "date_unit": date_unit,
+            "encoding": encoding,
+            "lines": lines,
+            "chunksize": chunksize,
+            "compression": compression,
+        }
+        if cls.read_json_remote_task is None:
+            return super(RayIO, cls).read_json(**kwargs)
+        
+        if lines:
+            #
+        else:
+            raise NotImplementedError("Currently only supports `lines=True`")
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
