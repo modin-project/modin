@@ -1766,7 +1766,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data, new_index, new_columns, self.dtypes.copy(), self._is_transposed
         )
 
-    # END Map across rows/columns 
+    # END Map across rows/columns
 
     # Head/Tail/Front/Back
     def head(self, n):
