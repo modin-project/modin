@@ -6,7 +6,6 @@ from itertools import groupby
 import numpy as np
 from operator import itemgetter
 import pandas
-from pandas.api.types import is_list_like
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import (
