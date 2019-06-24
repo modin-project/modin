@@ -1108,6 +1108,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self._map_partitions(func, new_dtypes=new_dtypes)
 
+    def memory_usage(self, axis=0, **kwargs):
+        """Returns the memory usage of each column.
+
+        Returns:
+            A new QueryCompiler object containing the memory usage of each column.
+        """
+        if self._is_transposed:
+            return self.transpose().memory_usage(axis=1, **kwargs)
+
+        def memory_usage_builder(df, **kwargs):
+            axis = kwargs.pop("axis")
+            # We have to manually change the orientation of the data within the
+            # partitions because memory_usage does not take in an axis argument
+            # and always does it along columns.
+            if axis:
+                df = df.T
+            result = df.memory_usage(**kwargs)
+            return result
+
+        def sum_memory_usage(df, **kwargs):
+            axis = kwargs.pop("axis")
+            return df.sum(axis=axis)
+
+        # Even though memory_usage does not take in an axis argument, we have to
+        # pass in an axis kwargs for _build_mapreduce_func to properly arrange
+        # the results.
+        map_func = self._build_mapreduce_func(memory_usage_builder, axis=axis, **kwargs)
+        reduce_func = self._build_mapreduce_func(sum_memory_usage, axis=axis, **kwargs)
+        return self._full_reduce(axis, map_func, reduce_func)
+
     def negative(self, **kwargs):
         func = self._prepare_method(pandas.DataFrame.__neg__, **kwargs)
         return self._map_partitions(func)
@@ -1301,36 +1331,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = self._build_mapreduce_func(pandas.DataFrame.median, **kwargs)
         return self._full_axis_reduce(axis, func)
 
-    def memory_usage(self, axis=0, **kwargs):
-        """Returns the memory usage of each column.
-
-        Returns:
-            A new QueryCompiler object containing the memory usage of each column.
-        """
-        if self._is_transposed:
-            return self.transpose().memory_usage(axis=1, **kwargs)
-
-        def memory_usage_builder(df, **kwargs):
-            axis = kwargs.pop("axis")
-            # We have to manually change the orientation of the data within the
-            # partitions because memory_usage does not take in an axis argument
-            # and always does it along columns.
-            if axis:
-                df = df.T
-            result = df.memory_usage(**kwargs)
-            return result
-
-        def sum_memory_usage(df, **kwargs):
-            axis = kwargs.pop("axis")
-            return df.sum(axis=axis)
-
-        # Even though memory_usage does not take in an axis argument, we have to
-        # pass in an axis kwargs for _build_mapreduce_func to properly arrange
-        # the results.
-        map_func = self._build_mapreduce_func(memory_usage_builder, axis=axis, **kwargs)
-        reduce_func = self._build_mapreduce_func(sum_memory_usage, axis=axis, **kwargs)
-        return self._full_reduce(axis, map_func, reduce_func)
-
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
 
@@ -1513,73 +1513,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_data = self._map_across_full_axis(axis, func)
         return self.__constructor__(new_data, self.index, self.columns)
 
-    def dropna(self, **kwargs):
-        """Returns a new QueryCompiler with null values dropped along given axis.
-        Return:
-            a new QueryCompiler
-        """
-        axis = kwargs.get("axis", 0)
-        subset = kwargs.get("subset", None)
-        thresh = kwargs.get("thresh", None)
-        how = kwargs.get("how", "any")
-        # We need to subset the axis that we care about with `subset`. This
-        # will be used to determine the number of values that are NA.
-        if subset is not None:
-            if not axis:
-                compute_na = self.getitem_column_array(subset)
-            else:
-                compute_na = self.getitem_row_array(self.index.get_indexer_for(subset))
-        else:
-            compute_na = self
-
-        if not isinstance(axis, list):
-            axis = [axis]
-        # We are building this dictionary first to determine which columns
-        # and rows to drop. This way we do not drop some columns before we
-        # know which rows need to be dropped.
-        if thresh is not None:
-            # Count the number of NA values and specify which are higher than
-            # thresh.
-            drop_values = {
-                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1).to_pandas().squeeze()
-                > thresh
-                for ax in axis
-            }
-        else:
-            drop_values = {
-                ax
-                ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1).to_pandas().squeeze()
-                for ax in axis
-            }
-
-        if 0 not in drop_values:
-            drop_values[0] = None
-
-        if 1 not in drop_values:
-            drop_values[1] = None
-
-            rm_from_index = (
-                [obj for obj in compute_na.index[drop_values[1]]]
-                if drop_values[1] is not None
-                else None
-            )
-            rm_from_columns = (
-                [obj for obj in compute_na.columns[drop_values[0]]]
-                if drop_values[0] is not None
-                else None
-            )
-        else:
-            rm_from_index = (
-                compute_na.index[drop_values[1]] if drop_values[1] is not None else None
-            )
-            rm_from_columns = (
-                compute_na.columns[drop_values[0]]
-                if drop_values[0] is not None
-                else None
-            )
-
-        return self.drop(index=rm_from_index, columns=rm_from_columns)
-
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
 
@@ -1690,6 +1623,64 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data = self._map_across_full_axis(axis, func)
             return self.__constructor__(new_data, self.index, self.columns)
 
+    def quantile_for_list_of_values(self, **kwargs):
+        """Returns Manager containing quantiles along an axis for numeric columns.
+
+        Returns:
+            QueryCompiler containing quantiles of original QueryCompiler along an axis.
+        """
+        if self._is_transposed:
+            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
+            return self.transpose().quantile_for_list_of_values(**kwargs)
+        axis = kwargs.get("axis", 0)
+        q = kwargs.get("q")
+        numeric_only = kwargs.get("numeric_only", True)
+        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
+
+        if numeric_only:
+            new_columns = self.numeric_columns()
+        else:
+            new_columns = [
+                col
+                for col, dtype in zip(self.columns, self.dtypes)
+                if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
+            ]
+        if axis:
+            # If along rows, then drop the nonnumeric columns, record the index, and
+            # take transpose. We have to do this because if we don't, the result is all
+            # in one column for some reason.
+            nonnumeric = [
+                col
+                for col, dtype in zip(self.columns, self.dtypes)
+                if not is_numeric_dtype(dtype)
+            ]
+            query_compiler = self.drop(columns=nonnumeric)
+            new_columns = query_compiler.index
+        else:
+            query_compiler = self
+
+        def quantile_builder(df, **kwargs):
+            result = df.quantile(**kwargs)
+            return result.T if axis == 1 else result
+
+        func = query_compiler._prepare_method(quantile_builder, **kwargs)
+        q_index = pandas.Float64Index(q)
+        new_data = query_compiler._map_across_full_axis(axis, func)
+
+        # This took a long time to debug, so here is the rundown of why this is needed.
+        # Previously, we were operating on select indices, but that was broken. We were
+        # not correctly setting the columns/index. Because of how we compute `to_pandas`
+        # and because of the static nature of the index for `axis=1` it is easier to
+        # just handle this as the transpose (see `quantile_builder` above for the
+        # transpose within the partition) than it is to completely rework other
+        # internal methods. Basically we are returning the transpose of the object for
+        # correctness and cleanliness of the code.
+        if axis == 1:
+            q_index = new_columns
+            new_columns = pandas.Float64Index(q)
+        result = self.__constructor__(new_data, q_index, new_columns)
+        return result.transpose() if axis == 1 else result
+
     def query(self, expr, **kwargs):
         """Query columns of the QueryCompiler with a boolean expression.
 
@@ -1775,89 +1766,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data, new_index, new_columns, self.dtypes.copy(), self._is_transposed
         )
 
-    # END Map across rows/columns
-
-    # Map across rows/columns
-    # These operations require some global knowledge of the full column/row
-    # that is being operated on. This means that we have to put all of that
-    # data in the same place.
-    def _map_across_full_axis_select_indices(
-        self, axis, func, indices, keep_remaining=False
-    ):
-        """Maps function to select indices along full axis.
-
-        Args:
-            axis: 0 for columns and 1 for rows.
-            func: Callable mapping function over the BlockParitions.
-            indices: indices along axis to map over.
-            keep_remaining: True if keep indices where function was not applied.
-
-        Returns:
-            BaseFrameManager containing the result of mapping func over axis on indices.
-        """
-        return self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, indices, keep_remaining
-        )
-
-    def quantile_for_list_of_values(self, **kwargs):
-        """Returns Manager containing quantiles along an axis for numeric columns.
-
-        Returns:
-            QueryCompiler containing quantiles of original QueryCompiler along an axis.
-        """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().quantile_for_list_of_values(**kwargs)
-        axis = kwargs.get("axis", 0)
-        q = kwargs.get("q")
-        numeric_only = kwargs.get("numeric_only", True)
-        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
-
-        if numeric_only:
-            new_columns = self.numeric_columns()
-        else:
-            new_columns = [
-                col
-                for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
-            ]
-        if axis:
-            # If along rows, then drop the nonnumeric columns, record the index, and
-            # take transpose. We have to do this because if we don't, the result is all
-            # in one column for some reason.
-            nonnumeric = [
-                col
-                for col, dtype in zip(self.columns, self.dtypes)
-                if not is_numeric_dtype(dtype)
-            ]
-            query_compiler = self.drop(columns=nonnumeric)
-            new_columns = query_compiler.index
-        else:
-            query_compiler = self
-
-        def quantile_builder(df, **kwargs):
-            result = df.quantile(**kwargs)
-            return result.T if axis == 1 else result
-
-        func = query_compiler._prepare_method(quantile_builder, **kwargs)
-        q_index = pandas.Float64Index(q)
-        new_data = query_compiler._map_across_full_axis(axis, func)
-
-        # This took a long time to debug, so here is the rundown of why this is needed.
-        # Previously, we were operating on select indices, but that was broken. We were
-        # not correctly setting the columns/index. Because of how we compute `to_pandas`
-        # and because of the static nature of the index for `axis=1` it is easier to
-        # just handle this as the transpose (see `quantile_builder` above for the
-        # transpose within the partition) than it is to completely rework other
-        # internal methods. Basically we are returning the transpose of the object for
-        # correctness and cleanliness of the code.
-        if axis == 1:
-            q_index = new_columns
-            new_columns = pandas.Float64Index(q)
-        result = self.__constructor__(new_data, q_index, new_columns)
-        return result.transpose() if axis == 1 else result
-
-    # END Map across rows/columns
+    # END Map across rows/columns 
 
     # Head/Tail/Front/Back
     def head(self, n):
@@ -2073,8 +1982,75 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END __getitem__ methods
 
-    # Drop
+    # Drop/Dropna
     # This will change the shape of the resulting data.
+    def dropna(self, **kwargs):
+        """Returns a new QueryCompiler with null values dropped along given axis.
+        Return:
+            a new QueryCompiler
+        """
+        axis = kwargs.get("axis", 0)
+        subset = kwargs.get("subset", None)
+        thresh = kwargs.get("thresh", None)
+        how = kwargs.get("how", "any")
+        # We need to subset the axis that we care about with `subset`. This
+        # will be used to determine the number of values that are NA.
+        if subset is not None:
+            if not axis:
+                compute_na = self.getitem_column_array(subset)
+            else:
+                compute_na = self.getitem_row_array(self.index.get_indexer_for(subset))
+        else:
+            compute_na = self
+
+        if not isinstance(axis, list):
+            axis = [axis]
+        # We are building this dictionary first to determine which columns
+        # and rows to drop. This way we do not drop some columns before we
+        # know which rows need to be dropped.
+        if thresh is not None:
+            # Count the number of NA values and specify which are higher than
+            # thresh.
+            drop_values = {
+                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1).to_pandas().squeeze()
+                > thresh
+                for ax in axis
+            }
+        else:
+            drop_values = {
+                ax
+                ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1).to_pandas().squeeze()
+                for ax in axis
+            }
+
+        if 0 not in drop_values:
+            drop_values[0] = None
+
+        if 1 not in drop_values:
+            drop_values[1] = None
+
+            rm_from_index = (
+                [obj for obj in compute_na.index[drop_values[1]]]
+                if drop_values[1] is not None
+                else None
+            )
+            rm_from_columns = (
+                [obj for obj in compute_na.columns[drop_values[0]]]
+                if drop_values[0] is not None
+                else None
+            )
+        else:
+            rm_from_index = (
+                compute_na.index[drop_values[1]] if drop_values[1] is not None else None
+            )
+            rm_from_columns = (
+                compute_na.columns[drop_values[0]]
+                if drop_values[0] is not None
+                else None
+            )
+
+        return self.drop(index=rm_from_index, columns=rm_from_columns)
+
     def drop(self, index=None, columns=None):
         """Remove row data for target index and columns.
 
@@ -2115,7 +2091,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
 
-    # END Drop
+    # END Drop/Dropna
 
     # Insert
     # This method changes the shape of the resulting data. In Pandas, this
