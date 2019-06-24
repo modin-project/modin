@@ -368,7 +368,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _join_list_of_managers(self, others, **kwargs):
         assert isinstance(
             others, list
-        ), "This method is for lists of DataManager objects only"
+        ), "This method is for lists of QueryCompiler objects only"
         assert all(
             isinstance(other, type(self)) for other in others
         ), "Different Manager objects are being used. This is not allowed"
@@ -488,7 +488,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Converts Modin DataFrame to Pandas DataFrame.
 
         Returns:
-            Pandas DataFrame of the DataManager.
+            Pandas DataFrame of the QueryCompiler.
         """
         df = self.data.to_pandas(is_transposed=self._is_transposed)
         if df.empty:
@@ -514,7 +514,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             block_partitions_cls: BlockParitions object to store partitions
 
         Returns:
-            Returns DataManager containing data from the Pandas DataFrame.
+            Returns QueryCompiler containing data from the Pandas DataFrame.
         """
         new_index = df.index
         new_columns = df.columns
@@ -537,7 +537,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             how_to_join: The type of join to join to make (e.g. right, outer).
 
         Returns:
-            New DataManager with new data and index.
+            New QueryCompiler with new data and index.
         """
         reindexed_self, reindexed_other_list, joined_index = self.copartition(
             0, other, how_to_join, sort=False
@@ -578,7 +578,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             other: The other Manager/scalar.
 
         Returns:
-            New DataManager with new data and index.
+            New QueryCompiler with new data and index.
         """
         axis = kwargs.get("axis", 0)
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
@@ -655,11 +655,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             other: The other manager.
 
         Returns:
-            New DataManager with updated data and index.
+            New QueryCompiler with updated data and index.
         """
         assert isinstance(
             other, type(self)
-        ), "Must have the same DataManager subclass to perform this operation"
+        ), "Must have the same QueryCompiler subclass to perform this operation"
 
         def update_builder(df, other, **kwargs):
             # This is because of a requirement in Arrow
@@ -676,12 +676,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             cond: Condition on which to evaluate values.
 
         Returns:
-            New DataManager with updated data and index.
+            New QueryCompiler with updated data and index.
         """
 
         assert isinstance(
             cond, type(self)
-        ), "Must have the same DataManager subclass to perform this operation"
+        ), "Must have the same QueryCompiler subclass to perform this operation"
         if isinstance(other, type(self)):
             # Note: Currently we are doing this with two maps across the entire
             # data. This can be done with a single map, but it will take a
@@ -860,10 +860,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # for simplicity of implementation.
 
     def transpose(self, *args, **kwargs):
-        """Transposes this DataManager.
+        """Transposes this QueryCompiler.
 
         Returns:
-            Transposed new DataManager.
+            Transposed new QueryCompiler.
         """
         new_data = self.data.transpose(*args, **kwargs)
         # Switch the index and columns and transpose the data within the blocks.
@@ -1508,7 +1508,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def dropna(self, **kwargs):
         """Returns a new QueryCompiler with null values dropped along given axis.
         Return:
-            a new DataManager
+            a new QueryCompiler
         """
         axis = kwargs.get("axis", 0)
         subset = kwargs.get("subset", None)
@@ -1683,13 +1683,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(new_data, self.index, self.columns)
 
     def query(self, expr, **kwargs):
-        """Query columns of the DataManager with a boolean expression.
+        """Query columns of the QueryCompiler with a boolean expression.
 
         Args:
             expr: Boolean expression to query the columns with.
 
         Returns:
-            DataManager containing the rows where the boolean expression is satisfied.
+            QueryCompiler containing the rows where the boolean expression is satisfied.
         """
         columns = self.columns
 
@@ -1714,7 +1714,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Computes numerical rank along axis. Equal values are set to the average.
 
         Returns:
-            DataManager containing the ranks of the values along an axis.
+            QueryCompiler containing the ranks of the values along an axis.
         """
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
@@ -1733,7 +1733,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Sorts the data with respect to either the columns or the indices.
 
         Returns:
-            DataManager containing the data sorted by columns or indices.
+            QueryCompiler containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
         if self._is_transposed:
@@ -1795,7 +1795,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """Returns Manager containing quantiles along an axis for numeric columns.
 
         Returns:
-            DataManager containing quantiles of original DataManager along an axis.
+            QueryCompiler containing quantiles of original QueryCompiler along an axis.
         """
         if self._is_transposed:
             kwargs["axis"] = kwargs.get("axis", 0) ^ 1
@@ -1859,7 +1859,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             n: Integer containing the number of rows to return.
 
         Returns:
-            DataManager containing the first n rows of the original DataManager.
+            QueryCompiler containing the first n rows of the original QueryCompiler.
         """
         # We grab the front if it is transposed and flag as transposed so that
         # we are not physically updating the data from this manager. This
@@ -1891,7 +1891,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             n: Integer containing the number of rows to return.
 
         Returns:
-            DataManager containing the last n rows of the original DataManager.
+            QueryCompiler containing the last n rows of the original QueryCompiler.
         """
         # See head for an explanation of the transposed behavior
         if n < 0:
@@ -1917,7 +1917,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             n: Integer containing the number of columns to return.
 
         Returns:
-            DataManager containing the first n columns of the original DataManager.
+            QueryCompiler containing the first n columns of the original QueryCompiler.
         """
         new_dtypes = (
             self._dtype_cache if self._dtype_cache is None else self._dtype_cache[:n]
@@ -1944,7 +1944,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             n: Integer containing the number of columns to return.
 
         Returns:
-            DataManager containing the last n columns of the original DataManager.
+            QueryCompiler containing the last n columns of the original QueryCompiler.
         """
         new_dtypes = (
             self._dtype_cache if self._dtype_cache is None else self._dtype_cache[-n:]
