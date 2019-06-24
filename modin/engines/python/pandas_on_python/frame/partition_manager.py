@@ -17,6 +17,9 @@ class PythonFrameManager(BaseFrameManager):
     def __init__(self, partitions):
         self.partitions = partitions
 
+    def put(self, obj):
+        return obj
+
     # We override these for performance reasons.
     # Lengths of the blocks
     _lengths_cache = None

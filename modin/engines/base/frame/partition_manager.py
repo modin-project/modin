@@ -38,17 +38,15 @@ class BaseFrameManager(object):
                 `_partition_class`.
         """
         raise NotImplementedError("Must be implemented in children classes")
-
-    def _broadcast_values(self, axis, values, split=True):
-        """Splits the values to the size of the partitions.
+    
+    def put(self, obj):
+        """Method for putting objects closer to the partitions.
 
         Args:
-            axis: Axis value of the axis the function is being applied on.
-            values: Numpy array of values to broadcast.
-            split: True to split the values, False to leave it all as one.
+            obj: Object to place.
 
         Returns:
-            Returns serialized object or list of serialized objects alined with the partitions.
+            Reference to object or object itself depending on engine.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -233,6 +231,29 @@ class BaseFrameManager(object):
             )
         )
         return new_partitions.map_across_full_axis(axis, reduce_func)
+
+    def _broadcast_values(self, axis, values, split=True):
+        """Splits the values to the size of the partitions.
+
+        Args:
+            axis: Axis value of the axis the function is being applied on.
+            values: List-like of values to broadcast.
+            block_idx: Index of the partition to give the values to.
+
+        Returns:
+            A list-like of values to be associated with the block_idx.
+        """
+        if split:
+            axis_lengths = self.block_widths if axis else self.block_lengths
+            broadcast_values = []
+            for block_idx in range(len(axis_lengths)):
+                cumulative_axis = np.insert(np.cumsum(axis_lengths), 0, 0)
+                broadcast_values.append(self.put(values[
+                    cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
+                ]))
+        else:
+            broadcast_values = self.put(values)
+        return broadcast_values
 
     def map_across_blocks(
         self,

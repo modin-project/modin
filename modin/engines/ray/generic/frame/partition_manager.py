@@ -12,6 +12,9 @@ class RayFrameManager(BaseFrameManager):
     def __init__(self, partitions):
         self.partitions = partitions
 
+    def put(self, obj):
+        return ray.put(obj)
+
     # We override these for performance reasons.
     # Lengths of the blocks
     _lengths_cache = None
@@ -101,26 +104,3 @@ class RayFrameManager(BaseFrameManager):
                     ]
                 )
         return self._widths_cache
-
-    def _broadcast_values(self, axis, values):
-        """Splits the values to the size of the partitions.
-
-        Args:
-            axis: Axis value of the axis the function is being applied on.
-            values: List-like of values to broadcast.
-            block_idx: Index of the partition to give the values to.
-
-        Returns:
-            A list-like of values to be associated with the block_idx.
-        """
-        axis_lengths = self.block_widths if axis else self.block_lengths
-        broadcast_values = []
-        for block_idx in range(len(axis_lengths)):
-            cumulative_axis = np.insert(np.cumsum(axis_lengths), 0, 0)
-            broadcast_values.append(ray.put(values[
-                cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
-            ]))
-            print(values[
-                cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
-            ])
-        return broadcast_values
