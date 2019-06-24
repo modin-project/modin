@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pandas
 import ray
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
@@ -97,4 +98,9 @@ def deploy_ray_func(func, *args):  # pragma: no cover
         The result of the function `func`.
     """
     result = func(*args)
-    return [i for r in result for i in [r, len(r), len(r.columns)]]
+    if isinstance(result, pandas.DataFrame):
+        return result, len(result), len(result.columns)
+    elif all(isinstance(r, pandas.DataFrame) for r in result):
+        return [i for r in result for i in [r, len(r), len(r.columns)]]
+    else:
+        return [i for r in result for i in [r, None, None]]
