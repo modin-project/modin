@@ -243,8 +243,9 @@ class BaseFrameManager(object):
         Returns:
             A list-like of values to be associated with the block_idx.
         """
+        axis_lengths = self.block_widths if axis else self.block_lengths
+        assert len(values) == sum(axis_lengths), "Expected a broadcast value of length {expected}, actual broadcast value length of {actual}".format(sum(axis_lengths), len(values))
         if split:
-            axis_lengths = self.block_widths if axis else self.block_lengths
             broadcast_values = []
             for block_idx in range(len(axis_lengths)):
                 cumulative_axis = np.insert(np.cumsum(axis_lengths), 0, 0)
