@@ -380,7 +380,7 @@ def test_read_csv_gzip():
 
     pandas_df = pandas.read_csv(gzip_path)
     modin_df = pd.read_csv(gzip_path)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(gzip_path, compression="gzip")
     modin_df = pd.read_csv(gzip_path, compression="gzip")
