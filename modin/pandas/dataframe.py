@@ -1954,6 +1954,10 @@ class DataFrame(BasePandasDataset):
                 self._create_or_update_from_compiler(
                     self._query_compiler.concat(1, value._query_compiler), inplace=True
                 )
+                # Now that the data is appended, we need to update the column name for
+                # that column to `key`, otherwise the name could be incorrect. Drop the
+                # last column name from the list (the appended value's name and append
+                # the new name.
                 self.columns = self.columns[:-1].append(pandas.Index([key]))
             else:
                 self.insert(loc=len(self.columns), column=key, value=value)
