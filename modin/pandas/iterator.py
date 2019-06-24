@@ -6,21 +6,21 @@ from collections import Iterator
 
 
 class PartitionIterator(Iterator):
-    def __init__(self, data_manager, axis, func):
+    def __init__(self, query_compiler, axis, func):
         """PartitionIterator class to define a generator on partitioned data
 
         Args:
-            data_manager (DataManager): Data manager for the dataframe
-            axis (int): axis to iterate over
-            func (callable): The function to get inner iterables from
+            query_compiler: Data manager for the dataframe
+            axis: axis to iterate over
+            func: The function to get inner iterables from
                 each partition
         """
-        self.data_manager = data_manager
+        self.query_compiler = query_compiler
         self.axis = axis
         self.index_iter = (
-            iter(self.data_manager.columns)
+            iter(self.query_compiler.columns)
             if axis
-            else iter(range(len(self.data_manager.index)))
+            else iter(range(len(self.query_compiler.index)))
         )
         self.func = func
 
@@ -33,7 +33,7 @@ class PartitionIterator(Iterator):
     def next(self):
         key = next(self.index_iter)
         if self.axis:
-            df = self.data_manager.getitem_column_array([key]).to_pandas()
+            df = self.query_compiler.getitem_column_array([key]).to_pandas()
         else:
-            df = self.data_manager.getitem_row_array([key]).to_pandas()
+            df = self.query_compiler.getitem_row_array([key]).to_pandas()
         return next(self.func(df))

@@ -138,7 +138,7 @@ class BaseQueryCompiler(object):
         """Converts Modin DataFrame to Pandas DataFrame.
 
         Returns:
-            Pandas DataFrame of the DataManager.
+            Pandas DataFrame of the QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -152,7 +152,7 @@ class BaseQueryCompiler(object):
             block_partitions_cls: BlockParitions object to store partitions
 
         Returns:
-            Returns DataManager containing data from the Pandas DataFrame.
+            Returns QueryCompiler containing data from the Pandas DataFrame.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -192,7 +192,7 @@ class BaseQueryCompiler(object):
             how_to_join: The type of join to join to make (e.g. right, outer).
 
         Returns:
-            New DataManager with new data and index.
+            New QueryCompiler with new data and index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -240,7 +240,7 @@ class BaseQueryCompiler(object):
             other: The other manager.
 
         Returns:
-            New DataManager with updated data and index.
+            New QueryCompiler with updated data and index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -251,7 +251,7 @@ class BaseQueryCompiler(object):
             cond: Condition on which to evaluate values.
 
         Returns:
-            New DataManager with updated data and index.
+            New QueryCompiler with updated data and index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -259,10 +259,10 @@ class BaseQueryCompiler(object):
 
     # Abstract Transpose
     def transpose(self, *args, **kwargs):
-        """Transposes this DataManager.
+        """Transposes this QueryCompiler.
 
         Returns:
-            Transposed new DataManager.
+            Transposed new QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -277,7 +277,7 @@ class BaseQueryCompiler(object):
             labels: New labels to conform 'axis' on to.
 
         Returns:
-            New DataManager with updated data and new index.
+            New QueryCompiler with updated data and new index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -285,7 +285,7 @@ class BaseQueryCompiler(object):
         """Removes all levels from index and sets a default level_0 index.
 
         Returns:
-            New DataManager with updated data and reset index.
+            New QueryCompiler with updated data and reset index.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -571,21 +571,21 @@ class BaseQueryCompiler(object):
         raise NotImplementedError("Must be implemented in children classes")
 
     def eval(self, expr, **kwargs):
-        """Returns a new DataManager with expr evaluated on columns.
+        """Returns a new QueryCompiler with expr evaluated on columns.
 
         Args:
             expr: The string expression to evaluate.
 
         Returns:
-            A new PandasDataManager with new columns after applying expr.
+            A new QueryCompiler with new columns after applying expr.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
     def mode(self, **kwargs):
-        """Returns a new DataManager with modes calculated for each label along given axis.
+        """Returns a new QueryCompiler with modes calculated for each label along given axis.
 
         Returns:
-            A new PandasDataManager with modes calculated.
+            A new QueryCompiler with modes calculated.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -593,18 +593,18 @@ class BaseQueryCompiler(object):
         """Replaces NaN values with the method provided.
 
         Returns:
-            A new PandasDataManager with null values filled.
+            A new QueryCompiler with null values filled.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
     def query(self, expr, **kwargs):
-        """Query columns of the DataManager with a boolean expression.
+        """Query columns of the QueryCompiler with a boolean expression.
 
         Args:
             expr: Boolean expression to query the columns with.
 
         Returns:
-            DataManager containing the rows where the boolean expression is satisfied.
+            QueryCompiler containing the rows where the boolean expression is satisfied.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -612,7 +612,7 @@ class BaseQueryCompiler(object):
         """Computes numerical rank along axis. Equal values are set to the average.
 
         Returns:
-            DataManager containing the ranks of the values along an axis.
+            QueryCompiler containing the ranks of the values along an axis.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -620,7 +620,7 @@ class BaseQueryCompiler(object):
         """Sorts the data with respect to either the columns or the indices.
 
         Returns:
-            DataManager containing the data sorted by columns or indices.
+            QueryCompiler containing the data sorted by columns or indices.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -634,7 +634,7 @@ class BaseQueryCompiler(object):
         """Returns Manager containing quantiles along an axis for numeric columns.
 
         Returns:
-            DataManager containing quantiles of original DataManager along an axis.
+            QueryCompiler containing quantiles of original QueryCompiler along an axis.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -648,7 +648,7 @@ class BaseQueryCompiler(object):
             n: Integer containing the number of rows to return.
 
         Returns:
-            DataManager containing the first n rows of the original DataManager.
+            QueryCompiler containing the first n rows of the original QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -659,7 +659,7 @@ class BaseQueryCompiler(object):
             n: Integer containing the number of rows to return.
 
         Returns:
-            DataManager containing the last n rows of the original DataManager.
+            QueryCompiler containing the last n rows of the original QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -670,7 +670,7 @@ class BaseQueryCompiler(object):
             n: Integer containing the number of columns to return.
 
         Returns:
-            DataManager containing the first n columns of the original DataManager.
+            QueryCompiler containing the first n columns of the original QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -681,7 +681,7 @@ class BaseQueryCompiler(object):
             n: Integer containing the number of columns to return.
 
         Returns:
-            DataManager containing the last n columns of the original DataManager.
+            QueryCompiler containing the last n columns of the original QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -741,7 +741,7 @@ class BaseQueryCompiler(object):
             columns: Target columns to drop.
 
         Returns:
-            A new PandasDataManager.
+            A new QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
@@ -780,7 +780,7 @@ class BaseQueryCompiler(object):
             columns: The columns to convert.
 
         Returns:
-            A new PandasDataManager.
+            A new QueryCompiler.
         """
         raise NotImplementedError("Must be implemented in children classes")
 
