@@ -148,23 +148,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if self._is_transposed:
 
-            def helper(df, other=None, internal_indices=[]):
+            def helper(df, broadcast_values=None, internal_indices=[]):
                 if len(internal_indices) > 0:
                     kwargs["internal_indices"] = internal_indices
-                if other is None:
+                if broadcast_values is None:
                     return pandas_func(df.T, **kwargs)
                 else:
-                    return pandas_func(df.T, other, **kwargs)
+                    return pandas_func(df.T, broadcast_values, **kwargs)
 
         else:
 
-            def helper(df, other=None, internal_indices=[]):
+            def helper(df, broadcast_values=None, internal_indices=[]):
                 if len(internal_indices) > 0:
                     kwargs["internal_indices"] = internal_indices
-                if other is None:
+                if broadcast_values is None:
                     return pandas_func(df, **kwargs)
                 else:
-                    return pandas_func(df, other, **kwargs)
+                    return pandas_func(df, broadcast_values, **kwargs)
 
         return helper
 
@@ -1089,18 +1089,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations are operations that apply a function to every partition.
     def _map_partitions(self, func, new_dtypes=None):
         return self.__constructor__(
-            # self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-            self.data.map_across_blocks(func, broadcast_axis=0, broadcast_values=np.array([i for i in range(50)])), self.index, self.columns, new_dtypes
+            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
         )
 
     def abs(self):
-        # func = self._prepare_method(pandas.DataFrame.abs)
-        # return self._map_partitions(func, new_dtypes=self.dtypes.copy())
-        def abs_builder(df, other):
-            print(df)
-            print(other)
-            return df.abs()
-        func = self._prepare_method(abs_builder)
+        func = self._prepare_method(pandas.DataFrame.abs)
         return self._map_partitions(func, new_dtypes=self.dtypes.copy())
 
     def applymap(self, func):
@@ -1911,7 +1904,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 idx: value[key] for key in value for idx in index.get_indexer_for([key])
             }
 
-            def fillna_dict_builder(df, other, func_dict={}):
+            def fillna_dict_builder(df, func_dict={}):
                 # We do this to ensure that no matter the state of the columns we get
                 # the correct ones.
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}

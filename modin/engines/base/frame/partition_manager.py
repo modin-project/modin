@@ -791,7 +791,7 @@ class BaseFrameManager(object):
         result = []
         for ind, obj in enumerate(partitions):
             if broadcast_values is not None:
-                result.append(obj.apply(preprocessed_func, other[ind], **kwargs))
+                result.append(obj.apply(preprocessed_func, to_broadcast[ind], **kwargs))
             else:
                 result.append(obj.apply(preprocessed_func, **kwargs))
         return result

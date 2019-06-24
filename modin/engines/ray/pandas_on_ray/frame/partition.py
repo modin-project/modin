@@ -143,18 +143,22 @@ def deploy_ray_func(call_queue, partition, func, broadcast_values, kwargs):  # p
             queued_func = deserialize(queued_func)
             queued_broadcast_values = deserialize(broadcast_values)
             queued_kwargs = deserialize(queued_kwargs)
+            if queued_broadcast_values is not None:
+                queued_kwargs["broadcast_values"] = broadcast_values
             try:
-                result = queued_func(partition, broadcast_values=broadcast_values, **queued_kwargs)
+                result = queued_func(partition, **queued_kwargs)
             except ValueError:
-                result = queued_func(partition.copy(), broadcast_values=broadcast_values, **queued_kwargs)
+                result = queued_func(partition.copy(), **queued_kwargs)
     if func is not None:
+        if broadcast_values is not None:
+            kwargs["broadcast_values"] = broadcast_values
         try:
-            result = func(partition, broadcast_values=broadcast_values, **kwargs)
+            result = func(partition, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
         # don't want the error to propagate to the user, and we want to avoid copying unless
         # we absolutely have to.
         except ValueError:
-            result = func(partition.copy(), broadcast_values=broadcast_values, **kwargs)
+            result = func(partition.copy(), **kwargs)
     else:
         result = partition
     return (
