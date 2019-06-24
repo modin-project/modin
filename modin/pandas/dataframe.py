@@ -1947,9 +1947,16 @@ class DataFrame(BasePandasDataset):
                     len(value.shape) < 3
                 ), "Shape of new values must be compatible with manager shape"
                 value = value.T.reshape(-1)[: len(self)]
-            value = np.array(value)
+            if not isinstance(value, Series):
+                value = list(value)
         if key not in self.columns:
-            self.insert(loc=len(self.columns), column=key, value=value)
+            if isinstance(value, Series):
+                self._create_or_update_from_compiler(
+                    self._query_compiler.concat(1, value._query_compiler), inplace=True
+                )
+                self.columns = self.columns[:-1].append(pandas.Index([key]))
+            else:
+                self.insert(loc=len(self.columns), column=key, value=value)
         elif len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)

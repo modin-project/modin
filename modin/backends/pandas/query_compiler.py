@@ -343,7 +343,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         new_self, to_append, joined_axis = self.copartition(
-            axis ^ 1, others, join, sort, force_repartition=True
+            axis ^ 1,
+            others,
+            join,
+            sort,
+            force_repartition=any(obj._is_transposed for obj in [self] + others),
         )
         new_data = new_self.concat(axis, to_append)
 
@@ -378,7 +382,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lsuffix = kwargs.get("lsuffix", "")
         rsuffix = kwargs.get("rsuffix", "")
         new_self, to_join, joined_index = self.copartition(
-            0, others, how, sort, force_repartition=True
+            0,
+            others,
+            how,
+            sort,
+            force_repartition=any(obj._is_transposed for obj in [self] + others),
         )
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
