@@ -281,14 +281,11 @@ class BaseFrameManager(object):
         for row_idx, row_of_parts in enumerate(self.partitions):
             new_partitions_row = []
             for col_idx, part in enumerate(row_of_parts):
-                if broadcast_values is not None:
-                    other = broadcast_values[col_idx if broadcast_axis else row_idx]
-                else:
-                    other = None
+                to_broadcast = broadcast_values[col_idx if broadcast_axis else row_idx] if broadcast_values is not None else None
                 if lazy:
                     new_block = part.add_to_apply_calls(preprocessed_map_func, other=other, **kwargs)
                 else:
-                    new_block = part.apply(preprocessed_map_func, other=other, **kwargs)
+                    new_block = part.apply(preprocessed_map_func, broadcast_values=to_broadcast, **kwargs)
                 new_partitions_row.append(new_block)
             new_partitions.append(new_partitions_row)
         return self.__constructor__(np.array(new_partitions))
@@ -339,7 +336,7 @@ class BaseFrameManager(object):
             )
         return new_self, new_other
 
-    def map_across_full_axis(self, axis, map_func):
+    def map_across_full_axis(self, axis, map_func, broadcast_values=None):
         """Applies `map_func` to every partition.
 
         Note: This method should be used in the case that `map_func` relies on
@@ -348,6 +345,7 @@ class BaseFrameManager(object):
         Args:
             axis: The axis to perform the map across (0 - index, 1 - columns).
             map_func: The function to apply.
+            broadcast_values: The values to broadcast to the full axis.
 
         Returns:
             A new BaseFrameManager object, the type of object that called this.
@@ -358,13 +356,14 @@ class BaseFrameManager(object):
         num_splits = self._compute_num_partitions()
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
+        to_broadcast = self._broadcast_values(axis, broadcast_values, split=False)
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
         result_blocks = np.array(
             [
-                part.apply(preprocessed_map_func, num_splits=num_splits)
+                part.apply(preprocessed_map_func, num_splits=num_splits, broadcast_values=to_broadcast)
                 for part in partitions
             ]
         )
@@ -779,19 +778,20 @@ class BaseFrameManager(object):
         Note: The main use for this is to preprocess the func.
 
         Args:
-            func: The func to apply
-            partitions: The list of partitions
+            func: The func to apply.
+            partitions: The list of partitions.
+            broadcast_axis: The axis to broadcast the values against.
+            broadcast_values: The values to broadcast.
 
         Returns:
             A list of BaseFramePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        if broadcast_values is not None:
-            other = self._broadcast_values(broadcast_axis, broadcast_values)
+        to_broadcast = self._broadcast_values(broadcast_axis, broadcast_values) if broadcast_values is not None else None
         result = []
         for ind, obj in enumerate(partitions):
             if broadcast_values is not None:
-                result.append(obj.apply(preprocessed_func, other, **kwargs))
+                result.append(obj.apply(preprocessed_func, other[ind], **kwargs))
             else:
                 result.append(obj.apply(preprocessed_func, **kwargs))
         return result
@@ -812,6 +812,7 @@ class BaseFrameManager(object):
             keep_remaining: Whether or not to keep the other partitions.
                 Some operations may want to drop the remaining partitions and
                 keep only the results.
+            broadcast_values: The values to broadcast.
 
         Returns:
             A new BaseFrameManager object, the type of object that called this.
@@ -928,7 +929,7 @@ class BaseFrameManager(object):
         )
 
     def apply_func_to_select_indices_along_full_axis(
-        self, axis, func, indices, keep_remaining=False
+        self, axis, func, indices, keep_remaining=False, broadcast_values=None,
     ):
         """Applies a function to a select subset of full columns/rows.
 
@@ -946,6 +947,7 @@ class BaseFrameManager(object):
             keep_remaining: Whether or not to keep the other partitions.
                 Some operations may want to drop the remaining partitions and
                 keep only the results.
+            broadcast_values: The values to broadcast.
 
         Returns:
             A new BaseFrameManager object, the type of object that called this.
@@ -961,6 +963,7 @@ class BaseFrameManager(object):
             indices = [indices]
         partitions_dict = self._get_dict_of_block_index(axis, indices)
         preprocessed_func = self.preprocess_func(func)
+        to_broadcast = self.put(axis, broadcast_values, split=False)
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
@@ -980,6 +983,7 @@ class BaseFrameManager(object):
                     [
                         partitions_for_apply[i].apply(
                             preprocessed_func,
+                            broadcast_values=to_broadcast,
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
@@ -995,6 +999,8 @@ class BaseFrameManager(object):
                         else self._apply_func_to_list_of_partitions(
                             preprocessed_func,
                             partitions_for_apply[i],
+                            broadcast_axis=axis,
+                            broadcast_values=broadcast_values,
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
@@ -1008,7 +1014,7 @@ class BaseFrameManager(object):
                 result = np.array(
                     [
                         partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i]
+                            preprocessed_func, broadcast_values=to_broadcast, internal_indices=partitions_dict[i]
                         )
                         for i in partitions_dict
                     ]
@@ -1020,7 +1026,7 @@ class BaseFrameManager(object):
                         partitions_for_remaining[i]
                         if i not in partitions_dict
                         else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i]
+                            preprocessed_func, broadcast_values=to_broadcast, internal_indices=partitions_dict[i]
                         )
                         for i in range(len(partitions_for_remaining))
                     ]

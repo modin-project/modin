@@ -502,7 +502,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        df = self.data.to_pandas()
+        df = self.data.to_pandas(is_transposed=self._is_transposed)
         if df.empty:
             if len(self.columns) != 0:
                 df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)

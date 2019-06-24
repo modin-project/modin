@@ -33,7 +33,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         self.drain_call_queue()
         return self.data.copy()
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, broadcast_values=None, **kwargs):
         """Apply some callable function to the data in this partition.
 
         Note: It is up to the implementation how kwargs are handled. They are
@@ -50,9 +50,9 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         def call_queue_closure(data, call_queues):
             result = data.copy()
-            for func, kwargs in call_queues:
+            for func, other, kwargs in call_queues:
                 try:
-                    result = func(result, **kwargs)
+                    result = func(result, other, **kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
@@ -60,11 +60,11 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
+        return PandasOnPythonFramePartition(func(self.data.copy(), broadcast_values, **kwargs))
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, broadcast_values=None, **kwargs):
         return PandasOnPythonFramePartition(
-            self.data.copy(), call_queue=self.call_queue + [(func, kwargs)]
+            self.data.copy(), call_queue=self.call_queue + [(func, broadcast_values, kwargs)]
         )
 
     def drain_call_queue(self):
