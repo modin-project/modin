@@ -8,7 +8,11 @@ from operator import itemgetter
 import pandas
 
 from modin.error_message import ErrorMessage
-from modin.data_management.utils import compute_chunksize, _get_nan_block_id
+from modin.data_management.utils import (
+    compute_chunksize,
+    _get_nan_block_id,
+    set_indices_for_pandas_concat,
+)
 
 
 class BaseFrameManager(object):
@@ -474,7 +478,8 @@ class BaseFrameManager(object):
             return self.transpose().to_pandas(False).T
         else:
             retrieved_objects = [
-                [obj.to_pandas() for obj in part] for part in self.partitions
+                [set_indices_for_pandas_concat(obj.to_pandas()) for obj in part]
+                for part in self.partitions
             ]
             if all(
                 isinstance(part, pandas.Series)
