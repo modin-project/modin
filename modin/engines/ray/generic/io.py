@@ -810,7 +810,9 @@ class RayIO(BaseIO):
         limit = math.ceil(row_cnt / num_parts)
         for part in range(num_parts):
             offset = part * limit
-            query = "SELECT * FROM ({} as foo) LIMIT {} OFFSET {}".format(sql, limit, offset)
+            query = "SELECT * FROM ({} as foo) LIMIT {} OFFSET {}".format(
+                sql, limit, offset
+            )
             partition_id = cls.read_sql_remote_task._remote(
                 args=(num_parts, query, con, index_col, kwargs),
                 num_return_vals=num_parts + 1,
