@@ -144,7 +144,7 @@ def deploy_ray_func(
             return ray.get(obj)
         return obj
 
-    if len(call_queue) > 1:
+    if len(call_queue) > 0:
         for queued_func, queued_broadcast_values, queued_kwargs in call_queue:
             queued_func = deserialize(queued_func)
             queued_broadcast_values = deserialize(broadcast_values)
@@ -152,9 +152,9 @@ def deploy_ray_func(
             if queued_broadcast_values is not None:
                 queued_kwargs["broadcast_values"] = broadcast_values
             try:
-                result = queued_func(partition, **queued_kwargs)
+                partition = queued_func(partition, **queued_kwargs)
             except ValueError:
-                result = queued_func(partition.copy(), **queued_kwargs)
+                partition = queued_func(partition.copy(), **queued_kwargs)
     if func is not None:
         if broadcast_values is not None:
             kwargs["broadcast_values"] = broadcast_values
