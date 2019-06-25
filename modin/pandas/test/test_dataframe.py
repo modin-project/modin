@@ -2068,6 +2068,26 @@ class TestDFPartOne:
 
         df_equals(modin_df.ffill(), test_data.tsframe.ffill())
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("method", ["backfill", "bfill", "pad", "ffill", None], ids=["backfill", "bfill", "pad", "ffill", "None"])
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("limit", int_arg_values, ids=int_arg_keys)
+    def test_fillna(self, data, method, axis, limit):
+        # We are not testing when limit is not positive until pandas-27042 gets fixed.
+        # We are not testing when axis is over rows until pandas-17399 gets fixed.
+        if limit > 0 and axis != 1 and axis != "columns":
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+
+            try:
+                pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.fillna(0, method=method, axis=axis, limit=limit)
+            else:
+                modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
+                df_equals(modin_result, pandas_result)
+
     def test_fillna_sanity(self):
         test_data = TestData()
         tf = test_data.tsframe

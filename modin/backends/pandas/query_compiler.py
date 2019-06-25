@@ -1632,7 +1632,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_data = self._map_across_full_axis(axis, func)
                 return self.__constructor__(new_data, self.index, self.columns)
             else:
-                return self._map_partitions(axis, func)
+                return self._map_partitions(func)
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
