@@ -11,6 +11,7 @@ import os
 import py
 import ray
 import re
+import sys
 import numpy as np
 import math
 
@@ -37,7 +38,7 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 
-def file_open(file_path, mode="rb"):
+def file_open(file_path, mode="rb", compression="infer"):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
@@ -50,6 +51,10 @@ def file_open(file_path, mode="rb"):
             except NoCredentialsError:
                 s3fs = S3FS.S3FileSystem(anon=True)
                 return s3fs.open(file_path)
+        elif compression == "gzip":
+            import gzip
+
+            return gzip.open(file_path, mode=mode)
     return open(file_path, mode=mode)
 
 
@@ -313,13 +318,11 @@ class RayIO(BaseIO):
             # be assigned correctly
             kwargs["index_col"] = None
             names = pandas.read_csv(
-                file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+                filepath, **dict(kwargs, nrows=0, skipfooter=0)
             ).columns
             kwargs["index_col"] = index_col
 
-        empty_pd_df = pandas.read_csv(
-            file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
-        )
+        empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -344,7 +347,7 @@ class RayIO(BaseIO):
             parse_dates=parse_dates,
             usecols=usecols,
         )
-        with file_open(filepath, "rb") as f:
+        with file_open(filepath, "rb", kwargs.get("compression", "infer")) as f:
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
@@ -595,8 +598,15 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
-            ErrorMessage.default_to_pandas("Compression detected.")
-            return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
+            if (
+                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
+                == "gzip"
+                and sys.version_info[0] == 3
+            ):
+                filtered_kwargs["compression"] = "gzip"
+            else:
+                ErrorMessage.default_to_pandas("Compression detected.")
+                return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:

@@ -370,6 +370,18 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
+def test_read_csv_gzip():
+    gzip_path = "modin/pandas/test/data/test_df.csv.gz"
+
+    pandas_df = pandas.read_csv(gzip_path)
+    modin_df = pd.read_csv(gzip_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
+    modin_df = pd.read_csv(gzip_path, compression="gzip")
+    df_equals(modin_df, pandas_df)
+
+
 def test_from_parquet(make_parquet_file):
     make_parquet_file(SMALL_ROW_SIZE)
 
