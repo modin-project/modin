@@ -54,16 +54,14 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         )
 
     def _wrap_partitions(self, partitions):
-        if not isinstance(partitions, self.instance_type):
-            return [
-                self.partition_type(
-                    partitions[i],
-                    self.partition_type(partitions[i + 1]),
-                    self.partition_type(partitions[i + 2]),
-                )
-                for i in range(0, len(partitions), 3)
-            ]
-        return super(PandasOnRayFrameAxisPartition, self)._wrap_partitions(partitions)
+        return [
+            self.partition_type(
+                partitions[i],
+                self.partition_type(partitions[i + 1]),
+                self.partition_type(partitions[i + 2]),
+            )
+            for i in range(0, len(partitions), 3)
+        ]
 
 
 class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
