@@ -798,10 +798,10 @@ class RayIO(BaseIO):
         if cls.read_sql_remote_task is None:
             return super(RayIO, cls).read_sql(sql, con, index_col=index_col, **kwargs)
 
-        row_cnt_query = "SELECT COUNT(*) FROM ({})".format(sql)
+        row_cnt_query = "SELECT COUNT(*) FROM ({} as foo)".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
         cols_names_df = pandas.read_sql(
-            "SELECT * FROM ({}) LIMIT 0".format(sql), con, index_col=index_col
+            "SELECT * FROM ({} as foo) LIMIT 0".format(sql), con, index_col=index_col
         )
         cols_names = cols_names_df.columns
         num_parts = cls.frame_mgr_cls._compute_num_partitions()
@@ -810,7 +810,9 @@ class RayIO(BaseIO):
         limit = math.ceil(row_cnt / num_parts)
         for part in range(num_parts):
             offset = part * limit
-            query = "SELECT * FROM ({}) LIMIT {} OFFSET {}".format(sql, limit, offset)
+            query = "SELECT * FROM ({} as foo) LIMIT {} OFFSET {}".format(
+                sql, limit, offset
+            )
             partition_id = cls.read_sql_remote_task._remote(
                 args=(num_parts, query, con, index_col, kwargs),
                 num_return_vals=num_parts + 1,
