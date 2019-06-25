@@ -2069,7 +2069,11 @@ class TestDFPartOne:
         df_equals(modin_df.ffill(), test_data.tsframe.ffill())
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("method", ["backfill", "bfill", "pad", "ffill", None], ids=["backfill", "bfill", "pad", "ffill", "None"])
+    @pytest.mark.parametrize(
+        "method",
+        ["backfill", "bfill", "pad", "ffill", None],
+        ids=["backfill", "bfill", "pad", "ffill", "None"],
+    )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize("limit", int_arg_values, ids=int_arg_keys)
     def test_fillna(self, data, method, axis, limit):
@@ -2080,7 +2084,9 @@ class TestDFPartOne:
             pandas_df = pandas.DataFrame(data)
 
             try:
-                pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
+                pandas_result = pandas_df.fillna(
+                    0, method=method, axis=axis, limit=limit
+                )
             except Exception as e:
                 with pytest.raises(type(e)):
                     modin_df.fillna(0, method=method, axis=axis, limit=limit)
