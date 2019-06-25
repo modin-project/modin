@@ -30,7 +30,8 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         Returns:
             The object that was `put`.
         """
-        self.drain_call_queue()
+        if len(self.call_queue):
+            self.drain_call_queue()
         return self.data.copy()
 
     def apply(self, func, broadcast_values=None, **kwargs):
@@ -50,9 +51,11 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         def call_queue_closure(data, call_queues):
             result = data.copy()
-            for func, other, kwargs in call_queues:
+            for func, broadcast_values, kwargs in call_queues:
                 try:
-                    result = func(result, other, **kwargs)
+                    if broadcast_values is not None:
+                        kwargs["broadcast_values"] = broadcast_values
+                    result = func(result, **kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
@@ -60,8 +63,10 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
+        if broadcast_values is not None:
+            kwargs["broadcast_values"] = broadcast_values
         return PandasOnPythonFramePartition(
-            func(self.data.copy(), broadcast_values, **kwargs)
+            func(self.data.copy(), **kwargs)
         )
 
     def add_to_apply_calls(self, func, broadcast_values=None, **kwargs):
