@@ -1597,6 +1597,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         value = kwargs.get("value")
+        method = kwargs.get("method", None)
+        limit = kwargs.get("limit", None)
+        downcast = kwargs.get("downcast", None)
+        full_axis = method is not None or limit is not None
+        new_dtype = self.dtypes if downcast is None else None
         if isinstance(value, dict):
             value = kwargs.pop("value")
 
@@ -1614,14 +1619,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 
-            new_data = self.data.apply_func_to_select_indices(
-                axis, fillna_dict_builder, value, keep_remaining=True
-            )
-            return self.__constructor__(new_data, self.index, self.columns)
+            if full_axis:
+                new_data = self.data.apply_func_to_select_indices_along_full_axis(
+                    axis, fillna_dict_builder, value, keep_remaining=True
+                )
+            else:
+                new_data = self.data.apply_func_to_select_indices(
+                    axis, fillna_dict_builder, value, keep_remaining=True
+                )
+            return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
         else:
             func = self._prepare_method(pandas.DataFrame.fillna, **kwargs)
-            new_data = self._map_across_full_axis(axis, func)
-            return self.__constructor__(new_data, self.index, self.columns)
+            if full_axis:
+                new_data = self._map_across_full_axis(axis, func)
+                return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
+            else:
+                return self._map_partitions(axis, func, new_dtypes)
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
