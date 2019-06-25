@@ -30,9 +30,9 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         self,
         func,
         num_splits=None,
-        broadcast_values=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        broadcast_values=None,
         **kwargs
     ):
         """Applies a function to a full axis.
@@ -49,7 +49,6 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
             num_splits: The number of objects to return, the number of splits
                 for the resulting object. It is up to this method to choose the
                 splitting at this time.
-            broadcast_values: The values to broadcast to the full axis.
             other_axis_partition: Another `BaseFrameAxisPartition` object to be applied
                 to func. This is for operations that are between datasets.
             maintain_partitioning: Whether or not to keep the partitioning in the same
@@ -58,6 +57,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
                 In this case, we have to return the partitioning to its previous
                 orientation (the lengths will remain the same). This is ignored between
                 two axis partitions.
+            broadcast_values: The values to broadcast to the full axis.
 
         Returns:
             A list of `BaseFramePartition` objects.
@@ -104,9 +104,9 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         self,
         func,
         num_splits=None,
-        broadcast_values=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        broadcast_values=None,
         **kwargs
     ):
         """Applies func to the object in the plasma store.
@@ -116,7 +116,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Args:
             func: The function to apply.
             num_splits: The number of times to split the result object.
-            broadcast_values: The values to broadcast to the full axis.
             other_axis_partition: Another `PandasOnRayFrameAxisPartition` object to apply to
                 func with this one.
             maintain_partitioning: Whether or not to keep the partitioning in the same
@@ -125,6 +124,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                 In this case, we have to return the partitioning to its previous
                 orientation (the lengths will remain the same). This is ignored between
                 two axis partitions.
+            broadcast_values: The values to broadcast to the full axis.
 
         Returns:
             A list of `RayRemotePartition` objects.
@@ -143,7 +143,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                     *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
                 )
             )
-        args = [self.axis, func, num_splits, broadcast_values, kwargs, maintain_partitioning]
+        args = [self.axis, func, num_splits, kwargs, maintain_partitioning, broadcast_values]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -163,13 +163,13 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, kwargs, False]
+        args = [self.axis, func, num_splits, kwargs, False, None]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, broadcast_values, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, num_splits, kwargs, maintain_partitioning, broadcast_values, *partitions
     ):
         """Deploy a function along a full axis in Ray.
 

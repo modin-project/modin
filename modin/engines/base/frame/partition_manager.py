@@ -980,7 +980,7 @@ class BaseFrameManager(object):
                     [
                         partitions_for_apply[i].apply(
                             preprocessed_func,
-                            to_broadcast,
+                            broadcast_value=to_broadcast,
                             func_dict={
                                 idx: dict_indices[idx] for idx in partitions_dict[i]
                             },
