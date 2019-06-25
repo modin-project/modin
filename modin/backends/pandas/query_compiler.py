@@ -2337,20 +2337,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def _map(df, other):
             return map_func(
                 df.groupby(by=other.squeeze(), axis=axis, **groupby_args), **map_args
-            )
+            ).reset_index(drop=False)
 
         if reduce_func is not None:
 
             def _reduce(df):
                 return reduce_func(
-                    df.groupby(by=df.index, axis=axis, **groupby_args), **reduce_args
+                    df.groupby(by=df.columns[0], axis=axis, **groupby_args),
+                    **reduce_args
                 )
 
         else:
 
             def _reduce(df):
                 return map_func(
-                    df.groupby(by=df.index, axis=axis, **groupby_args), **map_args
+                    df.groupby(by=df.columns[0], axis=axis, **groupby_args), **map_args
                 )
 
         new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
