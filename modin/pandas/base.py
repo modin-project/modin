@@ -2546,7 +2546,10 @@ class BasePandasDataset(object):
             A sorted DataFrame
         """
         axis = self._get_axis_number(axis)
-        if level is not None:
+        if level is not None or (
+            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
+            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
+        ):
             new_query_compiler = self._default_to_pandas(
                 "sort_index",
                 axis=axis,
@@ -2556,7 +2559,7 @@ class BasePandasDataset(object):
                 kind=kind,
                 na_position=na_position,
                 sort_remaining=sort_remaining,
-            )
+            )._query_compiler
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         if by is not None:
             warnings.warn(
