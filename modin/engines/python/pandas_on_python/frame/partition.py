@@ -65,9 +65,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         self.call_queue = []
         if broadcast_values is not None:
             kwargs["broadcast_values"] = broadcast_values
-        return PandasOnPythonFramePartition(
-            func(self.data.copy(), **kwargs)
-        )
+        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
 
     def add_to_apply_calls(self, func, broadcast_values=None, **kwargs):
         return PandasOnPythonFramePartition(
