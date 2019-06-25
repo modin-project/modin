@@ -10,6 +10,7 @@ import os
 import py
 import ray
 import re
+import sys
 import numpy as np
 import math
 
@@ -581,6 +582,7 @@ class RayIO(BaseIO):
             if (
                 _infer_compression(filepath_or_buffer, kwargs.get("compression"))
                 == "gzip"
+                and sys.version_info[0] == 3
             ):
                 filtered_kwargs["compression"] = "gzip"
             else:
