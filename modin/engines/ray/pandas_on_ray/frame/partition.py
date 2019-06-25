@@ -47,7 +47,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             A RayRemotePartition object.
         """
         oid = self.oid
-        new_obj, result, length, width = deploy_ray_func.remote(self.call_queue, oid, func, broadcast_values, kwargs)
+        new_obj, result, length, width = deploy_ray_func.remote(
+            self.call_queue, oid, func, broadcast_values, kwargs
+        )
         if len(self.call_queue) > 0:
             self.oid = new_obj
             self.call_queue = []
@@ -65,7 +67,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid, None, None, None)
+        _, self.oid, length, width = deploy_ray_func.remote(
+            call_queue, oid, None, None, None
+        )
         self.call_queue = []
         if self._length_cache is None:
             self._length_cache = PandasOnRayFramePartition(length)
@@ -132,7 +136,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
 
 @ray.remote(num_return_vals=4)
-def deploy_ray_func(call_queue, partition, func, broadcast_values, kwargs):  # pragma: no cover
+def deploy_ray_func(
+    call_queue, partition, func, broadcast_values, kwargs
+):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
             return ray.get(obj)

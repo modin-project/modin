@@ -38,7 +38,7 @@ class BaseFrameManager(object):
                 `_partition_class`.
         """
         raise NotImplementedError("Must be implemented in children classes")
-    
+
     def put(self, obj):
         """Method for putting objects closer to the partitions.
 
@@ -228,14 +228,23 @@ class BaseFrameManager(object):
             A list-like of values to be associated with the block_idx.
         """
         axis_lengths = self.block_widths if axis else self.block_lengths
-        assert len(values) == sum(axis_lengths), "Expected a broadcast value of length {expected}, actual broadcast value length of {actual}".format(sum(axis_lengths), len(values))
+        assert len(values) == sum(
+            axis_lengths
+        ), "Expected a broadcast value of length {expected}, actual broadcast value length of {actual}".format(
+            sum(axis_lengths), len(values)
+        )
         if split:
             broadcast_values = []
             for block_idx in range(len(axis_lengths)):
                 cumulative_axis = np.insert(np.cumsum(axis_lengths), 0, 0)
-                broadcast_values.append(self.put(values[
-                    cumulative_axis[block_idx] : cumulative_axis[block_idx] + axis_lengths[block_idx]
-                ]))
+                broadcast_values.append(
+                    self.put(
+                        values[
+                            cumulative_axis[block_idx] : cumulative_axis[block_idx]
+                            + axis_lengths[block_idx]
+                        ]
+                    )
+                )
         else:
             broadcast_values = self.put(values)
         return broadcast_values
@@ -263,18 +272,27 @@ class BaseFrameManager(object):
         preprocessed_map_func = self.preprocess_func(map_func)
         new_partitions = []
         if broadcast_axis is not None:
-            broadcast_values = self._broadcast_values(
-                broadcast_axis,
-                broadcast_values,
-            ) if put_broadcast else broadcast_values
+            broadcast_values = (
+                self._broadcast_values(broadcast_axis, broadcast_values)
+                if put_broadcast
+                else broadcast_values
+            )
         for row_idx, row_of_parts in enumerate(self.partitions):
             new_partitions_row = []
             for col_idx, part in enumerate(row_of_parts):
-                to_broadcast = broadcast_values[col_idx if broadcast_axis else row_idx] if broadcast_values is not None else None
+                to_broadcast = (
+                    broadcast_values[col_idx if broadcast_axis else row_idx]
+                    if broadcast_values is not None
+                    else None
+                )
                 if lazy:
-                    new_block = part.add_to_apply_calls(preprocessed_map_func, other=other, **kwargs)
+                    new_block = part.add_to_apply_calls(
+                        preprocessed_map_func, broadcast_values=to_broadcast, **kwargs
+                    )
                 else:
-                    new_block = part.apply(preprocessed_map_func, broadcast_values=to_broadcast, **kwargs)
+                    new_block = part.apply(
+                        preprocessed_map_func, broadcast_values=to_broadcast, **kwargs
+                    )
                 new_partitions_row.append(new_block)
             new_partitions.append(new_partitions_row)
         return self.__constructor__(np.array(new_partitions))
@@ -325,7 +343,9 @@ class BaseFrameManager(object):
             )
         return new_self, new_other
 
-    def map_across_full_axis(self, axis, map_func, broadcast_values=None, put_broadcast=True):
+    def map_across_full_axis(
+        self, axis, map_func, broadcast_values=None, put_broadcast=True
+    ):
         """Applies `map_func` to every partition.
 
         Note: This method should be used in the case that `map_func` relies on
@@ -346,14 +366,22 @@ class BaseFrameManager(object):
         num_splits = self._compute_num_partitions()
         preprocessed_map_func = self.preprocess_func(map_func)
         partitions = self.column_partitions if not axis else self.row_partitions
-        to_broadcast = self._broadcast_values(axis, broadcast_values, split=False) if broadcast_values is not None and put_broadcast else broadcast_values
+        to_broadcast = (
+            self._broadcast_values(axis, broadcast_values, split=False)
+            if broadcast_values is not None and put_broadcast
+            else broadcast_values
+        )
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
         result_blocks = np.array(
             [
-                part.apply(preprocessed_map_func, num_splits=num_splits, broadcast_values=to_broadcast)
+                part.apply(
+                    preprocessed_map_func,
+                    num_splits=num_splits,
+                    broadcast_values=to_broadcast,
+                )
                 for part in partitions
             ]
         )
@@ -761,7 +789,13 @@ class BaseFrameManager(object):
         ]
 
     def _apply_func_to_list_of_partitions(
-        self, func, partitions, broadcast_axis=None, broadcast_values=None, put_broadcast=True, **kwargs
+        self,
+        func,
+        partitions,
+        broadcast_axis=None,
+        broadcast_values=None,
+        put_broadcast=True,
+        **kwargs
     ):
         """Applies a function to a list of remote partitions.
 
@@ -778,7 +812,11 @@ class BaseFrameManager(object):
             A list of BaseFramePartition objects.
         """
         preprocessed_func = self.preprocess_func(func)
-        to_broadcast = self._broadcast_values(broadcast_axis, broadcast_values) if broadcast_values is not None and put_broadcast else broadcast_values
+        to_broadcast = (
+            self._broadcast_values(broadcast_axis, broadcast_values)
+            if broadcast_values is not None and put_broadcast
+            else broadcast_values
+        )
         result = []
         for ind, obj in enumerate(partitions):
             if broadcast_values is not None:
@@ -788,7 +826,13 @@ class BaseFrameManager(object):
         return result
 
     def apply_func_to_select_indices(
-        self, axis, func, indices, keep_remaining=False, broadcast_values=None, put_broadcast=True
+        self,
+        axis,
+        func,
+        indices,
+        keep_remaining=False,
+        broadcast_values=None,
+        put_broadcast=True,
     ):
         """Applies a function to select indices.
 
@@ -925,7 +969,13 @@ class BaseFrameManager(object):
         )
 
     def apply_func_to_select_indices_along_full_axis(
-        self, axis, func, indices, keep_remaining=False, broadcast_values=None, put_broadcast=True,
+        self,
+        axis,
+        func,
+        indices,
+        keep_remaining=False,
+        broadcast_values=None,
+        put_broadcast=True,
     ):
         """Applies a function to a select subset of full columns/rows.
 
@@ -960,7 +1010,11 @@ class BaseFrameManager(object):
             indices = [indices]
         partitions_dict = self._get_dict_of_block_index(axis, indices)
         preprocessed_func = self.preprocess_func(func)
-        to_broadcast = self.put(axis, broadcast_values, split=False) if broadccast_values is not None and put_broadcast else broadcast_values
+        to_broadcast = (
+            self.put(axis, broadcast_values, split=False)
+            if broadcast_values is not None and put_broadcast
+            else broadcast_values
+        )
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
@@ -1012,7 +1066,9 @@ class BaseFrameManager(object):
                 result = np.array(
                     [
                         partitions_for_apply[i].apply(
-                            preprocessed_func, broadcast_values=to_broadcast, internal_indices=partitions_dict[i]
+                            preprocessed_func,
+                            broadcast_values=to_broadcast,
+                            internal_indices=partitions_dict[i],
                         )
                         for i in partitions_dict
                     ]
@@ -1024,7 +1080,9 @@ class BaseFrameManager(object):
                         partitions_for_remaining[i]
                         if i not in partitions_dict
                         else partitions_for_apply[i].apply(
-                            preprocessed_func, broadcast_values=to_broadcast, internal_indices=partitions_dict[i]
+                            preprocessed_func,
+                            broadcast_values=to_broadcast,
+                            internal_indices=partitions_dict[i],
                         )
                         for i in range(len(partitions_for_remaining))
                     ]

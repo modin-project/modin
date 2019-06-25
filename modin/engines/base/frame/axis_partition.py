@@ -143,7 +143,14 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                     *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
                 )
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning, broadcast_values]
+        args = [
+            self.axis,
+            func,
+            num_splits,
+            kwargs,
+            maintain_partitioning,
+            broadcast_values,
+        ]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -169,7 +176,14 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, broadcast_values, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        kwargs,
+        maintain_partitioning,
+        broadcast_values,
+        *partitions
     ):
         """Deploy a function along a full axis in Ray.
 

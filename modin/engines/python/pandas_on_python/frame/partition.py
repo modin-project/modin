@@ -60,11 +60,14 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data.copy(), broadcast_values, **kwargs))
+        return PandasOnPythonFramePartition(
+            func(self.data.copy(), broadcast_values, **kwargs)
+        )
 
     def add_to_apply_calls(self, func, broadcast_values=None, **kwargs):
         return PandasOnPythonFramePartition(
-            self.data.copy(), call_queue=self.call_queue + [(func, broadcast_values, kwargs)]
+            self.data.copy(),
+            call_queue=self.call_queue + [(func, broadcast_values, kwargs)],
         )
 
     def drain_call_queue(self):

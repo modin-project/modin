@@ -21,7 +21,14 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, broadcast_values, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        kwargs,
+        maintain_partitioning,
+        broadcast_values,
+        *partitions
     ):
         return deploy_ray_func._remote(
             args=(

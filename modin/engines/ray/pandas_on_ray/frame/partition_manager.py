@@ -1,6 +1,3 @@
-import numpy as np
-import ray
-
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
 from .axis_partition import (
     PandasOnRayFrameColumnPartition,
