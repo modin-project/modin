@@ -1597,6 +1597,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         value = kwargs.get("value")
+        method = kwargs.get("method", None)
+        limit = kwargs.get("limit", None)
+        full_axis = method is not None or limit is not None
         if isinstance(value, dict):
             value = kwargs.pop("value")
 
@@ -1614,14 +1617,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
                 return df.fillna(value=func_dict, **kwargs)
 
-            new_data = self.data.apply_func_to_select_indices(
-                axis, fillna_dict_builder, value, keep_remaining=True
-            )
+            if full_axis:
+                new_data = self.data.apply_func_to_select_indices_along_full_axis(
+                    axis, fillna_dict_builder, value, keep_remaining=True
+                )
+            else:
+                new_data = self.data.apply_func_to_select_indices(
+                    axis, fillna_dict_builder, value, keep_remaining=True
+                )
             return self.__constructor__(new_data, self.index, self.columns)
         else:
             func = self._prepare_method(pandas.DataFrame.fillna, **kwargs)
-            new_data = self._map_across_full_axis(axis, func)
-            return self.__constructor__(new_data, self.index, self.columns)
+            if full_axis:
+                new_data = self._map_across_full_axis(axis, func)
+                return self.__constructor__(new_data, self.index, self.columns)
+            else:
+                return self._map_partitions(func)
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.

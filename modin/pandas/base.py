@@ -1141,6 +1141,11 @@ class BasePandasDataset(object):
                 expecting=expecting, method=method
             )
             raise ValueError(msg)
+        if limit is not None:
+            if not isinstance(limit, int):
+                raise ValueError("Limit must be an integer")
+            elif limit <= 0:
+                raise ValueError("Limit must be greater than 0")
 
         new_query_compiler = self._query_compiler.fillna(
             value=value,
