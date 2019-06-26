@@ -11,6 +11,7 @@ from pathlib import Path
 import pyarrow as pa
 import os
 import shutil
+import sqlalchemy as sa
 import sys
 
 from .utils import df_equals
@@ -327,7 +328,6 @@ def make_sql_connection():
         if os.path.exists(filename):
             os.remove(filename)
         filenames.append(filename)
-
         # Create connection and, if needed, table
         conn = "sqlite:///{}".format(filename)
         if table:
@@ -578,6 +578,20 @@ def test_from_sql(make_sql_connection):
 
     with pytest.warns(UserWarning):
         pd.read_sql_table(table, conn)
+
+    # Test SQLAlchemy engine
+    conn = sa.create_engine(conn)
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df = pd.read_sql(query, conn)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    # Test SQLAlchemy Connection
+    conn = conn.connect()
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df = pd.read_sql(query, conn)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
