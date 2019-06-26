@@ -143,6 +143,18 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to series with different index
+        series_test_modin = modin_df[modin_df.columns[0]].reset_index(drop=True)
+        series_test_pandas = pandas_df[pandas_df.columns[0]].reset_index(drop=True)
+        try:
+            pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df, op)(series_test_modin, axis=0)
+        else:
+            modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
+            df_equals(modin_result, pandas_result)
+
         # Level test
         new_idx = pandas.MultiIndex.from_tuples(
             [(i // 4, i // 2, i) for i in modin_df.index]
