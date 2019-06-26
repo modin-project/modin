@@ -762,7 +762,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_data = self._map_across_full_axis(
                 axis, self._prepare_method(list_like_op)
             )
-            return self.__constructor__(new_data, self.index, self.columns)
+            if axis == 1 and isinstance(scalar, pandas.Series):
+                new_columns = self.columns.union([label for label in scalar.index if label not in self.columns])
+            else:
+                new_columns = self.columns
+            return self.__constructor__(new_data, self.index, new_columns)
         else:
             return self._map_partitions(self._prepare_method(func))
 
