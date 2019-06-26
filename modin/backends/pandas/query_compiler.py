@@ -763,7 +763,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis, self._prepare_method(list_like_op)
             )
             if axis == 1 and isinstance(scalar, pandas.Series):
-                new_columns = self.columns.union([label for label in scalar.index if label not in self.columns])
+                new_columns = self.columns.union(
+                    [label for label in scalar.index if label not in self.columns]
+                )
             else:
                 new_columns = self.columns
             return self.__constructor__(new_data, self.index, new_columns)
