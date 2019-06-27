@@ -1293,7 +1293,7 @@ class Series(BasePandasDataset):
 
     @property
     def str(self):
-        return self._default_to_pandas(pandas.Series.str)
+        return StringMethods(self)
 
     def _to_pandas(self):
         df = self._query_compiler.to_pandas()
@@ -1301,3 +1301,161 @@ class Series(BasePandasDataset):
         if series.name == "__reduced__":
             series.name = None
         return series
+
+@_inherit_docstrings(pandas.core.strings.StringMethods)
+class StringMethods(object):
+    def __init__(self, series):
+        # Check if dtypes is objects
+
+        self._series = series
+        self._query_compiler = series._query_compiler
+
+    def cat(self, others=None, sep=None, na_rep=None, join=None):
+        return self._default_to_pandas(pandas.Series.str.cat, others=others, sep=sep, na_rep=na_rep, join=join)
+    
+    def split(self, pat=None, n=-1, expand=False):
+        return self._query_compiler.str_split(pat=pat, n=n, expand=expand)
+    
+    def rsplit(self, pat=None, n=-1, expand=False):
+        return self._query_compiler.str_rsplit(pat=pat, n=n, expand=expand)
+
+    def get(self, i):
+        return self._query_compiler.str_get(i)
+
+    def join(self, sep):
+        return self._query_compiler.str_join(sep)
+
+    def get_dummies(self, sep="|"):
+        return self._default_to_pandas(pandas.Series.str.get_dummies, sep=sep)
+
+    def contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+        return self._query_compiler.str_contains(pat, case=case, flags=flags, na=na, regex=regex)
+
+    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+        return self._query_compiler.str_replace(pat, repl, n=n, case=case, flags=flags, regex=regex)
+
+    def repeats(self, repeats):
+        return self._query_compiler.str_repeats(repeats)
+
+    def pad(self, width, side="left", fillchar=" "):
+        return self._query_compiler.str_pad(width, side=side, fillchar=fillchar)
+
+    def center(self, width, fillchar=" "):
+        return self._query_compiler.str_center(width, fillchar=fillchar)
+
+    def ljust(self, width, fillchar=" "):
+        return self._query_compiler.str_ljust(width, fillchar=fillchar)
+
+    def rjust(self, width, fillchar=" "):
+        return self._query_compiler.str_rjust(width, fillchar=fillchar)
+
+    def zfill(self, width):
+        return self._query_compiler.str_zfill(width)
+
+    def wrap(self, width, **kwargs):
+        return self._query_compiler.str_wrap(width, **kwargs)
+
+    def slice(self, start=None, stop=None, step=None):
+        return self._query_compiler.str_slice(start=start, stop=stop, step=step)
+
+    def slice_replace(self, start=None, stop=None, repl=None):
+        return self._query_compiler.str_replace(start=start, stop=stop, step=step)
+
+    def count(self, pat, flags=0, **kwargs):
+        return self._query_compiler.str_count(pat, flags=flags, **kwargs)
+
+    def startswith(self, pat, na=np.NaN):
+        return self._query_compiler.str_startswith(pat, na=na)
+
+    def endswith(self, pat, na=np.NaN):
+        return self._query_compiler.str_endswith(pat, na=na)
+
+    def findall(self, pat, flags=0, **kwargs):
+        return self._query_compiler.str_findall(pat, flags=flags, **kwargs)
+
+    def match(self, pat, case=True, flags=0, na=np.NaN):
+        return self._query_compiler.str_match(pat, flags=flags, **kwargs)
+
+    def extract(self, pat, flags=0, expand=True):
+        return self._default_to_pandas(pandas.Series.str.extract, pat, flags=flags, expand=expand)
+
+    def extractall(self, pat, flags=0):
+        return self._default_to_pandas(pandas.Series.str.extractall, pat, flags=flags)
+
+    def len(self):
+        return self._query_compiler.str_len()
+
+    def strip(self, to_strip=None):
+        return self._query_compiler.str_strip(to_strip=to_strip)
+
+    def rstrip(self, to_strip=None):
+        return self._query_compiler.str_rstrip(to_strip=to_strip)
+
+    def lstrip(self, to_strip=None):
+        return self._query_compiler.str_lstrip(to_strip=to_strip)
+
+    def partition(self, sep=" ", expand=True):
+        return self._query_compiler.str_partition(sep=sep, expand=expand)
+
+    def rpartition(self, sep=" ", expand=True):
+        return self._query_compiler.str_rpartition(sep=sep, expand=expand)
+
+    def lower(self):
+        return self._query_compiler.str_lower()
+
+    def upper(self):
+        return self._query_compiler.str_upper()
+
+    def find(self, sub, start=0, end=None):
+        return self._query_compiler.str_find(sub, start=start, end=end)
+
+    def rfind(self, sub, start=0, end=None):
+        return self._query_compiler.str_rfind(sub, start=start, end=end)
+
+    def index(self, sub, start=0, end=None):
+        return self._query_compiler.str_index(sub, start=start, end=end)
+
+    def rindex(self, sub, start=0, end=None):
+        return self._query_compiler.str_rindex(sub, start=start, end=end)
+
+    def capitalize(self):
+        return self._query_compiler.str_capitalize()
+
+    def swapcase(self):
+        return self._query_compiler.str_swapcase()
+
+    def normalize(self, form):
+        return self._query_compiler.str_normalize(form)
+
+    def translate(self, table, deletechars=None):
+        return self._query_compiler.str_translate(table, deletechars=deletechars)
+
+    def isalnum(self):
+        return self._query_compiler.str_isalnum()
+
+    def isalpha(self):
+        return self._query_compiler.str_isalpha()
+
+    def isdigit(self):
+        return self._query_compiler.str_isdigit()
+
+    def isspace(self):
+        return self._query_compiler.str_isspace()
+
+    def islower(self):
+        return self._query_compiler.str_islower()
+
+    def isupper(self):
+        return self._query_compiler.str_isupper()
+
+    def istitle(self):
+        return self._query_compiler.str_istitle()
+
+    def isnumeric(self):
+        return self._query_compiler.str_isnumeric()
+
+    def isdecimal(self):
+        return self._query_compiler.str_isdecimal()
+
+    def _default_to_pandas(self, op, *args, **kwargs):
+        return self._series._default_to_pandas(lambda series: op(series.str, *args, **kwargs))

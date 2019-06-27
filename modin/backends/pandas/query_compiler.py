@@ -1159,6 +1159,221 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = self._prepare_method(pandas.DataFrame.round, **kwargs)
         return self._map_partitions(func, new_dtypes=self._dtype_cache)
 
+    # String map partition operations
+    def str_split(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.split, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rsplit(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.rsplit, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_get(self, i):
+        kwargs["i"] = i
+        func = self._prepare_method(pandas.Series.str.get, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_join(self, sep):
+        kwargs["sep"] = sep
+        func = self._prepare_method(pandas.Series.str.join, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_contains(self, pat, **kwargs):
+        func = self._prepare_method(pandas.Series.str.contains, **kwargs)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_replace(self, pat, repl, **kwargs):
+        kwargs["pat"] = pat
+        kwargs["repl"] = repl
+        func = self._prepare_method(pandas.Series.str.replace, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_repeats(self, repeats):
+        kwargs["repeats"] = repeats
+        func = self._prepare_method(pandas.Series.str.repeats**kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_pad(self, width, **kwargs):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.pad, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_center(self, width, **kwargs):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.center, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_ljust(self, width, **kwargs):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.ljust, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rjust(self, width, **kwargs):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.rjust, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_zfill(self, width):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.zfill)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_wrap (self, width, **kwargs):
+        kwargs["width"] = width
+        func = self._prepare_method(pandas.Series.str.wrap, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_slice(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.slice, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_slice_replace(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.slice_replace, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_count(self, pat, **kwargs):
+        kwargs["pat"] = pat
+        func = self._prepare_method(pandas.Series.str.count, **kwargs)
+        new_dtypes = pandas.Series([int])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_startswith(self, pat, **kwargs):
+        kwargs["pat"] = pat
+        func = self._prepare_method(pandas.Series.str.startswith, **kwargs)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_endswith(self, pat, **kwargs):
+        kwargs["pat"] = pat
+        func = self._prepare_method(pandas.Series.str.endswith, **kwargs)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_findall(self, pat, **kwargs):
+        kwargs["pat"] = pat
+        func = self._prepare_method(pandas.Series.str.findall, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_match(self, pat, **kwargs):
+        kwargs["pat"] = pat
+        func = self._prepare_method(pandas.Series.str.match, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_len():
+        func = self._prepare_method(len)
+        new_dtypes = pandas.Series([int])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_strip(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.strip, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rstrip(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.rstrip, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_lstrip(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.lstrip, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_partition(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.partition, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rpartition(self, **kwargs):
+        func = self._prepare_method(pandas.Series.str.rpartition, **kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_lower(self):
+        func = self._prepare_method(pandas.Series.str.lower)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_upper(self):
+        func = self._prepare_method(pandas.Series.str.upper)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_find(self, sub, **kwargs):
+        kwargs["sub"] = sub
+        func = self._prepare_method(pandas.Series.str.find, kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rfind(self, sub, **kwargs):
+        kwargs["sub"] = sub
+        func = self._prepare_method(pandas.Series.str.rfind, kwargs)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_index(self, sub, **kwargs):
+        kwargs["sub"] = sub
+        func = self._prepare_method(pandas.Series.str.index)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_rindex(self, sub, **kwargs):
+        kwargs["sub"] = sub
+        func = self._prepare_method(pandas.Series.str.rindex)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_capitalize(self):
+        func = self._prepare_method(pandas.Series.str.capitalize)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_swapcase(self):
+        func = self._prepare_method(pandas.Series.str.swapcase)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_normalize(self, form):
+        func = self._prepare_method(pandas.Series.str.normalize)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_translate(self, table, **kwargs):
+        func = self._prepare_method(pandas.Series.str.translate)
+        return self._map_partitions(func, new_dtypes=self.dtypes)
+
+    def str_isalnum(self):
+        func = self._prepare_method(pandas.Series.str.isalnum)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isalpha(self):
+        func = self._prepare_method(pandas.Series.str.isalpha)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isdigit(self):
+        func = self._prepare_method(pandas.Series.str.isdigit)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isspace(self):
+        func = self._prepare_method(pandas.Series.str.isspace)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_islower(self):
+        func = self._prepare_method(pandas.Series.str.islower)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isupper(self):
+        func = self._prepare_method(pandas.Series.str.isupper)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_istitle(self):
+        func = self._prepare_method(pandas.Series.str.istitle)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isnumeric(self):
+        func = self._prepare_method(pandas.Series.str.isnumeric)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
+    def str_isdecimal(self):
+        func = self._prepare_method(pandas.Series.str.isdecimal)
+        new_dtypes = pandas.Series([bool])
+        return self._map_partitions(func, new_dtypes=new_dtypes)
+
     # END Map partitions operations
 
     # Map partitions across select indices
