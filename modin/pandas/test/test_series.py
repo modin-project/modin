@@ -21,6 +21,16 @@ from .utils import (
     name_contains,
     test_data_values,
     test_data_keys,
+    test_string_data_values,
+    test_string_data_keys,
+    test_string_list_data_values,
+    test_string_list_data_keys,
+    string_sep_values,
+    string_sep_keys,
+    string_na_rep_values,
+    string_na_rep_keys,
+    join_type_values,
+    join_type_keys,
     numeric_dfs,
     no_numeric_dfs,
     agg_func_keys,
@@ -132,9 +142,13 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(dict_vals):
-    modin_series = pd.Series(dict_vals[next(iter(dict_vals.keys()))])
-    pandas_series = pandas.Series(dict_vals[next(iter(dict_vals.keys()))])
+def create_test_series(vals):
+    if isinstance(vals, dict):
+        modin_series = pd.Series(vals[next(iter(vals.keys()))])
+        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
+    elif isinstance(vals, list):
+        modin_series = pd.Series(vals)
+        pandas_series = pandas.Series(vals)
     return modin_series, pandas_series
 
 
@@ -2650,3 +2664,781 @@ def test_xs():
     series = pd.Series([4, 0, "mammal", "cat", "walks"])
     with pytest.warns(UserWarning):
         series.xs("mammal")
+
+# Test str operations
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("others", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("na_rep", string_na_rep_values, ids=string_na_rep_keys)
+@pytest.mark.parametrize("join", join_type_values, ids=join_type_keys)
+def test_str_cat(data, others, sep, na_rep, join):
+    modin_series, pandas_series = create_test_series(data)
+    othres = others[:len(modin_series)]
+
+    with pytest.warns(UserWarning):
+        # We are only testing that this defaults to pandas, so we will just check for
+        # the warning
+        modin_series.str.cat(others, sep, na_rep=na_rep, join=join)
+
+    with pytest.warns(UserWarning):
+        # We are only testing that this defaults to pandas, so we will just check for
+        # the warning
+        modin_series.str.cat(None, sep, na_rep=na_rep, join=join)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+def test_str_split(data, pat, n, expand):
+    modin_series, pandas_series = create_test_series(data)
+
+    if n >= -1:
+        if expand and pat:
+            with pytest.warns(UserWarning):
+                # We are only testing that this defaults to pandas, so we will just check for
+                # the warning
+                modin_series.str.split(pat, n=n, expand=expand)
+        elif not expand:
+            try:
+                pandas_result = pandas_series.str.split(pat, n=n, expand=expand)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_series.str.split(pat, n=n, expand=expand)
+            else:
+                modin_result = modin_series.str.split(pat, n=n, expand=expand)
+                df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+def test_str_rsplit(data, pat, n, expand):
+    modin_series, pandas_series = create_test_series(data)
+
+    if n >= -1:
+        if expand and pat:
+            with pytest.warns(UserWarning):
+                # We are only testing that this defaults to pandas, so we will just check for
+                # the warning
+                modin_series.str.rsplit(pat, n=n, expand=expand)
+        elif not expand:
+            try:
+                pandas_result = pandas_series.str.rsplit(pat, n=n, expand=expand)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_series.str.rsplit(pat, n=n, expand=expand)
+            else:
+                modin_result = modin_series.str.rsplit(pat, n=n, expand=expand)
+                df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("i", int_arg_values, ids=int_arg_keys)
+def test_str_get(data, i):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.get(i)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.get(i)
+    else:
+        modin_result = modin_series.str.get(i)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_list_data_values, ids=test_string_list_data_keys)
+@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
+def test_str_join(data, sep):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.join(sep)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.join(sep)
+    else:
+        modin_result = modin_series.str.join(sep)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_list_data_values, ids=test_string_list_data_keys)
+@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
+def test_str_get_dummies(data, sep):
+    modin_series, pandas_series = create_test_series(data)
+
+    if sep:
+        with pytest.warns(UserWarning):
+            # We are only testing that this defaults to pandas, so we will just check for
+            # the warning
+            modin_series.str.get_dummies(sep)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("case", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
+def test_str_contains(data, pat, case, na):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=False)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.contains(pat, case=case, na=na, regex=False)
+    else:
+        modin_result = modin_series.str.contains(pat, case=case, na=na, regex=False)
+        df_equals(modin_result, pandas_result)
+
+    # Test regex
+    pat = ",|b"
+    try:
+        pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=True)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.contains(pat, case=case, na=na, regex=True)
+    else:
+        modin_result = modin_series.str.contains(pat, case=case, na=na, regex=True)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("repl", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("case", bool_arg_values, ids=bool_arg_keys)
+def test_str_replace(data, pat, repl, n, case):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=False)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
+    else:
+        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
+        df_equals(modin_result, pandas_result)
+
+    # Test regex
+    pat = "\,.*\|"
+    try:
+        pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=True)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
+    else:
+        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("repeats", int_arg_values, ids=int_arg_keys)
+def test_str_repeats(data, repeats):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.repeats(repeats)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.repeats(repeats)
+    else:
+        modin_result = modin_series.str.repeats(repeats)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("side", ["left", "right", "both"], ids=["left", "right", "both"])
+@pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
+def test_str_pad(data, width, side, fillchar):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.pad(width, side=side, fillchar=fillchar)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.pad(width, side=side, fillchar=fillchar)
+    else:
+        modin_result = modin_series.str.pad(width, side=side, fillchar=fillchar)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
+def test_str_center(data, width, fillchar):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.center(width, fillchar=fillchar)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.center(width, fillchar=fillchar)
+    else:
+        modin_result = modin_series.str.center(width, fillchar=fillchar)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
+def test_str_ljust(data, width, fillchar):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.ljust(width, fillchar=fillchar)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.ljust(width, fillchar=fillchar)
+    else:
+        modin_result = modin_series.str.ljust(width, fillchar=fillchar)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
+def test_str_rjust(data, width, fillchar):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.rjust(width, fillchar=fillchar)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.rjust(width, fillchar=fillchar)
+    else:
+        modin_result = modin_series.str.rjust(width, fillchar=fillchar)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+def test_str_zfill(data, width):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.zfill(width)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.zfill(width)
+    else:
+        modin_result = modin_series.str.zfill(width)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+def test_str_wrap(data, width):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.wrap(width)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.wrap(width)
+    else:
+        modin_result = modin_series.str.wrap(width)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("stop", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("step", int_arg_values, ids=int_arg_keys)
+def test_str_slice(data, start, stop, step):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.slice(start=start, stop=stop, step=step)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.slice(start=start, stop=stop, step=step)
+    else:
+        modin_result = modin_series.str.slice(start=start, stop=stop, step=step)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("stop", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("repl", string_sep_values, ids=string_sep_keys)
+def test_str_slice_replace(data, start, stop, repl):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.slice_replace(start=start, stop=stop, repl=repl)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
+    else:
+        modin_result = modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+def test_str_count(data, pat):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.count(pat)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.count(pat)
+    else:
+        modin_result = modin_series.str.count(pat)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
+def test_str_startswith(data, pat, na):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.startswith(pat, na=na)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.startswith(pat, na=na)
+    else:
+        modin_result = modin_series.str.startswith(pat, na=na)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
+def test_str_endswith(data, pat, na):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.endswith(pat, na=na)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.endswith(pat, na=na)
+    else:
+        modin_result = modin_series.str.endswith(pat, na=na)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+def test_str_findall(data, pat):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.findall(pat)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.findall(pat)
+    else:
+        modin_result = modin_series.str.findall(pat)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("case", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
+def test_str_match(data, pat, case, na):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.match(pat, case=case, na=na)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.match(pat, case=case, na=na)
+    else:
+        modin_result = modin_series.str.match(pat, case=case, na=na)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+def test_str_extract(data, expand):
+    modin_series, pandas_series = create_test_series(data)
+
+    if expand is not None:
+        with pytest.warns(UserWarning):
+            # We are only testing that this defaults to pandas, so we will just check for
+            # the warning
+            modin_series.str.extract(r'([ab])(\d)', expand=expand)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_extractall(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    with pytest.warns(UserWarning):
+        # We are only testing that this defaults to pandas, so we will just check for
+        # the warning
+        modin_series.str.extractall(r'([ab])(\d)')
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_len(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.len()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.len()
+    else:
+        modin_result = modin_series.str.len()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
+def test_str_strip(data, to_strip):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.strip(to_strip=to_strip)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.strip(to_strip=to_strip)
+    else:
+        modin_result = modin_series.str.strip(to_strip=to_strip)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
+def test_str_rstrip(data, to_strip):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.rstrip(to_strip=to_strip)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.rstrip(to_strip=to_strip)
+    else:
+        modin_result = modin_series.str.rstrip(to_strip=to_strip)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
+def test_str_lstrip(data, to_strip):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.lstrip(to_strip=to_strip)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.lstrip(to_strip=to_strip)
+    else:
+        modin_result = modin_series.str.lstrip(to_strip=to_strip)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+def test_str_partition(data, sep, expand):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.partition(sep, expand=expand)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.partition(sep, expand=expand)
+    else:
+        modin_result = modin_series.str.partition(sep, expand=expand)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+def test_str_rpartition(data, sep, expand):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.rpartition(sep, expand=expand)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.rpartition(sep, expand=expand)
+    else:
+        modin_result = modin_series.str.rpartition(sep, expand=expand)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_lower(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.lower()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.lower()
+    else:
+        modin_result = modin_series.str.lower()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_upper(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.upper()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.upper()
+    else:
+        modin_result = modin_series.str.upper()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+def test_str_find(data, sub, start, end):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.find(sub, start=start, end=end)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.find(sub, start=start, end=end)
+    else:
+        modin_result = modin_series.str.find(sub, start=start, end=end)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+def test_str_rfind(data, sub, start, end):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.rfind(sub, start=start, end=end)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.rfind(sub, start=start, end=end)
+    else:
+        modin_result = modin_series.str.rfind(sub, start=start, end=end)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+def test_str_index(data, sub, start, end):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.index(sub, start=start, end=end)
+    except ValueError as e:
+        # pytest does not get the RayGetErrors
+        assert True
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.index(sub, start=start, end=end)
+    else:
+        modin_result = modin_series.str.index(sub, start=start, end=end)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
+@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+def test_str_rindex(data, sub, start, end):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.rindex(sub, start=start, end=end)
+    except ValueError as e:
+        # pytest does not get the RayGetErrors
+        assert True
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.rindex(sub, start=start, end=end)
+    else:
+        modin_result = modin_series.str.rindex(sub, start=start, end=end)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_capitalize(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.capitalize()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.capitalize()
+    else:
+        modin_result = modin_series.str.capitalize()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_swapcase(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.swapcase()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.swapcase()
+    else:
+        modin_result = modin_series.str.swapcase()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("form", ["NFC", "NFKC", "NFD", "NFKD"], ids=["NFC", "NFKC", "NFD", "NFKD"])
+def test_str_normalize(data, form):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.normalize(form)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.normalize(form)
+    else:
+        modin_result = modin_series.str.normalize(form)
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+def test_str_translate(data, pat):
+    modin_series, pandas_series = create_test_series(data)
+
+    # Test none table
+    try:
+        pandas_result = pandas_series.str.translate(None)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.translate(None)
+    else:
+        modin_result = modin_series.str.translate(None)
+        df_equals(modin_result, pandas_result)
+
+    # Translation dictionary
+    table = {pat: "DDD"}
+    try:
+        pandas_result = pandas_series.str.translate(table)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.translate(table)
+    else:
+        modin_result = modin_series.str.translate(table)
+        df_equals(modin_result, pandas_result)
+
+    # Translation table with maketrans
+    if pat is not None:
+        table = str.maketrans(pat, "d"*len(pat))
+        try:
+            pandas_result = pandas_series.str.translate(table)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_series.str.translate(table)
+        else:
+            modin_result = modin_series.str.translate(table)
+            df_equals(modin_result, pandas_result)
+
+    # Test delete chars
+    deletechars = "|"
+    try:
+        pandas_result = pandas_series.str.translate(table, deletechars)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.translate(table, deletechars)
+    else:
+        modin_result = modin_series.str.translate(table, deletechars)
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isalnum(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isalnum()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isalnum()
+    else:
+        modin_result = modin_series.str.isalnum()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isalpha(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isalpha()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isalpha()
+    else:
+        modin_result = modin_series.str.isalpha()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isdigit(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isdigit()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isdigit()
+    else:
+        modin_result = modin_series.str.isdigit()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isspace(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isspace()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isspace()
+    else:
+        modin_result = modin_series.str.isspace()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_islower(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.islower()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.islower()
+    else:
+        modin_result = modin_series.str.islower()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isupper(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isupper()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isupper()
+    else:
+        modin_result = modin_series.str.isupper()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_istitle(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.istitle()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.istitle()
+    else:
+        modin_result = modin_series.str.istitle()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isnumeric(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isnumeric()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isnumeric()
+    else:
+        modin_result = modin_series.str.isnumeric()
+        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_isdecimal(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.isdecimal()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.isdecimal()
+    else:
+        modin_result = modin_series.str.isdecimal()
+        df_equals(modin_result, pandas_result)
