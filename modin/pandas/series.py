@@ -1308,7 +1308,6 @@ class Series(BasePandasDataset):
         return series
 
 
-@_inherit_docstrings(pandas.core.strings.StringMethods)
 class StringMethods(object):
     def __init__(self, series):
         # Check if dtypes is objects

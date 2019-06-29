@@ -284,13 +284,13 @@ def df_equals(df1, df2):
     ):
         if type(df1).__name__ == type(df2).__name__:
             if hasattr(df1, "name") and hasattr(df2, "name") and df1.name == df2.name:
-                assert True
+                return
             if (
                 hasattr(df1, "columns")
                 and hasattr(df2, "columns")
                 and df1.columns.equals(df2.columns)
             ):
-                assert True
+                return
         assert False
 
     # Convert to pandas
