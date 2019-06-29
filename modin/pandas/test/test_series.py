@@ -2665,6 +2665,7 @@ def test_xs():
     with pytest.warns(UserWarning):
         series.xs("mammal")
 
+
 # Test str operations
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("others", test_string_data_values, ids=test_string_data_keys)
@@ -2673,7 +2674,7 @@ def test_xs():
 @pytest.mark.parametrize("join", join_type_values, ids=join_type_keys)
 def test_str_cat(data, others, sep, na_rep, join):
     modin_series, pandas_series = create_test_series(data)
-    othres = others[:len(modin_series)]
+    others = others[: len(modin_series)]
 
     with pytest.warns(UserWarning):
         # We are only testing that this defaults to pandas, so we will just check for
@@ -2684,6 +2685,7 @@ def test_str_cat(data, others, sep, na_rep, join):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         modin_series.str.cat(None, sep, na_rep=na_rep, join=join)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -2732,6 +2734,7 @@ def test_str_rsplit(data, pat, n, expand):
                 modin_result = modin_series.str.rsplit(pat, n=n, expand=expand)
                 df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("i", int_arg_values, ids=int_arg_keys)
 def test_str_get(data, i):
@@ -2746,7 +2749,10 @@ def test_str_get(data, i):
         modin_result = modin_series.str.get(i)
         df_equals(modin_result, pandas_result)
 
-@pytest.mark.parametrize("data", test_string_list_data_values, ids=test_string_list_data_keys)
+
+@pytest.mark.parametrize(
+    "data", test_string_list_data_values, ids=test_string_list_data_keys
+)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
 def test_str_join(data, sep):
     modin_series, pandas_series = create_test_series(data)
@@ -2760,7 +2766,10 @@ def test_str_join(data, sep):
         modin_result = modin_series.str.join(sep)
         df_equals(modin_result, pandas_result)
 
-@pytest.mark.parametrize("data", test_string_list_data_values, ids=test_string_list_data_keys)
+
+@pytest.mark.parametrize(
+    "data", test_string_list_data_values, ids=test_string_list_data_keys
+)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
 def test_str_get_dummies(data, sep):
     modin_series, pandas_series = create_test_series(data)
@@ -2770,6 +2779,7 @@ def test_str_get_dummies(data, sep):
             # We are only testing that this defaults to pandas, so we will just check for
             # the warning
             modin_series.str.get_dummies(sep)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -2798,6 +2808,7 @@ def test_str_contains(data, pat, case, na):
         modin_result = modin_series.str.contains(pat, case=case, na=na, regex=True)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("repl", string_sep_values, ids=string_sep_keys)
@@ -2807,7 +2818,9 @@ def test_str_replace(data, pat, repl, n, case):
     modin_series, pandas_series = create_test_series(data)
 
     try:
-        pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=False)
+        pandas_result = pandas_series.str.replace(
+            pat, repl, n=n, case=case, regex=False
+        )
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
@@ -2816,7 +2829,7 @@ def test_str_replace(data, pat, repl, n, case):
         df_equals(modin_result, pandas_result)
 
     # Test regex
-    pat = "\,.*\|"
+    pat = ",|b"
     try:
         pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=True)
     except Exception as e:
@@ -2825,6 +2838,7 @@ def test_str_replace(data, pat, repl, n, case):
     else:
         modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("repeats", int_arg_values, ids=int_arg_keys)
@@ -2840,9 +2854,12 @@ def test_str_repeats(data, repeats):
         modin_result = modin_series.str.repeats(repeats)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("side", ["left", "right", "both"], ids=["left", "right", "both"])
+@pytest.mark.parametrize(
+    "side", ["left", "right", "both"], ids=["left", "right", "both"]
+)
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_pad(data, width, side, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -2855,6 +2872,7 @@ def test_str_pad(data, width, side, fillchar):
     else:
         modin_result = modin_series.str.pad(width, side=side, fillchar=fillchar)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
@@ -2871,6 +2889,7 @@ def test_str_center(data, width, fillchar):
         modin_result = modin_series.str.center(width, fillchar=fillchar)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
@@ -2885,6 +2904,7 @@ def test_str_ljust(data, width, fillchar):
     else:
         modin_result = modin_series.str.ljust(width, fillchar=fillchar)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
@@ -2901,6 +2921,7 @@ def test_str_rjust(data, width, fillchar):
         modin_result = modin_series.str.rjust(width, fillchar=fillchar)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 def test_str_zfill(data, width):
@@ -2915,6 +2936,7 @@ def test_str_zfill(data, width):
         modin_result = modin_series.str.zfill(width)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 def test_str_wrap(data, width):
@@ -2928,6 +2950,7 @@ def test_str_wrap(data, width):
     else:
         modin_result = modin_series.str.wrap(width)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
@@ -2945,6 +2968,7 @@ def test_str_slice(data, start, stop, step):
         modin_result = modin_series.str.slice(start=start, stop=stop, step=step)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("stop", int_arg_values, ids=int_arg_keys)
@@ -2953,13 +2977,16 @@ def test_str_slice_replace(data, start, stop, repl):
     modin_series, pandas_series = create_test_series(data)
 
     try:
-        pandas_result = pandas_series.str.slice_replace(start=start, stop=stop, repl=repl)
+        pandas_result = pandas_series.str.slice_replace(
+            start=start, stop=stop, repl=repl
+        )
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
     else:
         modin_result = modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -2974,6 +3001,7 @@ def test_str_count(data, pat):
     else:
         modin_result = modin_series.str.count(pat)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -2990,6 +3018,7 @@ def test_str_startswith(data, pat, na):
         modin_result = modin_series.str.startswith(pat, na=na)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
@@ -3005,6 +3034,7 @@ def test_str_endswith(data, pat, na):
         modin_result = modin_series.str.endswith(pat, na=na)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 def test_str_findall(data, pat):
@@ -3018,6 +3048,7 @@ def test_str_findall(data, pat):
     else:
         modin_result = modin_series.str.findall(pat)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -3035,6 +3066,7 @@ def test_str_match(data, pat, case, na):
         modin_result = modin_series.str.match(pat, case=case, na=na)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_extract(data, expand):
@@ -3044,7 +3076,8 @@ def test_str_extract(data, expand):
         with pytest.warns(UserWarning):
             # We are only testing that this defaults to pandas, so we will just check for
             # the warning
-            modin_series.str.extract(r'([ab])(\d)', expand=expand)
+            modin_series.str.extract(r"([ab])(\d)", expand=expand)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_extractall(data):
@@ -3053,7 +3086,8 @@ def test_str_extractall(data):
     with pytest.warns(UserWarning):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
-        modin_series.str.extractall(r'([ab])(\d)')
+        modin_series.str.extractall(r"([ab])(\d)")
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_len(data):
@@ -3067,6 +3101,7 @@ def test_str_len(data):
     else:
         modin_result = modin_series.str.len()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
@@ -3082,6 +3117,7 @@ def test_str_strip(data, to_strip):
         modin_result = modin_series.str.strip(to_strip=to_strip)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
 def test_str_rstrip(data, to_strip):
@@ -3096,6 +3132,7 @@ def test_str_rstrip(data, to_strip):
         modin_result = modin_series.str.rstrip(to_strip=to_strip)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
 def test_str_lstrip(data, to_strip):
@@ -3109,6 +3146,7 @@ def test_str_lstrip(data, to_strip):
     else:
         modin_result = modin_series.str.lstrip(to_strip=to_strip)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
@@ -3125,6 +3163,7 @@ def test_str_partition(data, sep, expand):
         modin_result = modin_series.str.partition(sep, expand=expand)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
@@ -3140,6 +3179,7 @@ def test_str_rpartition(data, sep, expand):
         modin_result = modin_series.str.rpartition(sep, expand=expand)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_lower(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3153,6 +3193,7 @@ def test_str_lower(data):
         modin_result = modin_series.str.lower()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_upper(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3165,6 +3206,7 @@ def test_str_upper(data):
     else:
         modin_result = modin_series.str.upper()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
@@ -3182,6 +3224,7 @@ def test_str_find(data, sub, start, end):
         modin_result = modin_series.str.find(sub, start=start, end=end)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
@@ -3198,6 +3241,7 @@ def test_str_rfind(data, sub, start, end):
         modin_result = modin_series.str.rfind(sub, start=start, end=end)
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
@@ -3207,7 +3251,7 @@ def test_str_index(data, sub, start, end):
 
     try:
         pandas_result = pandas_series.str.index(sub, start=start, end=end)
-    except ValueError as e:
+    except ValueError:
         # pytest does not get the RayGetErrors
         assert True
     except Exception as e:
@@ -3216,6 +3260,7 @@ def test_str_index(data, sub, start, end):
     else:
         modin_result = modin_series.str.index(sub, start=start, end=end)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
@@ -3226,7 +3271,7 @@ def test_str_rindex(data, sub, start, end):
 
     try:
         pandas_result = pandas_series.str.rindex(sub, start=start, end=end)
-    except ValueError as e:
+    except ValueError:
         # pytest does not get the RayGetErrors
         assert True
     except Exception as e:
@@ -3235,6 +3280,7 @@ def test_str_rindex(data, sub, start, end):
     else:
         modin_result = modin_series.str.rindex(sub, start=start, end=end)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_capitalize(data):
@@ -3249,6 +3295,7 @@ def test_str_capitalize(data):
         modin_result = modin_series.str.capitalize()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_swapcase(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3262,8 +3309,11 @@ def test_str_swapcase(data):
         modin_result = modin_series.str.swapcase()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("form", ["NFC", "NFKC", "NFD", "NFKD"], ids=["NFC", "NFKC", "NFD", "NFKD"])
+@pytest.mark.parametrize(
+    "form", ["NFC", "NFKC", "NFD", "NFKD"], ids=["NFC", "NFKC", "NFD", "NFKD"]
+)
 def test_str_normalize(data, form):
     modin_series, pandas_series = create_test_series(data)
 
@@ -3275,6 +3325,7 @@ def test_str_normalize(data, form):
     else:
         modin_result = modin_series.str.normalize(form)
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
@@ -3304,7 +3355,7 @@ def test_str_translate(data, pat):
 
     # Translation table with maketrans
     if pat is not None:
-        table = str.maketrans(pat, "d"*len(pat))
+        table = str.maketrans(pat, "d" * len(pat))
         try:
             pandas_result = pandas_series.str.translate(table)
         except Exception as e:
@@ -3339,6 +3390,7 @@ def test_str_isalnum(data):
         modin_result = modin_series.str.isalnum()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalpha(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3351,6 +3403,7 @@ def test_str_isalpha(data):
     else:
         modin_result = modin_series.str.isalpha()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdigit(data):
@@ -3365,6 +3418,7 @@ def test_str_isdigit(data):
         modin_result = modin_series.str.isdigit()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isspace(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3377,6 +3431,7 @@ def test_str_isspace(data):
     else:
         modin_result = modin_series.str.isspace()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_islower(data):
@@ -3391,6 +3446,7 @@ def test_str_islower(data):
         modin_result = modin_series.str.islower()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isupper(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3403,6 +3459,7 @@ def test_str_isupper(data):
     else:
         modin_result = modin_series.str.isupper()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_istitle(data):
@@ -3417,6 +3474,7 @@ def test_str_istitle(data):
         modin_result = modin_series.str.istitle()
         df_equals(modin_result, pandas_result)
 
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isnumeric(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3429,6 +3487,7 @@ def test_str_isnumeric(data):
     else:
         modin_result = modin_series.str.isnumeric()
         df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdecimal(data):

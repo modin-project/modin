@@ -113,44 +113,35 @@ no_numeric_dfs = ["datetime_timedelta_data"]
 
 # String test data
 test_string_data = {
-        "separator data": ["abC|DeF,Hik", "234,3245.67", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN],
-        }
+    "separator data": [
+        "abC|DeF,Hik",
+        "234,3245.67",
+        "gSaf,qWer|Gre",
+        "asd3,4sad|",
+        np.NaN,
+    ]
+}
 
 test_string_data_values = list(test_string_data.values())
 test_string_data_keys = list(test_string_data.keys())
 
 # List of strings test data
-test_string_list_data = {
-        "simple string": [["a"], ["CdE"], ["jDf"], ["werB"]],
-        }
+test_string_list_data = {"simple string": [["a"], ["CdE"], ["jDf"], ["werB"]]}
 
 test_string_list_data_values = list(test_string_list_data.values())
 test_string_list_data_keys = list(test_string_list_data.keys())
 
-string_seperators = {
-        "empty sep": "", 
-        "comma sep": ",",
-        "None sep": None,
-        }
+string_seperators = {"empty sep": "", "comma sep": ",", "None sep": None}
 
 string_sep_values = list(string_seperators.values())
 string_sep_keys = list(string_seperators.keys())
 
-string_na_rep = {
-        "None na_rep": None,
-        "- na_rep": "-",
-        "nan na_rep": np.NaN,
-        }
+string_na_rep = {"None na_rep": None, "- na_rep": "-", "nan na_rep": np.NaN}
 
 string_na_rep_values = list(string_na_rep.values())
 string_na_rep_keys = list(string_na_rep.keys())
 
-join_type = {
-        "left": "left",
-        "right": "right",
-        "inner": "inner",
-        "outer": "outer",
-        }
+join_type = {"left": "left", "right": "right", "inner": "inner", "outer": "outer"}
 
 join_type_keys = list(join_type.keys())
 join_type_values = list(join_type.values())
