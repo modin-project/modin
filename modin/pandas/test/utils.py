@@ -111,41 +111,6 @@ numeric_dfs = [
 
 no_numeric_dfs = ["datetime_timedelta_data"]
 
-# String test data
-test_string_data = {
-    "separator data": [
-        "abC|DeF,Hik",
-        "234,3245.67",
-        "gSaf,qWer|Gre",
-        "asd3,4sad|",
-        np.NaN,
-    ]
-}
-
-test_string_data_values = list(test_string_data.values())
-test_string_data_keys = list(test_string_data.keys())
-
-# List of strings test data
-test_string_list_data = {"simple string": [["a"], ["CdE"], ["jDf"], ["werB"]]}
-
-test_string_list_data_values = list(test_string_list_data.values())
-test_string_list_data_keys = list(test_string_list_data.keys())
-
-string_seperators = {"empty sep": "", "comma sep": ",", "None sep": None}
-
-string_sep_values = list(string_seperators.values())
-string_sep_keys = list(string_seperators.keys())
-
-string_na_rep = {"None na_rep": None, "- na_rep": "-", "nan na_rep": np.NaN}
-
-string_na_rep_values = list(string_na_rep.values())
-string_na_rep_keys = list(string_na_rep.keys())
-
-join_type = {"left": "left", "right": "right", "inner": "inner", "outer": "outer"}
-
-join_type_keys = list(join_type.keys())
-join_type_values = list(join_type.values())
-
 # Test functions for applymap
 test_func = {
     "plus one": lambda x: x + 1,
@@ -303,14 +268,11 @@ def df_equals(df1, df2):
     if isinstance(df2, pd.Series):
         df2 = to_pandas(df2)
 
-    if not isinstance(df1, type(df2)):
-        assert False
-
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
-            assert False
+            return False
         elif df1.empty and df2.empty and type(df1) != type(df2):
-            assert False
+            return False
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         try:
@@ -349,6 +311,8 @@ def df_equals(df1, df2):
         assert df1.dtypes == df2.dtypes
     else:
         if df1 != df2:
+            print(df1)
+            print(df2)
             np.testing.assert_almost_equal(df1, df2)
 
 
