@@ -29,8 +29,6 @@ from .utils import (
     string_sep_keys,
     string_na_rep_values,
     string_na_rep_keys,
-    join_type_values,
-    join_type_keys,
     numeric_dfs,
     no_numeric_dfs,
     agg_func_keys,
