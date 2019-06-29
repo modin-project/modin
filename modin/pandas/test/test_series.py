@@ -2667,24 +2667,20 @@ def test_xs():
 
 
 # Test str operations
-@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("others", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("na_rep", string_na_rep_values, ids=string_na_rep_keys)
-@pytest.mark.parametrize("join", join_type_values, ids=join_type_keys)
-def test_str_cat(data, others, sep, na_rep, join):
+def test_str_cat():
+    data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN]
     modin_series, pandas_series = create_test_series(data)
-    others = others[: len(modin_series)]
+    others = data
 
     with pytest.warns(UserWarning):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
-        modin_series.str.cat(others, sep, na_rep=na_rep, join=join)
+        modin_series.str.cat(others)
 
     with pytest.warns(UserWarning):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
-        modin_series.str.cat(None, sep, na_rep=na_rep, join=join)
+        modin_series.str.cat(None)
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
