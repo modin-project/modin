@@ -624,6 +624,7 @@ class RayIO(BaseIO):
     
     @classmethod
     def read_json(
+        cls,
         path_or_buf=None,
         orient=None,
         typ="frame",
@@ -658,10 +659,52 @@ class RayIO(BaseIO):
         if cls.read_json_remote_task is None:
             return super(RayIO, cls).read_json(**kwargs)
         
-        if lines:
-            #
+        if not lines:
+            ErrorMessage.default_to_pandas("`read_json` only optimized with `lines=True`")
+            return cls.from_pandas(pandas.read_json(path_or_buf=path_or_buf, **kwargs))
         else:
-            raise NotImplementedError("Currently only supports `lines=True`")
+            # TODO: Pick up the columns in an optimized way
+            # All rows must be read because some rows may have missing data
+            import json
+            columns = set()
+            with open(path_or_buf) as f:
+                columns.update(json.loads(line).keys() for line in f)
+
+            num_partitions = cls.frame_mgr_cls._compute_num_partitions()
+            num_splits = min(len(columns), num_partitions)
+
+            # Each item in this list will be a list of column names of the original df
+            column_splits = (
+                len(columns) // num_partitions
+                if len(columns) % num_partitions == 0
+                else len(columns) // num_partitions + 1
+            )
+            col_partitions = [
+                columns[i : i + column_splits]
+                for i in range(0, len(columns), column_splits)
+            ]
+            blk_partitions = np.array(
+                [
+                    cls.read_json_remote_task._remote(
+                        args=(path_or_buf, cols, num_splits, kwargs),
+                        num_return_vals=num_splits + 1,
+                    )
+                    for cols in col_partitions
+                ]
+            ).T
+            remote_partitions = np.array(
+                [
+                    [cls.frame_partition_cls(obj) for obj in row]
+                    for row in blk_partitions[:-1]
+                ]
+            )
+            index_len = ray.get(blk_partitions[-1][0])
+            index = pandas.RangeIndex(index_len)
+            new_query_compiler = cls.query_compiler_cls(
+                cls.frame_mgr_cls(remote_partitions), index, columns
+            )
+            return new_query_compiler
+            
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
