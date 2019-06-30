@@ -1323,7 +1323,7 @@ class StringMethods(object):
         )
 
     def split(self, pat=None, n=-1, expand=False):
-        if not pat and pat is not None:
+        if not pat and pat is not None and pandas.compat.PY3:
             raise ValueError("split() requires a non-empty pattern match.")
 
         if expand:
@@ -1581,8 +1581,6 @@ class StringMethods(object):
                     "specify character deletions in the table "
                     "argument"
                 )
-        if isinstance(table, dict) and not pandas.compat.PY3:
-            raise ValueError
         return Series(
             query_compiler=self._query_compiler.str_translate(
                 table, deletechars=deletechars

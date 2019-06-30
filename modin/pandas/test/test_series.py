@@ -3347,8 +3347,8 @@ def test_str_translate(data, pat):
         modin_result = modin_series.str.translate(table)
         df_equals(modin_result, pandas_result)
 
-    # Translation table with maketrans
-    if pat is not None:
+    # Translation table with maketrans (python3 only)
+    if pat is not None and not PY2:
         table = str.maketrans(pat, "d" * len(pat))
         try:
             pandas_result = pandas_series.str.translate(table)

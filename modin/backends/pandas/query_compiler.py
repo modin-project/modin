@@ -1257,28 +1257,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def str_count(self, pat, **kwargs):
         kwargs["pat"] = pat
         new_dtypes = pandas.Series([int])
+        # We have to pass in a lambda because pandas.Series.str.count does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.count, new_dtypes=new_dtypes, **kwargs
+            lambda str_series: str_series.count(**kwargs), new_dtypes=new_dtypes
         )
 
     def str_startswith(self, pat, **kwargs):
         kwargs["pat"] = pat
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.startswith does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.startswith, new_dtypes=new_dtypes, **kwargs
+            lambda str_series: str_series.startswith(**kwargs), new_dtypes=new_dtypes
         )
 
     def str_endswith(self, pat, **kwargs):
         kwargs["pat"] = pat
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.endswith does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.endswith, new_dtypes=new_dtypes, **kwargs
+            lambda str_series: str_series.endswith(**kwargs), new_dtypes=new_dtypes
         )
 
     def str_findall(self, pat, **kwargs):
         kwargs["pat"] = pat
+        # We have to pass in a lambda because pandas.Series.str.findall does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.findall, new_dtypes=self.dtypes, **kwargs
+            lambda str_series: str_series.findall(**kwargs), new_dtypes=self.dtypes
         )
 
     def str_match(self, pat, **kwargs):
@@ -1317,10 +1321,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def str_lower(self):
-        return self._str_map_partitions(pandas.Series.str.lower, new_dtypes=self.dtypes)
+        # We have to pass in a lambda because pandas.Series.str.lower does not exist for python2
+        return self._str_map_partitions(
+            lambda str_series: str_series.lower(), new_dtypes=self.dtypes
+        )
 
     def str_upper(self):
-        return self._str_map_partitions(pandas.Series.str.upper, new_dtypes=self.dtypes)
+        # We have to pass in a lambda because pandas.Series.str.upper does not exist for python2
+        return self._str_map_partitions(
+            lambda str_series: str_series.upper(), new_dtypes=self.dtypes
+        )
 
     def str_find(self, sub, **kwargs):
         kwargs["sub"] = sub
@@ -1347,13 +1357,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def str_capitalize(self):
+        # We have to pass in a lambda because pandas.Series.str.capitalize does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.capitalize, new_dtypes=self.dtypes
+            lambda str_series: str_series.capitalize(), new_dtypes=self.dtypes
         )
 
     def str_swapcase(self):
+        # We have to pass in a lambda because pandas.Series.str.swapcase does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.swapcase, new_dtypes=self.dtypes
+            lambda str_series: str_series.swapcase(), new_dtypes=self.dtypes
         )
 
     def str_normalize(self, form):
@@ -1369,56 +1381,65 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def str_isalnum(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isalnum does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isalnum, new_dtypes=new_dtypes
+            lambda str_series: str_series.isalnum(), new_dtypes=new_dtypes
         )
 
     def str_isalpha(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isalpha does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isalpha, new_dtypes=new_dtypes
+            lambda str_series: str_series.isalpha(), new_dtypes=new_dtypes
         )
 
     def str_isdigit(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isdigit does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isdigit, new_dtypes=new_dtypes
+            lambda str_series: str_series.isdigit(), new_dtypes=new_dtypes
         )
 
     def str_isspace(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isspace does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isspace, new_dtypes=new_dtypes
+            lambda str_series: str_series.isspace(), new_dtypes=new_dtypes
         )
 
     def str_islower(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.islower does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.islower, new_dtypes=new_dtypes
+            lambda str_series: str_series.islower(), new_dtypes=new_dtypes
         )
 
     def str_isupper(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isupper does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isupper, new_dtypes=new_dtypes
+            lambda str_series: str_series.isupper(), new_dtypes=new_dtypes
         )
 
     def str_istitle(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.istitle does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.istitle, new_dtypes=new_dtypes
+            lambda str_series: str_series.istitle(), new_dtypes=new_dtypes
         )
 
     def str_isnumeric(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isnumeric does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isnumeric, new_dtypes=new_dtypes
+            lambda str_series: str_series.isnumeric(), new_dtypes=new_dtypes
         )
 
     def str_isdecimal(self):
         new_dtypes = pandas.Series([bool])
+        # We have to pass in a lambda because pandas.Series.str.isdecimal does not exist for python2
         return self._str_map_partitions(
-            pandas.Series.str.isdecimal, new_dtypes=new_dtypes
+            lambda str_series: str_series.isdecimal(), new_dtypes=new_dtypes
         )
 
     # END String map partitions operations
