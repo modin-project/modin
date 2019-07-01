@@ -35,7 +35,7 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
          DataFrame. If axis is None, return a tuple containing both.
     """
     if axis == 0 or axis is None:
-        row_chunksize = get_default_chunksize(len(df.index), num_splits)
+        row_chunksize = get_default_chunksize(len(df), num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
         # large amount of small partitions.
         row_chunksize = max(1, row_chunksize, default_block_size)
