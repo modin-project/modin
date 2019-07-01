@@ -2,6 +2,7 @@ import ray
 import numpy as np
 from ray.worker import RayTaskError
 
+from modin.engines.base.frame.partition import BaseFramePartition
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.engines.ray.utils import handle_ray_task_error
 

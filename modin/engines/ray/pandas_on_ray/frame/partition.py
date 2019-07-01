@@ -47,6 +47,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
             A RayRemotePartition object.
         """
         oid = self.oid
+        if isinstance(broadcast_values, PandasOnRayFramePartition):
+            broadcast_values = broadcast_values.oid
         new_obj, result, length, width = deploy_ray_func.remote(
             self.call_queue, oid, func, broadcast_values, kwargs
         )
@@ -58,6 +60,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
         )
 
     def add_to_apply_calls(self, func, broadcast_values=None, **kwargs):
+        if isinstance(broadcast_values, PandasOnRayFramePartition):
+            broadcast_values = broadcast_values.oid
         return PandasOnRayFramePartition(
             self.oid, call_queue=self.call_queue + [(func, broadcast_values, kwargs)]
         )
@@ -147,10 +151,10 @@ def deploy_ray_func(
     if len(call_queue) > 0:
         for queued_func, queued_broadcast_values, queued_kwargs in call_queue:
             queued_func = deserialize(queued_func)
-            queued_broadcast_values = deserialize(broadcast_values)
+            queued_broadcast_values = deserialize(queued_broadcast_values)
             queued_kwargs = deserialize(queued_kwargs)
             if queued_broadcast_values is not None:
-                queued_kwargs["broadcast_values"] = broadcast_values
+                queued_kwargs["broadcast_values"] = queued_broadcast_values
             try:
                 partition = queued_func(partition, **queued_kwargs)
             except ValueError:

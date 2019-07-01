@@ -2634,9 +2634,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.groupby(by=df.columns[0], axis=axis, **groupby_args), **map_args
                 )
 
+        _map_func = self._prepare_method(_map)
+        _reduce_func = self._prepare_method(_reduce)
         by_data = np.squeeze(by.data.partitions)
-        mapped_data = self.data.map_across_blocks(_map, 0, by_data, False)
-        new_data = mapped_data.map_across_full_axis(0, _reduce)
+        mapped_data = self.data.map_across_blocks(_map_func, 0, by_data, False)
+        new_data = mapped_data.map_across_full_axis(0, _reduce_func)
         if axis == 0:
             new_columns = (
                 self.columns if not numeric_only else self.numeric_columns(True)
