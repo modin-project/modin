@@ -187,7 +187,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(
-            [set_indices_for_pandas_concat(df.T) for df in partitions],
+            [set_indices_for_pandas_concat(df) for df in partitions],
             axis=axis,
             copy=False,
         )
