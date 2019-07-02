@@ -967,28 +967,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.transpose().dot(other)
 
         def map_func(df, other):
-            return df.dot(other.squeeze()).to_frame()
+            result = df.squeeze().dot(other.squeeze())
+            if is_numeric_dtype(result):
+                return pandas.DataFrame([result])
+            else:
+                return pandas.DataFrame(result).T
 
-        def reduce_func(df):
-            return df.sum(axis=1)
-
-        reduce_func = self._build_mapreduce_func(reduce_func)
-        # If other is a series, we take the transpose to copartition along the columns.
-        if len(other.columns) == 1:
-            other = other.transpose()
         if isinstance(other, BaseQueryCompiler):
-            new_self, list_of_others, _ = self.copartition(1, other, "outer", True)
+            if len(self.columns) > 1 and len(other.columns) == 1:
+                # If self is DataFrame and other is a series, we take the transpose 
+                # to copartition along the columns.
+                other = other.transpose()
+                axis = 1
+                new_index = self.index
+            elif len(self.columns) == 1 and len(other.columns) > 1:
+                # If self is series and other is a Dataframe, we take the transpose 
+                # to copartition along the columns.
+                self = self.transpose()
+                axis = 1
+                new_index = self.index
+            elif len(self.columns) == 1 and len(other.columns) == 1:
+                # If both are series, then we copartition along the rows.
+                axis = 0
+                new_index = ["__reduce__"]
+            new_self, list_of_others, _ = self.copartition(axis, other, "outer", True)
             other = list_of_others[0]
-            print(other.partitions.shape)
-            print(new_self.partitions.shape)
-            new_data = new_self.groupby_reduce(1, other, map_func, reduce_func)
+            reduce_func = self._build_mapreduce_func(pandas.DataFrame.sum, axis=axis, skipna=False)
+            new_data = new_self.groupby_reduce(axis, other, map_func, reduce_func)
         else:
             def map_func(df):
-                return df.dot(other)
+                return pandas.DataFrame(df.dot(other))
 
-            # TODO(williamma12): Use #673 when it gets merged.
-            new_data = self.data._map_across_full_axis(1, map_func)
-        return self.__constructor__(new_data, index=self.index, columns=["__reduced__"])
+            if len(self.columns) == 1:
+                self = self.transpose()
+                axis = 1
+                new_index = ["__reduce__"]
+            else:
+                axis = 0
+                new_index = self.index
+            new_data = self.data.map_across_full_axis(axis, map_func)
+        return self.__constructor__(new_data, index=new_index, columns=["__reduced__"])
 
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.

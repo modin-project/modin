@@ -1966,7 +1966,7 @@ class TestDFPartOne:
 
         # Test bad dimensions
         with pytest.raises(ValueError):
-            modin_result = modin_df.dot(np.arange(len(modin_df)))
+            modin_result = modin_df.dot(np.arange(col_len+10))
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)

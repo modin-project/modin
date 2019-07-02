@@ -841,7 +841,7 @@ class BasePandasDataset(object):
         self_labels = self.columns if isinstance(self, DataFrame) else self.index
         if isinstance(other, BasePandasDataset):
             common = self_labels.union(other.index)
-            if (len(common) > len(self.columns) or
+            if (len(common) > len(self_labels) or
                     len(common) > len(other.index)):
                 raise ValueError("matrices are not aligned")
             if isinstance(self, DataFrame) and isinstance(other, DataFrame):
@@ -849,7 +849,8 @@ class BasePandasDataset(object):
                 return self._default_to_pandas("dot", other)
         else:
             other = np.asarray(other)
-            if self.shape[1] != other.shape[0]:
+            self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
+            if self_dim != other.shape[0]:
                 raise ValueError('Dot product shape mismatch, {l} vs {r}'.format(l=self.shape, r=other.shape))
             return self._default_to_pandas("dot", other)
 
