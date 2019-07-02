@@ -365,12 +365,18 @@ class RayIO(BaseIO):
 
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
-            column_widths = [
-                column_chunksize
-                if i != num_splits - 1
-                else len(column_names) - (column_chunksize * (num_splits - 1))
-                for i in range(num_splits)
-            ]
+            if column_chunksize > len(column_names):
+                column_widths = [len(column_names)]
+                # This prevents us from unnecessarily serializing a bunch of empty
+                # objects.
+                num_splits = 1
+            else:
+                column_widths = [
+                    column_chunksize
+                    if i != num_splits - 1
+                    else len(column_names) - (column_chunksize * (num_splits - 1))
+                    for i in range(num_splits)
+                ]
 
             while f.tell() < total_bytes:
                 start = f.tell()
