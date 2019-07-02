@@ -953,6 +953,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_func = self._build_mapreduce_func(pandas.DataFrame.sum, **kwargs)
         return self._full_reduce(axis, map_func, reduce_func)
 
+    def dot(self, other):
+        """Computes the matrix multiplication of self and other.
+
+        Args:
+            other: The other query compiler or other array-like to matrix
+            multiply with self.
+
+        Returns:
+            Returns the result of the matrix multiply.
+        """
+        if self._is_transposed:
+            return self.transpose().dot(other)
+
+        def map_func(df, other):
+            return df.dot(other.squeeze()).to_frame()
+
+        def reduce_func(df):
+            return df.sum(axis=1)
+
+        reduce_func = self._build_mapreduce_func(reduce_func)
+        # If other is a series, we take the transpose to copartition along the columns.
+        if len(other.columns) == 1:
+            other = other.transpose()
+        if isinstance(other, BaseQueryCompiler):
+            new_self, list_of_others, _ = self.copartition(1, other, "outer", True)
+            other = list_of_others[0]
+            print(other.partitions.shape)
+            print(new_self.partitions.shape)
+            new_data = new_self.groupby_reduce(1, other, map_func, reduce_func)
+        else:
+            def map_func(df):
+                return df.dot(other)
+
+            # TODO(williamma12): Use #673 when it gets merged.
+            new_data = self.data._map_across_full_axis(1, map_func)
+        return self.__constructor__(new_data, index=self.index, columns=["__reduced__"])
+
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.
 

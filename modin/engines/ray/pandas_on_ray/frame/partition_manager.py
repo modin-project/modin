@@ -30,6 +30,8 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         map_func = ray.put(map_func)
         by_parts = np.squeeze(by.partitions)
+        if len(by_parts.shape) == 0:
+            by_parts = np.array([by_parts.item()])
         new_partitions = self.__constructor__(
             np.array(
                 [
@@ -37,16 +39,16 @@ class PandasOnRayFrameManager(RayFrameManager):
                         PandasOnRayFramePartition(
                             func.remote(
                                 part.oid,
-                                by_parts[i].oid,
+                                by_parts[col_idx].oid if axis else by_parts[row_idx].oid,
                                 map_func,
                                 part.call_queue,
-                                by_parts[i].call_queue,
+                                by_parts[col_idx].call_queue if axis else by_parts[row_idx].call_queue,
                             )
                         )
-                        for part in self.partitions[i]
+                        for col_idx, part in enumerate(self.partitions[row_idx])
                     ]
-                    for i in range(len(self.partitions))
+                    for row_idx in range(len(self.partitions))
                 ]
             )
         )
-        return new_partitions.map_across_full_axis(0, reduce_func)
+        return new_partitions.map_across_full_axis(axis, reduce_func)
