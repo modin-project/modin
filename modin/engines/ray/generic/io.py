@@ -206,44 +206,71 @@ class RayIO(BaseIO):
 
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
-        # Each item in this list will be a list of column names of the original df
-        column_splits = (
-            len(columns) // num_partitions
-            if len(columns) % num_partitions == 0
-            else len(columns) // num_partitions + 1
-        )
-        col_partitions = [
-            columns[i : i + column_splits]
-            for i in range(0, len(columns), column_splits)
-        ]
 
         # Only read row groups in parallel if parquet files are not in a partitioned within a directory
         if not directory:
+
+            # For parallelized reading of row groups is
+            # implemented across row groups rather than columns,
+            # by setting column_splits equal to the number of columns.
+            # This is an efficient solution for Parquet datasets,
+            # which in most cases will have many more rows than columns,
+            # as all the columns from a row group are read at once.
+            column_splits = len(columns)
+            col_partitions = [
+                columns[i : i + column_splits]
+                for i in range(0, len(columns), column_splits)
+            ]
+
             pf = ParquetFile(path, memory_map=False)
             num_row_groups = pf.metadata.num_row_groups
+
+            row_group_splits = (
+                num_row_groups // num_partitions
+                if num_row_groups % num_partitions == 0
+                else num_row_groups // num_partitions + 1
+            )
+
+            row_group_indexes = [i for i in range(num_row_groups)]
+            row_group_partitions = [
+                row_group_indexes[i : i + row_group_splits]
+                for i in range(0, num_row_groups, row_group_splits)
+            ]
+
             blocks_with_lengths = [
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, col_partitions[i], 1, j, kwargs), num_return_vals=2
+                        args=(path, col_partitions[i], 1, j, kwargs),
+                        num_return_vals=len(j) + 1,
                     )
                     for i in range(len(col_partitions))
                 ]
-                for j in range(num_row_groups)
+                for j in row_group_partitions
             ]
-
-            blk_partitions = [
-                [blocks_with_lengths[i][j][0] for j in range(len(col_partitions))]
-                for i in range(num_row_groups)
-            ]
-
-            row_total = ray.put(
-                sum(
-                    ray.get(blocks_with_lengths[j][0][1]) for j in range(num_row_groups)
-                )
+            blk_partitions = []
+            total_count = 0
+            for j in range(len(row_group_partitions)):
+                for i in range(len(col_partitions)):
+                    for z in range(len(row_group_partitions[j])):
+                        blk_partitions.append([blocks_with_lengths[j][i][z]])
+                    cur_len = len(row_group_partitions[j])
+                    total_count = total_count + ray.get(
+                        blocks_with_lengths[j][i][cur_len]
+                    )
+            row_total = ray.put(total_count)
+            blk_partitions.append([row_total])
+        else:
+            column_splits = (
+                len(columns) // num_partitions
+                if len(columns) % num_partitions == 0
+                else len(columns) // num_partitions + 1
             )
 
-            blk_partitions.append([row_total for c in columns])
-        else:
+            col_partitions = [
+                columns[i : i + column_splits]
+                for i in range(0, len(columns), column_splits)
+            ]
+
             # Each item in this list will be a list of columns of original df
             # partitioned to smaller pieces along rows.
             # We need to transpose the oids array to fit our schema.
@@ -252,12 +279,12 @@ class RayIO(BaseIO):
             blk_partitions = np.array(
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, cols + partitioned_columns, num_splits, -1, kwargs),
+                        args=(path, cols + partitioned_columns, num_splits, [], kwargs),
                         num_return_vals=num_splits + 1,
                     )
                     if directory and cols == col_partitions[len(col_partitions) - 1]
                     else cls.read_parquet_remote_task._remote(
-                        args=(path, cols, num_splits, -1, kwargs),
+                        args=(path, cols, num_splits, [], kwargs),
                         num_return_vals=num_splits + 1,
                     )
                     for cols in col_partitions

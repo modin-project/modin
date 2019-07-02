@@ -37,7 +37,7 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
 
 @ray.remote
 def _read_parquet_columns(
-    path, columns, num_splits, rowgroup, kwargs
+    path, columns, num_splits, rowgroups, kwargs
 ):  # pragma: no cover
     """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
@@ -59,10 +59,14 @@ def _read_parquet_columns(
 
     kwargs["use_pandas_metadata"] = True
 
-    if rowgroup >= 0:
+    if not len(rowgroups) == 0:
         pf = ParquetFile(path, memory_map=False)
-        df = pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
-        return _split_result_for_readers(0, 1, df) + [len(df.index)]
+        df_list = [
+            pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
+            for rowgroup in rowgroups
+        ]
+        total_df_length = sum([len(df.index) for df in df_list])
+        return df_list + [total_df_length]
     else:
         df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
         df = df[columns]
