@@ -106,9 +106,11 @@ class RayIO(BaseIO):
 
     read_json_remote_task = None
     # For reading JSON files and other text files in parallel, this task should read
-    # based ...
+    # based on the offsets in the signature (`start` and `stop` are byte offsets).
+    # `prefix_id` is the `b""` prefix for reading with a `BytesIO` object and it will
+    # also contain encoding information in the string.
     #
-    # Signature: 
+    # Signature: (filepath, num_splits, start, stop, kwargs)
 
     read_hdf_remote_task = None
     # For reading HDF5 files in parallel, this task should read based on the `columns`
@@ -661,14 +663,12 @@ class RayIO(BaseIO):
         
         if not lines:
             ErrorMessage.default_to_pandas("`read_json` only optimized with `lines=True`")
-            return cls.from_pandas(pandas.read_json(path_or_buf=path_or_buf, **kwargs))
+            return super(RayIO, cls).read_json(**kwargs)
         else:
-            # TODO: Pick up the columns in an optimized way
+            # TODO: Pick up the columns in an optimized way from all data
             # All rows must be read because some rows may have missing data
-            import json
-            columns = set()
-            with open(path_or_buf) as f:
-                columns.update(json.loads(line).keys() for line in f)
+            from io import BytesIO
+            columns = pandas.read_json(BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True).columns
 
             num_partitions = cls.frame_mgr_cls._compute_num_partitions()
             num_splits = min(len(columns), num_partitions)
@@ -687,19 +687,21 @@ class RayIO(BaseIO):
                 [
                     cls.read_json_remote_task._remote(
                         args=(path_or_buf, cols, num_splits, kwargs),
-                        num_return_vals=num_splits + 1,
+                        num_return_vals=num_splits + 2,
                     )
                     for cols in col_partitions
                 ]
-            ).T
+            )
             remote_partitions = np.array(
                 [
                     [cls.frame_partition_cls(obj) for obj in row]
-                    for row in blk_partitions[:-1]
+                    for row in blk_partitions[:-2]
                 ]
             )
-            index_len = ray.get(blk_partitions[-1][0])
+            index_len = sum(ray.get(list(blk_partitions[-2])))
             index = pandas.RangeIndex(index_len)
+            columns_list = ray.get(list(blk_partitions[-1]))
+            columns = columns_list[0].join(columns_list[1:], how="outer", sort=False)
             new_query_compiler = cls.query_compiler_cls(
                 cls.frame_mgr_cls(remote_partitions), index, columns
             )
