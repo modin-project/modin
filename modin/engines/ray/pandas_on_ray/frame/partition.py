@@ -12,10 +12,12 @@ from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id, length=None, width=None, call_queue=[]):
+    def __init__(self, object_id, length=None, width=None, call_queue=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
+        if call_queue is None:
+            call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width

@@ -10,6 +10,8 @@ class RayFrameManager(BaseFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
     def __init__(self, partitions):
+        if isinstance(partitions, list):
+            partitions = np.array(partitions)
         self.partitions = partitions
 
     # We override these for performance reasons.

@@ -494,7 +494,7 @@ class BaseFrameManager(object):
             return self.transpose().to_pandas(False).T
         else:
             retrieved_objects = [
-                [set_indices_for_pandas_concat(obj.to_pandas()) for obj in part]
+                [obj.to_pandas() for obj in part]
                 for part in self.partitions
             ]
             if all(

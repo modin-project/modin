@@ -13,6 +13,7 @@ from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
     PandasOnRayFrameManager,
 )
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayData
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
@@ -204,6 +205,7 @@ class PandasOnRayIO(RayIO):
     frame_mgr_cls = PandasOnRayFrameManager
     frame_partition_cls = PandasOnRayFramePartition
     query_compiler_cls = PandasQueryCompiler
+    data_cls = PandasOnRayData
 
     read_parquet_remote_task = _read_parquet_columns
     read_csv_remote_task = _read_csv_with_offset_pandas_on_ray

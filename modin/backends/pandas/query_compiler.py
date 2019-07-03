@@ -6,18 +6,16 @@ import numpy as np
 import pandas
 
 from pandas.compat import string_types
-from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
 )
-from pandas.core.index import ensure_index
 from pandas.core.base import DataError
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
-from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.error_message import ErrorMessage
 
 
 class PandasQueryCompiler(BaseQueryCompiler):
@@ -25,41 +23,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
         with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(
-        self, block_partitions_object, index, columns, dtypes=None, is_transposed=False
+        self, block_partitions_object=None, index=None, columns=None, dtypes=None, is_transposed=False, data_object=None
     ):
-        assert isinstance(block_partitions_object, BaseFrameManager)
-        self.data = block_partitions_object
-        self.index = index
-        self.columns = columns
-        if dtypes is not None:
-            self._dtype_cache = dtypes
-        self._is_transposed = int(is_transposed)
+        if data_object is not None:
+            self._data_obj = data_object
+            # self.data = data.frame_manager
+            self.index = data_object.index
+            self.columns = data_object.columns
+            self.dtypes = data_object.dtypes
+            self._is_transposed = int(is_transposed)
+        else:
+            assert isinstance(block_partitions_object, BaseFrameManager)
+            self.data = block_partitions_object
+            self.index = index
+            self.columns = columns
+            if dtypes is not None:
+                self._dtype_cache = dtypes
+            self._is_transposed = int(is_transposed)
 
-    # Index, columns and dtypes objects
-    _dtype_cache = None
-
-    def _get_dtype(self):
-        if self._dtype_cache is None:
-
-            def dtype_builder(df):
-                return df.apply(lambda row: find_common_type(row.values), axis=0)
-
-            map_func = self._prepare_method(
-                self._build_mapreduce_func(lambda df: df.dtypes)
-            )
-            reduce_func = self._build_mapreduce_func(dtype_builder)
-            # For now we will use a pandas Series for the dtypes.
-            if len(self.columns) > 0:
-                self._dtype_cache = (
-                    self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
-                )
-            else:
-                self._dtype_cache = pandas.Series([])
-            # reset name to None because we use "__reduced__" internally
-            self._dtype_cache.name = None
-        return self._dtype_cache
-
-    dtypes = property(_get_dtype)
+    def to_pandas(self):
+        return self._data_obj.to_pandas()
 
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
@@ -97,86 +80,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return index_obj[new_indices] if compute_diff else new_indices
 
-    def _validate_set_axis(self, new_labels, old_labels):
-        new_labels = ensure_index(new_labels)
-        old_len = len(old_labels)
-        new_len = len(new_labels)
-        if old_len != new_len:
-            raise ValueError(
-                "Length mismatch: Expected axis has %d elements, "
-                "new values have %d elements" % (old_len, new_len)
-            )
-        return new_labels
-
-    _index_cache = None
-    _columns_cache = None
-
-    def _get_index(self):
-        return self._index_cache
-
-    def _get_columns(self):
-        return self._columns_cache
-
-    def _set_index(self, new_index):
-        if self._index_cache is None:
-            self._index_cache = ensure_index(new_index)
-        else:
-            new_index = self._validate_set_axis(new_index, self._index_cache)
-            self._index_cache = new_index
-
-    def _set_columns(self, new_columns):
-        if self._columns_cache is None:
-            self._columns_cache = ensure_index(new_columns)
-        else:
-            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            self._columns_cache = new_columns
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
     # END Index, columns, and dtypes objects
-
-    # Internal methods
-    # These methods are for building the correct answer in a modular way.
-    # Please be careful when changing these!
-    def _prepare_method(self, pandas_func, **kwargs):
-        """Prepares methods given various metadata.
-        Args:
-            pandas_func: The function to prepare.
-
-        Returns
-            Helper function which handles potential transpose.
-        """
-        if self._is_transposed:
-
-            def helper(df, internal_indices=[]):
-                if len(internal_indices) > 0:
-                    return pandas_func(
-                        df.T, internal_indices=internal_indices, **kwargs
-                    )
-                return pandas_func(df.T, **kwargs)
-
-        else:
-
-            def helper(df, internal_indices=[]):
-                if len(internal_indices) > 0:
-                    return pandas_func(df, internal_indices=internal_indices, **kwargs)
-                return pandas_func(df, **kwargs)
-
-        return helper
-
-    def numeric_columns(self, include_bool=True):
-        """Returns the numeric columns of the Manager.
-
-        Returns:
-            List of index names.
-        """
-        columns = []
-        for col, dtype in zip(self.columns, self.dtypes):
-            if is_numeric_dtype(dtype) and (
-                include_bool or (not include_bool and dtype != np.bool_)
-            ):
-                columns.append(col)
-        return columns
 
     def numeric_function_clean_dataframe(self, axis):
         """Preprocesses numeric functions to clean dataframe and pick numeric indices.
@@ -252,13 +156,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        return self.__constructor__(
-            self.data.copy(),
-            self.index.copy(),
-            self.columns.copy(),
-            self._dtype_cache,
-            self._is_transposed,
-        )
+        return self.__constructor__(data_object=self._data_obj.copy())
 
     # END Copy
 
@@ -273,29 +171,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Currently this computation is not delayed, and it may make a copy of the
     # DataFrame in memory. This can be problematic and should be fixed in the
     # future. TODO (devin-petersohn): Delay reindexing
-    def _join_index_objects(self, axis, other_index, how, sort=True):
-        """Joins a pair of index objects (columns or rows) by a given strategy.
-
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other_index: The other_index to join on.
-            how: The type of join to join to make (e.g. right, left).
-
-        Returns:
-            Joined indices.
-        """
-        if isinstance(other_index, list):
-            joined_obj = self.columns if not axis else self.index
-            # TODO: revisit for performance
-            for obj in other_index:
-                joined_obj = joined_obj.join(obj, how=how)
-
-            return joined_obj
-        if not axis:
-            return self.columns.join(other_index, how=how, sort=sort)
-        else:
-            return self.index.join(other_index, how=how, sort=sort)
-
     def join(self, other, **kwargs):
         """Joins a list or two objects together.
 
@@ -490,47 +365,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return
 
     # END Data Management Methods
-
-    # To/From Pandas
-    def to_pandas(self):
-        """Converts Modin DataFrame to Pandas DataFrame.
-
-        Returns:
-            Pandas DataFrame of the QueryCompiler.
-        """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
-        if df.empty:
-            if len(self.columns) != 0:
-                df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
-            else:
-                df = pandas.DataFrame(columns=self.columns, index=self.index)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
-            )
-            df.index = self.index
-            df.columns = self.columns
-        return df
-
-    @classmethod
-    def from_pandas(cls, df, block_partitions_cls):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
-
-        Args:
-            cls: DataManger object to convert the DataFrame to.
-            df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
-
-        Returns:
-            Returns QueryCompiler containing data from the Pandas DataFrame.
-        """
-        new_index = df.index
-        new_columns = df.columns
-        new_dtypes = df.dtypes
-        new_data = block_partitions_cls.from_pandas(df)
-        return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
-
-    # END To/From Pandas
 
     # To NumPy
     def to_numpy(self):
@@ -894,12 +728,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Transposed new QueryCompiler.
         """
-        new_data = self.data.transpose(*args, **kwargs)
         # Switch the index and columns and transpose the data within the blocks.
-        new_manager = self.__constructor__(
-            new_data, self.columns, self.index, is_transposed=self._is_transposed ^ 1
-        )
-        return new_manager
+        return self.__constructor__(data_object=self._data_obj.transpose())
 
     # END Transpose
 
@@ -907,51 +737,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     #
     # These operations result in a reduced dimensionality of data.
     # This will return a new QueryCompiler, which will be handled in the front end.
-    def _full_reduce(self, axis, map_func, reduce_func=None):
-        """Apply function that will reduce the data to a Pandas Series.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            map_func: Callable function to map the dataframe.
-            reduce_func: Callable function to reduce the dataframe. If none,
-                then apply map_func twice.
-
-        Return:
-            A new QueryCompiler object containing the results from map_func and
-            reduce_func.
-        """
-        if reduce_func is None:
-            reduce_func = map_func
-
-        mapped_parts = self.data.map_across_blocks(map_func)
-        full_frame = mapped_parts.map_across_full_axis(axis, reduce_func)
-        if axis == 0:
-            columns = self.columns
-            return self.__constructor__(
-                full_frame, index=["__reduced__"], columns=columns
-            )
-        else:
-            index = self.index
-            return self.__constructor__(
-                full_frame, index=index, columns=["__reduced__"]
-            )
-
-    def _build_mapreduce_func(self, func, **kwargs):
-        def _map_reduce_func(df):
-            series_result = func(df, **kwargs)
-            if kwargs.get("axis", 0) == 0 and isinstance(series_result, pandas.Series):
-                # In the case of axis=0, we need to keep the shape of the data
-                # consistent with what we have done. In the case of a reduction, the
-                # data for axis=0 should be a single value for each column. By
-                # transposing the data after we convert to a DataFrame, we ensure that
-                # the columns of the result line up with the columns from the data.
-                # axis=1 does not have this requirement because the index already will
-                # line up with the index of the data based on how pandas creates a
-                # DataFrame from a Series.
-                return pandas.DataFrame(series_result).T
-            return pandas.DataFrame(series_result)
-
-        return _map_reduce_func
 
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
@@ -1157,11 +942,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    def _map_partitions(self, func, new_dtypes=None):
-        return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
-        )
-
     def abs(self):
         func = self._prepare_method(pandas.DataFrame.abs)
         return self._map_partitions(func, new_dtypes=self.dtypes.copy())
@@ -1574,28 +1354,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map partitions across select indices
 
     # Column/Row partitions reduce operations
-    #
-    # These operations result in a reduced dimensionality of data.
-    # This will return a new QueryCompiler object which the font end will handle.
-    def _full_axis_reduce(self, axis, func, alternate_index=None):
-        """Applies map that reduce Manager to series but require knowledge of full axis.
-
-        Args:
-            func: Function to reduce the Manager by. This function takes in a Manager.
-            axis: axis to apply the function to.
-            alternate_index: If the resulting series should have an index
-                different from the current query_compiler's index or columns.
-
-        Return:
-            Pandas series containing the reduced data.
-        """
-        result = self.data.map_across_full_axis(axis, func)
-        if axis == 0:
-            columns = alternate_index if alternate_index is not None else self.columns
-            return self.__constructor__(result, index=["__reduced__"], columns=columns)
-        else:
-            index = alternate_index if alternate_index is not None else self.index
-            return self.__constructor__(result, index=index, columns=["__reduced__"])
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
@@ -1627,17 +1385,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.transpose().idxmax(**kwargs)
 
         axis = kwargs.get("axis", 0)
-        index = self.index if axis == 0 else self.columns
 
         def idxmax_builder(df, **kwargs):
-            if axis == 0:
-                df.index = index
-            else:
-                df.columns = index
             return df.idxmax(**kwargs)
 
-        func = self._build_mapreduce_func(idxmax_builder, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        func = self._data_obj._build_mapreduce_func(idxmax_builder, **kwargs)
+        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, func))
 
     def idxmin(self, **kwargs):
         """Returns the first occurrence of the minimum over requested axis.
@@ -1832,8 +1585,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
-    def _map_across_full_axis(self, axis, func):
-        return self.data.map_across_full_axis(axis, func)
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
@@ -2012,7 +1763,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
 
         if numeric_only:
-            new_columns = self.numeric_columns()
+            new_columns = self._numeric_columns()
         else:
             new_columns = [
                 col
@@ -2152,28 +1903,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the first n rows of the original QueryCompiler.
         """
-        # We grab the front if it is transposed and flag as transposed so that
-        # we are not physically updating the data from this manager. This
-        # allows the implementation to stay modular and reduces data copying.
-        if n < 0:
-            n = max(0, len(self.index) + n)
-        if self._is_transposed:
-            # Transpose the blocks back to their original orientation first to
-            # ensure that we extract the correct data on each node. The index
-            # on a transposed manager is already set to the correct value, so
-            # we need to only take the head of that instead of re-transposing.
-            result = self.__constructor__(
-                self.data.transpose().take(1, n).transpose(),
-                self.index[:n],
-                self.columns,
-                self._dtype_cache,
-                self._is_transposed,
-            )
-        else:
-            result = self.__constructor__(
-                self.data.take(0, n), self.index[:n], self.columns, self._dtype_cache
-            )
-        return result
+        return self.__constructor__(data_object=self._data_obj.head(n))
 
     def tail(self, n):
         """Returns the last n rows.
@@ -2184,22 +1914,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the last n rows of the original QueryCompiler.
         """
-        # See head for an explanation of the transposed behavior
-        if n < 0:
-            n = max(0, len(self.index) + n)
-        if self._is_transposed:
-            result = self.__constructor__(
-                self.data.transpose().take(1, -n).transpose(),
-                self.index[-n:],
-                self.columns,
-                self._dtype_cache,
-                self._is_transposed,
-            )
-        else:
-            result = self.__constructor__(
-                self.data.take(0, -n), self.index[-n:], self.columns, self._dtype_cache
-            )
-        return result
+        return self.__constructor__(data_object=self._data_obj.tail(n))
 
     def front(self, n):
         """Returns the first n columns.
@@ -2210,23 +1925,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
-        new_dtypes = (
-            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[:n]
-        )
-        # See head for an explanation of the transposed behavior
-        if self._is_transposed:
-            result = self.__constructor__(
-                self.data.transpose().take(0, n).transpose(),
-                self.index,
-                self.columns[:n],
-                new_dtypes,
-                self._is_transposed,
-            )
-        else:
-            result = self.__constructor__(
-                self.data.take(1, n), self.index, self.columns[:n], new_dtypes
-            )
-        return result
+        return self.__constructor__(data_object=self._data_obj.front(n))
 
     def back(self, n):
         """Returns the last n columns.
@@ -2237,23 +1936,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
-        new_dtypes = (
-            self._dtype_cache if self._dtype_cache is None else self._dtype_cache[-n:]
-        )
-        # See head for an explanation of the transposed behavior
-        if self._is_transposed:
-            result = self.__constructor__(
-                self.data.transpose().take(0, -n).transpose(),
-                self.index,
-                self.columns[-n:],
-                new_dtypes,
-                self._is_transposed,
-            )
-        else:
-            result = self.__constructor__(
-                self.data.take(1, -n), self.index, self.columns[-n:], new_dtypes
-            )
-        return result
+        return self.__constructor__(data_object=self._data_obj.back(n))
 
     # End Head/Tail/Front/Back
 
@@ -2660,18 +2343,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These methods require some sort of manual partitioning due to their
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
-    def _manual_repartition(self, axis, repartition_func, **kwargs):
-        """This method applies all manual partitioning functions.
-
-        Args:
-            axis: The axis to shuffle data along.
-            repartition_func: The function used to repartition data.
-
-        Returns:
-            A `BaseFrameManager` object.
-        """
-        func = self._prepare_method(repartition_func, **kwargs)
-        return self.data.manual_shuffle(axis, func)
 
     def groupby_reduce(
         self,
@@ -2707,7 +2378,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
         if axis == 0:
             new_columns = (
-                self.columns if not numeric_only else self.numeric_columns(True)
+                self.columns if not numeric_only else self._numeric_columns(True)
             )
             new_index = self.compute_index(axis, new_data, False)
         else:

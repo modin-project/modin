@@ -17,15 +17,6 @@ class BaseQueryCompiler(object):
     def __init__(self, block_partitions_object, index, columns, dtypes=None):
         raise NotImplementedError("Must be implemented in children classes")
 
-    # Dtypes and Indexing Abstract Methods
-    def _get_dtype(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_dtype(self, dtypes):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    dtypes = property(_get_dtype, _set_dtype)
-
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.
 
@@ -44,21 +35,6 @@ class BaseQueryCompiler(object):
             A new Index object.
         """
         raise NotImplementedError("Must be implemented in children classes")
-
-    def _get_index(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _get_columns(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_index(self, new_index):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_columns(self, new_columns):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
     # END dtypes and indexing abstract methods
 
     # Metadata modification abstract methods

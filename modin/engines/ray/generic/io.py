@@ -104,6 +104,7 @@ class RayIO(BaseIO):
     frame_mgr_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
+    data_cls = None
 
     # IMPORTANT NOTE
     #
@@ -285,12 +286,6 @@ class RayIO(BaseIO):
                 else index_len - (index_chunksize * (num_splits - 1))
                 for i in range(num_splits)
             ]
-        # Compute dtypes concatenating the results from each of the columns splits
-        # determined above. This creates a pandas Series that contains a dtype for every
-        # column.
-        dtypes_ids = list(blk_partitions[-1])
-        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
-
         blk_partitions = blk_partitions[:-2]
         remote_partitions = np.array(
             [
@@ -305,6 +300,13 @@ class RayIO(BaseIO):
                 for i in range(len(blk_partitions))
             ]
         )
+        # Compute dtypes concatenating the results from each of the columns splits
+        # determined above. This creates a pandas Series that contains a dtype for every
+        # column.
+        dtypes_ids = list(blk_partitions[-1])
+        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
+        dtypes.index = columns
+
         if directory:
             columns += partitioned_columns
         dtypes.index = columns
@@ -498,7 +500,6 @@ class RayIO(BaseIO):
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )
-
         partition_ids = [
             [
                 cls.frame_partition_cls(
@@ -522,19 +523,13 @@ class RayIO(BaseIO):
             elif isinstance(parse_dates, dict):
                 for new_col_name, group in parse_dates.items():
                     column_names = column_names.drop(group).insert(0, new_col_name)
-
         # Set the index for the dtypes to the column names
         if isinstance(dtypes, pandas.Series):
             dtypes.index = column_names
         else:
             dtypes = pandas.Series(dtypes, index=column_names)
-
-        new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(np.array(partition_ids)),
-            new_index,
-            column_names,
-            dtypes=dtypes,
-        )
+        new_data = cls.data_cls(partition_ids, new_index, column_names, row_lengths, column_widths, dtypes=dtypes)
+        new_query_compiler = cls.query_compiler_cls(data_object=new_data)
 
         if skipfooter:
             new_query_compiler = new_query_compiler.drop(
