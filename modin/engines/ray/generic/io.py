@@ -207,6 +207,7 @@ class RayIO(BaseIO):
             columns[i : i + column_splits]
             for i in range(0, len(columns), column_splits)
         ]
+        column_widths = [len(c) for c in col_partitions]
         # Each item in this list will be a list of columns of original df
         # partitioned to smaller pieces along rows.
         # We need to transpose the oids array to fit our schema.
@@ -226,14 +227,35 @@ class RayIO(BaseIO):
                 for cols in col_partitions
             ]
         ).T
-        remote_partitions = np.array(
-            [
-                [cls.frame_partition_cls(obj) for obj in row]
-                for row in blk_partitions[:-1]
-            ]
-        )
+        # Metadata
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
+        index_chunksize = compute_chunksize(
+            pandas.DataFrame(index=index), num_splits, axis=0
+        )
+        if index_chunksize > index_len:
+            row_lengths = [index_len] + [0 for _ in range(num_splits - 1)]
+        else:
+            row_lengths = [
+                index_chunksize
+                if i != num_splits - 1
+                else index_len - (index_chunksize * (num_splits - 1))
+                for i in range(num_splits)
+            ]
+        blk_partitions = blk_partitions[:-1]
+        remote_partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        blk_partitions[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(blk_partitions[i]))
+                ]
+                for i in range(len(blk_partitions))
+            ]
+        )
         if directory:
             columns += partitioned_columns
         new_query_compiler = cls.query_compiler_cls(
