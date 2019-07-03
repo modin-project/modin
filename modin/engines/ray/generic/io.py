@@ -17,6 +17,7 @@ import math
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
+from modin.data_management.utils import compute_chunksize
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
@@ -64,16 +65,6 @@ def file_size(f):
     size = f.tell()
     f.seek(cur_pos, os.SEEK_SET)
     return size
-
-
-@ray.remote
-def get_index(index_name, *partition_indices):  # pragma: no cover
-    """Get the index from the indices returned by the workers.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)"""
-    index = partition_indices[0].append(partition_indices[1:])
-    index.names = index_name
-    return index
 
 
 class RayIO(BaseIO):
@@ -298,7 +289,7 @@ class RayIO(BaseIO):
         return lines_read
 
     @classmethod
-    def _read_csv_from_file_pandas_on_ray(cls, filepath, kwargs={}):
+    def _read_csv_from_file_ray(cls, filepath, kwargs={}):
         """Constructs a DataFrame from a CSV file.
 
         Args:
@@ -372,6 +363,21 @@ class RayIO(BaseIO):
             # This is the chunksize each partition will read
             chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
 
+            # Metadata
+            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
+            if column_chunksize > len(column_names):
+                column_widths = [len(column_names)]
+                # This prevents us from unnecessarily serializing a bunch of empty
+                # objects.
+                num_splits = 1
+            else:
+                column_widths = [
+                    column_chunksize
+                    if i != num_splits - 1
+                    else len(column_names) - (column_chunksize * (num_splits - 1))
+                    for i in range(num_splits)
+                ]
+
             while f.tell() < total_bytes:
                 start = f.tell()
                 f.seek(chunk_size, os.SEEK_CUR)
@@ -387,17 +393,27 @@ class RayIO(BaseIO):
                     ),
                     num_return_vals=num_splits + 1,
                 )
-                partition_ids.append(
-                    [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]
-                )
+                partition_ids.append(partition_id[:-1])
                 index_ids.append(partition_id[-1])
 
         if index_col is None:
-            new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
+            row_lengths = ray.get(index_ids)
+            new_index = pandas.RangeIndex(sum(row_lengths))
         else:
-            new_index_ids = get_index.remote([empty_pd_df.index.name], *index_ids)
-            new_index = ray.get(new_index_ids)
+            index_objs = ray.get(index_ids)
+            row_lengths = [len(o) for o in index_objs]
+            new_index = index_objs[0].append(index_objs[1:])
+            new_index.name = empty_pd_df.index.name
 
+        partition_ids = [
+            [
+                cls.frame_partition_cls(
+                    partition_ids[i][j], length=row_lengths[i], width=column_widths[j]
+                )
+                for j in range(len(partition_ids[i]))
+            ]
+            for i in range(len(partition_ids))
+        ]
         # If parse_dates is present, the column names that we have might not be
         # the same length as the returned column names. If we do need to modify
         # the column names, we remove the old names from the column names and
@@ -622,9 +638,7 @@ class RayIO(BaseIO):
             ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            return cls._read_csv_from_file_pandas_on_ray(
-                filepath_or_buffer, filtered_kwargs
-            )
+            return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):

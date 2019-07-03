@@ -10,11 +10,13 @@ import ray
 
 
 class PyarrowOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id):
+    def __init__(self, object_id, length=None, width=None, call_queue=[]):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
-        self.call_queue = []
+        self.call_queue = call_queue
+        self._length_cache = length
+        self._width_cache = width
 
     def get(self):
         """Gets the object out of the plasma store.
