@@ -55,7 +55,7 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
     df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
     df = df[columns]
     # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
+    return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
 
 @ray.remote
@@ -96,7 +96,10 @@ def _read_csv_with_offset_pandas_on_ray(
         # We will use the lengths to build the index if we are not given an
         # `index_col`.
         index = len(pandas_df)
-    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
+    return _split_result_for_readers(1, num_splits, pandas_df) + [
+        index,
+        pandas_df.dtypes,
+    ]
 
 
 @ray.remote

@@ -5,6 +5,7 @@ from __future__ import print_function
 import pandas
 from pandas.io.common import _infer_compression
 from pandas.io.parsers import _validate_usecols_arg
+from pandas.core.dtypes.cast import find_common_type
 
 import inspect
 import os
@@ -213,22 +214,27 @@ class RayIO(BaseIO):
         # We need to transpose the oids array to fit our schema.
         # TODO (williamma12): This part can be parallelized even more if we
         # separate the partitioned parquet file code path from the default one.
+        # The workers return multiple objects for each part of the file read:
+        # - The first n - 2 objects are partitions of data
+        # - The n - 1 object is the length of the partition.
+        # - The nth object is the dtypes of the partition. We combine these to
+        #   form the final dtypes below.
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
                     args=(path, cols + partitioned_columns, num_splits, kwargs),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
                 if directory and cols == col_partitions[len(col_partitions) - 1]
                 else cls.read_parquet_remote_task._remote(
                     args=(path, cols, num_splits, kwargs),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
                 for cols in col_partitions
             ]
         ).T
         # Metadata
-        index_len = ray.get(blk_partitions[-1][0])
+        index_len = ray.get(blk_partitions[-2][0])
         index = pandas.RangeIndex(index_len)
         index_chunksize = compute_chunksize(
             pandas.DataFrame(index=index), num_splits, axis=0
@@ -242,7 +248,13 @@ class RayIO(BaseIO):
                 else index_len - (index_chunksize * (num_splits - 1))
                 for i in range(num_splits)
             ]
-        blk_partitions = blk_partitions[:-1]
+        # Compute dtypes concatenating the results from each of the columns splits
+        # determined above. This creates a pandas Series that contains a dtype for every
+        # column.
+        dtypes_ids = list(blk_partitions[-1])
+        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
+
+        blk_partitions = blk_partitions[:-2]
         remote_partitions = np.array(
             [
                 [
@@ -258,8 +270,9 @@ class RayIO(BaseIO):
         )
         if directory:
             columns += partitioned_columns
+        dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns
+            cls.frame_mgr_cls(remote_partitions), index, columns, dtypes=dtypes
         )
 
         return new_query_compiler
@@ -377,6 +390,7 @@ class RayIO(BaseIO):
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
+            dtypes_ids = []
             total_bytes = file_size(f)
             # Max number of partitions available
             num_parts = cls.frame_mgr_cls._compute_num_partitions()
@@ -404,6 +418,12 @@ class RayIO(BaseIO):
                 start = f.tell()
                 f.seek(chunk_size, os.SEEK_CUR)
                 f.readline()  # Read a whole number of lines
+                # The workers return multiple objects for each part of the file read:
+                # - The first n - 2 objects are partitions of data
+                # - The n - 1 object is the length of the partition or the index if
+                #   `index_col` is specified. We compute the index below.
+                # - The nth object is the dtypes of the partition. We combine these to
+                #   form the final dtypes below.
                 partition_id = cls.read_csv_remote_task._remote(
                     args=(
                         filepath,
@@ -413,11 +433,14 @@ class RayIO(BaseIO):
                         partition_kwargs_id,
                         prefix_id,
                     ),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
-                partition_ids.append(partition_id[:-1])
-                index_ids.append(partition_id[-1])
+                partition_ids.append(partition_id[:-2])
+                index_ids.append(partition_id[-2])
+                dtypes_ids.append(partition_id[-1])
 
+        # Compute the index based on a sum of the lengths of each partition (by default)
+        # or based on the column(s) that were requested.
         if index_col is None:
             row_lengths = ray.get(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
@@ -426,6 +449,17 @@ class RayIO(BaseIO):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
             new_index.name = empty_pd_df.index.name
+
+        # Compute dtypes by getting collecting and combining all of the partitions. The
+        # reported dtypes from differing rows can be different based on the inference in
+        # the limited data seen by each worker. We use pandas to compute the exact dtype
+        # over the whole column for each column.
+        dtypes = (
+            pandas.concat(ray.get(dtypes_ids), axis=1)
+            .apply(lambda row: find_common_type(row.values), axis=1)
+            .squeeze(axis=0)
+        )
+        dtypes.index = column_names
 
         partition_ids = [
             [
@@ -452,7 +486,10 @@ class RayIO(BaseIO):
                     column_names = column_names.drop(group).insert(0, new_col_name)
 
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(np.array(partition_ids)), new_index, column_names
+            cls.frame_mgr_cls(np.array(partition_ids)),
+            new_index,
+            column_names,
+            dtypes=dtypes,
         )
 
         if skipfooter:
