@@ -352,17 +352,15 @@ class DataFrame(BasePandasDataset):
             by = by(self.index)
         elif isinstance(by, string_types):
             idx_name = by
-            by = self.__getitem__(by).values.tolist()
+            by = self.__getitem__(by)._query_compiler
         elif is_list_like(by):
-            if isinstance(by, pandas.Series):
+            if isinstance(by, Series):
                 idx_name = by.name
-                by = by.values.tolist()
-
+                by = by.values
             mismatch = (
                 len(by) != len(self) if axis == 0 else len(by) != len(self.columns)
             )
-
-            if all(obj in self for obj in by) and mismatch:
+            if mismatch and all(obj in self for obj in by):
                 # In the future, we will need to add logic to handle this, but for now
                 # we default to pandas in this case.
                 pass
@@ -1949,9 +1947,20 @@ class DataFrame(BasePandasDataset):
                     len(value.shape) < 3
                 ), "Shape of new values must be compatible with manager shape"
                 value = value.T.reshape(-1)[: len(self)]
-            value = np.array(value)
+            if not isinstance(value, Series):
+                value = list(value)
         if key not in self.columns:
-            self.insert(loc=len(self.columns), column=key, value=value)
+            if isinstance(value, Series):
+                self._create_or_update_from_compiler(
+                    self._query_compiler.concat(1, value._query_compiler), inplace=True
+                )
+                # Now that the data is appended, we need to update the column name for
+                # that column to `key`, otherwise the name could be incorrect. Drop the
+                # last column name from the list (the appended value's name and append
+                # the new name.
+                self.columns = self.columns[:-1].append(pandas.Index([key]))
+            else:
+                self.insert(loc=len(self.columns), column=key, value=value)
         elif len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)

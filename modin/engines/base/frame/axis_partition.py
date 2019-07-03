@@ -1,5 +1,8 @@
 import pandas
-from modin.data_management.utils import split_result_of_axis_func_pandas
+from modin.data_management.utils import (
+    split_result_of_axis_func_pandas,
+    set_indices_for_pandas_concat,
+)
 
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
@@ -183,7 +186,11 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
 
-        dataframe = pandas.concat(partitions, axis=axis, copy=False)
+        dataframe = pandas.concat(
+            [set_indices_for_pandas_concat(df) for df in partitions],
+            axis=axis,
+            copy=False,
+        )
         result = func(dataframe, **kwargs)
         if isinstance(result, pandas.Series):
             if num_splits == 1:
@@ -229,8 +236,22 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns:
             A list of Pandas DataFrames.
         """
-        lt_frame = pandas.concat(list(partitions[:len_of_left]), axis=axis, copy=False)
-        rt_frame = pandas.concat(list(partitions[len_of_left:]), axis=axis, copy=False)
+        lt_frame = pandas.concat(
+            [
+                set_indices_for_pandas_concat(df)
+                for df in list(partitions[:len_of_left])
+            ],
+            axis=axis,
+            copy=False,
+        )
+        rt_frame = pandas.concat(
+            [
+                set_indices_for_pandas_concat(df)
+                for df in list(partitions[len_of_left:])
+            ],
+            axis=axis,
+            copy=False,
+        )
 
         result = func(lt_frame, rt_frame, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)

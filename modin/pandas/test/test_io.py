@@ -11,6 +11,7 @@ from pathlib import Path
 import pyarrow as pa
 import os
 import shutil
+import sqlalchemy as sa
 import sys
 
 from .utils import df_equals
@@ -327,7 +328,6 @@ def make_sql_connection():
         if os.path.exists(filename):
             os.remove(filename)
         filenames.append(filename)
-
         # Create connection and, if needed, table
         conn = "sqlite:///{}".format(filename)
         if table:
@@ -368,6 +368,18 @@ def setup_fwf_file():
 def teardown_fwf_file():
     if os.path.exists(TEST_FWF_FILENAME):
         os.remove(TEST_FWF_FILENAME)
+
+
+def test_read_csv_gzip():
+    gzip_path = "modin/pandas/test/data/test_df.csv.gz"
+
+    pandas_df = pandas.read_csv(gzip_path)
+    modin_df = pd.read_csv(gzip_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
+    modin_df = pd.read_csv(gzip_path, compression="gzip")
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet(make_parquet_file):
@@ -566,6 +578,20 @@ def test_from_sql(make_sql_connection):
 
     with pytest.warns(UserWarning):
         pd.read_sql_table(table, conn)
+
+    # Test SQLAlchemy engine
+    conn = sa.create_engine(conn)
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df = pd.read_sql(query, conn)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    # Test SQLAlchemy Connection
+    conn = conn.connect()
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df = pd.read_sql(query, conn)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")

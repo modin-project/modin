@@ -15,13 +15,13 @@ class FakeSeries:
 
 class PyarrowQueryCompiler(PandasQueryCompiler):
     def query(self, expr, **kwargs):
-        """Query columns of the DataManager with a boolean expression.
+        """Query columns of the QueryCompiler with a boolean expression.
 
         Args:
             expr: Boolean expression to query the columns with.
 
         Returns:
-            DataManager containing the rows where the boolean expression is satisfied.
+            QueryCompiler containing the rows where the boolean expression is satisfied.
         """
 
         def gen_table_expr(table, expr):
@@ -175,7 +175,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         """Converts Modin DataFrame to Pandas DataFrame.
 
         Returns:
-            Pandas DataFrame of the DataManager.
+            Pandas DataFrame of the QueryCompiler.
         """
         df = self.data.to_pandas(is_transposed=self._is_transposed)
         if df.empty:

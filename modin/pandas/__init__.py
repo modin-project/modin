@@ -142,6 +142,7 @@ def initialize_ray():
                 include_webui=False,
                 ignore_reinit_error=True,
                 redis_address=redis_address,
+                logging_level=100,
             )
         elif cluster is None:
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
@@ -173,6 +174,7 @@ def initialize_ray():
                 plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
                 redis_address=redis_address,
+                logging_level=100,
             )
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
@@ -181,7 +183,7 @@ def initialize_ray():
 
 if execution_engine == "Ray":
     initialize_ray()
-    num_cpus = ray.global_state.cluster_resources()["CPU"]
+    num_cpus = ray.cluster_resources()["CPU"]
 elif execution_engine == "Dask":  # pragma: no cover
     from distributed.client import _get_global_client
 

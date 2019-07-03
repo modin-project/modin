@@ -8,7 +8,11 @@ from operator import itemgetter
 import pandas
 
 from modin.error_message import ErrorMessage
-from modin.data_management.utils import compute_chunksize, _get_nan_block_id
+from modin.data_management.utils import (
+    compute_chunksize,
+    _get_nan_block_id,
+    set_indices_for_pandas_concat,
+)
 
 
 class BaseFrameManager(object):
@@ -200,6 +204,22 @@ class BaseFrameManager(object):
             A Pandas Series
         """
         raise NotImplementedError("Blocked on Distributed Series")
+
+    def groupby_reduce(self, axis, by, map_func, reduce_func):
+        by_parts = np.squeeze(by.partitions)
+        [obj.drain_call_queue() for obj in by_parts]
+        new_partitions = self.__constructor__(
+            np.array(
+                [
+                    [
+                        part.apply(map_func, other=by_parts[i].get())
+                        for part in self.partitions[i]
+                    ]
+                    for i in range(len(self.partitions))
+                ]
+            )
+        )
+        return new_partitions.map_across_full_axis(axis, reduce_func)
 
     def map_across_blocks(self, map_func):
         """Applies `map_func` to every partition.
@@ -458,7 +478,8 @@ class BaseFrameManager(object):
             return self.transpose().to_pandas(False).T
         else:
             retrieved_objects = [
-                [obj.to_pandas() for obj in part] for part in self.partitions
+                [set_indices_for_pandas_concat(obj.to_pandas()) for obj in part]
+                for part in self.partitions
             ]
             if all(
                 isinstance(part, pandas.Series)
@@ -669,10 +690,17 @@ class BaseFrameManager(object):
             count_for_each_partition = np.array(
                 [(partition_ids == i).sum() for i in range(len(cumulative))]
             ).cumsum()
-            # compute the internal indices and pair those with the partition index.
-            partition_ids_with_indices = [
-                (0, internal(0, indices[slice(count_for_each_partition[0])]))
-            ] + [
+            # Compute the internal indices and pair those with the partition index.
+            # If the first partition has any values we need to return, compute those
+            # first to make the list comprehension easier. Otherwise, just append the
+            # rest of the values to an empty list.
+            if count_for_each_partition[0] > 0:
+                first_partition_indices = [
+                    (0, internal(0, indices[slice(count_for_each_partition[0])]))
+                ]
+            else:
+                first_partition_indices = []
+            partition_ids_with_indices = first_partition_indices + [
                 (
                     i,
                     internal(

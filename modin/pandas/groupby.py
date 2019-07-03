@@ -40,7 +40,8 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
-        if level is None:
+
+        if level is None and not isinstance(by, type(self._query_compiler)):
             # This tells us whether or not there are multiple columns/rows in the groupby
             self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
         else:
@@ -97,10 +98,14 @@ class DataFrameGroupBy(object):
                     .groupby(by=self._by)
                 }
             else:
-                if self._axis == 0:
-                    self._index_grouped_cache = self._index.groupby(self._by)
+                if isinstance(self._by, type(self._query_compiler)):
+                    by = self._by.to_pandas().squeeze()
                 else:
-                    self._index_grouped_cache = self._columns.groupby(self._by)
+                    by = self._by
+                if self._axis == 0:
+                    self._index_grouped_cache = self._index.groupby(by)
+                else:
+                    self._index_grouped_cache = self._columns.groupby(by)
         return self._index_grouped_cache
 
     @property
@@ -153,7 +158,7 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
 
     def any(self):
-        return self._apply_agg_function(lambda df: df.any())
+        return self._groupby_reduce(lambda df: df.any(), None, numeric_only=False)
 
     @property
     def plot(self):  # pragma: no cover
@@ -174,7 +179,9 @@ class DataFrameGroupBy(object):
         return self._index_grouped
 
     def min(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.min(**kwargs))
+        return self._groupby_reduce(
+            lambda df: df.min(**kwargs), None, numeric_only=False
+        )
 
     def idxmax(self):
         return self._default_to_pandas(lambda df: df.idxmax())
@@ -238,7 +245,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.idxmin())
 
     def prod(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.prod(**kwargs))
+        return self._groupby_reduce(lambda df: df.prod(**kwargs), None)
 
     def std(self, ddof=1, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.std(ddof, *args, **kwargs))
@@ -272,7 +279,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.pad(limit=limit))
 
     def max(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.max(**kwargs))
+        return self._groupby_reduce(
+            lambda df: df.max(**kwargs), None, numeric_only=False
+        )
 
     def var(self, ddof=1, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.var(ddof, *args, **kwargs))
@@ -284,13 +293,15 @@ class DataFrameGroupBy(object):
         return len(self._index_grouped)
 
     def all(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.all(**kwargs))
+        return self._groupby_reduce(
+            lambda df: df.all(**kwargs), None, numeric_only=False
+        )
 
     def size(self):
         return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
 
     def sum(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.sum(**kwargs))
+        return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
 
     def __unicode__(self):
         return self._default_to_pandas(lambda df: df.__unicode__())
@@ -327,12 +338,7 @@ class DataFrameGroupBy(object):
         )
 
     def ngroup(self, ascending=True):
-        index = self._index if not self._axis else self._columns
-        return (
-            pandas.Series(index=index)
-            .groupby(by=self._by, **self._kwargs)
-            .ngroup(ascending)
-        )
+        return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
         return self._apply_agg_function(lambda df: df.nunique(dropna), drop=False)
@@ -368,7 +374,11 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.fillna(**kwargs))
 
     def count(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.count(**kwargs))
+        return self._groupby_reduce(
+            lambda df: df.count(**kwargs),
+            lambda df: df.sum(**kwargs),
+            numeric_only=False,
+        )
 
     def pipe(self, func, *args, **kwargs):
         return com._pipe(self, func, *args, **kwargs)
@@ -402,6 +412,35 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
+    def _groupby_reduce(
+        self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
+    ):
+        if not isinstance(self._by, type(self._query_compiler)):
+            return self._apply_agg_function(map_func, drop=drop, **kwargs)
+
+        # For aggregations, pandas behavior does this for the result.
+        # For other operations it does not, so we wait until there is an aggregation to
+        # actually perform this operation.
+        if self._idx_name is not None and drop:
+            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        else:
+            groupby_qc = self._query_compiler
+
+        from .dataframe import DataFrame
+
+        return DataFrame(
+            query_compiler=groupby_qc.groupby_reduce(
+                self._by,
+                self._axis,
+                self._kwargs,
+                map_func,
+                kwargs,
+                reduce_func=reduce_func,
+                reduce_args=kwargs,
+                numeric_only=numeric_only,
+            )
+        )
+
     def _apply_agg_function(self, f, drop=True, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
@@ -414,6 +453,11 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
+        if isinstance(self._by, type(self._query_compiler)):
+            by = self._by.to_pandas().squeeze()
+        else:
+            by = self._by
+
         if self._is_multi_by or self._level is not None:
             return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
@@ -423,9 +467,7 @@ class DataFrameGroupBy(object):
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler
-        new_manager = groupby_qc.groupby_agg(
-            self._by, self._axis, f, self._kwargs, kwargs
-        )
+        new_manager = groupby_qc.groupby_agg(by, self._axis, f, self._kwargs, kwargs)
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
         return DataFrame(query_compiler=new_manager)
@@ -439,7 +481,11 @@ class DataFrameGroupBy(object):
         Returns:
              A new Modin DataFrame with the result of the pandas function.
         """
+        if isinstance(self._by, type(self._query_compiler)):
+            by = self._by.to_pandas().squeeze()
+        else:
+            by = self._by
+
         return self._df._default_to_pandas(
-            lambda df: f(df.groupby(by=self._by, axis=self._axis, **self._kwargs)),
-            **kwargs
+            lambda df: f(df.groupby(by=by, axis=self._axis, **self._kwargs)), **kwargs
         )

@@ -90,12 +90,15 @@ def concat(
     ]
     objs = [obj._query_compiler for obj in objs if len(obj.index) or len(obj.columns)]
     if keys is not None:
-        objs = [objs[i] for i in range(min(len(objs), len(keys)))]
-        new_idx_labels = {
-            k: v.index if axis == 0 else v.columns for k, v in zip(keys, objs)
-        }
-        tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
-        new_idx = pandas.MultiIndex.from_tuples(tuples)
+        if all_series:
+            new_idx = keys
+        else:
+            objs = [objs[i] for i in range(min(len(objs), len(keys)))]
+            new_idx_labels = {
+                k: v.index if axis == 0 else v.columns for k, v in zip(keys, objs)
+            }
+            tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
+            new_idx = pandas.MultiIndex.from_tuples(tuples)
     else:
         new_idx = None
     new_query_compiler = objs[0].concat(

@@ -105,7 +105,7 @@ initialization_commands: []
 # List of shell commands to run to set up nodes.
 setup_commands:
     - pip install s3fs
-    - pip install git+https://github.com/williamma12/modin.git@cluster
+    - pip install modin
     - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
@@ -116,7 +116,6 @@ setup_commands:
 head_setup_commands:
     - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
     - echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
-    - echo 'export MODIN_OUT_OF_CORE="True"' >> ~/.bashrc
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []

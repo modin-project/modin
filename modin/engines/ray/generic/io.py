@@ -11,11 +11,13 @@ import os
 import py
 import ray
 import re
+import sys
 import numpy as np
 import math
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
+from modin.data_management.utils import compute_chunksize
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
@@ -37,7 +39,7 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 
-def file_open(file_path, mode="rb"):
+def file_open(file_path, mode="rb", compression="infer"):
     if isinstance(file_path, str):
         match = S3_ADDRESS_REGEX.search(file_path)
         if match:
@@ -50,6 +52,10 @@ def file_open(file_path, mode="rb"):
             except NoCredentialsError:
                 s3fs = S3FS.S3FileSystem(anon=True)
                 return s3fs.open(file_path)
+        elif compression == "gzip":
+            import gzip
+
+            return gzip.open(file_path, mode=mode)
     return open(file_path, mode=mode)
 
 
@@ -59,16 +65,6 @@ def file_size(f):
     size = f.tell()
     f.seek(cur_pos, os.SEEK_SET)
     return size
-
-
-@ray.remote
-def get_index(index_name, *partition_indices):  # pragma: no cover
-    """Get the index from the indices returned by the workers.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)"""
-    index = partition_indices[0].append(partition_indices[1:])
-    index.names = index_name
-    return index
 
 
 class RayIO(BaseIO):
@@ -301,7 +297,7 @@ class RayIO(BaseIO):
         return lines_read
 
     @classmethod
-    def _read_csv_from_file_pandas_on_ray(cls, filepath, kwargs={}):
+    def _read_csv_from_file_ray(cls, filepath, kwargs={}):
         """Constructs a DataFrame from a CSV file.
 
         Args:
@@ -321,13 +317,11 @@ class RayIO(BaseIO):
             # be assigned correctly
             kwargs["index_col"] = None
             names = pandas.read_csv(
-                file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+                filepath, **dict(kwargs, nrows=0, skipfooter=0)
             ).columns
             kwargs["index_col"] = index_col
 
-        empty_pd_df = pandas.read_csv(
-            file_open(filepath, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
-        )
+        empty_pd_df = pandas.read_csv(filepath, **dict(kwargs, nrows=0, skipfooter=0))
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -352,7 +346,7 @@ class RayIO(BaseIO):
             parse_dates=parse_dates,
             usecols=usecols,
         )
-        with file_open(filepath, "rb") as f:
+        with file_open(filepath, "rb", kwargs.get("compression", "infer")) as f:
             # Get the BOM if necessary
             prefix = b""
             if kwargs.get("encoding", None) is not None:
@@ -377,6 +371,21 @@ class RayIO(BaseIO):
             # This is the chunksize each partition will read
             chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
 
+            # Metadata
+            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
+            if column_chunksize > len(column_names):
+                column_widths = [len(column_names)]
+                # This prevents us from unnecessarily serializing a bunch of empty
+                # objects.
+                num_splits = 1
+            else:
+                column_widths = [
+                    column_chunksize
+                    if i != num_splits - 1
+                    else len(column_names) - (column_chunksize * (num_splits - 1))
+                    for i in range(num_splits)
+                ]
+
             while f.tell() < total_bytes:
                 start = f.tell()
                 f.seek(chunk_size, os.SEEK_CUR)
@@ -392,17 +401,27 @@ class RayIO(BaseIO):
                     ),
                     num_return_vals=num_splits + 1,
                 )
-                partition_ids.append(
-                    [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]
-                )
+                partition_ids.append(partition_id[:-1])
                 index_ids.append(partition_id[-1])
 
         if index_col is None:
-            new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
+            row_lengths = ray.get(index_ids)
+            new_index = pandas.RangeIndex(sum(row_lengths))
         else:
-            new_index_ids = get_index.remote([empty_pd_df.index.name], *index_ids)
-            new_index = ray.get(new_index_ids)
+            index_objs = ray.get(index_ids)
+            row_lengths = [len(o) for o in index_objs]
+            new_index = index_objs[0].append(index_objs[1:])
+            new_index.name = empty_pd_df.index.name
 
+        partition_ids = [
+            [
+                cls.frame_partition_cls(
+                    partition_ids[i][j], length=row_lengths[i], width=column_widths[j]
+                )
+                for j in range(len(partition_ids[i]))
+            ]
+            for i in range(len(partition_ids))
+        ]
         # If parse_dates is present, the column names that we have might not be
         # the same length as the returned column names. If we do need to modify
         # the column names, we remove the old names from the column names and
@@ -603,8 +622,15 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
-            ErrorMessage.default_to_pandas("Compression detected.")
-            return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
+            if (
+                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
+                == "gzip"
+                and sys.version_info[0] == 3
+            ):
+                filtered_kwargs["compression"] = "gzip"
+            else:
+                ErrorMessage.default_to_pandas("Compression detected.")
+                return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
@@ -706,7 +732,6 @@ class RayIO(BaseIO):
                 cls.frame_mgr_cls(remote_partitions), index, columns
             )
             return new_query_compiler
-            
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
@@ -890,10 +915,17 @@ class RayIO(BaseIO):
         if cls.read_sql_remote_task is None:
             return super(RayIO, cls).read_sql(sql, con, index_col=index_col, **kwargs)
 
-        row_cnt_query = "SELECT COUNT(*) FROM ({})".format(sql)
+        import sqlalchemy as sa
+
+        # In the case that we are given a SQLAlchemy Connection or Engine, the objects
+        # are not pickleable. We have to convert it to the URL string and connect from
+        # each of the workers.
+        if isinstance(con, (sa.engine.Engine, sa.engine.Connection)):
+            con = repr(con.engine.url)
+        row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
         cols_names_df = pandas.read_sql(
-            "SELECT * FROM ({}) LIMIT 0".format(sql), con, index_col=index_col
+            "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
         )
         cols_names = cols_names_df.columns
         num_parts = cls.frame_mgr_cls._compute_num_partitions()
@@ -902,7 +934,9 @@ class RayIO(BaseIO):
         limit = math.ceil(row_cnt / num_parts)
         for part in range(num_parts):
             offset = part * limit
-            query = "SELECT * FROM ({}) LIMIT {} OFFSET {}".format(sql, limit, offset)
+            query = "SELECT * FROM ({}) as foo LIMIT {} OFFSET {}".format(
+                sql, limit, offset
+            )
             partition_id = cls.read_sql_remote_task._remote(
                 args=(num_parts, query, con, index_col, kwargs),
                 num_return_vals=num_parts + 1,

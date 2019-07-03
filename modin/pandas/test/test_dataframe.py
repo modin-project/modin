@@ -143,6 +143,18 @@ class TestDFPartOne:
             modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe to series with different index
+        series_test_modin = modin_df[modin_df.columns[0]].reset_index(drop=True)
+        series_test_pandas = pandas_df[pandas_df.columns[0]].reset_index(drop=True)
+        try:
+            pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df, op)(series_test_modin, axis=0)
+        else:
+            modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
+            df_equals(modin_result, pandas_result)
+
         # Level test
         new_idx = pandas.MultiIndex.from_tuples(
             [(i // 4, i // 2, i) for i in modin_df.index]
@@ -2068,6 +2080,32 @@ class TestDFPartOne:
 
         df_equals(modin_df.ffill(), test_data.tsframe.ffill())
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "method",
+        ["backfill", "bfill", "pad", "ffill", None],
+        ids=["backfill", "bfill", "pad", "ffill", "None"],
+    )
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("limit", int_arg_values, ids=int_arg_keys)
+    def test_fillna(self, data, method, axis, limit):
+        # We are not testing when limit is not positive until pandas-27042 gets fixed.
+        # We are not testing when axis is over rows until pandas-17399 gets fixed.
+        if limit > 0 and axis != 1 and axis != "columns":
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+
+            try:
+                pandas_result = pandas_df.fillna(
+                    0, method=method, axis=axis, limit=limit
+                )
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.fillna(0, method=method, axis=axis, limit=limit)
+            else:
+                modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
+                df_equals(modin_result, pandas_result)
+
     def test_fillna_sanity(self):
         test_data = TestData()
         tf = test_data.tsframe
@@ -3070,6 +3108,19 @@ class TestDFPartTwo:
 
         modin_result = modin_df.memory_usage(index=index)
         pandas_result = pandas_df.memory_usage(index=index)
+        # We do not compare the indicies because pandas and modin handles the
+        # indicies slightly differently
+        if index:
+            modin_result = modin_result[1:]
+            pandas_result = pandas_result[1:]
+
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.T.memory_usage(index=index)
+        pandas_result = pandas_df.T.memory_usage(index=index)
+        if index:
+            modin_result = modin_result[1:]
+            pandas_result = pandas_result[1:]
 
         df_equals(modin_result, pandas_result)
 
@@ -4243,6 +4294,21 @@ class TestDFPartTwo:
             axis=axis, ascending=ascending, na_position=na_position, inplace=True
         )
         df_equals(modin_df_cp, pandas_df_cp)
+
+        # MultiIndex
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        modin_df.index = pd.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(modin_df))]
+        )
+        pandas_df.index = pandas.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(pandas_df))]
+        )
+
+        with pytest.warns(UserWarning):
+            df_equals(modin_df.sort_index(level=0), pandas_df.sort_index(level=0))
+        with pytest.warns(UserWarning):
+            df_equals(modin_df.sort_index(axis=0), pandas_df.sort_index(axis=0))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
