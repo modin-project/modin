@@ -1060,6 +1060,12 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             pd.DataFrame({"A": [1, 2], "B": [3, 4]}).to_numpy()
 
+    def test_partition_to_numpy(self):
+        test_data = TestData()
+        frame = pd.DataFrame(test_data.frame)
+        for partition in frame._query_compiler.data.partitions.flatten().tolist():
+            assert np.array_equal(partition.to_pandas().values, partition.to_numpy())
+            
     def test_asfreq(self):
         index = pd.date_range("1/1/2000", periods=4, freq="T")
         series = pd.Series([0.0, None, 2.0, 3.0], index=index)
