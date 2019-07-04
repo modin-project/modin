@@ -1951,7 +1951,6 @@ class TestDFPartOne:
             with pytest.raises(KeyError):
                 modin_df.dropna(axis=1, subset=[4, 5])
 
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dot(self, data):
         modin_df = pd.DataFrame(data)
@@ -1966,7 +1965,7 @@ class TestDFPartOne:
 
         # Test bad dimensions
         with pytest.raises(ValueError):
-            modin_result = modin_df.dot(np.arange(col_len+10))
+            modin_result = modin_df.dot(np.arange(col_len + 10))
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -1981,7 +1980,6 @@ class TestDFPartOne:
 
         with pytest.warns(UserWarning):
             modin_df.dot(modin_df.T)
-        
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_duplicated(self, data):

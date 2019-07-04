@@ -39,10 +39,14 @@ class PandasOnRayFrameManager(RayFrameManager):
                         PandasOnRayFramePartition(
                             func.remote(
                                 part.oid,
-                                by_parts[col_idx].oid if axis else by_parts[row_idx].oid,
+                                by_parts[col_idx].oid
+                                if axis
+                                else by_parts[row_idx].oid,
                                 map_func,
                                 part.call_queue,
-                                by_parts[col_idx].call_queue if axis else by_parts[row_idx].call_queue,
+                                by_parts[col_idx].call_queue
+                                if axis
+                                else by_parts[row_idx].call_queue,
                             )
                         )
                         for col_idx, part in enumerate(self.partitions[row_idx])

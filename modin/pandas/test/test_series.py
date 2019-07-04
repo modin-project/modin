@@ -1175,7 +1175,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_series.dot(np.arange(ind_len+10))
+        modin_result = modin_series.dot(np.arange(ind_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
@@ -1186,7 +1186,9 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_series.dot(pd.Series(np.arange(ind_len), index=reversed(modin_series.index)))
+        modin_result = modin_series.dot(
+            pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
+        )
 
     # modin_series.dot(modin_series.T)
 

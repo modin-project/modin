@@ -473,7 +473,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 reindex_right = compute_reindex(right_old_idxes[i])
             reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
-                axis, other[i].data, reindex_left, reindex_right, other[i]._is_transposed
+                axis,
+                other[i].data,
+                reindex_left,
+                reindex_right,
+                other[i]._is_transposed,
             )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
@@ -973,14 +977,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if isinstance(other, BaseQueryCompiler):
             if len(self.columns) > 1 and len(other.columns) == 1:
-                # If self is DataFrame and other is a series, we take the transpose 
+                # If self is DataFrame and other is a series, we take the transpose
                 # to copartition along the columns.
                 new_self = self
                 other = other.transpose()
                 axis = 1
                 new_index = self.index
             elif len(self.columns) == 1 and len(other.columns) > 1:
-                # If self is series and other is a Dataframe, we take the transpose 
+                # If self is series and other is a Dataframe, we take the transpose
                 # to copartition along the columns.
                 new_self = self.transpose()
                 axis = 1
@@ -990,9 +994,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_self = self
                 axis = 0
                 new_index = ["__reduce__"]
-            new_self, list_of_others, _ = new_self.copartition(axis, other, "left", False)
+            new_self, list_of_others, _ = new_self.copartition(
+                axis, other, "left", False
+            )
             other = list_of_others[0]
-            reduce_func = self._build_mapreduce_func(pandas.DataFrame.sum, axis=axis, skipna=False)
+            reduce_func = self._build_mapreduce_func(
+                pandas.DataFrame.sum, axis=axis, skipna=False
+            )
             new_data = new_self.groupby_reduce(axis, other, map_func, reduce_func)
         else:
             if len(self.columns) == 1:
