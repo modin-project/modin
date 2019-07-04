@@ -207,15 +207,17 @@ class BaseFrameManager(object):
 
     def groupby_reduce(self, axis, by, map_func, reduce_func):
         by_parts = np.squeeze(by.partitions)
+        if len(by_parts.shape) == 0:
+            by_parts = np.array([by_parts.item()])
         [obj.drain_call_queue() for obj in by_parts]
         new_partitions = self.__constructor__(
             np.array(
                 [
                     [
-                        part.apply(map_func, other=by_parts[i].get())
-                        for part in self.partitions[i]
+                        part.apply(map_func, other=by_parts[col_idx].get() if axis else by_parts[row_idx].get())
+                        for col_idx, part in enumerate(self.partitions[row_idx])
                     ]
-                    for i in range(len(self.partitions))
+                    for row_idx in range(len(self.partitions))
                 ]
             )
         )
