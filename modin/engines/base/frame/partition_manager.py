@@ -252,7 +252,7 @@ class BaseFrameManager(object):
         )
         return self.__constructor__(new_partitions)
 
-    def copartition_datasets(self, axis, other, left_func, right_func):
+    def copartition_datasets(self, axis, other, left_func, right_func, other_is_transposed):
         """Copartition two BlockPartitions objects.
 
         Args:
@@ -278,13 +278,13 @@ class BaseFrameManager(object):
                 other.block_lengths, new_self.block_lengths
             ):
                 new_other = other.manual_shuffle(
-                    axis, lambda x: x, new_self.block_lengths
+                    axis, lambda x: x, new_self.block_lengths, transposed=other_is_transposed
                 )
             elif axis == 1 and not np.array_equal(
                 other.block_widths, new_self.block_widths
             ):
                 new_other = other.manual_shuffle(
-                    axis, lambda x: x, new_self.block_widths
+                    axis, lambda x: x, new_self.block_widths, transposed=other_is_transposed
                 )
             else:
                 new_other = other
@@ -295,6 +295,7 @@ class BaseFrameManager(object):
                 axis,
                 right_func,
                 new_self.block_lengths if axis == 0 else new_self.block_widths,
+                transposed=other_is_transposed
             )
         return new_self, new_other
 
@@ -1117,7 +1118,7 @@ class BaseFrameManager(object):
         )
         return self.__constructor__(result) if axis else self.__constructor__(result.T)
 
-    def manual_shuffle(self, axis, shuffle_func, lengths):
+    def manual_shuffle(self, axis, shuffle_func, lengths, transposed=False):
         """Shuffle the partitions based on the `shuffle_func`.
 
         Args:
@@ -1133,7 +1134,7 @@ class BaseFrameManager(object):
         else:
             partitions = self.column_partitions
         func = self.preprocess_func(shuffle_func)
-        result = np.array([part.shuffle(func, lengths) for part in partitions])
+        result = np.array([part.shuffle(func, lengths, _transposed=transposed) for part in partitions])
         return self.__constructor__(result) if axis else self.__constructor__(result.T)
 
     def __getitem__(self, key):

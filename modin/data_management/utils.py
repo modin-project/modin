@@ -121,7 +121,7 @@ def width_fn_pandas(df):
     return len(df.columns)
 
 
-def set_indices_for_pandas_concat(df):
+def set_indices_for_pandas_concat(df, transposed=False):
     df.index = pandas.RangeIndex(len(df))
     df.columns = pandas.RangeIndex(len(df.columns))
-    return df
+    return df.T if transposed else df

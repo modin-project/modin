@@ -462,7 +462,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return reindex_partition
 
         for i in range(len(other)):
-
             # If the indices are equal we can skip partitioning so long as we are not
             # forced to repartition. See note above about `force_repartition`.
             if i != 0 or (left_old_idx.equals(joined_index) and not force_repartition):
@@ -472,12 +471,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if right_old_idxes[i].equals(joined_index) and not force_repartition:
                 reindex_right = None
             else:
-                reindex_right = other[i]._prepare_method(
-                    compute_reindex(right_old_idxes[i])
-                )
-
+                reindex_right = compute_reindex(right_old_idxes[i])
             reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
-                axis, other[i].data, reindex_left, reindex_right
+                axis, other[i].data, reindex_left, reindex_right, other[i]._is_transposed
             )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
@@ -964,46 +960,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Returns the result of the matrix multiply.
         """
         if self._is_transposed:
-            return self.transpose().dot(other)
+            return self.transpose().dot(other).transpose()
 
-        def map_func(df, other):
-            result = df.squeeze().dot(other.squeeze())
-            if is_numeric_dtype(result):
-                return pandas.DataFrame([result])
+        def map_func(df, other=other):
+            if isinstance(other, pandas.DataFrame):
+                other = other.squeeze()
+            result = df.squeeze().dot(other)
+            if is_list_like(result):
+                return pandas.DataFrame(result)
             else:
-                return pandas.DataFrame(result).T
+                return pandas.DataFrame([result])
 
         if isinstance(other, BaseQueryCompiler):
             if len(self.columns) > 1 and len(other.columns) == 1:
                 # If self is DataFrame and other is a series, we take the transpose 
                 # to copartition along the columns.
+                new_self = self
                 other = other.transpose()
                 axis = 1
                 new_index = self.index
             elif len(self.columns) == 1 and len(other.columns) > 1:
                 # If self is series and other is a Dataframe, we take the transpose 
                 # to copartition along the columns.
-                self = self.transpose()
+                new_self = self.transpose()
                 axis = 1
                 new_index = self.index
             elif len(self.columns) == 1 and len(other.columns) == 1:
                 # If both are series, then we copartition along the rows.
+                new_self = self
                 axis = 0
                 new_index = ["__reduce__"]
-            new_self, list_of_others, _ = self.copartition(axis, other, "outer", True)
+            new_self, list_of_others, _ = new_self.copartition(axis, other, "left", False)
             other = list_of_others[0]
             reduce_func = self._build_mapreduce_func(pandas.DataFrame.sum, axis=axis, skipna=False)
             new_data = new_self.groupby_reduce(axis, other, map_func, reduce_func)
         else:
-            def map_func(df):
-                return pandas.DataFrame(df.dot(other))
-
             if len(self.columns) == 1:
-                self = self.transpose()
-                axis = 1
+                axis = 0
                 new_index = ["__reduce__"]
             else:
-                axis = 0
+                axis = 1
                 new_index = self.index
             new_data = self.data.map_across_full_axis(axis, map_func)
         return self.__constructor__(new_data, index=new_index, columns=["__reduced__"])

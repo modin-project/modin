@@ -852,7 +852,6 @@ class BasePandasDataset(object):
             self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
             if self_dim != other.shape[0]:
                 raise ValueError('Dot product shape mismatch, {l} vs {r}'.format(l=self.shape, r=other.shape))
-            return self._default_to_pandas("dot", other)
 
         if isinstance(other, BasePandasDataset):
             other = other.reindex(index=self_labels)._query_compiler
