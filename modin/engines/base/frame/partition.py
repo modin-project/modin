@@ -62,7 +62,7 @@ class BaseFramePartition(object):  # pragma: no cover
             A Pandas DataFrame.
         """
         raise NotImplementedError("Must be implemented in child class")
-    
+
     def to_numpy(self):
         """Convert the object stored in this partition to a Numpy Array.
 
