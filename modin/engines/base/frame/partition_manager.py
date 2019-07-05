@@ -214,7 +214,12 @@ class BaseFrameManager(object):
             np.array(
                 [
                     [
-                        part.apply(map_func, other=by_parts[col_idx].get() if axis else by_parts[row_idx].get())
+                        part.apply(
+                            map_func,
+                            other=by_parts[col_idx].get()
+                            if axis
+                            else by_parts[row_idx].get(),
+                        )
                         for col_idx, part in enumerate(self.partitions[row_idx])
                     ]
                     for row_idx in range(len(self.partitions))
