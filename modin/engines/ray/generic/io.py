@@ -453,13 +453,12 @@ class RayIO(BaseIO):
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
-        # over the whole column for each column.
+        # over the whole column for each column. The index is set below.
         dtypes = (
             pandas.concat(ray.get(dtypes_ids), axis=1)
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )
-        dtypes.index = column_names
 
         partition_ids = [
             [
@@ -484,6 +483,12 @@ class RayIO(BaseIO):
             elif isinstance(parse_dates, dict):
                 for new_col_name, group in parse_dates.items():
                     column_names = column_names.drop(group).insert(0, new_col_name)
+
+        # Set the index for the dtypes to the column names
+        if isinstance(dtypes, pandas.Series):
+            dtypes.index = column_names
+        else:
+            dtypes = pandas.Series(dtypes, index=column_names)
 
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_mgr_cls(np.array(partition_ids)),
