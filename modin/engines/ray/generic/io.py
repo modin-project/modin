@@ -672,7 +672,10 @@ class RayIO(BaseIO):
                 compression_type == "gzip" and sys.version_info[0] == 3
             ):  # python2 cannot seek from end
                 filtered_kwargs["compression"] = compression_type
-            elif compression_type == "bz2" or compression_type == "xz":
+            elif compression_type == "bz2":
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "xz" and sys.version_info[0] == 3:
+                # .xz compression fails in pandas for python2
                 filtered_kwargs["compression"] = compression_type
             elif compression_type == "zip" and sys.version_info[0] == 3:
                 # need python3 to .seek and .tell ZipExtFile
