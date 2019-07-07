@@ -381,6 +381,39 @@ def test_read_csv_gzip():
     modin_df = pd.read_csv(gzip_path, compression="gzip")
     df_equals(modin_df, pandas_df)
 
+def test_read_csv_bz2():
+    bz2_path = "modin/pandas/test/data/test_df.csv.bz2"
+
+    pandas_df = pandas.read_csv(bz2_path)
+    modin_df = pd.read_csv(bz2_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(bz2_path, compression="bz2")
+    modin_df = pd.read_csv(bz2_path, compression="bz2")
+    df_equals(modin_df, pandas_df)
+
+def test_read_csv_xz():
+    xz_path = "modin/pandas/test/data/test_df.csv.xz"
+
+    pandas_df = pandas.read_csv(xz_path)
+    modin_df = pd.read_csv(xz_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(xz_path, compression="xz")
+    modin_df = pd.read_csv(xz_path, compression="xz")
+    df_equals(modin_df, pandas_df)
+
+def test_read_csv_zip():
+    zip_path = "modin/pandas/test/data/test_df.csv.zip"
+
+    pandas_df = pandas.read_csv(zip_path)
+    modin_df = pd.read_csv(zip_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(zip_path, compression="xz")
+    modin_df = pd.read_csv(zip_path, compression="xz")
+    df_equals(modin_df, pandas_df)
+
 
 def test_from_parquet(make_parquet_file):
     make_parquet_file(SMALL_ROW_SIZE)
