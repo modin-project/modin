@@ -182,7 +182,9 @@ def make_csv_file(delimiter=",", compression="infer"):
             elif compression == "zip" or compression == "xz" or compression == "bz2":
                 filename = filename + "." + compression
 
-            df.to_csv(filename, sep=delimiter, encoding=encoding, compression=compression)
+            df.to_csv(
+                filename, sep=delimiter, encoding=encoding, compression=compression
+            )
             filenames.append(filename)
             return df
 
@@ -378,7 +380,7 @@ def teardown_fwf_file():
 
 def test_read_csv_gzip(make_csv_file):
     make_csv_file(compression="gzip")
-    gzip_path = TEST_CSV_FILENAME+".gz"
+    gzip_path = TEST_CSV_FILENAME + ".gz"
 
     pandas_df = pandas.read_csv(gzip_path)
     modin_df = pd.read_csv(gzip_path)
@@ -403,13 +405,10 @@ def test_read_csv_bz2(make_csv_file):
 
 
 def test_read_csv_xz(make_csv_file):
-    make_csv_file(compression="xz")
-    xz_path = TEST_CSV_FILENAME + ".xz"
-    if PY2:  # check that read_csv doesn't error
-        _ = pd.read_csv(xz_path, compression="xz")
-        _ = pd.read_csv(xz_path)
+    if not PY2:
+        make_csv_file(compression="xz")
+        xz_path = TEST_CSV_FILENAME + ".xz"
 
-    else:
         pandas_df = pandas.read_csv(xz_path)
         modin_df = pd.read_csv(xz_path)
         df_equals(modin_df, pandas_df)
