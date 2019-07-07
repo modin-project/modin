@@ -668,16 +668,18 @@ class RayIO(BaseIO):
             compression_type = _infer_compression(
                 filepath_or_buffer, kwargs.get("compression")
             )
-            # print(_infer_compression(filepath_or_buffer, kwargs.get("compression")), sys.version_info[0])
             if (
                 compression_type == "gzip" and sys.version_info[0] == 3
             ):  # python2 cannot seek from end
                 filtered_kwargs["compression"] = compression_type
+            elif compression_type == "bz2" or compression_type == "xz":
+                filtered_kwargs["compression"] = compression_type
             elif (
-                compression_type == "bz2"
-                or compression_type == "xz"
-                or compression_type == "zip"
+                compression_type == "zip"
+                and sys.version_info[0] == 3
+                and sys.version_info[1] == 7
             ):
+                # need python 3.7 to .seek and .tell ZipExtFile
                 filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")

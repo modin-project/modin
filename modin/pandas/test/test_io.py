@@ -413,8 +413,8 @@ def test_read_csv_zip():
     modin_df = pd.read_csv(zip_path)
     df_equals(modin_df, pandas_df)
 
-    pandas_df = pandas.read_csv(zip_path, compression="xz")
-    modin_df = pd.read_csv(zip_path, compression="xz")
+    pandas_df = pandas.read_csv(zip_path, compression="zip")
+    modin_df = pd.read_csv(zip_path, compression="zip")
     df_equals(modin_df, pandas_df)
 
 
