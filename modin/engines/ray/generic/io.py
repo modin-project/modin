@@ -674,12 +674,8 @@ class RayIO(BaseIO):
                 filtered_kwargs["compression"] = compression_type
             elif compression_type == "bz2" or compression_type == "xz":
                 filtered_kwargs["compression"] = compression_type
-            elif (
-                compression_type == "zip"
-                and sys.version_info[0] == 3
-                and sys.version_info[1] == 7
-            ):
-                # need python 3.7 to .seek and .tell ZipExtFile
+            elif compression_type == "zip" and sys.version_info[0] == 3:
+                # need python3 to .seek and .tell ZipExtFile
                 filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")

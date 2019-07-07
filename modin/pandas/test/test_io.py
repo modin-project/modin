@@ -396,14 +396,17 @@ def test_read_csv_bz2():
 
 def test_read_csv_xz():
     xz_path = "modin/pandas/test/data/test_df.csv.xz"
+    if not PY2:
+        pandas_df = pandas.read_csv(xz_path)
+        modin_df = pd.read_csv(xz_path)
+        df_equals(modin_df, pandas_df)
 
-    pandas_df = pandas.read_csv(xz_path)
-    modin_df = pd.read_csv(xz_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(xz_path, compression="xz")
-    modin_df = pd.read_csv(xz_path, compression="xz")
-    df_equals(modin_df, pandas_df)
+        pandas_df = pandas.read_csv(xz_path, compression="xz")
+        modin_df = pd.read_csv(xz_path, compression="xz")
+        df_equals(modin_df, pandas_df)
+    else:  # check that read doesn't error
+        _ = pd.read_csv(xz_path)
+        _ = pd.read_csv(xz_path, compression="xz")
 
 
 def test_read_csv_zip():
