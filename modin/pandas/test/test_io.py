@@ -149,7 +149,7 @@ def teardown_test_file(test_path):
 
 
 @pytest.fixture
-def make_csv_file(delimiter=","):
+def make_csv_file(delimiter=",", compression="infer"):
     """Pytest fixture factory that makes temp csv files for testing.
 
     Yields:
@@ -163,6 +163,7 @@ def make_csv_file(delimiter=","):
         force=False,
         delimiter=delimiter,
         encoding=None,
+        compression=compression,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -176,7 +177,12 @@ def make_csv_file(delimiter=","):
                     "col4": [str(x.time()) for x in dates],
                 }
             )
-            df.to_csv(filename, sep=delimiter, encoding=encoding)
+            if compression == "gzip":
+                filename = filename + ".gz"
+            elif compression == "zip" or compression == "xz" or compression == "bz2":
+                filename = filename + "." + compression
+
+            df.to_csv(filename, sep=delimiter, encoding=encoding, compression=compression)
             filenames.append(filename)
             return df
 
@@ -370,8 +376,9 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
-def test_read_csv_gzip():
-    gzip_path = "modin/pandas/test/data/test_df.csv.gz"
+def test_read_csv_gzip(make_csv_file):
+    make_csv_file(compression="gzip")
+    gzip_path = TEST_CSV_FILENAME+".gz"
 
     pandas_df = pandas.read_csv(gzip_path)
     modin_df = pd.read_csv(gzip_path)
@@ -382,8 +389,9 @@ def test_read_csv_gzip():
     df_equals(modin_df, pandas_df)
 
 
-def test_read_csv_bz2():
-    bz2_path = "modin/pandas/test/data/test_df.csv.bz2"
+def test_read_csv_bz2(make_csv_file):
+    make_csv_file(compression="bz2")
+    bz2_path = TEST_CSV_FILENAME + ".bz2"
 
     pandas_df = pandas.read_csv(bz2_path)
     modin_df = pd.read_csv(bz2_path)
@@ -394,9 +402,14 @@ def test_read_csv_bz2():
     df_equals(modin_df, pandas_df)
 
 
-def test_read_csv_xz():
-    xz_path = "modin/pandas/test/data/test_df.csv.xz"
-    if not PY2:
+def test_read_csv_xz(make_csv_file):
+    make_csv_file(compression="xz")
+    xz_path = TEST_CSV_FILENAME + ".xz"
+    if PY2:  # check that read_csv doesn't error
+        _ = pd.read_csv(xz_path, compression="xz")
+        _ = pd.read_csv(xz_path)
+
+    else:
         pandas_df = pandas.read_csv(xz_path)
         modin_df = pd.read_csv(xz_path)
         df_equals(modin_df, pandas_df)
@@ -404,13 +417,11 @@ def test_read_csv_xz():
         pandas_df = pandas.read_csv(xz_path, compression="xz")
         modin_df = pd.read_csv(xz_path, compression="xz")
         df_equals(modin_df, pandas_df)
-    else:  # check that read doesn't error
-        _ = pd.read_csv(xz_path)
-        _ = pd.read_csv(xz_path, compression="xz")
 
 
-def test_read_csv_zip():
-    zip_path = "modin/pandas/test/data/test_df.csv.zip"
+def test_read_csv_zip(make_csv_file):
+    make_csv_file(compression="zip")
+    zip_path = TEST_CSV_FILENAME + ".zip"
 
     pandas_df = pandas.read_csv(zip_path)
     modin_df = pd.read_csv(zip_path)
