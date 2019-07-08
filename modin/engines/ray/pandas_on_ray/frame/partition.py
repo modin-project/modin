@@ -88,6 +88,14 @@ class PandasOnRayFramePartition(BaseFramePartition):
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
 
+    def to_numpy(self):
+        """Convert the object stored in this parition to a Numpy Array.
+
+        Returns:
+            A Numpy Array.
+        """
+        return self.apply(lambda df: df.values).get()
+
     def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])

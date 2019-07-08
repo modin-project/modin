@@ -63,6 +63,17 @@ class BaseFramePartition(object):  # pragma: no cover
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def to_numpy(self):
+        """Convert the object stored in this partition to a Numpy Array.
+
+        Note: If the underlying object is a Pandas DataFrame, this will return
+            a 2D array.
+
+        Returns:
+            A Numpy Array.
+        """
+        raise NotImplementedError("Must be implemented in child class")
+
     def mask(self, row_indices, col_indices):
         """Lazily create a mask that extracts the indices provided.
 
