@@ -835,9 +835,29 @@ class BasePandasDataset(object):
         )
 
     def dot(self, other):
+        from .dataframe import DataFrame
+
+        self_labels = self.columns if isinstance(self, DataFrame) else self.index
         if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas("dot", other)
+            common = self_labels.union(other.index)
+            if len(common) > len(self_labels) or len(common) > len(other.index):
+                raise ValueError("matrices are not aligned")
+            if isinstance(self, DataFrame) and isinstance(other, DataFrame):
+                other = other._to_pandas()
+                return self._default_to_pandas("dot", other)
+        else:
+            other = np.asarray(other)
+            self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
+            if self_dim != other.shape[0]:
+                raise ValueError(
+                    "Dot product shape mismatch, {} vs {}".format(
+                        self.shape, other.shape
+                    )
+                )
+
+        if isinstance(other, BasePandasDataset):
+            other = other.reindex(index=self_labels)._query_compiler
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def drop(
         self,
@@ -1968,27 +1988,35 @@ class BasePandasDataset(object):
             index = labels
         elif labels is not None:
             columns = labels
+        new_query_compiler = None
         if index is not None:
-            new_query_compiler = self._query_compiler.reindex(
-                0,
-                index,
-                method=method,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
-        else:
+            if not isinstance(index, pandas.Index):
+                index = pandas.Index(index)
+            if not index.equals(self.index):
+                new_query_compiler = self._query_compiler.reindex(
+                    0,
+                    index,
+                    method=method,
+                    fill_value=fill_value,
+                    limit=limit,
+                    tolerance=tolerance,
+                )
+        if new_query_compiler is None:
             new_query_compiler = self._query_compiler
+        final_query_compiler = None
         if columns is not None:
-            final_query_compiler = new_query_compiler.reindex(
-                1,
-                columns,
-                method=method,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
-        else:
+            if not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if not columns.equals(self.columns):
+                final_query_compiler = new_query_compiler.reindex(
+                    1,
+                    columns,
+                    method=method,
+                    fill_value=fill_value,
+                    limit=limit,
+                    tolerance=tolerance,
+                )
+        if final_query_compiler is None:
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 

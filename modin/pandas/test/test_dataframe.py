@@ -1951,10 +1951,35 @@ class TestDFPartOne:
             with pytest.raises(KeyError):
                 modin_df.dropna(axis=1, subset=[4, 5])
 
-    def test_dot(self):
-        data = test_data_values[0]
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_dot(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        col_len = len(modin_df.columns)
+
+        # Test list input
+        arr = np.arange(col_len)
+        modin_result = modin_df.dot(arr)
+        pandas_result = pandas_df.dot(arr)
+        df_equals(modin_result, pandas_result)
+
+        # Test bad dimensions
+        with pytest.raises(ValueError):
+            modin_result = modin_df.dot(np.arange(col_len + 10))
+
+        # Test series input
+        modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        modin_result = modin_df.dot(modin_series)
+        pandas_result = pandas_df.dot(pandas_series)
+        df_equals(modin_result, pandas_result)
+
+        # Test when input series index doesn't line up with columns
+        with pytest.raises(ValueError):
+            modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+
         with pytest.warns(UserWarning):
-            pd.DataFrame(data).dot(pd.DataFrame(data).T)
+            modin_df.dot(modin_df.T)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_duplicated(self, data):

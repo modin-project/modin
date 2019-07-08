@@ -1164,9 +1164,33 @@ def test_divide(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.dot(modin_series)
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    ind_len = len(modin_series)
+
+    # Test list input
+    arr = np.arange(ind_len)
+    modin_result = modin_series.dot(arr)
+    pandas_result = pandas_series.dot(arr)
+    df_equals(modin_result, pandas_result)
+
+    # Test bad dimensions
+    with pytest.raises(ValueError):
+        modin_result = modin_series.dot(np.arange(ind_len + 10))
+
+    # Test series input
+    modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    modin_result = modin_series.dot(modin_series)
+    pandas_result = pandas_series.dot(pandas_series)
+    df_equals(modin_result, pandas_result)
+
+    # Test when input series index doesn't line up with columns
+    with pytest.raises(ValueError):
+        modin_result = modin_series.dot(
+            pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
+        )
+
+    # modin_series.dot(modin_series.T)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
