@@ -93,6 +93,14 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         return dataframe
 
+    def to_numpy(self):
+        """Convert the object stored in this partition to a NumPy Array.
+
+        Returns:
+            A NumPy Array.
+        """
+        return self.apply(lambda df: df.values).get()
+
     @classmethod
     def put(cls, obj):
         """A factory classmethod to format a given object.
