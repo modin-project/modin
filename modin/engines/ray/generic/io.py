@@ -677,8 +677,12 @@ class RayIO(BaseIO):
             elif compression_type == "xz" and sys.version_info[0] == 3:
                 # .xz compression fails in pandas for python2
                 filtered_kwargs["compression"] = compression_type
-            elif compression_type == "zip" and sys.version_info[0] == 3:
-                # need python3 to .seek and .tell ZipExtFile
+            elif (
+                compression_type == "zip"
+                and sys.version_info[0] == 3
+                and sys.version_info[1] >= 7
+            ):
+                # need python3.7 to .seek and .tell ZipExtFile
                 filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")
