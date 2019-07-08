@@ -223,6 +223,18 @@ class PandasOnPythonFactory(BaseFactory):
     io_cls = PandasOnPythonIO
 
 
+class PandasOnMultiprocessFactory(BaseFactory):
+
+    from modin.engines.multiprocess.pandas_on_multiprocess.frame.partition_manager import (
+        MultiprocessFrameManager,
+    )
+    from modin.engines.multiprocess.pandas_on_multiprocess.io import PandasOnMultiprocessIO
+
+    query_compiler_cls = PandasQueryCompiler
+    block_partitions_cls = MultiprocessFrameManager
+    io_cls = PandasOnMultiprocessIO
+
+
 class PandasOnDaskFactory(BaseFactory):
 
     from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
