@@ -393,12 +393,17 @@ class RayIO(BaseIO):
                 # objects.
                 num_splits = 1
             else:
-                column_widths = [
-                    column_chunksize
-                    if i != num_splits - 1
-                    else len(column_names) - (column_chunksize * (num_splits - 1))
-                    for i in range(num_splits)
-                ]
+                column_widths = []
+                running_sum = 0
+                for _ in range(num_splits):
+                    if running_sum == len(column_names):
+                        column_widths.append(0)
+                    elif column_chunksize > len(column_names) - running_sum:
+                        column_widths.append(len(column_names) - running_sum)
+                        running_sum = len(column_names)
+                    else:
+                        column_widths.append(column_chunksize)
+                        running_sum += column_chunksize
 
             while f.tell() < total_bytes:
                 start = f.tell()
@@ -660,7 +665,8 @@ class RayIO(BaseIO):
             ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
+            result = cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
+            return result
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
