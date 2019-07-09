@@ -1057,8 +1057,9 @@ class TestDFPartOne:
         tm.assert_almost_equal(mat, expected)
 
     def test_to_numpy(self):
-        with pytest.warns(UserWarning):
-            pd.DataFrame({"A": [1, 2], "B": [3, 4]}).to_numpy()
+        test_data = TestData()
+        frame = pd.DataFrame(test_data.frame)
+        assert np.array_equiv(frame.values, test_data.frame.values)
 
     def test_partition_to_numpy(self):
         test_data = TestData()

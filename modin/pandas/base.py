@@ -2963,7 +2963,10 @@ class BasePandasDataset(object):
         Returns:
             A numpy array.
         """
-        return self._default_to_pandas("to_numpy", dtype=dtype, copy=copy)
+        arr = self._query_compiler.to_numpy()
+        if dtype != None:
+            return np.asarray(arr, dtype)
+        return arr
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -3335,7 +3338,7 @@ class BasePandasDataset(object):
         Returns:
             The numpy representation of this object.
         """
-        return self._to_pandas().values
+        return self.to_numpy()
 
     @property
     def __name__(self):
