@@ -2487,7 +2487,7 @@ def test_to_period():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
-    assert np.array_equiv(modin_series.values, pandas_series.values)
+    assert assert_array_equal(modin_series.values, pandas_series.values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
