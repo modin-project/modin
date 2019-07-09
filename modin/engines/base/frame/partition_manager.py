@@ -57,8 +57,6 @@ class BaseFrameManager(object):
     _row_partition_class = None
     # Whether or not we have already filtered out the empty partitions.
     _filtered_empties = False
-    # Vectorized function to convert array of row partitions into a partitioned NumPy array.
-    _vec_to_numpy = np.vectorize(lambda row: row.to_numpy(), otypes=[np.ndarray])
 
     def _get_partitions(self):
         if not self._filtered_empties or (
@@ -529,7 +527,9 @@ class BaseFrameManager(object):
         Returns:
             A NumPy Array
         """
-        arr = np.block(self._vec_to_numpy(self.partitions).tolist())
+        arr = np.block(
+            [[block.to_pandas().values for block in row] for row in self.partitions]
+        )
         if is_transposed:
             return arr.T
         return arr
