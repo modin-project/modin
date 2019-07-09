@@ -1065,9 +1065,7 @@ class TestDFPartOne:
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
         for partition in frame._query_compiler.data.partitions.flatten().tolist():
-            assert_array_equal(
-                partition.to_pandas().values, partition.to_numpy()
-            )
+            assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
     def test_asfreq(self):
         index = pd.date_range("1/1/2000", periods=4, freq="T")
