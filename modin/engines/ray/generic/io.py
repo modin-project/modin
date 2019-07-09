@@ -393,17 +393,14 @@ class RayIO(BaseIO):
                 # objects.
                 num_splits = 1
             else:
-                column_widths = []
-                running_sum = 0
-                for _ in range(num_splits):
-                    if running_sum == len(column_names):
-                        column_widths.append(0)
-                    elif column_chunksize > len(column_names) - running_sum:
-                        column_widths.append(len(column_names) - running_sum)
-                        running_sum = len(column_names)
-                    else:
-                        column_widths.append(column_chunksize)
-                        running_sum += column_chunksize
+                column_widths = [
+                    column_chunksize
+                    if len(column_names) > (column_chunksize * (i+1))
+                    else 
+                    0 if len(column_names) < (column_chunksize * i)
+                    else len(column_names) - (column_chunksize * i)
+                    for i in range(num_splits)
+                ]
 
             while f.tell() < total_bytes:
                 start = f.tell()
