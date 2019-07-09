@@ -665,8 +665,7 @@ class RayIO(BaseIO):
             ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            result = cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
-            return result
+            return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
