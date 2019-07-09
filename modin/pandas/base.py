@@ -2964,7 +2964,7 @@ class BasePandasDataset(object):
             A numpy array.
         """
         arr = self._query_compiler.to_numpy()
-        if dtype != None:
+        if dtype is not None:
             return np.asarray(arr, dtype)
         return arr
 
