@@ -857,7 +857,7 @@ class BasePandasDataset(object):
                 )
 
         if isinstance(other, BasePandasDataset):
-            other = other.reindex(index=self_labels)._query_compiler
+            other = other._query_compiler
         return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def drop(

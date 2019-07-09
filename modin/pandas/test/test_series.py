@@ -1183,10 +1183,13 @@ def test_dot(data):
     df_equals(modin_result, pandas_result)
 
     # Test when input series index doesn't line up with columns
-    with pytest.raises(ValueError):
-        modin_result = modin_series.dot(
-            pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
-        )
+    modin_result = modin_series.dot(
+        pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
+    )
+    pandas_result = pandas_series.dot(
+        pandas.Series(np.arange(ind_len), index=reversed(pandas_series.index))
+    )
+    df_equals(modin_result, pandas_result)
 
     # modin_series.dot(modin_series.T)
 

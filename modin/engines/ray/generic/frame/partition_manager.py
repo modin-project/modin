@@ -4,6 +4,7 @@ from ray.worker import RayTaskError
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.engines.ray.utils import handle_ray_task_error
+from pandas.api.types import is_integer
 
 
 class RayFrameManager(BaseFrameManager):
@@ -28,7 +29,7 @@ class RayFrameManager(BaseFrameManager):
             having to recompute these values each time they are needed.
         """
         if self._lengths_cache is None:
-            if not isinstance(self._partitions_cache[0][0].length(), int):
+            if not is_integer(self._partitions_cache[0][0].length()):
                 try:
                     # The first column will have the correct lengths. We have an
                     # invariant that requires that all blocks be the same length in a
@@ -46,7 +47,7 @@ class RayFrameManager(BaseFrameManager):
                     self._lengths_cache = np.array(
                         [
                             obj.length()
-                            if isinstance(obj.length(), int)
+                            if is_integer(obj.length())
                             else ray.get(obj.length().oid)
                             for obj in self._partitions_cache.T[0]
                         ]
@@ -55,7 +56,7 @@ class RayFrameManager(BaseFrameManager):
                 self._lengths_cache = np.array(
                     [
                         obj.length()
-                        if isinstance(obj.length(), int)
+                        if is_integer(obj.length())
                         else ray.get(obj.length().oid)
                         for obj in self._partitions_cache.T[0]
                     ]
@@ -70,7 +71,7 @@ class RayFrameManager(BaseFrameManager):
             having to recompute these values each time they are needed.
         """
         if self._widths_cache is None:
-            if not isinstance(self._partitions_cache[0][0].width(), int):
+            if not is_integer(self._partitions_cache[0][0].width()):
                 try:
                     # The first column will have the correct lengths. We have an
                     # invariant that requires that all blocks be the same width in a
@@ -86,7 +87,7 @@ class RayFrameManager(BaseFrameManager):
                     self._widths_cache = np.array(
                         [
                             obj.width()
-                            if isinstance(obj.width(), int)
+                            if is_integer(obj.width())
                             else ray.get(obj.width().oid)
                             for obj in self._partitions_cache[0]
                         ]
@@ -95,7 +96,7 @@ class RayFrameManager(BaseFrameManager):
                 self._widths_cache = np.array(
                     [
                         obj.width()
-                        if isinstance(obj.width(), int)
+                        if is_integer(obj.width())
                         else ray.get(obj.width().oid)
                         for obj in self._partitions_cache[0]
                     ]

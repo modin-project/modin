@@ -51,6 +51,36 @@ class BaseFramePartition(object):  # pragma: no cover
 
     def drain_call_queue(self):
         """Execute all functionality stored in the call queue."""
+        raise NotImplementedError("Must be implemented in child class")
+
+    def split(self, axis, splits, transposed):
+        """Split partition along axis given list of resulting index groups (splits).
+
+        Args:
+            axis: Axis to split along.
+            splits: List of list of indexes to group together.
+            transposed: True if the partition needs to be transposed first.
+
+        Returns:
+            Returns PandasOnRayFramePartitions for each of the resulting splits.
+        """
+        raise NotImplementedError("Must be implemented in child class")
+
+    @classmethod
+    def shuffle(cls, axis, func, part_length, part_width, *partitions, **kwargs):
+        """Takes the partitions combines them based on the indices.
+
+        Args:
+            axis: Axis to combine the partitions by.
+            func: Function to apply after creating the new partition.
+            part_length: Length of the resulting partition.
+            part_width: Width of the resulting partition.
+            *partitions: List of partitions to combine.
+
+        Returns:
+            A `BaseFramePartition` object.
+        """
+        raise NotImplementedError("Must be implemented in child class")
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.

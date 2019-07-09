@@ -18,7 +18,7 @@ import math
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
-from modin.data_management.utils import compute_chunksize
+from modin.data_management.utils import compute_chunksize, compute_lengths
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
@@ -437,21 +437,11 @@ class RayIO(BaseIO):
             chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
 
             # Metadata
-            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
-            if column_chunksize > len(column_names):
-                column_widths = [len(column_names)]
+            column_widths = compute_lengths(empty_pd_df, 1, num_splits)
+            if len(column_widths) == 1:
                 # This prevents us from unnecessarily serializing a bunch of empty
                 # objects.
                 num_splits = 1
-            else:
-                column_widths = [
-                    column_chunksize
-                    if len(column_names) > (column_chunksize * (i + 1))
-                    else 0
-                    if len(column_names) < (column_chunksize * i)
-                    else len(column_names) - (column_chunksize * i)
-                    for i in range(num_splits)
-                ]
 
             while f.tell() < total_bytes:
                 start = f.tell()

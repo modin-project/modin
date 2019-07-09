@@ -10,8 +10,10 @@ import pandas
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import (
     compute_chunksize,
+    compute_lengths,
     _get_nan_block_id,
     set_indices_for_pandas_concat,
+    compute_partition_shuffle,
 )
 
 
@@ -259,60 +261,54 @@ class BaseFrameManager(object):
         )
         return self.__constructor__(new_partitions)
 
-    def copartition_datasets(
-        self, axis, other, left_func, right_func, other_is_transposed
-    ):
-        """Copartition two BlockPartitions objects.
+    def repartition(self, axis, other, new_index, old_index, other_is_transposed):
+        """Repartition BlockPartition object.
 
         Args:
             axis: The axis to copartition.
-            other: The other BlockPartitions object to copartition with.
-            left_func: The function to apply to left. If None, just use the dimension
+            other: The other BlockPartitions object to copartition with. If None,
+                reindex self.
+            new_index: The function to apply to left. If None, just use the dimension
                 of self (based on axis).
-            right_func: The function to apply to right. If None, check the dimensions of
-                other and use the identity function if splitting needs to happen.
+            old_index: The function to apply to right. If None, check the dimensions of
+                other and use the identity index if splitting needs to happen.
+            other_is_transposed: True if the other partitions need to be transposed.
 
         Returns:
-            A tuple of BlockPartitions objects, left and right.
+            Updated BlockPartition object.
         """
-        if left_func is None:
-            new_self = self
+        if other is None:
+            assert new_index is not None
+            assert old_index is not None
+            other = self
+            lengths = None
         else:
-            new_self = self.map_across_full_axis(axis, left_func)
+            lengths = self.block_lengths if axis == 0 else self.block_widths
 
         # This block of code will only shuffle if absolutely necessary. If we do need to
-        # shuffle, we use the identity function and then reshuffle.
-        if right_func is None:
+        # shuffle, we use the identity indextion and then reshuffle.
+        if old_index is None:
             if axis == 0 and not np.array_equal(
-                other.block_lengths, new_self.block_lengths
+                other.block_lengths, self.block_lengths
             ):
-                new_other = other.manual_shuffle(
-                    axis,
-                    lambda x: x,
-                    new_self.block_lengths,
-                    transposed=other_is_transposed,
-                )
+                new_other = other.shuffle(axis, other_is_transposed, lengths=lengths)
             elif axis == 1 and not np.array_equal(
-                other.block_widths, new_self.block_widths
+                other.block_widths, self.block_widths
             ):
-                new_other = other.manual_shuffle(
-                    axis,
-                    lambda x: x,
-                    new_self.block_widths,
-                    transposed=other_is_transposed,
-                )
+                new_other = other.shuffle(axis, other_is_transposed, lengths=lengths)
             else:
                 new_other = other
         # Most of the time, we will be given an operation to do. We perform that with
-        # manual_shuffle.
+        # shuffle.
         else:
-            new_other = other.manual_shuffle(
+            new_other = other.shuffle(
                 axis,
-                right_func,
-                new_self.block_lengths if axis == 0 else new_self.block_widths,
-                transposed=other_is_transposed,
+                other_is_transposed,
+                lengths=lengths,
+                old_labels=old_index,
+                new_labels=new_index,
             )
-        return new_self, new_other
+        return new_other
 
     def map_across_full_axis(self, axis, map_func):
         """Applies `map_func` to every partition.
@@ -1144,26 +1140,154 @@ class BaseFrameManager(object):
         )
         return self.__constructor__(result) if axis else self.__constructor__(result.T)
 
-    def manual_shuffle(self, axis, shuffle_func, lengths, transposed=False):
+    def shuffle(
+        self,
+        axis,
+        is_transposed,
+        lengths=None,
+        old_labels=None,
+        new_labels=None,
+        fill_value=np.NaN,
+    ):
+        """Shuffle the partitions to match the lengths and new_labels.
+
+        Args:
+            axis: The axis to shuffle across.
+            is_transposed: True if the internal partitions need to be is_transposed.
+            lengths: The length of each partition to split the result into. If
+            None, calculate the lengths based off of the new_label.
+            old_labels: Current ordering of the labels.
+            new_labels: New ordering of the labels of the data.
+            fill_value: Value to fill the empty partitions with.
+
+        Returns:
+            A new BaseFrameManager object, the type of objec that called this.
+        """
+        # TODO(williamma12): remove this once the metadata class is able to determine is_transposed.
+        new_self = self.transpose() if is_transposed else self
+        block_widths = (
+            new_self.block_lengths if is_transposed else new_self.block_widths
+        )
+        block_lengths = (
+            new_self.block_widths if is_transposed else new_self.block_lengths
+        )
+
+        old_lengths = block_widths if axis else block_lengths
+        if lengths is not None:
+            new_lengths = lengths
+        elif lengths is None:
+            if sum(old_lengths) != len(new_labels):
+                empty_pd_df = pandas.DataFrame(
+                    columns=new_labels if not axis else None,
+                    index=new_labels if axis else None,
+                )
+                num_splits = self._compute_num_partitions()
+                new_lengths = compute_lengths(empty_pd_df, axis ^ 1, num_splits)
+            else:
+                new_lengths = old_lengths
+
+        new_partitions, old_partition_splits = compute_partition_shuffle(
+            old_lengths, new_lengths, old_labels, new_labels
+        )
+
+        # Convert the existing partitions to the splits that we need and convert the
+        # empty partitions to their lengths to be added when concating.
+        partitions = self.partitions.T if axis else self.partitions
+        old_partitions = {}
+        empty_partitions = []
+        for idx, splits in old_partition_splits.items():
+            if idx == -1:
+                empty_partitions = [len(split) for split in splits]
+            else:
+                old_partitions[idx] = np.array(
+                    [
+                        part.split(axis, is_transposed, splits)
+                        for part in partitions[idx]
+                    ]
+                )
+
+        return self._shuffle(
+            axis,
+            is_transposed,
+            new_lengths,
+            new_partitions,
+            old_partitions,
+            empty_partitions,
+            fill_value=fill_value,
+        )
+
+    def _shuffle(
+        self,
+        axis,
+        is_transposed,
+        lengths,
+        new_partitions,
+        old_partitions,
+        empty_partitions,
+        fill_value=np.NaN,
+        func=None,
+        **kwargs
+    ):
         """Shuffle the partitions based on the `shuffle_func`.
 
         Args:
             axis: The axis to shuffle across.
-            shuffle_func: The function to apply before splitting the result.
+            is_transposed: True if the internal partitions need to be is_transposed.
             lengths: The length of each partition to split the result into.
+            new_partitions: List of tuples, each of which contain the new partition
+            index and a list of tuples of the old partition index and the index of
+            the split in old_partitions.
+            old_partitions: Dictionary with key as the old partition index and values
+            as an array of partitions that is the original partitions split for
+            shuffling.
+            empty_partitions: List of integers containing how long each empty
+            partition should be.
+            fill_value: Value to fill the empty partitions with.
+            func: Function to apply after partitions are shuffled.
 
         Returns:
              A new BaseFrameManager object, the type of object that called this.
         """
-        if axis:
-            partitions = self.row_partitions
-        else:
-            partitions = self.column_partitions
-        func = self.preprocess_func(shuffle_func)
-        result = np.array(
-            [part.shuffle(func, lengths, _transposed=transposed) for part in partitions]
+        kwargs["_fill_value"] = fill_value
+
+        # TODO(williamma12): remove this once the metadata class is able to determine is_transposed.
+        new_self = self.transpose() if is_transposed else self
+        block_widths = (
+            new_self.block_lengths if is_transposed else new_self.block_widths
         )
-        return self.__constructor__(result) if axis else self.__constructor__(result.T)
+        block_lengths = (
+            new_self.block_widths if is_transposed else new_self.block_lengths
+        )
+
+        result = []
+        # We repeat this for the number of rows if we are shuffling the columns and
+        # repeat it for the number of columns if we are shuffling the rows.
+        for row_idx in range(len(self.partitions) if axis else len(self.partitions.T)):
+            axis_parts = []
+            for col_idx in range(len(lengths)):
+                if lengths[col_idx] == 0:
+                    continue
+                # Get the partition splits needed for the block.
+                block_parts = [
+                    old_partitions[idx][row_idx, split_idx]
+                    if idx != -1
+                    else empty_partitions[split_idx]
+                    for idx, split_idx in new_partitions[col_idx]
+                ]
+
+                # Create shuffled data and create partition.
+                part_width = lengths[col_idx] if axis else block_widths[row_idx]
+                part_length = block_lengths[row_idx] if axis else lengths[col_idx]
+                part = self._partition_class.shuffle(
+                    axis, func, part_length, part_width, *block_parts, **kwargs
+                )
+                axis_parts.append(part)
+            result.append(axis_parts)
+        return (
+            self.__constructor__(np.array(result))
+            if axis
+            else self.__constructor__(np.array(result).T)
+        )
 
     def __getitem__(self, key):
         return self.__constructor__(self.partitions[key])
