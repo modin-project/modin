@@ -222,7 +222,7 @@ class RayIO(BaseIO):
                 for i in range(0, len(columns), column_splits)
             ]
 
-            pf = ParquetFile(path, memory_map=False)
+            pf = ParquetFile(path)
             num_row_groups = pf.metadata.num_row_groups
 
             row_group_splits = (

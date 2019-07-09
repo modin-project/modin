@@ -65,7 +65,7 @@ def _read_parquet_columns(
             pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
             for rowgroup in rowgroups
         ]
-        total_df_length = sum([len(df.index) for df in df_list])
+        total_df_length = sum(len(df.index) for df in df_list)
         return df_list + [total_df_length]
     else:
         df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
