@@ -532,7 +532,6 @@ class BasePandasDataset(object):
         Returns:
             values: ndarray
         """
-        # TODO this is very inefficient, also see __array__
         return self.to_numpy()
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
@@ -3161,11 +3160,13 @@ class BasePandasDataset(object):
         return self._binary_op("__and__", other, axis=0)
 
     def __array__(self, dtype=None):
-        # TODO: This is very inefficient and needs fix, also see as_matrix
         return self.to_numpy(dtype)
 
     def __array_wrap__(self, result, context=None):
-        # TODO: This is very inefficient, see also __array__ and as_matrix
+        """TODO: This is very inefficient. __array__ and as_matrix have been
+        changed to call the more efficient to_numpy, but this has been left
+        unchanged since we are not sure of its purpose.
+        """
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def __copy__(self, deep=True):
