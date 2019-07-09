@@ -527,9 +527,7 @@ class BaseFrameManager(object):
         Returns:
             A NumPy Array
         """
-        arr = np.block(
-            [[block.to_pandas().values for block in row] for row in self.partitions]
-        )
+        arr = np.block([[block.to_numpy() for block in row] for row in self.partitions])
         if is_transposed:
             return arr.T
         return arr
