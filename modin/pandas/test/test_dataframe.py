@@ -1059,13 +1059,13 @@ class TestDFPartOne:
     def test_to_numpy(self):
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
-        assert assert_array_equal(frame.values, test_data.frame.values)
+        assert_array_equal(frame.values, test_data.frame.values)
 
     def test_partition_to_numpy(self):
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
         for partition in frame._query_compiler.data.partitions.flatten().tolist():
-            assert assert_array_equal(
+            assert_array_equal(
                 partition.to_pandas().values, partition.to_numpy()
             )
 
