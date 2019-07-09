@@ -5,6 +5,7 @@ from __future__ import print_function
 from io import BytesIO
 
 import ray
+import pandas
 import pyarrow as pa
 import pyarrow.csv as csv
 
@@ -51,7 +52,12 @@ def _read_csv_with_offset_pyarrow_on_ray(
         pa.Table.from_arrays(table.columns[chunksize * i : chunksize * (i + 1)])
         for i in range(num_splits)
     ]
-    return chunks + [table.num_rows]
+    return chunks + [
+        table.num_rows,
+        pandas.Series(
+            [t.to_pandas_dtype() for t in table.schema.types], index=table.schema.names
+        ),
+    ]
 
 
 class PyarrowOnRayIO(RayIO):
