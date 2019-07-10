@@ -532,7 +532,9 @@ class BasePandasDataset(object):
         Returns:
             values: ndarray
         """
-        return self.to_numpy()
+        if columns is None:
+            return self.to_numpy()
+        return self.__getitem__(columns).to_numpy()
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas(
