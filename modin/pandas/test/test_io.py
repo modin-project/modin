@@ -378,8 +378,6 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
-
-
 def test_from_parquet(make_parquet_file):
     make_parquet_file(SMALL_ROW_SIZE)
 
@@ -614,9 +612,10 @@ def test_from_csv(make_csv_file):
 
         assert modin_df_equals_pandas(modin_df, pandas_df)
 
+
 def test_from_csv_gzip(make_csv_file):
     make_csv_file(compression="gzip")
-    gzip_path = TEST_CSV_FILENAME + ".gz"
+    gzip_path = "{}.gz".format(TEST_CSV_FILENAME)
 
     pandas_df = pandas.read_csv(gzip_path)
     modin_df = pd.read_csv(gzip_path)
@@ -629,7 +628,7 @@ def test_from_csv_gzip(make_csv_file):
 
 def test_from_csv_bz2(make_csv_file):
     make_csv_file(compression="bz2")
-    bz2_path = TEST_CSV_FILENAME + ".bz2"
+    bz2_path = "{}.bz2".format(TEST_CSV_FILENAME)
 
     pandas_df = pandas.read_csv(bz2_path)
     modin_df = pd.read_csv(bz2_path)
@@ -640,23 +639,23 @@ def test_from_csv_bz2(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(sys.version_info[0] == 2)  # pandas implementation fails for python2
 def test_from_csv_xz(make_csv_file):
-    if not PY2:
-        make_csv_file(compression="xz")
-        xz_path = TEST_CSV_FILENAME + ".xz"
+    make_csv_file(compression="xz")
+    xz_path = "{}.xz".format(TEST_CSV_FILENAME)
 
-        pandas_df = pandas.read_csv(xz_path)
-        modin_df = pd.read_csv(xz_path)
-        df_equals(modin_df, pandas_df)
+    pandas_df = pandas.read_csv(xz_path)
+    modin_df = pd.read_csv(xz_path)
+    df_equals(modin_df, pandas_df)
 
-        pandas_df = pandas.read_csv(xz_path, compression="xz")
-        modin_df = pd.read_csv(xz_path, compression="xz")
-        df_equals(modin_df, pandas_df)
+    pandas_df = pandas.read_csv(xz_path, compression="xz")
+    modin_df = pd.read_csv(xz_path, compression="xz")
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_zip(make_csv_file):
     make_csv_file(compression="zip")
-    zip_path = TEST_CSV_FILENAME + ".zip"
+    zip_path = "{}.zip".format(TEST_CSV_FILENAME)
 
     pandas_df = pandas.read_csv(zip_path)
     modin_df = pd.read_csv(zip_path)
