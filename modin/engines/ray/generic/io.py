@@ -395,9 +395,9 @@ class RayIO(BaseIO):
             else:
                 column_widths = [
                     column_chunksize
-                    if len(column_names) > (column_chunksize * (i+1))
-                    else 
-                    0 if len(column_names) < (column_chunksize * i)
+                    if len(column_names) > (column_chunksize * (i + 1))
+                    else 0
+                    if len(column_names) < (column_chunksize * i)
                     else len(column_names) - (column_chunksize * i)
                     for i in range(num_splits)
                 ]
