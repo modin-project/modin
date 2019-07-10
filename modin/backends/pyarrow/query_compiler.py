@@ -202,6 +202,4 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         ErrorMessage.catch_bugs_and_request_email(
             len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
         )
-        if len(self.columns) == 1 and self.columns[0] == "__reduced__":
-            arr = arr.flatten()
         return arr

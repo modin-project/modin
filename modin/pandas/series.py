@@ -124,6 +124,9 @@ class Series(BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
+    def __array__(self, dtype=None):
+        return super(Series, self).__array__(dtype).flatten()
+
     def __array_prepare__(self, result, context=None):  # pragma: no cover
         return self._default_to_pandas(
             pandas.Series.__array_prepare__, result, context=context
@@ -261,6 +264,15 @@ class Series(BasePandasDataset):
     __ipow__ = __pow__
     __isub__ = __sub__
     __itruediv__ = __truediv__
+
+    @property
+    def values(self):
+        """Create a numpy array with the values from this Series.
+
+        Returns:
+            The numpy representation of this object.
+        """
+        return super(Series, self).to_numpy().flatten()
 
     def __xor__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
@@ -1038,6 +1050,19 @@ class Series(BasePandasDataset):
 
     def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list)
+
+    def to_numpy(self, dtype=None, copy=False):
+        """Convert the Series to a NumPy array.
+
+        Args:
+            dtype: The dtype to pass to numpy.asarray()
+            copy: Whether to ensure that the returned value is a not a view on another
+                array.
+
+        Returns:
+            A numpy array.
+        """
+        return super(Series, self).to_numpy(dtype, copy).flatten()
 
     tolist = to_list
 

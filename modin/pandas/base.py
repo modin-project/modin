@@ -3162,7 +3162,8 @@ class BasePandasDataset(object):
         return self._binary_op("__and__", other, axis=0)
 
     def __array__(self, dtype=None):
-        return self.to_numpy(dtype)
+        arr = self.to_numpy(dtype)
+        return arr
 
     def __array_wrap__(self, result, context=None):
         """TODO: This is very inefficient. __array__ and as_matrix have been
