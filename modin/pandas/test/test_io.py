@@ -178,9 +178,9 @@ def make_csv_file(delimiter=",", compression="infer"):
                 }
             )
             if compression == "gzip":
-                filename = filename + ".gz"
+                filename = "{}.gz".format(filename)
             elif compression == "zip" or compression == "xz" or compression == "bz2":
-                filename = filename + "." + compression
+                filename = "{fname}.{comp}".format(fname=filename, comp=compression)
 
             df.to_csv(
                 filename, sep=delimiter, encoding=encoding, compression=compression
