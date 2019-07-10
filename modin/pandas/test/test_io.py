@@ -378,57 +378,6 @@ def teardown_fwf_file():
         os.remove(TEST_FWF_FILENAME)
 
 
-def test_read_csv_gzip(make_csv_file):
-    make_csv_file(compression="gzip")
-    gzip_path = TEST_CSV_FILENAME + ".gz"
-
-    pandas_df = pandas.read_csv(gzip_path)
-    modin_df = pd.read_csv(gzip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
-    modin_df = pd.read_csv(gzip_path, compression="gzip")
-    df_equals(modin_df, pandas_df)
-
-
-def test_read_csv_bz2(make_csv_file):
-    make_csv_file(compression="bz2")
-    bz2_path = TEST_CSV_FILENAME + ".bz2"
-
-    pandas_df = pandas.read_csv(bz2_path)
-    modin_df = pd.read_csv(bz2_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(bz2_path, compression="bz2")
-    modin_df = pd.read_csv(bz2_path, compression="bz2")
-    df_equals(modin_df, pandas_df)
-
-
-def test_read_csv_xz(make_csv_file):
-    if not PY2:
-        make_csv_file(compression="xz")
-        xz_path = TEST_CSV_FILENAME + ".xz"
-
-        pandas_df = pandas.read_csv(xz_path)
-        modin_df = pd.read_csv(xz_path)
-        df_equals(modin_df, pandas_df)
-
-        pandas_df = pandas.read_csv(xz_path, compression="xz")
-        modin_df = pd.read_csv(xz_path, compression="xz")
-        df_equals(modin_df, pandas_df)
-
-
-def test_read_csv_zip(make_csv_file):
-    make_csv_file(compression="zip")
-    zip_path = TEST_CSV_FILENAME + ".zip"
-
-    pandas_df = pandas.read_csv(zip_path)
-    modin_df = pd.read_csv(zip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(zip_path, compression="zip")
-    modin_df = pd.read_csv(zip_path, compression="zip")
-    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet(make_parquet_file):
@@ -664,6 +613,58 @@ def test_from_csv(make_csv_file):
         modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
         assert modin_df_equals_pandas(modin_df, pandas_df)
+
+def test_from_csv_gzip(make_csv_file):
+    make_csv_file(compression="gzip")
+    gzip_path = TEST_CSV_FILENAME + ".gz"
+
+    pandas_df = pandas.read_csv(gzip_path)
+    modin_df = pd.read_csv(gzip_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
+    modin_df = pd.read_csv(gzip_path, compression="gzip")
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_bz2(make_csv_file):
+    make_csv_file(compression="bz2")
+    bz2_path = TEST_CSV_FILENAME + ".bz2"
+
+    pandas_df = pandas.read_csv(bz2_path)
+    modin_df = pd.read_csv(bz2_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(bz2_path, compression="bz2")
+    modin_df = pd.read_csv(bz2_path, compression="bz2")
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_xz(make_csv_file):
+    if not PY2:
+        make_csv_file(compression="xz")
+        xz_path = TEST_CSV_FILENAME + ".xz"
+
+        pandas_df = pandas.read_csv(xz_path)
+        modin_df = pd.read_csv(xz_path)
+        df_equals(modin_df, pandas_df)
+
+        pandas_df = pandas.read_csv(xz_path, compression="xz")
+        modin_df = pd.read_csv(xz_path, compression="xz")
+        df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_zip(make_csv_file):
+    make_csv_file(compression="zip")
+    zip_path = TEST_CSV_FILENAME + ".zip"
+
+    pandas_df = pandas.read_csv(zip_path)
+    modin_df = pd.read_csv(zip_path)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(zip_path, compression="zip")
+    modin_df = pd.read_csv(zip_path, compression="zip")
+    df_equals(modin_df, pandas_df)
 
 
 def test_parse_dates_read_csv():
