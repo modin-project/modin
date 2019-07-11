@@ -693,43 +693,63 @@ class RayIO(BaseIO):
         else:
             # TODO: Pick up the columns in an optimized way from all data
             # All rows must be read because some rows may have missing data
-            from io import BytesIO
+            from io import BytesIO                
             columns = pandas.read_json(BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True).columns
+            empty_pd_df = pandas.DataFrame(columns=columns)
 
-            num_partitions = cls.frame_mgr_cls._compute_num_partitions()
-            num_splits = min(len(columns), num_partitions)
+            with file_open(filepath, "rb", kwargs.get("compression", "infer")) as f:
+                total_bytes = file_size(f)
+                num_partitions = cls.frame_mgr_cls._compute_num_partitions()
+                num_splits = min(len(columns), num_partitions)
+                chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
 
-            # Each item in this list will be a list of column names of the original df
-            column_splits = (
-                len(columns) // num_partitions
-                if len(columns) % num_partitions == 0
-                else len(columns) // num_partitions + 1
-            )
-            col_partitions = [
-                columns[i : i + column_splits]
-                for i in range(0, len(columns), column_splits)
-            ]
-            blk_partitions = np.array(
-                [
-                    cls.read_json_remote_task._remote(
-                        args=(path_or_buf, cols, num_splits, kwargs),
-                        num_return_vals=num_splits + 2,
+                partition_ids = []
+                index_ids = []
+
+                column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
+                if column_chunksize > len(columns):
+                    column_widths = [len(columns)]
+                    num_splits = 1
+                else:
+                    column_widths = [
+                        column_chunksize
+                        if i != num_splits - 1
+                        else len(columns) - (column_chunksize * (num_splits - 1))
+                        for i in range(num_splits)
+                    ]
+                
+                while f.tell() < total_bytes:
+                    start = f.tell()
+                    f.seek(chunk_size, os.SEEK_CUR)
+                    f.readline()
+                    partition_id = cls.read_json_remote_task._remote(
+                        args=(
+                            path_or_buf,
+                            num_splits,
+                            start,
+                            f.tell(),
+                            kwargs # Need to verify this
+                        ),
+                        num_return_vals=num_splits + 2
                     )
-                    for cols in col_partitions
-                ]
-            )
-            remote_partitions = np.array(
+                    partition_ids.append(partition_id[:-1])
+                    index_ids.append(partition_id[-1])
+
+            row_lengths = ray.get(index_ids)
+            new_index = pandas.RangeIndex(sum(row_lengths))
+
+            partition_ids = [
                 [
-                    [cls.frame_partition_cls(obj) for obj in row]
-                    for row in blk_partitions[:-2]
+                    cls.frame_partition_cls(
+                        partition_ids[i][j], length=row_lengths[i], width=column_widths[j]
+                    )
+                    for j in range(len(partition_ids[i]))
                 ]
-            )
-            index_len = sum(ray.get(list(blk_partitions[-2])))
-            index = pandas.RangeIndex(index_len)
-            columns_list = ray.get(list(blk_partitions[-1]))
-            columns = columns_list[0].join(columns_list[1:], how="outer", sort=False)
+                for i in range(len(partition_ids))
+            ]
+            
             new_query_compiler = cls.query_compiler_cls(
-                cls.frame_mgr_cls(remote_partitions), index, columns
+                cls.frame_mgr_cls(np.array(partition_ids)), new_index, columns
             )
             return new_query_compiler
 
