@@ -639,7 +639,9 @@ def test_from_csv_bz2(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2)  # pandas implementation fails for python2
+@pytest.mark.skipif(
+    sys.version_info[0] == 2, reason="pandas implementation fails for python2"
+)
 def test_from_csv_xz(make_csv_file):
     make_csv_file(compression="xz")
     xz_path = "{}.xz".format(TEST_CSV_FILENAME)
