@@ -158,6 +158,17 @@ class BaseQueryCompiler(object):
 
     # END To/From Pandas
 
+    # To NumPy
+    def to_numpy(self):
+        """Converts Modin DataFrame to NumPy DataFrame.
+
+        Returns:
+            NumPy Array of the QueryCompiler.
+        """
+        raise NotImplementedError("Must be implemented in children classes")
+
+    # END To NumPy
+
     # Abstract copartition
     def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
         """Copartition two QueryCompiler objects.

@@ -532,8 +532,9 @@ class BasePandasDataset(object):
         Returns:
             values: ndarray
         """
-        # TODO this is very inefficient, also see __array__
-        return self._default_to_pandas("as_matrix", columns=columns)
+        if columns is None:
+            return self.to_numpy()
+        return self.__getitem__(columns).to_numpy()
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas(
@@ -2963,7 +2964,10 @@ class BasePandasDataset(object):
         Returns:
             A numpy array.
         """
-        return self._default_to_pandas("to_numpy", dtype=dtype, copy=copy)
+        arr = self._query_compiler.to_numpy()
+        if dtype is not None:
+            return np.asarray(arr, dtype)
+        return arr
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -3158,11 +3162,14 @@ class BasePandasDataset(object):
         return self._binary_op("__and__", other, axis=0)
 
     def __array__(self, dtype=None):
-        # TODO: This is very inefficient and needs fix, also see as_matrix
-        return self._default_to_pandas("__array__", dtype=dtype)
+        arr = self.to_numpy(dtype)
+        return arr
 
     def __array_wrap__(self, result, context=None):
-        # TODO: This is very inefficient, see also __array__ and as_matrix
+        """TODO: This is very inefficient. __array__ and as_matrix have been
+        changed to call the more efficient to_numpy, but this has been left
+        unchanged since we are not sure of its purpose.
+        """
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def __copy__(self, deep=True):
@@ -3335,7 +3342,7 @@ class BasePandasDataset(object):
         Returns:
             The numpy representation of this object.
         """
-        return self._to_pandas().values
+        return self.to_numpy()
 
     @property
     def __name__(self):

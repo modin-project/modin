@@ -521,6 +521,17 @@ class BaseFrameManager(object):
             else:
                 return pandas.concat(df_rows)
 
+    def to_numpy(self, is_transposed=False):
+        """Convert this object into a NumPy Array from the partitions.
+
+        Returns:
+            A NumPy Array
+        """
+        arr = np.block([[block.to_numpy() for block in row] for row in self.partitions])
+        if is_transposed:
+            return arr.T
+        return arr
+
     @classmethod
     def from_pandas(cls, df):
         num_splits = cls._compute_num_partitions()

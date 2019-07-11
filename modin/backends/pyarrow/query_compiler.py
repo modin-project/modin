@@ -191,3 +191,15 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             df.index = self.index
             df.columns = self.columns
         return df
+
+    def to_numpy(self):
+        """Converts Modin DataFrame to NumPy Array.
+
+        Returns:
+            NumPy Array of the QueryCompiler.
+        """
+        arr = self.data.to_numpy(is_transposed=self._is_transposed)
+        ErrorMessage.catch_bugs_and_request_email(
+            len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
+        )
+        return arr

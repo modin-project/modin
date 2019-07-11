@@ -177,8 +177,7 @@ def test___and__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___array__(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.__array__()
+    modin_result = modin_series.__array__()
     assert_array_equal(modin_result, pandas_series.__array__())
 
 
@@ -741,8 +740,7 @@ def test_as_blocks(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_as_matrix(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.as_matrix()
+    modin_series.as_matrix()
 
 
 def test_asfreq():
@@ -2482,6 +2480,12 @@ def test_to_period():
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
     with pytest.warns(UserWarning):
         series.to_period()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_numpy(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.values, pandas_series.values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
