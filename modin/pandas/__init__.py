@@ -196,7 +196,9 @@ elif execution_engine == "Dask":  # pragma: no cover
             client = Client()
         num_cpus = sum(client.ncores().values())
 elif execution_engine == "Multiprocess":
-    num_cpus = 4    # todo: need to calc this
+    import multiprocessing
+
+    num_cpus = multiprocessing.cpu_count()
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
