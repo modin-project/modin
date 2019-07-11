@@ -81,8 +81,7 @@ def _read_csv_with_offset_pandas_on_ray(
             default Index.
     """
     index_col = kwargs.get("index_col", None)
-    # pop "compression" from kwargs because bio is uncompressed
-    bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
+    bio = file_open(fname, "rb")
     bio.seek(start)
     to_read = header + bio.read(end - start)
     bio.close()
@@ -115,6 +114,14 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
          A list containing the split Pandas DataFrames and the Index as the last
             element. 
     """
+    bio = file_open(fname, "rb")
+    bio.seek(start)
+    to_read = header + bio.read(end - start)
+    bio.close()
+    pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+    partition_columns = pandas_df.columns
+    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
+    return _split_result_for_readers(1, num_splits, pandas_df) + [len(pandas_df)] + [partition_columns]
 
 
 @ray.remote
