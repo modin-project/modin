@@ -225,10 +225,10 @@ class PandasOnPythonFactory(BaseFactory):
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
+    from modin.engines.dask.pandas_on_dask_futures.frame.partition_manager import (
         DaskFrameManager,
     )
-    from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
+    from modin.engines.dask.pandas_on_dask_futures.io import PandasOnDaskIO
 
     query_compiler_cls = PandasQueryCompiler
     block_partitions_cls = DaskFrameManager
