@@ -58,7 +58,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-
+        print(func)
         call_queue = self.call_queue + [[func, kwargs]]
         future = self.client.submit(apply_list_of_funcs, call_queue, self.future)
         return PandasOnDaskFramePartition(future)

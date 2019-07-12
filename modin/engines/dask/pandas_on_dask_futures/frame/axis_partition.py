@@ -2,25 +2,23 @@
 from __future__ import division
 from __future__ import print_function
 
-import pandas
 from distributed.client import _get_global_client
+from distributed import Future
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
 
 
-
-
-class PandasOnMultiprocessFrameAxisPartition(PandasFrameAxisPartition):
+class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
             obj.drain_call_queue()
-        self.list_of_blocks = [obj for obj in list_of_blocks]
+        self.list_of_blocks = [obj.future for obj in list_of_blocks]
 
     partition_type = PandasOnDaskFramePartition
-    instance_type = pandas.DataFrame
+    instance_type = Future
 
     @classmethod
     def deploy_axis_func(
@@ -42,15 +40,8 @@ class PandasOnMultiprocessFrameAxisPartition(PandasFrameAxisPartition):
         # get futures for each.
         return cls._wrap_partitions([client.submit(lambda l: l[i], axis_result) for i in range(num_splits)])
 
-    @classmethod
-    def _wrap_partitions(cls, partitions):
-        if isinstance(partitions, cls.instance_type):
-            return [cls.partition_type(partitions)]
-        else:
-            return [cls.partition_type.put(obj) for obj in partitions]
 
-
-class PandasOnDaskFrameColumnPartition(PandasOnMultiprocessFrameAxisPartition):
+class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
     """The column partition implementation for Multiprocess. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
@@ -59,7 +50,7 @@ class PandasOnDaskFrameColumnPartition(PandasOnMultiprocessFrameAxisPartition):
     axis = 0
 
 
-class PandasOnDaskFrameRowPartition(PandasOnMultiprocessFrameAxisPartition):
+class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     """The row partition implementation for Multiprocess. All of the implementation
         for this class is in the parent class, and this class defines the axis
         to perform the computation over.
