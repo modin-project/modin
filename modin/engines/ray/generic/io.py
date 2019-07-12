@@ -646,9 +646,7 @@ class RayIO(BaseIO):
             ErrorMessage.default_to_pandas("`read_csv` with `nrows`")
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
-            return cls._read_csv_from_file_pandas_on_ray(
-                filepath_or_buffer, filtered_kwargs
-            )
+            return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
     
     @classmethod
     def read_json(

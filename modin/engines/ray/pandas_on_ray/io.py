@@ -116,7 +116,7 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
     """
     bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
     bio.seek(start)
-    to_read = header + bio.read(end - start)
+    to_read = b"" + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
     partition_columns = pandas_df.columns
