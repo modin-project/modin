@@ -28,7 +28,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         axis_result = client.submit(PandasFrameAxisPartition.deploy_axis_func, axis, func, num_splits, kwargs, maintain_partitioning, *partitions)
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
-        return cls._wrap_partitions([client.submit(lambda l: l[i], axis_result) for i in range(num_splits)])
+        return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
@@ -38,7 +38,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         axis_result = client.submit(PandasFrameAxisPartition.deploy_func_between_two_axis_partitions, axis, func, num_splits, len_of_left, kwargs, *partitions)
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
-        return cls._wrap_partitions([client.submit(lambda l: l[i], axis_result) for i in range(num_splits)])
+        return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
 
 
 class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):

@@ -58,7 +58,6 @@ class PandasOnDaskFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-        print(func)
         call_queue = self.call_queue + [[func, kwargs]]
         future = self.client.submit(apply_list_of_funcs, call_queue, self.future)
         return PandasOnDaskFramePartition(future)
@@ -77,7 +76,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
+        # new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
         return new_obj
 
     def __copy__(self):
@@ -110,7 +109,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
             A `RemotePartitions` object.
         """
         client = _get_global_client()
-        return cls(client.submit(lambda x: x, obj))
+        return cls(client.scatter(obj))
 
     @classmethod
     def preprocess_func(cls, func):
