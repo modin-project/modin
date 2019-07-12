@@ -101,3 +101,27 @@ class RayFrameManager(BaseFrameManager):
                     ]
                 )
         return self._widths_cache
+
+    def to_numpy(self, is_transposed=False):
+        """Convert this object into a NumPy Array from the partitions.
+
+        Returns:
+            A NumPy Array
+        """
+        parts = ray.get(
+            [
+                obj.apply(lambda df: df.to_numpy()).oid
+                for row in self.partitions
+                for obj in row
+            ]
+        )
+        n = self.partitions.shape[1]
+        parts = [
+            parts[i * n : (i + 1) * n] for i in list(range(self.partitions.shape[0]))
+        ]
+        # This is faster for smaller tables, say 100x100 but slower for larger tables
+        # Than np.block. Not sure if you want a hybrid or just use np.block
+        arr = np.concatenate([np.concatenate(p, axis=1) for p in parts], axis=0)
+        if is_transposed:
+            return arr.T
+        return arr
