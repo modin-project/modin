@@ -103,8 +103,6 @@ class RayIO(BaseIO):
     read_json_remote_task = None
     # For reading JSON files and other text files in parallel, this task should read
     # based on the offsets in the signature (`start` and `stop` are byte offsets).
-    # `prefix_id` is the `b""` prefix for reading with a `BytesIO` object and it will
-    # also contain encoding information in the string.
     #
     # Signature: (filepath, num_splits, start, stop, kwargs)
 
@@ -667,7 +665,6 @@ class RayIO(BaseIO):
         compression="infer",
     ):
         kwargs = {
-            "path_or_buf": path_or_buf,
             "orient": orient,
             "typ": typ,
             "dtype": dtype,
@@ -693,9 +690,9 @@ class RayIO(BaseIO):
             # All rows must be read because some rows may have missing data
             from io import BytesIO                
             columns = pandas.read_json(BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True).columns
-            empty_pd_df = pandas.DataFrame(columns=columns)
+            empty_pd_df = pandas.DataFrame(columns=columns).astype(dtype=dtype)
 
-            with file_open(filepath, "rb", kwargs.get("compression", "infer")) as f:
+            with file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
                 total_bytes = file_size(f)
                 num_partitions = cls.frame_mgr_cls._compute_num_partitions()
                 num_splits = min(len(columns), num_partitions)
@@ -726,12 +723,12 @@ class RayIO(BaseIO):
                             num_splits,
                             start,
                             f.tell(),
-                            kwargs # Need to verify this
+                            kwargs
                         ),
                         num_return_vals=num_splits + 2
                     )
-                    partition_ids.append(partition_id[:-1])
-                    index_ids.append(partition_id[-1])
+                    partition_ids.append(partition_id[:-2])
+                    index_ids.append(partition_id[-2])
 
             row_lengths = ray.get(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
