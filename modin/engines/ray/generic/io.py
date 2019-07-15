@@ -265,11 +265,14 @@ class RayIO(BaseIO):
             print("### col_partitions: ") 
             pp.pprint(col_partitions) 
 
+            # Note: In the nested list comprehnsion below, the expression  j==row_group_partitions[0],
+            #       controls the return of the dtypes array, which for effiicency is only returned 
+            #       from the first remote call for the first row group                      
             blocks_with_lengths = [
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, col_partitions[i], 1, j, kwargs),
-                        num_return_vals=len(j) + 2,
+                        args=(path, col_partitions[i], 1, j, True, True if j==row_group_partitions[0] else False, kwargs),
+                        num_return_vals= (len(j) + 2) if j==row_group_partitions[0] else (len(j) + 1),
                     )
                     for i in range(len(col_partitions))
                 ]
@@ -302,6 +305,9 @@ class RayIO(BaseIO):
             row_total = ray.put(total_count)
             datatypes_row = ray.put(my_data_types)
             '''
+
+
+            ''' 
             for rowgroup_idx in range(len(row_group_partitions)):
               print("Processing rowgroup: " + str(rowgroup_idx))
               print("test: " + str(row_group_partitions[rowgroup_idx])) 
@@ -318,13 +324,34 @@ class RayIO(BaseIO):
               my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])
             row_total = ray.put(total_count)
             datatypes_row = ray.put(my_data_types)
-              
-                 
+            '''
+
+            #process first row group
+            rowgroup_idx = 0
+            for z in range(len(row_group_partitions[rowgroup_idx])):
+                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
+            cur_len_index = len(row_group_partitions[rowgroup_idx])
+            cur_datatype_index = len(row_group_partitions[rowgroup_idx]) + 1
+            total_count = total_count + ray.get(blocks_with_lengths[rowgroup_idx][0][cur_len_index])                                                                                                                                                                                                        
+            my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])   
+            datatypes_row = ray.put(my_data_types)   
+
+            for rowgroup_idx in range(1, len(row_group_partitions)):
+              print("Processing rowgroup: " + str(rowgroup_idx))
+              print("test: " + str(row_group_partitions[rowgroup_idx])) 
+              for z in range(len(row_group_partitions[rowgroup_idx])):
+                print("From rowgroup: " + str(rowgroup_idx) + " " + "processing split number: " + str(z) + " appending to blk_partitions")
+                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
+              cur_len_index = len(row_group_partitions[rowgroup_idx])
+              total_count = total_count + ray.get(                                                                                                                                                               
+                        blocks_with_lengths[rowgroup_idx][0][cur_len_index]                                                                                                                                                       
+              )
+            row_total = ray.put(total_count)
+
+
             blk_partitions.append([row_total])
             blk_partitions.append([datatypes_row])
             
-
-
         else:
 
             # Each item in this list will be a list of column names of the original df
@@ -351,12 +378,12 @@ class RayIO(BaseIO):
             blk_partitions = np.array(
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, cols + partitioned_columns, num_splits, [], kwargs),
+                        args=(path, cols + partitioned_columns, num_splits, [], True, True, kwargs),
                         num_return_vals=num_splits + 2,
                     )
                     if directory and cols == col_partitions[len(col_partitions) - 1]
                     else cls.read_parquet_remote_task._remote(
-                        args=(path, cols, num_splits, [], kwargs),
+                        args=(path, cols, num_splits, [], True, True, kwargs),
                         num_return_vals=num_splits + 2,
                     )
                     for cols in col_partitions
