@@ -57,6 +57,35 @@ def file_open(file_path, mode="rb", compression="infer"):
             import gzip
 
             return gzip.open(file_path, mode=mode)
+        elif compression == "bz2":
+            import bz2
+
+            return bz2.BZ2File(file_path, mode=mode)
+        elif compression == "xz":
+            import lzma
+
+            return lzma.LZMAFile(file_path, mode=mode)
+        elif compression == "zip":
+            import zipfile
+
+            zf = zipfile.ZipFile(file_path, mode=mode.replace("b", ""))
+            if zf.mode == "w":
+                return zf
+            elif zf.mode == "r":
+                zip_names = zf.namelist()
+                if len(zip_names) == 1:
+                    f = zf.open(zip_names.pop())
+                    return f
+                elif len(zip_names) == 0:
+                    raise ValueError(
+                        "Zero files found in ZIP file {}".format(file_path)
+                    )
+                else:
+                    raise ValueError(
+                        "Multiple files found in ZIP file."
+                        " Only one file per ZIP: {}".format(zip_names)
+                    )
+
     return open(file_path, mode=mode)
 
 
@@ -680,12 +709,25 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
+            compression_type = _infer_compression(
+                filepath_or_buffer, kwargs.get("compression")
+            )
             if (
-                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
-                == "gzip"
+                compression_type == "gzip" and sys.version_info[0] == 3
+            ):  # python2 cannot seek from end
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "bz2":
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "xz" and sys.version_info[0] == 3:
+                # .xz compression fails in pandas for python2
+                filtered_kwargs["compression"] = compression_type
+            elif (
+                compression_type == "zip"
                 and sys.version_info[0] == 3
+                and sys.version_info[1] >= 7
             ):
-                filtered_kwargs["compression"] = "gzip"
+                # need python3.7 to .seek and .tell ZipExtFile
+                filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
