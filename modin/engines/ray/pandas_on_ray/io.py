@@ -33,7 +33,7 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
 
 
 @ray.remote
-def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
+def _read_parquet_columns(path, columns, num_splits, rowgroups, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
     Note: Ray functions are not detected by codecov (thus pragma: no cover)
@@ -50,12 +50,24 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
             default Index.
     """
     import pyarrow.parquet as pq
+    from pyarrow.parquet import ParquetFile
 
     kwargs["use_pandas_metadata"] = True
-    df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
-    df = df[columns]
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+
+    if not len(rowgroups) == 0:
+        pf = ParquetFile(path)
+        df_list = [
+            pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
+            for rowgroup in rowgroups
+        ]
+        total_df_length = sum(len(df.index) for df in df_list)
+        dtypes = df_list[0].dtypes
+        return df_list + [total_df_length] + [dtypes]
+    else:
+        df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
+        df = df[columns]
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
 
 @ray.remote
