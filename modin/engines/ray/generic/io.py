@@ -455,6 +455,21 @@ class RayIO(BaseIO):
 
         import sqlalchemy as sa
 
+        try:
+            import psycopg2 as pg
+
+            if isinstance(con, pg.extensions.connection):
+                con = "postgresql+psycopg2://{}:{}@{}{}/{}".format(  # Table in DB
+                    con.info.user,  # <Username>: for DB
+                    con.info.password,  # Password for DB
+                    con.info.host if con.info.host != "/tmp" else "",  # @<Hostname>
+                    (":" + str(con.info.port))
+                    if con.info.host != "/tmp"
+                    else "",  # <port>
+                    con.info.dbname,  # Table in DB
+                )
+        except ImportError:
+            pass
         # In the case that we are given a SQLAlchemy Connection or Engine, the objects
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
