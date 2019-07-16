@@ -2186,8 +2186,8 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
-        if level is not None:
-            new_query_compiler = self._default_to_pandas(
+        if level is not None or isinstance(self.index, pandas.MultiIndex):
+            return self._default_to_pandas(
                 "reset_index",
                 level=level,
                 drop=drop,
