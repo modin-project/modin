@@ -33,7 +33,7 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
 
 
 @ray.remote
-def _read_parquet_columns(path, columns, num_splits, rowgroups,  do_return_length, do_return_dtypes, kwargs):  # pragma: no cover
+def _read_parquet_columns(path, columns, num_splits, rowgroups,  do_return_length, do_return_dtypes, do_return_split_lengths, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
     Note: Ray functions are not detected by codecov (thus pragma: no cover)
@@ -42,12 +42,13 @@ def _read_parquet_columns(path, columns, num_splits, rowgroups,  do_return_lengt
         path: The path of the Parquet file.
         columns: The list of column names to read.
         num_splits: The number of partitions to split the column into.
+        do_return_length: If True return the total summed row count of all splits.
+        do_return_dtypes: If True return an array of datatype metadata.
+        do return_split_lengths: If True return an array containing the lengths of each split.
 
     Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
+         A list containing the split Pandas DataFrames.
+         Optionally, the total length, datatypes, and the lengths of each split may be returned.
     """
     import pyarrow.parquet as pq
     from pyarrow.parquet import ParquetFile
@@ -60,9 +61,10 @@ def _read_parquet_columns(path, columns, num_splits, rowgroups,  do_return_lengt
             pf.read_row_group(rowgroup, columns, **kwargs).to_pandas()
             for rowgroup in rowgroups
         ]
-        total_df_length = sum(len(df.index) for df in df_list)
+        df_lengths = [len(df.index) for df in df_list]
+        total_df_length = sum(df_lengths)
         dtypes = df_list[0].dtypes
-        return df_list + ( [total_df_length] if do_return_length else [] ) +  ( [dtypes] if do_return_dtypes else [])
+        return df_list + ( [total_df_length] if do_return_length else [] ) +  ( [dtypes] if do_return_dtypes else []) + ( [df_lengths] if do_return_split_lengths else []) 
     else:
         df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
         df = df[columns]

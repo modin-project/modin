@@ -228,14 +228,9 @@ class RayIO(BaseIO):
         num_partitions = cls.frame_mgr_cls._compute_num_partitions()
         num_splits = min(len(columns), num_partitions)
 
+        row_lengths = []
 
-        #########################################################################
-
-        
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-
-
+        # only read Parquet row groups in parallel if data is not partitioned in a directory
         if not directory:
             column_splits = len(columns)
             col_partitions = [
@@ -259,101 +254,56 @@ class RayIO(BaseIO):
                 for i in range(0, num_row_groups, row_group_splits)
             ]
 
-
-            print("#### row_group_partitions:")
-            pp.pprint(row_group_partitions)    
-            print("### col_partitions: ") 
-            pp.pprint(col_partitions) 
-
             # Note: In the nested list comprehnsion below, the expression  j==row_group_partitions[0],
-            #       controls the return of the dtypes array, which for effiicency is only returned 
+            #       controls the return of the dtypes array, which for efficiency is only returned 
             #       from the first remote call for the first row group                      
             blocks_with_lengths = [
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, col_partitions[i], 1, j, True, True if j==row_group_partitions[0] else False, kwargs),
-                        num_return_vals= (len(j) + 2) if j==row_group_partitions[0] else (len(j) + 1),
+                        args=(path, col_partitions[i], 1, j, True, True if j==row_group_partitions[0] else False, True, kwargs),
+                        num_return_vals= (len(j) + 3) if j==row_group_partitions[0] else (len(j) + 2),
                     )
                     for i in range(len(col_partitions))
                 ]
                 for j in row_group_partitions
             ]
 
-            import pprint
-            pp = pprint.PrettyPrinter(indent=4)
-            print("#### blocks_with_lengths")  
-            pp.pprint(blocks_with_lengths) 
-
-
             blk_partitions = []
             total_count = 0
-
-
             my_data_types = []          
 
-            '''   
-            for j in range(len(row_group_partitions)):
-                for i in range(len(col_partitions)):
-                    for z in range(len(row_group_partitions[j]) - 1):
-                        blk_partitions.append([blocks_with_lengths[j][i][z]])
-                    cur_len_index = len(row_group_partitions[j]) - 1
-                    total_count = total_count + ray.get(
-                        blocks_with_lengths[j][i][cur_len_index]
-                    )
-                    cur_datatype_index = len(row_group_partitions[j])
-                    my_data_types = ray.get(blocks_with_lengths[j][i][cur_datatype_index]) 
-            row_total = ray.put(total_count)
-            datatypes_row = ray.put(my_data_types)
-            '''
-
-
-            ''' 
-            for rowgroup_idx in range(len(row_group_partitions)):
-              print("Processing rowgroup: " + str(rowgroup_idx))
-              print("test: " + str(row_group_partitions[rowgroup_idx])) 
-              for z in range(len(row_group_partitions[rowgroup_idx])):
-                print("From rowgroup: " + str(rowgroup_idx) + " " + "processing split number: " + str(z) + " appending to blk_partitions")
-                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
-              cur_len_index = len(row_group_partitions[rowgroup_idx])
-              cur_datatype_index = len(row_group_partitions[rowgroup_idx]) + 1
-              print("cur_len_index: " + str(cur_len_index))
-              print("cur_datatype_index: " + str(cur_datatype_index))
-              total_count = total_count + ray.get(                                                                                                                                                               
-                        blocks_with_lengths[rowgroup_idx][0][cur_len_index]                                                                                                                                                       
-              )
-              my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])
-            row_total = ray.put(total_count)
-            datatypes_row = ray.put(my_data_types)
-            '''
-
-            #process first row group
+            # process first row group partition
             rowgroup_idx = 0
             for z in range(len(row_group_partitions[rowgroup_idx])):
-                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
+                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])             
             cur_len_index = len(row_group_partitions[rowgroup_idx])
             cur_datatype_index = len(row_group_partitions[rowgroup_idx]) + 1
-            total_count = total_count + ray.get(blocks_with_lengths[rowgroup_idx][0][cur_len_index])                                                                                                                                                                                                        
+            cur_split_lengths_index = len(row_group_partitions[rowgroup_idx]) + 2
+            row_lengths.extend(ray.get(blocks_with_lengths[rowgroup_idx][0][cur_split_lengths_index]))
+            total_count = total_count + ray.get(blocks_with_lengths[rowgroup_idx][0][cur_len_index])
+                                                                                       
+            # prepare metdata                                                                                                                 
             my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])   
             datatypes_row = ray.put(my_data_types)   
 
+            # process remaining row group partitions  
             for rowgroup_idx in range(1, len(row_group_partitions)):
-              print("Processing rowgroup: " + str(rowgroup_idx))
-              print("test: " + str(row_group_partitions[rowgroup_idx])) 
               for z in range(len(row_group_partitions[rowgroup_idx])):
-                print("From rowgroup: " + str(rowgroup_idx) + " " + "processing split number: " + str(z) + " appending to blk_partitions")
                 blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
               cur_len_index = len(row_group_partitions[rowgroup_idx])
-              total_count = total_count + ray.get(                                                                                                                                                               
+              cur_split_lengths_index = len(row_group_partitions[rowgroup_idx]) + 1
+              row_lengths.extend(ray.get(blocks_with_lengths[rowgroup_idx][0][cur_split_lengths_index]))
+
+              total_count = total_count + ray.get(                                                            
                         blocks_with_lengths[rowgroup_idx][0][cur_len_index]                                                                                                                                                       
               )
             row_total = ray.put(total_count)
-
 
             blk_partitions.append([row_total])
             blk_partitions.append([datatypes_row])
             
+        # the data is partitioned in a dirctory
         else:
-
             # Each item in this list will be a list of column names of the original df
             column_splits = (
                 len(columns) // num_partitions
@@ -378,47 +328,40 @@ class RayIO(BaseIO):
             blk_partitions = np.array(
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, cols + partitioned_columns, num_splits, [], True, True, kwargs),
+                        args=(path, cols + partitioned_columns, num_splits, [], True, True, False, kwargs),
                         num_return_vals=num_splits + 2,
                     )
                     if directory and cols == col_partitions[len(col_partitions) - 1]
                     else cls.read_parquet_remote_task._remote(
-                        args=(path, cols, num_splits, [], True, True, kwargs),
+                        args=(path, cols, num_splits, [], True, True, False, kwargs),
                         num_return_vals=num_splits + 2,
                     )
                     for cols in col_partitions
                 ]
             ).T
 
-
-        #######################################################################
-
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        print("#### blk_partitions")  
-        pp.pprint(blk_partitions) 
-
-        #print("blk_partitions [5][0]: " + str(blk_partitions[5][0]) + " " + str(ray.get(blk_partitions[5][0]))  ) 
-        #print("blk_partitions [5][1]: " + str(blk_partitions[5][1])  + " " + str(ray.get(blk_partitions[5][1]))  ) 
-        #print("blk_partitions [6][0]: " + str(blk_partitions[6][0])  + " " + str(ray.get(blk_partitions[6][0])) ) 
-        #print("blk_partitions [6][1]: " + str(blk_partitions[6][1])  + " " + str(ray.get(blk_partitions[6][1])) ) 
-        print("blk_partitions [-2][0]: " + str(blk_partitions[-2][0])  + " " + str(ray.get(blk_partitions[-2][0])) ) 
-
         # Metadata
         index_len = ray.get(blk_partitions[-2][0])
         index = pandas.RangeIndex(index_len)
         index_chunksize = compute_chunksize(
             pandas.DataFrame(index=index), num_splits, axis=0
-        )
-        if index_chunksize > index_len:
-            row_lengths = [index_len] + [0 for _ in range(num_splits - 1)]
-        else:
-            row_lengths = [
-                index_chunksize
-                if i != num_splits - 1
-                else index_len - (index_chunksize * (num_splits - 1))
-                for i in range(num_splits)
-            ]
+        )   
+
+        # If the data is partitioned in a directory, compute the row_lengths as below 
+        if directory:
+            index_chunksize = compute_chunksize(
+                pandas.DataFrame(index=index), num_splits, axis=0
+            )
+            if index_chunksize > index_len:
+                row_lengths = [index_len] + [0 for _ in range(num_splits - 1)]
+            else:
+                row_lengths = [
+                    index_chunksize
+                    if i != num_splits - 1
+                    else index_len - (index_chunksize * (num_splits - 1))
+                    for i in range(num_splits)
+                 ]
+
         # Compute dtypes concatenating the results from each of the columns splits
         # determined above. This creates a pandas Series that contains a dtype for every
         # column.
@@ -426,6 +369,7 @@ class RayIO(BaseIO):
         dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
 
         blk_partitions = blk_partitions[:-2]
+
         remote_partitions = np.array(
             [
                 [
