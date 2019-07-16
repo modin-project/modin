@@ -2911,6 +2911,17 @@ class TestDFPartOne:
             # DataFrame
             df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
+            # List-like of booleans
+            indices = [
+                True if i % 3 == 0 else False for i in range(len(modin_df.index))
+            ]
+            columns = [
+                True if i % 5 == 0 else False for i in range(len(modin_df.columns))
+            ]
+            modin_result = modin_df.loc[indices, columns]
+            pandas_result = pandas_df.loc[indices, columns]
+            df_equals(modin_result, pandas_result)
+
             # See issue #80
             # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
             df_equals(modin_df.loc[1:2, key1:key2], pandas_df.loc[1:2, key1:key2])

@@ -1702,6 +1702,11 @@ def test_loc(data):
         df_equals(modin_series.loc[v], pandas_series.loc[v])
         df_equals(modin_series.loc[v:], pandas_series.loc[v:])
 
+    indices = [True if i % 3 == 0 else False for i in range(len(modin_series.index))]
+    modin_result = modin_series.loc[indices]
+    pandas_result = pandas_series.loc[indices]
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lt(data):
