@@ -255,13 +255,13 @@ class RayIO(BaseIO):
             ]
 
             # Note: In the nested list comprehnsion below, the expression  j==row_group_partitions[0],
-            #       controls the return of the dtypes array, which for efficiency is only returned 
-            #       from the first remote call for the first row group                      
+            #       controls the return of the dtypes array, which for efficiency is only returned
+            #       from the first remote call for the first row group
             blocks_with_lengths = [
                 [
                     cls.read_parquet_remote_task._remote(
-                        args=(path, col_partitions[i], 1, j, True, True if j==row_group_partitions[0] else False, True, kwargs),
-                        num_return_vals= (len(j) + 3) if j==row_group_partitions[0] else (len(j) + 2),
+                        args=(path, col_partitions[i], 1, j, True, True if j == row_group_partitions[0] else False, True, kwargs),
+                        num_return_vals=(len(j) + 3) if j == row_group_partitions[0] else (len(j) + 2),
                     )
                     for i in range(len(col_partitions))
                 ]
@@ -270,23 +270,22 @@ class RayIO(BaseIO):
 
             blk_partitions = []
             total_count = 0
-            my_data_types = []          
+            my_data_types = []
 
             # process first row group partition
             rowgroup_idx = 0
             for z in range(len(row_group_partitions[rowgroup_idx])):
-                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])             
+                blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
             cur_len_index = len(row_group_partitions[rowgroup_idx])
             cur_datatype_index = len(row_group_partitions[rowgroup_idx]) + 1
             cur_split_lengths_index = len(row_group_partitions[rowgroup_idx]) + 2
             row_lengths.extend(ray.get(blocks_with_lengths[rowgroup_idx][0][cur_split_lengths_index]))
             total_count = total_count + ray.get(blocks_with_lengths[rowgroup_idx][0][cur_len_index])
-                                                                                       
-            # prepare metdata                                                                                                                 
-            my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])   
-            datatypes_row = ray.put(my_data_types)   
+            # prepare metdata
+            my_data_types = ray.get(blocks_with_lengths[rowgroup_idx][0][cur_datatype_index])
+            datatypes_row = ray.put(my_data_types)
 
-            # process remaining row group partitions  
+            # process remaining row group partitions
             for rowgroup_idx in range(1, len(row_group_partitions)):
               for z in range(len(row_group_partitions[rowgroup_idx])):
                 blk_partitions.append([blocks_with_lengths[rowgroup_idx][0][z]])
