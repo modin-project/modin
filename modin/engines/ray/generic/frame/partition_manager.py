@@ -121,7 +121,7 @@ class RayFrameManager(BaseFrameManager):
         ]
         # This is faster for smaller tables, say 100x100 but slower for larger tables
         # Than np.block. Not sure if you want a hybrid or just use np.block
-        arr = np.concatenate([np.concatenate(p, axis=1) for p in parts], axis=0)
+        arr = np.block(parts)
         if is_transposed:
             return arr.T
         return arr
