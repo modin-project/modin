@@ -688,6 +688,7 @@ class RayIO(BaseIO):
         else:
             # TODO: Pick up the columns in an optimized way from all data
             # All rows must be read because some rows may have missing data
+            # Currently assumes all rows have the same columns
             from io import BytesIO                
             columns = pandas.read_json(BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True).columns
             empty_pd_df = pandas.DataFrame(columns=columns).astype(dtype=dtype)
@@ -729,6 +730,10 @@ class RayIO(BaseIO):
                     )
                     partition_ids.append(partition_id[:-2])
                     index_ids.append(partition_id[-2])
+                    if set(columns) != set(partition_id[-1]):
+                        ErrorMessage.default_to_pandas("`read_json` cannot be optimized if" \
+                            " any two rows have differing columns.")
+                        return super(RayIO, cls).read_json(**kwargs)
 
             row_lengths = ray.get(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
