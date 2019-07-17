@@ -2,7 +2,10 @@ from distributed import get_client
 import numpy as np
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
-from .axis_partition import PandasOnDaskFrameColumnPartition, PandasOnDaskFrameRowPartition
+from .axis_partition import (
+    PandasOnDaskFrameColumnPartition,
+    PandasOnDaskFrameRowPartition,
+)
 from .partition import PandasOnDaskFramePartition
 
 
@@ -34,7 +37,9 @@ class DaskFrameManager(BaseFrameManager):
             # invariant that requires that all blocks be the same length in a
             # row of blocks.
             self._lengths_cache = np.array(
-                get_client().gather([obj.length().future for obj in self._partitions_cache.T[0]])
+                get_client().gather(
+                    [obj.length().future for obj in self._partitions_cache.T[0]]
+                )
                 if len(self._partitions_cache.T) > 0
                 else []
             )
@@ -55,7 +60,9 @@ class DaskFrameManager(BaseFrameManager):
             # invariant that requires that all blocks be the same width in a
             # column of blocks.
             self._widths_cache = np.array(
-                get_client().gather([obj.width().future for obj in self._partitions_cache[0]])
+                get_client().gather(
+                    [obj.width().future for obj in self._partitions_cache[0]]
+                )
                 if len(self._partitions_cache) > 0
                 else []
             )

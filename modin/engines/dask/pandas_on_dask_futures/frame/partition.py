@@ -70,7 +70,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
     def drain_call_queue(self):
         if len(self.call_queue) == 0:
             return
-        self.apply(lambda x: x)
+        self.future = self.apply(lambda x: x).future
 
     def mask(self, row_indices=None, col_indices=None):
         new_obj = self.add_to_apply_calls(

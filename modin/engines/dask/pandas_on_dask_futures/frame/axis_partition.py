@@ -10,7 +10,6 @@ from .partition import PandasOnDaskFramePartition
 
 
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
-
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
@@ -25,7 +24,15 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         client = _get_global_client()
-        axis_result = client.submit(PandasFrameAxisPartition.deploy_axis_func, axis, func, num_splits, kwargs, maintain_partitioning, *partitions)
+        axis_result = client.submit(
+            PandasFrameAxisPartition.deploy_axis_func,
+            axis,
+            func,
+            num_splits,
+            kwargs,
+            maintain_partitioning,
+            *partitions
+        )
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
@@ -35,7 +42,15 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
         client = _get_global_client()
-        axis_result = client.submit(PandasFrameAxisPartition.deploy_func_between_two_axis_partitions, axis, func, num_splits, len_of_left, kwargs, *partitions)
+        axis_result = client.submit(
+            PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
+            axis,
+            func,
+            num_splits,
+            len_of_left,
+            kwargs,
+            *partitions
+        )
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
