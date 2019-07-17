@@ -2186,15 +2186,15 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
-        if level is not None:
+        if level is not None or isinstance(self.index, pandas.MultiIndex):
             new_query_compiler = self._default_to_pandas(
                 "reset_index",
                 level=level,
                 drop=drop,
-                inplace=inplace,
+                inplace=False,
                 col_level=col_level,
                 col_fill=col_fill,
-            )
+            )._query_compiler
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
