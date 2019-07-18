@@ -753,7 +753,7 @@ class RayIO(BaseIO):
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
             return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
-    
+
     @classmethod
     def read_json(
         cls,
@@ -789,17 +789,23 @@ class RayIO(BaseIO):
         }
         if cls.read_json_remote_task is None:
             return super(RayIO, cls).read_json(**kwargs)
-        
+
         if not lines:
-            ErrorMessage.default_to_pandas("`read_json` only optimized with `lines=True`")
+            ErrorMessage.default_to_pandas(
+                "`read_json` only optimized with `lines=True`"
+            )
             return super(RayIO, cls).read_json(**kwargs)
         else:
             # TODO: Pick up the columns in an optimized way from all data
             # All rows must be read because some rows may have missing data
             # Currently assumes all rows have the same columns
-            from io import BytesIO                
-            columns = pandas.read_json(BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True).columns
-            empty_pd_df = pandas.DataFrame(columns=columns).astype(dtype=dtype)
+            from io import BytesIO
+
+            columns = pandas.read_json(
+                BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True
+            ).columns
+            kwargs["columns"] = columns
+            empty_pd_df = pandas.DataFrame(columns=columns)
 
             with file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
                 total_bytes = file_size(f)
@@ -809,6 +815,7 @@ class RayIO(BaseIO):
 
                 partition_ids = []
                 index_ids = []
+                dtypes_ids = []
 
                 column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
                 if column_chunksize > len(columns):
@@ -821,43 +828,50 @@ class RayIO(BaseIO):
                         else len(columns) - (column_chunksize * (num_splits - 1))
                         for i in range(num_splits)
                     ]
-                
+
                 while f.tell() < total_bytes:
                     start = f.tell()
                     f.seek(chunk_size, os.SEEK_CUR)
                     f.readline()
                     partition_id = cls.read_json_remote_task._remote(
-                        args=(
-                            path_or_buf,
-                            num_splits,
-                            start,
-                            f.tell(),
-                            kwargs
-                        ),
-                        num_return_vals=num_splits + 2
+                        args=(path_or_buf, num_splits, start, f.tell(), kwargs),
+                        num_return_vals=num_splits + 3,
                     )
-                    partition_ids.append(partition_id[:-2])
-                    index_ids.append(partition_id[-2])
-                    if set(columns) != set(partition_id[-1]):
-                        ErrorMessage.default_to_pandas("`read_json` cannot be optimized if" \
-                            " any two rows have differing columns.")
-                        return super(RayIO, cls).read_json(**kwargs)
+                    partition_ids.append(partition_id[:-3])
+                    index_ids.append(partition_id[-3])
+                    dtypes_ids.append(partition_id[-2])
 
             row_lengths = ray.get(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
 
+            dtypes = (
+                pandas.concat(ray.get(dtypes_ids), axis=1)
+                .apply(lambda row: find_common_type(row.values), axis=1)
+                .squeeze(axis=0)
+            )
+
             partition_ids = [
                 [
                     cls.frame_partition_cls(
-                        partition_ids[i][j], length=row_lengths[i], width=column_widths[j]
+                        partition_ids[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
                     )
                     for j in range(len(partition_ids[i]))
                 ]
                 for i in range(len(partition_ids))
             ]
-            
+
+            if isinstance(dtypes, pandas.Series):
+                dtypes.index = columns
+            else:
+                dtypes = pandas.Series(dtypes, index=columns)
+
             new_query_compiler = cls.query_compiler_cls(
-                cls.frame_mgr_cls(np.array(partition_ids)), new_index, columns
+                cls.frame_mgr_cls(np.array(partition_ids)),
+                new_index,
+                columns,
+                dtypes=dtypes,
             )
             return new_query_compiler
 

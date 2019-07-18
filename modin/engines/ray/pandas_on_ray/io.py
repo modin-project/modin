@@ -101,6 +101,7 @@ def _read_csv_with_offset_pandas_on_ray(
         pandas_df.dtypes,
     ]
 
+
 @ray.remote
 def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
     """Use a Ray task to read a chunk of a JSON into a Pandas dataframe.
@@ -122,10 +123,17 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
     bio.seek(start)
     to_read = b"" + bio.read(end - start)
     bio.close()
+    columns = kwargs.pop("columns")
     pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+    if not pandas_df.columns.equals(columns):
+        raise NotImplementedError("Columns must be the same across all rows.")
     partition_columns = pandas_df.columns
     pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
-    return _split_result_for_readers(1, num_splits, pandas_df) + [len(pandas_df)] + [partition_columns]
+    return _split_result_for_readers(1, num_splits, pandas_df) + [
+        len(pandas_df),
+        pandas_df.dtypes,
+        partition_columns,
+    ]
 
 
 @ray.remote
