@@ -119,8 +119,7 @@ class RayFrameManager(BaseFrameManager):
         parts = [
             parts[i * n : (i + 1) * n] for i in list(range(self.partitions.shape[0]))
         ]
-        # This is faster for smaller tables, say 100x100 but slower for larger tables
-        # Than np.block. Not sure if you want a hybrid or just use np.block
+
         arr = np.block(parts)
         if is_transposed:
             return arr.T
