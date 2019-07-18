@@ -5,6 +5,7 @@ from __future__ import print_function
 import pandas
 from pandas.io.common import _infer_compression
 from pandas.io.parsers import _validate_usecols_arg
+from pandas.core.dtypes.cast import find_common_type
 
 import inspect
 import os
@@ -56,6 +57,35 @@ def file_open(file_path, mode="rb", compression="infer"):
             import gzip
 
             return gzip.open(file_path, mode=mode)
+        elif compression == "bz2":
+            import bz2
+
+            return bz2.BZ2File(file_path, mode=mode)
+        elif compression == "xz":
+            import lzma
+
+            return lzma.LZMAFile(file_path, mode=mode)
+        elif compression == "zip":
+            import zipfile
+
+            zf = zipfile.ZipFile(file_path, mode=mode.replace("b", ""))
+            if zf.mode == "w":
+                return zf
+            elif zf.mode == "r":
+                zip_names = zf.namelist()
+                if len(zip_names) == 1:
+                    f = zf.open(zip_names.pop())
+                    return f
+                elif len(zip_names) == 0:
+                    raise ValueError(
+                        "Zero files found in ZIP file {}".format(file_path)
+                    )
+                else:
+                    raise ValueError(
+                        "Multiple files found in ZIP file."
+                        " Only one file per ZIP: {}".format(zip_names)
+                    )
+
     return open(file_path, mode=mode)
 
 
@@ -213,37 +243,71 @@ class RayIO(BaseIO):
             columns[i : i + column_splits]
             for i in range(0, len(columns), column_splits)
         ]
+        column_widths = [len(c) for c in col_partitions]
         # Each item in this list will be a list of columns of original df
         # partitioned to smaller pieces along rows.
         # We need to transpose the oids array to fit our schema.
         # TODO (williamma12): This part can be parallelized even more if we
         # separate the partitioned parquet file code path from the default one.
+        # The workers return multiple objects for each part of the file read:
+        # - The first n - 2 objects are partitions of data
+        # - The n - 1 object is the length of the partition.
+        # - The nth object is the dtypes of the partition. We combine these to
+        #   form the final dtypes below.
         blk_partitions = np.array(
             [
                 cls.read_parquet_remote_task._remote(
                     args=(path, cols + partitioned_columns, num_splits, kwargs),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
                 if directory and cols == col_partitions[len(col_partitions) - 1]
                 else cls.read_parquet_remote_task._remote(
                     args=(path, cols, num_splits, kwargs),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
                 for cols in col_partitions
             ]
         ).T
+        # Metadata
+        index_len = ray.get(blk_partitions[-2][0])
+        index = pandas.RangeIndex(index_len)
+        index_chunksize = compute_chunksize(
+            pandas.DataFrame(index=index), num_splits, axis=0
+        )
+        if index_chunksize > index_len:
+            row_lengths = [index_len] + [0 for _ in range(num_splits - 1)]
+        else:
+            row_lengths = [
+                index_chunksize
+                if i != num_splits - 1
+                else index_len - (index_chunksize * (num_splits - 1))
+                for i in range(num_splits)
+            ]
+        # Compute dtypes concatenating the results from each of the columns splits
+        # determined above. This creates a pandas Series that contains a dtype for every
+        # column.
+        dtypes_ids = list(blk_partitions[-1])
+        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
+
+        blk_partitions = blk_partitions[:-2]
         remote_partitions = np.array(
             [
-                [cls.frame_partition_cls(obj) for obj in row]
-                for row in blk_partitions[:-1]
+                [
+                    cls.frame_partition_cls(
+                        blk_partitions[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(blk_partitions[i]))
+                ]
+                for i in range(len(blk_partitions))
             ]
         )
-        index_len = ray.get(blk_partitions[-1][0])
-        index = pandas.RangeIndex(index_len)
         if directory:
             columns += partitioned_columns
+        dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns
+            cls.frame_mgr_cls(remote_partitions), index, columns, dtypes=dtypes
         )
 
         return new_query_compiler
@@ -361,6 +425,7 @@ class RayIO(BaseIO):
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
+            dtypes_ids = []
             total_bytes = file_size(f)
             # Max number of partitions available
             num_parts = cls.frame_mgr_cls._compute_num_partitions()
@@ -379,8 +444,10 @@ class RayIO(BaseIO):
             else:
                 column_widths = [
                     column_chunksize
-                    if i != num_splits - 1
-                    else len(column_names) - (column_chunksize * (num_splits - 1))
+                    if len(column_names) > (column_chunksize * (i + 1))
+                    else 0
+                    if len(column_names) < (column_chunksize * i)
+                    else len(column_names) - (column_chunksize * i)
                     for i in range(num_splits)
                 ]
 
@@ -388,6 +455,12 @@ class RayIO(BaseIO):
                 start = f.tell()
                 f.seek(chunk_size, os.SEEK_CUR)
                 f.readline()  # Read a whole number of lines
+                # The workers return multiple objects for each part of the file read:
+                # - The first n - 2 objects are partitions of data
+                # - The n - 1 object is the length of the partition or the index if
+                #   `index_col` is specified. We compute the index below.
+                # - The nth object is the dtypes of the partition. We combine these to
+                #   form the final dtypes below.
                 partition_id = cls.read_csv_remote_task._remote(
                     args=(
                         filepath,
@@ -397,11 +470,14 @@ class RayIO(BaseIO):
                         partition_kwargs_id,
                         prefix_id,
                     ),
-                    num_return_vals=num_splits + 1,
+                    num_return_vals=num_splits + 2,
                 )
-                partition_ids.append(partition_id[:-1])
-                index_ids.append(partition_id[-1])
+                partition_ids.append(partition_id[:-2])
+                index_ids.append(partition_id[-2])
+                dtypes_ids.append(partition_id[-1])
 
+        # Compute the index based on a sum of the lengths of each partition (by default)
+        # or based on the column(s) that were requested.
         if index_col is None:
             row_lengths = ray.get(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
@@ -410,6 +486,16 @@ class RayIO(BaseIO):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
             new_index.name = empty_pd_df.index.name
+
+        # Compute dtypes by getting collecting and combining all of the partitions. The
+        # reported dtypes from differing rows can be different based on the inference in
+        # the limited data seen by each worker. We use pandas to compute the exact dtype
+        # over the whole column for each column. The index is set below.
+        dtypes = (
+            pandas.concat(ray.get(dtypes_ids), axis=1)
+            .apply(lambda row: find_common_type(row.values), axis=1)
+            .squeeze(axis=0)
+        )
 
         partition_ids = [
             [
@@ -435,8 +521,17 @@ class RayIO(BaseIO):
                 for new_col_name, group in parse_dates.items():
                     column_names = column_names.drop(group).insert(0, new_col_name)
 
+        # Set the index for the dtypes to the column names
+        if isinstance(dtypes, pandas.Series):
+            dtypes.index = column_names
+        else:
+            dtypes = pandas.Series(dtypes, index=column_names)
+
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(np.array(partition_ids)), new_index, column_names
+            cls.frame_mgr_cls(np.array(partition_ids)),
+            new_index,
+            column_names,
+            dtypes=dtypes,
         )
 
         if skipfooter:
@@ -620,12 +715,25 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
+            compression_type = _infer_compression(
+                filepath_or_buffer, kwargs.get("compression")
+            )
             if (
-                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
-                == "gzip"
+                compression_type == "gzip" and sys.version_info[0] == 3
+            ):  # python2 cannot seek from end
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "bz2":
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "xz" and sys.version_info[0] == 3:
+                # .xz compression fails in pandas for python2
+                filtered_kwargs["compression"] = compression_type
+            elif (
+                compression_type == "zip"
                 and sys.version_info[0] == 3
+                and sys.version_info[1] >= 7
             ):
-                filtered_kwargs["compression"] = "gzip"
+                # need python3.7 to .seek and .tell ZipExtFile
+                filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)

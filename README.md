@@ -8,7 +8,7 @@
 <a href="https://travis-ci.com/modin-project/modin"><img alt="" src="https://travis-ci.com/modin-project/modin.svg?branch=master" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg" align="center"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.5.3-blue.svg" align="center"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.5.4-blue.svg" align="center"></a>
 </p>
 
 

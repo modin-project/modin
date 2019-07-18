@@ -177,8 +177,7 @@ def test___and__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___array__(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.__array__()
+    modin_result = modin_series.__array__()
     assert_array_equal(modin_result, pandas_series.__array__())
 
 
@@ -741,8 +740,7 @@ def test_as_blocks(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_as_matrix(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.as_matrix()
+    modin_series.as_matrix()
 
 
 def test_asfreq():
@@ -1164,9 +1162,33 @@ def test_divide(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.dot(modin_series)
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    ind_len = len(modin_series)
+
+    # Test list input
+    arr = np.arange(ind_len)
+    modin_result = modin_series.dot(arr)
+    pandas_result = pandas_series.dot(arr)
+    df_equals(modin_result, pandas_result)
+
+    # Test bad dimensions
+    with pytest.raises(ValueError):
+        modin_result = modin_series.dot(np.arange(ind_len + 10))
+
+    # Test series input
+    modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    modin_result = modin_series.dot(modin_series)
+    pandas_result = pandas_series.dot(pandas_series)
+    df_equals(modin_result, pandas_result)
+
+    # Test when input series index doesn't line up with columns
+    with pytest.raises(ValueError):
+        modin_result = modin_series.dot(
+            pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
+        )
+
+    # modin_series.dot(modin_series.T)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -1679,6 +1701,11 @@ def test_loc(data):
     for v in modin_series.index:
         df_equals(modin_series.loc[v], pandas_series.loc[v])
         df_equals(modin_series.loc[v:], pandas_series.loc[v:])
+
+    indices = [True if i % 3 == 0 else False for i in range(len(modin_series.index))]
+    modin_result = modin_series.loc[indices]
+    pandas_result = pandas_series.loc[indices]
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2458,6 +2485,12 @@ def test_to_period():
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
     with pytest.warns(UserWarning):
         series.to_period()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_numpy(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.values, pandas_series.values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

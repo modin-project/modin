@@ -238,12 +238,17 @@ class _LocIndexer(_LocationIndexerBase):
         else:
             if len(key) > self.df.ndim:
                 raise IndexingError("Too many indexers")
-            if key[0] == slice(None):
+            if isinstance(key[0], slice) and key[0] == slice(None):
                 return self.df.__getitem__(key[1])
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        ndim = (0 if len(row_lookup) == 1 else 1) + (0 if len(col_lookup) == 1 else 1)
+        # Check that the row_lookup/col_lookup is longer than 1 or that the
+        # row_loc/col_loc is not boolean list to determine the ndim of the
+        # result properly for multiindex.
+        ndim = (0 if len(row_lookup) == 1 and not is_boolean_array(row_loc) else 1) + (
+            0 if len(col_lookup) == 1 and not is_boolean_array(col_loc) else 1
+        )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
@@ -338,6 +343,9 @@ class _LocIndexer(_LocationIndexerBase):
             )
         elif isinstance(self.qc.index, pandas.MultiIndex):
             row_lookup = self.qc.index.get_locs(row_loc)
+        elif is_boolean_array(row_loc):
+            # If passed in a list of booleans, we return the index of the true values
+            row_lookup = [i for i, row_val in enumerate(row_loc) if row_val]
         else:
             row_lookup = self.qc.index.get_indexer_for(row_loc)
         if isinstance(col_loc, slice):
@@ -346,6 +354,9 @@ class _LocIndexer(_LocationIndexerBase):
             )
         elif isinstance(self.qc.columns, pandas.MultiIndex):
             col_lookup = self.qc.columns.get_locs(col_loc)
+        elif is_boolean_array(col_loc):
+            # If passed in a list of booleans, we return the index of the true values
+            col_lookup = [i for i, col_val in enumerate(col_loc) if col_val]
         else:
             col_lookup = self.qc.columns.get_indexer_for(col_loc)
         return row_lookup, col_lookup

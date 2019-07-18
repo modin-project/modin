@@ -532,8 +532,9 @@ class BasePandasDataset(object):
         Returns:
             values: ndarray
         """
-        # TODO this is very inefficient, also see __array__
-        return self._default_to_pandas("as_matrix", columns=columns)
+        if columns is None:
+            return self.to_numpy()
+        return self.__getitem__(columns).to_numpy()
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas(
@@ -835,9 +836,29 @@ class BasePandasDataset(object):
         )
 
     def dot(self, other):
+        from .dataframe import DataFrame
+
+        self_labels = self.columns if isinstance(self, DataFrame) else self.index
         if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas("dot", other)
+            common = self_labels.union(other.index)
+            if len(common) > len(self_labels) or len(common) > len(other.index):
+                raise ValueError("matrices are not aligned")
+            if isinstance(self, DataFrame) and isinstance(other, DataFrame):
+                other = other._to_pandas()
+                return self._default_to_pandas("dot", other)
+        else:
+            other = np.asarray(other)
+            self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
+            if self_dim != other.shape[0]:
+                raise ValueError(
+                    "Dot product shape mismatch, {} vs {}".format(
+                        self.shape, other.shape
+                    )
+                )
+
+        if isinstance(other, BasePandasDataset):
+            other = other.reindex(index=self_labels)._query_compiler
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def drop(
         self,
@@ -1968,27 +1989,35 @@ class BasePandasDataset(object):
             index = labels
         elif labels is not None:
             columns = labels
+        new_query_compiler = None
         if index is not None:
-            new_query_compiler = self._query_compiler.reindex(
-                0,
-                index,
-                method=method,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
-        else:
+            if not isinstance(index, pandas.Index):
+                index = pandas.Index(index)
+            if not index.equals(self.index):
+                new_query_compiler = self._query_compiler.reindex(
+                    0,
+                    index,
+                    method=method,
+                    fill_value=fill_value,
+                    limit=limit,
+                    tolerance=tolerance,
+                )
+        if new_query_compiler is None:
             new_query_compiler = self._query_compiler
+        final_query_compiler = None
         if columns is not None:
-            final_query_compiler = new_query_compiler.reindex(
-                1,
-                columns,
-                method=method,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
-        else:
+            if not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if not columns.equals(self.columns):
+                final_query_compiler = new_query_compiler.reindex(
+                    1,
+                    columns,
+                    method=method,
+                    fill_value=fill_value,
+                    limit=limit,
+                    tolerance=tolerance,
+                )
+        if final_query_compiler is None:
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
@@ -2157,15 +2186,15 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
-        if level is not None:
+        if level is not None or isinstance(self.index, pandas.MultiIndex):
             new_query_compiler = self._default_to_pandas(
                 "reset_index",
                 level=level,
                 drop=drop,
-                inplace=inplace,
+                inplace=False,
                 col_level=col_level,
                 col_fill=col_fill,
-            )
+            )._query_compiler
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
@@ -2935,7 +2964,10 @@ class BasePandasDataset(object):
         Returns:
             A numpy array.
         """
-        return self._default_to_pandas("to_numpy", dtype=dtype, copy=copy)
+        arr = self._query_compiler.to_numpy()
+        if dtype is not None:
+            return np.asarray(arr, dtype)
+        return arr
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -3130,11 +3162,14 @@ class BasePandasDataset(object):
         return self._binary_op("__and__", other, axis=0)
 
     def __array__(self, dtype=None):
-        # TODO: This is very inefficient and needs fix, also see as_matrix
-        return self._default_to_pandas("__array__", dtype=dtype)
+        arr = self.to_numpy(dtype)
+        return arr
 
     def __array_wrap__(self, result, context=None):
-        # TODO: This is very inefficient, see also __array__ and as_matrix
+        """TODO: This is very inefficient. __array__ and as_matrix have been
+        changed to call the more efficient to_numpy, but this has been left
+        unchanged since we are not sure of its purpose.
+        """
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def __copy__(self, deep=True):
@@ -3307,7 +3342,7 @@ class BasePandasDataset(object):
         Returns:
             The numpy representation of this object.
         """
-        return self._to_pandas().values
+        return self.to_numpy()
 
     @property
     def __name__(self):

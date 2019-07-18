@@ -185,9 +185,10 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         # Pop these off first because they aren't expected by the function.
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
+        transposed = kwargs.pop("_transposed", False)
 
         dataframe = pandas.concat(
-            [set_indices_for_pandas_concat(df) for df in partitions],
+            [set_indices_for_pandas_concat(df, transposed) for df in partitions],
             axis=axis,
             copy=False,
         )

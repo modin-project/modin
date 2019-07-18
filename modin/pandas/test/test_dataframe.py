@@ -1057,8 +1057,15 @@ class TestDFPartOne:
         tm.assert_almost_equal(mat, expected)
 
     def test_to_numpy(self):
-        with pytest.warns(UserWarning):
-            pd.DataFrame({"A": [1, 2], "B": [3, 4]}).to_numpy()
+        test_data = TestData()
+        frame = pd.DataFrame(test_data.frame)
+        assert_array_equal(frame.values, test_data.frame.values)
+
+    def test_partition_to_numpy(self):
+        test_data = TestData()
+        frame = pd.DataFrame(test_data.frame)
+        for partition in frame._query_compiler.data.partitions.flatten().tolist():
+            assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
     def test_asfreq(self):
         index = pd.date_range("1/1/2000", periods=4, freq="T")
@@ -1951,10 +1958,35 @@ class TestDFPartOne:
             with pytest.raises(KeyError):
                 modin_df.dropna(axis=1, subset=[4, 5])
 
-    def test_dot(self):
-        data = test_data_values[0]
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_dot(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        col_len = len(modin_df.columns)
+
+        # Test list input
+        arr = np.arange(col_len)
+        modin_result = modin_df.dot(arr)
+        pandas_result = pandas_df.dot(arr)
+        df_equals(modin_result, pandas_result)
+
+        # Test bad dimensions
+        with pytest.raises(ValueError):
+            modin_result = modin_df.dot(np.arange(col_len + 10))
+
+        # Test series input
+        modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        modin_result = modin_df.dot(modin_series)
+        pandas_result = pandas_df.dot(pandas_series)
+        df_equals(modin_result, pandas_result)
+
+        # Test when input series index doesn't line up with columns
+        with pytest.raises(ValueError):
+            modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+
         with pytest.warns(UserWarning):
-            pd.DataFrame(data).dot(pd.DataFrame(data).T)
+            modin_df.dot(modin_df.T)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_duplicated(self, data):
@@ -2878,6 +2910,17 @@ class TestDFPartOne:
 
             # DataFrame
             df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
+
+            # List-like of booleans
+            indices = [
+                True if i % 3 == 0 else False for i in range(len(modin_df.index))
+            ]
+            columns = [
+                True if i % 5 == 0 else False for i in range(len(modin_df.columns))
+            ]
+            modin_result = modin_df.loc[indices, columns]
+            pandas_result = pandas_df.loc[indices, columns]
+            df_equals(modin_result, pandas_result)
 
             # See issue #80
             # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
