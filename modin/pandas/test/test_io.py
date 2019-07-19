@@ -838,7 +838,10 @@ def test_from_csv_s3(make_csv_file):
     # This will warn if it defaults to pandas behavior, but it shouldn't
     with pytest.warns(None) as record:
         modin_df = pd.read_csv(dataset_url)
-    assert not record.list
+
+    assert not any(
+        "defaulting to pandas implementation" in str(err) for err in record.list
+    )
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 

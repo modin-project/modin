@@ -32,11 +32,13 @@ def file_exists(file_path):
             from botocore.exceptions import NoCredentialsError
 
             s3fs = S3FS.S3FileSystem(anon=False)
+            exists = False
             try:
-                return s3fs.exists(file_path)
+                exists = s3fs.exists(file_path) or exists
             except NoCredentialsError:
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return s3fs.exists(file_path)
+                pass
+            s3fs = S3FS.S3FileSystem(anon=True)
+            return exists or s3fs.exists(file_path)
     return os.path.exists(file_path)
 
 
