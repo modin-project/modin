@@ -101,3 +101,26 @@ class RayFrameManager(BaseFrameManager):
                     ]
                 )
         return self._widths_cache
+
+    def to_numpy(self, is_transposed=False):
+        """Convert this object into a NumPy Array from the partitions.
+
+        Returns:
+            A NumPy Array
+        """
+        parts = ray.get(
+            [
+                obj.apply(lambda df: df.to_numpy()).oid
+                for row in self.partitions
+                for obj in row
+            ]
+        )
+        n = self.partitions.shape[1]
+        parts = [
+            parts[i * n : (i + 1) * n] for i in list(range(self.partitions.shape[0]))
+        ]
+
+        arr = np.block(parts)
+        if is_transposed:
+            return arr.T
+        return arr
