@@ -839,7 +839,6 @@ def test_from_csv_s3(make_csv_file):
     with pytest.warns(None) as record:
         modin_df = pd.read_csv(dataset_url)
 
-    print([str(err) for err in record.list])
     assert not any(
         "defaulting to pandas implementation" in str(err) for err in record.list
     )
