@@ -207,6 +207,16 @@ def setup_json_file(row_size, force=False):
         df.to_json(TEST_JSON_FILENAME)
 
 
+def setup_json_lines_file(row_size, force=False):
+    if os.path.exists(TEST_JSON_FILENAME) and not force:
+        pass
+    else:
+        df = pandas.DataFrame(
+            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+        )
+        df.to_json(TEST_JSON_FILENAME, lines=True, orient="records")
+
+
 def teardown_json_file():
     if os.path.exists(TEST_JSON_FILENAME):
         os.remove(TEST_JSON_FILENAME)
@@ -431,6 +441,17 @@ def test_from_json():
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME)
     modin_df = pd.read_json(TEST_JSON_FILENAME)
+
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+    teardown_json_file()
+
+
+def test_from_json_lines():
+    setup_json_lines_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_json(TEST_JSON_FILENAME, lines=True)
+    modin_df = pd.read_json(TEST_JSON_FILENAME, lines=True)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 

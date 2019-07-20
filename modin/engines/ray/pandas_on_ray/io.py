@@ -117,7 +117,7 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
 
     Returns:
          A list containing the split Pandas DataFrames and the Index as the last
-            element. 
+            element.
     """
     bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
     bio.seek(start)
