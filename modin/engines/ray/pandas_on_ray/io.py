@@ -103,6 +103,40 @@ def _read_csv_with_offset_pandas_on_ray(
 
 
 @ray.remote
+def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
+    """Use a Ray task to read a chunk of a JSON into a Pandas dataframe.
+
+    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
+    Args:
+        fname: The filename of the file to open.
+        num_splits: The number of splits (partitions) to separate the DataFrame into.
+        start: The start byte offset.
+        end: The end byte offset.
+        kwargs: The kwargs for the Pandas `read_json` function.
+
+    Returns:
+         A list containing the split Pandas DataFrames and the Index as the last
+            element.
+    """
+    bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
+    bio.seek(start)
+    to_read = b"" + bio.read(end - start)
+    bio.close()
+    columns = kwargs.pop("columns")
+    pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+    if not pandas_df.columns.equals(columns):
+        raise NotImplementedError("Columns must be the same across all rows.")
+    partition_columns = pandas_df.columns
+    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
+    return _split_result_for_readers(1, num_splits, pandas_df) + [
+        len(pandas_df),
+        pandas_df.dtypes,
+        partition_columns,
+    ]
+
+
+@ray.remote
 def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no cover
     """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
@@ -173,6 +207,7 @@ class PandasOnRayIO(RayIO):
 
     read_parquet_remote_task = _read_parquet_columns
     read_csv_remote_task = _read_csv_with_offset_pandas_on_ray
+    read_json_remote_task = _read_json
     read_hdf_remote_task = _read_hdf_columns
     read_feather_remote_task = _read_feather_columns
     read_sql_remote_task = _read_sql_with_limit_offset
