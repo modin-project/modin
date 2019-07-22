@@ -773,6 +773,7 @@ class RayIO(BaseIO):
         compression="infer",
     ):
         kwargs = {
+            "path_or_buf": path_or_buf,
             "orient": orient,
             "typ": typ,
             "dtype": dtype,
@@ -806,6 +807,8 @@ class RayIO(BaseIO):
             ).columns
             kwargs["columns"] = columns
             empty_pd_df = pandas.DataFrame(columns=columns)
+
+            path_or_buf = kwargs.pop("path_or_buf")
 
             with file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
                 total_bytes = file_size(f)
