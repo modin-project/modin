@@ -12,11 +12,11 @@ steps:
 - bash: echo "##vso[task.prependpath]$CONDA/bin"
   displayName: Add conda to PATH
 
-- bash: which python
+- bash: echo `which python`; echo `which pip`
   displayName: check python bin
 
 - script: |
-    conda install -c anaconda -y hdf5 
+    conda install -y hdf5 python=3.6 pytables=3.4.4
     pip install --upgrade pip
     pip install -r requirements.txt
   displayName: 'Install dependencies'
