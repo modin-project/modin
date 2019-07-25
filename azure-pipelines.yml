@@ -12,8 +12,17 @@ steps:
 - bash: echo "##vso[task.prependpath]$CONDA/bin"
   displayName: Add conda to PATH
 
-- bash: echo `which python`; echo `which pip`
-  displayName: check python bin
+- task: CacheBeta@0
+  inputs:
+    key: $(Agent.OS) - conda
+    path: /usr/share/miniconda
+  displayName: cache conda envs
+
+- task: CacheBeta@0
+  inputs:
+    key: $(Agent.OS) - pip
+    path: /home/vsts/.cache/pip
+  displayName: cache pip downloads
 
 - script: |
     conda install -y hdf5 python=3.6 pytables=3.4.4
