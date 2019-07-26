@@ -9,10 +9,12 @@ from modin.engines.ray.utils import handle_ray_task_error
 class RayFrameManager(BaseFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
-    def __init__(self, partitions):
+    def __init__(self, partitions, block_lengths=None, block_widths=None):
         if isinstance(partitions, list):
             partitions = np.array(partitions)
         self.partitions = partitions
+        self._lengths_cache = block_lengths
+        self._widths_cache = block_widths
 
     # We override these for performance reasons.
     # Lengths of the blocks

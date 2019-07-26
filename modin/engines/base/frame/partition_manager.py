@@ -28,7 +28,7 @@ class BaseFrameManager(object):
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
-    def __init__(self, partitions):
+    def __init__(self, partitions, block_lengths=None, block_widths=None):
         """Init must accept a parameter `partitions` that is a 2D numpy array
             of type `_partition_class` (defined below). This method will be
             called from a factory.

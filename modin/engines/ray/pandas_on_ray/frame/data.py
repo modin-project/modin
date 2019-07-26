@@ -31,7 +31,7 @@ class PandasOnRayData(object):
         self._column_widths = column_widths
         self._dtypes = dtypes
         self._apply_index_objs()
-        self._frame_manager = self.frame_mgr_cls(self._partitions)
+        self._frame_manager = self.frame_mgr_cls(self._partitions, row_lengths, column_widths)
 
     def _apply_index_objs(self):
         cum_row_lengths = np.cumsum([0] + self._row_lengths)
@@ -41,9 +41,16 @@ class PandasOnRayData(object):
             df.index, df.columns = idx, col
             return df
 
+        self._partitions = np.array(
+            [[self._partitions[i][j]
+              for j in range(len(self._partitions[i])) if self._column_widths[j] > 0]
+             for i in range(len(self._partitions))
+             if self._row_lengths[i] > 0])
+
         for i in range(len(self._row_lengths)):
             for j in range(len(self._column_widths)):
-                self._partitions[i][j].call_queue += [(apply_idx_objs, {"idx":self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])], "col":self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+                if self._row_lengths[i] > 0 and self._column_widths[j] > 0:
+                    self._partitions[i][j].call_queue += [(apply_idx_objs, {"idx":self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])], "col":self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
 
     def copy(self):
         return self.__constructor__(
@@ -77,9 +84,7 @@ class PandasOnRayData(object):
         def dtype_builder(df):
             return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-        map_func = self._prepare_method(
-            self._build_mapreduce_func(lambda df: df.dtypes)
-        )
+        map_func = self._build_mapreduce_func(lambda df: df.dtypes)
         reduce_func = self._build_mapreduce_func(dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
@@ -180,7 +185,6 @@ class PandasOnRayData(object):
         else:
             return self.index.join(other_index, how=how, sort=sort)
 
-
     # Internal methods
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
@@ -239,22 +243,26 @@ class PandasOnRayData(object):
         if reduce_func is None:
             reduce_func = map_func
 
-        mapped_parts = self.data.map_across_blocks(map_func)
-        full_frame = mapped_parts.map_across_full_axis(axis, reduce_func)
+        mapped_parts = self._frame_manager.map_across_blocks(map_func)
+        final_parts = mapped_parts.map_across_full_axis(axis, reduce_func).partitions
         if axis == 0:
             columns = self.columns
-            return self.__constructor__(
-                full_frame, index=["__reduced__"], columns=columns
-            )
+            index = ["__reduced__"]
+            new_lengths = [1]
+            new_widths = self._column_widths
         else:
+            columns = ["__reduced__"]
             index = self.index
-            return self.__constructor__(
-                full_frame, index=index, columns=["__reduced__"]
-            )
+            new_lengths = self._row_lengths
+            new_widths = [1]
+        return self.__constructor__(
+            final_parts, index, columns, new_lengths, new_widths,
+        )
 
     def _map_partitions(self, func, new_dtypes=None):
+        new_partitions = self._frame_manager.map_across_blocks(func).partitions
         return self.__constructor__(
-            self.data.map_across_blocks(func), self.index, self.columns, new_dtypes
+            new_partitions, self.index, self.columns, self._row_lengths, self._column_widths, dtypes=new_dtypes
         )
 
     def _map_across_full_axis(self, axis, func):
@@ -311,6 +319,25 @@ class PandasOnRayData(object):
         return self.__constructor__(new_partitions, self.columns, self.index, self._column_widths, self._row_lengths, dtypes=new_dtypes)
 
     # Head/Tail/Front/Back
+    def _compute_lengths(self, lengths_list, n, from_back=False):
+        if not from_back:
+            idx = np.digitize(n, np.cumsum(lengths_list))
+            if idx == 0:
+                return [n]
+            return [
+                lengths_list[i] if i < idx else n - sum(lengths_list[:i])
+                for i in range(len(lengths_list)) if i <= idx
+            ]
+        else:
+            lengths_list = [i for i in lengths_list if i > 0]
+            idx = np.digitize(sum(lengths_list) - n, np.cumsum(lengths_list))
+            if idx == len(lengths_list) - 1:
+                return [n]
+            return [
+                   lengths_list[i] if i > idx else n - sum(lengths_list[i + 1:])
+                   for i in range(len(lengths_list)) if i >= idx
+               ]
+
     def head(self, n):
         """Returns the first n rows.
 
@@ -325,8 +352,7 @@ class PandasOnRayData(object):
         # allows the implementation to stay modular and reduces data copying.
         if n < 0:
             n = max(0, len(self.index) + n)
-        row_idx = np.digitize(n, np.cumsum(self._row_lengths))
-        new_row_lengths = [self._row_lengths[i] if i < row_idx else n - sum(self._row_lengths[:i]) for i in range(len(self._row_lengths)) if i <= row_idx]
+        new_row_lengths = self._compute_lengths(self._row_lengths, n)
         new_partitions = self._frame_manager.take(0, n).partitions
         return self.__constructor__(
             new_partitions, self.index[:n], self.columns, new_row_lengths, self._column_widths, self.dtypes,
@@ -344,12 +370,10 @@ class PandasOnRayData(object):
         # See head for an explanation of the transposed behavior
         if n < 0:
             n = max(0, len(self.index) + n)
-        row_idx = np.digitize(n, np.cumsum(self._row_lengths[::-1]))
-        new_row_lengths = [self._row_lengths[i] if i < row_idx else n - sum(self._row_lengths[::-1][:i]) for i in
-                           range(len(self._row_lengths))[::-1] if i <= row_idx][::-1]
+        new_row_lengths = self._compute_lengths(self._row_lengths, n, from_back=True)
         new_partitions = self._frame_manager.take(0, -n).partitions
         return self.__constructor__(
-            new_partitions, self.index[n:], self.columns, new_row_lengths, self._column_widths, self.dtypes,
+            new_partitions, self.index[-n:], self.columns, new_row_lengths, self._column_widths, self.dtypes,
         )
 
     def front(self, n):
@@ -361,9 +385,7 @@ class PandasOnRayData(object):
         Returns:
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
-        col_idx = np.digitize(n, np.cumsum(self._column_widths))
-        new_col_lengths = [self._column_widths[i] if i < col_idx else n - sum(self._column_widths[:i]) for i in
-                           range(len(self._column_widths)) if i <= col_idx]
+        new_col_lengths = self._compute_lengths(self._column_widths, n)
         new_partitions = self._frame_manager.take(1, n).partitions
         return self.__constructor__(
             new_partitions, self.index, self.columns[:n], self._row_lengths, new_col_lengths, self.dtypes[:n],
@@ -378,12 +400,10 @@ class PandasOnRayData(object):
         Returns:
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
-        col_idx = np.digitize(n, np.cumsum(self._column_widths[::-1]))
-        new_col_lengths = [self._column_widths[i] if i < col_idx else n - sum(self._column_widths[::-1][:i]) for i in
-                           range(len(self._column_widths))[::-1] if i <= col_idx][::-1]
+        new_col_lengths = self._compute_lengths(self._column_widths, n, from_back=True)
         new_partitions = self._frame_manager.take(1, -n).partitions
         return self.__constructor__(
-            new_partitions, self.index, self.columns[n:], self._row_lengths, new_col_lengths, self.dtypes[n:],
+            new_partitions, self.index, self.columns[-n:], self._row_lengths, new_col_lengths, self.dtypes[n:],
         )
 
     # End Head/Tail/Front/Back

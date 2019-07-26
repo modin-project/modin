@@ -16,6 +16,7 @@ from pandas.core.base import DataError
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.data_management.functions import MapFunction
 
 
 class PandasQueryCompiler(BaseQueryCompiler):
@@ -23,7 +24,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(
-        self, block_partitions_object=None, index=None, columns=None, dtypes=None, is_transposed=False, data_object=None
+        self, block_partitions_object=None, index=None, columns=None, dtypes=None, data_object=None
     ):
         if data_object is not None:
             self._data_obj = data_object
@@ -31,7 +32,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self.index = data_object.index
             self.columns = data_object.columns
             self.dtypes = data_object.dtypes
-            self._is_transposed = int(is_transposed)
         else:
             assert isinstance(block_partitions_object, BaseFrameManager)
             self.data = block_partitions_object
@@ -39,7 +39,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self.columns = columns
             if dtypes is not None:
                 self._dtype_cache = dtypes
-            self._is_transposed = int(is_transposed)
 
     def to_pandas(self):
         return self._data_obj.to_pandas()
@@ -128,9 +127,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = self.index.map(lambda x: str(prefix) + str(x))
             new_columns = self.columns
             new_dtype_cache = self._dtype_cache
-        return self.__constructor__(
-            self.data, new_index, new_columns, new_dtype_cache, self._is_transposed
-        )
+        return self.__constructor__(self.data, new_index, new_columns, new_dtype_cache)
 
     def add_suffix(self, suffix, axis=1):
         if axis == 1:
@@ -145,9 +142,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = self.index.map(lambda x: str(x) + str(suffix))
             new_columns = self.columns
             new_dtype_cache = self._dtype_cache
-        return self.__constructor__(
-            self.data, new_index, new_columns, new_dtype_cache, self._is_transposed
-        )
+        return self.__constructor__(self.data, new_index, new_columns, new_dtype_cache)
 
     # END Metadata modification methods
 
@@ -894,9 +889,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the sum of each numerical column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().sum(**kwargs)
         return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
 
     def _process_all_any(self, func, **kwargs):
@@ -917,11 +909,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object containing boolean values or boolean.
         """
-        if self._is_transposed:
-            # Pandas ignores on axis=1
-            kwargs["bool_only"] = False
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().all(**kwargs)
         return self._process_all_any(lambda df, **kwargs: df.all(**kwargs), **kwargs)
 
     def any(self, **kwargs):
@@ -930,43 +917,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object containing boolean values or boolean.
         """
-        if self._is_transposed:
-            if kwargs.get("axis", 0) == 1:
-                # Pandas ignores on axis=1
-                kwargs["bool_only"] = False
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().any(**kwargs)
         return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
 
-    # END Full Reduce operations
-
-    # Map partitions operations
-    # These operations are operations that apply a function to every partition.
-    def abs(self):
-        func = self._prepare_method(pandas.DataFrame.abs)
-        return self._map_partitions(func, new_dtypes=self.dtypes.copy())
-
-    def applymap(self, func):
-        remote_func = self._prepare_method(pandas.DataFrame.applymap, func=func)
-        return self._map_partitions(remote_func)
-
-    def invert(self):
-        remote_func = self._prepare_method(pandas.DataFrame.__invert__)
-        return self._map_partitions(remote_func)
-
-    def isin(self, **kwargs):
-        func = self._prepare_method(pandas.DataFrame.isin, **kwargs)
-        new_dtypes = pandas.Series(
-            [np.dtype("bool") for _ in self.columns], index=self.columns
-        )
-        return self._map_partitions(func, new_dtypes=new_dtypes)
-
-    def isna(self):
-        func = self._prepare_method(pandas.DataFrame.isna)
-        new_dtypes = pandas.Series(
-            [np.dtype("bool") for _ in self.columns], index=self.columns
-        )
-        return self._map_partitions(func, new_dtypes=new_dtypes)
 
     def memory_usage(self, axis=0, **kwargs):
         """Returns the memory usage of each column.
@@ -998,20 +950,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_func = self._build_mapreduce_func(sum_memory_usage, axis=axis, **kwargs)
         return self._full_reduce(axis, map_func, reduce_func)
 
-    def negative(self, **kwargs):
-        func = self._prepare_method(pandas.DataFrame.__neg__, **kwargs)
-        return self._map_partitions(func)
+    # END Full Reduce operations
 
-    def notna(self):
-        func = self._prepare_method(pandas.DataFrame.notna)
-        new_dtypes = pandas.Series(
-            [np.dtype("bool") for _ in self.columns], index=self.columns
-        )
-        return self._map_partitions(func, new_dtypes=new_dtypes)
-
-    def round(self, **kwargs):
-        func = self._prepare_method(pandas.DataFrame.round, **kwargs)
-        return self._map_partitions(func, new_dtypes=self._dtype_cache)
+    # Map partitions operations
+    # These operations are operations that apply a function to every partition.
+    abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
+    applymap = MapFunction.register(pandas.DataFrame.applymap)
+    invert = MapFunction.register(pandas.DataFrame.__invert__)
+    isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
+    isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)
+    negative = MapFunction.register(pandas.DataFrame.__neg__)
+    notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
+    round = MapFunction.register(pandas.DataFrame.round)
 
     # END Map partitions operations
 

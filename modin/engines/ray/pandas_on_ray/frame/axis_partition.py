@@ -15,24 +15,18 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
-        self.idx = list_of_blocks[0].idx
-        self.col = list_of_blocks[0].col
-        self.offsets = list_of_blocks[0].offsets
 
     partition_type = PandasOnRayFramePartition
     instance_type = ray.ObjectID
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, index, columns, offsets, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         return deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_axis_func,
                 axis,
-                index,
-                columns,
-                offsets,
                 func,
                 num_splits,
                 kwargs,

@@ -132,9 +132,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
-                    self.index,
-                    self.columns,
-                    self.offsets,
                     func,
                     num_splits,
                     len(self.list_of_blocks),
@@ -168,7 +165,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-            cls, axis, index, columns, offsets, func, num_splits, kwargs, maintain_partitioning, *partitions
+            cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         """Deploy a function along a full axis in Ray.
 
@@ -195,12 +192,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             axis=axis,
             copy=False,
         )
-        if axis == 0:
-            dataframe.index = index
-            dataframe.columns = columns[slice(*offsets[1])]
-        else:
-            dataframe.index = index[slice(*offsets[1])]
-            dataframe.columns = columns
         result = func(dataframe, **kwargs)
         if isinstance(result, pandas.Series):
             if num_splits == 1:
