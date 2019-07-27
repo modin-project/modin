@@ -173,15 +173,14 @@ def compute_partition_shuffle(old_lengths, new_lengths, old_index=None, new_inde
         (2) how the old blocks are split (dictionary key-value pairs of old block
         indices and how they should be split). Any -1's indicate a dataframe of NaNs.
     """
-    # Create a dataframe of index values to facilitate the shuffle calculations.
+    # Create a numpy arrays of index values to facilitate the shuffle calculations.
     # We use -1 to represent NaN indices.
-    # The resulting dataframe will look like the following
-    #   old_block_index     old_internal_index  new_block_index
-    # 0     0                   0                   0
-    # 1     0                   1                   0
-    # 2     1                   0                   0
-    # 3     1                   1                   1
-    # 4     -1                  -1                  1
+    # old_index  old_block_index  new_block_index
+    #     0            0                0
+    #     1            0                0
+    #     2            1                0
+    #     3            1                1
+    #    -1           -1                1
 
     # Create list for the old/new block index and internal indices of the old blocks.
     old_block_index = np.repeat(np.arange(len(old_lengths)), old_lengths)
