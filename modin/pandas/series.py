@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import numpy as np
 import pandas
-from pandas.compat import string_types
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import (
     is_dict_like,
@@ -408,7 +407,7 @@ class Series(BasePandasDataset):
         except Exception:
             return_type = self.__name__
         if (
-            isinstance(func, string_types)
+            isinstance(func, str)
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
@@ -1553,7 +1552,7 @@ class StringMethods(object):
         return Series(query_compiler=self._query_compiler.str_upper())
 
     def find(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1562,7 +1561,7 @@ class StringMethods(object):
         )
 
     def rfind(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1571,7 +1570,7 @@ class StringMethods(object):
         )
 
     def index(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1580,7 +1579,7 @@ class StringMethods(object):
         )
 
     def rindex(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )

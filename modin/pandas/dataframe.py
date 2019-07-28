@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import pandas
-from pandas.compat import string_types
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
@@ -350,7 +349,7 @@ class DataFrame(BasePandasDataset):
         idx_name = None
         if callable(by):
             by = by(self.index)
-        elif isinstance(by, string_types):
+        elif isinstance(by, str):
             idx_name = by
             by = self.__getitem__(by)._query_compiler
         elif is_list_like(by):

@@ -1,8 +1,8 @@
-pandas==0.24.2
+pandas==0.25.0
 numpy
 dask[complete]==1.1.0
 distributed==1.25.0
-ray==0.7.1
+ray==0.7.3
 psutil==5.4.8
 strip_hints==0.1.1
 xarray

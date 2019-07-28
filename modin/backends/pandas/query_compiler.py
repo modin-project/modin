@@ -5,7 +5,6 @@ from __future__ import print_function
 import numpy as np
 import pandas
 
-from pandas.compat import string_types
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
     is_list_like,
@@ -2617,12 +2616,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_data = self._map_across_full_axis(axis, func_prepared)
         # When the function is list-like, the function names become the index/columns
         new_index = (
-            [f if isinstance(f, string_types) else f.__name__ for f in func]
+            [f if isinstance(f, str) else f.__name__ for f in func]
             if axis == 0
             else self.index
         )
         new_columns = (
-            [f if isinstance(f, string_types) else f.__name__ for f in func]
+            [f if isinstance(f, str) else f.__name__ for f in func]
             if axis == 1
             else self.columns
         )

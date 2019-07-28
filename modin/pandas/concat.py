@@ -22,7 +22,7 @@ def concat(
     copy=True,
 ):
     if isinstance(
-        objs, (pandas.Series, Series, DataFrame, compat.string_types, pandas.DataFrame)
+        objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)
     ):
         raise TypeError(
             "first argument must be an iterable of pandas "
