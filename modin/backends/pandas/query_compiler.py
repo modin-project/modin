@@ -862,15 +862,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         min_count = kwargs.get("min_count", 0)
-
-        def sum_prod_builder(df, **kwargs):
-            return func(df, **kwargs)
-
-        builder_func = self._build_mapreduce_func(sum_prod_builder, **kwargs)
         if min_count <= 1:
-            return self._full_reduce(axis, builder_func)
+            return self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
         else:
-            return self._full_axis_reduce(axis, builder_func)
+            return self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs))
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -878,9 +873,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the product of each numerical column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().prod(**kwargs)
         return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
 
     def sum(self, **kwargs):
@@ -900,8 +892,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         axis = 0 if axis is None else axis
         kwargs["axis"] = axis
-        builder_func = self._build_mapreduce_func(func, **kwargs)
-        return self._full_reduce(axis, builder_func)
+        return self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
 
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
@@ -919,17 +910,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
 
-
     def memory_usage(self, axis=0, **kwargs):
         """Returns the memory usage of each column.
 
         Returns:
             A new QueryCompiler object containing the memory usage of each column.
         """
-        if self._is_transposed:
-            return self.transpose().memory_usage(axis=1, **kwargs)
+        kwargs["axis"] = axis
 
-        def memory_usage_builder(df, **kwargs):
+        def memory_usage_builder(df):
             axis = kwargs.pop("axis")
             # We have to manually change the orientation of the data within the
             # partitions because memory_usage does not take in an axis argument
@@ -939,16 +928,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result = df.memory_usage(**kwargs)
             return result
 
-        def sum_memory_usage(df, **kwargs):
+        def sum_memory_usage(df):
             axis = kwargs.pop("axis")
             return df.sum(axis=axis)
 
-        # Even though memory_usage does not take in an axis argument, we have to
-        # pass in an axis kwargs for _build_mapreduce_func to properly arrange
-        # the results.
-        map_func = self._build_mapreduce_func(memory_usage_builder, axis=axis, **kwargs)
-        reduce_func = self._build_mapreduce_func(sum_memory_usage, axis=axis, **kwargs)
-        return self._full_reduce(axis, map_func, reduce_func)
+        return self._data_obj._full_reduce(axis, memory_usage_builder, sum_memory_usage)
 
     # END Full Reduce operations
 

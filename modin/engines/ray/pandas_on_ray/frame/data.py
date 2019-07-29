@@ -16,8 +16,8 @@ from modin.error_message import ErrorMessage
 
 class PandasOnRayData(object):
 
-    frame_mgr_cls = PandasOnRayFrameManager
-    query_compiler_cls = PandasQueryCompiler
+    _frame_mgr_cls = PandasOnRayFrameManager
+    _query_compiler_cls = PandasQueryCompiler
 
     @property
     def __constructor__(self):
@@ -31,7 +31,6 @@ class PandasOnRayData(object):
         self._column_widths = column_widths
         self._dtypes = dtypes
         self._apply_index_objs()
-        self._frame_manager = self.frame_mgr_cls(self._partitions, row_lengths, column_widths)
 
     def _apply_index_objs(self):
         cum_row_lengths = np.cumsum([0] + self._row_lengths)
@@ -43,18 +42,21 @@ class PandasOnRayData(object):
 
         self._partitions = np.array(
             [[self._partitions[i][j]
-              for j in range(len(self._partitions[i])) if self._column_widths[j] > 0]
+              for j in range(len(self._partitions[i]))
+              if j < len(self._column_widths) and self._column_widths[j] > 0]
              for i in range(len(self._partitions))
-             if self._row_lengths[i] > 0])
+             if i < len(self._row_lengths) and self._row_lengths[i] > 0])
 
-        for i in range(len(self._row_lengths)):
-            for j in range(len(self._column_widths)):
-                if self._row_lengths[i] > 0 and self._column_widths[j] > 0:
-                    self._partitions[i][j].call_queue += [(apply_idx_objs, {"idx":self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])], "col":self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+        self._column_widths = [w for w in self._column_widths if w > 0]
+        self._row_lengths = [r for r in self._row_lengths if r > 0]
+
+        for i in range(len(self._partitions)):
+            for j in range(len(self._partitions[i])):
+                self._partitions[i][j].call_queue += [(apply_idx_objs, {"idx":self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])], "col":self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
 
     def copy(self):
         return self.__constructor__(
-            self._frame_manager.partitions,
+            self._partitions,
             self.index.copy(),
             self.columns.copy(),
             self._row_lengths,
@@ -69,10 +71,6 @@ class PandasOnRayData(object):
     @property
     def column_widths(self):
         return self._column_widths
-
-    @property
-    def frame_manager(self):
-        return self._frame_manager
 
     @property
     def dtypes(self):
@@ -218,7 +216,8 @@ class PandasOnRayData(object):
         Return:
             Pandas series containing the reduced data.
         """
-        result = self._frame_manager.map_across_full_axis(axis, func)
+        func = self._build_mapreduce_func(func)
+        result = self._frame_mgr_cls.map_across_full_axis(axis, func)
         if axis == 0:
             columns = alternate_index if alternate_index is not None else self.columns
             return self.__constructor__(result.partitions, index=["__reduced__"], columns=columns, row_lengths=[1], column_widths=self.column_widths, dtypes=self.dtypes)
@@ -240,11 +239,14 @@ class PandasOnRayData(object):
             A new QueryCompiler object containing the results from map_func and
             reduce_func.
         """
+        map_func = self._build_mapreduce_func(map_func)
         if reduce_func is None:
             reduce_func = map_func
+        else:
+            reduce_func = self._build_mapreduce_func(reduce_func)
 
-        mapped_parts = self._frame_manager.map_across_blocks(map_func)
-        final_parts = mapped_parts.map_across_full_axis(axis, reduce_func).partitions
+        parts = self._frame_mgr_cls.map_across_blocks(self._partitions, map_func)
+        final_parts = self._frame_mgr_cls.map_across_full_axis(axis, parts, reduce_func)
         if axis == 0:
             columns = self.columns
             index = ["__reduced__"]
@@ -259,10 +261,12 @@ class PandasOnRayData(object):
             final_parts, index, columns, new_lengths, new_widths,
         )
 
-    def _map_partitions(self, func, new_dtypes=None):
-        new_partitions = self._frame_manager.map_across_blocks(func).partitions
+    def _map_partitions(self, func, dtypes=None):
+        new_partitions = self._frame_mgr_cls.map_across_blocks(self._partitions, func)
+        if dtypes is not None:
+            dtypes = pandas.Series([dtypes] * len(self.columns), index=self.columns)
         return self.__constructor__(
-            new_partitions, self.index, self.columns, self._row_lengths, self._column_widths, dtypes=new_dtypes
+            new_partitions, self.index, self.columns, self._row_lengths, self._column_widths, dtypes=dtypes
         )
 
     def _map_across_full_axis(self, axis, func):
@@ -296,7 +300,7 @@ class PandasOnRayData(object):
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_data = cls.frame_mgr_cls.from_pandas(df)
+        new_data = cls._frame_mgr_cls.from_pandas(df)
         return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
 
     def to_pandas(self):
@@ -305,7 +309,7 @@ class PandasOnRayData(object):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        df = self._frame_manager.to_pandas()
+        df = self._frame_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             if len(self.columns) != 0:
                 df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
@@ -319,7 +323,8 @@ class PandasOnRayData(object):
         return self.__constructor__(new_partitions, self.columns, self.index, self._column_widths, self._row_lengths, dtypes=new_dtypes)
 
     # Head/Tail/Front/Back
-    def _compute_lengths(self, lengths_list, n, from_back=False):
+    @staticmethod
+    def _compute_lengths(lengths_list, n, from_back=False):
         if not from_back:
             idx = np.digitize(n, np.cumsum(lengths_list))
             if idx == 0:
@@ -353,7 +358,7 @@ class PandasOnRayData(object):
         if n < 0:
             n = max(0, len(self.index) + n)
         new_row_lengths = self._compute_lengths(self._row_lengths, n)
-        new_partitions = self._frame_manager.take(0, n).partitions
+        new_partitions = self._frame_mgr_cls.take(0, self._partitions, self._row_lengths, n)
         return self.__constructor__(
             new_partitions, self.index[:n], self.columns, new_row_lengths, self._column_widths, self.dtypes,
         )
@@ -371,7 +376,7 @@ class PandasOnRayData(object):
         if n < 0:
             n = max(0, len(self.index) + n)
         new_row_lengths = self._compute_lengths(self._row_lengths, n, from_back=True)
-        new_partitions = self._frame_manager.take(0, -n).partitions
+        new_partitions = self._frame_mgr_cls.take(0, self._partitions, self._row_lengths, -n)
         return self.__constructor__(
             new_partitions, self.index[-n:], self.columns, new_row_lengths, self._column_widths, self.dtypes,
         )
@@ -386,7 +391,7 @@ class PandasOnRayData(object):
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
         new_col_lengths = self._compute_lengths(self._column_widths, n)
-        new_partitions = self._frame_manager.take(1, n).partitions
+        new_partitions = self._frame_mgr_cls.take(1, self._partitions, self._column_widths, n)
         return self.__constructor__(
             new_partitions, self.index, self.columns[:n], self._row_lengths, new_col_lengths, self.dtypes[:n],
         )
@@ -401,7 +406,7 @@ class PandasOnRayData(object):
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
         new_col_lengths = self._compute_lengths(self._column_widths, n, from_back=True)
-        new_partitions = self._frame_manager.take(1, -n).partitions
+        new_partitions = self._frame_mgr_cls.take(1, self._partitions, self._column_widths, -n)
         return self.__constructor__(
             new_partitions, self.index, self.columns[-n:], self._row_lengths, new_col_lengths, self.dtypes[n:],
         )

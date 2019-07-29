@@ -59,6 +59,7 @@ class BaseFrameManager(object):
     _filtered_empties = False
 
     def _get_partitions(self):
+        return self._partitions_cache
         if not self._filtered_empties or (
             self._lengths_cache is not None and self._widths_cache is not None
         ):
@@ -86,7 +87,8 @@ class BaseFrameManager(object):
 
     partitions = property(_get_partitions, _set_partitions)
 
-    def preprocess_func(self, map_func):
+    @classmethod
+    def preprocess_func(cls, map_func):
         """Preprocess a function to be applied to `BaseFramePartition` objects.
 
         Note: If your `BaseFramePartition` objects assume that a function provided
@@ -105,12 +107,12 @@ class BaseFrameManager(object):
             `BaseFramePartition.apply` method will recognize it (For the subclass
             being used).
         """
-        return self._partition_class.preprocess_func(map_func)
+        return cls._partition_class.preprocess_func(map_func)
 
     # END Abstract Methods
 
-    @property
-    def column_partitions(self):
+    @classmethod
+    def column_partitions(cls, partitions):
         """A list of `BaseFrameAxisPartition` objects.
 
         Note: Each value in this list will be an `BaseFrameAxisPartition` object.
@@ -118,10 +120,10 @@ class BaseFrameManager(object):
 
         Returns a list of `BaseFrameAxisPartition` objects.
         """
-        return [self._column_partitions_class(col) for col in self.partitions.T]
+        return [cls._column_partitions_class(col) for col in partitions.T]
 
-    @property
-    def row_partitions(self):
+    @classmethod
+    def row_partitions(cls, partitions):
         """A list of `BaseFrameAxisPartition` objects, represents column partitions.
 
         Note: Each value in this list will an `BaseFrameAxisPartition` object.
@@ -129,7 +131,7 @@ class BaseFrameManager(object):
 
         Returns a list of `BaseFrameAxisPartition` objects.
         """
-        return [self._row_partition_class(row) for row in self.partitions]
+        return [cls._row_partition_class(row) for row in partitions]
 
     # Lengths of the blocks
     _lengths_cache = None
@@ -228,7 +230,8 @@ class BaseFrameManager(object):
         )
         return new_partitions.map_across_full_axis(axis, reduce_func)
 
-    def map_across_blocks(self, map_func):
+    @classmethod
+    def map_across_blocks(cls, partitions, map_func):
         """Applies `map_func` to every partition.
 
         Args:
@@ -237,14 +240,14 @@ class BaseFrameManager(object):
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
-        preprocessed_map_func = self.preprocess_func(map_func)
+        preprocessed_map_func = cls.preprocess_func(map_func)
         new_partitions = np.array(
             [
                 [part.apply(preprocessed_map_func) for part in row_of_parts]
-                for row_of_parts in self.partitions
+                for row_of_parts in partitions
             ]
         )
-        return self.__constructor__(new_partitions)
+        return new_partitions
 
     def lazy_map_across_blocks(self, map_func, kwargs):
         preprocessed_map_func = self.preprocess_func(map_func)
@@ -314,7 +317,8 @@ class BaseFrameManager(object):
             )
         return new_self, new_other
 
-    def map_across_full_axis(self, axis, map_func):
+    @classmethod
+    def map_across_full_axis(cls, axis, partitions, map_func):
         """Applies `map_func` to every partition.
 
         Note: This method should be used in the case that `map_func` relies on
@@ -330,9 +334,9 @@ class BaseFrameManager(object):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        num_splits = self._compute_num_partitions()
-        preprocessed_map_func = self.preprocess_func(map_func)
-        partitions = self.column_partitions if not axis else self.row_partitions
+        num_splits = cls._compute_num_partitions()
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        partitions = cls.column_partitions(partitions) if not axis else cls.row_partitions(partitions)
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
@@ -346,13 +350,10 @@ class BaseFrameManager(object):
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D numpy array to return
         # the structure to the correct order.
-        return (
-            self.__constructor__(result_blocks.T)
-            if not axis
-            else self.__constructor__(result_blocks)
-        )
+        return result_blocks.T if not axis else result_blocks
 
-    def take(self, axis, n):
+    @classmethod
+    def take(cls, axis, partitions, block_lengths, n):
         """Take the first (or last) n rows or columns from the blocks
 
         Note: Axis = 0 will be equivalent to `head` or `tail`
@@ -368,11 +369,11 @@ class BaseFrameManager(object):
         """
         # These are the partitions that we will extract over
         if not axis:
-            partitions = self.partitions
-            bin_lengths = self.block_lengths
+            partitions = partitions
+            bin_lengths = block_lengths
         else:
-            partitions = self.partitions.T
-            bin_lengths = self.block_widths
+            partitions = partitions.T
+            bin_lengths = block_lengths
         if n < 0:
             length_bins = np.cumsum(bin_lengths[::-1])
             n *= -1
@@ -395,7 +396,7 @@ class BaseFrameManager(object):
                     if axis == 0
                     else (slice(None), slice(-remaining, None))
                 )
-                func = self.preprocess_func(lambda df: df.iloc[slice_obj])
+                func = cls.preprocess_func(lambda df: df.iloc[slice_obj])
                 # We use idx + 1 here because the loop is not inclusive, and we
                 # need to iterate through idx.
                 result = np.array(
@@ -423,7 +424,7 @@ class BaseFrameManager(object):
                 slice_obj = (
                     slice(remaining) if axis == 0 else (slice(None), slice(remaining))
                 )
-                func = self.preprocess_func(lambda df: df.iloc[slice_obj])
+                func = cls.preprocess_func(lambda df: df.iloc[slice_obj])
                 # See note above about idx + 1
                 result = np.array(
                     [
@@ -433,7 +434,7 @@ class BaseFrameManager(object):
                         for i in range(idx + 1)
                     ]
                 )
-        return self.__constructor__(result.T) if axis else self.__constructor__(result)
+        return result.T if axis else result
 
     def concat(self, axis, other_blocks):
         """Concatenate the blocks with another set of blocks.
@@ -476,50 +477,40 @@ class BaseFrameManager(object):
         """
         return self.__constructor__(self.partitions.T)
 
-    def to_pandas(self, is_transposed=False):
+    @classmethod
+    def to_pandas(cls, partitions):
         """Convert this object into a Pandas DataFrame from the partitions.
-
-        Args:
-            is_transposed: A flag for telling this object that the external
-                representation is transposed, but not the internal.
 
         Returns:
             A Pandas DataFrame
         """
-        # In the case this is transposed, it is easier to just temporarily
-        # transpose back then transpose after the conversion. The performance
-        # is the same as if we individually transposed the blocks and
-        # concatenated them, but the code is much smaller.
-        if is_transposed:
-            return self.transpose().to_pandas(False).T
+        retrieved_objects = [
+            [obj.to_pandas() for obj in part]
+            for part in partitions
+        ]
+        if all(
+            isinstance(part, pandas.Series)
+            for row in retrieved_objects
+            for part in row
+        ):
+            axis = 0
+        elif all(
+            isinstance(part, pandas.DataFrame)
+            for row in retrieved_objects
+            for part in row
+        ):
+            axis = 1
         else:
-            retrieved_objects = [
-                [obj.to_pandas() for obj in part]
-                for part in self.partitions
-            ]
-            if all(
-                isinstance(part, pandas.Series)
-                for row in retrieved_objects
-                for part in row
-            ):
-                axis = 0
-            elif all(
-                isinstance(part, pandas.DataFrame)
-                for row in retrieved_objects
-                for part in row
-            ):
-                axis = 1
-            else:
-                ErrorMessage.catch_bugs_and_request_email(True)
-            df_rows = [
-                pandas.concat([part for part in row], axis=axis)
-                for row in retrieved_objects
-                if not all(part.empty for part in row)
-            ]
-            if len(df_rows) == 0:
-                return pandas.DataFrame()
-            else:
-                return pandas.concat(df_rows)
+            ErrorMessage.catch_bugs_and_request_email(True)
+        df_rows = [
+            pandas.concat([part for part in row], axis=axis)
+            for row in retrieved_objects
+            if not all(part.empty for part in row)
+        ]
+        if len(df_rows) == 0:
+            return pandas.DataFrame()
+        else:
+            return pandas.concat(df_rows)
 
     def to_numpy(self, is_transposed=False):
         """Convert this object into a NumPy Array from the partitions.
