@@ -82,8 +82,8 @@ class PandasOnRayData(object):
         def dtype_builder(df):
             return df.apply(lambda row: find_common_type(row.values), axis=0)
 
-        map_func = self._build_mapreduce_func(lambda df: df.dtypes)
-        reduce_func = self._build_mapreduce_func(dtype_builder)
+        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
+        reduce_func = self._build_mapreduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
             dtypes = (
@@ -187,10 +187,10 @@ class PandasOnRayData(object):
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
 
-    def _build_mapreduce_func(self, func, **kwargs):
+    def _build_mapreduce_func(self, axis, func, **kwargs):
         def _map_reduce_func(df):
             series_result = func(df, **kwargs)
-            if kwargs.get("axis", 0) == 0 and isinstance(series_result, pandas.Series):
+            if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
                 # consistent with what we have done. In the case of a reduction, the
                 # data for axis=0 should be a single value for each column. By
@@ -216,8 +216,8 @@ class PandasOnRayData(object):
         Return:
             Pandas series containing the reduced data.
         """
-        func = self._build_mapreduce_func(func)
-        result = self._frame_mgr_cls.map_across_full_axis(axis, func)
+        func = self._build_mapreduce_func(axis, func)
+        result = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         if axis == 0:
             columns = alternate_index if alternate_index is not None else self.columns
             return self.__constructor__(result.partitions, index=["__reduced__"], columns=columns, row_lengths=[1], column_widths=self.column_widths, dtypes=self.dtypes)
@@ -239,11 +239,11 @@ class PandasOnRayData(object):
             A new QueryCompiler object containing the results from map_func and
             reduce_func.
         """
-        map_func = self._build_mapreduce_func(map_func)
+        map_func = self._build_mapreduce_func(axis, map_func)
         if reduce_func is None:
             reduce_func = map_func
         else:
-            reduce_func = self._build_mapreduce_func(reduce_func)
+            reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
         parts = self._frame_mgr_cls.map_across_blocks(self._partitions, map_func)
         final_parts = self._frame_mgr_cls.map_across_full_axis(axis, parts, reduce_func)
@@ -263,7 +263,9 @@ class PandasOnRayData(object):
 
     def _map_partitions(self, func, dtypes=None):
         new_partitions = self._frame_mgr_cls.map_across_blocks(self._partitions, func)
-        if dtypes is not None:
+        if dtypes == "copy":
+            dtypes = self.dtypes
+        elif dtypes is not None:
             dtypes = pandas.Series([dtypes] * len(self.columns), index=self.columns)
         return self.__constructor__(
             new_partitions, self.index, self.columns, self._row_lengths, self._column_widths, dtypes=dtypes

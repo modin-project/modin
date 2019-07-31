@@ -194,17 +194,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _append_list_of_managers(self, others, axis, **kwargs):
         if not isinstance(others, list):
             others = [others]
-        if self._is_transposed:
-            # If others are transposed, we handle that behavior correctly in
-            # `copartition`, but it is not handled correctly in the case that `self` is
-            # transposed.
-            return (
-                self.transpose()
-                ._append_list_of_managers(
-                    [o.transpose() for o in others], axis ^ 1, **kwargs
-                )
-                .transpose()
-            )
         assert all(
             isinstance(other, type(self)) for other in others
         ), "Different Manager objects are being used. This is not allowed"
@@ -217,7 +206,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             others,
             join,
             sort,
-            force_repartition=any(obj._is_transposed for obj in [self] + others),
+            force_repartition=False,
         )
         new_data = new_self.concat(axis, to_append)
 
@@ -256,7 +245,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             others,
             how,
             sort,
-            force_repartition=any(obj._is_transposed for obj in [self] + others),
+            force_repartition=False,
         )
         new_data = new_self.concat(1, to_join)
         # This stage is to efficiently get the resulting columns, including the
@@ -594,17 +583,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler with updated data and new index.
         """
         if isinstance(scalar, (list, np.ndarray, pandas.Series)):
-            new_index = self.index if axis == 0 else self.columns
-
-            def list_like_op(df):
-                if axis == 0:
-                    df.index = new_index
-                else:
-                    df.columns = new_index
-                return func(df)
-
             new_data = self._map_across_full_axis(
-                axis, self._prepare_method(list_like_op)
+                axis, func
             )
             if axis == 1 and isinstance(scalar, pandas.Series):
                 new_columns = self.columns.union(
@@ -740,13 +720,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing counts of non-NaN objects from each
             column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().count(**kwargs)
         axis = kwargs.get("axis", 0)
-        map_func = self._build_mapreduce_func(pandas.DataFrame.count, **kwargs)
-        reduce_func = self._build_mapreduce_func(pandas.DataFrame.sum, **kwargs)
-        return self._full_reduce(axis, map_func, reduce_func)
+        return self._data_obj._full_reduce(axis, lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs))
 
     def dot(self, other):
         """Computes the matrix multiplication of self and other.
@@ -758,8 +733,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Returns the result of the matrix multiply.
         """
-        if self._is_transposed:
-            return self.transpose().dot(other).transpose()
 
         def map_func(df, other=other):
             if isinstance(other, pandas.DataFrame):
@@ -813,11 +786,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the maximum values from each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().max(**kwargs)
-        mapreduce_func = self._build_mapreduce_func(pandas.DataFrame.max, **kwargs)
-        return self._full_reduce(kwargs.get("axis", 0), mapreduce_func)
+        return self._data_obj._full_reduce(kwargs.get("axis", 0), lambda df: df.max(**kwargs))
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -826,18 +795,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the mean from each numerical column or
             row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().mean(**kwargs)
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
         sums = self.sum(**kwargs)
         counts = self.count(axis=axis, numeric_only=kwargs.get("numeric_only", None))
-        if sums._is_transposed and counts._is_transposed:
-            sums = sums.transpose()
-            counts = counts.transpose()
-        result = sums.binary_op("truediv", counts, axis=axis)
-        return result.transpose() if axis == 0 else result
+        return sums.binary_op("truediv", counts, axis=axis)
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -845,11 +807,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the minimum value from each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().min(**kwargs)
-        mapreduce_func = self._build_mapreduce_func(pandas.DataFrame.min, **kwargs)
-        return self._full_reduce(kwargs.get("axis", 0), mapreduce_func)
+        return self._data_obj._full_reduce(kwargs.get("axis", 0), lambda df: df.min(**kwargs))
 
     def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
@@ -916,10 +874,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the memory usage of each column.
         """
-        kwargs["axis"] = axis
 
         def memory_usage_builder(df):
-            axis = kwargs.pop("axis")
             # We have to manually change the orientation of the data within the
             # partitions because memory_usage does not take in an axis argument
             # and always does it along columns.
@@ -929,7 +885,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result
 
         def sum_memory_usage(df):
-            axis = kwargs.pop("axis")
             return df.sum(axis=axis)
 
         return self._data_obj._full_reduce(axis, memory_usage_builder, sum_memory_usage)
@@ -950,285 +905,60 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map partitions operations
 
     # String map partition operations
-    def _str_map_partitions(self, func, new_dtypes=None, **kwargs):
-        def str_op_builder(df, **kwargs):
+    def _str_map(func):
+        def str_op_builder(df, *args, **kwargs):
             str_series = df.squeeze().str
-            return func(str_series, **kwargs).to_frame()
+            return func(str_series, *args, **kwargs).to_frame()
+        return str_op_builder
 
-        builder_func = self._prepare_method(str_op_builder, **kwargs)
-        return self._map_partitions(builder_func, new_dtypes=new_dtypes)
+    # This is here to shorten the call to pandas
+    str_ops = pandas.Series.str
 
-    def str_split(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.split, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rsplit(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.rsplit, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_get(self, i):
-        return self._str_map_partitions(
-            pandas.Series.str.get, new_dtypes=self.dtypes, i=i
-        )
-
-    def str_join(self, sep):
-        return self._str_map_partitions(
-            pandas.Series.str.join, new_dtypes=self.dtypes, sep=sep
-        )
-
-    def str_contains(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        new_dtypes = pandas.Series([bool])
-        return self._str_map_partitions(
-            pandas.Series.str.contains, new_dtypes=new_dtypes, **kwargs
-        )
-
-    def str_replace(self, pat, repl, **kwargs):
-        kwargs["pat"] = pat
-        kwargs["repl"] = repl
-        return self._str_map_partitions(
-            pandas.Series.str.replace, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_repeats(self, repeats):
-        return self._str_map_partitions(
-            pandas.Series.str.repeats, new_dtypes=self.dtypes, repeats=repeats
-        )
-
-    def str_pad(self, width, **kwargs):
-        kwargs["width"] = width
-        return self._str_map_partitions(
-            pandas.Series.str.pad, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_center(self, width, **kwargs):
-        kwargs["width"] = width
-        return self._str_map_partitions(
-            pandas.Series.str.center, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_ljust(self, width, **kwargs):
-        kwargs["width"] = width
-        return self._str_map_partitions(
-            pandas.Series.str.ljust, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rjust(self, width, **kwargs):
-        kwargs["width"] = width
-        return self._str_map_partitions(
-            pandas.Series.str.rjust, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_zfill(self, width):
-        return self._str_map_partitions(
-            pandas.Series.str.zfill, new_dtypes=self.dtypes, width=width
-        )
-
-    def str_wrap(self, width, **kwargs):
-        kwargs["width"] = width
-        return self._str_map_partitions(
-            pandas.Series.str.wrap, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_slice(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.slice, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_slice_replace(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.slice_replace, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_count(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        new_dtypes = pandas.Series([int])
-        # We have to pass in a lambda because pandas.Series.str.count does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.count(**kwargs), new_dtypes=new_dtypes
-        )
-
-    def str_startswith(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.startswith does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.startswith(**kwargs), new_dtypes=new_dtypes
-        )
-
-    def str_endswith(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.endswith does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.endswith(**kwargs), new_dtypes=new_dtypes
-        )
-
-    def str_findall(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        # We have to pass in a lambda because pandas.Series.str.findall does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.findall(**kwargs), new_dtypes=self.dtypes
-        )
-
-    def str_match(self, pat, **kwargs):
-        kwargs["pat"] = pat
-        return self._str_map_partitions(
-            pandas.Series.str.match, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_len(self):
-        new_dtypes = pandas.Series([int])
-        return self._str_map_partitions(pandas.Series.str.len, new_dtypes=new_dtypes)
-
-    def str_strip(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.strip, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rstrip(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.rstrip, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_lstrip(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.lstrip, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_partition(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.partition, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rpartition(self, **kwargs):
-        return self._str_map_partitions(
-            pandas.Series.str.rpartition, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_lower(self):
-        # We have to pass in a lambda because pandas.Series.str.lower does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.lower(), new_dtypes=self.dtypes
-        )
-
-    def str_upper(self):
-        # We have to pass in a lambda because pandas.Series.str.upper does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.upper(), new_dtypes=self.dtypes
-        )
-
-    def str_find(self, sub, **kwargs):
-        kwargs["sub"] = sub
-        return self._str_map_partitions(
-            pandas.Series.str.find, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rfind(self, sub, **kwargs):
-        kwargs["sub"] = sub
-        return self._str_map_partitions(
-            pandas.Series.str.rfind, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_index(self, sub, **kwargs):
-        kwargs["sub"] = sub
-        return self._str_map_partitions(
-            pandas.Series.str.index, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_rindex(self, sub, **kwargs):
-        kwargs["sub"] = sub
-        return self._str_map_partitions(
-            pandas.Series.str.rindex, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_capitalize(self):
-        # We have to pass in a lambda because pandas.Series.str.capitalize does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.capitalize(), new_dtypes=self.dtypes
-        )
-
-    def str_swapcase(self):
-        # We have to pass in a lambda because pandas.Series.str.swapcase does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.swapcase(), new_dtypes=self.dtypes
-        )
-
-    def str_normalize(self, form):
-        return self._str_map_partitions(
-            pandas.Series.str.normalize, new_dtypes=self.dtypes, form=form
-        )
-
-    def str_translate(self, table, **kwargs):
-        kwargs["table"] = table
-        return self._str_map_partitions(
-            pandas.Series.str.translate, new_dtypes=self.dtypes, **kwargs
-        )
-
-    def str_isalnum(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isalnum does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isalnum(), new_dtypes=new_dtypes
-        )
-
-    def str_isalpha(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isalpha does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isalpha(), new_dtypes=new_dtypes
-        )
-
-    def str_isdigit(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isdigit does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isdigit(), new_dtypes=new_dtypes
-        )
-
-    def str_isspace(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isspace does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isspace(), new_dtypes=new_dtypes
-        )
-
-    def str_islower(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.islower does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.islower(), new_dtypes=new_dtypes
-        )
-
-    def str_isupper(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isupper does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isupper(), new_dtypes=new_dtypes
-        )
-
-    def str_istitle(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.istitle does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.istitle(), new_dtypes=new_dtypes
-        )
-
-    def str_isnumeric(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isnumeric does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isnumeric(), new_dtypes=new_dtypes
-        )
-
-    def str_isdecimal(self):
-        new_dtypes = pandas.Series([bool])
-        # We have to pass in a lambda because pandas.Series.str.isdecimal does not exist for python2
-        return self._str_map_partitions(
-            lambda str_series: str_series.isdecimal(), new_dtypes=new_dtypes
-        )
+    str_capitalize = MapFunction.register(_str_map(str_ops.capitalize), dtypes="copy")
+    str_center = MapFunction.register(_str_map(str_ops.center), dtypes="copy")
+    str_contains = MapFunction.register(_str_map(str_ops.contains), dtypes=np.bool)
+    str_count = MapFunction.register(_str_map(str_ops.count), dtypes=int)
+    str_endswith = MapFunction.register(_str_map(str_ops.endswith), dtypes=np.bool)
+    str_find = MapFunction.register(_str_map(str_ops.find), dtypes="copy")
+    str_findall = MapFunction.register(_str_map(str_ops.findall), dtypes="copy")
+    str_get = MapFunction.register(_str_map(str_ops.get), dtypes="copy")
+    str_index = MapFunction.register(_str_map(str_ops.index), dtypes="copy")
+    str_isalnum = MapFunction.register(_str_map(str_ops.isalnum), dtypes=np.bool)
+    str_isalpha = MapFunction.register(_str_map(str_ops.isalpha), dtypes=np.bool)
+    str_isdecimal = MapFunction.register(_str_map(str_ops.isdecimal), dtypes=np.bool)
+    str_isdigit = MapFunction.register(_str_map(str_ops.isdigit), dtypes=np.bool)
+    str_islower = MapFunction.register(_str_map(str_ops.islower), dtypes=np.bool)
+    str_isnumeric = MapFunction.register(_str_map(str_ops.isnumeric), dtypes=np.bool)
+    str_isspace = MapFunction.register(_str_map(str_ops.isspace), dtypes=np.bool)
+    str_istitle = MapFunction.register(_str_map(str_ops.istitle), dtypes=np.bool)
+    str_isupper = MapFunction.register(_str_map(str_ops.isupper), dtypes=np.bool)
+    str_join = MapFunction.register(_str_map(str_ops.join), dtypes="copy")
+    str_len = MapFunction.register(_str_map(str_ops.len), dtypes=int)
+    str_ljust = MapFunction.register(_str_map(str_ops.ljust), dtypes="copy")
+    str_lower = MapFunction.register(_str_map(str_ops.lower), dtypes="copy")
+    str_lstrip = MapFunction.register(_str_map(str_ops.lstrip), dtypes="copy")
+    str_match = MapFunction.register(_str_map(str_ops.match), dtypes="copy")
+    str_normalize = MapFunction.register(_str_map(str_ops.normalize), dtypes="copy")
+    str_pad = MapFunction.register(_str_map(str_ops.pad), dtypes="copy")
+    str_partition = MapFunction.register(_str_map(str_ops.partition), dtypes="copy")
+    str_repeat = MapFunction.register(_str_map(str_ops.repeat), dtypes="copy")
+    str_replace = MapFunction.register(_str_map(str_ops.replace), dtypes="copy")
+    str_rfind = MapFunction.register(_str_map(str_ops.rfind), dtypes="copy")
+    str_rindex = MapFunction.register(_str_map(str_ops.rindex), dtypes="copy")
+    str_rjust = MapFunction.register(_str_map(str_ops.rjust), dtypes="copy")
+    str_rpartition = MapFunction.register(_str_map(str_ops.rpartition), dtypes="copy")
+    str_rsplit = MapFunction.register(_str_map(str_ops.rsplit), dtypes="copy")
+    str_rstrip = MapFunction.register(_str_map(str_ops.rstrip), dtypes="copy")
+    str_slice = MapFunction.register(_str_map(str_ops.slice), dtypes="copy")
+    str_slice_replace = MapFunction.register(_str_map(str_ops.slice_replace), dtypes="copy")
+    str_split = MapFunction.register(_str_map(str_ops.split), dtypes="copy")
+    str_startswith = MapFunction.register(_str_map(str_ops.startswith), dtypes=np.bool)
+    str_strip = MapFunction.register(_str_map(str_ops.strip), dtypes="copy")
+    str_swapcase = MapFunction.register(_str_map(str_ops.swapcase), dtypes="copy")
+    str_translate = MapFunction.register(_str_map(str_ops.translate), dtypes="copy")
+    str_upper = MapFunction.register(_str_map(str_ops.upper), dtypes="copy")
+    str_wrap = MapFunction.register(_str_map(str_ops.wrap), dtypes="copy")
+    str_zfill = MapFunction.register(_str_map(str_ops.zfill), dtypes="copy")
 
     # END String map partitions operations
 
@@ -1314,17 +1044,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the maximum of each column or axis.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().idxmax(**kwargs)
-
         axis = kwargs.get("axis", 0)
-
-        def idxmax_builder(df, **kwargs):
-            return df.idxmax(**kwargs)
-
-        func = self._data_obj._build_mapreduce_func(idxmax_builder, **kwargs)
-        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, func))
+        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs)))
 
     def idxmin(self, **kwargs):
         """Returns the first occurrence of the minimum over requested axis.
@@ -1332,22 +1053,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the minimum of each column or axis.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().idxmin(**kwargs)
-
         axis = kwargs.get("axis", 0)
-        index = self.index if axis == 0 else self.columns
-
-        def idxmin_builder(df, **kwargs):
-            if axis == 0:
-                df.index = index
-            else:
-                df.columns = index
-            return df.idxmin(**kwargs)
-
-        func = self._build_mapreduce_func(idxmin_builder, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs)))
 
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
