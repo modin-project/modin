@@ -175,27 +175,26 @@ def compute_partition_shuffle(old_lengths, new_lengths, old_index=None, new_inde
     """
     # Create a numpy arrays of index values to facilitate the shuffle calculations.
     # We use -1 to represent NaN indices.
-    # old_index  old_block_index  new_block_index
-    #     0            0                0
-    #     1            0                0
-    #     2            1                0
-    #     3            1                1
-    #    -1           -1                1
+    # old_index  old_block_index  old_internal_index  new_block_index
+    #     0            0                  0                 0
+    #     1            0                  1                 0
+    #     2            1                  0                 0
+    #     3            1                  1                 1
+    #    -1           -1                 -1                 1
 
     # Create list for the old/new block index and internal indices of the old blocks.
     old_block_index = np.repeat(np.arange(len(old_lengths)), old_lengths)
+    old_internal_index = np.concatenate([np.arange(old_len) for old_len in old_lengths])
     new_block_index = np.repeat(np.arange(len(new_lengths)), new_lengths)
 
     # Pad old block and internal indices to the new index length.
     if new_index is not None and len(new_index) > len(old_index):
         diff = len(new_index) - len(old_index)
-        empty_rows = np.repeat(-1, diff)
-        old_block_index = np.append(old_block_index, empty_rows)
         old_index = pandas.Index(old_index).append(
             pandas.Index(np.arange(-1, -(diff + 1), -1))
         )
 
-    index = pandas.Index(old_index).get_indexer(new_index)
+    index = old_index.get_indexer(new_index)
 
     # Using the index dataframe, we iterate through to calculate how we split
     # the old blocks and how the new blocks are built out of the old blocks.
@@ -206,19 +205,20 @@ def compute_partition_shuffle(old_lengths, new_lengths, old_index=None, new_inde
     prev_old_block_idx = -2
     prev_new_block_idx = -2
 
-    for i in range(len(index)):
-        old_block_idx = old_block_index[i]
+    for i, idx in enumerate(index):
+        old_block_idx = old_block_index[idx] if idx != -1 else -1
+        old_internal_idx = old_internal_index[idx] if idx != -1 else -1
         new_block_idx = new_block_index[i]
         # Calculate the old partition splits.
         if new_block_idx != prev_new_block_idx or old_block_idx != prev_old_block_idx:
             # Create a old partitions split if either of the block indices are not equal to the last one.
             old_partition_split_idx = old_partition_counts[old_block_idx]
             old_partition_counts[old_block_idx] += 1
-            old_partition_splits[old_block_idx].append([index[i]])
+            old_partition_splits[old_block_idx].append([old_internal_idx])
         else:
             # Otherwise, add to the previous split.
             old_partition_split_idx = old_partition_counts[old_block_idx]
-            old_partition_splits[old_block_idx][-1].append(index[i])
+            old_partition_splits[old_block_idx][-1].append(old_internal_idx)
         # Save new block data
         if len(new_partition_block) > 0 and new_block_idx != prev_new_block_idx:
             # Save new partition block to new block if we are on a new block
