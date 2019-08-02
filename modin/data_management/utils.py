@@ -194,7 +194,10 @@ def compute_partition_shuffle(old_lengths, new_lengths, old_index=None, new_inde
             pandas.Index(np.arange(-1, -(diff + 1), -1))
         )
 
-    index = old_index.get_indexer(new_index)
+    if old_index is not None:
+        index = old_index.get_indexer(new_index)
+    else:
+        index = pandas.Index(np.arange(sum(old_lengths)))
 
     # Using the index dataframe, we iterate through to calculate how we split
     # the old blocks and how the new blocks are built out of the old blocks.
