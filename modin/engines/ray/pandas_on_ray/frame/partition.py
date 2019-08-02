@@ -324,7 +324,7 @@ def deploy_ray_shuffle(
         else:
             df_part.columns = pandas.RangeIndex(len(df_part.columns))
         df_parts.append(df_part)
-    df = pandas.concat(df_parts, axis=axis)#, ignore_index=True)
+    df = pandas.concat(df_parts, axis=axis)  # , ignore_index=True)
 
     # Make sure internal indices are correct.
     if axis:
