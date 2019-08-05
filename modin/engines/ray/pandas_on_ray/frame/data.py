@@ -272,7 +272,19 @@ class PandasOnRayData(object):
         )
 
     def _map_across_full_axis(self, axis, func):
-        return self.data.map_across_full_axis(axis, func)
+        new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
+        first = new_partitions[0][0].apply(lambda df: (df.index, df.columns)).oid
+        idx_parts = [part.apply(lambda df: df.index).oid for part in new_partitions.T[0]]
+        col_parts = [part.apply(lambda df: df.columns).oid for part in new_partitions[0]]
+        first_idx, first_col = ray.get(first)
+        idx_parts = ray.get(idx_parts)
+        col_parts = ray.get(col_parts)
+        new_lengths = [len(obj) for obj in [first_idx] + idx_parts]
+        new_widths = [len(obj) for obj in [first_col] + col_parts]
+        new_idx = first_idx.append(idx_parts)
+        new_cols = first_col.append(col_parts)
+        print(new_cols)
+        return self.__constructor__(new_partitions, new_idx, new_cols, new_lengths, new_widths)
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):
         """This method applies all manual partitioning functions.

@@ -336,7 +336,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 other[i].data,
                 reindex_left,
                 reindex_right,
-                other[i]._is_transposed,
             )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
@@ -357,7 +356,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             NumPy Array of the QueryCompiler.
         """
-        arr = self.data.to_numpy(is_transposed=self._is_transposed)
+        arr = self.data.to_numpy()
         ErrorMessage.catch_bugs_and_request_email(
             len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
         )
@@ -424,18 +423,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if isinstance(other, type(self)):
-            # If this QueryCompiler is transposed, copartition can sometimes fail to
-            # properly co-locate the data. It does not fail if other is transposed, so
-            # if this object is transposed, we will transpose both and do the operation,
-            # then transpose at the end.
-            if self._is_transposed:
-                return (
-                    self.transpose()
-                    ._inter_manager_operations(
-                        other.transpose(), "outer", lambda x, y: func(x, y, **kwargs)
-                    )
-                    .transpose()
-                )
             return self._inter_manager_operations(
                 other, "outer", lambda x, y: func(x, y, **kwargs)
             )
@@ -609,13 +596,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler with updated data and new index.
         """
-        if self._is_transposed:
-            return (
-                self.transpose()
-                .reindex(axis=axis ^ 1, labels=labels, **kwargs)
-                .transpose()
-            )
-
         # To reindex, we need a function that will be shipped to each of the
         # partitions.
         def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
@@ -1080,9 +1060,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the median of each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().median(**kwargs)
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
         func = self._build_mapreduce_func(pandas.DataFrame.median, **kwargs)
@@ -1094,9 +1071,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object of ints indexed by column or index names.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().nunique(**kwargs)
         axis = kwargs.get("axis", 0)
         func = self._build_mapreduce_func(pandas.DataFrame.nunique, **kwargs)
         return self._full_axis_reduce(axis, func)
@@ -1107,9 +1081,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the quantile of each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().quantile_for_single_value(**kwargs)
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q", 0.5)
         assert type(q) is float
@@ -1134,9 +1105,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the skew of each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().skew(**kwargs)
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
         func = self._build_mapreduce_func(pandas.DataFrame.skew, **kwargs)
@@ -1149,9 +1117,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the standard deviation of each column
             or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().std(**kwargs)
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
         func = self._build_mapreduce_func(pandas.DataFrame.std, **kwargs)
@@ -1163,9 +1128,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the variance of each column or row.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().var(**kwargs)
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
         func = self._build_mapreduce_func(pandas.DataFrame.var, **kwargs)
@@ -1229,40 +1191,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(func, **kwargs)
-        new_data = self._map_across_full_axis(axis, func)
-        return self.__constructor__(
-            new_data, self.index, self.columns, self._dtype_cache
-        )
+        new_data = self._data_obj._map_across_full_axis(axis, func)
+        return self.__constructor__(data_object=new_data)
 
     def cummax(self, **kwargs):
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cummax(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cummax, **kwargs)
 
     def cummin(self, **kwargs):
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cummin(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cummin, **kwargs)
 
     def cumsum(self, **kwargs):
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cumsum(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cumsum, **kwargs)
 
     def cumprod(self, **kwargs):
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().cumprod(**kwargs).transpose()
         return self._cumulative_builder(pandas.DataFrame.cumprod, **kwargs)
 
     def diff(self, **kwargs):
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().diff(**kwargs).transpose()
         axis = kwargs.get("axis", 0)
         func = self._prepare_method(pandas.DataFrame.diff, **kwargs)
         new_data = self._map_across_full_axis(axis, func)
@@ -1277,8 +1221,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler with new columns after applying expr.
         """
-        columns = self.index if self._is_transposed else self.columns
-        index = self.columns if self._is_transposed else self.index
+        index = self.index
 
         # Make a copy of columns and eval on the copy to determine if result type is
         # series or not
@@ -1290,7 +1233,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # pop the `axis` parameter because it was needed to build the mapreduce
             # function but it is not a parameter used by `eval`.
             kwargs.pop("axis", None)
-            df.columns = columns
             result = df.eval(expr, inplace=False, **kwargs)
             return result
 
@@ -1395,9 +1337,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing quantiles of original QueryCompiler along an axis.
         """
-        if self._is_transposed:
-            kwargs["axis"] = kwargs.get("axis", 0) ^ 1
-            return self.transpose().quantile_for_list_of_values(**kwargs)
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q")
         numeric_only = kwargs.get("numeric_only", True)
@@ -1501,8 +1440,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             QueryCompiler containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
-        if self._is_transposed:
-            return self.transpose().sort_index(axis=axis ^ 1, **kwargs).transpose()
         index = self.columns if axis else self.index
 
         # sort_index can have ascending be None and behaves as if it is False.
@@ -1529,7 +1466,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = pandas.Series(self.index).sort_values(**kwargs)
             new_columns = self.columns
         return self.__constructor__(
-            new_data, new_index, new_columns, self.dtypes.copy(), self._is_transposed
+            new_data, new_index, new_columns, self.dtypes.copy()
         )
 
     # END Map across rows/columns
@@ -1593,12 +1530,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        if self._is_transposed:
-            return (
-                self.transpose()
-                .getitem_row_array(self.columns.get_indexer_for(key))
-                .transpose()
-            )
         # Convert to list for type checking
         if not numeric:
             numeric_indices = self.columns.get_indexer_for(key)
@@ -1623,8 +1554,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        if self._is_transposed:
-            return self.transpose().getitem_column_array(key, numeric=True).transpose()
         result = self.data.mask(row_indices=key)
         # We can't just set the index to key here because there may be multiple
         # instances of a key.
@@ -1761,8 +1690,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if index is None and columns is None:
             return self.copy()
-        if self._is_transposed:
-            return self.transpose().drop(index=columns, columns=index).transpose()
         if index is None:
             new_index = self.index
             idx_numeric_indices = None
@@ -2164,8 +2091,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Indexing
     def view(self, index=None, columns=None):
-        if self._is_transposed:
-            return self.transpose().view(columns=index, index=columns)
         index_map_series = pandas.Series(np.arange(len(self.index)), index=self.index)
         column_map_series = pandas.Series(
             np.arange(len(self.columns)), index=self.columns
