@@ -50,13 +50,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        new_obj, result, length, width = deploy_ray_func.remote(call_queue, oid)
+        result = deploy_ray_func.remote(call_queue, oid)
         if len(self.call_queue) > 0:
-            self.oid = new_obj
-            self.call_queue = []
-        return PandasOnRayFramePartition(
-            result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width)
-        )
+            pass
+            # self.oid = new_obj
+            # self.call_queue = []
+        return PandasOnRayFramePartition(result)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnRayFramePartition(
@@ -68,12 +67,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid)
+        self.oid = deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
-        if self._length_cache is None:
-            self._length_cache = PandasOnRayFramePartition(length)
-        if self._width_cache is None:
-            self._width_cache = PandasOnRayFramePartition(width)
 
     def __copy__(self):
         return PandasOnRayFramePartition(
@@ -142,7 +137,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote(num_return_vals=4)
+@ray.remote
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
@@ -167,6 +162,7 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), **kwargs)
+    return result
     return (
         partition if len(call_queue) > 1 else None,
         result,

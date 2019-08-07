@@ -88,11 +88,9 @@ def _read_csv_with_offset_pandas_on_ray(
     to_read = header + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     if index_col is not None:
         index = pandas_df.index
         # Partitions must have RangeIndex
-        pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
     else:
         # We will use the lengths to build the index if we are not given an
         # `index_col`.
@@ -129,7 +127,6 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
     if not pandas_df.columns.equals(columns):
         raise NotImplementedError("Columns must be the same across all rows.")
     partition_columns = pandas_df.columns
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     return _split_result_for_readers(1, num_splits, pandas_df) + [
         len(pandas_df),
         pandas_df.dtypes,

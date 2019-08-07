@@ -25,21 +25,14 @@ class PandasOnRayData(object):
 
     def __init__(self, partitions, index, columns, row_lengths, column_widths, dtypes=None):
         self._partitions = partitions
-        self.index = index
-        self.columns = columns
+        self._index_cache = index
+        self._columns_cache = columns
         self._row_lengths = row_lengths
         self._column_widths = column_widths
         self._dtypes = dtypes
-        self._apply_index_objs()
+        self._filter_empties()
 
-    def _apply_index_objs(self):
-        cum_row_lengths = np.cumsum([0] + self._row_lengths)
-        cum_col_widths = np.cumsum([0] + self._column_widths)
-
-        def apply_idx_objs(df, idx, col):
-            df.index, df.columns = idx, col
-            return df
-
+    def _filter_empties(self):
         self._partitions = np.array(
             [[self._partitions[i][j]
               for j in range(len(self._partitions[i]))
@@ -50,9 +43,44 @@ class PandasOnRayData(object):
         self._column_widths = [w for w in self._column_widths if w > 0]
         self._row_lengths = [r for r in self._row_lengths if r > 0]
 
-        for i in range(len(self._partitions)):
-            for j in range(len(self._partitions[i])):
-                self._partitions[i][j].call_queue += [(apply_idx_objs, {"idx":self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])], "col":self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+    def _apply_index_objs(self, axis=None):
+        self._filter_empties()
+        if axis is None or axis == 0:
+            cum_row_lengths = np.cumsum([0] + self._row_lengths)
+        if axis is None or axis == 1:
+            cum_col_widths = np.cumsum([0] + self._column_widths)
+
+        if axis is None:
+            def apply_idx_objs(df, idx, col):
+                df.index, df.columns = idx, col
+                return df
+
+            for i in range(len(self._partitions)):
+                for j in range(len(self._partitions[i])):
+                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
+                        "idx": self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])],
+                        "col": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+        elif axis == 0:
+            def apply_idx_objs(df, idx):
+                df.index = idx
+                return df
+
+            for i in range(len(self._partitions)):
+                for j in range(len(self._partitions[i])):
+                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
+                        "idx": self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])]})]
+
+        elif axis == 1:
+            def apply_idx_objs(df, cols):
+                df.cols = cols
+                return df
+
+            for i in range(len(self._partitions)):
+                for j in range(len(self._partitions[i])):
+                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
+                        "col": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+        else:
+            ErrorMessage.catch_bugs_and_request_email(axis is not None and axis not in [0, 1])
 
     def copy(self):
         return self.__constructor__(
@@ -135,6 +163,7 @@ class PandasOnRayData(object):
         else:
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
+        self._apply_index_objs(axis=0)
 
     def _set_columns(self, new_columns):
         if self._columns_cache is None:
@@ -142,6 +171,7 @@ class PandasOnRayData(object):
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
+        self._apply_index_objs(axis=1)
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
@@ -273,17 +303,13 @@ class PandasOnRayData(object):
 
     def _map_across_full_axis(self, axis, func):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
-        first = new_partitions[0][0].apply(lambda df: (df.index, df.columns)).oid
-        idx_parts = [part.apply(lambda df: df.index).oid for part in new_partitions.T[0]]
-        col_parts = [part.apply(lambda df: df.columns).oid for part in new_partitions[0]]
-        first_idx, first_col = ray.get(first)
-        idx_parts = ray.get(idx_parts)
-        col_parts = ray.get(col_parts)
+        first_idx, first_col = ray.get(new_partitions[0][0].apply(lambda df: (df.index, df.columns)).oid)
+        idx_parts = ray.get([part.apply(lambda df: df.index).oid for part in new_partitions.T[0][1:]])
+        col_parts = ray.get([part.apply(lambda df: df.columns).oid for part in new_partitions[0][1:]])
         new_lengths = [len(obj) for obj in [first_idx] + idx_parts]
         new_widths = [len(obj) for obj in [first_col] + col_parts]
         new_idx = first_idx.append(idx_parts)
         new_cols = first_col.append(col_parts)
-        print(new_cols)
         return self.__constructor__(new_partitions, new_idx, new_cols, new_lengths, new_widths)
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):

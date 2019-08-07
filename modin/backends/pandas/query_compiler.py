@@ -28,10 +28,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ):
         if data_object is not None:
             self._data_obj = data_object
-            # self.data = data.frame_manager
-            self.index = data_object.index
-            self.columns = data_object.columns
-            self.dtypes = data_object.dtypes
         else:
             assert isinstance(block_partitions_object, BaseFrameManager)
             self.data = block_partitions_object
@@ -42,6 +38,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def to_pandas(self):
         return self._data_obj.to_pandas()
+
+    def _get_axis(axis):
+        if axis == 0:
+            return lambda self: self._data_obj.index
+        else:
+            return lambda self: self._data_obj.columns
+
+    def _set_axis(axis):
+        if axis == 0:
+            def set_idx(self, idx):
+                self._data_obj.index = idx
+
+            return set_idx
+        if axis == 1:
+            def set_cols(self, cols):
+                self._data_obj.columns = cols
+
+            return set_cols
+
+    index = property(_get_axis(0), _set_axis(0))
+    columns = property(_get_axis(1), _set_axis(1))
+
+    @property
+    def dtypes(self):
+        return self._data_obj.dtypes
 
     def compute_index(self, axis, data_object, compute_diff=True):
         """Computes the index after a number of rows have been removed.

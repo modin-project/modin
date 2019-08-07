@@ -537,6 +537,8 @@ class RayIO(BaseIO):
             )
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
+        if index_col is None:
+            new_query_compiler._data_obj._apply_index_objs(axis=0)
         return new_query_compiler
 
     @classmethod
