@@ -3,10 +3,9 @@ from numpy import nan
 import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, _get_rename_function, _pipe
+from pandas.core.common import count_not_none, _pipe
 from pandas.core.dtypes.common import (
     is_list_like,
-    is_dict_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
