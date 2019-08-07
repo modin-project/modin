@@ -1296,11 +1296,6 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).compound()
 
-    def test_convert_objects(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).convert_objects()
-
     def test_corr(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -3701,13 +3696,6 @@ class TestDFPartTwo:
             pandas_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
         )
 
-    def test_reindex_axis(self):
-        df = pd.DataFrame(
-            {"num_legs": [4, 2], "num_wings": [0, 2]}, index=["dog", "hawk"]
-        )
-        with pytest.warns(UserWarning):
-            df.reindex_axis(["num_wings", "num_legs", "num_heads"], axis="columns")
-
     def test_reindex_like(self):
         df1 = pd.DataFrame(
             [
@@ -4104,11 +4092,6 @@ class TestDFPartTwo:
         modin_result = modin_df.sample(n=2, random_state=42, axis=axis)
         pandas_result = pandas_df.sample(n=2, random_state=42, axis=axis)
         df_equals(modin_result, pandas_result)
-
-    def test_select(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).select(lambda x: x % 2 == 0)
 
     def test_select_dtypes(self):
         frame_data = {
@@ -4985,11 +4968,6 @@ class TestDFPartTwo:
         pandas_df = pandas.DataFrame(data)
 
         assert len(modin_df) == len(pandas_df)
-
-    def test___unicode__(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).__unicode__()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___neg__(self, request, data):

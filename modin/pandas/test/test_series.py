@@ -965,13 +965,6 @@ def test_compress(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_convert_objects(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.convert_objects()
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series, modin_series.copy())
@@ -2048,14 +2041,6 @@ def test_reindex(data):
         )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reindex_axis(data):
-    modin_series, pandas_series = create_test_series(data)
-    modin_series.reindex_axis(
-        [i for i in modin_series.index[: len(modin_series.index) // 2]]
-    )
-
-
 def test_reindex_like():
     df1 = pd.DataFrame(
         [
@@ -2239,13 +2224,6 @@ def test_searchsorted(data):
     modin_series, pandas_series = create_test_series(data)
     with pytest.warns(UserWarning):
         modin_series.searchsorted(3)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_select(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.select(lambda x: x == 4)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

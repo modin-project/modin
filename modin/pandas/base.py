@@ -2022,27 +2022,6 @@ class BasePandasDataset(object):
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
-    def reindex_axis(
-        self,
-        labels,
-        axis=0,
-        method=None,
-        level=None,
-        copy=True,
-        limit=None,
-        fill_value=nan,
-    ):
-        return self._default_to_pandas(
-            "reindex_axis",
-            labels,
-            axis=axis,
-            method=method,
-            level=level,
-            copy=copy,
-            limit=limit,
-            fill_value=fill_value,
-        )
-
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -2474,9 +2453,6 @@ class BasePandasDataset(object):
             numeric_only=numeric_only,
             **kwargs
         )
-
-    def select(self, crit, axis=0):
-        return self._default_to_pandas("select", crit, axis=axis)
 
     def set_axis(self, labels, axis=0, inplace=None):
         """Assign desired index to given axis.

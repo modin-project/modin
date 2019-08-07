@@ -303,9 +303,6 @@ class DataFrameGroupBy(object):
     def sum(self, **kwargs):
         return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
 
-    def __unicode__(self):
-        return self._default_to_pandas(lambda df: df.__unicode__())
-
     def describe(self, **kwargs):
         return self._default_to_pandas(lambda df: df.describe(**kwargs))
 

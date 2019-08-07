@@ -479,21 +479,6 @@ class Series(BasePandasDataset):
             pandas.Series.compress, condition, *args, **kwargs
         )
 
-    def convert_objects(
-        self,
-        convert_dates=True,
-        convert_numeric=False,
-        convert_timedeltas=True,
-        copy=True,
-    ):
-        return self._default_to_pandas(
-            pandas.Series.convert_objects,
-            convert_dates=convert_dates,
-            convert_numeric=convert_numeric,
-            convert_timedeltas=convert_timedeltas,
-            copy=copy,
-        )
-
     def corr(self, other, method="pearson", min_periods=None):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -860,11 +845,6 @@ class Series(BasePandasDataset):
             tolerance=tolerance,
             fill_value=fill_value,
         )
-
-    def reindex_axis(self, labels, axis=0, **kwargs):
-        if axis != 0:
-            raise ValueError("cannot reindex series on non-zero axis!")
-        return self.reindex(index=labels, **kwargs)
 
     def rename(self, index=None, **kwargs):
         non_mapping = is_scalar(index) or (

@@ -503,21 +503,6 @@ class DataFrame(BasePandasDataset):
             other, func, fill_value=fill_value, overwrite=overwrite
         )
 
-    def convert_objects(
-        self,
-        convert_dates=True,
-        convert_numeric=False,
-        convert_timedeltas=True,
-        copy=True,
-    ):
-        return self._default_to_pandas(
-            pandas.DataFrame.convert_objects,
-            convert_dates=convert_dates,
-            convert_numeric=convert_numeric,
-            convert_timedeltas=convert_timedeltas,
-            copy=copy,
-        )
-
     def corr(self, method="pearson", min_periods=1):
         return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
@@ -1965,9 +1950,6 @@ class DataFrame(BasePandasDataset):
             self._update_inplace(new_self._query_compiler)
         else:
             self._update_inplace(self._query_compiler.setitem(0, key, value))
-
-    def __unicode__(self):
-        return self._default_to_pandas(pandas.DataFrame.__unicode__)
 
     def __hash__(self):
         return self._default_to_pandas(pandas.DataFrame.__hash__)
