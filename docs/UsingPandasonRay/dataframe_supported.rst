@@ -307,8 +307,6 @@ default to pandas.
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `rename`_                 | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `rename_axis`_            | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
 | `reorder_levels`_         | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `replace`_                | D                               |                                                    |
@@ -599,7 +597,6 @@ default to pandas.
 .. _`reindex`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.reindex.html#pandas.DataFrame.reindex
 .. _`reindex_like`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.reindex_like.html#pandas.DataFrame.reindex_like
 .. _`rename`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.rename.html#pandas.DataFrame.rename
-.. _`rename_axis`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.rename_axis.html#pandas.DataFrame.rename_axis
 .. _`reorder_levels`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.reorder_levels.html#pandas.DataFrame.reorder_levels
 .. _`replace`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.replace.html#pandas.DataFrame.replace
 .. _`resample`: https://pandas.pydata.org/pandas-docs/stable/reference/pandas.DataFrame.resample.html#pandas.DataFrame.resample
