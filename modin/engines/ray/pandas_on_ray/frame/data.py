@@ -1,5 +1,7 @@
 import ray
+from itertools import groupby
 import numpy as np
+from operator import itemgetter
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.index import ensure_index
@@ -23,7 +25,7 @@ class PandasOnRayData(object):
     def __constructor__(self):
         return type(self)
 
-    def __init__(self, partitions, index, columns, row_lengths, column_widths, dtypes=None):
+    def __init__(self, partitions, index, columns, row_lengths=None, column_widths=None, dtypes=None):
         self._partitions = partitions
         self._index_cache = index
         self._columns_cache = columns
@@ -190,6 +192,94 @@ class PandasOnRayData(object):
                 columns.append(col)
         return columns
 
+    def _get_dict_of_block_index(self, axis, indices, ordered=False):
+        """Convert indices to a dict of block index to internal index mapping.
+
+        Note: See `_get_blocks_containing_index` for primary usage. This method
+            accepts a list of indices rather than just a single value, and uses
+            `_get_blocks_containing_index`.
+
+        Args:
+            axis: The axis along which to get the indices
+                (0 - columns, 1 - rows)
+            indices: A list of global indices to convert.
+
+        Returns
+            For unordered: a dictionary of {block index: list of local indices}.
+            For ordered: a list of tuples mapping block index: list of local indices.
+        """
+        if not ordered:
+            indices = np.sort(indices)
+        else:
+            indices = np.array(indices)
+        if not axis:
+            # INT_MAX to make sure we don't try to compute on partitions that don't
+            # exist.
+            cumulative = np.array(
+                np.append(self._column_widths[:-1], np.iinfo(np.int32).max)
+            ).cumsum()
+        else:
+            cumulative = np.array(
+                np.append(self._row_lengths[:-1], np.iinfo(np.int32).max)
+            ).cumsum()
+
+        def internal(block_idx, global_index):
+            return (
+                global_index
+                if not block_idx
+                else np.subtract(
+                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
+                )
+            )
+
+        partition_ids = np.digitize(indices, cumulative)
+        # If the output order doesn't matter or if the indices are monotonically
+        # increasing, the computation is significantly simpler and faster than doing
+        # the zip and groupby.
+        if not ordered or np.all(np.diff(indices) > 0):
+            count_for_each_partition = np.array(
+                [(partition_ids == i).sum() for i in range(len(cumulative))]
+            ).cumsum()
+            # Compute the internal indices and pair those with the partition index.
+            # If the first partition has any values we need to return, compute those
+            # first to make the list comprehension easier. Otherwise, just append the
+            # rest of the values to an empty list.
+            if count_for_each_partition[0] > 0:
+                first_partition_indices = [
+                    (0, internal(0, indices[slice(count_for_each_partition[0])]))
+                ]
+            else:
+                first_partition_indices = []
+            partition_ids_with_indices = first_partition_indices + [
+                (
+                    i,
+                    internal(
+                        i,
+                        indices[
+                            slice(
+                                count_for_each_partition[i - 1],
+                                count_for_each_partition[i],
+                            )
+                        ],
+                    ),
+                )
+                for i in range(1, len(count_for_each_partition))
+                if count_for_each_partition[i] > count_for_each_partition[i - 1]
+            ]
+            return (
+                dict(partition_ids_with_indices)
+                if not ordered
+                else partition_ids_with_indices
+            )
+
+        all_partitions_and_idx = zip(partition_ids, indices)
+        # In ordered, we have to maintain the order of the list of indices provided.
+        # This means that we need to return a list instead of a dictionary.
+        return [
+            (k, internal(k, [x for _, x in v]))
+            for k, v in groupby(all_partitions_and_idx, itemgetter(0))
+        ]
+
     def _join_index_objects(self, axis, other_index, how, sort=True):
         """Joins a pair of index objects (columns or rows) by a given strategy.
 
@@ -217,9 +307,9 @@ class PandasOnRayData(object):
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
 
-    def _build_mapreduce_func(self, axis, func, **kwargs):
+    def _build_mapreduce_func(self, axis, func):
         def _map_reduce_func(df):
-            series_result = func(df, **kwargs)
+            series_result = func(df)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
                 # consistent with what we have done. In the case of a reduction, the
@@ -303,14 +393,40 @@ class PandasOnRayData(object):
 
     def _map_across_full_axis(self, axis, func):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
-        first_idx, first_col = ray.get(new_partitions[0][0].apply(lambda df: (df.index, df.columns)).oid)
-        idx_parts = ray.get([part.apply(lambda df: df.index).oid for part in new_partitions.T[0][1:]])
-        col_parts = ray.get([part.apply(lambda df: df.columns).oid for part in new_partitions[0][1:]])
-        new_lengths = [len(obj) for obj in [first_idx] + idx_parts]
-        new_widths = [len(obj) for obj in [first_col] + col_parts]
-        new_idx = first_idx.append(idx_parts)
-        new_cols = first_col.append(col_parts)
-        return self.__constructor__(new_partitions, new_idx, new_cols, new_lengths, new_widths)
+        return self.__constructor__(new_partitions, self.index, self.columns, self._row_lengths, self._column_widths)
+
+    def _apply_full_axis(self, axis, func, new_idx):
+        new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
+        # Index objects for new object creation. This is shorter than if..else
+        index_objs = {axis ^ 1: [self.index, self.columns][axis], axis: new_idx}
+        # Length objects for new object creation. This is shorter than if..else
+        lengths_objs = {axis: [len(new_idx)] if len(new_idx) == 1 else None, axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+
+    def _apply_full_axis_select_indices(self, axis, func, apply_indices, new_idx=None):
+        """Reduce Manger along select indices using function that needs full axis.
+
+        Args:
+            func: Callable that reduces the dimension of the object and requires full
+                knowledge of the entire axis.
+            axis: 0 for columns and 1 for rows. Defaults to 0.
+            apply_indices: Index of the resulting QueryCompiler.
+
+        Returns:
+            A new QueryCompiler object with index or BaseFrameManager object.
+        """
+        # Convert indices to numeric indices
+        old_index = self.index if axis else self.columns
+        numeric_indices = old_index.get_indexer_for(apply_indices)
+        dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
+        new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
+            axis, self._partitions, func, dict_indices
+        )
+        # Index objects for new object creation. This is shorter than if..else
+        index_objs = {axis ^ 1: apply_indices, axis: new_idx}
+        # Length objects for new object creation. This is shorter than if..else
+        lengths_objs = {axis: [len(apply_indices)], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):
         """This method applies all manual partitioning functions.

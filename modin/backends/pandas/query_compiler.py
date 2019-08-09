@@ -19,6 +19,26 @@ from modin.error_message import ErrorMessage
 from modin.data_management.functions import MapFunction
 
 
+def _get_axis(axis):
+    if axis == 0:
+        return lambda self: self._data_obj.index
+    else:
+        return lambda self: self._data_obj.columns
+
+
+def _set_axis(axis):
+    if axis == 0:
+        def set_idx(self, idx):
+            self._data_obj.index = idx
+
+        return set_idx
+    if axis == 1:
+        def set_cols(self, cols):
+            self._data_obj.columns = cols
+
+        return set_cols
+
+
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
@@ -38,24 +58,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def to_pandas(self):
         return self._data_obj.to_pandas()
-
-    def _get_axis(axis):
-        if axis == 0:
-            return lambda self: self._data_obj.index
-        else:
-            return lambda self: self._data_obj.columns
-
-    def _set_axis(axis):
-        if axis == 0:
-            def set_idx(self, idx):
-                self._data_obj.index = idx
-
-            return set_idx
-        if axis == 1:
-            def set_cols(self, cols):
-                self._data_obj.columns = cols
-
-            return set_cols
 
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
@@ -1068,11 +1070,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.index = pandas.RangeIndex(len(df.index))
             return df.apply(lambda df: df.last_valid_index())
 
-        func = self._build_mapreduce_func(last_valid_index_builder)
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
-        first_result = self._full_axis_reduce(0, func).max(axis=1).to_pandas().squeeze()
+        first_result = self._data_obj._full_axis_reduce(0, last_valid_index_builder).max(axis=1).to_pandas().squeeze()
         return self.index[first_result]
 
     def median(self, **kwargs):
@@ -1083,8 +1084,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._build_mapreduce_func(pandas.DataFrame.median, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self._data_obj._full_axis_reduce(axis, lambda df: df.median(**kwargs))
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
@@ -1093,8 +1093,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object of ints indexed by column or index names.
         """
         axis = kwargs.get("axis", 0)
-        func = self._build_mapreduce_func(pandas.DataFrame.nunique, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self._data_obj._full_axis_reduce(axis, lambda df: df.nunique(**kwargs))
 
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
@@ -1106,14 +1105,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         q = kwargs.get("q", 0.5)
         assert type(q) is float
 
-        def quantile_builder(df, **kwargs):
+        def quantile_builder(df):
             try:
                 return pandas.DataFrame.quantile(df, **kwargs)
             except ValueError:
                 return pandas.Series()
 
-        func = self._build_mapreduce_func(quantile_builder, **kwargs)
-        result = self._full_axis_reduce(axis, func)
+        result = self._data_obj._full_axis_reduce(axis, quantile_builder)
         if axis == 0:
             result.index = [q]
         else:
@@ -1128,8 +1126,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._build_mapreduce_func(pandas.DataFrame.skew, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self._data_obj._full_axis_reduce(axis, lambda df: df.skew(**kwargs))
 
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.
@@ -1140,8 +1137,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._build_mapreduce_func(pandas.DataFrame.std, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self._data_obj._full_axis_reduce(axis, lambda df: df.std(**kwargs))
 
     def var(self, **kwargs):
         """Returns variance of each column or row.
@@ -1151,8 +1147,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        func = self._build_mapreduce_func(pandas.DataFrame.var, **kwargs)
-        return self._full_axis_reduce(axis, func)
+        return self._data_obj._full_axis_reduce(axis, lambda df: df.var(**kwargs))
 
     # END Column/Row partitions reduce operations
 
@@ -1160,25 +1155,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     #
     # These operations result in a reduced dimensionality of data.
     # This will return a new QueryCompiler object which the front end will handle.
-    def _full_axis_reduce_along_select_indices(self, func, axis, index):
-        """Reduce Manger along select indices using function that needs full axis.
-
-        Args:
-            func: Callable that reduces the dimension of the object and requires full
-                knowledge of the entire axis.
-            axis: 0 for columns and 1 for rows. Defaults to 0.
-            index: Index of the resulting QueryCompiler.
-
-        Returns:
-            A new QueryCompiler object with index or BaseFrameManager object.
-        """
-        # Convert indices to numeric indices
-        old_index = self.index if axis else self.columns
-        numeric_indices = [i for i, name in enumerate(old_index) if name in index]
-        result = self.data.apply_func_to_select_indices_along_full_axis(
-            axis, func, numeric_indices
-        )
-        return result
 
     def describe(self, **kwargs):
         """Generates descriptive statistics.
@@ -1187,21 +1163,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
         # Use pandas to calculate the correct columns
-        new_columns = (
+        empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
             .describe(**kwargs)
-            .columns
         )
 
         def describe_builder(df, internal_indices=[], **kwargs):
             return df.iloc[:, internal_indices].describe(**kwargs)
 
-        # Apply describe and update indices, columns, and dtypes
-        func = self._prepare_method(describe_builder, **kwargs)
-        new_data = self._full_axis_reduce_along_select_indices(func, 0, new_columns)
-        new_index = self.compute_index(0, new_data, False)
-        return self.__constructor__(new_data, new_index, new_columns)
+        return self.__constructor__(data_object=self._data_obj._apply_full_axis_select_indices(0, describe_builder,
+                                                                                               empty_df.columns,
+                                                                                               new_idx=empty_df.index))
 
     # END Column/Row partitions reduce operations over select indices
 
@@ -1229,9 +1202,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def diff(self, **kwargs):
         axis = kwargs.get("axis", 0)
-        func = self._prepare_method(pandas.DataFrame.diff, **kwargs)
-        new_data = self._map_across_full_axis(axis, func)
-        return self.__constructor__(new_data, self.index, self.columns)
+        return self.__constructor__(data_object=self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs)))
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -1242,31 +1213,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler with new columns after applying expr.
         """
-        index = self.index
-
         # Make a copy of columns and eval on the copy to determine if result type is
         # series or not
-        columns_copy = pandas.DataFrame(columns=self.columns)
+        columns_copy = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
         columns_copy = columns_copy.eval(expr, inplace=False, **kwargs)
         expect_series = isinstance(columns_copy, pandas.Series)
 
         def eval_builder(df, **kwargs):
-            # pop the `axis` parameter because it was needed to build the mapreduce
-            # function but it is not a parameter used by `eval`.
-            kwargs.pop("axis", None)
-            result = df.eval(expr, inplace=False, **kwargs)
-            return result
+            return pandas.DataFrame(df.eval(expr, inplace=False, **kwargs))
 
-        func = self._build_mapreduce_func(eval_builder, axis=1, **kwargs)
-        new_data = self._map_across_full_axis(1, func)
-
-        if expect_series:
-            new_columns = [columns_copy.name]
-            new_index = index
-        else:
-            new_columns = columns_copy.columns
-            new_index = self.index
-        return self.__constructor__(new_data, new_index, new_columns)
+        new_data = self._data_obj._apply_full_axis(1, eval_builder, [columns_copy.name] if expect_series else columns_copy.columns)
+        return self.__constructor__(data_object=new_data)
 
     def mode(self, **kwargs):
         """Returns a new QueryCompiler with modes calculated for each label along given axis.

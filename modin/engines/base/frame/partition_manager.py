@@ -2,9 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from itertools import groupby
 import numpy as np
-from operator import itemgetter
 import pandas
 
 from modin.error_message import ErrorMessage
@@ -53,39 +51,6 @@ class BaseFrameManager(object):
     _partition_class = None
     # Column partitions class is the class to use to create the column partitions.
     _column_partitions_class = None
-    # Row partitions class is the class to use to create row partitions.
-    _row_partition_class = None
-    # Whether or not we have already filtered out the empty partitions.
-    _filtered_empties = False
-
-    def _get_partitions(self):
-        return self._partitions_cache
-        if not self._filtered_empties or (
-            self._lengths_cache is not None and self._widths_cache is not None
-        ):
-            self._partitions_cache = np.array(
-                [
-                    row
-                    for row in [
-                        [
-                            self._partitions_cache[i][j]
-                            for j in range(len(self._partitions_cache[i]))
-                            if self.block_lengths[i] != 0 and self.block_widths[j] != 0
-                        ]
-                        for i in range(len(self._partitions_cache))
-                    ]
-                    if len(row)
-                ]
-            )
-            self._remove_empty_blocks()
-            self._filtered_empties = True
-        return self._partitions_cache
-
-    def _set_partitions(self, new_partitions):
-        self._filtered_empties = False
-        self._partitions_cache = new_partitions
-
-    partitions = property(_get_partitions, _set_partitions)
 
     @classmethod
     def preprocess_func(cls, map_func):
@@ -660,95 +625,8 @@ class BaseFrameManager(object):
             )
         return block_idx, internal_idx
 
-    def _get_dict_of_block_index(self, axis, indices, ordered=False):
-        """Convert indices to a dict of block index to internal index mapping.
-
-        Note: See `_get_blocks_containing_index` for primary usage. This method
-            accepts a list of indices rather than just a single value, and uses
-            `_get_blocks_containing_index`.
-
-        Args:
-            axis: The axis along which to get the indices
-                (0 - columns, 1 - rows)
-            indices: A list of global indices to convert.
-
-        Returns
-            For unordered: a dictionary of {block index: list of local indices}.
-            For ordered: a list of tuples mapping block index: list of local indices.
-        """
-        if not ordered:
-            indices = np.sort(indices)
-        else:
-            indices = np.array(indices)
-        if not axis:
-            # INT_MAX to make sure we don't try to compute on partitions that don't
-            # exist.
-            cumulative = np.array(
-                np.append(self.block_widths[:-1], np.iinfo(np.int32).max)
-            ).cumsum()
-        else:
-            cumulative = np.array(
-                np.append(self.block_lengths[:-1], np.iinfo(np.int32).max)
-            ).cumsum()
-
-        def internal(block_idx, global_index):
-            return (
-                global_index
-                if not block_idx
-                else np.subtract(
-                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
-                )
-            )
-
-        partition_ids = np.digitize(indices, cumulative)
-        # If the output order doesn't matter or if the indices are monotonically
-        # increasing, the computation is significantly simpler and faster than doing
-        # the zip and groupby.
-        if not ordered or np.all(np.diff(indices) > 0):
-            count_for_each_partition = np.array(
-                [(partition_ids == i).sum() for i in range(len(cumulative))]
-            ).cumsum()
-            # Compute the internal indices and pair those with the partition index.
-            # If the first partition has any values we need to return, compute those
-            # first to make the list comprehension easier. Otherwise, just append the
-            # rest of the values to an empty list.
-            if count_for_each_partition[0] > 0:
-                first_partition_indices = [
-                    (0, internal(0, indices[slice(count_for_each_partition[0])]))
-                ]
-            else:
-                first_partition_indices = []
-            partition_ids_with_indices = first_partition_indices + [
-                (
-                    i,
-                    internal(
-                        i,
-                        indices[
-                            slice(
-                                count_for_each_partition[i - 1],
-                                count_for_each_partition[i],
-                            )
-                        ],
-                    ),
-                )
-                for i in range(1, len(count_for_each_partition))
-                if count_for_each_partition[i] > count_for_each_partition[i - 1]
-            ]
-            return (
-                dict(partition_ids_with_indices)
-                if not ordered
-                else partition_ids_with_indices
-            )
-
-        all_partitions_and_idx = zip(partition_ids, indices)
-        # In ordered, we have to maintain the order of the list of indices provided.
-        # This means that we need to return a list instead of a dictionary.
-        return [
-            (k, internal(k, [x for _, x in v]))
-            for k, v in groupby(all_partitions_and_idx, itemgetter(0))
-        ]
-
-    def _apply_func_to_list_of_partitions(self, func, partitions, **kwargs):
+    @classmethod
+    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """Applies a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
@@ -760,7 +638,7 @@ class BaseFrameManager(object):
         Returns:
             A list of BaseFramePartition objects.
         """
-        preprocessed_func = self.preprocess_func(func)
+        preprocessed_func = cls.preprocess_func(func)
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     def apply_func_to_select_indices(self, axis, func, indices, keep_remaining=False):
@@ -787,16 +665,10 @@ class BaseFrameManager(object):
         # to figure out the partitions that need to be applied to, so we will
         # store the dictionary in a separate variable and assign `indices` to
         # the keys to handle it the same as we normally would.
-        if isinstance(indices, dict):
-            dict_indices = indices
-            indices = list(indices.keys())
+        if isinstance(func, dict):
+            dict_func = func
         else:
-            dict_indices = None
-        if not isinstance(indices, list):
-            indices = [indices]
-        partitions_dict = self._get_dict_of_block_index(
-            axis, indices, ordered=not keep_remaining
-        )
+            dict_func = None
         if not axis:
             partitions_for_apply = self.partitions.T
         else:
@@ -805,7 +677,7 @@ class BaseFrameManager(object):
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
         # accept a keyword argument `func_dict`.
-        if dict_indices is not None:
+        if dict_func is not None:
 
             def local_to_global_idx(partition_id, local_idx):
                 if partition_id == 0:
@@ -823,25 +695,25 @@ class BaseFrameManager(object):
                             func,
                             partitions_for_apply[o_idx],
                             func_dict={
-                                i_idx: dict_indices[local_to_global_idx(o_idx, i_idx)]
+                                i_idx: dict_func[local_to_global_idx(o_idx, i_idx)]
                                 for i_idx in list_to_apply
                                 if i_idx >= 0
                             },
                         )
-                        for o_idx, list_to_apply in partitions_dict
+                        for o_idx, list_to_apply in indices
                     ]
                 )
             else:
                 result = np.array(
                     [
                         partitions_for_apply[i]
-                        if i not in partitions_dict
+                        if i not in indices
                         else self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[local_to_global_idx(i, idx)]
-                                for idx in partitions_dict[i]
+                                idx: dict_func[local_to_global_idx(i, idx)]
+                                for idx in indices[i]
                                 if idx >= 0
                             },
                         )
@@ -861,7 +733,7 @@ class BaseFrameManager(object):
                             partitions_for_apply[idx],
                             internal_indices=list_to_apply,
                         )
-                        for idx, list_to_apply in partitions_dict
+                        for idx, list_to_apply in indices
                     ]
                 )
             else:
@@ -870,11 +742,11 @@ class BaseFrameManager(object):
                 result = np.array(
                     [
                         partitions_for_apply[i]
-                        if i not in partitions_dict
+                        if i not in indices
                         else self._apply_func_to_list_of_partitions(
                             func,
                             partitions_for_apply[i],
-                            internal_indices=partitions_dict[i],
+                            internal_indices=indices[i],
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -883,8 +755,9 @@ class BaseFrameManager(object):
             self.__constructor__(result.T) if not axis else self.__constructor__(result)
         )
 
+    @classmethod
     def apply_func_to_select_indices_along_full_axis(
-        self, axis, func, indices, keep_remaining=False
+        cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """Applies a function to a select subset of full columns/rows.
 
@@ -906,53 +779,53 @@ class BaseFrameManager(object):
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
-        if self.partitions.size == 0:
-            return self.__constructor__(np.array([[]]))
-        if isinstance(indices, dict):
-            dict_indices = indices
-            indices = list(indices.keys())
+        if partitions.size == 0:
+            return np.array([[]])
+        # Handling dictionaries has to be done differently, but we still want
+        # to figure out the partitions that need to be applied to, so we will
+        # store the dictionary in a separate variable and assign `indices` to
+        # the keys to handle it the same as we normally would.
+        if isinstance(func, dict):
+            dict_func = func
         else:
-            dict_indices = None
-        if not isinstance(indices, list):
-            indices = [indices]
-        partitions_dict = self._get_dict_of_block_index(axis, indices)
-        preprocessed_func = self.preprocess_func(func)
+            dict_func = None
+        preprocessed_func = cls.preprocess_func(func)
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
         if not axis:
-            partitions_for_apply = self.column_partitions
-            partitions_for_remaining = self.partitions.T
+            partitions_for_apply = cls.column_partitions(partitions)
+            partitions_for_remaining = partitions.T
         else:
-            partitions_for_apply = self.row_partitions
-            partitions_for_remaining = self.partitions
+            partitions_for_apply = cls.row_partitions(partitions)
+            partitions_for_remaining = partitions
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
         # accept a keyword argument `func_dict`.
-        if dict_indices is not None:
+        if dict_func is not None:
             if not keep_remaining:
                 result = np.array(
                     [
                         partitions_for_apply[i].apply(
                             preprocessed_func,
                             func_dict={
-                                idx: dict_indices[idx] for idx in partitions_dict[i]
+                                idx: dict_func[idx] for idx in indices[i]
                             },
                         )
-                        for i in partitions_dict
+                        for i in indices
                     ]
                 )
             else:
                 result = np.array(
                     [
                         partitions_for_remaining[i]
-                        if i not in partitions_dict
-                        else self._apply_func_to_list_of_partitions(
+                        if i not in indices
+                        else cls._apply_func_to_list_of_partitions(
                             preprocessed_func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_indices[idx] for idx in partitions_dict[i]
+                                idx: dict_func[idx] for idx in indices[i]
                             },
                         )
                         for i in range(len(partitions_for_apply))
@@ -964,9 +837,9 @@ class BaseFrameManager(object):
                 result = np.array(
                     [
                         partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i]
+                            preprocessed_func, internal_indices=indices[i]
                         )
-                        for i in partitions_dict
+                        for i in indices
                     ]
                 )
             else:
@@ -974,16 +847,14 @@ class BaseFrameManager(object):
                 result = np.array(
                     [
                         partitions_for_remaining[i]
-                        if i not in partitions_dict
+                        if i not in indices
                         else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=partitions_dict[i]
+                            preprocessed_func, internal_indices=indices[i]
                         )
                         for i in range(len(partitions_for_remaining))
                     ]
                 )
-        return (
-            self.__constructor__(result.T) if not axis else self.__constructor__(result)
-        )
+        return result.T if not axis else result
 
     def mask(self, row_indices=None, col_indices=None):
         ErrorMessage.catch_bugs_and_request_email(
