@@ -349,7 +349,7 @@ class DataFrame(BasePandasDataset):
         axis = self._get_axis_number(axis)
         idx_name = None
         if callable(by):
-            by = by(self.index)
+            by = self.index.map(by)
         elif isinstance(by, string_types):
             idx_name = by
             by = self.__getitem__(by)._query_compiler
