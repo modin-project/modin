@@ -10,27 +10,6 @@ matrix:
     - os: linux
       dist: trusty
       env:
-        - PYTHON=2.7
-        - MODIN_ENGINE=ray
-        - MODIN_DF_TEST=ONE
-
-    - os: linux
-      dist: trusty
-      env:
-        - PYTHON=2.7
-        - MODIN_ENGINE=ray
-        - MODIN_DF_TEST=TWO
-
-    - os: linux
-      dist: trusty
-      env:
-      - PYTHON=2.7
-      - MODIN_ENGINE=ray
-      - MODIN_DF_TEST=NONE
-
-    - os: linux
-      dist: trusty
-      env:
         - PYTHON=3.6
         - MODIN_ENGINE=ray
         - MODIN_DF_TEST=ONE
@@ -48,13 +27,6 @@ matrix:
       - PYTHON=3.6
       - MODIN_ENGINE=ray
       - MODIN_DF_TEST=NONE
-
-    - os: linux
-      dist: trusty
-      env:
-        - PYTHON=2.7
-        - MODIN_DEBUG=1
-        - MODIN_DF_TEST=ALL
 
     - os: linux
       dist: trusty

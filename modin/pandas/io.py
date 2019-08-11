@@ -5,6 +5,8 @@ from __future__ import print_function
 import inspect
 import pandas
 import re
+import pathlib
+from typing import Union, IO, AnyStr, Sequence
 from collections import OrderedDict
 
 from modin.error_message import ErrorMessage
@@ -43,7 +45,7 @@ def _make_parser_func(sep):
     """
 
     def parser_func(
-        filepath_or_buffer,
+        filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
         sep=sep,
         delimiter=None,
         header="infer",
@@ -71,6 +73,7 @@ def _make_parser_func(sep):
         keep_date_col=False,
         date_parser=None,
         dayfirst=False,
+        cache_dates=True,
         iterator=False,
         chunksize=None,
         compression="infer",
@@ -120,7 +123,7 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-read_table = _make_parser_func(sep=False)
+read_table = _make_parser_func(sep="\t")
 read_csv = _make_parser_func(sep=",")
 
 
@@ -128,8 +131,8 @@ def read_json(
     path_or_buf=None,
     orient=None,
     typ="frame",
-    dtype=True,
-    convert_axes=True,
+    dtype=None,
+    convert_axes=None,
     convert_dates=True,
     keep_default_dates=True,
     numpy=False,
@@ -155,6 +158,7 @@ def read_gbq(
     location=None,
     configuration=None,
     credentials=None,
+    use_bqstorage_api=None,
     private_key=None,
     verbose=None,
 ):
@@ -325,7 +329,7 @@ def read_sql(
 
 
 def read_fwf(
-    filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]], colspecs="infer", widths=None, infer_nrows=100, **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
@@ -357,6 +361,13 @@ def read_sql_query(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql_query(**kwargs))
+
+def read_spss(
+    path: Union[str, pathlib.Path],
+    usecols: Union[Sequence[str], type(None)] = None,
+    convert_categoricals: bool = True,
+):
+    pass
 
 
 def to_pickle(obj, path, compression="infer", protocol=4):

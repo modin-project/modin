@@ -1525,7 +1525,6 @@ class BasePandasDataset(object):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -1538,7 +1537,6 @@ class BasePandasDataset(object):
             level=level,
             errors=errors,
             try_cast=try_cast,
-            raise_on_error=raise_on_error,
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -2672,9 +2670,9 @@ class BasePandasDataset(object):
     def swaplevel(self, i=-2, j=-1, axis=0):
         return self._default_to_pandas("swaplevel", i=i, j=j, axis=axis)
 
-    def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
+    def take(self, indices, axis=0, is_copy=True, **kwargs):
         return self._default_to_pandas(
-            "take", indices, axis=axis, convert=convert, is_copy=is_copy, **kwargs
+            "take", indices, axis=axis, is_copy=is_copy, **kwargs
         )
 
     def tail(self, n=5):

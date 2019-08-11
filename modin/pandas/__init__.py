@@ -75,6 +75,7 @@ from pandas import (
     SparseSeries,
     SparseDataFrame,
     datetime,
+    NamedAgg,
 )
 import threading
 import os
@@ -104,6 +105,7 @@ from .io import (
     read_fwf,
     read_sql_table,
     read_sql_query,
+    read_spss,
     ExcelFile,
     to_pickle,
     HDFStore,
@@ -217,6 +219,7 @@ __all__ = [
     "read_sql",
     "read_gbq",
     "read_table",
+    "read_spss",
     "concat",
     "eval",
     "unique",
@@ -302,6 +305,7 @@ __all__ = [
     "SparseSeries",
     "SparseDataFrame",
     "datetime",
+    "NamedAgg",
 ]
 
 del pandas

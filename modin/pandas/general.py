@@ -185,6 +185,7 @@ def pivot_table(
     margins=False,
     dropna=True,
     margins_name="All",
+    observed=False,
 ):
     if not isinstance(data, DataFrame):
         raise ValueError(

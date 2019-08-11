@@ -1147,6 +1147,7 @@ class DataFrame(BasePandasDataset):
         margins=False,
         dropna=True,
         margins_name="All",
+        observed=False,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.pivot_table,
@@ -1727,7 +1728,6 @@ class DataFrame(BasePandasDataset):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         """Replaces values not meeting condition with values in other.
 
@@ -1763,7 +1763,6 @@ class DataFrame(BasePandasDataset):
                 level=level,
                 errors=errors,
                 try_cast=try_cast,
-                raise_on_error=raise_on_error,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         axis = self._get_axis_number(axis) if axis is not None else 0

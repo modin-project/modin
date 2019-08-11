@@ -281,7 +281,6 @@ class BaseIO(object):
     def read_excel(
         cls,
         io,
-        sheet_name=0,
         header=0,
         names=None,
         index_col=None,
@@ -313,7 +312,6 @@ class BaseIO(object):
         ErrorMessage.default_to_pandas("`read_excel`")
         intermediate = pandas.read_excel(
             io,
-            sheet_name=sheet_name,
             header=header,
             names=names,
             index_col=index_col,

@@ -493,8 +493,8 @@ def test_from_excel():
 def test_from_excel_all_sheets():
     setup_excel_file(SMALL_ROW_SIZE)
 
-    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
-    modin_df = pd.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
+    modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
 
     assert isinstance(pandas_df, OrderedDict)
     assert isinstance(modin_df, OrderedDict)
