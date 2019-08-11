@@ -26,6 +26,8 @@ from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
 
+from typing import Tuple, Union
+
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
@@ -538,6 +540,9 @@ class DataFrame(BasePandasDataset):
             and self.columns.equals(other.columns)
             and self.eq(other).all().all()
         )
+    
+    def explode(self, column: Union[str, Tuple]):
+        pass
 
     def eval(self, expr, inplace=False, **kwargs):
         """Evaluate a Python expression as a string using various backends.
@@ -1252,6 +1257,7 @@ class DataFrame(BasePandasDataset):
         copy=True,
         inplace=False,
         level=None,
+        errors="ignore",
     ):
         """Alters axes labels.
 
@@ -1466,6 +1472,9 @@ class DataFrame(BasePandasDataset):
 
         if not inplace:
             return frame
+    
+    def sparse(data=None):
+        pass
 
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None
@@ -1605,9 +1614,6 @@ class DataFrame(BasePandasDataset):
             table_id=table_id,
             render_links=render_links,
         )
-
-    def to_panel(self):  # pragma: no cover
-        return self._default_to_pandas(pandas.DataFrame.to_panel)
 
     def to_parquet(
         self,

@@ -1250,31 +1250,6 @@ class BasePandasDataset(object):
             "floordiv", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    @classmethod
-    def from_csv(
-        cls,
-        path,
-        header=0,
-        sep=",",
-        index_col=0,
-        parse_dates=True,
-        encoding=None,
-        tupleize_cols=None,
-        infer_datetime_format=False,
-    ):
-        from .io import read_csv
-
-        return read_csv(
-            path,
-            header=header,
-            sep=sep,
-            index_col=index_col,
-            parse_dates=parse_dates,
-            encoding=encoding,
-            tupleize_cols=tupleize_cols,
-            infer_datetime_format=infer_datetime_format,
-        )
-
     def ge(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than or equal to other.
 
@@ -2971,6 +2946,7 @@ class BasePandasDataset(object):
         index_names=True,
         justify=None,
         max_rows=None,
+        min_rows=None,
         max_cols=None,
         show_dimensions=False,
         decimal=".",

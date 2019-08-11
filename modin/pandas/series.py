@@ -533,6 +533,9 @@ class Series(BasePandasDataset):
             and self.index.equals(other.index)
             and self.eq(other).all()
         )
+    
+    def explode(self, column):
+        pass
 
     def factorize(self, sort=False, na_sentinel=-1):
         return self._default_to_pandas(
@@ -549,26 +552,6 @@ class Series(BasePandasDataset):
         self, arr, index=None, name=None, dtype=None, copy=False, fastpath=False
     ):
         raise NotImplementedError("Not Yet implemented.")
-
-    def from_csv(
-        self,
-        path,
-        sep=",",
-        parse_dates=True,
-        header=None,
-        index_col=0,
-        encoding=None,
-        infer_datetime_format=False,
-    ):
-        return super(Series, self).from_csv(
-            path,
-            sep=sep,
-            parse_dates=parse_dates,
-            header=header,
-            index_col=index_col,
-            encoding=encoding,
-            infer_datetime_format=infer_datetime_format,
-        )
 
     def ge(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -1019,6 +1002,9 @@ class Series(BasePandasDataset):
             return Series(dtype=self.dtype)
         return super(Series, self).tail(n)
 
+    def take(self, indices, axis=0, is_copy=False, **kwargs):
+        pass
+
     def to_frame(self, name=None):
         from .dataframe import DataFrame
 
@@ -1061,6 +1047,7 @@ class Series(BasePandasDataset):
         dtype=False,
         name=False,
         max_rows=None,
+        min_rows=None,
     ):
         return self._default_to_pandas(
             pandas.Series.to_string,

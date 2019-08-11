@@ -908,23 +908,6 @@ def test_from_csv_chunksize(make_csv_file):
     assert modin_df_equals_pandas(modin_df, pd_df)
 
 
-def test_from_csv_delimiter(make_csv_file):
-    make_csv_file(delimiter="|")
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep="|")
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, sep="|")
-
-    assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame.from_csv(
-        TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
-    )
-    pandas_df = pandas.DataFrame.from_csv(
-        TEST_CSV_FILENAME, sep="|", parse_dates=False, header="infer", index_col=None
-    )
-    assert modin_df_equals_pandas(modin_df, pandas_df)
-
-
 def test_from_csv_skiprows(make_csv_file):
     make_csv_file()
 
@@ -1132,13 +1115,6 @@ def test_to_msgpack():
 
     teardown_test_file(TEST_MSGPACK_pandas_FILENAME)
     teardown_test_file(TEST_MSGPACK_DF_FILENAME)
-
-
-def test_to_panel():
-    modin_df = create_test_ray_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        modin_df.to_panel()
 
 
 def test_to_parquet():
