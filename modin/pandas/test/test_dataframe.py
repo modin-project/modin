@@ -1689,10 +1689,16 @@ class TestDFPartOne:
         df_equals(modin_result, pandas_result)
 
     def test_droplevel(self):
+<<<<<<< HEAD
         df = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]).set_index(
             [0, 1]
+=======
+        df = (
+            pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+            .set_index([0, 1])
+            .rename_axis(["a", "b"])
+>>>>>>> parent of de61799... Deprecate rename_axis
         )
-        df.index.rename(["a", "b"], inplace=True)
         df.columns = pd.MultiIndex.from_tuples(
             [("c", "e"), ("d", "f")], names=["level_1", "level_2"]
         )
@@ -3900,15 +3906,14 @@ class TestDFPartTwo:
         index = ["dog", "cat", "monkey"]
         modin_df = pd.DataFrame(data, index)
         pandas_df = pandas.DataFrame(data, index)
+        df_equals(modin_df.rename_axis("animal"), pandas_df.rename_axis("animal"))
+        df_equals(
+            modin_df.rename_axis("limbs", axis="columns"),
+            pandas_df.rename_axis("limbs", axis="columns"),
+        )
 
-        modin_df_copy = modin_df.copy()
-        pandas_df_copy = pandas_df.copy()
-        modin_df_copy.index.rename("animal", inplace=True)
-        pandas_df_copy.index.rename("animal", inplace=True)
-        df_equals(modin_df_copy, pandas_df_copy)
-
-        modin_df.columns.rename("limbs", inplace=True)
-        pandas_df.columns.rename("limbs", inplace=True)
+        modin_df.rename_axis("limbs", axis="columns", inplace=True)
+        pandas_df.rename_axis("limbs", axis="columns", inplace=True)
         df_equals(modin_df, pandas_df)
 
         new_index = pd.MultiIndex.from_product(
@@ -3917,17 +3922,28 @@ class TestDFPartTwo:
         modin_df.index = new_index
         pandas_df.index = new_index
 
-        modin_df_copy = modin_df.copy()
-        pandas_df_copy = pandas_df.copy()
-        modin_df_copy.index.rename(["class", "name"], inplace=True)
-        pandas_df_copy.index.rename(["class", "name"], inplace=True)
-        df_equals(modin_df_copy, pandas_df_copy)
+        df_equals(
+            modin_df.rename_axis(index={"type": "class"}),
+            pandas_df.rename_axis(index={"type": "class"}),
+        )
+        df_equals(
+            modin_df.rename_axis(columns=str.upper),
+            pandas_df.rename_axis(columns=str.upper),
+        )
+        df_equals(
+            modin_df.rename_axis(
+                columns=[str.upper(o) for o in modin_df.columns.names]
+            ),
+            pandas_df.rename_axis(
+                columns=[str.upper(o) for o in pandas_df.columns.names]
+            ),
+        )
 
-        modin_df_copy = modin_df.copy()
-        pandas_df_copy = pandas_df.copy()
-        modin_df_copy.columns.rename(str.upper(modin_df_copy.columns.name))
-        pandas_df_copy.columns.rename(str.upper(pandas_df_copy.columns.name))
-        df_equals(modin_df_copy, pandas_df_copy)
+        with pytest.warns(FutureWarning):
+            df_equals(
+                modin_df.rename_axis(str.upper, axis=1),
+                pandas_df.rename_axis(str.upper, axis=1),
+            )
 
     def test_rename_axis_inplace(self):
         test_frame = TestData().frame
@@ -3935,16 +3951,16 @@ class TestDFPartTwo:
 
         result = test_frame.copy()
         modin_result = modin_df.copy()
-        no_return = result.index.rename("foo", inplace=True)
-        modin_no_return = modin_result.index.rename("foo", inplace=True)
+        no_return = result.rename_axis("foo", inplace=True)
+        modin_no_return = modin_result.rename_axis("foo", inplace=True)
 
         assert no_return is modin_no_return
         df_equals(modin_result, result)
 
         result = test_frame.copy()
         modin_result = modin_df.copy()
-        no_return = result.columns.rename("bar", inplace=True)
-        modin_no_return = modin_result.columns.rename("bar", inplace=True)
+        no_return = result.rename_axis("bar", axis=1, inplace=True)
+        modin_no_return = modin_result.rename_axis("bar", axis=1, inplace=True)
 
         assert no_return is modin_no_return
         df_equals(modin_result, result)
