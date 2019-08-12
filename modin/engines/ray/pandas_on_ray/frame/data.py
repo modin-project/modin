@@ -29,21 +29,21 @@ class PandasOnRayData(object):
         self._partitions = partitions
         self._index_cache = index
         self._columns_cache = columns
-        self._row_lengths = row_lengths
-        self._column_widths = column_widths
+        self._row_lengths_cache = row_lengths
+        self._column_widths_cache = column_widths
         self._dtypes = dtypes
         self._filter_empties()
 
     def _filter_empties(self):
+        self._column_widths_cache = [w for w in self._column_widths if w > 0]
+        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
+
         self._partitions = np.array(
             [[self._partitions[i][j]
               for j in range(len(self._partitions[i]))
-              if j < len(self._column_widths) and self._column_widths[j] > 0]
+              if j < len(self._column_widths)]
              for i in range(len(self._partitions))
-             if i < len(self._row_lengths) and self._row_lengths[i] > 0])
-
-        self._column_widths = [w for w in self._column_widths if w > 0]
-        self._row_lengths = [r for r in self._row_lengths if r > 0]
+             if i < len(self._row_lengths)])
 
     def _apply_index_objs(self, axis=None):
         self._filter_empties()
@@ -83,6 +83,18 @@ class PandasOnRayData(object):
                         "col": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
         else:
             ErrorMessage.catch_bugs_and_request_email(axis is not None and axis not in [0, 1])
+
+    @property
+    def _row_lengths(self):
+        if self._row_lengths_cache is None:
+            self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
+        return self._row_lengths_cache
+
+    @property
+    def _column_widths(self):
+        if self._column_widths_cache is None:
+            self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+        return self._column_widths_cache
 
     def copy(self):
         return self.__constructor__(
@@ -177,6 +189,39 @@ class PandasOnRayData(object):
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
+
+    # Metadata modification methods
+    def add_prefix(self, prefix, axis):
+        if axis == 1:
+            new_columns = self.columns.map(lambda x: str(prefix) + str(x))
+            if self._dtypes is not None:
+                new_dtype_cache = self._dtypes.copy()
+                new_dtype_cache.index = new_columns
+            else:
+                new_dtype_cache = None
+            new_index = self.index
+        else:
+            new_index = self.index.map(lambda x: str(prefix) + str(x))
+            new_columns = self.columns
+            new_dtype_cache = self._dtypes
+        return self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+
+    def add_suffix(self, suffix, axis):
+        if axis == 1:
+            new_columns = self.columns.map(lambda x: str(x) + str(suffix))
+            if self._dtypes is not None:
+                new_dtype_cache = self._dtypes.copy()
+                new_dtype_cache.index = new_columns
+            else:
+                new_dtype_cache = None
+            new_index = self.index
+        else:
+            new_index = self.index.map(lambda x: str(x) + str(suffix))
+            new_columns = self.columns
+            new_dtype_cache = self._dtypes
+        return self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+
+    # END Metadata modification methods
 
     def _numeric_columns(self, include_bool=True):
         """Returns the numeric columns of the Manager.
@@ -340,11 +385,11 @@ class PandasOnRayData(object):
         result = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         if axis == 0:
             columns = alternate_index if alternate_index is not None else self.columns
-            return self.__constructor__(result.partitions, index=["__reduced__"], columns=columns, row_lengths=[1], column_widths=self.column_widths, dtypes=self.dtypes)
+            return self.__constructor__(result, index=["__reduced__"], columns=columns, row_lengths=[1], column_widths=self.column_widths, dtypes=self.dtypes)
         else:
             index = alternate_index if alternate_index is not None else self.index
             new_dtypes = pandas.Series(np.full(1, find_common_type(self.dtypes.values)), index=["__reduced__"])
-            return self.__constructor__(result.partitions, index=index, columns=["__reduced__"], row_lengths=self.row_lengths, column_widths=[1], dtypes=new_dtypes)
+            return self.__constructor__(result, index=index, columns=["__reduced__"], row_lengths=self.row_lengths, column_widths=[1], dtypes=new_dtypes)
 
     def _full_reduce(self, axis, map_func, reduce_func=None):
         """Apply function that will reduce the data to a Pandas Series.
@@ -395,13 +440,16 @@ class PandasOnRayData(object):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         return self.__constructor__(new_partitions, self.index, self.columns, self._row_lengths, self._column_widths)
 
-    def _apply_full_axis(self, axis, func, new_idx):
+    def _apply_full_axis(self, axis, func, new_index=None, new_columns=None):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         # Index objects for new object creation. This is shorter than if..else
-        index_objs = {axis ^ 1: [self.index, self.columns][axis], axis: new_idx}
+        if new_columns is None:
+            new_columns = self._frame_mgr_cls.get_indices(1, new_partitions, lambda df: df.columns)
+        if new_index is None:
+            new_index = self._frame_mgr_cls.get_indices(1, new_partitions, lambda df: df.index)
         # Length objects for new object creation. This is shorter than if..else
-        lengths_objs = {axis: [len(new_idx)] if len(new_idx) == 1 else None, axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
-        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+        lengths_objs = {axis: None, axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+        return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1])
 
     def _apply_full_axis_select_indices(self, axis, func, apply_indices, new_idx=None):
         """Reduce Manger along select indices using function that needs full axis.

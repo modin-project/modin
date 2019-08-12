@@ -13,7 +13,6 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.base import DataError
 
-from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.data_management.functions import MapFunction
@@ -43,18 +42,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
 
-    def __init__(
-        self, block_partitions_object=None, index=None, columns=None, dtypes=None, data_object=None
-    ):
-        if data_object is not None:
-            self._data_obj = data_object
-        else:
-            assert isinstance(block_partitions_object, BaseFrameManager)
-            self.data = block_partitions_object
-            self.index = index
-            self.columns = columns
-            if dtypes is not None:
-                self._dtype_cache = dtypes
+    def __init__(self, data_object):
+        self._data_obj = data_object
 
     def to_pandas(self):
         return self._data_obj.to_pandas()
@@ -138,34 +127,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Metadata modification methods
     def add_prefix(self, prefix, axis=1):
-        if axis == 1:
-            new_columns = self.columns.map(lambda x: str(prefix) + str(x))
-            if self._dtype_cache is not None:
-                new_dtype_cache = self._dtype_cache.copy()
-                new_dtype_cache.index = new_columns
-            else:
-                new_dtype_cache = None
-            new_index = self.index
-        else:
-            new_index = self.index.map(lambda x: str(prefix) + str(x))
-            new_columns = self.columns
-            new_dtype_cache = self._dtype_cache
-        return self.__constructor__(self.data, new_index, new_columns, new_dtype_cache)
+        return self.__constructor__(self._data_obj.add_prefix(prefix, axis))
 
     def add_suffix(self, suffix, axis=1):
-        if axis == 1:
-            new_columns = self.columns.map(lambda x: str(x) + str(suffix))
-            if self._dtype_cache is not None:
-                new_dtype_cache = self._dtype_cache.copy()
-                new_dtype_cache.index = new_columns
-            else:
-                new_dtype_cache = None
-            new_index = self.index
-        else:
-            new_index = self.index.map(lambda x: str(x) + str(suffix))
-            new_columns = self.columns
-            new_dtype_cache = self._dtype_cache
-        return self.__constructor__(self.data, new_index, new_columns, new_dtype_cache)
+        return self.__constructor__(self._data_obj.add_suffix(suffix, axis))
 
     # END Metadata modification methods
 
@@ -174,7 +139,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        return self.__constructor__(data_object=self._data_obj.copy())
+        return self.__constructor__(self._data_obj.copy())
 
     # END Copy
 
@@ -707,7 +672,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Transposed new QueryCompiler.
         """
         # Switch the index and columns and transpose the data within the blocks.
-        return self.__constructor__(data_object=self._data_obj.transpose())
+        return self.__constructor__(self._data_obj.transpose())
 
     # END Transpose
 
@@ -1028,17 +993,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             Scalar of index name.
         """
-        # It may be possible to incrementally check each partition, but this
-        # computation is fairly cheap.
         def first_valid_index_builder(df):
             df.index = pandas.RangeIndex(len(df.index))
             return df.apply(lambda df: df.first_valid_index())
 
-        func = self._build_mapreduce_func(first_valid_index_builder)
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
-        first_result = self._full_axis_reduce(0, func).min(axis=1).to_pandas().squeeze()
+        first_result = self.__constructor__(self._data_obj._full_axis_reduce(0, first_valid_index_builder)).min(axis=1).to_pandas().squeeze()
         return self.index[first_result]
 
     def idxmax(self, **kwargs):
@@ -1048,7 +1010,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the maximum of each column or axis.
         """
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs)))
+        return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs)))
 
     def idxmin(self, **kwargs):
         """Returns the first occurrence of the minimum over requested axis.
@@ -1057,7 +1019,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the minimum of each column or axis.
         """
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(data_object=self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs)))
+        return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs)))
 
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
@@ -1073,7 +1035,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
-        first_result = self._data_obj._full_axis_reduce(0, last_valid_index_builder).max(axis=1).to_pandas().squeeze()
+        first_result = self.__constructor__(self._data_obj._full_axis_reduce(0, last_valid_index_builder)).max(axis=1).to_pandas().squeeze()
         return self.index[first_result]
 
     def median(self, **kwargs):
@@ -1116,7 +1078,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result.index = [q]
         else:
             result.columns = [q]
-        return result
+        return self.__constructor__(result)
 
     def skew(self, **kwargs):
         """Returns skew of each column or row.
@@ -1172,7 +1134,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def describe_builder(df, internal_indices=[], **kwargs):
             return df.iloc[:, internal_indices].describe(**kwargs)
 
-        return self.__constructor__(data_object=self._data_obj._apply_full_axis_select_indices(0, describe_builder,
+        return self.__constructor__(self._data_obj._apply_full_axis_select_indices(0, describe_builder,
                                                                                                empty_df.columns,
                                                                                                new_idx=empty_df.index))
 
@@ -1186,7 +1148,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
         new_data = self._data_obj._map_across_full_axis(axis, func)
-        return self.__constructor__(data_object=new_data)
+        return self.__constructor__(new_data)
 
     def cummax(self, **kwargs):
         return self._cumulative_builder(pandas.DataFrame.cummax, **kwargs)
@@ -1202,7 +1164,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def diff(self, **kwargs):
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(data_object=self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs)))
+        return self.__constructor__(self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs)))
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -1215,15 +1177,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Make a copy of columns and eval on the copy to determine if result type is
         # series or not
-        columns_copy = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
-        columns_copy = columns_copy.eval(expr, inplace=False, **kwargs)
-        expect_series = isinstance(columns_copy, pandas.Series)
+        empty_eval = pandas.DataFrame(columns=self.columns).astype(self.dtypes).eval(expr, inplace=False, **kwargs)
+        expect_series = isinstance(empty_eval, pandas.Series)
 
         def eval_builder(df, **kwargs):
             return pandas.DataFrame(df.eval(expr, inplace=False, **kwargs))
 
-        new_data = self._data_obj._apply_full_axis(1, eval_builder, [columns_copy.name] if expect_series else columns_copy.columns)
-        return self.__constructor__(data_object=new_data)
+        new_data = self._data_obj._apply_full_axis(1, eval_builder, new_index=self.index, new_columns=[empty_eval.name] if expect_series else empty_eval.columns)
+        return self.__constructor__(new_data)
 
     def mode(self, **kwargs):
         """Returns a new QueryCompiler with modes calculated for each label along given axis.
@@ -1239,30 +1200,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # that all the partitions will be the same shape
             if not axis and len(df) != len(result):
                 # Pad columns
-                append_values = pandas.DataFrame(
-                    columns=result.columns, index=range(len(result), len(df))
-                )
-                result = pandas.concat([result, append_values], ignore_index=True)
+                result.reindex(columns=df.columns, inplace=True)
             elif axis and len(df.columns) != len(result.columns):
                 # Pad rows
-                append_vals = pandas.DataFrame(
-                    columns=range(len(result.columns), len(df.columns)),
-                    index=result.index,
-                )
-                result = pandas.concat([result, append_vals], axis=1)
+                result.reindex(index=df.index, inplace=True)
             return pandas.DataFrame(result)
 
-        func = self._prepare_method(mode_builder, **kwargs)
-        new_data = self._map_across_full_axis(axis, func)
-
-        new_index = pandas.RangeIndex(len(self.index)) if not axis else self.index
-        new_columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
-        new_dtypes = self._dtype_cache
-        if new_dtypes is not None:
-            new_dtypes.index = new_columns
-        return self.__constructor__(
-            new_data, new_index, new_columns, new_dtypes
-        ).dropna(axis=axis, how="all")
+        new_data = self._data_obj._map_across_full_axis(axis, mode_builder)
+        new_data.index = pandas.RangeIndex(len(self.index)) if not axis else self.index
+        new_data.columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
+        return self.__constructor__(new_data).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -1373,24 +1320,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the rows where the boolean expression is satisfied.
         """
-        columns = self.columns
 
         def query_builder(df, **kwargs):
-            # This is required because of an Arrow limitation
-            # TODO revisit for Arrow error
-            df = df.copy()
-            df.index = pandas.RangeIndex(len(df))
-            df.columns = columns
-            df.query(expr, inplace=True, **kwargs)
-            df.columns = pandas.RangeIndex(len(df.columns))
-            return df
+            return df.query(expr, inplace=False, **kwargs)
 
-        func = self._prepare_method(query_builder, **kwargs)
-        new_data = self._map_across_full_axis(1, func)
-        # Query removes rows, so we need to update the index
-        new_index = self.compute_index(0, new_data, True)
-
-        return self.__constructor__(new_data, new_index, self.columns, self.dtypes)
+        return self.__constructor__(self._data_obj._apply_full_axis(1, query_builder, new_columns=self.columns))
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
@@ -1459,7 +1393,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the first n rows of the original QueryCompiler.
         """
-        return self.__constructor__(data_object=self._data_obj.head(n))
+        return self.__constructor__(self._data_obj.head(n))
 
     def tail(self, n):
         """Returns the last n rows.
@@ -1470,7 +1404,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the last n rows of the original QueryCompiler.
         """
-        return self.__constructor__(data_object=self._data_obj.tail(n))
+        return self.__constructor__(self._data_obj.tail(n))
 
     def front(self, n):
         """Returns the first n columns.
@@ -1481,7 +1415,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
-        return self.__constructor__(data_object=self._data_obj.front(n))
+        return self.__constructor__(self._data_obj.front(n))
 
     def back(self, n):
         """Returns the last n columns.
@@ -1492,7 +1426,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
-        return self.__constructor__(data_object=self._data_obj.back(n))
+        return self.__constructor__(self._data_obj.back(n))
 
     # End Head/Tail/Front/Back
 

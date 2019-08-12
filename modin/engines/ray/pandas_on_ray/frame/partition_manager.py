@@ -7,6 +7,7 @@ from .axis_partition import (
     PandasOnRayFrameRowPartition,
 )
 from .partition import PandasOnRayFramePartition
+from modin.error_message import ErrorMessage
 
 
 class PandasOnRayFrameManager(RayFrameManager):
@@ -16,6 +17,45 @@ class PandasOnRayFrameManager(RayFrameManager):
     _partition_class = PandasOnRayFramePartition
     _column_partitions_class = PandasOnRayFrameColumnPartition
     _row_partition_class = PandasOnRayFrameRowPartition
+
+    @classmethod
+    def get_indices(cls, axis, partitions, index_func=None):
+        """This gets the internal indices stored in the partitions.
+
+        Note: These are the global indices of the object. This is mostly useful
+            when you have deleted rows/columns internally, but do not know
+            which ones were deleted.
+
+        Args:
+            axis: This axis to extract the labels. (0 - index, 1 - columns).
+            index_func: The function to be used to extract the function.
+            old_blocks: An optional previous object that this object was
+                created from. This is used to compute the correct offsets.
+
+        Returns:
+            A Pandas Index object.
+        """
+        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
+        func = cls.preprocess_func(index_func)
+        if axis == 0:
+            # We grab the first column of blocks and extract the indices
+            # Note: We use _partitions_cache in the context of this function to make
+            # sure that none of the partitions are modified or filtered out before we
+            # get the index information.
+            # DO NOT CHANGE TO self.partitions under any circumstance.
+            new_idx = (
+                [idx.apply(func).oid for idx in partitions.T[0]]
+                if len(partitions.T)
+                else []
+            )
+        else:
+            new_idx = (
+                [idx.apply(func).oid for idx in partitions[0]]
+                if len(partitions)
+                else []
+            )
+        new_idx = ray.get(new_idx)
+        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     def groupby_reduce(self, axis, by, map_func, reduce_func):  # pragma: no cover
         @ray.remote

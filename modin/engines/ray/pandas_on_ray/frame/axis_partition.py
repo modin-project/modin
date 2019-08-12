@@ -57,8 +57,8 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         return [
             self.partition_type(
                 partitions[i],
-                self.partition_type(partitions[i + 1]),
-                self.partition_type(partitions[i + 2]),
+                partitions[i + 1],
+                partitions[i + 2],
             )
             for i in range(0, len(partitions), 3)
         ]

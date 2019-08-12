@@ -508,7 +508,8 @@ class BaseFrameManager(object):
         ]
         return cls(np.array(parts))
 
-    def get_indices(self, axis=0, index_func=None, old_blocks=None):
+    @classmethod
+    def get_indices(cls, axis, partitions, index_func=None):
         """This gets the internal indices stored in the partitions.
 
         Note: These are the global indices of the object. This is mostly useful
@@ -525,53 +526,25 @@ class BaseFrameManager(object):
             A Pandas Index object.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
-        func = self.preprocess_func(index_func)
+        func = cls.preprocess_func(index_func)
         if axis == 0:
             # We grab the first column of blocks and extract the indices
             # Note: We use _partitions_cache in the context of this function to make
             # sure that none of the partitions are modified or filtered out before we
             # get the index information.
             # DO NOT CHANGE TO self.partitions under any circumstance.
-            new_indices = (
-                [idx.apply(func).get() for idx in self._partitions_cache.T[0]]
-                if len(self._partitions_cache.T)
+            new_idx = (
+                [idx.apply(func).get() for idx in partitions.T[0]]
+                if len(partitions.T)
                 else []
             )
-            # This is important because sometimes we have resized the data. The new
-            # sizes will not be valid if we are trying to compute the index on a
-            # new object that has a different length.
-            if old_blocks is not None:
-                cumulative_block_lengths = np.array(old_blocks.block_lengths).cumsum()
-            else:
-                cumulative_block_lengths = np.array(self.block_lengths).cumsum()
         else:
-            new_indices = (
-                [idx.apply(func).get() for idx in self._partitions_cache[0]]
-                if len(self._partitions_cache)
+            new_idx = (
+                [idx.apply(func).get() for idx in partitions[0]]
+                if len(partitions)
                 else []
             )
-
-            if old_blocks is not None:
-                cumulative_block_lengths = np.array(old_blocks.block_widths).cumsum()
-            else:
-                cumulative_block_lengths = np.array(self.block_widths).cumsum()
-        full_indices = new_indices[0] if len(new_indices) else new_indices
-        if old_blocks is not None:
-            for i in range(len(new_indices)):
-                # If the length is 0 there is nothing to append.
-                if i == 0 or len(new_indices[i]) == 0:
-                    continue
-                # The try-except here is intended to catch issues where we are
-                # trying to get a string index out of the internal index.
-                try:
-                    append_val = new_indices[i] + cumulative_block_lengths[i - 1]
-                except TypeError:
-                    append_val = new_indices[i]
-
-                full_indices = full_indices.append(append_val)
-        else:
-            full_indices = full_indices.append(new_indices[1:])
-        return full_indices
+        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
     def _compute_num_partitions(cls):
