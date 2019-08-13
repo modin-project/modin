@@ -1747,7 +1747,6 @@ class DataFrame(BasePandasDataset):
             level: The MultiLevel index level to apply over.
             errors: Whether or not to raise errors. Does nothing in Pandas.
             try_cast: Try to cast the result back to the input type.
-            raise_on_error: Whether to raise invalid datatypes (deprecated).
 
         Returns:
             A new DataFrame with the replaced values.

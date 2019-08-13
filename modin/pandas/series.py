@@ -1118,7 +1118,6 @@ class Series(BasePandasDataset):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         if isinstance(other, Series):
             other = to_pandas(other)
@@ -1131,7 +1130,6 @@ class Series(BasePandasDataset):
             level=level,
             errors=errors,
             try_cast=try_cast,
-            raise_on_error=raise_on_error,
         )
 
     def xs(self, key, axis=0, level=None, drop_level=True):  # pragma: no cover
