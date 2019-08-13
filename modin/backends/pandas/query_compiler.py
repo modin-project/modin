@@ -280,7 +280,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         index_obj = (
             [o.index for o in other] if axis == 0 else [o.columns for o in other]
         )
-        joined_index = self._join_index_objects(
+        joined_index = self._data_obj._join_index_objects(
             axis ^ 1, index_obj, how_to_join, sort=sort
         )
         # We have to set these because otherwise when we perform the functions it may
@@ -289,49 +289,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         right_old_idxes = index_obj
 
         # Start with this and we'll repartition the first time, and then not again.
-        reindexed_self = self.data
+        if not left_old_idx.equals(joined_index):
+            reindexed_self = self._data_obj._apply_full_axis(axis, lambda df: df.reindex(joined_index))
+        else:
+            reindexed_self = self._data_obj
         reindexed_other_list = []
 
-        def compute_reindex(old_idx):
-            """Create a function based on the old index and axis.
-
-            Args:
-                old_idx: The old index/columns
-
-            Returns:
-                A function that will be run in each partition.
-            """
-
-            def reindex_partition(df):
-                if axis == 0:
-                    df.index = old_idx
-                    new_df = df.reindex(index=joined_index)
-                    new_df.index = pandas.RangeIndex(len(new_df.index))
-                else:
-                    df.columns = old_idx
-                    new_df = df.reindex(columns=joined_index)
-                    new_df.columns = pandas.RangeIndex(len(new_df.columns))
-                return new_df
-
-            return reindex_partition
-
         for i in range(len(other)):
-            # If the indices are equal we can skip partitioning so long as we are not
-            # forced to repartition. See note above about `force_repartition`.
-            if i != 0 or (left_old_idx.equals(joined_index) and not force_repartition):
-                reindex_left = None
-            else:
-                reindex_left = self._prepare_method(compute_reindex(left_old_idx))
             if right_old_idxes[i].equals(joined_index) and not force_repartition:
-                reindex_right = None
+                reindexed_other = other[i]._data_obj
             else:
-                reindex_right = compute_reindex(right_old_idxes[i])
-            reindexed_self, reindexed_other = reindexed_self.copartition_datasets(
-                axis,
-                other[i].data,
-                reindex_left,
-                reindex_right,
-            )
+                reindexed_other = other.__constructor__other[i]._data_obj._apply_full_axis(axis, lambda df: df.reindex(joined_index))
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
@@ -374,36 +342,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             New QueryCompiler with new data and index.
         """
-        reindexed_self, reindexed_other_list, joined_index = self.copartition(
+        left_data, right_data, joined_index = self.copartition(
             0, other, how_to_join, sort=False
         )
         # unwrap list returned by `copartition`.
-        reindexed_other = reindexed_other_list[0]
-        new_columns = self._join_index_objects(
-            0, other.columns, how_to_join, sort=False
-        )
-        # THere is an interesting serialization anomaly that happens if we do
-        # not use the columns in `inter_data_op_builder` from here (e.g. if we
-        # pass them in). Passing them in can cause problems, so we will just
-        # use them from here.
-        self_cols = self.columns
-        other_cols = other.columns
+        reindexed_other = right_data[0]
 
         def inter_data_op_builder(left, right, func):
-            left.columns = self_cols
-            right.columns = other_cols
-            # We reset here to make sure that the internal indexes match. We aligned
-            # them in the previous step, so this step is to prevent mismatches.
-            left.index = pandas.RangeIndex(len(left.index))
-            right.index = pandas.RangeIndex(len(right.index))
             result = func(left, right)
-            result.columns = pandas.RangeIndex(len(result.columns))
             return result
 
-        new_data = reindexed_self.inter_data_operation(
+        new_data = left_data.inter_data_operation(
             1, lambda l, r: inter_data_op_builder(l, r, func), reindexed_other
         )
-        return self.__constructor__(new_data, joined_index, new_columns)
+        return self.__constructor__(new_data)
 
     def _inter_df_op_handler(self, func, other, **kwargs):
         """Helper method for inter-manager and scalar operations.
@@ -416,7 +368,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler with new data and index.
         """
         axis = kwargs.get("axis", 0)
-        axis = pandas.DataFrame()._get_axis_number(axis) if axis is not None else 0
         if isinstance(other, type(self)):
             return self._inter_manager_operations(
                 other, "outer", lambda x, y: func(x, y, **kwargs)
@@ -1199,16 +1150,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # We return a dataframe with the same shape as the input to ensure
             # that all the partitions will be the same shape
             if not axis and len(df) != len(result):
-                # Pad columns
-                result.reindex(columns=df.columns, inplace=True)
-            elif axis and len(df.columns) != len(result.columns):
                 # Pad rows
-                result.reindex(index=df.index, inplace=True)
+                result = result.reindex(index=df.index)
+            elif axis and len(df.columns) != len(result.columns):
+                # Pad columns
+                result = result.reindex(columns=df.columns)
             return pandas.DataFrame(result)
 
         new_data = self._data_obj._map_across_full_axis(axis, mode_builder)
-        new_data.index = pandas.RangeIndex(len(self.index)) if not axis else self.index
-        new_data.columns = self.columns if not axis else pandas.RangeIndex(len(self.columns))
+        if axis == 0:
+            new_data.index = pandas.RangeIndex(len(self.index))
+        else:
+            new_data.columns = pandas.RangeIndex(len(self.columns))
         return self.__constructor__(new_data).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
@@ -1223,7 +1176,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
         if isinstance(value, dict):
-            value = kwargs.pop("value")
+            raise NotImplementedError("FIXME")
+            kwargs.pop("value")
 
             if axis == 0:
                 index = self.columns
@@ -1247,14 +1201,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_data = self.data.apply_func_to_select_indices(
                     axis, fillna_dict_builder, value, keep_remaining=True
                 )
-            return self.__constructor__(new_data, self.index, self.columns)
         else:
-            func = self._prepare_method(pandas.DataFrame.fillna, **kwargs)
             if full_axis:
-                new_data = self._map_across_full_axis(axis, func)
-                return self.__constructor__(new_data, self.index, self.columns)
+                new_data = self._data_obj._map_across_full_axis(axis, lambda df: df.fillna(**kwargs))
             else:
-                return self._map_partitions(func)
+                new_data = self._data_obj._map_partitions(lambda df: df.fillna(**kwargs))
+        return self.__constructor__(new_data)
 
     def quantile_for_list_of_values(self, **kwargs):
         """Returns Manager containing quantiles along an axis for numeric columns.
@@ -1268,34 +1220,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
 
         if numeric_only:
-            new_columns = self._numeric_columns()
+            new_columns = self._data_obj._numeric_columns()
         else:
             new_columns = [
                 col
                 for col, dtype in zip(self.columns, self.dtypes)
                 if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
             ]
-        if axis:
-            # If along rows, then drop the nonnumeric columns, record the index, and
-            # take transpose. We have to do this because if we don't, the result is all
-            # in one column for some reason.
-            nonnumeric = [
-                col
-                for col, dtype in zip(self.columns, self.dtypes)
-                if not is_numeric_dtype(dtype)
-            ]
-            query_compiler = self.drop(columns=nonnumeric)
-            new_columns = query_compiler.index
+        if axis == 1:
+            query_compiler = self.getitem_column_array(new_columns)
+            new_columns = self.index
         else:
             query_compiler = self
 
         def quantile_builder(df, **kwargs):
             result = df.quantile(**kwargs)
-            return result.T if axis == 1 else result
-
-        func = query_compiler._prepare_method(quantile_builder, **kwargs)
-        q_index = pandas.Float64Index(q)
-        new_data = query_compiler._map_across_full_axis(axis, func)
+            return result.T if kwargs.get("axis", 0) == 1 else result
 
         # This took a long time to debug, so here is the rundown of why this is needed.
         # Previously, we were operating on select indices, but that was broken. We were
@@ -1308,7 +1248,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if axis == 1:
             q_index = new_columns
             new_columns = pandas.Float64Index(q)
-        result = self.__constructor__(new_data, q_index, new_columns)
+        else:
+            q_index = pandas.Float64Index(q)
+        new_data = query_compiler._data_obj._apply_full_axis(axis, lambda df: quantile_builder(df, **kwargs), new_index=q_index, new_columns=new_columns, new_dtypes=np.float64)
+        result = self.__constructor__(new_data)
         return result.transpose() if axis == 1 else result
 
     def query(self, expr, **kwargs):
@@ -1334,16 +1277,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        func = self._prepare_method(pandas.DataFrame.rank, **kwargs)
-        new_data = self._map_across_full_axis(axis, func)
-        # Since we assume no knowledge of internal state, we get the columns
-        # from the internal partitions.
-        if numeric_only:
-            new_columns = self.compute_index(1, new_data, True)
-        else:
-            new_columns = self.columns
-        new_dtypes = pandas.Series([np.float64 for _ in new_columns], index=new_columns)
-        return self.__constructor__(new_data, self.index, new_columns, new_dtypes)
+        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.rank(**kwargs), new_index=self.index, new_columns=self.columns if not numeric_only else None, dtypes=np.float64)
+        return self.__constructor__(new_data)
 
     def sort_index(self, **kwargs):
         """Sorts the data with respect to either the columns or the indices.
@@ -1352,8 +1287,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             QueryCompiler containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
-        index = self.columns if axis else self.index
-
         # sort_index can have ascending be None and behaves as if it is False.
         # sort_values cannot have ascending be None. Thus, the following logic is to
         # convert the ascending argument to one that works with sort_values
@@ -1361,25 +1294,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if ascending is None:
             ascending = False
         kwargs["ascending"] = ascending
-
-        def sort_index_builder(df, **kwargs):
-            if axis:
-                df.columns = index
-            else:
-                df.index = index
-            return df.sort_index(axis=axis, **kwargs)
-
-        func = self._prepare_method(sort_index_builder, **kwargs)
-        new_data = self._map_across_full_axis(axis, func)
         if axis:
             new_columns = pandas.Series(self.columns).sort_values(**kwargs)
             new_index = self.index
         else:
             new_index = pandas.Series(self.index).sort_values(**kwargs)
             new_columns = self.columns
-        return self.__constructor__(
-            new_data, new_index, new_columns, self.dtypes.copy()
-        )
+        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.sort_index(axis=axis, **kwargs), new_index, new_columns, dtypes="copy" if axis == 0 else None)
+        return self.__constructor__(new_data)
 
     # END Map across rows/columns
 
@@ -1492,20 +1414,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 _setitem()
             return df
 
-        if axis == 0:
-            numeric_indices = list(self.columns.get_indexer_for([key]))
-        else:
-            numeric_indices = list(self.index.get_indexer_for([key]))
-        prepared_func = self._prepare_method(setitem)
         if is_list_like(value):
-            new_data = self.data.apply_func_to_select_indices_along_full_axis(
-                axis, prepared_func, numeric_indices, keep_remaining=True
+            new_data = self._data_obj._apply_full_axis_select_indices(
+                axis, setitem, [key], new_idx=self.index, keep_remaining=True
             )
         else:
-            new_data = self.data.apply_func_to_select_indices(
-                axis, prepared_func, numeric_indices, keep_remaining=True
+            new_data = self._data_obj._apply_select_indices(
+                axis, setitem, [key], new_idx=self.index, keep_remaining=True
             )
-        return self.__constructor__(new_data, self.index, self.columns)
+        return self.__constructor__(new_data)
 
     # END __getitem__ methods
 

@@ -53,15 +53,15 @@ class PandasOnRayData(object):
             cum_col_widths = np.cumsum([0] + self._column_widths)
 
         if axis is None:
-            def apply_idx_objs(df, idx, col):
-                df.index, df.columns = idx, col
+            def apply_idx_objs(df, idx, cols):
+                df.index, df.columns = idx, cols
                 return df
 
             for i in range(len(self._partitions)):
                 for j in range(len(self._partitions[i])):
                     self._partitions[i][j].call_queue += [(apply_idx_objs, {
                         "idx": self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])],
-                        "col": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+                        "cols": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
         elif axis == 0:
             def apply_idx_objs(df, idx):
                 df.index = idx
@@ -74,13 +74,13 @@ class PandasOnRayData(object):
 
         elif axis == 1:
             def apply_idx_objs(df, cols):
-                df.cols = cols
+                df.columns = cols
                 return df
 
             for i in range(len(self._partitions)):
                 for j in range(len(self._partitions[i])):
                     self._partitions[i][j].call_queue += [(apply_idx_objs, {
-                        "col": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+                        "cols": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
         else:
             ErrorMessage.catch_bugs_and_request_email(axis is not None and axis not in [0, 1])
 
@@ -479,9 +479,9 @@ class PandasOnRayData(object):
     def _map_partitions(self, func, dtypes=None):
         new_partitions = self._frame_mgr_cls.map_across_blocks(self._partitions, func)
         if dtypes == "copy":
-            dtypes = self.dtypes
+            dtypes = self._dtypes
         elif dtypes is not None:
-            dtypes = pandas.Series([dtypes] * len(self.columns), index=self.columns)
+            dtypes = pandas.Series([np.dtype(dtypes)] * len(self.columns), index=self.columns)
         return self.__constructor__(
             new_partitions, self.index, self.columns, self._row_lengths, self._column_widths, dtypes=dtypes
         )
@@ -490,7 +490,7 @@ class PandasOnRayData(object):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         return self.__constructor__(new_partitions, self.index, self.columns, self._row_lengths, self._column_widths)
 
-    def _apply_full_axis(self, axis, func, new_index=None, new_columns=None):
+    def _apply_full_axis(self, axis, func, new_index=None, new_columns=None, dtypes=None):
         new_partitions = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
         # Index objects for new object creation. This is shorter than if..else
         if new_columns is None:
@@ -499,9 +499,13 @@ class PandasOnRayData(object):
             new_index = self._frame_mgr_cls.get_indices(1, new_partitions, lambda df: df.index)
         # Length objects for new object creation. This is shorter than if..else
         lengths_objs = {axis: None, axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
-        return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1])
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series([np.dtype(dtypes)] * len(new_columns), index=new_columns)
+        return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1], dtypes)
 
-    def _apply_full_axis_select_indices(self, axis, func, apply_indices, new_idx=None):
+    def _apply_full_axis_select_indices(self, axis, func, apply_indices, new_idx=None, keep_remaining=False):
         """Reduce Manger along select indices using function that needs full axis.
 
         Args:
@@ -518,12 +522,28 @@ class PandasOnRayData(object):
         numeric_indices = old_index.get_indexer_for(apply_indices)
         dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
         new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
-            axis, self._partitions, func, dict_indices
+            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
         )
         # Index objects for new object creation. This is shorter than if..else
-        index_objs = {axis ^ 1: apply_indices, axis: new_idx}
+        index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
         # Length objects for new object creation. This is shorter than if..else
-        lengths_objs = {axis: [len(apply_indices)], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+        lengths_objs = {
+            axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis],
+            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+
+    def _apply_select_indices(self, axis, func, apply_indices, new_idx=None, keep_remaining=False):
+        # Convert indices to numeric indices
+        old_index = self.index if axis else self.columns
+        numeric_indices = old_index.get_indexer_for(apply_indices)
+        dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
+        new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
+            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
+        )
+        # Index objects for new object creation. This is shorter than if..else
+        index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
+        # Length objects for new object creation. This is shorter than if..else
+        lengths_objs = {axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
         return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):
@@ -538,6 +558,9 @@ class PandasOnRayData(object):
         """
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
+
+    def _binary_op(self, axis, function, right_data):
+        
 
     @classmethod
     def from_pandas(cls, df):
