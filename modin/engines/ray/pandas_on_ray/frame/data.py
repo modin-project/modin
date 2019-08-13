@@ -84,6 +84,56 @@ class PandasOnRayData(object):
         else:
             ErrorMessage.catch_bugs_and_request_email(axis is not None and axis not in [0, 1])
 
+    def mask(self, row_indices=None, row_numeric_idx=None, col_indices=None, col_numeric_idx=None):
+        if row_indices is None and row_numeric_idx is None and col_indices is None and col_numeric_idx is None:
+            return self.copy()
+        if row_indices is not None:
+            row_numeric_idx = self.index.get_indexer_for(row_indices)
+        if row_numeric_idx is not None:
+            row_partitions_list = self._get_dict_of_block_index(
+                1, row_numeric_idx, ordered=True
+            )
+            new_row_lengths = [len(indices) for _, indices in row_partitions_list]
+            new_index = self.index[row_numeric_idx]
+        else:
+            row_partitions_list = [
+                (i, range(self._row_lengths[i]))
+                for i in range(len(self._row_lengths))
+            ]
+            new_row_lengths = self._row_lengths
+            new_index = self.index
+
+        if col_indices is not None:
+            col_numeric_idx = self.columns.get_indexer_for(col_indices)
+        if col_numeric_idx is not None:
+            col_partitions_list = self._get_dict_of_block_index(
+                0, col_numeric_idx, ordered=True
+            )
+            new_col_widths = [len(indices) for _, indices in col_partitions_list]
+            new_columns = self.columns[col_numeric_idx]
+            new_dtypes = self.dtypes[col_numeric_idx]
+        else:
+            col_partitions_list = [
+                (i, range(self._column_widths[i])) for i in range(len(self._column_widths))
+            ]
+            new_col_widths = self._column_widths
+            new_columns = self.columns
+            new_dtypes = self.dtypes
+        new_partitions = np.array(
+                [
+                    [
+                        self._partitions[row_idx][col_idx].mask(
+                            row_internal_indices, col_internal_indices
+                        )
+                        for col_idx, col_internal_indices in col_partitions_list
+                        if len(col_internal_indices) > 0
+                    ]
+                    for row_idx, row_internal_indices in row_partitions_list
+                    if len(row_internal_indices) > 0
+                ]
+            )
+        return self.__constructor__(new_partitions, new_index, new_columns, new_row_lengths, new_col_widths, new_dtypes)
+
     @property
     def _row_lengths(self):
         if self._row_lengths_cache is None:

@@ -38,6 +38,13 @@ def _set_axis(axis):
         return set_cols
 
 
+def _str_map(func):
+    def str_op_builder(df, *args, **kwargs):
+        str_series = df.squeeze().str
+        return func(str_series, *args, **kwargs).to_frame()
+    return str_op_builder
+
+
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a Pandas backend. This logic is specific to Pandas."""
@@ -872,13 +879,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Map partitions operations
 
-    # String map partition operations
-    def _str_map(func):
-        def str_op_builder(df, *args, **kwargs):
-            str_series = df.squeeze().str
-            return func(str_series, *args, **kwargs).to_frame()
-        return str_op_builder
-
     # This is here to shorten the call to pandas
     str_ops = pandas.Series.str
 
@@ -1443,19 +1443,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler.
         """
         # Convert to list for type checking
-        if not numeric:
-            numeric_indices = self.columns.get_indexer_for(key)
+        if numeric:
+            new_data = self._data_obj.mask(col_numeric_idx=key)
         else:
-            numeric_indices = key
-        result = self.data.mask(col_indices=numeric_indices)
-        # We can't just set the columns to key here because there may be
-        # multiple instances of a key.
-        new_columns = self.columns[numeric_indices]
-        if self._dtype_cache is not None:
-            new_dtypes = self.dtypes[numeric_indices]
-        else:
-            new_dtypes = None
-        return self.__constructor__(result, self.index, new_columns, new_dtypes)
+            new_data = self._data_obj.mask(col_indices=key)
+        return self.__constructor__(new_data)
 
     def getitem_row_array(self, key):
         """Get row data for target labels.
@@ -1466,11 +1458,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        result = self.data.mask(row_indices=key)
-        # We can't just set the index to key here because there may be multiple
-        # instances of a key.
-        new_index = self.index[key]
-        return self.__constructor__(result, new_index, self.columns, self._dtype_cache)
+        return self.__constructor__(self._data_obj.mask(row_numeric_idx=key))
 
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
@@ -1600,33 +1588,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        if index is None and columns is None:
-            return self.copy()
-        if index is None:
-            new_index = self.index
-            idx_numeric_indices = None
-        else:
-            idx_numeric_indices = pandas.RangeIndex(len(self.index)).drop(
-                self.index.get_indexer_for(index)
-            )
-            new_index = self.index[~self.index.isin(index)]
-        if columns is None:
-            new_columns = self.columns
-            new_dtypes = self._dtype_cache
-            col_numeric_indices = None
-        else:
-            col_numeric_indices = pandas.RangeIndex(len(self.columns)).drop(
-                self.columns.get_indexer_for(columns)
-            )
-            new_columns = self.columns[~self.columns.isin(columns)]
-            if self._dtype_cache is not None:
-                new_dtypes = self.dtypes.drop(columns)
-            else:
-                new_dtypes = None
-        new_data = self.data.mask(
-            row_indices=idx_numeric_indices, col_indices=col_numeric_indices
-        )
-        return self.__constructor__(new_data, new_index, new_columns, new_dtypes)
+        if index is not None:
+            index = self.index[~self.index.isin(index)]
+        if columns is not None:
+            columns = self.columns[~self.columns.isin(columns)]
+        new_data = self._data_obj.mask(row_indices=index, col_indices=columns)
+        return self.__constructor__(new_data)
 
     # END Drop/Dropna
 
