@@ -1328,7 +1328,7 @@ class Series(BasePandasDataset):
     def _to_pandas(self):
         df = self._query_compiler.to_pandas()
         series = df[df.columns[0]]
-        if series.name == "__reduced__":
+        if self._query_compiler.columns[0] == "__reduced__":
             series.name = None
         return series
 

@@ -672,9 +672,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         min_count = kwargs.get("min_count", 0)
         if min_count <= 1:
-            return self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+            return self.__constructor__(self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs)))
         else:
-            return self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs))
+            return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs)))
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -701,7 +701,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         axis = 0 if axis is None else axis
         kwargs["axis"] = axis
-        return self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+        return self.__constructor__(self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs)))
 
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
@@ -1610,21 +1610,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-
-        def callable_apply_builder(df, axis=0):
-            if not axis:
-                df.index = index
-                df.columns = pandas.RangeIndex(len(df.columns))
-            else:
-                df.columns = index
-                df.index = pandas.RangeIndex(len(df.index))
-            result = df.apply(func, axis=axis, *args, **kwargs)
-            return result
-
-        index = self.index if not axis else self.columns
-        func_prepared = self._build_mapreduce_func(callable_apply_builder, axis=axis)
-        result_data = self._map_across_full_axis(axis, func_prepared)
-        return self._post_process_apply(result_data, axis)
+        if isinstance(pandas.DataFrame().apply(func), pandas.Series):
+            new_data = self._data_obj._full_axis_reduce(axis, lambda df: df.apply(func, axis=axis, *args, **kwargs))
+        else:
+            new_data = self._data_obj._apply_full_axis(axis, lambda df: df.apply(func, axis=axis, *args, **kwargs))
+        return self.__constructor__(new_data)
 
     # END UDF
 
