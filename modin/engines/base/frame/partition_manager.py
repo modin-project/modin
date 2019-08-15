@@ -496,8 +496,8 @@ class BaseFrameManager(object):
         if not return_dims:
             return np.array(parts)
         else:
-            row_lengths = [row_chunksize if i + row_chunksize < len(df) - 1 else len(df) % row_chunksize for i in range(0, len(df), row_chunksize)]
-            col_widths = [col_chunksize if i + col_chunksize < len(df.columns) - 1 else len(df.columns) % col_chunksize for i in range(0, len(df.columns), col_chunksize)]
+            row_lengths = [row_chunksize if i + row_chunksize < len(df) - 1 else len(df) % row_chunksize or row_chunksize for i in range(0, len(df), row_chunksize)]
+            col_widths = [col_chunksize if i + col_chunksize < len(df.columns) - 1 else len(df.columns) % col_chunksize or col_chunksize for i in range(0, len(df.columns), col_chunksize)]
             return np.array(parts), row_lengths, col_widths
 
     @classmethod

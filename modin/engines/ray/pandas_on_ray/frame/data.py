@@ -617,7 +617,7 @@ class PandasOnRayData(object):
 
     def _binary_op(self, function, right_data):
         left_parts, right_parts, joined_index = self._copartition(
-            0, right_data, "outer", sort=False
+            0, right_data, "outer", sort=True
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
