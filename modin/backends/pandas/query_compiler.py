@@ -165,18 +165,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Currently this computation is not delayed, and it may make a copy of the
     # DataFrame in memory. This can be problematic and should be fixed in the
     # future. TODO (devin-petersohn): Delay reindexing
-    def join(self, other, **kwargs):
-        """Joins a list or two objects together.
-
-        Args:
-            other: The other object(s) to join on.
-
-        Returns:
-            Joined objects.
-        """
-        if not isinstance(other, list):
-            other = [other]
-        return self._join_list_of_managers(other, **kwargs)
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -188,76 +176,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Concatenated objects.
         """
-        return self._append_list_of_managers(other, axis, **kwargs)
-
-    def _append_list_of_managers(self, others, axis, **kwargs):
-        if not isinstance(others, list):
-            others = [others]
-        assert all(
-            isinstance(other, type(self)) for other in others
-        ), "Different Manager objects are being used. This is not allowed"
-
+        if not isinstance(other, list):
+            other = [other]
+        assert all(isinstance(o, type(self)) for o in other), "Different Manager objects are being used. This is not allowed"
         sort = kwargs.get("sort", None)
+        if sort is None:
+            sort = False
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
-        new_self, to_append, joined_axis = self.copartition(
-            axis ^ 1,
-            others,
-            join,
-            sort,
-            force_repartition=False,
-        )
-        new_data = new_self.concat(axis, to_append)
-
-        if axis == 0:
-            # The indices will be appended to form the final index.
-            # If `ignore_index` is true, we create a RangeIndex that is the
-            # length of all of the index objects combined. This is the same
-            # behavior as pandas.
-            new_index = (
-                self.index.append([other.index for other in others])
-                if not ignore_index
-                else pandas.RangeIndex(
-                    len(self.index) + sum(len(other.index) for other in others)
-                )
-            )
-            return self.__constructor__(new_data, new_index, joined_axis)
-        else:
-            # The columns will be appended to form the final columns.
-            new_columns = self.columns.append([other.columns for other in others])
-            return self.__constructor__(new_data, joined_axis, new_columns)
-
-    def _join_list_of_managers(self, others, **kwargs):
-        assert isinstance(
-            others, list
-        ), "This method is for lists of QueryCompiler objects only"
-        assert all(
-            isinstance(other, type(self)) for other in others
-        ), "Different Manager objects are being used. This is not allowed"
-        # Uses join's default value (though should not revert to default)
-        how = kwargs.get("how", "left")
-        sort = kwargs.get("sort", False)
-        lsuffix = kwargs.get("lsuffix", "")
-        rsuffix = kwargs.get("rsuffix", "")
-        new_self, to_join, joined_index = self.copartition(
-            0,
-            others,
-            how,
-            sort,
-            force_repartition=False,
-        )
-        new_data = new_self.concat(1, to_join)
-        # This stage is to efficiently get the resulting columns, including the
-        # suffixes.
-        if len(others) == 1:
-            others_proxy = pandas.DataFrame(columns=others[0].columns)
-        else:
-            others_proxy = [pandas.DataFrame(columns=other.columns) for other in others]
-        self_proxy = pandas.DataFrame(columns=self.columns)
-        new_columns = self_proxy.join(
-            others_proxy, lsuffix=lsuffix, rsuffix=rsuffix
-        ).columns
-        return self.__constructor__(new_data, joined_index, new_columns)
+        other_data = [o._data_obj for o in other]
+        new_data = self._data_obj._concat(axis, other_data, join, sort)
+        if ignore_index:
+            new_data.index = pandas.RangeIndex(len(self.index) + sum(len(o.index) for o in other))
+        return self.__constructor__(new_data)
 
     # END Append/Concat/Join
 
@@ -1502,47 +1433,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             pass
 
-    def _post_process_apply(self, result_data, axis, try_scale=True):
-        """Recompute the index after applying function.
-
-        Args:
-            result_data: a BaseFrameManager object.
-            axis: Target axis along which function was applied.
-
-        Returns:
-            A new PandasQueryCompiler.
-        """
-        if try_scale:
-            try:
-                internal_index = self.compute_index(0, result_data, True)
-            except IndexError:
-                internal_index = self.compute_index(0, result_data, False)
-            try:
-                internal_columns = self.compute_index(1, result_data, True)
-            except IndexError:
-                internal_columns = self.compute_index(1, result_data, False)
-        else:
-            internal_index = self.compute_index(0, result_data, False)
-            internal_columns = self.compute_index(1, result_data, False)
-        if not axis:
-            index = internal_index
-            # We check if the two columns are the same length because if
-            # they are the same length, `self.columns` is the correct index.
-            # However, if the operation resulted in a different number of columns,
-            # we must use the derived columns from `self.compute_index()`.
-            if len(internal_columns) != len(self.columns):
-                columns = internal_columns
-            else:
-                columns = self.columns
-        else:
-            columns = internal_columns
-            # See above explanation for checking the lengths of columns
-            if len(internal_index) != len(self.index):
-                index = internal_index
-            else:
-                index = self.index
-        return self.__constructor__(result_data, index, columns)
-
     def _dict_func(self, func, axis, *args, **kwargs):
         """Apply function to certain indices across given axis.
 
@@ -1553,25 +1443,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
+        raise NotImplementedError("FIXME")
         if "axis" not in kwargs:
             kwargs["axis"] = axis
-
-        if axis == 0:
-            index = self.columns
-        else:
-            index = self.index
-        func = {idx: func[key] for key in func for idx in index.get_indexer_for([key])}
 
         def dict_apply_builder(df, func_dict={}):
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
 
-        result_data = self.data.apply_func_to_select_indices_along_full_axis(
+        return self.__constructor__(self._data_obj._apply_full_axis_select_indices(
             axis, dict_apply_builder, func, keep_remaining=False
-        )
-        full_result = self._post_process_apply(result_data, axis)
-        return full_result
+        ))
 
     def _list_like_func(self, func, axis, *args, **kwargs):
         """Apply list-like function across given axis.
@@ -1583,10 +1466,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        func_prepared = self._prepare_method(
-            lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs))
-        )
-        new_data = self._map_across_full_axis(axis, func_prepared)
         # When the function is list-like, the function names become the index/columns
         new_index = (
             [f if isinstance(f, string_types) else f.__name__ for f in func]
@@ -1598,7 +1477,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis == 1
             else self.columns
         )
-        return self.__constructor__(new_data, new_index, new_columns)
+        new_data = self._data_obj._apply_full_axis(axis, lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)), new_index=new_index, new_columns=new_columns)
+        return self.__constructor__(new_data)
 
     def _callable_func(self, func, axis, *args, **kwargs):
         """Apply callable functions across given axis.
@@ -1712,11 +1592,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             index = self.compute_index(0, result_data, True)
             columns = self.compute_index(1, result_data, False)
-        # If the result is a Series, this is how `compute_index` returns the columns.
-        if len(columns) == 0 and len(index) != 0:
-            return self._post_process_apply(result_data, axis, try_scale=True)
-        else:
-            return self.__constructor__(result_data, index, columns)
+        return self.__constructor__(result_data)
 
     # END Manual Partitioning methods
 

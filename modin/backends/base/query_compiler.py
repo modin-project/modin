@@ -145,27 +145,6 @@ class BaseQueryCompiler(object):
 
     # END To NumPy
 
-    # Abstract copartition
-    def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
-        """Copartition two QueryCompiler objects.
-
-        Args:
-            axis: The axis to copartition along.
-            other: The other Query Compiler(s) to copartition against.
-            how_to_join: How to manage joining the index object ("left", "right", etc.)
-            sort: Whether or not to sort the joined index.
-            force_repartition: Whether or not to force the repartitioning. By default,
-                this method will skip repartitioning if it is possible. This is because
-                reindexing is extremely inefficient. Because this method is used to
-                `join` or `append`, it is vital that the internal indices match.
-
-        Returns:
-            A tuple (left query compiler, right query compiler list, joined index).
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # END Abstract copartition
-
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,

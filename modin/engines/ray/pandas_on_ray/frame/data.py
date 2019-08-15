@@ -379,7 +379,7 @@ class PandasOnRayData(object):
             for k, v in groupby(all_partitions_and_idx, itemgetter(0))
         ]
 
-    def _join_index_objects(self, axis, other_index, how, sort=True):
+    def _join_index_objects(self, axis, other_index, how, sort):
         """Joins a pair of index objects (columns or rows) by a given strategy.
 
         Args:
@@ -394,8 +394,7 @@ class PandasOnRayData(object):
             joined_obj = self.columns if not axis else self.index
             # TODO: revisit for performance
             for obj in other_index:
-                joined_obj = joined_obj.join(obj, how=how)
-
+                joined_obj = joined_obj.join(obj, how=how, sort=sort)
             return joined_obj
         if not axis:
             return self.columns.join(other_index, how=how, sort=sort)
@@ -573,13 +572,13 @@ class PandasOnRayData(object):
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
 
-    def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
+    def _copartition(self, axis, other, how, sort, force_repartition=False):
         """Copartition two QueryCompiler objects.
 
         Args:
             axis: The axis to copartition along.
             other: The other Query Compiler(s) to copartition against.
-            how_to_join: How to manage joining the index object ("left", "right", etc.)
+            how: How to manage joining the index object ("left", "right", etc.)
             sort: Whether or not to sort the joined index.
             force_repartition: Whether or not to force the repartitioning. By default,
                 this method will skip repartitioning if it is possible. This is because
@@ -595,9 +594,7 @@ class PandasOnRayData(object):
         index_obj = (
             [o.index for o in other] if axis == 0 else [o.columns for o in other]
         )
-        joined_index = self._join_index_objects(
-            axis ^ 1, index_obj, how_to_join, sort=sort
-        )
+        joined_index = self._join_index_objects(axis ^ 1, index_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.index if axis == 0 else self.columns
@@ -605,32 +602,47 @@ class PandasOnRayData(object):
 
         # Start with this and we'll repartition the first time, and then not again.
         if not left_old_idx.equals(joined_index):
-            reindexed_self = self._apply_full_axis(axis, lambda df: df.reindex(joined_index))
+            reindexed_self = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, lambda df: df.reindex(joined_index))
         else:
-            reindexed_self = self
+            reindexed_self = self._partitions
         reindexed_other_list = []
 
         for i in range(len(other)):
             if right_old_idxes[i].equals(joined_index) and not force_repartition:
-                reindexed_other = other[i]
+                reindexed_other = other[i]._partitions
             else:
-                new_index = joined_index if axis == 0 else other[i].index
-                new_columns = joined_index if axis == 1 else other[i].columns
-                reindexed_other = other[i]._apply_full_axis(axis, lambda df: df.reindex(joined_index), new_index=new_index, new_columns=new_columns)
+                reindexed_other = other[i]._frame_mgr_cls.map_across_full_axis(axis, other[i]._partitions, lambda df: df.reindex(joined_index))
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
     def _binary_op(self, function, right_data):
-        left_data, right_data, joined_index = self.copartition(
+        left_parts, right_parts, joined_index = self._copartition(
             0, right_data, "outer", sort=False
         )
         # unwrap list returned by `copartition`.
-        right_data = right_data[0]
+        right_parts = right_parts[0]
         new_data = self._frame_mgr_cls.inter_data_operation(
-            1, self._partitions, lambda l, r: function(l, r), right_data._partitions
+            1, left_parts, lambda l, r: function(l, r), right_parts
         )
-        new_columns = left_data.columns.join(right_data.columns, how="outer")
-        return self.__constructor__(new_data, self.index, new_columns, left_data._row_lengths, None)
+        new_columns = self.columns.join(right_data.columns, how="outer")
+        return self.__constructor__(new_data, self.index, new_columns, None, None)
+
+    def _concat(self, axis, others, how, sort):
+        left_parts, right_parts, joined_index = self._copartition(
+            axis ^ 1,
+            others,
+            how,
+            sort,
+            force_repartition=False,
+        )
+        new_partitions = self._frame_mgr_cls.concat(axis, left_parts, right_parts)
+        if axis == 0:
+            new_index = self.index.append([other.index for other in others])
+            new_columns = joined_index
+        else:
+            new_columns = self.columns.append([other.columns for other in others])
+            new_index = joined_index
+        return self.__constructor__(new_partitions, new_index, new_columns)
 
     @classmethod
     def from_pandas(cls, df):

@@ -401,7 +401,8 @@ class BaseFrameManager(object):
                 )
         return result.T if axis else result
 
-    def concat(self, axis, other_blocks):
+    @classmethod
+    def concat(cls, axis, left_parts, right_parts):
         """Concatenate the blocks with another set of blocks.
 
         Note: Assumes that the blocks are already the same shape on the
@@ -410,21 +411,16 @@ class BaseFrameManager(object):
 
         Args:
             axis: The axis to concatenate to.
-            other_blocks: the other blocks to be concatenated. This is a
+            right_parts: the other blocks to be concatenated. This is a
                 BaseFrameManager object.
 
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
-        if type(other_blocks) is list:
-            other_blocks = [blocks.partitions for blocks in other_blocks]
-            return self.__constructor__(
-                np.concatenate([self.partitions] + other_blocks, axis=axis)
-            )
+        if type(right_parts) is list:
+            return np.concatenate([left_parts] + right_parts, axis=axis)
         else:
-            return self.__constructor__(
-                np.append(self.partitions, other_blocks.partitions, axis=axis)
-            )
+            return np.append(left_parts, right_parts, axis=axis)
 
     def copy(self):
         """Create a copy of this object.
@@ -500,8 +496,8 @@ class BaseFrameManager(object):
         if not return_dims:
             return np.array(parts)
         else:
-            row_lengths = [row_chunksize if i < len(df) - 1 else row_chunksize % len(df) for i in range(0, len(df), row_chunksize)]
-            col_widths = [col_chunksize if i < len(df.columns) - 1 else col_chunksize % len(df.columns) for i in range(0, len(df.columns), col_chunksize)]
+            row_lengths = [row_chunksize if i + row_chunksize < len(df) - 1 else len(df) % row_chunksize for i in range(0, len(df), row_chunksize)]
+            col_widths = [col_chunksize if i + col_chunksize < len(df.columns) - 1 else len(df.columns) % col_chunksize for i in range(0, len(df.columns), col_chunksize)]
             return np.array(parts), row_lengths, col_widths
 
     @classmethod
@@ -929,7 +925,7 @@ class BaseFrameManager(object):
                 for n_cols_ in n_cols_lst
             ]
             new_chunk = self.__constructor__(np.array([nan_oids_lst]))
-            data = self.concat(axis=0, other_blocks=new_chunk)
+            data = self.concat(axis=0, right_parts=new_chunk)
 
         if n_cols:
             n_rows_lst = self.block_lengths
@@ -940,5 +936,5 @@ class BaseFrameManager(object):
                 for n_rows_ in n_rows_lst
             ]
             new_chunk = self.__constructor__(np.array([nan_oids_lst]).T)
-            data = self.concat(axis=1, other_blocks=new_chunk)
+            data = self.concat(axis=1, right_parts=new_chunk)
         return data
