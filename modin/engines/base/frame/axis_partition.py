@@ -1,7 +1,6 @@
 import pandas
 from modin.data_management.utils import (
     split_result_of_axis_func_pandas,
-    set_indices_for_pandas_concat,
 )
 
 
@@ -185,7 +184,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         # Pop these off first because they aren't expected by the function.
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
-        transposed = kwargs.pop("_transposed", False)
+        kwargs.pop("_transposed", False)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
@@ -233,22 +232,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns:
             A list of Pandas DataFrames.
         """
-        lt_frame = pandas.concat(
-            [
-                set_indices_for_pandas_concat(df)
-                for df in list(partitions[:len_of_left])
-            ],
-            axis=axis,
-            copy=False,
-        )
-        rt_frame = pandas.concat(
-            [
-                set_indices_for_pandas_concat(df)
-                for df in list(partitions[len_of_left:])
-            ],
-            axis=axis,
-            copy=False,
-        )
-
+        lt_frame = pandas.concat(partitions[:len_of_left], axis=axis, copy=False)
+        rt_frame = pandas.concat(partitions[len_of_left:], axis=axis, copy=False)
         result = func(lt_frame, rt_frame, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)

@@ -44,7 +44,7 @@ class BaseFactory(object):
 
     @classmethod
     def _from_pandas(cls, df):
-        return cls.query_compiler_cls.from_pandas(df, cls.block_partitions_cls)
+        return cls.query_compiler_cls.from_pandas(df, cls.data_cls)
 
     @classmethod
     def read_parquet(cls, **kwargs):
@@ -202,12 +202,12 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
-        PandasOnRayFrameManager,
+    from modin.engines.ray.pandas_on_ray.frame.data import (
+        PandasOnRayData,
     )
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = PandasOnRayFrameManager
+    data_cls = PandasOnRayData
     io_cls = PandasOnRayIO
 
 

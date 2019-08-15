@@ -57,31 +57,31 @@ class PandasOnRayData(object):
                 df.index, df.columns = idx, cols
                 return df
 
-            for i in range(len(self._partitions)):
-                for j in range(len(self._partitions[i])):
-                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
-                        "idx": self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])],
-                        "cols": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
+            self._partitions = np.array([[self._partitions[i][j].add_to_apply_calls(apply_idx_objs,
+                                                              idx=self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])],
+                                                              cols=self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])])
+                                 for j in range(len(self._partitions[i]))] for i in range(len(self._partitions))])
         elif axis == 0:
             def apply_idx_objs(df, idx):
                 df.index = idx
                 return df
 
-            for i in range(len(self._partitions)):
-                for j in range(len(self._partitions[i])):
-                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
-                        "idx": self.index[slice(cum_row_lengths[i], cum_row_lengths[i + 1])]})]
-
+            self._partitions = np.array([[self._partitions[i][j].add_to_apply_calls(apply_idx_objs,
+                                                                           idx=self.index[
+                                                                               slice(cum_row_lengths[i],
+                                                                                     cum_row_lengths[i + 1])])
+                                 for j in range(len(self._partitions[i]))] for i in
+                                range(len(self._partitions))])
         elif axis == 1:
             def apply_idx_objs(df, cols):
                 df.columns = cols
                 return df
 
-            for i in range(len(self._partitions)):
-                for j in range(len(self._partitions[i])):
-                    self._partitions[i][j].call_queue += [(apply_idx_objs, {
-                        "cols": self.columns[slice(cum_col_widths[j], cum_col_widths[j + 1])]})]
-        else:
+            self._partitions = np.array([[self._partitions[i][j].add_to_apply_calls(apply_idx_objs,
+                                                                           cols=self.columns[slice(cum_col_widths[j],
+                                                                                                   cum_col_widths[
+                                                                                                       j + 1])])
+                                 for j in range(len(self._partitions[i]))] for i in range(len(self._partitions))])
             ErrorMessage.catch_bugs_and_request_email(axis is not None and axis not in [0, 1])
 
     def mask(self, row_indices=None, row_numeric_idx=None, col_indices=None, col_numeric_idx=None):
@@ -97,7 +97,7 @@ class PandasOnRayData(object):
             new_index = self.index[row_numeric_idx]
         else:
             row_partitions_list = [
-                (i, range(self._row_lengths[i]))
+                (i, slice(None))
                 for i in range(len(self._row_lengths))
             ]
             new_row_lengths = self._row_lengths
@@ -114,7 +114,7 @@ class PandasOnRayData(object):
             new_dtypes = self.dtypes[col_numeric_idx]
         else:
             col_partitions_list = [
-                (i, range(self._column_widths[i])) for i in range(len(self._column_widths))
+                (i, slice(None)) for i in range(len(self._column_widths))
             ]
             new_col_widths = self._column_widths
             new_columns = self.columns
@@ -126,10 +126,10 @@ class PandasOnRayData(object):
                             row_internal_indices, col_internal_indices
                         )
                         for col_idx, col_internal_indices in col_partitions_list
-                        if len(col_internal_indices) > 0
+                        if isinstance(col_internal_indices, slice) or len(col_internal_indices) > 0
                     ]
                     for row_idx, row_internal_indices in row_partitions_list
-                    if len(row_internal_indices) > 0
+                    if isinstance(row_internal_indices, slice) or len(row_internal_indices) > 0
                 ]
             )
         return self.__constructor__(new_partitions, new_index, new_columns, new_row_lengths, new_col_widths, new_dtypes)
@@ -254,7 +254,9 @@ class PandasOnRayData(object):
             new_index = self.index.map(lambda x: str(prefix) + str(x))
             new_columns = self.columns
             new_dtype_cache = self._dtypes
-        return self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+        new_data_obj = self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+        new_data_obj._apply_index_objs(axis)
+        return new_data_obj
 
     def add_suffix(self, suffix, axis):
         if axis == 1:
@@ -269,7 +271,9 @@ class PandasOnRayData(object):
             new_index = self.index.map(lambda x: str(x) + str(suffix))
             new_columns = self.columns
             new_dtype_cache = self._dtypes
-        return self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+        new_data_obj = self.__constructor__(self._partitions, new_index, new_columns, self._row_lengths, self._column_widths, new_dtype_cache)
+        new_data_obj._apply_index_objs(axis)
+        return new_data_obj
 
     # END Metadata modification methods
 
@@ -532,19 +536,29 @@ class PandasOnRayData(object):
             axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
         return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
 
-    def _apply_select_indices(self, axis, func, apply_indices, new_idx=None, keep_remaining=False):
-        # Convert indices to numeric indices
-        old_index = self.index if axis else self.columns
-        numeric_indices = old_index.get_indexer_for(apply_indices)
-        dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
-        new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
-            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
-        )
-        # Index objects for new object creation. This is shorter than if..else
-        index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
-        # Length objects for new object creation. This is shorter than if..else
-        lengths_objs = {axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
-        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+    def _apply_select_indices(self, axis, func, apply_indices=None, row_indices=None, col_indices=None, new_idx=None, keep_remaining=False, item_to_distribute=None):
+        if axis is not None:
+            assert apply_indices is not None
+            # Convert indices to numeric indices
+            old_index = self.index if axis else self.columns
+            numeric_indices = old_index.get_indexer_for(apply_indices)
+            dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
+            new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
+                axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
+            )
+            # Index objects for new object creation. This is shorter than if..else
+            index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
+            # Length objects for new object creation. This is shorter than if..else
+            lengths_objs = {axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
+            return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+        else:
+            assert row_indices is not None and col_indices is not None
+            assert keep_remaining
+            assert item_to_distribute is not None
+            row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
+            col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
+            new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(self._partitions, func, row_partitions_list, col_partitions_list, item_to_distribute)
+            return self.__constructor__(new_partitions, self.index, self.columns, self._row_lengths_cache, self._column_widths_cache)
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):
         """This method applies all manual partitioning functions.
@@ -559,8 +573,64 @@ class PandasOnRayData(object):
         func = self._prepare_method(repartition_func, **kwargs)
         return self.data.manual_shuffle(axis, func)
 
-    def _binary_op(self, axis, function, right_data):
-        
+    def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
+        """Copartition two QueryCompiler objects.
+
+        Args:
+            axis: The axis to copartition along.
+            other: The other Query Compiler(s) to copartition against.
+            how_to_join: How to manage joining the index object ("left", "right", etc.)
+            sort: Whether or not to sort the joined index.
+            force_repartition: Whether or not to force the repartitioning. By default,
+                this method will skip repartitioning if it is possible. This is because
+                reindexing is extremely inefficient. Because this method is used to
+                `join` or `append`, it is vital that the internal indices match.
+
+        Returns:
+            A tuple (left query compiler, right query compiler list, joined index).
+        """
+        if isinstance(other, type(self)):
+            other = [other]
+
+        index_obj = (
+            [o.index for o in other] if axis == 0 else [o.columns for o in other]
+        )
+        joined_index = self._join_index_objects(
+            axis ^ 1, index_obj, how_to_join, sort=sort
+        )
+        # We have to set these because otherwise when we perform the functions it may
+        # end up serializing this entire object.
+        left_old_idx = self.index if axis == 0 else self.columns
+        right_old_idxes = index_obj
+
+        # Start with this and we'll repartition the first time, and then not again.
+        if not left_old_idx.equals(joined_index):
+            reindexed_self = self._apply_full_axis(axis, lambda df: df.reindex(joined_index))
+        else:
+            reindexed_self = self
+        reindexed_other_list = []
+
+        for i in range(len(other)):
+            if right_old_idxes[i].equals(joined_index) and not force_repartition:
+                reindexed_other = other[i]
+            else:
+                new_index = joined_index if axis == 0 else other[i].index
+                new_columns = joined_index if axis == 1 else other[i].columns
+                reindexed_other = other[i]._apply_full_axis(axis, lambda df: df.reindex(joined_index), new_index=new_index, new_columns=new_columns)
+            reindexed_other_list.append(reindexed_other)
+        return reindexed_self, reindexed_other_list, joined_index
+
+    def _binary_op(self, function, right_data):
+        left_data, right_data, joined_index = self.copartition(
+            0, right_data, "outer", sort=False
+        )
+        # unwrap list returned by `copartition`.
+        right_data = right_data[0]
+        new_data = self._frame_mgr_cls.inter_data_operation(
+            1, self._partitions, lambda l, r: function(l, r), right_data._partitions
+        )
+        new_columns = left_data.columns.join(right_data.columns, how="outer")
+        return self.__constructor__(new_data, self.index, new_columns, left_data._row_lengths, None)
 
     @classmethod
     def from_pandas(cls, df):
@@ -577,8 +647,8 @@ class PandasOnRayData(object):
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_data = cls._frame_mgr_cls.from_pandas(df)
-        return cls(new_data, new_index, new_columns, dtypes=new_dtypes)
+        new_data, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
+        return cls(new_data, new_index, new_columns, new_lengths, new_widths, dtypes=new_dtypes)
 
     def to_pandas(self):
         """Converts Modin DataFrame to Pandas DataFrame.

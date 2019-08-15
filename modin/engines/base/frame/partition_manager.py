@@ -9,7 +9,6 @@ from modin.error_message import ErrorMessage
 from modin.data_management.utils import (
     compute_chunksize,
     _get_nan_block_id,
-    set_indices_for_pandas_concat,
 )
 
 
@@ -214,18 +213,19 @@ class BaseFrameManager(object):
         )
         return new_partitions
 
-    def lazy_map_across_blocks(self, map_func, kwargs):
-        preprocessed_map_func = self.preprocess_func(map_func)
+    @classmethod
+    def lazy_map(cls, partitions, map_func, kwargs):
+        preprocessed_map_func = cls.preprocess_func(map_func)
         new_partitions = np.array(
             [
                 [
                     part.add_to_apply_calls(preprocessed_map_func, kwargs)
                     for part in row_of_parts
                 ]
-                for row_of_parts in self.partitions
+                for row_of_parts in partitions
             ]
         )
-        return self.__constructor__(new_partitions)
+        return new_partitions
 
     def copartition_datasets(
         self, axis, other, left_func, right_func, other_is_transposed
@@ -489,24 +489,20 @@ class BaseFrameManager(object):
         return arr
 
     @classmethod
-    def from_pandas(cls, df):
+    def from_pandas(cls, df, return_dims=False):
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
-
-        # Each chunk must have a RangeIndex that spans its length and width
-        # according to our invariant.
-        def chunk_builder(i, j):
-            chunk = df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
-            chunk.index = pandas.RangeIndex(len(chunk.index))
-            chunk.columns = pandas.RangeIndex(len(chunk.columns))
-            return put_func(chunk)
-
         parts = [
-            [chunk_builder(i, j) for j in range(0, len(df.columns), col_chunksize)]
+            [put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()) for j in range(0, len(df.columns), col_chunksize)]
             for i in range(0, len(df), row_chunksize)
         ]
-        return cls(np.array(parts))
+        if not return_dims:
+            return np.array(parts)
+        else:
+            row_lengths = [row_chunksize if i < len(df) - 1 else row_chunksize % len(df) for i in range(0, len(df), row_chunksize)]
+            col_widths = [col_chunksize if i < len(df.columns) - 1 else col_chunksize % len(df.columns) for i in range(0, len(df.columns), col_chunksize)]
+            return np.array(parts), row_lengths, col_widths
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
@@ -818,14 +814,13 @@ class BaseFrameManager(object):
                 )
         return result.T if not axis else result
 
+    @classmethod
     def apply_func_to_indices_both_axis(
-        self,
+        cls,
+        partitions,
         func,
-        row_indices,
-        col_indices,
-        lazy=False,
-        keep_remaining=True,
-        mutate=False,
+        row_partitions_list,
+        col_partitions_list,
         item_to_distribute=None,
     ):
         """
@@ -835,25 +830,7 @@ class BaseFrameManager(object):
             it must use `row_internal_indices, col_internal_indices` as keyword
             arguments.
         """
-        if keep_remaining:
-            row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
-            col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
-        else:
-            row_partitions_list = self._get_dict_of_block_index(
-                1, row_indices, ordered=True
-            )
-            col_partitions_list = self._get_dict_of_block_index(
-                0, col_indices, ordered=True
-            )
-            result = np.empty(
-                (len(row_partitions_list), len(col_partitions_list)), dtype=type(self)
-            )
-
-        if not mutate:
-            partition_copy = self.partitions.copy()
-        else:
-            partition_copy = self.partitions
-
+        partition_copy = partitions.copy()
         row_position_counter = 0
         for row_idx, row_values in enumerate(row_partitions_list):
             row_blk_idx, row_internal_idx = row_values
@@ -872,35 +849,19 @@ class BaseFrameManager(object):
                     item = {"item": item}
                 else:
                     item = {}
-
-                if lazy:
-                    block_result = remote_part.add_to_apply_calls(
-                        func,
-                        row_internal_indices=row_internal_idx,
-                        col_internal_indices=col_internal_idx,
-                        **item
-                    )
-                else:
-                    block_result = remote_part.apply(
-                        func,
-                        row_internal_indices=row_internal_idx,
-                        col_internal_indices=col_internal_idx,
-                        **item
-                    )
-                if keep_remaining:
-                    partition_copy[row_blk_idx, col_blk_idx] = block_result
-                else:
-                    result[row_idx][col_idx] = block_result
+                block_result = remote_part.add_to_apply_calls(
+                    func,
+                    row_internal_indices=row_internal_idx,
+                    col_internal_indices=col_internal_idx,
+                    **item
+                )
+                partition_copy[row_blk_idx, col_blk_idx] = block_result
                 col_position_counter += len(col_internal_idx)
-
             row_position_counter += len(row_internal_idx)
+        return partition_copy
 
-        if keep_remaining:
-            return self.__constructor__(partition_copy)
-        else:
-            return self.__constructor__(result)
-
-    def inter_data_operation(self, axis, func, other):
+    @classmethod
+    def inter_data_operation(cls, axis, left, func, right):
         """Apply a function that requires two BaseFrameManager objects.
 
         Args:
@@ -912,23 +873,23 @@ class BaseFrameManager(object):
             A new BaseFrameManager object, the type of object that called this.
         """
         if axis:
-            partitions = self.row_partitions
-            other_partitions = other.row_partitions
+            left_partitions = cls.row_partitions(left)
+            right_partitions = cls.row_partitions(right)
         else:
-            partitions = self.column_partitions
-            other_partitions = other.column_partitions
-        func = self.preprocess_func(func)
+            left_partitions = cls.column_partitions(left)
+            right_partitions = cls.column_partitions(right)
+        func = cls.preprocess_func(func)
         result = np.array(
             [
-                partitions[i].apply(
+                left_partitions[i].apply(
                     func,
-                    num_splits=self._compute_num_partitions(),
-                    other_axis_partition=other_partitions[i],
+                    num_splits=cls._compute_num_partitions(),
+                    other_axis_partition=right_partitions[i],
                 )
-                for i in range(len(partitions))
+                for i in range(len(left_partitions))
             ]
         )
-        return self.__constructor__(result) if axis else self.__constructor__(result.T)
+        return result if axis else result.T
 
     def manual_shuffle(self, axis, shuffle_func, lengths, transposed=False):
         """Shuffle the partitions based on the `shuffle_func`.
