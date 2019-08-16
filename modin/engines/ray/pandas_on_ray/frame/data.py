@@ -27,8 +27,8 @@ class PandasOnRayData(object):
 
     def __init__(self, partitions, index, columns, row_lengths=None, column_widths=None, dtypes=None):
         self._partitions = partitions
-        self._index_cache = index
-        self._columns_cache = columns
+        self._index_cache = ensure_index(index)
+        self._columns_cache = ensure_index(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
@@ -200,6 +200,43 @@ class PandasOnRayData(object):
         )
         dtypes.index = column_names
         return dtypes
+
+    def astype(self, col_dtypes):
+        """Converts columns dtypes to given dtypes.
+
+        Args:
+            col_dtypes: Dictionary of {col: dtype,...} where col is the column
+                name and dtype is a numpy dtype.
+
+        Returns:
+            DataFrame with updated dtypes.
+        """
+        columns = col_dtypes.keys()
+        # Create Series for the updated dtypes
+        new_dtypes = self.dtypes.copy()
+        for i, column in enumerate(columns):
+            dtype = col_dtypes[column]
+            if (
+                not isinstance(dtype, type(self.dtypes[column]))
+                or dtype != self.dtypes[column]
+            ):
+                # Update the new dtype series to the proper pandas dtype
+                try:
+                    new_dtype = np.dtype(dtype)
+                except TypeError:
+                    new_dtype = dtype
+                if dtype != np.int32 and new_dtype == np.int32:
+                    new_dtype = np.dtype("int64")
+                elif dtype != np.float32 and new_dtype == np.float32:
+                    new_dtype = np.dtype("float64")
+                new_dtypes[column] = new_dtype
+        # Update partitions for each dtype that is updated
+
+        def astype_builder(df):
+            return df.astype({k: v for k, v in col_dtypes.items() if k in df})
+
+        new_data = self._frame_mgr_cls.map_across_blocks(self._partitions, astype_builder)
+        return self.__constructor__(new_data, self.index, self.columns, self._row_lengths, self._column_widths, new_dtypes)
 
     _index_cache = None
     _columns_cache = None
@@ -602,7 +639,7 @@ class PandasOnRayData(object):
 
         # Start with this and we'll repartition the first time, and then not again.
         if not left_old_idx.equals(joined_index):
-            reindexed_self = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, lambda df: df.reindex(joined_index))
+            reindexed_self = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis))
         else:
             reindexed_self = self._partitions
         reindexed_other_list = []
@@ -611,7 +648,7 @@ class PandasOnRayData(object):
             if right_old_idxes[i].equals(joined_index) and not force_repartition:
                 reindexed_other = other[i]._partitions
             else:
-                reindexed_other = other[i]._frame_mgr_cls.map_across_full_axis(axis, other[i]._partitions, lambda df: df.reindex(joined_index))
+                reindexed_other = other[i]._frame_mgr_cls.map_across_full_axis(axis, other[i]._partitions, lambda df: df.reindex(joined_index, axis=axis))
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
@@ -674,7 +711,11 @@ class PandasOnRayData(object):
                 df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
+        df.index.name = self.index.name
         return df
+
+    def to_numpy(self):
+        return self._frame_mgr_cls.to_numpy(self._partitions)
 
     def transpose(self):
         new_partitions = np.array([[part.add_to_apply_calls(pandas.DataFrame.transpose) for part in row] for row in self._partitions]).T

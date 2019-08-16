@@ -97,80 +97,6 @@ class BaseFrameManager(object):
         """
         return [cls._row_partition_class(row) for row in partitions]
 
-    # Lengths of the blocks
-    _lengths_cache = None
-
-    # These are set up as properties so that we only use them when we need
-    # them. We also do not want to trigger this computation on object creation.
-    @property
-    def block_lengths(self):
-        """Gets the lengths of the blocks.
-
-        Note: This works with the property structure `_lengths_cache` to avoid
-            having to recompute these values each time they are needed.
-        """
-        if self._lengths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same length in a
-            # row of blocks.
-            self._lengths_cache = np.array(
-                [obj.length().get() for obj in self._partitions_cache.T[0]]
-                if len(self._partitions_cache.T) > 0
-                else []
-            )
-        return self._lengths_cache
-
-    # Widths of the blocks
-    _widths_cache = None
-
-    @property
-    def block_widths(self):
-        """Gets the widths of the blocks.
-
-        Note: This works with the property structure `_widths_cache` to avoid
-            having to recompute these values each time they are needed.
-        """
-        if self._widths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same width in a
-            # column of blocks.
-            self._widths_cache = np.array(
-                [obj.width().get() for obj in self._partitions_cache[0]]
-                if len(self._partitions_cache) > 0
-                else []
-            )
-        return self._widths_cache
-
-    def _remove_empty_blocks(self):
-        if self._widths_cache is not None:
-            self._widths_cache = [width for width in self._widths_cache if width != 0]
-        if self._lengths_cache is not None:
-            self._lengths_cache = np.array(
-                [length for length in self._lengths_cache if length != 0]
-            )
-
-    @property
-    def shape(self):
-        return int(np.sum(self.block_lengths)), int(np.sum(self.block_widths))
-
-    def full_reduce(self, map_func, reduce_func, axis):
-        """Perform a full reduce on the data.
-
-        Note: This follows the 2-phase reduce paradigm, where each partition
-            performs a local reduction (map_func), then partitions are brought
-            together and the final reduction occurs.
-        Args:
-            map_func: The function that will be performed on all partitions.
-                This is the local reduction on each partition.
-            reduce_func: The final reduction function. This can differ from the
-                `map_func`
-            axis: The axis to perform this operation along
-                (0 - index, 1 - columns)
-        Returns:
-            A Pandas Series
-        """
-        raise NotImplementedError("Blocked on Distributed Series")
-
     def groupby_reduce(self, axis, by, map_func, reduce_func):
         by_parts = np.squeeze(by.partitions)
         if len(by_parts.shape) == 0:
@@ -226,61 +152,6 @@ class BaseFrameManager(object):
             ]
         )
         return new_partitions
-
-    def copartition_datasets(
-        self, axis, other, left_func, right_func, other_is_transposed
-    ):
-        """Copartition two BlockPartitions objects.
-
-        Args:
-            axis: The axis to copartition.
-            other: The other BlockPartitions object to copartition with.
-            left_func: The function to apply to left. If None, just use the dimension
-                of self (based on axis).
-            right_func: The function to apply to right. If None, check the dimensions of
-                other and use the identity function if splitting needs to happen.
-
-        Returns:
-            A tuple of BlockPartitions objects, left and right.
-        """
-        if left_func is None:
-            new_self = self
-        else:
-            new_self = self.map_across_full_axis(axis, left_func)
-
-        # This block of code will only shuffle if absolutely necessary. If we do need to
-        # shuffle, we use the identity function and then reshuffle.
-        if right_func is None:
-            if axis == 0 and not np.array_equal(
-                other.block_lengths, new_self.block_lengths
-            ):
-                new_other = other.manual_shuffle(
-                    axis,
-                    lambda x: x,
-                    new_self.block_lengths,
-                    transposed=other_is_transposed,
-                )
-            elif axis == 1 and not np.array_equal(
-                other.block_widths, new_self.block_widths
-            ):
-                new_other = other.manual_shuffle(
-                    axis,
-                    lambda x: x,
-                    new_self.block_widths,
-                    transposed=other_is_transposed,
-                )
-            else:
-                new_other = other
-        # Most of the time, we will be given an operation to do. We perform that with
-        # manual_shuffle.
-        else:
-            new_other = other.manual_shuffle(
-                axis,
-                right_func,
-                new_self.block_lengths if axis == 0 else new_self.block_widths,
-                transposed=other_is_transposed,
-            )
-        return new_self, new_other
 
     @classmethod
     def map_across_full_axis(cls, axis, partitions, map_func):
@@ -511,8 +382,6 @@ class BaseFrameManager(object):
         Args:
             axis: This axis to extract the labels. (0 - index, 1 - columns).
             index_func: The function to be used to extract the function.
-            old_blocks: An optional previous object that this object was
-                created from. This is used to compute the correct offsets.
 
         Returns:
             A Pandas Index object.
@@ -520,11 +389,6 @@ class BaseFrameManager(object):
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
-            # We grab the first column of blocks and extract the indices
-            # Note: We use _partitions_cache in the context of this function to make
-            # sure that none of the partitions are modified or filtered out before we
-            # get the index information.
-            # DO NOT CHANGE TO self.partitions under any circumstance.
             new_idx = (
                 [idx.apply(func).get() for idx in partitions.T[0]]
                 if len(partitions.T)
@@ -536,6 +400,7 @@ class BaseFrameManager(object):
                 if len(partitions)
                 else []
             )
+        # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod

@@ -208,7 +208,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             NumPy Array of the QueryCompiler.
         """
-        arr = self.data.to_numpy()
+        arr = self._data_obj.to_numpy()
         ErrorMessage.catch_bugs_and_request_email(
             len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
         )
@@ -737,7 +737,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
-    # Map partitions across select indices
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
 
@@ -748,49 +747,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             DataFrame with updated dtypes.
         """
-        # Group indices to update by dtype for less map operations
-        dtype_indices = {}
-        columns = col_dtypes.keys()
-        numeric_indices = list(self.columns.get_indexer_for(columns))
-        # Create Series for the updated dtypes
-        new_dtypes = self.dtypes.copy()
-        for i, column in enumerate(columns):
-            dtype = col_dtypes[column]
-            if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
-            ):
-                # Only add dtype only if different
-                if dtype in dtype_indices.keys():
-                    dtype_indices[dtype].append(numeric_indices[i])
-                else:
-                    dtype_indices[dtype] = [numeric_indices[i]]
-                # Update the new dtype series to the proper pandas dtype
-                try:
-                    new_dtype = np.dtype(dtype)
-                except TypeError:
-                    new_dtype = dtype
-                if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtype = np.dtype("int64")
-                elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtype = np.dtype("float64")
-                new_dtypes[column] = new_dtype
-        # Update partitions for each dtype that is updated
-        new_data = self.data
-        for dtype in dtype_indices.keys():
-
-            def astype(df, internal_indices=[]):
-                block_dtypes = {}
-                for ind in internal_indices:
-                    block_dtypes[df.columns[ind]] = dtype
-                return df.astype(block_dtypes)
-
-            new_data = new_data.apply_func_to_select_indices(
-                0, astype, dtype_indices[dtype], keep_remaining=True
-            )
-        return self.__constructor__(new_data, self.index, self.columns, new_dtypes)
-
-    # END Map partitions across select indices
+        return self.__constructor__(self._data_obj.astype(col_dtypes))
 
     # Column/Row partitions reduce operations
 

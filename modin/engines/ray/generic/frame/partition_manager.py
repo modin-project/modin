@@ -102,7 +102,8 @@ class RayFrameManager(BaseFrameManager):
                 ]
             )
 
-    def to_numpy(self, is_transposed=False):
+    @classmethod
+    def to_numpy(cls, partitions):
         """Convert this object into a NumPy Array from the partitions.
 
         Returns:
@@ -111,16 +112,14 @@ class RayFrameManager(BaseFrameManager):
         parts = ray.get(
             [
                 obj.apply(lambda df: df.to_numpy()).oid
-                for row in self.partitions
+                for row in partitions
                 for obj in row
             ]
         )
-        n = self.partitions.shape[1]
+        n = partitions.shape[1]
         parts = [
-            parts[i * n : (i + 1) * n] for i in list(range(self.partitions.shape[0]))
+            parts[i * n : (i + 1) * n] for i in list(range(partitions.shape[0]))
         ]
 
         arr = np.block(parts)
-        if is_transposed:
-            return arr.T
         return arr
