@@ -895,7 +895,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             .describe(**kwargs)
         )
 
-        def describe_builder(df, internal_indices=[], **kwargs):
+        def describe_builder(df, internal_indices=[]):
             return df.iloc[:, internal_indices].describe(**kwargs)
 
         return self.__constructor__(self._data_obj._apply_full_axis_select_indices(0, describe_builder,
@@ -911,7 +911,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
-        new_data = self._data_obj._map_across_full_axis(axis, func)
+        new_data = self._data_obj._map_across_full_axis(axis, lambda df: func(df, **kwargs))
         return self.__constructor__(new_data)
 
     def cummax(self, **kwargs):

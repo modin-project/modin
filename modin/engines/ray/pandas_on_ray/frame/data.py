@@ -88,7 +88,7 @@ class PandasOnRayData(object):
         if row_indices is None and row_numeric_idx is None and col_indices is None and col_numeric_idx is None:
             return self.copy()
         if row_indices is not None:
-            row_numeric_idx = self.index.get_indexer_for(row_indices)
+            row_numeric_idx = self.index.get_indexer_for(pandas.Index(row_indices).unique())
         if row_numeric_idx is not None:
             row_partitions_list = self._get_dict_of_block_index(
                 1, row_numeric_idx, ordered=True
@@ -104,7 +104,7 @@ class PandasOnRayData(object):
             new_index = self.index
 
         if col_indices is not None:
-            col_numeric_idx = self.columns.get_indexer_for(col_indices)
+            col_numeric_idx = self.columns.get_indexer_for(pandas.Index(col_indices).unique())
         if col_numeric_idx is not None:
             col_partitions_list = self._get_dict_of_block_index(
                 0, col_numeric_idx, ordered=True
