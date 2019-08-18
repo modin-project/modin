@@ -545,7 +545,7 @@ class PandasOnRayData(object):
             dtypes = pandas.Series([np.dtype(dtypes)] * len(new_columns), index=new_columns)
         return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1], dtypes)
 
-    def _apply_full_axis_select_indices(self, axis, func, apply_indices, new_idx=None, keep_remaining=False):
+    def _apply_full_axis_select_indices(self, axis, func, apply_indices=None, numeric_indices=None, new_index=None, new_columns=None, keep_remaining=False):
         """Reduce Manger along select indices using function that needs full axis.
 
         Args:
@@ -557,20 +557,25 @@ class PandasOnRayData(object):
         Returns:
             A new QueryCompiler object with index or BaseFrameManager object.
         """
+        assert apply_indices is not None or numeric_indices is not None
         # Convert indices to numeric indices
         old_index = self.index if axis else self.columns
-        numeric_indices = old_index.get_indexer_for(apply_indices)
+        if apply_indices is not None:
+            numeric_indices = old_index.get_indexer_for(apply_indices)
         dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
         new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
             axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
         )
-        # Index objects for new object creation. This is shorter than if..else
-        index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
+        # TODO Infer columns and index from `keep_remaining` and `apply_indices`
+        if new_index is None:
+            new_index = self.index if axis == 1 else None
+        if new_columns is None:
+            new_columns = self.columns if axis == 0 else None
         # Length objects for new object creation. This is shorter than if..else
         lengths_objs = {
-            axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis],
-            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
-        return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+            axis: None if not keep_remaining else [self._row_lengths, self._column_widths][axis], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]
+        }
+        return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1])
 
     def _apply_select_indices(self, axis, func, apply_indices=None, row_indices=None, col_indices=None, new_idx=None, keep_remaining=False, item_to_distribute=None):
         if axis is not None:

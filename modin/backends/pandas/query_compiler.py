@@ -398,40 +398,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler with updated data and new index.
         """
-        # To reindex, we need a function that will be shipped to each of the
-        # partitions.
-        def reindex_builer(df, axis, old_labels, new_labels, **kwargs):
-            if axis:
-                while len(df.columns) < len(old_labels):
-                    df[len(df.columns)] = np.nan
-                df.columns = old_labels
-                new_df = df.reindex(columns=new_labels, **kwargs)
-                # reset the internal columns back to a RangeIndex
-                new_df.columns = pandas.RangeIndex(len(new_df.columns))
-                return new_df
-            else:
-                while len(df.index) < len(old_labels):
-                    df.loc[len(df.index)] = np.nan
-                df.index = old_labels
-                new_df = df.reindex(index=new_labels, **kwargs)
-                # reset the internal index back to a RangeIndex
-                new_df.reset_index(inplace=True, drop=True)
-                return new_df
-
-        old_labels = self.columns if axis else self.index
         new_index = self.index if axis else labels
         new_columns = labels if axis else self.columns
-        func = self._prepare_method(
-            lambda df: reindex_builer(df, axis, old_labels, labels, **kwargs)
-        )
-        # The reindex can just be mapped over the axis we are modifying. This
-        # is for simplicity in implementation. We specify num_splits here
-        # because if we are repartitioning we should (in the future).
-        # Additionally this operation is often followed by an operation that
-        # assumes identical partitioning. Internally, we *may* change the
-        # partitioning during a map across a full axis.
-        new_data = self._map_across_full_axis(axis, func)
-        return self.__constructor__(new_data, new_index, new_columns)
+        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.reindex(labels=labels, axis=axis, **kwargs), new_index=new_index, new_columns=new_columns)
+        return self.__constructor__(new_data)
 
     def reset_index(self, **kwargs):
         """Removes all levels from index and sets a default level_0 index.
@@ -440,32 +410,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler with updated data and reset index.
         """
         drop = kwargs.get("drop", False)
-        new_index = pandas.RangeIndex(len(self.index))
         if not drop:
-            if isinstance(self.index, pandas.MultiIndex):
-                # TODO (devin-petersohn) ensure partitioning is properly aligned
-                new_column_names = pandas.Index(self.index.names)
-                new_columns = new_column_names.append(self.columns)
-                index_data = pandas.DataFrame(list(zip(*self.index))).T
-                result = self.data.from_pandas(index_data).concat(1, self.data)
-                return self.__constructor__(result, new_index, new_columns)
-            else:
-                new_column_name = (
-                    self.index.name
-                    if self.index.name is not None
-                    else "index"
-                    if "index" not in self.columns
-                    else "level_0"
-                )
-                new_columns = self.columns.insert(0, new_column_name)
-                result = self.insert(0, new_column_name, self.index)
-                return self.__constructor__(result.data, new_index, new_columns)
-        else:
-            # The copies here are to ensure that we do not give references to
-            # this object for the purposes of updates.
-            return self.__constructor__(
-                self.data.copy(), new_index, self.columns.copy(), self._dtype_cache
+            new_column_name = (
+                self.index.name
+                if self.index.name is not None
+                else "index"
+                if "index" not in self.columns
+                else "level_0"
             )
+            new_qc = self.insert(0, new_column_name, self.index)
+        else:
+            new_qc = self.copy()
+        new_qc.index = pandas.RangeIndex(len(new_qc.index))
+        return new_qc
 
     # END Reindex/reset_index
 
@@ -559,8 +516,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 axis = 1
                 new_index = self.index
-            new_data = self.data.map_across_full_axis(axis, map_func)
-        return self.__constructor__(new_data, index=new_index, columns=["__reduced__"])
+            new_data = self._data_obj._apply_full_axis(axis, map_func, new_index=new_index, new_columns=["__reduced__"])
+        return self.__constructor__(new_data)
 
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.
@@ -579,9 +536,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        sums = self.sum(**kwargs)
-        counts = self.count(axis=axis, numeric_only=kwargs.get("numeric_only", None))
-        return sums.binary_op("truediv", counts, axis=axis)
+        return self._data_obj._full_reduce(axis, map_func=lambda df: df.apply(lambda s: (s.sum(), s.count()), axis=axis),
+                                           reduce_func=lambda df: df.apply(lambda x: (sum(x.apply(lambda item: item[0])), sum(x.apply(lambda item: item[1]))), axis=axis))
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -900,7 +856,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(self._data_obj._apply_full_axis_select_indices(0, describe_builder,
                                                                                                empty_df.columns,
-                                                                                               new_idx=empty_df.index))
+                                                                                               new_index=empty_df.index,
+                                                                                   new_columns=empty_df.columns))
 
     # END Column/Row partitions reduce operations over select indices
 
@@ -1229,9 +1186,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if is_list_like(value):
             new_data = self._data_obj._apply_full_axis_select_indices(
-                axis, setitem, [key], new_idx=self.index, keep_remaining=True
+                axis, setitem, [key], new_index=self.index, new_columns=self.columns, keep_remaining=True
             )
         else:
+            raise NotImplementedError("FIXME")
             new_data = self._data_obj._apply_select_indices(
                 axis, setitem, [key], new_idx=self.index, keep_remaining=True
             )
@@ -1353,18 +1311,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
-            old_index = df.index
-            df.index = pandas.RangeIndex(len(df.index))
-            df.insert(internal_idx, internal_idx, value, allow_duplicates=True)
-            df.columns = pandas.RangeIndex(len(df.columns))
-            df.index = old_index
+            df.insert(internal_idx, column, value)
             return df
 
-        new_data = self.data.apply_func_to_select_indices_along_full_axis(
-            0, insert, loc, keep_remaining=True
+        new_data = self._data_obj._apply_full_axis_select_indices(
+            0, insert, numeric_indices=[loc], keep_remaining=True, new_index=self.index, new_columns=self.columns.insert(loc, column)
         )
-        new_columns = self.columns.insert(loc, column)
-        return self.__constructor__(new_data, self.index, new_columns)
+        return self.__constructor__(new_data)
 
     # END Insert
 
