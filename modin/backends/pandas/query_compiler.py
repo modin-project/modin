@@ -534,10 +534,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the mean from each numerical column or
             row.
         """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        return self._data_obj._full_reduce(axis, map_func=lambda df: df.apply(lambda s: (s.sum(), s.count()), axis=axis),
-                                           reduce_func=lambda df: df.apply(lambda x: (sum(x.apply(lambda item: item[0])), sum(x.apply(lambda item: item[1]))), axis=axis))
+        axis = kwargs.pop("axis", 0)
+        numeric_only = kwargs.pop("numeric_only", False)
+        if numeric_only:
+            obj = self._data_obj.mask(col_indices=self._data_obj._numeric_columns())
+        else:
+            obj = self._data_obj
+        return obj._full_reduce(axis, map_func=lambda df: df.apply(lambda s: (s.sum(**kwargs), s.count()), axis=axis),
+                                           reduce_func=lambda df: df.apply(lambda x: x.apply(lambda item: item[0]).sum(**kwargs) / x.apply(lambda item: item[1]).sum(**kwargs), axis=axis))
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
