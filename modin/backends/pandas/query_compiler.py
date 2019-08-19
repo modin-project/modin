@@ -610,26 +610,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
 
-    def memory_usage(self, axis=0, **kwargs):
+    def memory_usage(self, **kwargs):
         """Returns the memory usage of each column.
 
         Returns:
             A new QueryCompiler object containing the memory usage of each column.
         """
-
-        def memory_usage_builder(df):
-            # We have to manually change the orientation of the data within the
-            # partitions because memory_usage does not take in an axis argument
-            # and always does it along columns.
-            if axis:
-                df = df.T
-            result = df.memory_usage(**kwargs)
-            return result
-
-        def sum_memory_usage(df):
-            return df.sum(axis=axis)
-
-        return self._data_obj._full_reduce(axis, memory_usage_builder, sum_memory_usage)
+        return self.__constructor__(self._data_obj._full_reduce(0, lambda df: df.memory_usage(**kwargs), lambda df: df.sum()))
 
     # END Full Reduce operations
 
@@ -903,12 +890,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Make a copy of columns and eval on the copy to determine if result type is
         # series or not
         empty_eval = pandas.DataFrame(columns=self.columns).astype(self.dtypes).eval(expr, inplace=False, **kwargs)
-        expect_series = isinstance(empty_eval, pandas.Series)
-
-        def eval_builder(df, **kwargs):
-            return pandas.DataFrame(df.eval(expr, inplace=False, **kwargs))
-
-        new_data = self._data_obj._apply_full_axis(1, eval_builder, new_index=self.index, new_columns=[empty_eval.name] if expect_series else empty_eval.columns)
+        new_columns = [empty_eval.name] if isinstance(empty_eval, pandas.Series) else empty_eval.columns
+        new_data = self._data_obj._apply_full_axis(1, lambda df: pandas.DataFrame(df.eval(expr, inplace=False, **kwargs)), new_index=self.index, new_columns=new_columns)
         return self.__constructor__(new_data)
 
     def mode(self, **kwargs):
@@ -919,23 +902,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
 
-        def mode_builder(df, **kwargs):
-            result = df.mode(**kwargs)
+        def mode_builder(df):
+            result = pandas.DataFrame(df.mode(**kwargs))
             # We return a dataframe with the same shape as the input to ensure
             # that all the partitions will be the same shape
-            if not axis and len(df) != len(result):
+            if axis == 0 and len(df) != len(result):
                 # Pad rows
-                result = result.reindex(index=df.index)
-            elif axis and len(df.columns) != len(result.columns):
+                result = result.reindex(index=pandas.RangeIndex(len(df.index)))
+            elif axis == 1 and len(df.columns) != len(result.columns):
                 # Pad columns
-                result = result.reindex(columns=df.columns)
+                result = result.reindex(columns=pandas.RangeIndex(len(df.columns)))
             return pandas.DataFrame(result)
 
-        new_data = self._data_obj._map_across_full_axis(axis, mode_builder)
         if axis == 0:
-            new_data.index = pandas.RangeIndex(len(self.index))
+            new_index = pandas.RangeIndex(len(self.index))
+            new_columns = self.columns
         else:
-            new_data.columns = pandas.RangeIndex(len(self.columns))
+            new_index = self.index
+            new_columns = pandas.RangeIndex(len(self.columns))
+        new_data = self._data_obj._apply_full_axis(axis, mode_builder, new_index=new_index, new_columns=new_columns)
         return self.__constructor__(new_data).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
@@ -950,36 +935,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
         if isinstance(value, dict):
-            raise NotImplementedError("FIXME")
             kwargs.pop("value")
 
-            if axis == 0:
-                index = self.columns
-            else:
-                index = self.index
-            value = {
-                idx: value[key] for key in value for idx in index.get_indexer_for([key])
-            }
-
-            def fillna_dict_builder(df, func_dict={}):
-                # We do this to ensure that no matter the state of the columns we get
-                # the correct ones.
-                func_dict = {df.columns[idx]: func_dict[idx] for idx in func_dict}
+            def fillna(df):
+                func_dict = {c: value[c] for c in value if c in df.columns}
                 return df.fillna(value=func_dict, **kwargs)
-
-            if full_axis:
-                new_data = self.data.apply_func_to_select_indices_along_full_axis(
-                    axis, fillna_dict_builder, value, keep_remaining=True
-                )
-            else:
-                new_data = self.data.apply_func_to_select_indices(
-                    axis, fillna_dict_builder, value, keep_remaining=True
-                )
         else:
-            if full_axis:
-                new_data = self._data_obj._map_across_full_axis(axis, lambda df: df.fillna(**kwargs))
-            else:
-                new_data = self._data_obj._map_partitions(lambda df: df.fillna(**kwargs))
+            def fillna(df):
+                return df.fillna(**kwargs)
+        if full_axis:
+            new_data = self._data_obj._map_across_full_axis(axis, fillna)
+        else:
+            new_data = self._data_obj._map_partitions(fillna)
         return self.__constructor__(new_data)
 
     def quantile_for_list_of_values(self, **kwargs):
@@ -1024,7 +991,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = pandas.Float64Index(q)
         else:
             q_index = pandas.Float64Index(q)
-        new_data = query_compiler._data_obj._apply_full_axis(axis, lambda df: quantile_builder(df, **kwargs), new_index=q_index, new_columns=new_columns, new_dtypes=np.float64)
+        new_data = query_compiler._data_obj._apply_full_axis(axis, lambda df: quantile_builder(df, **kwargs), new_index=q_index, new_columns=new_columns, dtypes=np.float64)
         result = self.__constructor__(new_data)
         return result.transpose() if axis == 1 else result
 
@@ -1281,11 +1248,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if index is not None:
             # The unique here is to avoid duplicating rows with the same name
-            index = self.index[~self.index.isin(index)].unique()
+            index = np.sort(self.index.get_indexer_for(self.index[~self.index.isin(index)].unique()))
         if columns is not None:
             # The unique here is to avoid duplicating columns with the same name
-            columns = self.columns[~self.columns.isin(columns)].unique()
-        new_data = self._data_obj.mask(row_indices=index, col_indices=columns)
+            columns = np.sort(self.columns.get_indexer_for(self.columns[~self.columns.isin(columns)].unique()))
+        new_data = self._data_obj.mask(row_numeric_idx=index, col_numeric_idx=columns)
         return self.__constructor__(new_data)
 
     # END Drop/Dropna

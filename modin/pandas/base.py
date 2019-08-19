@@ -1624,7 +1624,6 @@ class BasePandasDataset(object):
             the memory usage of each of the columns in bytes. If `index=true`,
             then the first value of the Series will be 'Index' with its memory usage.
         """
-        assert not index, "Internal Error. Index must be evaluated in child class"
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
