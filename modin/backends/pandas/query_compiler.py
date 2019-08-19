@@ -1193,9 +1193,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis, setitem, [key], new_index=self.index, new_columns=self.columns, keep_remaining=True
             )
         else:
-            raise NotImplementedError("FIXME")
             new_data = self._data_obj._apply_select_indices(
-                axis, setitem, [key], new_idx=self.index, keep_remaining=True
+                axis, setitem, [key], new_index=self.index, new_columns=self.columns, keep_remaining=True
             )
         return self.__constructor__(new_data)
 
@@ -1281,9 +1280,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler.
         """
         if index is not None:
-            index = self.index[~self.index.isin(index)]
+            # The unique here is to avoid duplicating rows with the same name
+            index = self.index[~self.index.isin(index)].unique()
         if columns is not None:
-            columns = self.columns[~self.columns.isin(columns)]
+            # The unique here is to avoid duplicating columns with the same name
+            columns = self.columns[~self.columns.isin(columns)].unique()
         new_data = self._data_obj.mask(row_indices=index, col_indices=columns)
         return self.__constructor__(new_data)
 
@@ -1605,6 +1606,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func=iloc_mut,
             row_indices=row_numeric_index,
             col_indices=col_numeric_index,
+            new_index=self.index,
+            new_columns=self.columns,
             keep_remaining=True,
             item_to_distribute=broadcasted_items,
         )

@@ -974,6 +974,7 @@ class DataFrame(BasePandasDataset):
         ).columns
         new_frame = DataFrame(
             query_compiler=self._query_compiler.concat(
+                1,
                 [obj._query_compiler for obj in other],
                 join=how,
                 sort=sort,

@@ -88,7 +88,7 @@ class PandasOnRayData(object):
         if row_indices is None and row_numeric_idx is None and col_indices is None and col_numeric_idx is None:
             return self.copy()
         if row_indices is not None:
-            row_numeric_idx = self.index.get_indexer_for(pandas.Index(row_indices).unique())
+            row_numeric_idx = self.index.get_indexer_for(row_indices)
         if row_numeric_idx is not None:
             row_partitions_list = self._get_dict_of_block_index(
                 1, row_numeric_idx, ordered=True
@@ -104,7 +104,7 @@ class PandasOnRayData(object):
             new_index = self.index
 
         if col_indices is not None:
-            col_numeric_idx = self.columns.get_indexer_for(pandas.Index(col_indices).unique())
+            col_numeric_idx = self.columns.get_indexer_for(col_indices)
         if col_numeric_idx is not None:
             col_partitions_list = self._get_dict_of_block_index(
                 0, col_numeric_idx, ordered=True
@@ -577,7 +577,12 @@ class PandasOnRayData(object):
         }
         return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1])
 
-    def _apply_select_indices(self, axis, func, apply_indices=None, row_indices=None, col_indices=None, new_idx=None, keep_remaining=False, item_to_distribute=None):
+    def _apply_select_indices(self, axis, func, apply_indices=None, row_indices=None, col_indices=None, new_index=None, new_columns=None, keep_remaining=False, item_to_distribute=None):
+        # TODO Infer columns and index from `keep_remaining` and `apply_indices`
+        if new_index is None:
+            new_index = self.index if axis == 1 else None
+        if new_columns is None:
+            new_columns = self.columns if axis == 0 else None
         if axis is not None:
             assert apply_indices is not None
             # Convert indices to numeric indices
@@ -587,11 +592,9 @@ class PandasOnRayData(object):
             new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
                 axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
             )
-            # Index objects for new object creation. This is shorter than if..else
-            index_objs = {axis ^ 1: apply_indices if not keep_remaining else old_index, axis: new_idx}
             # Length objects for new object creation. This is shorter than if..else
             lengths_objs = {axis: [len(apply_indices)] if not keep_remaining else [self._row_lengths, self._column_widths][axis], axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1]}
-            return self.__constructor__(new_partitions, index_objs[0], index_objs[1], lengths_objs[0], lengths_objs[1])
+            return self.__constructor__(new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1])
         else:
             assert row_indices is not None and col_indices is not None
             assert keep_remaining
@@ -599,7 +602,7 @@ class PandasOnRayData(object):
             row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
             col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
             new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(self._partitions, func, row_partitions_list, col_partitions_list, item_to_distribute)
-            return self.__constructor__(new_partitions, self.index, self.columns, self._row_lengths_cache, self._column_widths_cache)
+            return self.__constructor__(new_partitions, new_index, new_columns, self._row_lengths_cache, self._column_widths_cache)
 
     def _manual_repartition(self, axis, repartition_func, **kwargs):
         """This method applies all manual partitioning functions.
@@ -643,7 +646,7 @@ class PandasOnRayData(object):
         right_old_idxes = index_obj
 
         # Start with this and we'll repartition the first time, and then not again.
-        if not left_old_idx.equals(joined_index):
+        if not left_old_idx.equals(joined_index) or force_repartition:
             reindexed_self = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis))
         else:
             reindexed_self = self._partitions
@@ -670,12 +673,14 @@ class PandasOnRayData(object):
         return self.__constructor__(new_data, self.index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
+        #TODO Update to no longer force repartition
+        # Requires pruning of the partitions after they have been changed
         left_parts, right_parts, joined_index = self._copartition(
             axis ^ 1,
             others,
             how,
             sort,
-            force_repartition=False,
+            force_repartition=True,
         )
         new_partitions = self._frame_mgr_cls.concat(axis, left_parts, right_parts)
         if axis == 0:
