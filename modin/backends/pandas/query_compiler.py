@@ -482,41 +482,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return pandas.DataFrame([result])
 
-        if isinstance(other, BaseQueryCompiler):
-            if len(self.columns) > 1 and len(other.columns) == 1:
-                # If self is DataFrame and other is a series, we take the transpose
-                # to copartition along the columns.
-                new_self = self
-                other = other.transpose()
-                axis = 1
-                new_index = self.index
-            elif len(self.columns) == 1 and len(other.columns) > 1:
-                # If self is series and other is a Dataframe, we take the transpose
-                # to copartition along the columns.
-                new_self = self.transpose()
-                axis = 1
-                new_index = self.index
-            elif len(self.columns) == 1 and len(other.columns) == 1:
-                # If both are series, then we copartition along the rows.
-                new_self = self
-                axis = 0
-                new_index = ["__reduce__"]
-            new_self, list_of_others, _ = new_self.copartition(
-                axis, other, "left", False
-            )
-            other = list_of_others[0]
-            reduce_func = self._build_mapreduce_func(
-                pandas.DataFrame.sum, axis=axis, skipna=False
-            )
-            new_data = new_self.groupby_reduce(axis, other, map_func, reduce_func)
+        if len(self.columns) == 1:
+            axis = 0
+            new_index = ["__reduce__"]
         else:
-            if len(self.columns) == 1:
-                axis = 0
-                new_index = ["__reduce__"]
-            else:
-                axis = 1
-                new_index = self.index
-            new_data = self._data_obj._apply_full_axis(axis, map_func, new_index=new_index, new_columns=["__reduced__"])
+            axis = 1
+            new_index = self.index
+        new_data = self._data_obj._apply_full_axis(axis, map_func, new_index=new_index, new_columns=["__reduced__"])
         return self.__constructor__(new_data)
 
     def max(self, **kwargs):
