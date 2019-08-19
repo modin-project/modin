@@ -687,6 +687,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis) if axis is not None else 0
 
         if level is not None:
+
+            if not isinstance(self.axes[axis], pandas.MultiIndex):
+                # error thrown by pandas
+                raise TypeError("Can only count levels on hierarchical columns.")
+
             if isinstance(level, string_types):
                 level = self.axes[axis].names.index(level)
 
