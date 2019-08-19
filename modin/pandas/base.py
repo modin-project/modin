@@ -701,6 +701,7 @@ class BasePandasDataset(object):
                 self.groupby(self.axes[axis].codes[level], axis=axis)
                 .count()
                 .rename(new_names, axis=axis)
+                .rename_axis(self.axes[axis].names[level], axis=axis)
             )
 
         return self._reduce_dimension(

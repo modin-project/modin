@@ -1333,20 +1333,23 @@ class TestDFPartOne:
         pandas_df_multi_level = pandas_df.copy()
         axis = modin_df._get_axis_number(axis) if axis is not None else 0
         levels = 3
+        axis_names = ["a", "b", "c"]
         if axis == 0:
             new_idx = pandas.MultiIndex.from_tuples(
-                [(i // 4, i // 2, i) for i in range(len(modin_df.index))]
+                [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
+                names=axis_names,
             )
             modin_df_multi_level.index = new_idx
             pandas_df_multi_level.index = new_idx
         else:
             new_col = pandas.MultiIndex.from_tuples(
-                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))]
+                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+                names=axis_names,
             )
             modin_df_multi_level.columns = new_col
             pandas_df_multi_level.columns = new_col
 
-        for level in range(levels):
+        for level in list(range(levels)) + axis_names:
             modin_multi_level_result = modin_df_multi_level.count(
                 axis=axis, numeric_only=numeric_only, level=level
             )
