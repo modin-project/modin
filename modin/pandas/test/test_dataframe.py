@@ -1342,9 +1342,7 @@ class TestDFPartOne:
             modin_df_multi_level.index = new_idx
             pandas_df_multi_level.index = new_idx
             try:  # test error
-                pandas_df_multi_level.count(
-                    axis=1, numeric_only=numeric_only, level=0
-                )
+                pandas_df_multi_level.count(axis=1, numeric_only=numeric_only, level=0)
             except Exception as e:
                 with pytest.raises(type(e)):
                     modin_df_multi_level.count(
@@ -1358,9 +1356,7 @@ class TestDFPartOne:
             modin_df_multi_level.columns = new_col
             pandas_df_multi_level.columns = new_col
             try:  # test error
-                pandas_df_multi_level.count(
-                    axis=0, numeric_only=numeric_only, level=0
-                )
+                pandas_df_multi_level.count(axis=0, numeric_only=numeric_only, level=0)
             except Exception as e:
                 with pytest.raises(type(e)):
                     modin_df_multi_level.count(
