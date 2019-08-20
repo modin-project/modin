@@ -37,9 +37,7 @@ class RayFrameManager(BaseFrameManager):
                 # invariant that requires that all blocks be the same length in a
                 # row of blocks.
                 return np.array(
-                    ray.get(
-                        [obj.length().oid for obj in partitions.T[0]]
-                    )
+                    ray.get([obj.length().oid for obj in partitions.T[0]])
                     if len(partitions.T) > 0
                     else []
                 )
@@ -117,9 +115,7 @@ class RayFrameManager(BaseFrameManager):
             ]
         )
         n = partitions.shape[1]
-        parts = [
-            parts[i * n : (i + 1) * n] for i in list(range(partitions.shape[0]))
-        ]
+        parts = [parts[i * n : (i + 1) * n] for i in list(range(partitions.shape[0]))]
 
         arr = np.block(parts)
         return arr

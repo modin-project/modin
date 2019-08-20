@@ -162,7 +162,11 @@ class BaseFrameManager(object):
         # partitions as best we can right now.
         num_splits = cls._compute_num_partitions()
         preprocessed_map_func = cls.preprocess_func(map_func)
-        partitions = cls.column_partitions(partitions) if not axis else cls.row_partitions(partitions)
+        partitions = (
+            cls.column_partitions(partitions)
+            if not axis
+            else cls.row_partitions(partitions)
+        )
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
@@ -290,14 +294,9 @@ class BaseFrameManager(object):
         Returns:
             A Pandas DataFrame
         """
-        retrieved_objects = [
-            [obj.to_pandas() for obj in part]
-            for part in partitions
-        ]
+        retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
-            isinstance(part, pandas.Series)
-            for row in retrieved_objects
-            for part in row
+            isinstance(part, pandas.Series) for row in retrieved_objects for part in row
         ):
             axis = 0
         elif all(
@@ -333,14 +332,27 @@ class BaseFrameManager(object):
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
         parts = [
-            [put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()) for j in range(0, len(df.columns), col_chunksize)]
+            [
+                put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy())
+                for j in range(0, len(df.columns), col_chunksize)
+            ]
             for i in range(0, len(df), row_chunksize)
         ]
         if not return_dims:
             return np.array(parts)
         else:
-            row_lengths = [row_chunksize if i + row_chunksize < len(df) - 1 else len(df) % row_chunksize or row_chunksize for i in range(0, len(df), row_chunksize)]
-            col_widths = [col_chunksize if i + col_chunksize < len(df.columns) - 1 else len(df.columns) % col_chunksize or col_chunksize for i in range(0, len(df.columns), col_chunksize)]
+            row_lengths = [
+                row_chunksize
+                if i + row_chunksize < len(df) - 1
+                else len(df) % row_chunksize or row_chunksize
+                for i in range(0, len(df), row_chunksize)
+            ]
+            col_widths = [
+                col_chunksize
+                if i + col_chunksize < len(df.columns) - 1
+                else len(df.columns) % col_chunksize or col_chunksize
+                for i in range(0, len(df.columns), col_chunksize)
+            ]
             return np.array(parts), row_lengths, col_widths
 
     @classmethod
@@ -403,7 +415,9 @@ class BaseFrameManager(object):
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
-    def apply_func_to_select_indices(cls, axis, partitions, func, indices, keep_remaining=False):
+    def apply_func_to_select_indices(
+        cls, axis, partitions, func, indices, keep_remaining=False
+    ):
         """Applies a function to select indices.
 
         Note: Your internal function must take a kwarg `internal_indices` for
@@ -464,9 +478,7 @@ class BaseFrameManager(object):
                             func,
                             partitions_for_apply[i],
                             func_dict={
-                                idx: dict_func[idx]
-                                for idx in indices[i]
-                                if idx >= 0
+                                idx: dict_func[idx] for idx in indices[i] if idx >= 0
                             },
                         )
                         for i in range(len(partitions_for_apply))
@@ -496,9 +508,7 @@ class BaseFrameManager(object):
                         partitions_for_apply[i]
                         if i not in indices
                         else cls._apply_func_to_list_of_partitions(
-                            func,
-                            partitions_for_apply[i],
-                            internal_indices=indices[i],
+                            func, partitions_for_apply[i], internal_indices=indices[i]
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -559,9 +569,7 @@ class BaseFrameManager(object):
                     [
                         partitions_for_apply[i].apply(
                             preprocessed_func,
-                            func_dict={
-                                idx: dict_func[idx] for idx in indices[i]
-                            },
+                            func_dict={idx: dict_func[idx] for idx in indices[i]},
                         )
                         for i in indices
                     ]
@@ -574,9 +582,7 @@ class BaseFrameManager(object):
                         else cls._apply_func_to_list_of_partitions(
                             preprocessed_func,
                             partitions_for_apply[i],
-                            func_dict={
-                                idx: dict_func[idx] for idx in indices[i]
-                            },
+                            func_dict={idx: dict_func[idx] for idx in indices[i]},
                         )
                         for i in range(len(partitions_for_apply))
                     ]

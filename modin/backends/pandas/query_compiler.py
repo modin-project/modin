@@ -27,11 +27,13 @@ def _get_axis(axis):
 
 def _set_axis(axis):
     if axis == 0:
+
         def set_idx(self, idx):
             self._data_obj.index = idx
 
         return set_idx
     if axis == 1:
+
         def set_cols(self, cols):
             self._data_obj.columns = cols
 
@@ -42,6 +44,7 @@ def _str_map(func):
     def str_op_builder(df, *args, **kwargs):
         str_series = df.squeeze().str
         return func(str_series, *args, **kwargs).to_frame()
+
     return str_op_builder
 
 
@@ -110,7 +113,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if not isinstance(other, list):
             other = [other]
-        assert all(isinstance(o, type(self)) for o in other), "Different Manager objects are being used. This is not allowed"
+        assert all(
+            isinstance(o, type(self)) for o in other
+        ), "Different Manager objects are being used. This is not allowed"
         sort = kwargs.get("sort", None)
         if sort is None:
             sort = False
@@ -119,7 +124,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         other_data = [o._data_obj for o in other]
         new_data = self._data_obj._concat(axis, other_data, join, sort)
         if ignore_index:
-            new_data.index = pandas.RangeIndex(len(self.index) + sum(len(o.index) for o in other))
+            new_data.index = pandas.RangeIndex(
+                len(self.index) + sum(len(o.index) for o in other)
+            )
         return self.__constructor__(new_data)
 
     # END Append/Concat/Join
@@ -192,19 +199,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func = op
         axis = kwargs.get("axis", 0)
         if isinstance(other, type(self)):
-            return self.__constructor__(self._data_obj._binary_op(
-                lambda x, y: func(x, y, **kwargs), other._data_obj
-            ))
+            return self.__constructor__(
+                self._data_obj._binary_op(
+                    lambda x, y: func(x, y, **kwargs), other._data_obj
+                )
+            )
         else:
             if isinstance(other, (list, np.ndarray, pandas.Series)):
                 if axis == 1 and isinstance(other, pandas.Series):
                     new_columns = self.columns.join(other.index, how="outer")
                 else:
                     new_columns = self.columns
-                new_data = self._data_obj._apply_full_axis(axis, lambda df: func(df, other, **kwargs),
-                                                           new_index=self.index, new_columns=new_columns)
+                new_data = self._data_obj._apply_full_axis(
+                    axis,
+                    lambda df: func(df, other, **kwargs),
+                    new_index=self.index,
+                    new_columns=new_columns,
+                )
             else:
-                new_data = self._data_obj._map_partitions(lambda df: func(df, other, **kwargs))
+                new_data = self._data_obj._map_partitions(
+                    lambda df: func(df, other, **kwargs)
+                )
             return self.__constructor__(new_data)
 
     def clip(self, lower, upper, **kwargs):
@@ -212,7 +227,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
         if is_list_like(lower) or is_list_like(upper):
-            new_data = self._data_obj._map_across_full_axis(axis, lambda df: df.clip(**kwargs))
+            new_data = self._data_obj._map_across_full_axis(
+                axis, lambda df: df.clip(**kwargs)
+            )
         else:
             new_data = self._data_obj._map_partitions(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_data)
@@ -273,7 +290,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_series(df, cond):
                 return df.where(cond, other, **kwargs)
 
-            new_data = self._data_obj._binary_op(where_builder_series, cond._data_obj, join_type="left")
+            new_data = self._data_obj._binary_op(
+                where_builder_series, cond._data_obj, join_type="left"
+            )
         return self.__constructor__(new_data)
 
     # END Inter-Data operations
@@ -291,7 +310,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         new_index = self.index if axis else labels
         new_columns = labels if axis else self.columns
-        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.reindex(labels=labels, axis=axis, **kwargs), new_index=new_index, new_columns=new_columns)
+        new_data = self._data_obj._apply_full_axis(
+            axis,
+            lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
+            new_index=new_index,
+            new_columns=new_columns,
+        )
         return self.__constructor__(new_data)
 
     def reset_index(self, **kwargs):
@@ -351,7 +375,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             column or row.
         """
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_reduce(axis, lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs))
+        return self._data_obj._full_reduce(
+            axis, lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs)
+        )
 
     def dot(self, other):
         """Computes the matrix multiplication of self and other.
@@ -379,7 +405,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             axis = 1
             new_index = self.index
-        new_data = self._data_obj._apply_full_axis(axis, map_func, new_index=new_index, new_columns=["__reduced__"])
+        new_data = self._data_obj._apply_full_axis(
+            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+        )
         return self.__constructor__(new_data)
 
     def max(self, **kwargs):
@@ -388,7 +416,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the maximum values from each column or row.
         """
-        return self._data_obj._full_reduce(kwargs.get("axis", 0), lambda df: df.max(**kwargs))
+        return self._data_obj._full_reduce(
+            kwargs.get("axis", 0), lambda df: df.max(**kwargs)
+        )
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -403,8 +433,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             obj = self._data_obj.mask(col_indices=self._data_obj._numeric_columns())
         else:
             obj = self._data_obj
-        return obj._full_reduce(axis, map_func=lambda df: df.apply(lambda s: (s.sum(**kwargs), s.count()), axis=axis),
-                                           reduce_func=lambda df: df.apply(lambda x: x.apply(lambda item: item[0]).sum(**kwargs) / x.apply(lambda item: item[1]).sum(**kwargs), axis=axis))
+        return obj._full_reduce(
+            axis,
+            map_func=lambda df: df.apply(
+                lambda s: (s.sum(**kwargs), s.count()), axis=axis
+            ),
+            reduce_func=lambda df: df.apply(
+                lambda x: x.apply(lambda item: item[0]).sum(**kwargs)
+                / x.apply(lambda item: item[1]).sum(**kwargs),
+                axis=axis,
+            ),
+        )
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -412,7 +451,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the minimum value from each column or row.
         """
-        return self._data_obj._full_reduce(kwargs.get("axis", 0), lambda df: df.min(**kwargs))
+        return self._data_obj._full_reduce(
+            kwargs.get("axis", 0), lambda df: df.min(**kwargs)
+        )
 
     def _process_sum_prod(self, func, **kwargs):
         """Calculates the sum or product of the DataFrame.
@@ -426,9 +467,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         min_count = kwargs.get("min_count", 0)
         if min_count <= 1:
-            return self.__constructor__(self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs)))
+            return self.__constructor__(
+                self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+            )
         else:
-            return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs)))
+            return self.__constructor__(
+                self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs))
+            )
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -455,7 +500,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         axis = 0 if axis is None else axis
         kwargs["axis"] = axis
-        return self.__constructor__(self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs)))
+        return self.__constructor__(
+            self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+        )
 
     def all(self, **kwargs):
         """Returns whether all the elements are true, potentially over an axis.
@@ -479,7 +526,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object containing the memory usage of each column.
         """
-        return self.__constructor__(self._data_obj._full_reduce(0, lambda df: df.memory_usage(**kwargs), lambda df: df.sum()))
+        return self.__constructor__(
+            self._data_obj._full_reduce(
+                0, lambda df: df.memory_usage(**kwargs), lambda df: df.sum()
+            )
+        )
 
     # END Full Reduce operations
 
@@ -535,7 +586,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_rsplit = MapFunction.register(_str_map(str_ops.rsplit), dtypes="copy")
     str_rstrip = MapFunction.register(_str_map(str_ops.rstrip), dtypes="copy")
     str_slice = MapFunction.register(_str_map(str_ops.slice), dtypes="copy")
-    str_slice_replace = MapFunction.register(_str_map(str_ops.slice_replace), dtypes="copy")
+    str_slice_replace = MapFunction.register(
+        _str_map(str_ops.slice_replace), dtypes="copy"
+    )
     str_split = MapFunction.register(_str_map(str_ops.split), dtypes="copy")
     str_startswith = MapFunction.register(_str_map(str_ops.startswith), dtypes=np.bool)
     str_strip = MapFunction.register(_str_map(str_ops.strip), dtypes="copy")
@@ -567,6 +620,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             Scalar of index name.
         """
+
         def first_valid_index_builder(df):
             df.index = pandas.RangeIndex(len(df.index))
             return df.apply(lambda df: df.first_valid_index())
@@ -574,7 +628,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
-        first_result = self.__constructor__(self._data_obj._full_axis_reduce(0, first_valid_index_builder)).min(axis=1).to_pandas().squeeze()
+        first_result = (
+            self.__constructor__(
+                self._data_obj._full_axis_reduce(0, first_valid_index_builder)
+            )
+            .min(axis=1)
+            .to_pandas()
+            .squeeze()
+        )
         return self.index[first_result]
 
     def idxmax(self, **kwargs):
@@ -584,7 +645,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the maximum of each column or axis.
         """
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs)))
+        return self.__constructor__(
+            self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs))
+        )
 
     def idxmin(self, **kwargs):
         """Returns the first occurrence of the minimum over requested axis.
@@ -593,7 +656,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the minimum of each column or axis.
         """
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs)))
+        return self.__constructor__(
+            self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs))
+        )
 
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
@@ -609,7 +674,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
-        first_result = self.__constructor__(self._data_obj._full_axis_reduce(0, last_valid_index_builder)).max(axis=1).to_pandas().squeeze()
+        first_result = (
+            self.__constructor__(
+                self._data_obj._full_axis_reduce(0, last_valid_index_builder)
+            )
+            .max(axis=1)
+            .to_pandas()
+            .squeeze()
+        )
         return self.index[first_result]
 
     def median(self, **kwargs):
@@ -708,10 +780,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def describe_builder(df, internal_indices=[]):
             return df.iloc[:, internal_indices].describe(**kwargs)
 
-        return self.__constructor__(self._data_obj._apply_full_axis_select_indices(0, describe_builder,
-                                                                                               empty_df.columns,
-                                                                                               new_index=empty_df.index,
-                                                                                   new_columns=empty_df.columns))
+        return self.__constructor__(
+            self._data_obj._apply_full_axis_select_indices(
+                0,
+                describe_builder,
+                empty_df.columns,
+                new_index=empty_df.index,
+                new_columns=empty_df.columns,
+            )
+        )
 
     # END Column/Row partitions reduce operations over select indices
 
@@ -722,7 +799,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
-        new_data = self._data_obj._map_across_full_axis(axis, lambda df: func(df, **kwargs))
+        new_data = self._data_obj._map_across_full_axis(
+            axis, lambda df: func(df, **kwargs)
+        )
         return self.__constructor__(new_data)
 
     def cummax(self, **kwargs):
@@ -739,7 +818,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def diff(self, **kwargs):
         axis = kwargs.get("axis", 0)
-        return self.__constructor__(self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs)))
+        return self.__constructor__(
+            self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs))
+        )
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -752,9 +833,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Make a copy of columns and eval on the copy to determine if result type is
         # series or not
-        empty_eval = pandas.DataFrame(columns=self.columns).astype(self.dtypes).eval(expr, inplace=False, **kwargs)
-        new_columns = [empty_eval.name] if isinstance(empty_eval, pandas.Series) else empty_eval.columns
-        new_data = self._data_obj._apply_full_axis(1, lambda df: pandas.DataFrame(df.eval(expr, inplace=False, **kwargs)), new_index=self.index, new_columns=new_columns)
+        empty_eval = (
+            pandas.DataFrame(columns=self.columns)
+            .astype(self.dtypes)
+            .eval(expr, inplace=False, **kwargs)
+        )
+        new_columns = (
+            [empty_eval.name]
+            if isinstance(empty_eval, pandas.Series)
+            else empty_eval.columns
+        )
+        new_data = self._data_obj._apply_full_axis(
+            1,
+            lambda df: pandas.DataFrame(df.eval(expr, inplace=False, **kwargs)),
+            new_index=self.index,
+            new_columns=new_columns,
+        )
         return self.__constructor__(new_data)
 
     def mode(self, **kwargs):
@@ -783,7 +877,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_index = self.index
             new_columns = pandas.RangeIndex(len(self.columns))
-        new_data = self._data_obj._apply_full_axis(axis, mode_builder, new_index=new_index, new_columns=new_columns)
+        new_data = self._data_obj._apply_full_axis(
+            axis, mode_builder, new_index=new_index, new_columns=new_columns
+        )
         return self.__constructor__(new_data).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
@@ -803,9 +899,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def fillna(df):
                 func_dict = {c: value[c] for c in value if c in df.columns}
                 return df.fillna(value=func_dict, **kwargs)
+
         else:
+
             def fillna(df):
                 return df.fillna(**kwargs)
+
         if full_axis:
             new_data = self._data_obj._map_across_full_axis(axis, fillna)
         else:
@@ -854,7 +953,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = pandas.Float64Index(q)
         else:
             q_index = pandas.Float64Index(q)
-        new_data = query_compiler._data_obj._apply_full_axis(axis, lambda df: quantile_builder(df, **kwargs), new_index=q_index, new_columns=new_columns, dtypes=np.float64)
+        new_data = query_compiler._data_obj._apply_full_axis(
+            axis,
+            lambda df: quantile_builder(df, **kwargs),
+            new_index=q_index,
+            new_columns=new_columns,
+            dtypes=np.float64,
+        )
         result = self.__constructor__(new_data)
         return result.transpose() if axis == 1 else result
 
@@ -871,7 +976,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def query_builder(df, **kwargs):
             return df.query(expr, inplace=False, **kwargs)
 
-        return self.__constructor__(self._data_obj._apply_full_axis(1, query_builder, new_columns=self.columns))
+        return self.__constructor__(
+            self._data_obj._apply_full_axis(1, query_builder, new_columns=self.columns)
+        )
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
@@ -881,7 +988,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.rank(**kwargs), new_index=self.index, new_columns=self.columns if not numeric_only else None, dtypes=np.float64)
+        new_data = self._data_obj._apply_full_axis(
+            axis,
+            lambda df: df.rank(**kwargs),
+            new_index=self.index,
+            new_columns=self.columns if not numeric_only else None,
+            dtypes=np.float64,
+        )
         return self.__constructor__(new_data)
 
     def sort_index(self, **kwargs):
@@ -904,7 +1017,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_index = pandas.Series(self.index).sort_values(**kwargs)
             new_columns = self.columns
-        new_data = self._data_obj._apply_full_axis(axis, lambda df: df.sort_index(axis=axis, **kwargs), new_index, new_columns, dtypes="copy" if axis == 0 else None)
+        new_data = self._data_obj._apply_full_axis(
+            axis,
+            lambda df: df.sort_index(axis=axis, **kwargs),
+            new_index,
+            new_columns,
+            dtypes="copy" if axis == 0 else None,
+        )
         return self.__constructor__(new_data)
 
     # END Map across rows/columns
@@ -1020,11 +1139,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if is_list_like(value):
             new_data = self._data_obj._apply_full_axis_select_indices(
-                axis, setitem, [key], new_index=self.index, new_columns=self.columns, keep_remaining=True
+                axis,
+                setitem,
+                [key],
+                new_index=self.index,
+                new_columns=self.columns,
+                keep_remaining=True,
             )
         else:
             new_data = self._data_obj._apply_select_indices(
-                axis, setitem, [key], new_index=self.index, new_columns=self.columns, keep_remaining=True
+                axis,
+                setitem,
+                [key],
+                new_index=self.index,
+                new_columns=self.columns,
+                keep_remaining=True,
             )
         return self.__constructor__(new_data)
 
@@ -1111,10 +1240,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if index is not None:
             # The unique here is to avoid duplicating rows with the same name
-            index = np.sort(self.index.get_indexer_for(self.index[~self.index.isin(index)].unique()))
+            index = np.sort(
+                self.index.get_indexer_for(self.index[~self.index.isin(index)].unique())
+            )
         if columns is not None:
             # The unique here is to avoid duplicating columns with the same name
-            columns = np.sort(self.columns.get_indexer_for(self.columns[~self.columns.isin(columns)].unique()))
+            columns = np.sort(
+                self.columns.get_indexer_for(
+                    self.columns[~self.columns.isin(columns)].unique()
+                )
+            )
         new_data = self._data_obj.mask(row_numeric_idx=index, col_numeric_idx=columns)
         return self.__constructor__(new_data)
 
@@ -1150,7 +1285,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df
 
         new_data = self._data_obj._apply_full_axis_select_indices(
-            0, insert, numeric_indices=[loc], keep_remaining=True, new_index=self.index, new_columns=self.columns.insert(loc, column)
+            0,
+            insert,
+            numeric_indices=[loc],
+            keep_remaining=True,
+            new_index=self.index,
+            new_columns=self.columns.insert(loc, column),
         )
         return self.__constructor__(new_data)
 
@@ -1197,9 +1337,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
 
-        return self.__constructor__(self._data_obj._apply_full_axis_select_indices(
-            axis, dict_apply_builder, func, keep_remaining=False
-        ))
+        return self.__constructor__(
+            self._data_obj._apply_full_axis_select_indices(
+                axis, dict_apply_builder, func, keep_remaining=False
+            )
+        )
 
     def _list_like_func(self, func, axis, *args, **kwargs):
         """Apply list-like function across given axis.
@@ -1222,7 +1364,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis == 1
             else self.columns
         )
-        new_data = self._data_obj._apply_full_axis(axis, lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)), new_index=new_index, new_columns=new_columns)
+        new_data = self._data_obj._apply_full_axis(
+            axis,
+            lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)),
+            new_index=new_index,
+            new_columns=new_columns,
+        )
         return self.__constructor__(new_data)
 
     def _callable_func(self, func, axis, *args, **kwargs):
@@ -1236,9 +1383,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler.
         """
         if isinstance(pandas.DataFrame().apply(func), pandas.Series):
-            new_data = self._data_obj._full_axis_reduce(axis, lambda df: df.apply(func, axis=axis, *args, **kwargs))
+            new_data = self._data_obj._full_axis_reduce(
+                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+            )
         else:
-            new_data = self._data_obj._apply_full_axis(axis, lambda df: df.apply(func, axis=axis, *args, **kwargs))
+            new_data = self._data_obj._apply_full_axis(
+                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+            )
         return self.__constructor__(new_data)
 
     # END UDF
@@ -1423,7 +1574,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Indexing
     def view(self, index=None, columns=None):
-        return self.__constructor__(self._data_obj.mask(row_numeric_idx=index, col_numeric_idx=columns))
+        return self.__constructor__(
+            self._data_obj.mask(row_numeric_idx=index, col_numeric_idx=columns)
+        )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):

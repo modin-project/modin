@@ -202,9 +202,7 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.data import (
-        PandasOnRayData,
-    )
+    from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayData
 
     query_compiler_cls = PandasQueryCompiler
     data_cls = PandasOnRayData

@@ -63,7 +63,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        self.oid, self._length_cache, self._width_cache = deploy_ray_func.remote(call_queue, oid)
+        self.oid, self._length_cache, self._width_cache = deploy_ray_func.remote(
+            call_queue, oid
+        )
         self.call_queue = []
 
     def __copy__(self):
@@ -93,8 +95,16 @@ class PandasOnRayFramePartition(BaseFramePartition):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache = len(row_indices) if not isinstance(row_indices, slice) else self._length_cache
-        new_obj._width_cache = len(col_indices) if not isinstance(col_indices, slice) else self._width_cache
+        new_obj._length_cache = (
+            len(row_indices)
+            if not isinstance(row_indices, slice)
+            else self._length_cache
+        )
+        new_obj._width_cache = (
+            len(col_indices)
+            if not isinstance(col_indices, slice)
+            else self._width_cache
+        )
         return new_obj
 
     @classmethod
@@ -126,7 +136,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(self.oid)
+                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                    self.oid
+                )
         if isinstance(self._length_cache, ray.ObjectID):
             try:
                 self._length_cache = ray.get(self._length_cache)
@@ -139,7 +151,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(self.oid)
+                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                    self.oid
+                )
         if isinstance(self._width_cache, ray.ObjectID):
             try:
                 self._width_cache = ray.get(self._width_cache)

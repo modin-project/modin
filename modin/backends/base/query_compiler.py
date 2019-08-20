@@ -35,6 +35,7 @@ class BaseQueryCompiler(object):
             A new Index object.
         """
         raise NotImplementedError("Must be implemented in children classes")
+
     # END dtypes and indexing abstract methods
 
     # Metadata modification abstract methods

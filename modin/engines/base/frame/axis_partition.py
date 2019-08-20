@@ -1,7 +1,5 @@
 import pandas
-from modin.data_management.utils import (
-    split_result_of_axis_func_pandas,
-)
+from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
@@ -164,7 +162,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-            cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         """Deploy a function along a full axis in Ray.
 

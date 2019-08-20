@@ -963,11 +963,15 @@ class DataFrame(BasePandasDataset):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
             # would otherwise require a lot more logic.
-            new_columns = pandas.DataFrame(columns=self.columns).join(
-                pandas.DataFrame(columns=other.columns),
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-            ).columns
+            new_columns = (
+                pandas.DataFrame(columns=self.columns)
+                .join(
+                    pandas.DataFrame(columns=other.columns),
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                )
+                .columns
+            )
             other = [other]
         else:
             # This constraint carried over from Pandas.
@@ -975,17 +979,18 @@ class DataFrame(BasePandasDataset):
                 raise ValueError(
                     "Joining multiple DataFrames only supported for joining on index"
                 )
-            new_columns = pandas.DataFrame(columns=self.columns).join(
-                [pandas.DataFrame(columns=obj.columns) for obj in other],
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-            ).columns
+            new_columns = (
+                pandas.DataFrame(columns=self.columns)
+                .join(
+                    [pandas.DataFrame(columns=obj.columns) for obj in other],
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                )
+                .columns
+            )
         new_frame = DataFrame(
             query_compiler=self._query_compiler.concat(
-                1,
-                [obj._query_compiler for obj in other],
-                join=how,
-                sort=sort,
+                1, [obj._query_compiler for obj in other], join=how, sort=sort
             )
         )
         new_frame.columns = new_columns

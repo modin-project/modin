@@ -528,7 +528,14 @@ class RayIO(BaseIO):
             dtypes.index = column_names
         else:
             dtypes = pandas.Series(dtypes, index=column_names)
-        new_data = cls.data_cls(partition_ids, new_index, column_names, row_lengths, column_widths, dtypes=dtypes)
+        new_data = cls.data_cls(
+            partition_ids,
+            new_index,
+            column_names,
+            row_lengths,
+            column_widths,
+            dtypes=dtypes,
+        )
         new_query_compiler = cls.query_compiler_cls(data_object=new_data)
 
         if skipfooter:
