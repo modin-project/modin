@@ -1341,6 +1341,15 @@ class TestDFPartOne:
             )
             modin_df_multi_level.index = new_idx
             pandas_df_multi_level.index = new_idx
+            try:  # test error
+                pandas_df_multi_level.count(
+                    axis=1, numeric_only=numeric_only, level=level
+                )
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=1, numeric_only=numeric_only, level=level
+                    )
         else:
             new_col = pandas.MultiIndex.from_tuples(
                 [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
@@ -1348,6 +1357,15 @@ class TestDFPartOne:
             )
             modin_df_multi_level.columns = new_col
             pandas_df_multi_level.columns = new_col
+            try:  # test error
+                pandas_df_multi_level.count(
+                    axis=0, numeric_only=numeric_only, level=level
+                )
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=0, numeric_only=numeric_only, level=level
+                    )
 
         for level in list(range(levels)) + axis_names:
             modin_multi_level_result = modin_df_multi_level.count(
