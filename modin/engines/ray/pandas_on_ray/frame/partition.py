@@ -128,7 +128,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
             else:
                 self._length_cache, self._width_cache = get_index_and_columns.remote(self.oid)
         if isinstance(self._length_cache, ray.ObjectID):
-            self._length_cache = ray.get(self._length_cache)
+            try:
+                self._length_cache = ray.get(self._length_cache)
+            except RayTaskError as e:
+                handle_ray_task_error(e)
         return self._length_cache
 
     def width(self):
@@ -138,7 +141,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
             else:
                 self._length_cache, self._width_cache = get_index_and_columns.remote(self.oid)
         if isinstance(self._width_cache, ray.ObjectID):
-            self._width_cache = ray.get(self._width_cache)
+            try:
+                self._width_cache = ray.get(self._width_cache)
+            except RayTaskError as e:
+                handle_ray_task_error(e)
         return self._width_cache
 
     @classmethod

@@ -720,11 +720,7 @@ class Series(BasePandasDataset):
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
     def map(self, arg, na_action=None):
-        return self.__constructor__(
-            query_compiler=self._query_compiler._map_partitions(
-                lambda df: pandas.DataFrame(df.iloc[:, 0].map(arg, na_action=na_action))
-            )
-        )
+        return self.__constructor__(query_compiler=self._query_compiler.applymap(arg))
 
     def memory_usage(self, index=True, deep=False):
         if index:
