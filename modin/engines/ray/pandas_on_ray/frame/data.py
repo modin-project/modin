@@ -660,16 +660,16 @@ class PandasOnRayData(object):
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
-    def _binary_op(self, function, right_data):
+    def _binary_op(self, function, right_data, join_type="outer"):
         left_parts, right_parts, joined_index = self._copartition(
-            0, right_data, "outer", sort=True
+            0, right_data, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_data = self._frame_mgr_cls.inter_data_operation(
             1, left_parts, lambda l, r: function(l, r), right_parts
         )
-        new_columns = self.columns.join(right_data.columns, how="outer")
+        new_columns = self.columns.join(right_data.columns, how=join_type)
         return self.__constructor__(new_data, self.index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):

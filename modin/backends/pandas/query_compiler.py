@@ -221,19 +221,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # data if the index objects don't match. An outer join + op is performed,
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
-    def _inter_manager_operations(self, other, how_to_join, func):
-        """Inter-data operations (e.g. add, sub).
-
-        Args:
-            other: The other Manager for the operation.
-            how_to_join: The type of join to join to make (e.g. right, outer).
-
-        Returns:
-            New QueryCompiler with new data and index.
-        """
-
-        new_data = self._data_obj._binary_op(func, other)
-        return self.__constructor__(new_data)
 
     def _inter_df_op_handler(self, func, other, **kwargs):
         """Helper method for inter-manager and scalar operations.
@@ -340,6 +327,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
+
         if isinstance(other, type(self)):
             # Note: Currently we are doing this with two maps across the entire
             # data. This can be done with a single map, but it will take a
@@ -349,41 +337,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_first_pass(cond, other, **kwargs):
                 return cond.where(cond, other, **kwargs)
 
+            first_pass = cond._data_obj._binary_op(
+                where_builder_first_pass, other._data_obj, join_type="left"
+            )
+
             def where_builder_second_pass(df, new_other, **kwargs):
                 return df.where(new_other.eq(True), new_other, **kwargs)
 
-            first_pass = cond._inter_manager_operations(
-                other, "left", where_builder_first_pass
+            new_data = self._data_obj._binary_op(
+                where_builder_second_pass, first_pass, join_type="left"
             )
-            final_pass = self._inter_manager_operations(
-                first_pass, "left", where_builder_second_pass
-            )
-            return self.__constructor__(final_pass.data, self.index, self.columns)
         else:
-            axis = kwargs.get("axis", 0)
-            # Rather than serializing and passing in the index/columns, we will
-            # just change this index to match the internal index.
-            if isinstance(other, pandas.Series):
-                other.index = pandas.RangeIndex(len(other.index))
 
             def where_builder_series(df, cond):
-                if axis == 0:
-                    df.index = pandas.RangeIndex(len(df.index))
-                    cond.index = pandas.RangeIndex(len(cond.index))
-                else:
-                    df.columns = pandas.RangeIndex(len(df.columns))
-                    cond.columns = pandas.RangeIndex(len(cond.columns))
                 return df.where(cond, other, **kwargs)
 
-            reindexed_self, reindexed_cond, a = self.copartition(
-                axis, cond, "left", False
-            )
-            # Unwrap from list given by `copartition`
-            reindexed_cond = reindexed_cond[0]
-            new_data = reindexed_self.inter_data_operation(
-                axis, lambda l, r: where_builder_series(l, r), reindexed_cond
-            )
-            return self.__constructor__(new_data, self.index, self.columns)
+            new_data = self._data_obj._binary_op(where_builder_series, cond._data_obj, join_type="left")
+        return self.__constructor__(new_data)
 
     # END Inter-Data operations
 
