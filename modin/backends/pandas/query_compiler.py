@@ -66,75 +66,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def dtypes(self):
         return self._data_obj.dtypes
 
-    def compute_index(self, axis, data_object, compute_diff=True):
-        """Computes the index after a number of rows have been removed.
-
-        Note: In order for this to be used properly, the indexes must not be
-            changed before you compute this.
-
-        Args:
-            axis: The axis to extract the index from.
-            data_object: The new data object to extract the index from.
-            compute_diff: True to use `self` to compute the index from self
-                rather than data_object. This is used when the dimension of the
-                index may have changed, but the deleted rows/columns are
-                unknown.
-
-        Returns:
-            A new pandas.Index object.
-        """
-
-        def pandas_index_extraction(df, axis):
-            if not axis:
-                return df.index
-            else:
-                try:
-                    return df.columns
-                except AttributeError:
-                    return pandas.Index([])
-
-        index_obj = self.index if not axis else self.columns
-        old_blocks = self.data if compute_diff else None
-        new_indices = data_object.get_indices(
-            axis=axis,
-            index_func=lambda df: pandas_index_extraction(df, axis),
-            old_blocks=old_blocks,
-        )
-        return index_obj[new_indices] if compute_diff else new_indices
-
     # END Index, columns, and dtypes objects
-
-    def numeric_function_clean_dataframe(self, axis):
-        """Preprocesses numeric functions to clean dataframe and pick numeric indices.
-
-        Args:
-            axis: '0' if columns and '1' if rows.
-
-        Returns:
-            Tuple with return value(if any), indices to apply func to & cleaned Manager.
-        """
-        result = None
-        query_compiler = self
-        # If no numeric columns and over columns, then return empty Series
-        if not axis and len(self.index) == 0:
-            result = pandas.Series(dtype=np.int64)
-
-        nonnumeric = [
-            col
-            for col, dtype in zip(self.columns, self.dtypes)
-            if not is_numeric_dtype(dtype)
-        ]
-        if len(nonnumeric) == len(self.columns):
-            # If over rows and no numeric columns, return this
-            if axis:
-                result = pandas.Series([np.nan for _ in self.index])
-            else:
-                result = pandas.Series([0 for _ in self.index])
-        else:
-            query_compiler = self.drop(columns=nonnumeric)
-        return result, query_compiler
-
-    # END Internal methods
 
     # Metadata modification methods
     def add_prefix(self, prefix, axis=1):
@@ -216,37 +148,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END To NumPy
 
-    # Inter-Data operations (e.g. add, sub)
+    # Binary operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
-
-    def _inter_df_op_handler(self, func, other, **kwargs):
-        """Helper method for inter-manager and scalar operations.
-
-        Args:
-            func: The function to use on the Manager/scalar.
-            other: The other Manager/scalar.
-
-        Returns:
-            New QueryCompiler with new data and index.
-        """
-        axis = kwargs.get("axis", 0)
-        if isinstance(other, type(self)):
-            return self.__constructor__(self._data_obj._binary_op(
-                lambda x, y: func(x, y, **kwargs), other._data_obj
-            ))
-        else:
-            if isinstance(other, (list, np.ndarray, pandas.Series)):
-                if axis == 1 and isinstance(other, pandas.Series):
-                    new_columns = self.columns.join(other.index, how="outer")
-                else:
-                    new_columns = self.columns
-                new_data = self._data_obj._apply_full_axis(axis, lambda df: func(df, other, **kwargs), new_index=self.index, new_columns=new_columns)
-            else:
-                new_data = self._data_obj._map_partitions(lambda df: func(df, other, **kwargs))
-            return self.__constructor__(new_data)
 
     def binary_op(self, op, other, **kwargs):
         """Perform an operation between two objects.
@@ -280,8 +186,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler object.
         """
-        func = getattr(pandas.DataFrame, op)
-        return self._inter_df_op_handler(func, other, **kwargs)
+        if not callable(op):
+            func = getattr(pandas.DataFrame, op)
+        else:
+            func = op
+        axis = kwargs.get("axis", 0)
+        if isinstance(other, type(self)):
+            return self.__constructor__(self._data_obj._binary_op(
+                lambda x, y: func(x, y, **kwargs), other._data_obj
+            ))
+        else:
+            if isinstance(other, (list, np.ndarray, pandas.Series)):
+                if axis == 1 and isinstance(other, pandas.Series):
+                    new_columns = self.columns.join(other.index, how="outer")
+                else:
+                    new_columns = self.columns
+                new_data = self._data_obj._apply_full_axis(axis, lambda df: func(df, other, **kwargs),
+                                                           new_index=self.index, new_columns=new_columns)
+            else:
+                new_data = self._data_obj._map_partitions(lambda df: func(df, other, **kwargs))
+            return self.__constructor__(new_data)
 
     def clip(self, lower, upper, **kwargs):
         kwargs["upper"] = upper
@@ -302,9 +226,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             New QueryCompiler with updated data and index.
         """
-        assert isinstance(
-            other, type(self)
-        ), "Must have the same QueryCompiler subclass to perform this operation"
 
         def update_builder(df, other, **kwargs):
             # This is because of a requirement in Arrow
@@ -312,7 +233,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.update(other, **kwargs)
             return df
 
-        return self._inter_df_op_handler(update_builder, other, **kwargs)
+        return self.binary_op(update_builder, other, **kwargs)
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -1521,106 +1442,3 @@ class PandasQueryCompiler(BaseQueryCompiler):
             item_to_distribute=broadcasted_items,
         )
         return self.__constructor__(new_data)
-
-    def global_idx_to_numeric_idx(self, axis, indices):
-        """
-        Note: this function involves making copies of the index in memory.
-
-        Args:
-            axis: Axis to extract indices.
-            indices: Indices to convert to numerical.
-
-        Returns:
-            An Index object.
-        """
-        assert axis in ["row", "col", "columns"]
-        if axis == "row":
-            return pandas.Index(
-                pandas.Series(np.arange(len(self.index)), index=self.index)
-                .loc[indices]
-                .values
-            )
-        elif axis in ["col", "columns"]:
-            return pandas.Index(
-                pandas.Series(np.arange(len(self.columns)), index=self.columns)
-                .loc[indices]
-                .values
-            )
-
-    def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
-        new_data = self.data.enlarge_partitions(
-            len(new_row_labels), len(new_col_labels)
-        )
-        concated_index = (
-            self.index.append(type(self.index)(new_row_labels))
-            if new_row_labels
-            else self.index
-        )
-        concated_columns = (
-            self.columns.append(type(self.columns)(new_col_labels))
-            if new_col_labels
-            else self.columns
-        )
-        return self.__constructor__(new_data, concated_index, concated_columns)
-
-
-class PandasQueryCompilerView(PandasQueryCompiler):
-    """
-    This class represent a view of the PandasQueryCompiler
-
-    In particular, the following constraints are broken:
-    - (len(self.index), len(self.columns)) != self.data.shape
-
-    Note:
-        The constraint will be satisfied when we get the data
-    """
-
-    def __init__(
-        self,
-        data_object,
-        index_map_series=None,
-        columns_map_series=None,
-    ):
-        """
-        Args:
-            index_map_series: a Pandas Series Object mapping user-facing index to
-                numeric index.
-            columns_map_series: a Pandas Series Object mapping user-facing index to
-                numeric index.
-        """
-        assert index_map_series is not None
-        assert columns_map_series is not None
-        self.index_map = index_map_series
-        self.columns_map = columns_map_series
-        PandasQueryCompiler.__init__(self, data_object)
-
-    @property
-    def __constructor__(self):
-        """Return parent object when getting the constructor."""
-        return PandasQueryCompiler
-
-    def _get_data(self):
-        """Perform the map step
-
-        Returns:
-            A BaseFrameManager object.
-        """
-        masked_data = self.parent_data.mask(
-            row_indices=self.index_map.values, col_indices=self.columns_map.values
-        )
-        return masked_data
-
-    def _set_data(self, new_data):
-        """Note this setter will be called by the
-            `super(PandasQueryCompiler).__init__` function
-        """
-        self.parent_data = new_data
-
-    _data_obj = property(_get_data, _set_data)
-
-    def global_idx_to_numeric_idx(self, axis, indices):
-        assert axis in ["row", "col", "columns"]
-        if axis == "row":
-            return self.index_map.loc[indices].index
-        elif axis in ["col", "columns"]:
-            return self.columns_map.loc[indices].index

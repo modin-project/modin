@@ -6,10 +6,7 @@ import numpy as np
 import pandas
 
 from modin.error_message import ErrorMessage
-from modin.data_management.utils import (
-    compute_chunksize,
-    _get_nan_block_id,
-)
+from modin.data_management.utils import compute_chunksize
 
 
 class BaseFrameManager(object):
@@ -36,20 +33,13 @@ class BaseFrameManager(object):
         """
         raise NotImplementedError("Must be implemented in children classes")
 
-    @property
-    def __constructor__(self):
-        """Convenience method for creating new objects.
-
-        Note: This is used by the abstract class to ensure the return type is the same
-            as the child subclassing it.
-        """
-        return type(self)
-
     # Partition class is the class to use for storing each partition. It must
     # extend the `BaseFramePartition` class.
     _partition_class = None
     # Column partitions class is the class to use to create the column partitions.
     _column_partitions_class = None
+    # Row partitions class is the class to use to create the row partitions.
+    _row_partition_class = None
 
     @classmethod
     def preprocess_func(cls, map_func):
@@ -293,22 +283,6 @@ class BaseFrameManager(object):
         else:
             return np.append(left_parts, right_parts, axis=axis)
 
-    def copy(self):
-        """Create a copy of this object.
-
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
-        """
-        return self.__constructor__(self.partitions.copy())
-
-    def transpose(self, *args, **kwargs):
-        """Transpose the blocks stored in this object.
-
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
-        """
-        return self.__constructor__(self.partitions.T)
-
     @classmethod
     def to_pandas(cls, partitions):
         """Convert this object into a Pandas DataFrame from the partitions.
@@ -344,16 +318,14 @@ class BaseFrameManager(object):
         else:
             return pandas.concat(df_rows)
 
-    def to_numpy(self, is_transposed=False):
+    @classmethod
+    def to_numpy(cls, partitions):
         """Convert this object into a NumPy Array from the partitions.
 
         Returns:
             A NumPy Array
         """
-        arr = np.block([[block.to_numpy() for block in row] for row in self.partitions])
-        if is_transposed:
-            return arr.T
-        return arr
+        return np.block([[block.to_numpy() for block in row] for row in partitions])
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):
@@ -413,47 +385,6 @@ class BaseFrameManager(object):
         from modin.pandas import DEFAULT_NPARTITIONS
 
         return DEFAULT_NPARTITIONS
-
-    # Extracting rows/columns
-    def _get_blocks_containing_index(self, axis, index):
-        """Convert a global index to a block index and local index.
-
-        Note: This method is primarily used to convert a global index into a
-            partition index (along the axis provided) and local index (useful
-            for `iloc` or similar operations.
-
-        Args:
-            axis: The axis along which to get the indices
-                (0 - columns, 1 - rows)
-            index: The global index to convert.
-
-        Returns:
-            A tuple containing (block index and internal index).
-        """
-        if not axis:
-            ErrorMessage.catch_bugs_and_request_email(index > sum(self.block_widths))
-            cumulative_column_widths = np.array(self.block_widths).cumsum()
-            block_idx = int(np.digitize(index, cumulative_column_widths))
-            if block_idx == len(cumulative_column_widths):
-                block_idx -= 1
-            # Compute the internal index based on the previous lengths. This
-            # is a global index, so we must subtract the lengths first.
-            internal_idx = (
-                index
-                if not block_idx
-                else index - cumulative_column_widths[block_idx - 1]
-            )
-        else:
-            ErrorMessage.catch_bugs_and_request_email(index > sum(self.block_lengths))
-            cumulative_row_lengths = np.array(self.block_lengths).cumsum()
-            block_idx = int(np.digitize(index, cumulative_row_lengths))
-            # See note above about internal index
-            internal_idx = (
-                index
-                if not block_idx
-                else index - cumulative_row_lengths[block_idx - 1]
-            )
-        return block_idx, internal_idx
 
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
@@ -751,55 +682,3 @@ class BaseFrameManager(object):
             ]
         )
         return result if axis else result.T
-
-    def manual_shuffle(self, axis, shuffle_func, lengths, transposed=False):
-        """Shuffle the partitions based on the `shuffle_func`.
-
-        Args:
-            axis: The axis to shuffle across.
-            shuffle_func: The function to apply before splitting the result.
-            lengths: The length of each partition to split the result into.
-
-        Returns:
-             A new BaseFrameManager object, the type of object that called this.
-        """
-        if axis:
-            partitions = self.row_partitions
-        else:
-            partitions = self.column_partitions
-        func = self.preprocess_func(shuffle_func)
-        result = np.array(
-            [part.shuffle(func, lengths, _transposed=transposed) for part in partitions]
-        )
-        return self.__constructor__(result) if axis else self.__constructor__(result.T)
-
-    def __getitem__(self, key):
-        return self.__constructor__(self.partitions[key])
-
-    def __len__(self):
-        return sum(self.block_lengths)
-
-    def enlarge_partitions(self, n_rows=None, n_cols=None):
-        data = self.partitions
-        if n_rows:
-            n_cols_lst = self.block_widths
-            nan_oids_lst = [
-                self._partition_class(
-                    _get_nan_block_id(self._partition_class, n_rows, n_cols_)
-                )
-                for n_cols_ in n_cols_lst
-            ]
-            new_chunk = self.__constructor__(np.array([nan_oids_lst]))
-            data = self.concat(axis=0, right_parts=new_chunk)
-
-        if n_cols:
-            n_rows_lst = self.block_lengths
-            nan_oids_lst = [
-                self._partition_class(
-                    _get_nan_block_id(self._partition_class, n_rows_, n_cols)
-                )
-                for n_rows_ in n_rows_lst
-            ]
-            new_chunk = self.__constructor__(np.array([nan_oids_lst]).T)
-            data = self.concat(axis=1, right_parts=new_chunk)
-        return data

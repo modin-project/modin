@@ -604,19 +604,6 @@ class PandasOnRayData(object):
             new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(self._partitions, func, row_partitions_list, col_partitions_list, item_to_distribute)
             return self.__constructor__(new_partitions, new_index, new_columns, self._row_lengths_cache, self._column_widths_cache)
 
-    def _manual_repartition(self, axis, repartition_func, **kwargs):
-        """This method applies all manual partitioning functions.
-
-        Args:
-            axis: The axis to shuffle data along.
-            repartition_func: The function used to repartition data.
-
-        Returns:
-            A `BaseFrameManager` object.
-        """
-        func = self._prepare_method(repartition_func, **kwargs)
-        return self.data.manual_shuffle(axis, func)
-
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """Copartition two QueryCompiler objects.
 
