@@ -4,12 +4,10 @@ from __future__ import print_function
 
 from modin.engines.base.io import BaseIO
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.engines.python.pandas_on_python.frame.partition_manager import (
-    PythonFrameManager,
-)
+from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonData
 
 
 class PandasOnPythonIO(BaseIO):
 
-    frame_mgr_cls = PythonFrameManager
+    data_cls = PandasOnPythonData
     query_compiler_cls = PandasQueryCompiler

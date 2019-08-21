@@ -211,13 +211,11 @@ class PandasOnRayFactory(BaseFactory):
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.engines.python.pandas_on_python.frame.partition_manager import (
-        PythonFrameManager,
-    )
+    from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonData
     from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
     query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = PythonFrameManager
+    data_cls = PandasOnPythonData
     io_cls = PandasOnPythonIO
 
 
