@@ -199,7 +199,6 @@ def _read_sql_with_limit_offset(
 
 class PandasOnRayIO(RayIO):
 
-    frame_mgr_cls = PandasOnRayFrameManager
     frame_partition_cls = PandasOnRayFramePartition
     query_compiler_cls = PandasQueryCompiler
     data_cls = PandasOnRayData

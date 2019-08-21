@@ -452,7 +452,6 @@ def test_from_json_lines():
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME, lines=True)
     modin_df = pd.read_json(TEST_JSON_FILENAME, lines=True)
-
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_json_file()
