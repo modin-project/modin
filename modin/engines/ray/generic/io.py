@@ -286,7 +286,6 @@ class RayIO(BaseIO):
                 else index_len - (index_chunksize * (num_splits - 1))
                 for i in range(num_splits)
             ]
-        blk_partitions = blk_partitions[:-2]
         remote_partitions = np.array(
             [
                 [
@@ -297,7 +296,7 @@ class RayIO(BaseIO):
                     )
                     for j in range(len(blk_partitions[i]))
                 ]
-                for i in range(len(blk_partitions))
+                for i in range(len(blk_partitions[:-2]))
             ]
         )
         # Compute dtypes concatenating the results from each of the columns splits
@@ -305,13 +304,11 @@ class RayIO(BaseIO):
         # column.
         dtypes_ids = list(blk_partitions[-1])
         dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
-        dtypes.index = columns
-
         if directory:
             columns += partitioned_columns
         dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns, dtypes=dtypes
+            cls.data_cls(remote_partitions, index, columns, row_lengths, column_widths, dtypes=dtypes)
         )
 
         return new_query_compiler
