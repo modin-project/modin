@@ -1514,61 +1514,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not is_list_like(columns):
             columns = [columns]
 
-        # We have to do one of two things in order to ensure the final columns
-        # are correct. Our first option is to map over the data and assign the
-        # columns in a separate pass. That is what we have chosen to do here.
-        # This is not as efficient, but it requires less information from the
-        # lower layers and does not break any of our internal requirements. The
-        # second option is that we assign the columns as a part of the
-        # `get_dummies` call. This requires knowledge of the length of each
-        # partition, and breaks some of our assumptions and separation of
-        # concerns.
-        def set_columns(df, columns):
-            df.columns = columns
-            return df
-
-        set_cols = self.columns
-        columns_applied = self._map_across_full_axis(
-            1, lambda df: set_columns(df, set_cols)
-        )
         # In some cases, we are mapping across all of the data. It is more
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-
-            def get_dummies_builder(df):
-                if df is not None:
-                    if not df.empty:
-                        return pandas.get_dummies(df, **kwargs)
-                    else:
-                        return pandas.DataFrame([])
-
-            func = self._prepare_method(lambda df: get_dummies_builder(df))
-            new_data = columns_applied.map_across_full_axis(0, func)
+            new_data = self._data_obj._map_across_full_axis(0, lambda df: pandas.get_dummies(df, **kwargs))
             untouched_data = None
         else:
-
-            def get_dummies_builder(df, internal_indices=[]):
-                return pandas.get_dummies(
-                    df.iloc[:, internal_indices], columns=None, **kwargs
-                )
-
-            numeric_indices = list(self.columns.get_indexer_for(columns))
-            new_data = columns_applied.apply_func_to_select_indices_along_full_axis(
-                0, get_dummies_builder, numeric_indices, keep_remaining=False
+            new_data = self._data_obj.mask(col_indices=columns)._map_across_full_axis(
+                0, lambda df: pandas.get_dummies(df, **kwargs)
             )
             untouched_data = self.drop(columns=columns)
-        # Since we set the columns in the beginning, we can just extract them
-        # here. There is fortunately no required extra steps for a correct
-        # column index.
-        final_columns = self.compute_index(1, new_data, False)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_data` with the raw data from the columns that were
         # not selected.
         if len(columns) != len(self.columns):
-            new_data = untouched_data.data.concat(1, new_data)
-            final_columns = untouched_data.columns.append(pandas.Index(final_columns))
-        return cls(new_data, self.index, final_columns)
+            new_data = untouched_data._data_obj._concat(1, [new_data], how="left", sort=False)
+        return cls(new_data)
 
     # END Get_dummies
 
