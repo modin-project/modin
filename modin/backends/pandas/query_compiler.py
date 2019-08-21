@@ -1410,6 +1410,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_args=None,
         numeric_only=True,
     ):
+        assert isinstance(by, type(self)), "Can only use groupby reduce with another Query Compiler"
+
         def _map(df, other):
             return map_func(
                 df.groupby(by=other.squeeze(), axis=axis, **groupby_args), **map_args
@@ -1430,42 +1432,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.groupby(by=df.columns[0], axis=axis, **groupby_args), **map_args
                 )
 
-        new_data = self.data.groupby_reduce(axis, by.data, _map, _reduce)
         if axis == 0:
             new_columns = (
-                self.columns if not numeric_only else self._numeric_columns(True)
+                self.columns if not numeric_only else self._data_obj._numeric_columns(True)
             )
-            new_index = self.compute_index(axis, new_data, False)
+            new_index = None
         else:
-            new_columns = self.compute_index(axis, new_data, False)
             new_index = self.index
-        return self.__constructor__(new_data, new_index, new_columns)
+            new_columns = None
+        new_data = self._data_obj.groupby_reduce(axis, by._data_obj, _map, _reduce, new_columns=new_columns, new_index=new_index)
+        return self.__constructor__(new_data)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
 
-        remote_index = self.index if not axis else self.columns
-
         def groupby_agg_builder(df):
-            if not axis:
-                df.index = remote_index
-                df.columns = pandas.RangeIndex(len(df.columns))
-                # We need to be careful that our internal index doesn't overlap with the
-                # groupby values, otherwise we return an incorrect result. We
-                # temporarily modify the columns so that we don't run into correctness
-                # issues.
-                if all(b in df for b in by):
-                    df = df.add_prefix("_")
-            else:
-                df.columns = remote_index
-                df.index = pandas.RangeIndex(len(df.index))
 
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
                 try:
                     result = agg_func(grouped_df, **agg_args)
-                    # This will set things back if we changed them (see above).
-                    if axis == 0 and not is_numeric_dtype(result.columns.dtype):
-                        result.columns = [int(col[1:]) for col in result]
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid issues
                 # with extracting the index.
@@ -1480,14 +1465,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except ValueError:
                 return compute_groupby(df.copy())
 
-        func_prepared = self._prepare_method(lambda df: groupby_agg_builder(df))
-        result_data = self._map_across_full_axis(axis, func_prepared)
-        if axis == 0:
-            index = self.compute_index(0, result_data, False)
-            columns = self.compute_index(1, result_data, True)
-        else:
-            index = self.compute_index(0, result_data, True)
-            columns = self.compute_index(1, result_data, False)
+        result_data = self._data_obj._apply_full_axis(axis, lambda df: groupby_agg_builder(df))
         return self.__constructor__(result_data)
 
     # END Manual Partitioning methods

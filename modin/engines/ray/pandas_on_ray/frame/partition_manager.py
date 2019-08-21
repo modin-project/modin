@@ -57,7 +57,8 @@ class PandasOnRayFrameManager(RayFrameManager):
         new_idx = ray.get(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
-    def groupby_reduce(self, axis, by, map_func, reduce_func):  # pragma: no cover
+    @classmethod
+    def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):  # pragma: no cover
         @ray.remote
         def func(df, other, map_func, call_queue_df=[], call_queue_other=[]):
             if len(call_queue_df) > 0:
@@ -69,11 +70,10 @@ class PandasOnRayFrameManager(RayFrameManager):
             return map_func(df, other)
 
         map_func = ray.put(map_func)
-        by_parts = np.squeeze(by.partitions)
+        by_parts = np.squeeze(by)
         if len(by_parts.shape) == 0:
             by_parts = np.array([by_parts.item()])
-        new_partitions = self.__constructor__(
-            np.array(
+        new_partitions = np.array(
                 [
                     [
                         PandasOnRayFramePartition(
@@ -89,10 +89,9 @@ class PandasOnRayFrameManager(RayFrameManager):
                                 else by_parts[row_idx].call_queue,
                             )
                         )
-                        for col_idx, part in enumerate(self.partitions[row_idx])
+                        for col_idx, part in enumerate(partitions[row_idx])
                     ]
-                    for row_idx in range(len(self.partitions))
+                    for row_idx in range(len(partitions))
                 ]
             )
-        )
-        return new_partitions.map_across_full_axis(axis, reduce_func)
+        return cls.map_across_full_axis(axis, new_partitions, reduce_func)

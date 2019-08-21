@@ -87,13 +87,13 @@ class BaseFrameManager(object):
         """
         return [cls._row_partition_class(row) for row in partitions]
 
-    def groupby_reduce(self, axis, by, map_func, reduce_func):
-        by_parts = np.squeeze(by.partitions)
+    @classmethod
+    def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):
+        by_parts = np.squeeze(by)
         if len(by_parts.shape) == 0:
             by_parts = np.array([by_parts.item()])
         [obj.drain_call_queue() for obj in by_parts]
-        new_partitions = self.__constructor__(
-            np.array(
+        new_partitions = np.array(
                 [
                     [
                         part.apply(
@@ -102,13 +102,12 @@ class BaseFrameManager(object):
                             if axis
                             else by_parts[row_idx].get(),
                         )
-                        for col_idx, part in enumerate(self.partitions[row_idx])
+                        for col_idx, part in enumerate(partitions[row_idx])
                     ]
-                    for row_idx in range(len(self.partitions))
+                    for row_idx in range(len(partitions))
                 ]
             )
-        )
-        return new_partitions.map_across_full_axis(axis, reduce_func)
+        return cls.map_across_full_axis(axis, new_partitions, reduce_func)
 
     @classmethod
     def map_across_blocks(cls, partitions, map_func):
