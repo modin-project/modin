@@ -94,19 +94,19 @@ class BaseFrameManager(object):
             by_parts = np.array([by_parts.item()])
         [obj.drain_call_queue() for obj in by_parts]
         new_partitions = np.array(
+            [
                 [
-                    [
-                        part.apply(
-                            map_func,
-                            other=by_parts[col_idx].get()
-                            if axis
-                            else by_parts[row_idx].get(),
-                        )
-                        for col_idx, part in enumerate(partitions[row_idx])
-                    ]
-                    for row_idx in range(len(partitions))
+                    part.apply(
+                        map_func,
+                        other=by_parts[col_idx].get()
+                        if axis
+                        else by_parts[row_idx].get(),
+                    )
+                    for col_idx, part in enumerate(partitions[row_idx])
                 ]
-            )
+                for row_idx in range(len(partitions))
+            ]
+        )
         return cls.map_across_full_axis(axis, new_partitions, reduce_func)
 
     @classmethod

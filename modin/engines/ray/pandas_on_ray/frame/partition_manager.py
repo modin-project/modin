@@ -58,7 +58,9 @@ class PandasOnRayFrameManager(RayFrameManager):
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
-    def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):  # pragma: no cover
+    def groupby_reduce(
+        cls, axis, partitions, by, map_func, reduce_func
+    ):  # pragma: no cover
         @ray.remote
         def func(df, other, map_func, call_queue_df=[], call_queue_other=[]):
             if len(call_queue_df) > 0:
@@ -74,24 +76,22 @@ class PandasOnRayFrameManager(RayFrameManager):
         if len(by_parts.shape) == 0:
             by_parts = np.array([by_parts.item()])
         new_partitions = np.array(
+            [
                 [
-                    [
-                        PandasOnRayFramePartition(
-                            func.remote(
-                                part.oid,
-                                by_parts[col_idx].oid
-                                if axis
-                                else by_parts[row_idx].oid,
-                                map_func,
-                                part.call_queue,
-                                by_parts[col_idx].call_queue
-                                if axis
-                                else by_parts[row_idx].call_queue,
-                            )
+                    PandasOnRayFramePartition(
+                        func.remote(
+                            part.oid,
+                            by_parts[col_idx].oid if axis else by_parts[row_idx].oid,
+                            map_func,
+                            part.call_queue,
+                            by_parts[col_idx].call_queue
+                            if axis
+                            else by_parts[row_idx].call_queue,
                         )
-                        for col_idx, part in enumerate(partitions[row_idx])
-                    ]
-                    for row_idx in range(len(partitions))
+                    )
+                    for col_idx, part in enumerate(partitions[row_idx])
                 ]
-            )
+                for row_idx in range(len(partitions))
+            ]
+        )
         return cls.map_across_full_axis(axis, new_partitions, reduce_func)

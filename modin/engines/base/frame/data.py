@@ -861,8 +861,12 @@ class BasePandasData(object):
             new_index = joined_index
         return self.__constructor__(new_partitions, new_index, new_columns)
 
-    def groupby_reduce(self, axis, by, map_func, reduce_func, new_index=None, new_columns=None):
-        new_partitions = self._frame_mgr_cls.groupby_reduce(axis, self._partitions, by._partitions, map_func, reduce_func)
+    def groupby_reduce(
+        self, axis, by, map_func, reduce_func, new_index=None, new_columns=None
+    ):
+        new_partitions = self._frame_mgr_cls.groupby_reduce(
+            axis, self._partitions, by._partitions, map_func, reduce_func
+        )
         if new_columns is None:
             new_columns = self._frame_mgr_cls.get_indices(
                 1, new_partitions, lambda df: df.columns
@@ -877,7 +881,9 @@ class BasePandasData(object):
         else:
             new_widths = None
             new_lengths = self.row_lengths
-        return self.__constructor__(new_partitions, new_index, new_columns, new_lengths, new_widths)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, new_lengths, new_widths
+        )
 
     @classmethod
     def from_pandas(cls, df):

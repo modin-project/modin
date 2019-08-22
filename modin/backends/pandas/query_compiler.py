@@ -1410,7 +1410,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_args=None,
         numeric_only=True,
     ):
-        assert isinstance(by, type(self)), "Can only use groupby reduce with another Query Compiler"
+        assert isinstance(
+            by, type(self)
+        ), "Can only use groupby reduce with another Query Compiler"
 
         def _map(df, other):
             return map_func(
@@ -1434,19 +1436,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if axis == 0:
             new_columns = (
-                self.columns if not numeric_only else self._data_obj._numeric_columns(True)
+                self.columns
+                if not numeric_only
+                else self._data_obj._numeric_columns(True)
             )
             new_index = None
         else:
             new_index = self.index
             new_columns = None
-        new_data = self._data_obj.groupby_reduce(axis, by._data_obj, _map, _reduce, new_columns=new_columns, new_index=new_index)
+        new_data = self._data_obj.groupby_reduce(
+            axis,
+            by._data_obj,
+            _map,
+            _reduce,
+            new_columns=new_columns,
+            new_index=new_index,
+        )
         return self.__constructor__(new_data)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
-
         def groupby_agg_builder(df):
-
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
                 try:
@@ -1465,7 +1474,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except ValueError:
                 return compute_groupby(df.copy())
 
-        result_data = self._data_obj._apply_full_axis(axis, lambda df: groupby_agg_builder(df))
+        result_data = self._data_obj._apply_full_axis(
+            axis, lambda df: groupby_agg_builder(df)
+        )
         return self.__constructor__(result_data)
 
     # END Manual Partitioning methods
@@ -1496,7 +1507,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-            new_data = self._data_obj._map_across_full_axis(0, lambda df: pandas.get_dummies(df, **kwargs))
+            new_data = self._data_obj._map_across_full_axis(
+                0, lambda df: pandas.get_dummies(df, **kwargs)
+            )
             untouched_data = None
         else:
             new_data = self._data_obj.mask(col_indices=columns)._map_across_full_axis(
@@ -1507,7 +1520,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # prepend the `new_data` with the raw data from the columns that were
         # not selected.
         if len(columns) != len(self.columns):
-            new_data = untouched_data._data_obj._concat(1, [new_data], how="left", sort=False)
+            new_data = untouched_data._data_obj._concat(
+                1, [new_data], how="left", sort=False
+            )
         return cls(new_data)
 
     # END Get_dummies
