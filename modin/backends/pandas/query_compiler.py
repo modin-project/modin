@@ -40,10 +40,10 @@ def _set_axis(axis):
         return set_cols
 
 
-def _str_map(func):
+def _str_map(func_name):
     def str_op_builder(df, *args, **kwargs):
-        str_series = df.squeeze().str
-        return func(str_series, *args, **kwargs).to_frame()
+        str_s = df.squeeze().str
+        return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
 
     return str_op_builder
 
@@ -547,56 +547,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Map partitions operations
 
-    # This is here to shorten the call to pandas
-    str_ops = pandas.Series.str
+    # String map partitions operations
 
-    str_capitalize = MapFunction.register(_str_map(str_ops.capitalize), dtypes="copy")
-    str_center = MapFunction.register(_str_map(str_ops.center), dtypes="copy")
-    str_contains = MapFunction.register(_str_map(str_ops.contains), dtypes=np.bool)
-    str_count = MapFunction.register(_str_map(str_ops.count), dtypes=int)
-    str_endswith = MapFunction.register(_str_map(str_ops.endswith), dtypes=np.bool)
-    str_find = MapFunction.register(_str_map(str_ops.find), dtypes="copy")
-    str_findall = MapFunction.register(_str_map(str_ops.findall), dtypes="copy")
-    str_get = MapFunction.register(_str_map(str_ops.get), dtypes="copy")
-    str_index = MapFunction.register(_str_map(str_ops.index), dtypes="copy")
-    str_isalnum = MapFunction.register(_str_map(str_ops.isalnum), dtypes=np.bool)
-    str_isalpha = MapFunction.register(_str_map(str_ops.isalpha), dtypes=np.bool)
-    str_isdecimal = MapFunction.register(_str_map(str_ops.isdecimal), dtypes=np.bool)
-    str_isdigit = MapFunction.register(_str_map(str_ops.isdigit), dtypes=np.bool)
-    str_islower = MapFunction.register(_str_map(str_ops.islower), dtypes=np.bool)
-    str_isnumeric = MapFunction.register(_str_map(str_ops.isnumeric), dtypes=np.bool)
-    str_isspace = MapFunction.register(_str_map(str_ops.isspace), dtypes=np.bool)
-    str_istitle = MapFunction.register(_str_map(str_ops.istitle), dtypes=np.bool)
-    str_isupper = MapFunction.register(_str_map(str_ops.isupper), dtypes=np.bool)
-    str_join = MapFunction.register(_str_map(str_ops.join), dtypes="copy")
-    str_len = MapFunction.register(_str_map(str_ops.len), dtypes=int)
-    str_ljust = MapFunction.register(_str_map(str_ops.ljust), dtypes="copy")
-    str_lower = MapFunction.register(_str_map(str_ops.lower), dtypes="copy")
-    str_lstrip = MapFunction.register(_str_map(str_ops.lstrip), dtypes="copy")
-    str_match = MapFunction.register(_str_map(str_ops.match), dtypes="copy")
-    str_normalize = MapFunction.register(_str_map(str_ops.normalize), dtypes="copy")
-    str_pad = MapFunction.register(_str_map(str_ops.pad), dtypes="copy")
-    str_partition = MapFunction.register(_str_map(str_ops.partition), dtypes="copy")
-    str_repeat = MapFunction.register(_str_map(str_ops.repeat), dtypes="copy")
-    str_replace = MapFunction.register(_str_map(str_ops.replace), dtypes="copy")
-    str_rfind = MapFunction.register(_str_map(str_ops.rfind), dtypes="copy")
-    str_rindex = MapFunction.register(_str_map(str_ops.rindex), dtypes="copy")
-    str_rjust = MapFunction.register(_str_map(str_ops.rjust), dtypes="copy")
-    str_rpartition = MapFunction.register(_str_map(str_ops.rpartition), dtypes="copy")
-    str_rsplit = MapFunction.register(_str_map(str_ops.rsplit), dtypes="copy")
-    str_rstrip = MapFunction.register(_str_map(str_ops.rstrip), dtypes="copy")
-    str_slice = MapFunction.register(_str_map(str_ops.slice), dtypes="copy")
-    str_slice_replace = MapFunction.register(
-        _str_map(str_ops.slice_replace), dtypes="copy"
-    )
-    str_split = MapFunction.register(_str_map(str_ops.split), dtypes="copy")
-    str_startswith = MapFunction.register(_str_map(str_ops.startswith), dtypes=np.bool)
-    str_strip = MapFunction.register(_str_map(str_ops.strip), dtypes="copy")
-    str_swapcase = MapFunction.register(_str_map(str_ops.swapcase), dtypes="copy")
-    str_translate = MapFunction.register(_str_map(str_ops.translate), dtypes="copy")
-    str_upper = MapFunction.register(_str_map(str_ops.upper), dtypes="copy")
-    str_wrap = MapFunction.register(_str_map(str_ops.wrap), dtypes="copy")
-    str_zfill = MapFunction.register(_str_map(str_ops.zfill), dtypes="copy")
+    str_capitalize = MapFunction.register(_str_map("capitalize"), dtypes="copy")
+    str_center = MapFunction.register(_str_map("center"), dtypes="copy")
+    str_contains = MapFunction.register(_str_map("contains"), dtypes=np.bool)
+    str_count = MapFunction.register(_str_map("count"), dtypes=int)
+    str_endswith = MapFunction.register(_str_map("endswith"), dtypes=np.bool)
+    str_find = MapFunction.register(_str_map("find"), dtypes="copy")
+    str_findall = MapFunction.register(_str_map("findall"), dtypes="copy")
+    str_get = MapFunction.register(_str_map("get"), dtypes="copy")
+    str_index = MapFunction.register(_str_map("index"), dtypes="copy")
+    str_isalnum = MapFunction.register(_str_map("isalnum"), dtypes=np.bool)
+    str_isalpha = MapFunction.register(_str_map("isalpha"), dtypes=np.bool)
+    str_isdecimal = MapFunction.register(_str_map("isdecimal"), dtypes=np.bool)
+    str_isdigit = MapFunction.register(_str_map("isdigit"), dtypes=np.bool)
+    str_islower = MapFunction.register(_str_map("islower"), dtypes=np.bool)
+    str_isnumeric = MapFunction.register(_str_map("isnumeric"), dtypes=np.bool)
+    str_isspace = MapFunction.register(_str_map("isspace"), dtypes=np.bool)
+    str_istitle = MapFunction.register(_str_map("istitle"), dtypes=np.bool)
+    str_isupper = MapFunction.register(_str_map("isupper"), dtypes=np.bool)
+    str_join = MapFunction.register(_str_map("join"), dtypes="copy")
+    str_len = MapFunction.register(_str_map("len"), dtypes=int)
+    str_ljust = MapFunction.register(_str_map("ljust"), dtypes="copy")
+    str_lower = MapFunction.register(_str_map("lower"), dtypes="copy")
+    str_lstrip = MapFunction.register(_str_map("lstrip"), dtypes="copy")
+    str_match = MapFunction.register(_str_map("match"), dtypes="copy")
+    str_normalize = MapFunction.register(_str_map("normalize"), dtypes="copy")
+    str_pad = MapFunction.register(_str_map("pad"), dtypes="copy")
+    str_partition = MapFunction.register(_str_map("partition"), dtypes="copy")
+    str_repeat = MapFunction.register(_str_map("repeat"), dtypes="copy")
+    str_replace = MapFunction.register(_str_map("replace"), dtypes="copy")
+    str_rfind = MapFunction.register(_str_map("rfind"), dtypes="copy")
+    str_rindex = MapFunction.register(_str_map("rindex"), dtypes="copy")
+    str_rjust = MapFunction.register(_str_map("rjust"), dtypes="copy")
+    str_rpartition = MapFunction.register(_str_map("rpartition"), dtypes="copy")
+    str_rsplit = MapFunction.register(_str_map("rsplit"), dtypes="copy")
+    str_rstrip = MapFunction.register(_str_map("rstrip"), dtypes="copy")
+    str_slice = MapFunction.register(_str_map("slice"), dtypes="copy")
+    str_slice_replace = MapFunction.register(_str_map("slice_replace"), dtypes="copy")
+    str_split = MapFunction.register(_str_map("split"), dtypes="copy")
+    str_startswith = MapFunction.register(_str_map("startswith"), dtypes=np.bool)
+    str_strip = MapFunction.register(_str_map("strip"), dtypes="copy")
+    str_swapcase = MapFunction.register(_str_map("swapcase"), dtypes="copy")
+    str_translate = MapFunction.register(_str_map("translate"), dtypes="copy")
+    str_upper = MapFunction.register(_str_map("upper"), dtypes="copy")
+    str_wrap = MapFunction.register(_str_map("wrap"), dtypes="copy")
+    str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
 
     # END String map partitions operations
 
