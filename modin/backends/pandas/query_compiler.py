@@ -217,9 +217,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_columns=new_columns,
                 )
             else:
-                new_data = self._data_obj._map_partitions(
-                    lambda df: func(df, other, **kwargs)
-                )
+                new_data = self._data_obj._map(lambda df: func(df, other, **kwargs))
             return self.__constructor__(new_data)
 
     def clip(self, lower, upper, **kwargs):
@@ -227,11 +225,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
         if is_list_like(lower) or is_list_like(upper):
-            new_data = self._data_obj._map_across_full_axis(
-                axis, lambda df: df.clip(**kwargs)
-            )
+            new_data = self._data_obj._map_full_axis(axis, lambda df: df.clip(**kwargs))
         else:
-            new_data = self._data_obj._map_partitions(lambda df: df.clip(**kwargs))
+            new_data = self._data_obj._map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_data)
 
     def update(self, other, **kwargs):
@@ -375,7 +371,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             column or row.
         """
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_reduce(
+        return self._data_obj._map_reduce(
             axis, lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs)
         )
 
@@ -416,7 +412,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the maximum values from each column or row.
         """
-        return self._data_obj._full_reduce(
+        return self._data_obj._map_reduce(
             kwargs.get("axis", 0), lambda df: df.max(**kwargs)
         )
 
@@ -433,7 +429,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             obj = self._data_obj.mask(col_indices=self._data_obj._numeric_columns())
         else:
             obj = self._data_obj
-        return obj._full_reduce(
+        return obj._map_reduce(
             axis,
             map_func=lambda df: df.apply(
                 lambda s: (s.sum(**kwargs), s.count()), axis=axis
@@ -451,7 +447,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             A new QueryCompiler object with the minimum value from each column or row.
         """
-        return self._data_obj._full_reduce(
+        return self._data_obj._map_reduce(
             kwargs.get("axis", 0), lambda df: df.min(**kwargs)
         )
 
@@ -468,11 +464,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         min_count = kwargs.get("min_count", 0)
         if min_count <= 1:
             return self.__constructor__(
-                self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+                self._data_obj._map_reduce(axis, lambda df: func(df, **kwargs))
             )
         else:
             return self.__constructor__(
-                self._data_obj._full_axis_reduce(axis, lambda df: func(df, **kwargs))
+                self._data_obj._map_reduce_full_axis(
+                    axis, lambda df: func(df, **kwargs)
+                )
             )
 
     def prod(self, **kwargs):
@@ -501,7 +499,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = 0 if axis is None else axis
         kwargs["axis"] = axis
         return self.__constructor__(
-            self._data_obj._full_reduce(axis, lambda df: func(df, **kwargs))
+            self._data_obj._map_reduce(axis, lambda df: func(df, **kwargs))
         )
 
     def all(self, **kwargs):
@@ -527,7 +525,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object containing the memory usage of each column.
         """
         return self.__constructor__(
-            self._data_obj._full_reduce(
+            self._data_obj._map_reduce(
                 0, lambda df: df.memory_usage(**kwargs), lambda df: df.sum()
             )
         )
@@ -627,7 +625,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._data_obj._full_axis_reduce(0, first_valid_index_builder)
+                self._data_obj._map_reduce_full_axis(0, first_valid_index_builder)
             )
             .min(axis=1)
             .to_pandas()
@@ -643,7 +641,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         return self.__constructor__(
-            self._data_obj._full_axis_reduce(axis, lambda df: df.idxmax(**kwargs))
+            self._data_obj._map_reduce_full_axis(axis, lambda df: df.idxmax(**kwargs))
         )
 
     def idxmin(self, **kwargs):
@@ -654,7 +652,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         axis = kwargs.get("axis", 0)
         return self.__constructor__(
-            self._data_obj._full_axis_reduce(axis, lambda df: df.idxmin(**kwargs))
+            self._data_obj._map_reduce_full_axis(axis, lambda df: df.idxmin(**kwargs))
         )
 
     def last_valid_index(self):
@@ -673,7 +671,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._data_obj._full_axis_reduce(0, last_valid_index_builder)
+                self._data_obj._map_reduce_full_axis(0, last_valid_index_builder)
             )
             .max(axis=1)
             .to_pandas()
@@ -689,7 +687,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_axis_reduce(axis, lambda df: df.median(**kwargs))
+        return self._data_obj._map_reduce_full_axis(
+            axis, lambda df: df.median(**kwargs)
+        )
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
@@ -698,7 +698,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler object of ints indexed by column or index names.
         """
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_axis_reduce(axis, lambda df: df.nunique(**kwargs))
+        return self._data_obj._map_reduce_full_axis(
+            axis, lambda df: df.nunique(**kwargs)
+        )
 
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
@@ -716,7 +718,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except ValueError:
                 return pandas.Series()
 
-        result = self._data_obj._full_axis_reduce(axis, quantile_builder)
+        result = self._data_obj._map_reduce_full_axis(axis, quantile_builder)
         if axis == 0:
             result.index = [q]
         else:
@@ -731,7 +733,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_axis_reduce(axis, lambda df: df.skew(**kwargs))
+        return self._data_obj._map_reduce_full_axis(axis, lambda df: df.skew(**kwargs))
 
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.
@@ -742,7 +744,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_axis_reduce(axis, lambda df: df.std(**kwargs))
+        return self._data_obj._map_reduce_full_axis(axis, lambda df: df.std(**kwargs))
 
     def var(self, **kwargs):
         """Returns variance of each column or row.
@@ -752,7 +754,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Pandas default is 0 (though not mentioned in docs)
         axis = kwargs.get("axis", 0)
-        return self._data_obj._full_axis_reduce(axis, lambda df: df.var(**kwargs))
+        return self._data_obj._map_reduce_full_axis(axis, lambda df: df.var(**kwargs))
 
     # END Column/Row partitions reduce operations
 
@@ -796,9 +798,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def _cumulative_builder(self, func, **kwargs):
         axis = kwargs.get("axis", 0)
-        new_data = self._data_obj._map_across_full_axis(
-            axis, lambda df: func(df, **kwargs)
-        )
+        new_data = self._data_obj._map_full_axis(axis, lambda df: func(df, **kwargs))
         return self.__constructor__(new_data)
 
     def cummax(self, **kwargs):
@@ -816,7 +816,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def diff(self, **kwargs):
         axis = kwargs.get("axis", 0)
         return self.__constructor__(
-            self._data_obj._map_across_full_axis(axis, lambda df: df.diff(**kwargs))
+            self._data_obj._map_full_axis(axis, lambda df: df.diff(**kwargs))
         )
 
     def eval(self, expr, **kwargs):
@@ -903,9 +903,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df.fillna(**kwargs)
 
         if full_axis:
-            new_data = self._data_obj._map_across_full_axis(axis, fillna)
+            new_data = self._data_obj._map_full_axis(axis, fillna)
         else:
-            new_data = self._data_obj._map_partitions(fillna)
+            new_data = self._data_obj._map(fillna)
         return self.__constructor__(new_data)
 
     def quantile_for_list_of_values(self, **kwargs):
@@ -1325,7 +1325,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        raise NotImplementedError("FIXME")
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
@@ -1380,7 +1379,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler.
         """
         if isinstance(pandas.DataFrame().apply(func), pandas.Series):
-            new_data = self._data_obj._full_axis_reduce(
+            new_data = self._data_obj._map_reduce_full_axis(
                 axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
             )
         else:
@@ -1504,12 +1503,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-            new_data = self._data_obj._map_across_full_axis(
+            new_data = self._data_obj._map_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs)
             )
             untouched_data = None
         else:
-            new_data = self._data_obj.mask(col_indices=columns)._map_across_full_axis(
+            new_data = self._data_obj.mask(col_indices=columns)._map_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs)
             )
             untouched_data = self.drop(columns=columns)

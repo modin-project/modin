@@ -1,7 +1,7 @@
-from modin.engines.base.frame.data import BasePandasData
+from modin.engines.base.frame.data import BasePandasFrame
 from .partition_manager import PythonFrameManager
 
 
-class PandasOnPythonData(BasePandasData):
+class PandasOnPythonFrame(BasePandasFrame):
 
     _frame_mgr_cls = PythonFrameManager

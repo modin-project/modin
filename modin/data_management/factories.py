@@ -202,20 +202,20 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayData
+    from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 
     query_compiler_cls = PandasQueryCompiler
-    data_cls = PandasOnRayData
+    data_cls = PandasOnRayFrame
     io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonData
+    from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonFrame
     from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
     query_compiler_cls = PandasQueryCompiler
-    data_cls = PandasOnPythonData
+    data_cls = PandasOnPythonFrame
     io_cls = PandasOnPythonIO
 
 

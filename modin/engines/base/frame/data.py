@@ -10,13 +10,14 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 
 
-class BasePandasData(object):
+class BasePandasFrame(object):
 
     _frame_mgr_cls = None
     _query_compiler_cls = PandasQueryCompiler
 
     @property
     def __constructor__(self):
+        """The constructor for this object. A convenience method"""
         return type(self)
 
     def __init__(
@@ -28,6 +29,18 @@ class BasePandasData(object):
         column_widths=None,
         dtypes=None,
     ):
+        """Initialize a dataframe.
+
+        Args:
+            partitions: A 2D numpy array of partitions. Must contain partition objects.
+            index: The index object for the dataframe. Converts to a pandas.Index.
+            columns: The columns object for the dataframe. Converts to a pandas.Index.
+            row_lengths: (optional) The lengths of each partition in the rows. The
+                "height" of each of the block partitions. Is computed if not provided.
+            column_widths: (optional) The width of each partition in the columns. The
+                "width" of each of the block partitions. Is computed if not provided.
+            dtypes: (optional) The data types for the dataframe.
+        """
         self._partitions = partitions
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
@@ -37,6 +50,7 @@ class BasePandasData(object):
         self._filter_empties()
 
     def _filter_empties(self):
+        """Removes empty partitions to avoid triggering excess computation."""
         self._column_widths_cache = [w for w in self._column_widths if w > 0]
         self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
 
@@ -53,6 +67,15 @@ class BasePandasData(object):
         )
 
     def _apply_index_objs(self, axis=None):
+        """Lazily applies the index object (Index or Columns) to the partitions.
+
+        Args:
+            axis: The axis to apply to, None applies to both axes.
+
+        Returns:
+            A new 2D array of partitions that have the index assignment added to the
+            call queue.
+        """
         self._filter_empties()
         if axis is None or axis == 0:
             cum_row_lengths = np.cumsum([0] + self._row_lengths)
@@ -133,6 +156,17 @@ class BasePandasData(object):
         col_indices=None,
         col_numeric_idx=None,
     ):
+        """Lazily select columns or rows from given indices.
+
+        Args:
+            row_indices: The row labels to extract.
+            row_numeric_idx: The row indices to extract.
+            col_indices: The column labels to extract.
+            col_numeric_idx: The column indices to extract.
+
+        Returns:
+             A new dataframe.
+        """
         if (
             row_indices is None
             and row_numeric_idx is None
@@ -197,17 +231,32 @@ class BasePandasData(object):
 
     @property
     def _row_lengths(self):
+        """Compute the row lengths if they are not provided.
+
+        Returns:
+            A list of row lengths.
+        """
         if self._row_lengths_cache is None:
             self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
         return self._row_lengths_cache
 
     @property
     def _column_widths(self):
+        """Compute the column widths if they are not provided.
+
+        Returns:
+            A list of column widths.
+        """
         if self._column_widths_cache is None:
             self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
         return self._column_widths_cache
 
     def copy(self):
+        """Copy this object.
+
+        Returns:
+            A copied version of this object.
+        """
         return self.__constructor__(
             self._partitions,
             self.index.copy(),
@@ -218,20 +267,23 @@ class BasePandasData(object):
         )
 
     @property
-    def row_lengths(self):
-        return self._row_lengths
-
-    @property
-    def column_widths(self):
-        return self._column_widths
-
-    @property
     def dtypes(self):
+        """Compute the data types if they are not provided.
+
+        Returns:
+            A pandas Series containing the data types for this dataframe.
+        """
         if self._dtypes is None:
             self._dtypes = self._compute_dtypes()
         return self._dtypes
 
     def _compute_dtypes(self):
+        """Compute the dtypes via MapReduce.
+
+        Returns:
+            The data types of this dataframe.
+        """
+
         def dtype_builder(df):
             return df.apply(lambda row: find_common_type(row.values), axis=0)
 
@@ -239,7 +291,7 @@ class BasePandasData(object):
         reduce_func = self._build_mapreduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self._full_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -247,13 +299,22 @@ class BasePandasData(object):
         return dtypes
 
     @classmethod
-    def combine_dtypes(cls, dtypes_ids, column_names):
+    def combine_dtypes(cls, list_of_dtypes, column_names):
+        """Describes how data types should be combined when they do not match.
+
+        Args:
+            list_of_dtypes: A list of pandas Series with the data types.
+            column_names: The names of the columns that the data types map to.
+
+        Returns:
+             A pandas Series containing the finalized data types.
+        """
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column.
         dtypes = (
-            pandas.concat(dtypes_ids, axis=1)
+            pandas.concat(list_of_dtypes, axis=1)
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )
@@ -268,7 +329,7 @@ class BasePandasData(object):
                 name and dtype is a numpy dtype.
 
         Returns:
-            DataFrame with updated dtypes.
+            dataframe with updated dtypes.
         """
         columns = col_dtypes.keys()
         # Create Series for the updated dtypes
@@ -310,6 +371,15 @@ class BasePandasData(object):
     _columns_cache = None
 
     def _validate_set_axis(self, new_labels, old_labels):
+        """Validates the index or columns replacement against the old labels.
+
+        Args:
+            new_labels: The labels to replace with.
+            old_labels: The labels to replace.
+
+        Returns:
+            The validated labels.
+        """
         new_labels = ensure_index(new_labels)
         old_len = len(old_labels)
         new_len = len(new_labels)
@@ -321,12 +391,27 @@ class BasePandasData(object):
         return new_labels
 
     def _get_index(self):
+        """Gets the index from the cache object.
+
+        Returns:
+            A pandas.Index object containing the row labels.
+        """
         return self._index_cache
 
     def _get_columns(self):
+        """Gets the columns from the cache object.
+
+        Returns:
+            A pandas.Index object containing the column labels.
+        """
         return self._columns_cache
 
     def _set_index(self, new_index):
+        """Replaces the current row labels with new labels.
+
+        Args:
+            new_index: The replacement row labels.
+        """
         if self._index_cache is None:
             self._index_cache = ensure_index(new_index)
         else:
@@ -335,63 +420,63 @@ class BasePandasData(object):
         self._apply_index_objs(axis=0)
 
     def _set_columns(self, new_columns):
+        """Replaces the current column labels with new labels.
+
+        Args:
+            new_columns: The replacement column labels.
+        """
         if self._columns_cache is None:
             self._columns_cache = ensure_index(new_columns)
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
+            if self._dtypes is not None:
+                self._dtypes.index = new_columns
         self._apply_index_objs(axis=1)
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
 
+    @property
+    def axes(self):
+        """The index, columns that can be accessed with an `axis` integer."""
+        return [self.index, self.columns]
+
     # Metadata modification methods
     def add_prefix(self, prefix, axis):
-        if axis == 1:
-            new_columns = self.columns.map(lambda x: str(prefix) + str(x))
-            if self._dtypes is not None:
-                new_dtype_cache = self._dtypes.copy()
-                new_dtype_cache.index = new_columns
-            else:
-                new_dtype_cache = None
-            new_index = self.index
+        """Add a prefix to the current row or column labels.
+
+        Args:
+            prefix: The prefix to add.
+            axis: The axis to update.
+
+        Returns:
+            A new dataframe with the updated labels.
+        """
+        new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
+        new_data_obj = self.copy()
+        if axis == 0:
+            new_data_obj.index = new_labels
         else:
-            new_index = self.index.map(lambda x: str(prefix) + str(x))
-            new_columns = self.columns
-            new_dtype_cache = self._dtypes
-        new_data_obj = self.__constructor__(
-            self._partitions,
-            new_index,
-            new_columns,
-            self._row_lengths,
-            self._column_widths,
-            new_dtype_cache,
-        )
-        new_data_obj._apply_index_objs(axis)
+            new_data_obj.columns = new_labels
         return new_data_obj
 
     def add_suffix(self, suffix, axis):
-        if axis == 1:
-            new_columns = self.columns.map(lambda x: str(x) + str(suffix))
-            if self._dtypes is not None:
-                new_dtype_cache = self._dtypes.copy()
-                new_dtype_cache.index = new_columns
-            else:
-                new_dtype_cache = None
-            new_index = self.index
+        """Add a suffix to the current row or column labels.
+
+        Args:
+            suffix: The suffix to add.
+            axis: The axis to update.
+
+        Returns:
+            A new dataframe with the updated labels.
+        """
+        new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
+        new_data_obj = self.copy()
+        if axis == 0:
+            new_data_obj.index = new_labels
         else:
-            new_index = self.index.map(lambda x: str(x) + str(suffix))
-            new_columns = self.columns
-            new_dtype_cache = self._dtypes
-        new_data_obj = self.__constructor__(
-            self._partitions,
-            new_index,
-            new_columns,
-            self._row_lengths,
-            self._column_widths,
-            new_dtype_cache,
-        )
-        new_data_obj._apply_index_objs(axis)
+            new_data_obj.columns = new_labels
         return new_data_obj
 
     # END Metadata modification methods
@@ -525,6 +610,19 @@ class BasePandasData(object):
     # Please be careful when changing these!
 
     def _build_mapreduce_func(self, axis, func):
+        """Properly formats a MapReduce result so that the partitioning is correct.
+
+        Note: This should be used for any MapReduce style operation that results in a
+            reduced data dimensionality (dataframe -> series).
+
+        Args:
+            axis: The axis along which to apply the function.
+            func: The function to apply.
+
+        Returns:
+            A function to be shipped to the partitions to be executed.
+        """
+
         def _map_reduce_func(df):
             series_result = func(df)
             if axis == 0 and isinstance(series_result, pandas.Series):
@@ -541,7 +639,7 @@ class BasePandasData(object):
 
         return _map_reduce_func
 
-    def _full_axis_reduce(self, axis, func, alternate_index=None):
+    def _map_reduce_full_axis(self, axis, func, alternate_index=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
@@ -562,7 +660,7 @@ class BasePandasData(object):
                 index=["__reduced__"],
                 columns=columns,
                 row_lengths=[1],
-                column_widths=self.column_widths,
+                column_widths=self._column_widths,
                 dtypes=self.dtypes,
             )
         else:
@@ -574,12 +672,12 @@ class BasePandasData(object):
                 result,
                 index=index,
                 columns=["__reduced__"],
-                row_lengths=self.row_lengths,
+                row_lengths=self._row_lengths,
                 column_widths=[1],
                 dtypes=new_dtypes,
             )
 
-    def _full_reduce(self, axis, map_func, reduce_func=None):
+    def _map_reduce(self, axis, map_func, reduce_func=None):
         """Apply function that will reduce the data to a Pandas Series.
 
         Args:
@@ -589,8 +687,7 @@ class BasePandasData(object):
                 then apply map_func twice.
 
         Return:
-            A new QueryCompiler object containing the results from map_func and
-            reduce_func.
+            A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
         if reduce_func is None:
@@ -614,7 +711,17 @@ class BasePandasData(object):
             final_parts, index, columns, new_lengths, new_widths
         )
 
-    def _map_partitions(self, func, dtypes=None):
+    def _map(self, func, dtypes=None):
+        """Perform a function that maps across the entire dataset.
+
+        Args:
+            func: The function to apply.
+            dtypes: (optional) The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and allows us to avoid (re)computing it.
+        Returns:
+            A new dataframe.
+        """
         new_partitions = self._frame_mgr_cls.map_across_blocks(self._partitions, func)
         if dtypes == "copy":
             dtypes = self._dtypes
@@ -631,7 +738,18 @@ class BasePandasData(object):
             dtypes=dtypes,
         )
 
-    def _map_across_full_axis(self, axis, func):
+    def _map_full_axis(self, axis, func):
+        """Perform a function across an entire axis.
+
+        Note: The data shape is not changed (length and width of the table).
+
+        Args:
+            axis: The axis to apply over.
+            func: The function to apply.
+
+        Returns:
+             A new dataframe.
+        """
         new_partitions = self._frame_mgr_cls.map_across_full_axis(
             axis, self._partitions, func
         )
@@ -646,6 +764,24 @@ class BasePandasData(object):
     def _apply_full_axis(
         self, axis, func, new_index=None, new_columns=None, dtypes=None
     ):
+        """Perform a function across an entire axis.
+
+        Note: The data shape may change as a result of the function.
+
+        Args:
+            axis: The axis to apply over.
+            func: The function to apply.
+            new_index: (optional) The index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns: (optional) The columns of the result. We may know this in
+                advance, and if not provided it must be computed.
+            dtypes: (optional) The data types of the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and allows us to avoid (re)computing it.
+
+        Returns:
+            A new dataframe.
+        """
         new_partitions = self._frame_mgr_cls.map_across_full_axis(
             axis, self._partitions, func
         )
@@ -688,16 +824,21 @@ class BasePandasData(object):
         new_columns=None,
         keep_remaining=False,
     ):
-        """Reduce Manger along select indices using function that needs full axis.
+        """Apply a functional across an entire axis for a subset of the data.
 
         Args:
-            func: Callable that reduces the dimension of the object and requires full
-                knowledge of the entire axis.
-            axis: 0 for columns and 1 for rows. Defaults to 0.
-            apply_indices: Index of the resulting QueryCompiler.
+            axis: The axis to apply over.
+            func: The function to apply
+            apply_indices: The labels to apply over.
+            numeric_indices: The indices to apply over.
+            new_index: (optional) The index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns: (optional) The columns of the result. We may know this in
+                advance, and if not provided it must be computed.
+            keep_remaining: Whether or not to drop the data that is not computed over.
 
         Returns:
-            A new QueryCompiler object with index or BaseFrameManager object.
+            A new dataframe.
         """
         assert apply_indices is not None or numeric_indices is not None
         # Convert indices to numeric indices
@@ -736,6 +877,28 @@ class BasePandasData(object):
         keep_remaining=False,
         item_to_distribute=None,
     ):
+        """Apply a functional across an entire axis for a subset of the data.
+
+        Args:
+            axis: The axis to apply over.
+            func: The function to apply
+            apply_indices: (optional) The labels to apply over. Must be given if axis is
+                provided.
+            row_indices: (optional) The row indices to apply over. Must be provided with
+                `col_indices` to apply over both axes.
+            col_indices: (optional) The column indices to apply over. Must be provided
+                with `row_indices` to apply over both axes.
+            new_index: (optional) The index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns: (optional) The columns of the result. We may know this in
+                advance, and if not provided it must be computed.
+            keep_remaining: Whether or not to drop the data that is not computed over.
+            item_to_distribute: (optional) The item to split up so it can be applied
+                over both axes.
+
+        Returns:
+            A new dataframe.
+        """
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
             new_index = self.index if axis == 1 else None
@@ -765,6 +928,8 @@ class BasePandasData(object):
                 new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
             )
         else:
+            # We are apply over both axes here, so make sure we have all the right
+            # variables set.
             assert row_indices is not None and col_indices is not None
             assert keep_remaining
             assert item_to_distribute is not None
@@ -786,11 +951,11 @@ class BasePandasData(object):
             )
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
-        """Copartition two QueryCompiler objects.
+        """Copartition two dataframes.
 
         Args:
             axis: The axis to copartition along.
-            other: The other Query Compiler(s) to copartition against.
+            other: The other dataframes(s) to copartition against.
             how: How to manage joining the index object ("left", "right", etc.)
             sort: Whether or not to sort the joined index.
             force_repartition: Whether or not to force the repartitioning. By default,
@@ -799,7 +964,7 @@ class BasePandasData(object):
                 `join` or `append`, it is vital that the internal indices match.
 
         Returns:
-            A tuple (left query compiler, right query compiler list, joined index).
+            A tuple (left data, right data list, joined index).
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -835,18 +1000,39 @@ class BasePandasData(object):
         return reindexed_self, reindexed_other_list, joined_index
 
     def _binary_op(self, function, right_data, join_type="outer"):
+        """Perform an operation that requires joining with another dataframe.
+
+        Args:
+            function: The function to apply after the join.
+            right_data: The dataframe to join with.
+            join_type: (optional) The type of join to apply.
+
+        Returns:
+             A new dataframe.
+        """
         left_parts, right_parts, joined_index = self._copartition(
             0, right_data, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
-        new_data = self._frame_mgr_cls.inter_data_operation(
+        new_data = self._frame_mgr_cls.binary_operation(
             1, left_parts, lambda l, r: function(l, r), right_parts
         )
         new_columns = self.columns.join(right_data.columns, how=join_type)
         return self.__constructor__(new_data, self.index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
+        """Concatenate this dataframe with one or more others.
+
+        Args:
+            axis: The axis to concatenate over.
+            others: The list of dataframes to concatenate with.
+            how: The type of join to use for the axis.
+            sort: Whether or not to sort the result.
+
+        Returns:
+            A new dataframe.
+        """
         # TODO Update to no longer force repartition
         # Requires pruning of the partitions after they have been changed
         left_parts, right_parts, joined_index = self._copartition(
@@ -864,6 +1050,21 @@ class BasePandasData(object):
     def groupby_reduce(
         self, axis, by, map_func, reduce_func, new_index=None, new_columns=None
     ):
+        """Groupby another dataframe and aggregate the result.
+
+        Args:
+            axis: The axis to groupby and aggregate over.
+            by: The dataframe to group by.
+            map_func: The map component of the aggregation.
+            reduce_func: The reduce component of the aggregation.
+            new_index: (optional) The index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns: (optional) The columns of the result. We may know this in
+                advance, and if not provided it must be computed.
+
+        Returns:
+             A new dataframe.
+        """
         new_partitions = self._frame_mgr_cls.groupby_reduce(
             axis, self._partitions, by._partitions, map_func, reduce_func
         )
@@ -876,11 +1077,11 @@ class BasePandasData(object):
                 1, new_partitions, lambda df: df.index
             )
         if axis == 0:
-            new_widths = self.column_widths
+            new_widths = self._column_widths
             new_lengths = None
         else:
             new_widths = None
-            new_lengths = self.row_lengths
+            new_lengths = self._row_lengths
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths
         )
@@ -890,12 +1091,10 @@ class BasePandasData(object):
         """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
 
         Args:
-            cls: DataManger object to convert the DataFrame to.
             df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
 
         Returns:
-            Returns QueryCompiler containing data from the Pandas DataFrame.
+            A new dataframe.
         """
         new_index = df.index
         new_columns = df.columns
@@ -909,7 +1108,7 @@ class BasePandasData(object):
         """Converts Modin DataFrame to Pandas DataFrame.
 
         Returns:
-            Pandas DataFrame of the QueryCompiler.
+            Pandas DataFrame.
         """
         df = self._frame_mgr_cls.to_pandas(self._partitions)
         if df.empty:
@@ -921,9 +1120,19 @@ class BasePandasData(object):
         return df
 
     def to_numpy(self):
+        """Converts Modin DataFrame to a 2D numpy array.
+
+        Returns:
+            Numpy array.
+        """
         return self._frame_mgr_cls.to_numpy(self._partitions)
 
     def transpose(self):
+        """Transpose the index and columns of this dataframe.
+
+        Returns:
+            A new dataframe.
+        """
         new_partitions = np.array(
             [
                 [part.add_to_apply_calls(pandas.DataFrame.transpose) for part in row]
@@ -946,6 +1155,16 @@ class BasePandasData(object):
     # Head/Tail/Front/Back
     @staticmethod
     def _compute_lengths(lengths_list, n, from_back=False):
+        """Computes the new lengths based on the lengths/widths of the previous and `n`.
+
+        Args:
+            lengths_list: The list of lengths or widths.
+            n: The number of rows or columns extracted.
+            from_back: Whether or not to compute from the back. Used in `tail`/`back`
+
+        Returns:
+             A list of lengths or widths of the resulting dataframe.
+        """
         if not from_back:
             idx = np.digitize(n, np.cumsum(lengths_list))
             if idx == 0:
@@ -973,7 +1192,7 @@ class BasePandasData(object):
             n: Integer containing the number of rows to return.
 
         Returns:
-            QueryCompiler containing the first n rows of the original QueryCompiler.
+            A new dataframe.
         """
         # We grab the front if it is transposed and flag as transposed so that
         # we are not physically updating the data from this manager. This
@@ -1000,7 +1219,7 @@ class BasePandasData(object):
             n: Integer containing the number of rows to return.
 
         Returns:
-            QueryCompiler containing the last n rows of the original QueryCompiler.
+            A new dataframe.
         """
         # See head for an explanation of the transposed behavior
         if n < 0:
@@ -1025,7 +1244,7 @@ class BasePandasData(object):
             n: Integer containing the number of columns to return.
 
         Returns:
-            QueryCompiler containing the first n columns of the original QueryCompiler.
+            A new dataframe.
         """
         new_col_lengths = self._compute_lengths(self._column_widths, n)
         new_partitions = self._frame_mgr_cls.take(
@@ -1047,7 +1266,7 @@ class BasePandasData(object):
             n: Integer containing the number of columns to return.
 
         Returns:
-            QueryCompiler containing the last n columns of the original QueryCompiler.
+            A new dataframe.
         """
         new_col_lengths = self._compute_lengths(self._column_widths, n, from_back=True)
         new_partitions = self._frame_mgr_cls.take(

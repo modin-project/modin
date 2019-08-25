@@ -10,29 +10,6 @@ from modin.data_management.utils import compute_chunksize
 
 
 class BaseFrameManager(object):
-    """Abstract Class that manages a set of `BaseFramePartition` objects, and
-        structures them into a 2D numpy array. This object will interact with
-        each of these objects through the `BaseFramePartition` API.
-
-    Note: See the Abstract Methods and Fields section immediately below this
-        for a list of requirements for subclassing this object.
-    """
-
-    # Abstract Methods and Fields: Must implement in children classes
-    # In some cases, there you may be able to use the same implementation for
-    # some of these abstract methods, but for the sake of generality they are
-    # treated differently.
-    def __init__(self, partitions, block_lengths=None, block_widths=None):
-        """Init must accept a parameter `partitions` that is a 2D numpy array
-            of type `_partition_class` (defined below). This method will be
-            called from a factory.
-
-        Args:
-            partitions: A 2D numpy array of the type defined in
-                `_partition_class`.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
     # Partition class is the class to use for storing each partition. It must
     # extend the `BaseFramePartition` class.
     _partition_class = None
@@ -123,20 +100,6 @@ class BaseFrameManager(object):
         new_partitions = np.array(
             [
                 [part.apply(preprocessed_map_func) for part in row_of_parts]
-                for row_of_parts in partitions
-            ]
-        )
-        return new_partitions
-
-    @classmethod
-    def lazy_map(cls, partitions, map_func, kwargs):
-        preprocessed_map_func = cls.preprocess_func(map_func)
-        new_partitions = np.array(
-            [
-                [
-                    part.add_to_apply_calls(preprocessed_map_func, kwargs)
-                    for part in row_of_parts
-                ]
                 for row_of_parts in partitions
             ]
         )
@@ -658,7 +621,7 @@ class BaseFrameManager(object):
         return partition_copy
 
     @classmethod
-    def inter_data_operation(cls, axis, left, func, right):
+    def binary_operation(cls, axis, left, func, right):
         """Apply a function that requires two BaseFrameManager objects.
 
         Args:
