@@ -103,7 +103,7 @@ class RayIO(BaseIO):
 
     frame_partition_cls = None
     query_compiler_cls = None
-    data_cls = None
+    frame_cls = None
 
     # IMPORTANT NOTE
     #
@@ -306,7 +306,7 @@ class RayIO(BaseIO):
             columns += partitioned_columns
         dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
-            cls.data_cls(
+            cls.frame_cls(
                 remote_partitions,
                 index,
                 columns,
@@ -530,7 +530,7 @@ class RayIO(BaseIO):
             dtypes.index = column_names
         else:
             dtypes = pandas.Series(dtypes, index=column_names)
-        new_data = cls.data_cls(
+        new_data = cls.frame_cls(
             partition_ids,
             new_index,
             column_names,
@@ -880,7 +880,7 @@ class RayIO(BaseIO):
             else:
                 dtypes = pandas.Series(dtypes, index=columns)
 
-            new_data = cls.data_cls(
+            new_data = cls.frame_cls(
                 np.array(partition_ids),
                 new_index,
                 columns,
@@ -967,7 +967,7 @@ class RayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            cls.data_cls(remote_partitions, index, columns)
+            cls.frame_cls(remote_partitions, index, columns)
         )
         return new_query_compiler
 
@@ -1030,7 +1030,7 @@ class RayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            cls.data_cls(remote_partitions, index, columns)
+            cls.frame_cls(remote_partitions, index, columns)
         )
         return new_query_compiler
 
@@ -1116,6 +1116,6 @@ class RayIO(BaseIO):
             index_lst = [x for part_index in ray.get(index_ids) for x in part_index]
             new_index = pandas.Index(index_lst).set_names(index_col)
 
-        new_data = cls.data_cls(np.array(partition_ids), new_index, cols_names)
+        new_data = cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         new_data._apply_index_objs(axis=0)
         return cls.query_compiler_cls(new_data)

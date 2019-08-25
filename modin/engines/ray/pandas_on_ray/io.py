@@ -198,7 +198,7 @@ class PandasOnRayIO(RayIO):
 
     frame_partition_cls = PandasOnRayFramePartition
     query_compiler_cls = PandasQueryCompiler
-    data_cls = PandasOnRayFrame
+    frame_cls = PandasOnRayFrame
 
     read_parquet_remote_task = _read_parquet_columns
     read_csv_remote_task = _read_csv_with_offset_pandas_on_ray
