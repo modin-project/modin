@@ -701,7 +701,6 @@ class BasePandasDataset(object):
                     self.axes[axis].levels[level],
                 )
             )
-
             return (
                 self.groupby(self.axes[axis].codes[level], axis=axis)
                 .count()

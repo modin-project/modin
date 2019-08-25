@@ -1367,6 +1367,8 @@ class TestDFPartOne:
             modin_multi_level_result = modin_df_multi_level.count(
                 axis=axis, numeric_only=numeric_only, level=level
             )
+            print(modin_multi_level_result)
+            print(modin_multi_level_result._to_pandas())
             pandas_multi_level_result = pandas_df_multi_level.count(
                 axis=axis, numeric_only=numeric_only, level=level
             )
