@@ -1328,20 +1328,49 @@ class TestDFPartOne:
         pandas_result = pandas_df.T.count(axis=axis, numeric_only=numeric_only)
         df_equals(modin_result, pandas_result)
 
-        # multi-index count test
-        levels = 2
-        modin_multiindex_df = modin_df.groupby(list(modin_df.columns[:levels])).count()
-        pandas_multiindex_df = pandas_df.groupby(
-            list(pandas_df.columns[:levels])
-        ).count()
-        for level in range(levels):
-            modin_result = modin_multiindex_df.count(
-                axis="index", numeric_only=numeric_only, level=level
+        # test level
+        modin_df_multi_level = modin_df.copy()
+        pandas_df_multi_level = pandas_df.copy()
+        axis = modin_df._get_axis_number(axis) if axis is not None else 0
+        levels = 3
+        axis_names = ["a", "b", "c"]
+        if axis == 0:
+            new_idx = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
+                names=axis_names,
             )
-            pandas_result = pandas_multiindex_df.count(
-                axis="index", numeric_only=numeric_only, level=level
+            modin_df_multi_level.index = new_idx
+            pandas_df_multi_level.index = new_idx
+            try:  # test error
+                pandas_df_multi_level.count(axis=1, numeric_only=numeric_only, level=0)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=1, numeric_only=numeric_only, level=0
+                    )
+        else:
+            new_col = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+                names=axis_names,
             )
-            df_equals(modin_result, pandas_result)
+            modin_df_multi_level.columns = new_col
+            pandas_df_multi_level.columns = new_col
+            try:  # test error
+                pandas_df_multi_level.count(axis=0, numeric_only=numeric_only, level=0)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=0, numeric_only=numeric_only, level=0
+                    )
+
+        for level in list(range(levels)) + axis_names:
+            modin_multi_level_result = modin_df_multi_level.count(
+                axis=axis, numeric_only=numeric_only, level=level
+            )
+            pandas_multi_level_result = pandas_df_multi_level.count(
+                axis=axis, numeric_only=numeric_only, level=level
+            )
+            df_equals(modin_multi_level_result, pandas_multi_level_result)
 
     def test_cov(self):
         data = test_data_values[0]
