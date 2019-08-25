@@ -1328,6 +1328,21 @@ class TestDFPartOne:
         pandas_result = pandas_df.T.count(axis=axis, numeric_only=numeric_only)
         df_equals(modin_result, pandas_result)
 
+        # multi-index count test
+        levels = 2
+        modin_multiindex_df = modin_df.groupby(list(modin_df.columns[:levels])).count()
+        pandas_multiindex_df = pandas_df.groupby(
+            list(pandas_df.columns[:levels])
+        ).count()
+        for level in range(levels):
+            modin_result = modin_multiindex_df.count(
+                axis="index", numeric_only=numeric_only, level=level
+            )
+            pandas_result = pandas_multiindex_df.count(
+                axis="index", numeric_only=numeric_only, level=level
+            )
+            df_equals(modin_result, pandas_result)
+
     def test_cov(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):

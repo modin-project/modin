@@ -15,33 +15,33 @@ default to pandas.
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.concat``             | Y                               |                                                    |
+| `pd.concat`_              | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.eval``               | Y                               |                                                    |
+| `pd.eval`_                | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.unique``             | D                               |                                                    |
+| `pd.unique`_              | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | ``pd.value_counts``       | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.cut``                | D                               |                                                    |
+| `pd.cut`_                 | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.to_numeric``         | D                               |                                                    |
+| `pd.to_numeric`_          | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.factorize``          | D                               |                                                    |
+| `pd.factorize`_           | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.qcut``               | D                               |                                                    |
+| `pd.qcut`_                | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | ``pd.match``              | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.to_datetime``        | D                               |                                                    |
+| `pd.to_datetime`_         | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.get_dummies``        | Y                               |                                                    |
+| `pd.get_dummies`_         | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.date_range``         | D                               |                                                    |
+| `pd.date_range`_          | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.bdate_range``        | D                               |                                                    |
+| `pd.bdate_range`_         | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.to_timedelta``       | D                               |                                                    |
+| `pd.to_timedelta`_        | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | ``pd.options``            | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
@@ -99,3 +99,15 @@ contributing a distributed version of any of these objects, feel free to open a
 
 .. _open an issue: https://github.com/modin-project/modin/issues
 .. _pull request: https://github.com/modin-project/modin/pulls
+.. _`pd.concat`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.concat.html#pandas.concat
+.. _`pd.eval`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+.. _`pd.unique`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.unique.html#pandas.unique
+.. _`pd.cut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html#pandas.cut
+.. _`pd.to_numeric`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_numeric.html#pandas.to_numeric
+.. _`pd.factorize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.factorize.html#pandas.factorize
+.. _`pd.qcut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut
+.. _`pd.to_datetime`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_datetime.html#pandas.to_datetime
+.. _`pd.get_dummies`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.get_dummies.html#pandas.get_dummies
+.. _`pd.date_range`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html#pandas.date_range
+.. _`pd.bdate_range`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.bdate_range.html#pandas.bdate_range
+.. _`pd.to_timedelta`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_timedelta.html#pandas.to_timedelta

@@ -683,6 +683,11 @@ class BasePandasDataset(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
+        if level is not None:
+            return self._default_to_pandas(
+                "count", axis=axis, level=level, numeric_only=numeric_only
+            )
+
         axis = self._get_axis_number(axis) if axis is not None else 0
         return self._reduce_dimension(
             self._query_compiler.count(
