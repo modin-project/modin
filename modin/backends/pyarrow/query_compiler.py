@@ -5,8 +5,6 @@ from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
-from modin.error_message import ErrorMessage
-
 
 class FakeSeries:
     def __init__(self, dtype):
@@ -177,20 +175,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        df = self.data.to_pandas(is_transposed=self._is_transposed)
-        if df.empty:
-            dtype_dict = {
-                col_name: pandas.Series(dtype=self.dtypes[col_name])
-                for col_name in self.columns
-            }
-            df = pandas.DataFrame(dtype_dict, self.index)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                len(df.index) != len(self.index) or len(df.columns) != len(self.columns)
-            )
-            df.index = self.index
-            df.columns = self.columns
-        return df
+        return self._data_obj.to_pandas()
 
     def to_numpy(self):
         """Converts Modin DataFrame to NumPy Array.
@@ -198,8 +183,4 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         Returns:
             NumPy Array of the QueryCompiler.
         """
-        arr = self.data.to_numpy(is_transposed=self._is_transposed)
-        ErrorMessage.catch_bugs_and_request_email(
-            len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
-        )
-        return arr
+        return self._data_obj.to_numpy()

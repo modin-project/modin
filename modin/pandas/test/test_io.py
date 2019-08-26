@@ -624,13 +624,13 @@ def test_from_csv(make_csv_file):
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
     modin_df = pd.read_csv(TEST_CSV_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     if not PY2:
         pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
         modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
-        assert modin_df_equals_pandas(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_gzip(make_csv_file):

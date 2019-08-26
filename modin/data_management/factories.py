@@ -296,12 +296,10 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
 
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
 
-    from modin.experimental.engines.pyarrow_on_ray.frame.partition_manager import (
-        PyarrowOnRayFrameManager,
-    )
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
     from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
+    from modin.experimental.engines.pyarrow_on_ray.frame.data import PyarrowOnRayFrame
 
     query_compiler_cls = PyarrowQueryCompiler
-    block_partitions_cls = PyarrowOnRayFrameManager
+    data_cls = PyarrowOnRayFrame
     io_cls = PyarrowOnRayIO
