@@ -254,6 +254,10 @@ class RayIO(BaseIO):
                 for i in range(0, num_row_groups, row_group_splits)
             ]
 
+            print("row_group_partitions: " + str(row_group_partitions))
+            print("col_partitions: " + str(col_partitions))
+
+
             # Note: In the nested list comprehnsion below, the expression  j==row_group_partitions[0],
             #       controls the return of the dtypes array, which for efficiency is only returned
             #       from the first remote call for the first row group
@@ -367,12 +371,16 @@ class RayIO(BaseIO):
                 ]
             ).T
 
+        print("Done block partitions")
+
         # Metadata
         index_len = ray.get(blk_partitions[-2][0])
         index = pandas.RangeIndex(index_len)
         index_chunksize = compute_chunksize(
             pandas.DataFrame(index=index), num_splits, axis=0
         )
+ 
+        print("Done meta data")
 
         # If the data is partitioned in a directory, compute the row_lengths as below
         if directory:
@@ -392,11 +400,16 @@ class RayIO(BaseIO):
         # Compute dtypes concatenating the results from each of the columns splits
         # determined above. This creates a pandas Series that contains a dtype for every
         # column.
+
+        print("Assign dtypes_id") 
         dtypes_ids = list(blk_partitions[-1])
+        print("Assign dtypes")
         dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
 
+        print("reassighn blk_partitions")
         blk_partitions = blk_partitions[:-2]
 
+        print("Assign remote paritions")
         remote_partitions = np.array(
             [
                 [
@@ -410,6 +423,8 @@ class RayIO(BaseIO):
                 for i in range(len(blk_partitions))
             ]
         )
+
+        print("Done assigning remote partitions")  
         if directory:
             columns += partitioned_columns
         dtypes.index = columns
@@ -417,6 +432,7 @@ class RayIO(BaseIO):
             cls.frame_mgr_cls(remote_partitions), index, columns, dtypes=dtypes
         )
 
+        print("About to return new_query_compiler")
         return new_query_compiler
 
     # CSV

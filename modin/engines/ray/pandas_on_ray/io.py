@@ -64,6 +64,11 @@ def _read_parquet_columns(
 
     kwargs["use_pandas_metadata"] = True
 
+    print("In remote read parquet")
+    print("num_splits:" + str(num_splits))
+    print("Columns:" + str(columns))
+    print("Rowgroups:" + str(rowgroups))
+
     if not len(rowgroups) == 0:
         pf = ParquetFile(path)
         df_list = [
@@ -73,6 +78,7 @@ def _read_parquet_columns(
         df_lengths = [len(df.index) for df in df_list]
         total_df_length = sum(df_lengths)
         dtypes = df_list[0].dtypes
+        print("About to return")
         return (
             df_list
             + ([total_df_length] if do_return_length else [])
