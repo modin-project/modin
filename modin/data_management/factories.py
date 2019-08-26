@@ -8,20 +8,9 @@ import warnings
 
 from modin import __execution_engine__ as execution_engine
 from modin import __partition_format__ as partition_format
-from modin.backends.pandas.query_compiler import PandasQueryCompiler
 
 
 class BaseFactory(object):
-    @property
-    def query_compiler_cls(self):
-        """The Query Compiler class for this factory."""
-        raise NotImplementedError("Implement in children classes!")
-
-    @property
-    def block_partitions_cls(self):
-        """The Block Partitions class for this factory."""
-        raise NotImplementedError("Implement in children classes!")
-
     @property
     def io_cls(self):
         """The module where the I/O functionality exists."""
@@ -44,7 +33,7 @@ class BaseFactory(object):
 
     @classmethod
     def _from_pandas(cls, df):
-        return cls.query_compiler_cls.from_pandas(df, cls.data_cls)
+        return cls.io_cls.from_pandas(df)
 
     @classmethod
     def read_parquet(cls, **kwargs):
@@ -202,32 +191,21 @@ class BaseFactory(object):
 class PandasOnRayFactory(BaseFactory):
 
     from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-    from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 
-    query_compiler_cls = PandasQueryCompiler
-    data_cls = PandasOnRayFrame
     io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
 
-    from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonFrame
     from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
-    query_compiler_cls = PandasQueryCompiler
-    data_cls = PandasOnPythonFrame
     io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.engines.dask.pandas_on_dask_delayed.frame.partition_manager import (
-        DaskFrameManager,
-    )
     from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
 
-    query_compiler_cls = PandasQueryCompiler
-    block_partitions_cls = DaskFrameManager
     io_cls = PandasOnDaskIO
 
 
@@ -297,9 +275,5 @@ class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonF
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
 
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
-    from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
-    from modin.experimental.engines.pyarrow_on_ray.frame.data import PyarrowOnRayFrame
 
-    query_compiler_cls = PyarrowQueryCompiler
-    data_cls = PyarrowOnRayFrame
     io_cls = PyarrowOnRayIO

@@ -9,5 +9,5 @@ from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonFrame
 
 class PandasOnPythonIO(BaseIO):
 
-    data_cls = PandasOnPythonFrame
+    frame_cls = PandasOnPythonFrame
     query_compiler_cls = PandasQueryCompiler
