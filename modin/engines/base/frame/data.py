@@ -231,7 +231,7 @@ class BasePandasFrame(object):
 
     @property
     def _row_lengths(self):
-        """Compute the row lengths if they are not provided.
+        """Compute the row lengths if they are not cached.
 
         Returns:
             A list of row lengths.
@@ -242,7 +242,7 @@ class BasePandasFrame(object):
 
     @property
     def _column_widths(self):
-        """Compute the column widths if they are not provided.
+        """Compute the column widths if they are not cached.
 
         Returns:
             A list of column widths.
@@ -268,7 +268,7 @@ class BasePandasFrame(object):
 
     @property
     def dtypes(self):
-        """Compute the data types if they are not provided.
+        """Compute the data types if they are not cached.
 
         Returns:
             A pandas Series containing the data types for this dataframe.
