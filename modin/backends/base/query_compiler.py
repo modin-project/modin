@@ -664,15 +664,15 @@ class BaseQueryCompiler(object):
         raise NotImplementedError(not_implemented_msg)
 
     def groupby_reduce(
-            self,
-            by,
-            axis,
-            groupby_args,
-            map_func,
-            map_args,
-            reduce_func=None,
-            reduce_args=None,
-            numeric_only=True,
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_func,
+        map_args,
+        reduce_func=None,
+        reduce_args=None,
+        numeric_only=True,
     ):
         raise NotImplementedError(not_implemented_msg)
 

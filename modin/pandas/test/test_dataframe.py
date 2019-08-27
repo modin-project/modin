@@ -637,8 +637,8 @@ class TestDFPartOne:
 
         assert new_modin_df is not modin_df
         assert np.array_equal(
-            new_modin_df._query_compiler._data_obj._partitions,
-            modin_df._query_compiler._data_obj._partitions,
+            new_modin_df._query_compiler._modin_frame._partitions,
+            modin_df._query_compiler._modin_frame._partitions,
         )
         assert new_modin_df is not modin_df
         df_equals(new_modin_df, modin_df)
@@ -1064,7 +1064,9 @@ class TestDFPartOne:
     def test_partition_to_numpy(self):
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
-        for partition in frame._query_compiler._data_obj._partitions.flatten().tolist():
+        for (
+            partition
+        ) in frame._query_compiler._modin_frame._partitions.flatten().tolist():
             assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
     def test_asfreq(self):

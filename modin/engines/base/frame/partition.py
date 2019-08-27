@@ -135,15 +135,6 @@ class BaseFramePartition(object):  # pragma: no cover
             A callable function.
         """
         raise NotImplementedError(not_implemented_msg)
-    
-    @classmethod
-    def empty(cls):
-        """Create an empty partition
-        
-        Returns;
-            An empty partition
-        """
-        
 
     _length_cache = None
     _width_cache = None
@@ -166,4 +157,9 @@ class BaseFramePartition(object):  # pragma: no cover
 
     @classmethod
     def empty(cls):
-        raise NotImplementedError("To be implemented in the child class!")
+        """Create an empty partition
+
+        Returns;
+            An empty partition
+        """
+        raise NotImplementedError(not_implemented_msg)

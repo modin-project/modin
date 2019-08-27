@@ -1118,7 +1118,12 @@ class BasePandasFrame(object):
         new_dtypes = df.dtypes
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
         return cls(
-            new_frame, new_index, new_columns, new_lengths, new_widths, dtypes=new_dtypes
+            new_frame,
+            new_index,
+            new_columns,
+            new_lengths,
+            new_widths,
+            dtypes=new_dtypes,
         )
 
     def to_pandas(self):
