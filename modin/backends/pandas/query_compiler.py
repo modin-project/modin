@@ -31,7 +31,7 @@ def _set_axis(axis):
         def set_axis(self, idx):
             self._modin_frame.index = idx
 
-    if axis == 1:
+    else:
 
         def set_axis(self, cols):
             self._modin_frame.columns = cols
@@ -264,7 +264,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
-
         if isinstance(other, type(self)):
             # Note: Currently we are doing this with two maps across the entire
             # data. This can be done with a single map, but it will take a
@@ -284,6 +283,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._binary_op(
                 where_builder_second_pass, first_pass, join_type="left"
             )
+        # This will be a Series of scalars to be applied based on the condition
+        # dataframe.
         else:
 
             def where_builder_series(df, cond):

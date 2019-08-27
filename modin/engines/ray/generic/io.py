@@ -530,7 +530,7 @@ class RayIO(BaseIO):
             dtypes.index = column_names
         else:
             dtypes = pandas.Series(dtypes, index=column_names)
-        new_data = cls.frame_cls(
+        new_frame = cls.frame_cls(
             partition_ids,
             new_index,
             column_names,
@@ -538,7 +538,7 @@ class RayIO(BaseIO):
             column_widths,
             dtypes=dtypes,
         )
-        new_query_compiler = cls.query_compiler_cls(data_object=new_data)
+        new_query_compiler = cls.query_compiler_cls(new_frame)
 
         if skipfooter:
             new_query_compiler = new_query_compiler.drop(
@@ -547,7 +547,7 @@ class RayIO(BaseIO):
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
-            new_query_compiler._data_obj._apply_index_objs(axis=0)
+            new_query_compiler._modin_frame._apply_index_objs(axis=0)
         return new_query_compiler
 
     @classmethod
@@ -880,7 +880,7 @@ class RayIO(BaseIO):
             else:
                 dtypes = pandas.Series(dtypes, index=columns)
 
-            new_data = cls.frame_cls(
+            new_frame = cls.frame_cls(
                 np.array(partition_ids),
                 new_index,
                 columns,
@@ -888,8 +888,8 @@ class RayIO(BaseIO):
                 column_widths,
                 dtypes=dtypes,
             )
-            new_data._apply_index_objs(axis=0)
-            return cls.query_compiler_cls(new_data)
+            new_frame._apply_index_objs(axis=0)
+            return cls.query_compiler_cls(new_frame)
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
@@ -1058,7 +1058,7 @@ class RayIO(BaseIO):
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._data_obj._map_reduce_full_axis(1, func)
+        result = qc._modin_frame._map_reduce_full_axis(1, func)
         # blocking operation
         result.to_pandas()
 
@@ -1116,6 +1116,6 @@ class RayIO(BaseIO):
             index_lst = [x for part_index in ray.get(index_ids) for x in part_index]
             new_index = pandas.Index(index_lst).set_names(index_col)
 
-        new_data = cls.frame_cls(np.array(partition_ids), new_index, cols_names)
-        new_data._apply_index_objs(axis=0)
-        return cls.query_compiler_cls(new_data)
+        new_frame = cls.frame_cls(np.array(partition_ids), new_index, cols_names)
+        new_frame._apply_index_objs(axis=0)
+        return cls.query_compiler_cls(new_frame)

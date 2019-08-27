@@ -433,11 +433,11 @@ class BasePandasFrame(object):
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
-        new_data = self._frame_mgr_cls.map_across_blocks(
+        new_frame = self._frame_mgr_cls.map_across_blocks(
             self._partitions, astype_builder
         )
         return self.__constructor__(
-            new_data,
+            new_frame,
             self.index,
             self.columns,
             self._row_lengths,
@@ -457,12 +457,12 @@ class BasePandasFrame(object):
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
-        new_data_obj = self.copy()
+        new_frame = self.copy()
         if axis == 0:
-            new_data_obj.index = new_labels
+            new_frame.index = new_labels
         else:
-            new_data_obj.columns = new_labels
-        return new_data_obj
+            new_frame.columns = new_labels
+        return new_frame
 
     def add_suffix(self, suffix, axis):
         """Add a suffix to the current row or column labels.
@@ -475,12 +475,12 @@ class BasePandasFrame(object):
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
-        new_data_obj = self.copy()
+        new_frame = self.copy()
         if axis == 0:
-            new_data_obj.index = new_labels
+            new_frame.index = new_labels
         else:
-            new_data_obj.columns = new_labels
-        return new_data_obj
+            new_frame.columns = new_labels
+        return new_frame
 
     # END Metadata modification methods
 
@@ -1016,27 +1016,27 @@ class BasePandasFrame(object):
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
-    def _binary_op(self, function, right_data, join_type="outer"):
+    def _binary_op(self, op, right_frame, join_type="outer"):
         """Perform an operation that requires joining with another dataframe.
 
         Args:
-            function: The function to apply after the join.
-            right_data: The dataframe to join with.
+            op: The function to apply after the join.
+            right_frame: The dataframe to join with.
             join_type: (optional) The type of join to apply.
 
         Returns:
              A new dataframe.
         """
         left_parts, right_parts, joined_index = self._copartition(
-            0, right_data, join_type, sort=True
+            0, right_frame, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
-        new_data = self._frame_mgr_cls.binary_operation(
-            1, left_parts, lambda l, r: function(l, r), right_parts
+        new_frame = self._frame_mgr_cls.binary_operation(
+            1, left_parts, lambda l, r: op(l, r), right_parts
         )
-        new_columns = self.columns.join(right_data.columns, how=join_type)
-        return self.__constructor__(new_data, self.index, new_columns, None, None)
+        new_columns = self.columns.join(right_frame.columns, how=join_type)
+        return self.__constructor__(new_frame, self.index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
         """Concatenate this dataframe with one or more others.
@@ -1116,9 +1116,9 @@ class BasePandasFrame(object):
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_data, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
+        new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
         return cls(
-            new_data, new_index, new_columns, new_lengths, new_widths, dtypes=new_dtypes
+            new_frame, new_index, new_columns, new_lengths, new_widths, dtypes=new_dtypes
         )
 
     def to_pandas(self):

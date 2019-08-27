@@ -1,3 +1,6 @@
+not_implemented_msg = "Must be implemented in child class"
+
+
 class BaseFramePartition(object):  # pragma: no cover
     """This abstract class holds the data and metadata for a single partition.
         The methods required for implementing this abstract class are listed in
@@ -23,7 +26,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             The object that was `put`.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -39,7 +42,7 @@ class BaseFramePartition(object):  # pragma: no cover
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     def add_to_apply_calls(self, func, **kwargs):
         """Add the function to the apply function call stack.
@@ -47,7 +50,7 @@ class BaseFramePartition(object):  # pragma: no cover
         This function will be executed when apply is called. It will be executed
         in the order inserted; apply's func operates the last and return
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     def drain_call_queue(self):
         """Execute all functionality stored in the call queue."""
@@ -61,7 +64,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A Pandas DataFrame.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     def to_numpy(self):
         """Convert the object stored in this partition to a Numpy Array.
@@ -72,7 +75,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A Numpy Array.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     def mask(self, row_indices, col_indices):
         """Lazily create a mask that extracts the indices provided.
@@ -84,7 +87,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A `BaseFramePartition` object.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     @classmethod
     def put(cls, obj):
@@ -96,7 +99,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A `BaseFramePartition` object.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     @classmethod
     def preprocess_func(cls, func):
@@ -113,7 +116,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             An object that can be accepted by `apply`.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     @classmethod
     def length_extraction_fn(cls):
@@ -122,7 +125,7 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A callable function.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
 
     @classmethod
     def width_extraction_fn(cls):
@@ -131,7 +134,16 @@ class BaseFramePartition(object):  # pragma: no cover
         Returns:
             A callable function.
         """
-        raise NotImplementedError("Must be implemented in child class")
+        raise NotImplementedError(not_implemented_msg)
+    
+    @classmethod
+    def empty(cls):
+        """Create an empty partition
+        
+        Returns;
+            An empty partition
+        """
+        
 
     _length_cache = None
     _width_cache = None
