@@ -49,6 +49,135 @@ class BasePandasFrame(object):
         self._dtypes = dtypes
         self._filter_empties()
 
+    @property
+    def _row_lengths(self):
+        """Compute the row lengths if they are not provided.
+
+        Returns:
+            A list of row lengths.
+        """
+        if self._row_lengths_cache is None:
+            self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
+        return self._row_lengths_cache
+
+    @property
+    def _column_widths(self):
+        """Compute the column widths if they are not provided.
+
+        Returns:
+            A list of column widths.
+        """
+        if self._column_widths_cache is None:
+            self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+        return self._column_widths_cache
+
+    @property
+    def dtypes(self):
+        """Compute the data types if they are not provided.
+
+        Returns:
+            A pandas Series containing the data types for this dataframe.
+        """
+        if self._dtypes is None:
+            self._dtypes = self._compute_dtypes()
+        return self._dtypes
+
+    def _compute_dtypes(self):
+        """Compute the dtypes via MapReduce.
+
+        Returns:
+            The data types of this dataframe.
+        """
+
+        def dtype_builder(df):
+            return df.apply(lambda row: find_common_type(row.values), axis=0)
+
+        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
+        reduce_func = self._build_mapreduce_func(0, dtype_builder)
+        # For now we will use a pandas Series for the dtypes.
+        if len(self.columns) > 0:
+            dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+        else:
+            dtypes = pandas.Series([])
+        # reset name to None because we use "__reduced__" internally
+        dtypes.name = None
+        return dtypes
+
+    _index_cache = None
+    _columns_cache = None
+
+    def _validate_set_axis(self, new_labels, old_labels):
+        """Validates the index or columns replacement against the old labels.
+
+        Args:
+            new_labels: The labels to replace with.
+            old_labels: The labels to replace.
+
+        Returns:
+            The validated labels.
+        """
+        new_labels = ensure_index(new_labels)
+        old_len = len(old_labels)
+        new_len = len(new_labels)
+        if old_len != new_len:
+            raise ValueError(
+                "Length mismatch: Expected axis has %d elements, "
+                "new values have %d elements" % (old_len, new_len)
+            )
+        return new_labels
+
+    def _get_index(self):
+        """Gets the index from the cache object.
+
+        Returns:
+            A pandas.Index object containing the row labels.
+        """
+        return self._index_cache
+
+    def _get_columns(self):
+        """Gets the columns from the cache object.
+
+        Returns:
+            A pandas.Index object containing the column labels.
+        """
+        return self._columns_cache
+
+    def _set_index(self, new_index):
+        """Replaces the current row labels with new labels.
+
+        Args:
+            new_index: The replacement row labels.
+        """
+        if self._index_cache is None:
+            self._index_cache = ensure_index(new_index)
+        else:
+            new_index = self._validate_set_axis(new_index, self._index_cache)
+            self._index_cache = new_index
+        self._apply_index_objs(axis=0)
+
+    def _set_columns(self, new_columns):
+        """Replaces the current column labels with new labels.
+
+        Args:
+            new_columns: The replacement column labels.
+        """
+        if self._columns_cache is None:
+            self._columns_cache = ensure_index(new_columns)
+        else:
+            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
+            self._columns_cache = new_columns
+            if self._dtypes is not None:
+                self._dtypes.index = new_columns
+        self._apply_index_objs(axis=1)
+
+    columns = property(_get_columns, _set_columns)
+    index = property(_get_index, _set_index)
+
+    @property
+    def axes(self):
+        """The index, columns that can be accessed with an `axis` integer."""
+        return [self.index, self.columns]
+
     def _filter_empties(self):
         """Removes empty partitions to avoid triggering excess computation."""
         self._column_widths_cache = [w for w in self._column_widths if w > 0]
@@ -158,6 +287,9 @@ class BasePandasFrame(object):
     ):
         """Lazily select columns or rows from given indices.
 
+        Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
+            The same rule applied to col_indices and col_numeric_idx.
+
         Args:
             row_indices: The row labels to extract.
             row_numeric_idx: The row indices to extract.
@@ -229,28 +361,6 @@ class BasePandasFrame(object):
             new_dtypes,
         )
 
-    @property
-    def _row_lengths(self):
-        """Compute the row lengths if they are not provided.
-
-        Returns:
-            A list of row lengths.
-        """
-        if self._row_lengths_cache is None:
-            self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
-        return self._row_lengths_cache
-
-    @property
-    def _column_widths(self):
-        """Compute the column widths if they are not provided.
-
-        Returns:
-            A list of column widths.
-        """
-        if self._column_widths_cache is None:
-            self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
-        return self._column_widths_cache
-
     def copy(self):
         """Copy this object.
 
@@ -265,38 +375,6 @@ class BasePandasFrame(object):
             self._column_widths,
             self._dtypes,
         )
-
-    @property
-    def dtypes(self):
-        """Compute the data types if they are not provided.
-
-        Returns:
-            A pandas Series containing the data types for this dataframe.
-        """
-        if self._dtypes is None:
-            self._dtypes = self._compute_dtypes()
-        return self._dtypes
-
-    def _compute_dtypes(self):
-        """Compute the dtypes via MapReduce.
-
-        Returns:
-            The data types of this dataframe.
-        """
-
-        def dtype_builder(df):
-            return df.apply(lambda row: find_common_type(row.values), axis=0)
-
-        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_mapreduce_func(0, dtype_builder)
-        # For now we will use a pandas Series for the dtypes.
-        if len(self.columns) > 0:
-            dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
-        else:
-            dtypes = pandas.Series([])
-        # reset name to None because we use "__reduced__" internally
-        dtypes.name = None
-        return dtypes
 
     @classmethod
     def combine_dtypes(cls, list_of_dtypes, column_names):
@@ -366,81 +444,6 @@ class BasePandasFrame(object):
             self._column_widths,
             new_dtypes,
         )
-
-    _index_cache = None
-    _columns_cache = None
-
-    def _validate_set_axis(self, new_labels, old_labels):
-        """Validates the index or columns replacement against the old labels.
-
-        Args:
-            new_labels: The labels to replace with.
-            old_labels: The labels to replace.
-
-        Returns:
-            The validated labels.
-        """
-        new_labels = ensure_index(new_labels)
-        old_len = len(old_labels)
-        new_len = len(new_labels)
-        if old_len != new_len:
-            raise ValueError(
-                "Length mismatch: Expected axis has %d elements, "
-                "new values have %d elements" % (old_len, new_len)
-            )
-        return new_labels
-
-    def _get_index(self):
-        """Gets the index from the cache object.
-
-        Returns:
-            A pandas.Index object containing the row labels.
-        """
-        return self._index_cache
-
-    def _get_columns(self):
-        """Gets the columns from the cache object.
-
-        Returns:
-            A pandas.Index object containing the column labels.
-        """
-        return self._columns_cache
-
-    def _set_index(self, new_index):
-        """Replaces the current row labels with new labels.
-
-        Args:
-            new_index: The replacement row labels.
-        """
-        if self._index_cache is None:
-            self._index_cache = ensure_index(new_index)
-        else:
-            new_index = self._validate_set_axis(new_index, self._index_cache)
-            self._index_cache = new_index
-        self._apply_index_objs(axis=0)
-
-    def _set_columns(self, new_columns):
-        """Replaces the current column labels with new labels.
-
-        Args:
-            new_columns: The replacement column labels.
-        """
-        if self._columns_cache is None:
-            self._columns_cache = ensure_index(new_columns)
-        else:
-            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            self._columns_cache = new_columns
-            if self._dtypes is not None:
-                self._dtypes.index = new_columns
-        self._apply_index_objs(axis=1)
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
-
-    @property
-    def axes(self):
-        """The index, columns that can be accessed with an `axis` integer."""
-        return [self.index, self.columns]
 
     # Metadata modification methods
     def add_prefix(self, prefix, axis):
@@ -795,6 +798,10 @@ class BasePandasFrame(object):
                 1, new_partitions, lambda df: df.index
             )
         # Length objects for new object creation. This is shorter than if..else
+        # This object determines the lengths and widths based on the given parameters
+        # and builds a dictionary used in the constructor below. 0 gives the row lengths
+        # and 1 gives the column widths. Since the dimension of `axis` given may have
+        # changed, we current just recompute it.
         lengths_objs = {
             axis: None,
             axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
@@ -824,7 +831,7 @@ class BasePandasFrame(object):
         new_columns=None,
         keep_remaining=False,
     ):
-        """Apply a functional across an entire axis for a subset of the data.
+        """Apply a function across an entire axis for a subset of the data.
 
         Args:
             axis: The axis to apply over.
@@ -855,6 +862,11 @@ class BasePandasFrame(object):
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
         # Length objects for new object creation. This is shorter than if..else
+        # This object determines the lengths and widths based on the given parameters
+        # and builds a dictionary used in the constructor below. 0 gives the row lengths
+        # and 1 gives the column widths. Since the dimension of `axis` given may have
+        # changed, we current just recompute it.
+        # TODO Determine lengths from current lengths if `keep_remaining=False`
         lengths_objs = {
             axis: None
             if not keep_remaining
@@ -877,7 +889,7 @@ class BasePandasFrame(object):
         keep_remaining=False,
         item_to_distribute=None,
     ):
-        """Apply a functional across an entire axis for a subset of the data.
+        """Apply a function for a subset of the data.
 
         Args:
             axis: The axis to apply over.
@@ -918,6 +930,11 @@ class BasePandasFrame(object):
                 keep_remaining=keep_remaining,
             )
             # Length objects for new object creation. This is shorter than if..else
+            # This object determines the lengths and widths based on the given
+            # parameters and builds a dictionary used in the constructor below. 0 gives
+            # the row lengths and 1 gives the column widths. Since the dimension of
+            # `axis` given may have changed, we current just recompute it.
+            # TODO Determine lengths from current lengths if `keep_remaining=False`
             lengths_objs = {
                 axis: [len(apply_indices)]
                 if not keep_remaining

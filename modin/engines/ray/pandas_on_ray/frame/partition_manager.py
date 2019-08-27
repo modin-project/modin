@@ -39,10 +39,6 @@ class PandasOnRayFrameManager(RayFrameManager):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             # We grab the first column of blocks and extract the indices
-            # Note: We use _partitions_cache in the context of this function to make
-            # sure that none of the partitions are modified or filtered out before we
-            # get the index information.
-            # DO NOT CHANGE TO self.partitions under any circumstance.
             new_idx = (
                 [idx.apply(func).oid for idx in partitions.T[0]]
                 if len(partitions.T)
