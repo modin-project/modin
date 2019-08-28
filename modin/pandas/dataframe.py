@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
@@ -18,6 +14,7 @@ import itertools
 import functools
 import numpy as np
 import sys
+from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -25,8 +22,6 @@ from .utils import from_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
-
-from typing import Tuple, Union
 
 
 @_inherit_docstrings(
@@ -540,9 +535,9 @@ class DataFrame(BasePandasDataset):
             and self.columns.equals(other.columns)
             and self.eq(other).all().all()
         )
-    
+
     def explode(self, column: Union[str, Tuple]):
-        pass
+        return self._default_to_pandas(pandas.DataFrame.explode, column)
 
     def eval(self, expr, inplace=False, **kwargs):
         """Evaluate a Python expression as a string using various backends.
@@ -1472,9 +1467,9 @@ class DataFrame(BasePandasDataset):
 
         if not inplace:
             return frame
-    
-    def sparse(data=None):
-        pass
+
+    def sparse(self, data=None):
+        return self._default_to_pandas(pandas.DataFrame.sparse, data=data)
 
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None

@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import pandas
 from pandas.core.common import is_bool_indexer
@@ -533,7 +529,7 @@ class Series(BasePandasDataset):
             and self.index.equals(other.index)
             and self.eq(other).all()
         )
-    
+
     def explode(self, column):
         pass
 

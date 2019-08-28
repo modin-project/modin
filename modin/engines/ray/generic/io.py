@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 from pandas.io.common import _infer_compression
 from pandas.io.parsers import _validate_usecols_arg

@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from itertools import groupby
 import numpy as np
 from operator import itemgetter

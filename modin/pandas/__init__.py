@@ -1,9 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# TODO: In the future `set_option` or similar needs to run on every node
-# in order to keep all pandas instances across nodes consistent
 import pandas
 
 __pandas_version__ = "0.25.0"
@@ -24,7 +18,6 @@ from pandas import (
     factorize,
     test,
     qcut,
-    Panel,
     date_range,
     period_range,
     Index,
@@ -235,7 +228,6 @@ __all__ = [
     "isnull",
     "merge",
     "pivot_table",
-    "Panel",
     "date_range",
     "Index",
     "MultiIndex",
@@ -278,7 +270,6 @@ __all__ = [
     "TimedeltaIndex",
     "IntervalIndex",
     "IndexSlice",
-    "TimeGrouper",
     "Grouper",
     "array",
     "Period",

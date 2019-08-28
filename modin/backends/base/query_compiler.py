@@ -1,8 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-
 class BaseQueryCompiler(object):
     """Abstract Class that handles the queries to Modin dataframes.
 

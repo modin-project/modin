@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pytest
 import numpy as np
 import pandas
@@ -1635,8 +1631,7 @@ class TestDFPartOne:
 
         # non-unique
         nu_df = pandas.DataFrame(
-            pandas.compat.lzip(range(3), range(-3, 1), list("abc")),
-            columns=["a", "a", "b"],
+            zip(range(3), range(-3, 1), list("abc")), columns=["a", "a", "b"]
         )
         modin_nu_df = pd.DataFrame(nu_df)
         df_equals(modin_nu_df.drop("a", axis=1), nu_df[["b"]])

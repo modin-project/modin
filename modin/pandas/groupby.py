@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like

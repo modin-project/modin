@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
@@ -518,6 +514,11 @@ class BaseIO(object):
                 chunksize=chunksize,
             )
         )
+
+    @classmethod
+    def read_spss(cls, path, usecols, convert_categoricals):
+        ErrorMessage.default_to_pandas("`read_spss`")
+        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
 
     @classmethod
     def to_sql(

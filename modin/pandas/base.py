@@ -6,6 +6,7 @@ from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, _pipe
 from pandas.core.dtypes.common import (
     is_list_like,
+    is_dict_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
@@ -692,7 +693,7 @@ class BasePandasDataset(object):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
-            if isinstance(level, string_types):
+            if isinstance(level, str):
                 level = self.axes[axis].names.index(level)
 
             new_names = dict(

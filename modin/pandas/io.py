@@ -1,13 +1,9 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import inspect
 import pandas
-import re
 import pathlib
-from typing import Union, IO, AnyStr, Sequence
+import re
 from collections import OrderedDict
+from typing import Union, IO, AnyStr, Sequence
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
@@ -329,7 +325,11 @@ def read_sql(
 
 
 def read_fwf(
-    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]], colspecs="infer", widths=None, infer_nrows=100, **kwds
+    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    colspecs="infer",
+    widths=None,
+    infer_nrows=100,
+    **kwds
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
@@ -362,12 +362,15 @@ def read_sql_query(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_sql_query(**kwargs))
 
+
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
-    pass
+    return DataFrame(
+        query_compiler=BaseFactory.read_spss(path, usecols, convert_categoricals)
+    )
 
 
 def to_pickle(obj, path, compression="infer", protocol=4):
