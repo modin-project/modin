@@ -1,40 +1,80 @@
+trigger:
+- master
 pr:
 - master
 
-pool:
-  vmImage: 'ubuntu-latest'
 strategy:
   matrix:
     Python36:
       python.version: '3.6'
 
-steps:
-- bash: echo "##vso[task.prependpath]$CONDA/bin"
-  displayName: Add conda to PATH
+jobs:
+  - job: Linux
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - bash: echo "##vso[task.prependpath]$CONDA/bin"
+      displayName: Add conda to PATH
 
-- task: CacheBeta@0
-  inputs:
-    key: $(Agent.OS) - conda
-    path: /usr/share/miniconda
-  displayName: cache conda envs
+    - task: CacheBeta@0
+      inputs:
+        key: $(Agent.OS) - conda
+        path: /usr/share/miniconda
+      displayName: cache conda envs
 
-- task: CacheBeta@0
-  inputs:
-    key: $(Agent.OS) - pip
-    path: /home/vsts/.cache/pip
-  displayName: cache pip downloads
+    - task: CacheBeta@0
+      inputs:
+        key: $(Agent.OS) - pip
+        path: /home/vsts/.cache/pip
+      displayName: cache pip downloads
 
-- script: |
-    conda install -y hdf5 python=3.6 pytables=3.4.4
-    pip install --upgrade pip
-    pip install -r requirements.txt
-  displayName: 'Install dependencies'
+    - script: |
+        conda install -y hdf5 python=3.6 pytables=3.4.4
+        pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
 
-- script: |
-    pip install pytest pytest-azurepipelines
-    pip install -e .
-  displayName: 'install test deps'
+    - script: |
+        pip install pytest pytest-azurepipelines
+        pip install -e .
+      displayName: 'install test deps'
 
-- script: |
-    pytest ./modin/pandas/test/test_api.py
-  displayName: 'pytest test-run'
+    - script: |
+        pytest ./modin/pandas/test/test_dataframe.py::TestDFPartOne
+        pytest ./modin/pandas/test/test_api.py
+      displayName: 'Test first half of dataframe tests'
+
+    - job: Linux
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+        - bash: echo "##vso[task.prependpath]$CONDA/bin"
+          displayName: Add conda to PATH
+
+        - task: CacheBeta@0
+          inputs:
+            key: $(Agent.OS) - conda
+            path: /usr/share/miniconda
+          displayName: cache conda envs
+
+        - task: CacheBeta@0
+          inputs:
+            key: $(Agent.OS) - pip
+            path: /home/vsts/.cache/pip
+          displayName: cache pip downloads
+
+        - script: |
+            conda install -y hdf5 python=3.6 pytables=3.4.4
+            pip install --upgrade pip
+            pip install -r requirements.txt
+          displayName: 'Install dependencies'
+
+        - script: |
+            pip install pytest pytest-azurepipelines
+            pip install -e .
+          displayName: 'install test deps'
+
+        - script: |
+            pytest ./modin/pandas/test/test_dataframe.py::TestDFPartTwo
+            pytest ./modin/pandas/test/test_api.py
+          displayName: 'Test second half of dataframe tests'
