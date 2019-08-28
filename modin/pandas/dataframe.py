@@ -955,7 +955,7 @@ class DataFrame(BasePandasDataset):
                 rsuffix=rsuffix,
                 sort=sort,
             )
-        if isinstance(other, pandas.Series):
+        if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = DataFrame({other.name: other})
@@ -963,43 +963,38 @@ class DataFrame(BasePandasDataset):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
             # would otherwise require a lot more logic.
-            pandas.DataFrame(columns=self.columns).join(
-                pandas.DataFrame(columns=other.columns),
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-            ).columns
-
-            return DataFrame(
-                query_compiler=self._query_compiler.join(
-                    other._query_compiler,
-                    how=how,
+            new_columns = (
+                pandas.DataFrame(columns=self.columns)
+                .join(
+                    pandas.DataFrame(columns=other.columns),
                     lsuffix=lsuffix,
                     rsuffix=rsuffix,
-                    sort=sort,
                 )
+                .columns
             )
+            other = [other]
         else:
             # This constraint carried over from Pandas.
             if on is not None:
                 raise ValueError(
                     "Joining multiple DataFrames only supported for joining on index"
                 )
-            # See note above about error checking with an empty join.
-            pandas.DataFrame(columns=self.columns).join(
-                [pandas.DataFrame(columns=obj.columns) for obj in other],
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-            ).columns
-
-            return DataFrame(
-                query_compiler=self._query_compiler.join(
-                    [obj._query_compiler for obj in other],
-                    how=how,
+            new_columns = (
+                pandas.DataFrame(columns=self.columns)
+                .join(
+                    [pandas.DataFrame(columns=obj.columns) for obj in other],
                     lsuffix=lsuffix,
                     rsuffix=rsuffix,
-                    sort=sort,
                 )
+                .columns
             )
+        new_frame = DataFrame(
+            query_compiler=self._query_compiler.concat(
+                1, [obj._query_compiler for obj in other], join=how, sort=sort
+            )
+        )
+        new_frame.columns = new_columns
+        return new_frame
 
     def le(self, other, axis="columns", level=None):
         if isinstance(other, Series):

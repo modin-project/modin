@@ -303,6 +303,7 @@ __all__ = [
     "SparseSeries",
     "SparseDataFrame",
     "datetime",
+    "DEFAULT_NPARTITIONS",
 ]
 
 del pandas

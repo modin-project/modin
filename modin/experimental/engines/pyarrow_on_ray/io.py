@@ -12,9 +12,7 @@ import pyarrow.csv as csv
 from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
 from modin.data_management.utils import get_default_chunksize
 from modin.engines.ray.generic.io import RayIO
-from modin.experimental.engines.pyarrow_on_ray.frame.partition_manager import (
-    PyarrowOnRayFrameManager,
-)
+from modin.experimental.engines.pyarrow_on_ray.frame.data import PyarrowOnRayFrame
 from modin.experimental.engines.pyarrow_on_ray.frame.partition import (
     PyarrowOnRayFramePartition,
 )
@@ -62,7 +60,7 @@ def _read_csv_with_offset_pyarrow_on_ray(
 
 class PyarrowOnRayIO(RayIO):
 
-    frame_mgr_cls = PyarrowOnRayFrameManager
+    frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
     query_compiler_cls = PyarrowQueryCompiler
 

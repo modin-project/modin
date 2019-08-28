@@ -637,8 +637,8 @@ class TestDFPartOne:
 
         assert new_modin_df is not modin_df
         assert np.array_equal(
-            new_modin_df._query_compiler.data.partitions,
-            modin_df._query_compiler.data.partitions,
+            new_modin_df._query_compiler._modin_frame._partitions,
+            modin_df._query_compiler._modin_frame._partitions,
         )
         assert new_modin_df is not modin_df
         df_equals(new_modin_df, modin_df)
@@ -1064,7 +1064,9 @@ class TestDFPartOne:
     def test_partition_to_numpy(self):
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
-        for partition in frame._query_compiler.data.partitions.flatten().tolist():
+        for (
+            partition
+        ) in frame._query_compiler._modin_frame._partitions.flatten().tolist():
             assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
     def test_asfreq(self):
@@ -3195,20 +3197,6 @@ class TestDFPartTwo:
 
         modin_result = modin_df.memory_usage(index=index)
         pandas_result = pandas_df.memory_usage(index=index)
-        # We do not compare the indicies because pandas and modin handles the
-        # indicies slightly differently
-        if index:
-            modin_result = modin_result[1:]
-            pandas_result = pandas_result[1:]
-
-        df_equals(modin_result, pandas_result)
-
-        modin_result = modin_df.T.memory_usage(index=index)
-        pandas_result = pandas_df.T.memory_usage(index=index)
-        if index:
-            modin_result = modin_result[1:]
-            pandas_result = pandas_result[1:]
-
         df_equals(modin_result, pandas_result)
 
     def test_merge(self):
@@ -3468,7 +3456,6 @@ class TestDFPartTwo:
             f(g(h(modin_df), arg1=a), arg2=b, arg3=c),
             (modin_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),
         )
-
         df_equals(
             (modin_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),
             (pandas_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),

@@ -9,10 +9,8 @@ import ray
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO, file_open
-from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
-    PandasOnRayFrameManager,
-)
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
@@ -87,11 +85,9 @@ def _read_csv_with_offset_pandas_on_ray(
     to_read = header + bio.read(end - start)
     bio.close()
     pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     if index_col is not None:
         index = pandas_df.index
         # Partitions must have RangeIndex
-        pandas_df.index = pandas.RangeIndex(0, len(pandas_df))
     else:
         # We will use the lengths to build the index if we are not given an
         # `index_col`.
@@ -128,7 +124,6 @@ def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
     if not pandas_df.columns.equals(columns):
         raise NotImplementedError("Columns must be the same across all rows.")
     partition_columns = pandas_df.columns
-    pandas_df.columns = pandas.RangeIndex(len(pandas_df.columns))
     return _split_result_for_readers(1, num_splits, pandas_df) + [
         len(pandas_df),
         pandas_df.dtypes,
@@ -201,9 +196,9 @@ def _read_sql_with_limit_offset(
 
 class PandasOnRayIO(RayIO):
 
-    frame_mgr_cls = PandasOnRayFrameManager
     frame_partition_cls = PandasOnRayFramePartition
     query_compiler_cls = PandasQueryCompiler
+    frame_cls = PandasOnRayFrame
 
     read_parquet_remote_task = _read_parquet_columns
     read_csv_remote_task = _read_csv_with_offset_pandas_on_ray
