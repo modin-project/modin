@@ -2138,6 +2138,12 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).expanding()
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_explode(self, data):
+        modin_df = pd.DataFrame(data)
+        with pytest.warns(UserWarning):
+            modin_df.explode(modin_df.columns[0])
+
     def test_ffill(self):
         test_data = TestData()
         test_data.tsframe["A"][:5] = np.nan

@@ -43,11 +43,6 @@ pd.DEFAULT_NPARTITIONS = 4
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 
-if sys.version_info[0] < 3:
-    PY2 = True
-else:
-    PY2 = False
-
 
 def inter_df_math_helper(modin_series, pandas_series, op):
     try:
@@ -408,8 +403,7 @@ def test___repr__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___round__(data):
     modin_series, pandas_series = create_test_series(data)
-    if not PY2:
-        df_equals(round(modin_series), round(pandas_series))
+    df_equals(round(modin_series), round(pandas_series))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -956,7 +950,7 @@ def test_compound(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_compress(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with pytest.raises(KeyError):
         modin_series.compress(modin_series > 30)
 
 
@@ -2454,6 +2448,15 @@ def test_take():
         series.take([0, 3])
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_explode(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.explode()
+    pandas_result = pandas_series.explode()
+    df_equals(modin_result, pandas_result)
+
+
 def test_to_period():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
@@ -3355,7 +3358,7 @@ def test_str_translate(data, pat):
         df_equals(modin_result, pandas_result)
 
     # Translation table with maketrans (python3 only)
-    if pat is not None and not PY2:
+    if pat is not None:
         table = str.maketrans(pat, "d" * len(pat))
         try:
             pandas_result = pandas_series.str.translate(table)

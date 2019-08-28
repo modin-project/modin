@@ -530,8 +530,8 @@ class Series(BasePandasDataset):
             and self.eq(other).all()
         )
 
-    def explode(self, column):
-        pass
+    def explode(self):
+        return self._default_to_pandas(pandas.Series.explode)
 
     def factorize(self, sort=False, na_sentinel=-1):
         return self._default_to_pandas(
@@ -999,7 +999,7 @@ class Series(BasePandasDataset):
         return super(Series, self).tail(n)
 
     def take(self, indices, axis=0, is_copy=False, **kwargs):
-        pass
+        self._default_to_pandas(pandas.Series.take, indices, axis=axis, is_copy=is_copy, **kwargs)
 
     def to_frame(self, name=None):
         from .dataframe import DataFrame
@@ -1308,7 +1308,7 @@ class StringMethods(object):
         )
 
     def split(self, pat=None, n=-1, expand=False):
-        if not pat and pat is not None and pandas.compat.PY3:
+        if not pat and pat is not None:
             raise ValueError("split() requires a non-empty pattern match.")
 
         if expand:

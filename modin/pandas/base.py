@@ -2082,6 +2082,19 @@ class BasePandasDataset(object):
                 if non_mapper:
                     newnames = v
                 else:
+                    def _get_rename_function(mapper):
+                        if isinstance(mapper, (dict, BasePandasDataset)):
+
+                            def f(x):
+                                if x in mapper:
+                                    return mapper[x]
+                                else:
+                                    return x
+                        else:
+                            f = mapper
+
+                        return f
+
                     f = _get_rename_function(v)
                     curnames = self.index.names if axis == 0 else self.columns.names
                     newnames = [f(name) for name in curnames]
