@@ -654,7 +654,8 @@ class BasePandasFrame(object):
             new_widths = [1]
             if self._dtypes is not None:
                 new_dtypes = pandas.Series(
-                    np.full(1, find_common_type(self.dtypes.values)), index=["__reduced__"]
+                    np.full(1, find_common_type(self.dtypes.values)),
+                    index=["__reduced__"],
                 )
             else:
                 new_dtypes = self._dtypes
