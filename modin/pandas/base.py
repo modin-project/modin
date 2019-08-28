@@ -683,7 +683,32 @@ class BasePandasDataset(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
+
         axis = self._get_axis_number(axis) if axis is not None else 0
+
+        if level is not None:
+
+            if not isinstance(self.axes[axis], pandas.MultiIndex):
+                # error thrown by pandas
+                raise TypeError("Can only count levels on hierarchical columns.")
+
+            if isinstance(level, string_types):
+                level = self.axes[axis].names.index(level)
+
+            new_names = dict(
+                zip(
+                    range(len(self.axes[axis].levels[level])),
+                    self.axes[axis].levels[level],
+                )
+            )
+
+            return (
+                self.groupby(self.axes[axis].codes[level], axis=axis)
+                .count()
+                .rename(new_names, axis=axis)
+                .rename_axis(self.axes[axis].names[level], axis=axis)
+            )
+
         return self._reduce_dimension(
             self._query_compiler.count(
                 axis=axis, level=level, numeric_only=numeric_only
