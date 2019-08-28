@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-not_implemented_msg = "Must be implemented in children classes"
+NOT_IMPLEMENTED_MESSAGE = "Must be implemented in children classes"
 
 
 class BaseQueryCompiler(object):
@@ -19,10 +19,10 @@ class BaseQueryCompiler(object):
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def add_suffix(self, suffix, axis=1):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Metadata modification abstract methods
 
@@ -31,7 +31,7 @@ class BaseQueryCompiler(object):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract copy
 
@@ -47,7 +47,7 @@ class BaseQueryCompiler(object):
         Returns:
             Concatenated objects.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract join and append helper functions
 
@@ -56,7 +56,7 @@ class BaseQueryCompiler(object):
         """In the future, this will hopefully trigger a cleanup of this object.
         """
         # TODO create a way to clean up this object.
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Data Management Methods
 
@@ -67,7 +67,7 @@ class BaseQueryCompiler(object):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def from_pandas(cls, df, block_partitions_cls):
@@ -81,7 +81,7 @@ class BaseQueryCompiler(object):
         Returns:
             Returns QueryCompiler containing data from the Pandas DataFrame.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END To/From Pandas
 
@@ -92,7 +92,7 @@ class BaseQueryCompiler(object):
         Returns:
             NumPy Array of the QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END To NumPy
 
@@ -134,10 +134,10 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler object.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def clip(self, lower, upper, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def update(self, other, **kwargs):
         """Uses other manager to update corresponding values in this manager.
@@ -148,7 +148,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and index.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -159,7 +159,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and index.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract inter-data operations
 
@@ -170,7 +170,7 @@ class BaseQueryCompiler(object):
         Returns:
             Transposed new QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract Transpose
 
@@ -185,7 +185,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and new index.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def reset_index(self, **kwargs):
         """Removes all levels from index and sets a default level_0 index.
@@ -193,7 +193,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and reset index.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract reindex/reset_index
 
@@ -210,7 +210,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series containing counts of non-NaN objects from each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.
@@ -218,7 +218,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the maximum values from each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -226,7 +226,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series containing the mean from each numerical column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -234,7 +234,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the minimum value from each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -242,7 +242,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -250,38 +250,38 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract full Reduce operations
 
     # Abstract map partitions operations
     # These operations are operations that apply a function to every partition.
     def abs(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def applymap(self, func):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isin(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isna(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isnull(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def negative(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def notna(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def notnull(self):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def round(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map partitions operations
 
@@ -296,7 +296,7 @@ class BaseQueryCompiler(object):
         Returns:
             DataFrame with updated dtypes.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map partitions across select indices
 
@@ -312,7 +312,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def any(self, **kwargs):
         """Returns whether any the elements are true, potentially over an axis.
@@ -320,7 +320,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
@@ -328,7 +328,7 @@ class BaseQueryCompiler(object):
         Return:
             Scalar of index name.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def idxmax(self, **kwargs):
         """Returns the first occurance of the maximum over requested axis.
@@ -336,7 +336,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the maximum of each column or axis.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def idxmin(self, **kwargs):
         """Returns the first occurance of the minimum over requested axis.
@@ -344,7 +344,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the minimum of each column or axis.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
@@ -352,7 +352,7 @@ class BaseQueryCompiler(object):
         Return:
             Scalar of index name.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def median(self, **kwargs):
         """Returns median of each column or row.
@@ -360,7 +360,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the median of each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def memory_usage(self, **kwargs):
         """Returns the memory usage of each column.
@@ -368,7 +368,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the memory usage of each column.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
@@ -376,7 +376,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series of ints indexed by column or index names.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
@@ -384,7 +384,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the quantile of each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def skew(self, **kwargs):
         """Returns skew of each column or row.
@@ -392,7 +392,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the skew of each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.
@@ -400,7 +400,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the standard deviation of each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def to_datetime(self, **kwargs):
         """Converts the Manager to a Series of DateTime objects.
@@ -408,7 +408,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series of DateTime objects.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def var(self, **kwargs):
         """Returns variance of each column or row.
@@ -416,7 +416,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the variance of each column or row.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract column/row partitions reduce operations
 
@@ -432,7 +432,7 @@ class BaseQueryCompiler(object):
         Returns:
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract column/row partitions reduce operations over select indices
 
@@ -441,26 +441,26 @@ class BaseQueryCompiler(object):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
     def cumsum(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cummax(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cummin(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cumprod(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def diff(self, **kwargs):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def dropna(self, **kwargs):
         """Returns a new QueryCompiler with null values dropped along given axis.
         Return:
             New QueryCompiler
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -471,7 +471,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with new columns after applying expr.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def mode(self, **kwargs):
         """Returns a new QueryCompiler with modes calculated for each label along given axis.
@@ -479,7 +479,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with modes calculated.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -487,7 +487,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with null values filled.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def query(self, expr, **kwargs):
         """Query columns of the QueryCompiler with a boolean expression.
@@ -498,7 +498,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the rows where the boolean expression is satisfied.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
@@ -506,7 +506,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the ranks of the values along an axis.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def sort_index(self, **kwargs):
         """Sorts the data with respect to either the columns or the indices.
@@ -514,7 +514,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the data sorted by columns or indices.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map across rows/columns
 
@@ -528,7 +528,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing quantiles of original QueryCompiler along an axis.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map across rows/columns
 
@@ -542,7 +542,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the first n rows of the original QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def tail(self, n):
         """Returns the last n rows.
@@ -553,7 +553,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the last n rows of the original QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def front(self, n):
         """Returns the first n columns.
@@ -564,7 +564,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def back(self, n):
         """Returns the last n columns.
@@ -575,7 +575,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END head/tail/front/back
 
@@ -589,7 +589,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new Query Compiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def getitem_row_array(self, key):
         """Get row data for target labels.
@@ -600,7 +600,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new Query Compiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract __getitem__ methods
 
@@ -620,7 +620,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with new data inserted.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract insert
 
@@ -635,7 +635,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END drop
 
@@ -652,7 +652,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END UDF
 
@@ -661,7 +661,7 @@ class BaseQueryCompiler(object):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def groupby_reduce(
         self,
@@ -674,7 +674,7 @@ class BaseQueryCompiler(object):
         reduce_args=None,
         numeric_only=True,
     ):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Manual Partitioning methods
 
@@ -687,17 +687,17 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # Indexing
     def view(self, index=None, columns=None):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def squeeze(self, ndim=0, axis=None):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
-        raise NotImplementedError(not_implemented_msg)
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract methods for QueryCompiler
 

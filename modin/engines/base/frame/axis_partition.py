@@ -1,6 +1,8 @@
 import pandas
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
+NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
+
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
     """This abstract class represents the Parent class for any
@@ -57,7 +59,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         Returns:
             A list of `BaseFramePartition` objects.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
 
     def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `lengths`.
@@ -69,7 +71,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         Returns:
             A list of RemotePartition objects split by `lengths`.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
 
     # Child classes must have these in order to correctly subclass.
     instance_type = None
