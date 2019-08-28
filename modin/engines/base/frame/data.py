@@ -854,7 +854,7 @@ class BasePandasFrame(object):
         # This object determines the lengths and widths based on the given parameters
         # and builds a dictionary used in the constructor below. 0 gives the row lengths
         # and 1 gives the column widths. Since the dimension of `axis` given may have
-        # changed, we current just recompute it.
+        # changed, we currently just recompute it.
         # TODO Determine lengths from current lengths if `keep_remaining=False`
         lengths_objs = {
             axis: None
