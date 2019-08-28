@@ -84,10 +84,10 @@ class BaseFrameManager(object):
                 for row_idx in range(len(partitions))
             ]
         )
-        return cls.map_across_full_axis(axis, new_partitions, reduce_func)
+        return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
-    def map_across_blocks(cls, partitions, map_func):
+    def map_partitions(cls, partitions, map_func):
         """Applies `map_func` to every partition.
 
         Args:
@@ -97,16 +97,25 @@ class BaseFrameManager(object):
             A new BaseFrameManager object, the type of object that called this.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
-        new_partitions = np.array(
+        return np.array(
             [
                 [part.apply(preprocessed_map_func) for part in row_of_parts]
                 for row_of_parts in partitions
             ]
         )
-        return new_partitions
 
     @classmethod
-    def map_across_full_axis(cls, axis, partitions, map_func):
+    def lazy_map_partitions(cls, partitions, map_func):
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        return np.array(
+            [
+                [part.add_to_apply_calls(preprocessed_map_func) for part in row]
+                for row in partitions
+            ]
+        )
+
+    @classmethod
+    def map_axis_partitions(cls, axis, partitions, map_func):
         """Applies `map_func` to every partition.
 
         Note: This method should be used in the case that `map_func` relies on

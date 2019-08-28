@@ -90,4 +90,4 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(partitions))
             ]
         )
-        return cls.map_across_full_axis(axis, new_partitions, reduce_func)
+        return cls.map_axis_partitions(axis, new_partitions, reduce_func)

@@ -433,9 +433,7 @@ class BasePandasFrame(object):
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
-        new_frame = self._frame_mgr_cls.map_across_blocks(
-            self._partitions, astype_builder
-        )
+        new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
         return self.__constructor__(
             new_frame,
             self.index,
@@ -642,43 +640,43 @@ class BasePandasFrame(object):
 
         return _map_reduce_func
 
-    def _map_reduce_full_axis(self, axis, func, alternate_index=None):
+    def _compute_map_reduce_metadata(self, axis, new_parts):
+        if axis == 0:
+            columns = self.columns
+            index = ["__reduced__"]
+            new_lengths = [1]
+            new_widths = self._column_widths
+            new_dtypes = self._dtypes
+        else:
+            columns = ["__reduced__"]
+            index = self.index
+            new_lengths = self._row_lengths
+            new_widths = [1]
+            if self._dtypes is not None:
+                new_dtypes = pandas.Series(
+                    np.full(1, find_common_type(self.dtypes.values)), index=["__reduced__"]
+                )
+            else:
+                new_dtypes = self._dtypes
+        return self.__constructor__(
+            new_parts, index, columns, new_lengths, new_widths, new_dtypes
+        )
+
+    def _map_reduce_full_axis(self, axis, func):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
             func: Function to reduce the Manager by. This function takes in a Manager.
             axis: axis to apply the function to.
-            alternate_index: If the resulting series should have an index
-                different from the current query_compiler's index or columns.
 
         Return:
             Pandas series containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
-        result = self._frame_mgr_cls.map_across_full_axis(axis, self._partitions, func)
-        if axis == 0:
-            columns = alternate_index if alternate_index is not None else self.columns
-            return self.__constructor__(
-                result,
-                index=["__reduced__"],
-                columns=columns,
-                row_lengths=[1],
-                column_widths=self._column_widths,
-                dtypes=self.dtypes,
-            )
-        else:
-            index = alternate_index if alternate_index is not None else self.index
-            new_dtypes = pandas.Series(
-                np.full(1, find_common_type(self.dtypes.values)), index=["__reduced__"]
-            )
-            return self.__constructor__(
-                result,
-                index=index,
-                columns=["__reduced__"],
-                row_lengths=self._row_lengths,
-                column_widths=[1],
-                dtypes=new_dtypes,
-            )
+        new_parts = self._frame_mgr_cls.map_axis_partitions(
+            axis, self._partitions, func
+        )
+        return self._compute_map_reduce_metadata(axis, new_parts)
 
     def _map_reduce(self, axis, map_func, reduce_func=None):
         """Apply function that will reduce the data to a Pandas Series.
@@ -698,21 +696,11 @@ class BasePandasFrame(object):
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
-        parts = self._frame_mgr_cls.map_across_blocks(self._partitions, map_func)
-        final_parts = self._frame_mgr_cls.map_across_full_axis(axis, parts, reduce_func)
-        if axis == 0:
-            columns = self.columns
-            index = ["__reduced__"]
-            new_lengths = [1]
-            new_widths = self._column_widths
-        else:
-            columns = ["__reduced__"]
-            index = self.index
-            new_lengths = self._row_lengths
-            new_widths = [1]
-        return self.__constructor__(
-            final_parts, index, columns, new_lengths, new_widths
+        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
+        reduce_parts = self._frame_mgr_cls.map_axis_partitions(
+            axis, map_parts, reduce_func
         )
+        return self._compute_map_reduce_metadata(axis, reduce_parts)
 
     def _map(self, func, dtypes=None):
         """Perform a function that maps across the entire dataset.
@@ -725,7 +713,7 @@ class BasePandasFrame(object):
         Returns:
             A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_across_blocks(self._partitions, func)
+        new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
@@ -753,7 +741,7 @@ class BasePandasFrame(object):
         Returns:
              A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_across_full_axis(
+        new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
         return self.__constructor__(
@@ -785,7 +773,7 @@ class BasePandasFrame(object):
         Returns:
             A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_across_full_axis(
+        new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
         # Index objects for new object creation. This is shorter than if..else
@@ -986,18 +974,16 @@ class BasePandasFrame(object):
         if isinstance(other, type(self)):
             other = [other]
 
-        index_obj = (
-            [o.index for o in other] if axis == 0 else [o.columns for o in other]
-        )
+        index_obj = [o.axes[axis] for o in other]
         joined_index = self._join_index_objects(axis ^ 1, index_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
-        left_old_idx = self.index if axis == 0 else self.columns
+        left_old_idx = self.axes[axis]
         right_old_idxes = index_obj
 
         # Start with this and we'll repartition the first time, and then not again.
         if not left_old_idx.equals(joined_index) or force_repartition:
-            reindexed_self = self._frame_mgr_cls.map_across_full_axis(
+            reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
             )
         else:
@@ -1008,7 +994,7 @@ class BasePandasFrame(object):
             if right_old_idxes[i].equals(joined_index) and not force_repartition:
                 reindexed_other = other[i]._partitions
             else:
-                reindexed_other = other[i]._frame_mgr_cls.map_across_full_axis(
+                reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
                     lambda df: df.reindex(joined_index, axis=axis),
@@ -1155,11 +1141,8 @@ class BasePandasFrame(object):
         Returns:
             A new dataframe.
         """
-        new_partitions = np.array(
-            [
-                [part.add_to_apply_calls(pandas.DataFrame.transpose) for part in row]
-                for row in self._partitions
-            ]
+        new_partitions = self._frame_mgr_cls.lazy_map_partitions(
+            self._partitions, lambda df: df.T
         ).T
         new_dtypes = pandas.Series(
             np.full(len(self.index), find_common_type(self.dtypes.values)),
