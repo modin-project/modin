@@ -32,11 +32,13 @@ def file_exists(file_path):
             from botocore.exceptions import NoCredentialsError
 
             s3fs = S3FS.S3FileSystem(anon=False)
+            exists = False
             try:
-                return s3fs.exists(file_path)
+                exists = s3fs.exists(file_path) or exists
             except NoCredentialsError:
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return s3fs.exists(file_path)
+                pass
+            s3fs = S3FS.S3FileSystem(anon=True)
+            return exists or s3fs.exists(file_path)
     return os.path.exists(file_path)
 
 
@@ -57,6 +59,35 @@ def file_open(file_path, mode="rb", compression="infer"):
             import gzip
 
             return gzip.open(file_path, mode=mode)
+        elif compression == "bz2":
+            import bz2
+
+            return bz2.BZ2File(file_path, mode=mode)
+        elif compression == "xz":
+            import lzma
+
+            return lzma.LZMAFile(file_path, mode=mode)
+        elif compression == "zip":
+            import zipfile
+
+            zf = zipfile.ZipFile(file_path, mode=mode.replace("b", ""))
+            if zf.mode == "w":
+                return zf
+            elif zf.mode == "r":
+                zip_names = zf.namelist()
+                if len(zip_names) == 1:
+                    f = zf.open(zip_names.pop())
+                    return f
+                elif len(zip_names) == 0:
+                    raise ValueError(
+                        "Zero files found in ZIP file {}".format(file_path)
+                    )
+                else:
+                    raise ValueError(
+                        "Multiple files found in ZIP file."
+                        " Only one file per ZIP: {}".format(zip_names)
+                    )
+
     return open(file_path, mode=mode)
 
 
@@ -70,9 +101,9 @@ def file_size(f):
 
 class RayIO(BaseIO):
 
-    frame_mgr_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
+    frame_cls = None
 
     # IMPORTANT NOTE
     #
@@ -100,6 +131,12 @@ class RayIO(BaseIO):
     # also contain encoding information in the string.
     #
     # Signature: (filepath, num_splits, start, stop, kwargs, prefix_id)
+
+    read_json_remote_task = None
+    # For reading JSON files and other text files in parallel, this task should read
+    # based on the offsets in the signature (`start` and `stop` are byte offsets).
+    #
+    # Signature: (filepath, num_splits, start, stop, kwargs)
 
     read_hdf_remote_task = None
     # For reading HDF5 files in parallel, this task should read based on the `columns`
@@ -191,12 +228,11 @@ class RayIO(BaseIO):
             # If all of the columns wanted are partition columns, return an
             # empty dataframe with the desired columns.
             if len(columns) == 0:
-                return cls.query_compiler_cls.from_pandas(
-                    pandas.DataFrame(columns=partitioned_columns),
-                    block_partitions_cls=cls.frame_mgr_cls,
-                )
+                return cls.from_pandas(pandas.DataFrame(columns=partitioned_columns))
 
-        num_partitions = cls.frame_mgr_cls._compute_num_partitions()
+        from modin.pandas import DEFAULT_NPARTITIONS
+
+        num_partitions = DEFAULT_NPARTITIONS
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -248,13 +284,6 @@ class RayIO(BaseIO):
                 else index_len - (index_chunksize * (num_splits - 1))
                 for i in range(num_splits)
             ]
-        # Compute dtypes concatenating the results from each of the columns splits
-        # determined above. This creates a pandas Series that contains a dtype for every
-        # column.
-        dtypes_ids = list(blk_partitions[-1])
-        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
-
-        blk_partitions = blk_partitions[:-2]
         remote_partitions = np.array(
             [
                 [
@@ -265,14 +294,26 @@ class RayIO(BaseIO):
                     )
                     for j in range(len(blk_partitions[i]))
                 ]
-                for i in range(len(blk_partitions))
+                for i in range(len(blk_partitions[:-2]))
             ]
         )
+        # Compute dtypes concatenating the results from each of the columns splits
+        # determined above. This creates a pandas Series that contains a dtype for every
+        # column.
+        dtypes_ids = list(blk_partitions[-1])
+        dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
         if directory:
             columns += partitioned_columns
         dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns, dtypes=dtypes
+            cls.frame_cls(
+                remote_partitions,
+                index,
+                columns,
+                row_lengths,
+                column_widths,
+                dtypes=dtypes,
+            )
         )
 
         return new_query_compiler
@@ -365,9 +406,7 @@ class RayIO(BaseIO):
         partition_kwargs = dict(
             kwargs,
             header=None,
-            names=names
-            if kwargs.get("usecols") is None or kwargs.get("names") is not None
-            else None,
+            names=names,
             skipfooter=0,
             skiprows=None,
             parse_dates=parse_dates,
@@ -393,11 +432,13 @@ class RayIO(BaseIO):
             dtypes_ids = []
             total_bytes = file_size(f)
             # Max number of partitions available
-            num_parts = cls.frame_mgr_cls._compute_num_partitions()
+            from modin.pandas import DEFAULT_NPARTITIONS
+
+            num_partitions = DEFAULT_NPARTITIONS
             # This is the number of splits for the columns
-            num_splits = min(len(column_names), num_parts)
+            num_splits = min(len(column_names), num_partitions)
             # This is the chunksize each partition will read
-            chunk_size = max(1, (total_bytes - f.tell()) // num_parts)
+            chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
 
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
@@ -461,7 +502,6 @@ class RayIO(BaseIO):
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )
-
         partition_ids = [
             [
                 cls.frame_partition_cls(
@@ -485,19 +525,20 @@ class RayIO(BaseIO):
             elif isinstance(parse_dates, dict):
                 for new_col_name, group in parse_dates.items():
                     column_names = column_names.drop(group).insert(0, new_col_name)
-
         # Set the index for the dtypes to the column names
         if isinstance(dtypes, pandas.Series):
             dtypes.index = column_names
         else:
             dtypes = pandas.Series(dtypes, index=column_names)
-
-        new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(np.array(partition_ids)),
+        new_frame = cls.frame_cls(
+            partition_ids,
             new_index,
             column_names,
+            row_lengths,
+            column_widths,
             dtypes=dtypes,
         )
+        new_query_compiler = cls.query_compiler_cls(new_frame)
 
         if skipfooter:
             new_query_compiler = new_query_compiler.drop(
@@ -505,6 +546,8 @@ class RayIO(BaseIO):
             )
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
+        if index_col is None:
+            new_query_compiler._modin_frame._apply_index_objs(axis=0)
         return new_query_compiler
 
     @classmethod
@@ -680,12 +723,25 @@ class RayIO(BaseIO):
             _infer_compression(filepath_or_buffer, kwargs.get("compression"))
             is not None
         ):
+            compression_type = _infer_compression(
+                filepath_or_buffer, kwargs.get("compression")
+            )
             if (
-                _infer_compression(filepath_or_buffer, kwargs.get("compression"))
-                == "gzip"
+                compression_type == "gzip" and sys.version_info[0] == 3
+            ):  # python2 cannot seek from end
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "bz2":
+                filtered_kwargs["compression"] = compression_type
+            elif compression_type == "xz" and sys.version_info[0] == 3:
+                # .xz compression fails in pandas for python2
+                filtered_kwargs["compression"] = compression_type
+            elif (
+                compression_type == "zip"
                 and sys.version_info[0] == 3
+                and sys.version_info[1] >= 7
             ):
-                filtered_kwargs["compression"] = "gzip"
+                # need python3.7 to .seek and .tell ZipExtFile
+                filtered_kwargs["compression"] = compression_type
             else:
                 ErrorMessage.default_to_pandas("Compression detected.")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
@@ -705,6 +761,135 @@ class RayIO(BaseIO):
             return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
         else:
             return cls._read_csv_from_file_ray(filepath_or_buffer, filtered_kwargs)
+
+    @classmethod
+    def read_json(
+        cls,
+        path_or_buf=None,
+        orient=None,
+        typ="frame",
+        dtype=True,
+        convert_axes=True,
+        convert_dates=True,
+        keep_default_dates=True,
+        numpy=False,
+        precise_float=False,
+        date_unit=None,
+        encoding=None,
+        lines=False,
+        chunksize=None,
+        compression="infer",
+    ):
+        kwargs = {
+            "path_or_buf": path_or_buf,
+            "orient": orient,
+            "typ": typ,
+            "dtype": dtype,
+            "convert_axes": convert_axes,
+            "convert_dates": convert_dates,
+            "keep_default_dates": keep_default_dates,
+            "numpy": numpy,
+            "precise_float": precise_float,
+            "date_unit": date_unit,
+            "encoding": encoding,
+            "lines": lines,
+            "chunksize": chunksize,
+            "compression": compression,
+        }
+        if cls.read_json_remote_task is None:
+            return super(RayIO, cls).read_json(**kwargs)
+
+        if not lines:
+            ErrorMessage.default_to_pandas(
+                "`read_json` only optimized with `lines=True`"
+            )
+            return super(RayIO, cls).read_json(**kwargs)
+        else:
+            # TODO: Pick up the columns in an optimized way from all data
+            # All rows must be read because some rows may have missing data
+            # Currently assumes all rows have the same columns
+            from io import BytesIO
+
+            columns = pandas.read_json(
+                BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True
+            ).columns
+            kwargs["columns"] = columns
+            empty_pd_df = pandas.DataFrame(columns=columns)
+
+            path_or_buf = kwargs.pop("path_or_buf")
+
+            with file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
+                total_bytes = file_size(f)
+                from modin.pandas import DEFAULT_NPARTITIONS
+
+                num_partitions = DEFAULT_NPARTITIONS
+                num_splits = min(len(columns), num_partitions)
+                chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
+
+                partition_ids = []
+                index_ids = []
+                dtypes_ids = []
+
+                column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
+                if column_chunksize > len(columns):
+                    column_widths = [len(columns)]
+                    num_splits = 1
+                else:
+                    column_widths = [
+                        column_chunksize
+                        if i != num_splits - 1
+                        else len(columns) - (column_chunksize * (num_splits - 1))
+                        for i in range(num_splits)
+                    ]
+
+                while f.tell() < total_bytes:
+                    start = f.tell()
+                    f.seek(chunk_size, os.SEEK_CUR)
+                    f.readline()
+                    partition_id = cls.read_json_remote_task._remote(
+                        args=(path_or_buf, num_splits, start, f.tell(), kwargs),
+                        num_return_vals=num_splits + 3,
+                    )
+                    partition_ids.append(partition_id[:-3])
+                    index_ids.append(partition_id[-3])
+                    dtypes_ids.append(partition_id[-2])
+
+            row_lengths = ray.get(index_ids)
+            new_index = pandas.RangeIndex(sum(row_lengths))
+
+            dtypes = (
+                pandas.concat(ray.get(dtypes_ids), axis=1)
+                .apply(lambda row: find_common_type(row.values), axis=1)
+                .squeeze(axis=0)
+            )
+
+            partition_ids = [
+                [
+                    cls.frame_partition_cls(
+                        partition_ids[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(partition_ids[i]))
+                ]
+                for i in range(len(partition_ids))
+            ]
+
+            if isinstance(dtypes, pandas.Series):
+                dtypes.index = columns
+            else:
+                dtypes = pandas.Series(dtypes, index=columns)
+
+            new_frame = cls.frame_cls(
+                np.array(partition_ids),
+                new_index,
+                columns,
+                row_lengths,
+                column_widths,
+                dtypes=dtypes,
+            )
+            new_frame._apply_index_objs(axis=0)
+            return cls.query_compiler_cls(new_frame)
 
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
@@ -750,7 +935,9 @@ class RayIO(BaseIO):
             kwargs["stop"] = stop
             columns = empty_pd_df.columns
 
-        num_partitions = cls.frame_mgr_cls._compute_num_partitions()
+        from modin.pandas import DEFAULT_NPARTITIONS
+
+        num_partitions = DEFAULT_NPARTITIONS
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -780,7 +967,7 @@ class RayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns
+            cls.frame_cls(remote_partitions, index, columns)
         )
         return new_query_compiler
 
@@ -812,7 +999,9 @@ class RayIO(BaseIO):
             fr = FeatherReader(path)
             columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
 
-        num_partitions = cls.frame_mgr_cls._compute_num_partitions()
+        from modin.pandas import DEFAULT_NPARTITIONS
+
+        num_partitions = DEFAULT_NPARTITIONS
         num_splits = min(len(columns), num_partitions)
         # Each item in this list will be a list of column names of the original df
         column_splits = (
@@ -841,7 +1030,7 @@ class RayIO(BaseIO):
         index_len = ray.get(blk_partitions[-1][0])
         index = pandas.RangeIndex(index_len)
         new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(remote_partitions), index, columns
+            cls.frame_cls(remote_partitions, index, columns)
         )
         return new_query_compiler
 
@@ -864,13 +1053,12 @@ class RayIO(BaseIO):
         kwargs["if_exists"] = "append"
         columns = qc.columns
 
-        def func(df, **kwargs):
+        def func(df):
             df.columns = columns
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
-        map_func = qc._prepare_method(func, **kwargs)
-        result = qc._map_across_full_axis(1, map_func)
+        result = qc._modin_frame._map_reduce_full_axis(1, func)
         # blocking operation
         result.to_pandas()
 
@@ -901,18 +1089,20 @@ class RayIO(BaseIO):
             "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
         )
         cols_names = cols_names_df.columns
-        num_parts = cls.frame_mgr_cls._compute_num_partitions()
+        from modin.pandas import DEFAULT_NPARTITIONS
+
+        num_partitions = DEFAULT_NPARTITIONS
         partition_ids = []
         index_ids = []
-        limit = math.ceil(row_cnt / num_parts)
-        for part in range(num_parts):
+        limit = math.ceil(row_cnt / num_partitions)
+        for part in range(num_partitions):
             offset = part * limit
             query = "SELECT * FROM ({}) as foo LIMIT {} OFFSET {}".format(
                 sql, limit, offset
             )
             partition_id = cls.read_sql_remote_task._remote(
-                args=(num_parts, query, con, index_col, kwargs),
-                num_return_vals=num_parts + 1,
+                args=(num_partitions, query, con, index_col, kwargs),
+                num_return_vals=num_partitions + 1,
             )
             partition_ids.append(
                 [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]
@@ -926,7 +1116,6 @@ class RayIO(BaseIO):
             index_lst = [x for part_index in ray.get(index_ids) for x in part_index]
             new_index = pandas.Index(index_lst).set_names(index_col)
 
-        new_query_compiler = cls.query_compiler_cls(
-            cls.frame_mgr_cls(np.array(partition_ids)), new_index, cols_names
-        )
-        return new_query_compiler
+        new_frame = cls.frame_cls(np.array(partition_ids), new_index, cols_names)
+        new_frame._apply_index_objs(axis=0)
+        return cls.query_compiler_cls(new_frame)

@@ -637,8 +637,8 @@ class TestDFPartOne:
 
         assert new_modin_df is not modin_df
         assert np.array_equal(
-            new_modin_df._query_compiler.data.partitions,
-            modin_df._query_compiler.data.partitions,
+            new_modin_df._query_compiler._modin_frame._partitions,
+            modin_df._query_compiler._modin_frame._partitions,
         )
         assert new_modin_df is not modin_df
         df_equals(new_modin_df, modin_df)
@@ -1064,7 +1064,9 @@ class TestDFPartOne:
     def test_partition_to_numpy(self):
         test_data = TestData()
         frame = pd.DataFrame(test_data.frame)
-        for partition in frame._query_compiler.data.partitions.flatten().tolist():
+        for (
+            partition
+        ) in frame._query_compiler._modin_frame._partitions.flatten().tolist():
             assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
     def test_asfreq(self):
@@ -1327,6 +1329,50 @@ class TestDFPartOne:
         modin_result = modin_df.T.count(axis=axis, numeric_only=numeric_only)
         pandas_result = pandas_df.T.count(axis=axis, numeric_only=numeric_only)
         df_equals(modin_result, pandas_result)
+
+        # test level
+        modin_df_multi_level = modin_df.copy()
+        pandas_df_multi_level = pandas_df.copy()
+        axis = modin_df._get_axis_number(axis) if axis is not None else 0
+        levels = 3
+        axis_names = ["a", "b", "c"]
+        if axis == 0:
+            new_idx = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
+                names=axis_names,
+            )
+            modin_df_multi_level.index = new_idx
+            pandas_df_multi_level.index = new_idx
+            try:  # test error
+                pandas_df_multi_level.count(axis=1, numeric_only=numeric_only, level=0)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=1, numeric_only=numeric_only, level=0
+                    )
+        else:
+            new_col = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+                names=axis_names,
+            )
+            modin_df_multi_level.columns = new_col
+            pandas_df_multi_level.columns = new_col
+            try:  # test error
+                pandas_df_multi_level.count(axis=0, numeric_only=numeric_only, level=0)
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.count(
+                        axis=0, numeric_only=numeric_only, level=0
+                    )
+
+        for level in list(range(levels)) + axis_names:
+            modin_multi_level_result = modin_df_multi_level.count(
+                axis=axis, numeric_only=numeric_only, level=level
+            )
+            pandas_multi_level_result = pandas_df_multi_level.count(
+                axis=axis, numeric_only=numeric_only, level=level
+            )
+            df_equals(modin_multi_level_result, pandas_multi_level_result)
 
     def test_cov(self):
         data = test_data_values[0]
@@ -2911,6 +2957,17 @@ class TestDFPartOne:
             # DataFrame
             df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
+            # List-like of booleans
+            indices = [
+                True if i % 3 == 0 else False for i in range(len(modin_df.index))
+            ]
+            columns = [
+                True if i % 5 == 0 else False for i in range(len(modin_df.columns))
+            ]
+            modin_result = modin_df.loc[indices, columns]
+            pandas_result = pandas_df.loc[indices, columns]
+            df_equals(modin_result, pandas_result)
+
             # See issue #80
             # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
             df_equals(modin_df.loc[1:2, key1:key2], pandas_df.loc[1:2, key1:key2])
@@ -3140,20 +3197,6 @@ class TestDFPartTwo:
 
         modin_result = modin_df.memory_usage(index=index)
         pandas_result = pandas_df.memory_usage(index=index)
-        # We do not compare the indicies because pandas and modin handles the
-        # indicies slightly differently
-        if index:
-            modin_result = modin_result[1:]
-            pandas_result = pandas_result[1:]
-
-        df_equals(modin_result, pandas_result)
-
-        modin_result = modin_df.T.memory_usage(index=index)
-        pandas_result = pandas_df.T.memory_usage(index=index)
-        if index:
-            modin_result = modin_result[1:]
-            pandas_result = pandas_result[1:]
-
         df_equals(modin_result, pandas_result)
 
     def test_merge(self):
@@ -3413,7 +3456,6 @@ class TestDFPartTwo:
             f(g(h(modin_df), arg1=a), arg2=b, arg3=c),
             (modin_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),
         )
-
         df_equals(
             (modin_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),
             (pandas_df.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c)),

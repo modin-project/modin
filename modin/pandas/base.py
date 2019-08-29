@@ -683,7 +683,31 @@ class BasePandasDataset(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
+
         axis = self._get_axis_number(axis) if axis is not None else 0
+
+        if level is not None:
+
+            if not isinstance(self.axes[axis], pandas.MultiIndex):
+                # error thrown by pandas
+                raise TypeError("Can only count levels on hierarchical columns.")
+
+            if isinstance(level, string_types):
+                level = self.axes[axis].names.index(level)
+
+            new_names = dict(
+                zip(
+                    range(len(self.axes[axis].levels[level])),
+                    self.axes[axis].levels[level],
+                )
+            )
+            return (
+                self.groupby(self.axes[axis].codes[level], axis=axis)
+                .count()
+                .rename(new_names, axis=axis)
+                .rename_axis(self.axes[axis].names[level], axis=axis)
+            )
+
         return self._reduce_dimension(
             self._query_compiler.count(
                 axis=axis, level=level, numeric_only=numeric_only
@@ -858,6 +882,8 @@ class BasePandasDataset(object):
 
         if isinstance(other, BasePandasDataset):
             other = other.reindex(index=self_labels)._query_compiler
+            # Change this to use the query compiler in #673.
+            other = other.to_pandas()
         return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def drop(
@@ -1624,7 +1650,6 @@ class BasePandasDataset(object):
             the memory usage of each of the columns in bytes. If `index=true`,
             then the first value of the Series will be 'Index' with its memory usage.
         """
-        assert not index, "Internal Error. Index must be evaluated in child class"
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
@@ -2186,15 +2211,15 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
-        if level is not None:
+        if level is not None or isinstance(self.index, pandas.MultiIndex):
             new_query_compiler = self._default_to_pandas(
                 "reset_index",
                 level=level,
                 drop=drop,
-                inplace=inplace,
+                inplace=False,
                 col_level=col_level,
                 col_fill=col_fill,
-            )
+            )._query_compiler
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.

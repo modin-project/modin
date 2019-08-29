@@ -1185,7 +1185,9 @@ def test_dot(data):
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
         modin_result = modin_series.dot(
-            pd.Series(np.arange(ind_len), index=reversed(modin_series.index))
+            pd.Series(
+                np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
+            )
         )
 
     # modin_series.dot(modin_series.T)
@@ -1701,6 +1703,11 @@ def test_loc(data):
     for v in modin_series.index:
         df_equals(modin_series.loc[v], pandas_series.loc[v])
         df_equals(modin_series.loc[v:], pandas_series.loc[v:])
+
+    indices = [True if i % 3 == 0 else False for i in range(len(modin_series.index))]
+    modin_result = modin_series.loc[indices]
+    pandas_result = pandas_series.loc[indices]
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

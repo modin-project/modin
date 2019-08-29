@@ -30,7 +30,7 @@ def get_partition_format():
     return os.environ.get("MODIN_BACKEND", "Pandas").title()
 
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 __execution_engine__ = get_execution_engine()
 __partition_format__ = get_partition_format()
 

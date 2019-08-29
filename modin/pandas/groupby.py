@@ -415,6 +415,13 @@ class DataFrameGroupBy(object):
     def _groupby_reduce(
         self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
     ):
+        if (
+            self._is_multi_by
+            or self._level is not None
+            or isinstance(self._df.axes[self._axis], pandas.MultiIndex)
+        ):
+            return self._default_to_pandas(map_func, **kwargs)
+
         if not isinstance(self._by, type(self._query_compiler)):
             return self._apply_agg_function(map_func, drop=drop, **kwargs)
 
@@ -458,7 +465,11 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        if self._is_multi_by or self._level is not None:
+        if (
+            self._is_multi_by
+            or self._level is not None
+            or isinstance(self._index, pandas.MultiIndex)
+        ):
             return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to

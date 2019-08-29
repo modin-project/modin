@@ -7,7 +7,6 @@ import pandas
 from pandas.api.types import is_scalar, is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer
 from pandas.core.indexing import IndexingError
-from warnings import warn
 
 from .dataframe import DataFrame
 from .series import Series
@@ -54,14 +53,6 @@ def is_integer_slice(x):
     return True
 
 
-_ENLARGEMENT_WARNING = """
-Passing list-likes to .loc or [] with any missing label will raise
-KeyError in the future, you can use .reindex() as an alternative.
-
-See the documentation here:
-http://pandas.pydata.org/pandas-docs/stable/indexing.html#deprecate-loc-reindex-listlike
-"""
-
 _ILOC_INT_ONLY_ERROR = """
 Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
@@ -98,29 +89,6 @@ def _parse_tuple(tup):
     col_loc = [col_loc] if col_scaler else col_loc
 
     return row_loc, col_loc, ndim, row_scaler, col_scaler
-
-
-def _is_enlargement(locator, global_index):
-    """Determine if a locator will enlarge the global index.
-
-    Enlargement happens when you trying to locate using labels isn't in the
-    original index. In other words, enlargement == adding NaNs !
-    """
-    if (
-        is_list_like(locator)
-        and not is_slice(locator)
-        and len(locator) > 0
-        and not is_boolean_array(locator)
-        and (isinstance(locator, type(global_index[0])) and locator not in global_index)
-    ):
-        n_diff_elems = len(pandas.Index(locator).difference(global_index))
-        is_enlargement_boolean = n_diff_elems > 0
-        return is_enlargement_boolean
-    return False
-
-
-def _warn_enlargement():
-    warn(FutureWarning(_ENLARGEMENT_WARNING))
 
 
 def _compute_ndim(row_loc, col_loc):
@@ -220,7 +188,8 @@ class _LocationIndexerBase(object):
     def _write_items(self, row_lookup, col_lookup, item):
         """Perform remote write and replace blocks.
         """
-        self.qc.write_items(row_lookup, col_lookup, item)
+        new_qc = self.qc.write_items(row_lookup, col_lookup, item)
+        self.df._create_or_update_from_compiler(new_qc, inplace=True)
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -238,12 +207,16 @@ class _LocIndexer(_LocationIndexerBase):
         else:
             if len(key) > self.df.ndim:
                 raise IndexingError("Too many indexers")
-            if key[0] == slice(None):
+            if isinstance(key[0], slice) and key[0] == slice(None):
                 return self.df.__getitem__(key[1])
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
-        self._handle_enlargement(row_loc, col_loc)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        ndim = (0 if len(row_lookup) == 1 else 1) + (0 if len(col_lookup) == 1 else 1)
+        # Check that the row_lookup/col_lookup is longer than 1 or that the
+        # row_loc/col_loc is not boolean list to determine the ndim of the
+        # result properly for multiindex.
+        ndim = (0 if len(row_lookup) == 1 and not is_boolean_array(row_loc) else 1) + (
+            0 if len(col_lookup) == 1 and not is_boolean_array(col_loc) else 1
+        )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
@@ -286,21 +259,6 @@ class _LocIndexer(_LocationIndexerBase):
             row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
             super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
-    def _handle_enlargement(self, row_loc, col_loc):
-        """Handle Enlargement (if there is one).
-
-        Returns:
-            None
-        """
-        if _is_enlargement(row_loc, self.qc.index) or _is_enlargement(
-            col_loc, self.qc.columns
-        ):
-            _warn_enlargement()
-            self.qc.enlarge_partitions(
-                new_row_labels=self._compute_enlarge_labels(row_loc, self.qc.index),
-                new_col_labels=self._compute_enlarge_labels(col_loc, self.qc.columns),
-            )
-
     def _compute_enlarge_labels(self, locator, base_index):
         """Helper for _enlarge_axis, compute common labels and extra labels.
 
@@ -338,6 +296,9 @@ class _LocIndexer(_LocationIndexerBase):
             )
         elif isinstance(self.qc.index, pandas.MultiIndex):
             row_lookup = self.qc.index.get_locs(row_loc)
+        elif is_boolean_array(row_loc):
+            # If passed in a list of booleans, we return the index of the true values
+            row_lookup = [i for i, row_val in enumerate(row_loc) if row_val]
         else:
             row_lookup = self.qc.index.get_indexer_for(row_loc)
         if isinstance(col_loc, slice):
@@ -346,6 +307,9 @@ class _LocIndexer(_LocationIndexerBase):
             )
         elif isinstance(self.qc.columns, pandas.MultiIndex):
             col_lookup = self.qc.columns.get_locs(col_loc)
+        elif is_boolean_array(col_loc):
+            # If passed in a list of booleans, we return the index of the true values
+            col_lookup = [i for i, col_val in enumerate(col_loc) if col_val]
         else:
             col_lookup = self.qc.columns.get_indexer_for(col_loc)
         return row_lookup, col_lookup

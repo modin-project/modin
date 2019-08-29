@@ -1,8 +1,7 @@
 import pandas
-from modin.data_management.utils import (
-    split_result_of_axis_func_pandas,
-    set_indices_for_pandas_concat,
-)
+from modin.data_management.utils import split_result_of_axis_func_pandas
+
+NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
 
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
@@ -60,7 +59,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         Returns:
             A list of `BaseFramePartition` objects.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
 
     def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `lengths`.
@@ -72,7 +71,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         Returns:
             A list of RemotePartition objects split by `lengths`.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
 
     # Child classes must have these in order to correctly subclass.
     instance_type = None
@@ -185,13 +184,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         # Pop these off first because they aren't expected by the function.
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
-        transposed = kwargs.pop("_transposed", False)
 
-        dataframe = pandas.concat(
-            [set_indices_for_pandas_concat(df, transposed) for df in partitions],
-            axis=axis,
-            copy=False,
-        )
+        dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
         if isinstance(result, pandas.Series):
             if num_splits == 1:
@@ -237,22 +231,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns:
             A list of Pandas DataFrames.
         """
-        lt_frame = pandas.concat(
-            [
-                set_indices_for_pandas_concat(df)
-                for df in list(partitions[:len_of_left])
-            ],
-            axis=axis,
-            copy=False,
-        )
-        rt_frame = pandas.concat(
-            [
-                set_indices_for_pandas_concat(df)
-                for df in list(partitions[len_of_left:])
-            ],
-            axis=axis,
-            copy=False,
-        )
-
+        lt_frame = pandas.concat(partitions[:len_of_left], axis=axis, copy=False)
+        rt_frame = pandas.concat(partitions[len_of_left:], axis=axis, copy=False)
         result = func(lt_frame, rt_frame, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
