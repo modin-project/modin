@@ -23,8 +23,10 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         subclasses. There is no logic for updating inplace.
     """
 
-    def __init__(self, future, length=None, width=None, call_queue=[]):
+    def __init__(self, future, length=None, width=None, call_queue=None):
         self.future = future
+        if call_queue is None:
+            call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
@@ -72,11 +74,20 @@ class PandasOnDaskFramePartition(BaseFramePartition):
             return
         self.future = self.apply(lambda x: x).future
 
-    def mask(self, row_indices=None, col_indices=None):
+    def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        # new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
+        new_obj._length_cache = (
+            len(row_indices)
+            if not isinstance(row_indices, slice)
+            else self._length_cache
+        )
+        new_obj._width_cache = (
+            len(col_indices)
+            if not isinstance(col_indices, slice)
+            else self._width_cache
+        )
         return new_obj
 
     def __copy__(self):
@@ -97,6 +108,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
 
         return dataframe
+
+    def to_numpy(self):
+        """Convert the object stored in this parition to a Numpy Array.
+
+        Returns:
+            A Numpy Array.
+        """
+        return self.apply(lambda df: df.to_numpy()).get()
 
     @classmethod
     def put(cls, obj):
@@ -151,12 +170,16 @@ class PandasOnDaskFramePartition(BaseFramePartition):
 
     def length(self):
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df))
+            self._length_cache = self.apply(lambda df: len(df)).future
+        if isinstance(self._length_cache, type(self.future)):
+            self._length_cache = self._length_cache.result()
         return self._length_cache
 
     def width(self):
         if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns))
+            self._width_cache = self.apply(lambda df: len(df.columns)).future
+        if isinstance(self._width_cache, type(self.future)):
+            self._width_cache = self._width_cache.result()
         return self._width_cache
 
     @classmethod

@@ -16,8 +16,10 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         subclasses. There is no logic for updating inplace.
     """
 
-    def __init__(self, data, length=None, width=None, call_queue=[]):
+    def __init__(self, data, length=None, width=None, call_queue=None):
         self.data = data
+        if call_queue is None:
+            call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width

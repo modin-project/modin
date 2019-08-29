@@ -1,5 +1,5 @@
 from distributed import get_client
-import numpy as np
+
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
@@ -7,6 +7,7 @@ from .axis_partition import (
     PandasOnDaskFrameRowPartition,
 )
 from .partition import PandasOnDaskFramePartition
+from modin.error_message import ErrorMessage
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -17,53 +18,38 @@ class DaskFrameManager(BaseFrameManager):
     _column_partitions_class = PandasOnDaskFrameColumnPartition
     _row_partition_class = PandasOnDaskFrameRowPartition
 
-    def __init__(self, partitions):
-        self.partitions = partitions
+    @classmethod
+    def get_indices(cls, axis, partitions, index_func=None):
+        """This gets the internal indices stored in the partitions.
 
-    # Lengths of the blocks
-    _lengths_cache = None
+        Note: These are the global indices of the object. This is mostly useful
+            when you have deleted rows/columns internally, but do not know
+            which ones were deleted.
 
-    # These are set up as properties so that we only use them when we need
-    # them. We also do not want to trigger this computation on object creation.
-    @property
-    def block_lengths(self):
-        """Gets the lengths of the blocks.
+        Args:
+            axis: This axis to extract the labels. (0 - index, 1 - columns).
+            index_func: The function to be used to extract the function.
+            old_blocks: An optional previous object that this object was
+                created from. This is used to compute the correct offsets.
 
-        Note: This works with the property structure `_lengths_cache` to avoid
-            having to recompute these values each time they are needed.
+        Returns:
+            A Pandas Index object.
         """
-        if self._lengths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same length in a
-            # row of blocks.
-            self._lengths_cache = np.array(
-                get_client().gather(
-                    [obj.length().future for obj in self._partitions_cache.T[0]]
-                )
-                if len(self._partitions_cache.T) > 0
+        client = get_client()
+        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
+        func = cls.preprocess_func(index_func)
+        if axis == 0:
+            # We grab the first column of blocks and extract the indices
+            new_idx = (
+                [idx.apply(func).future for idx in partitions.T[0]]
+                if len(partitions.T)
                 else []
             )
-        return self._lengths_cache
-
-    # Widths of the blocks
-    _widths_cache = None
-
-    @property
-    def block_widths(self):
-        """Gets the widths of the blocks.
-
-        Note: This works with the property structure `_widths_cache` to avoid
-            having to recompute these values each time they are needed.
-        """
-        if self._widths_cache is None:
-            # The first column will have the correct lengths. We have an
-            # invariant that requires that all blocks be the same width in a
-            # column of blocks.
-            self._widths_cache = np.array(
-                get_client().gather(
-                    [obj.width().future for obj in self._partitions_cache[0]]
-                )
-                if len(self._partitions_cache) > 0
+        else:
+            new_idx = (
+                [idx.apply(func).future for idx in partitions[0]]
+                if len(partitions)
                 else []
             )
-        return self._widths_cache
+        new_idx = client.gather(new_idx)
+        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
