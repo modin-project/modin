@@ -185,9 +185,14 @@ def initialize_ray():
         # This is a hack solution to fix #647, #746
         def move_stdlib_ahead_of_site_packages(*args):
             site_packages_path = None
-            for path in sys.path:
+            site_packages_path_index = -1
+            for i, path in enumerate(sys.path):
                 if sys.exec_prefix in path and path.endswith("site-packages"):
                     site_packages_path = path
+                    site_packages_path_index = i
+                    # break on first found
+                    break
+
             if site_packages_path is not None:
                 # stdlib packages layout as follows:
                 # - python3.x
@@ -196,7 +201,9 @@ def initialize_ray():
                 #     - pandas
                 # So extracting the dirname of the site_packages can point us
                 # to the directory containing standard libraries.
-                sys.path.insert(0, os.path.dirname(site_packages_path))
+                sys.path.insert(
+                    site_packages_path_index, os.path.dirname(site_packages_path)
+                )
 
         move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
