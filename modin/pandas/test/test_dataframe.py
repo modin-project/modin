@@ -3957,7 +3957,7 @@ class TestDFPartTwo:
             ),
         )
 
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError):
             df_equals(
                 modin_df.rename_axis(str.upper, axis=1),
                 pandas_df.rename_axis(str.upper, axis=1),

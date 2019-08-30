@@ -2059,16 +2059,7 @@ class BasePandasDataset(object):
             if non_mapper:
                 return self._set_axis_name(mapper, axis=axis, inplace=inplace)
             else:
-                # Deprecated (v0.21) behavior is if mapper is specified,
-                # and not a list or scalar, then call rename
-                msg = (
-                    "Using 'rename_axis' to alter labels is deprecated. "
-                    "Use '.rename' instead"
-                )
-                warnings.warn(msg, FutureWarning, stacklevel=3)
-                axis = pandas.DataFrame()._get_axis_name(axis)
-                d = {"copy": copy, "inplace": inplace, axis: mapper}
-                return self.rename(**d)
+                raise ValueError("Use `.rename` to alter labels " "with a mapper.")
         else:
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)

@@ -1,6 +1,6 @@
 import pandas
 
-__pandas_version__ = "0.25.0"
+__pandas_version__ = "0.25.1"
 
 if pandas.__version__ != __pandas_version__:
     raise ImportError(

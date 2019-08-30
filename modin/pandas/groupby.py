@@ -2,7 +2,6 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
-import sys
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
@@ -391,6 +390,10 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, **kwargs):
+        import numpy as np
+
+        if self._df.dtypes.map(lambda x: x == np.dtype("O")).any():
+            raise TypeError("'quantile' cannot be performed against 'object' dtypes!")
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 

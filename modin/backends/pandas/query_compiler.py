@@ -847,11 +847,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             .astype(self.dtypes)
             .eval(expr, inplace=False, **kwargs)
         )
-        new_columns = (
-            [empty_eval.name]
-            if isinstance(empty_eval, pandas.Series)
-            else empty_eval.columns
-        )
+        if isinstance(empty_eval, pandas.Series):
+            new_columns = (
+                [empty_eval.name] if empty_eval.name is not None else ["__reduced__"]
+            )
+        else:
+            new_columns = empty_eval.columns
         new_modin_frame = self._modin_frame._apply_full_axis(
             1,
             lambda df: pandas.DataFrame(df.eval(expr, inplace=False, **kwargs)),
@@ -1473,9 +1474,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 try:
                     result = agg_func(grouped_df, **agg_args)
                 # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid issues
-                # with extracting the index.
-                except DataError:
+                # numeric operation is done. We need to build the index here to avoid
+                # issues with extracting the index.
+                except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 return result
 
@@ -1483,7 +1484,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return compute_groupby(df)
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
-            except ValueError:
+            except (ValueError, KeyError):
                 return compute_groupby(df.copy())
 
         new_modin_frame = self._modin_frame._apply_full_axis(

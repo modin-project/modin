@@ -731,7 +731,13 @@ def test_tail(ray_groupby, pandas_groupby, n):
 
 @pytest.fixture
 def test_quantile(ray_groupby, pandas_groupby):
-    ray_df_equals_pandas(ray_groupby.quantile(q=0.4), pandas_groupby.quantile(q=0.4))
+    try:
+        pandas_result = pandas_groupby.quantile(q=0.4)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            ray_groupby.quantile(q=0.4)
+    else:
+        ray_df_equals_pandas(ray_groupby.quantile(q=0.4), pandas_result)
 
 
 @pytest.fixture
