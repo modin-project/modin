@@ -1,9 +1,4 @@
-import sys
-
-if sys.version_info[0] == 3:
-    import builtins
-else:
-    import __builtin__ as builtins
+import builtins
 
 
 def handle_ray_task_error(e):

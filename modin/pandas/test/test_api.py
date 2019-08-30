@@ -26,6 +26,7 @@ def test_top_level_api_equality():
         "get_option",
         "option_context",
         "reset_option",
+        "Panel",  # This is deprecated and throws a warning every time.
     ]
 
     assert not len(
@@ -62,9 +63,6 @@ def test_top_level_api_equality():
                     },
                 )
             except Exception:
-                print(pandas_sig)
-                print(modin_sig)
-                print(m)
                 raise
             try:
                 # This validates that there are actually values to add to the difference

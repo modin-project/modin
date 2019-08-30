@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import sys
 import warnings
@@ -170,6 +166,14 @@ class BaseFactory(object):
     @classmethod
     def _read_sql_query(cls, **kwargs):
         return cls.io_cls.read_sql_query(**kwargs)
+
+    @classmethod
+    def read_spss(cls, **kwargs):
+        return cls._determine_engine()._read_spss(**kwargs)
+
+    @classmethod
+    def _read_spss(cls, **kwargs):
+        return cls.io_cls.read_spss(**kwargs)
 
     @classmethod
     def to_sql(cls, *args, **kwargs):

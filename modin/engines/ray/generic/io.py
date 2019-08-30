@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 from pandas.io.common import _infer_compression
 from pandas.io.parsers import _validate_usecols_arg
@@ -596,6 +592,7 @@ class RayIO(BaseIO):
         keep_date_col=False,
         date_parser=None,
         dayfirst=False,
+        cache_dates=True,
         iterator=False,
         chunksize=None,
         compression="infer",
@@ -608,7 +605,6 @@ class RayIO(BaseIO):
         comment=None,
         encoding=None,
         dialect=None,
-        tupleize_cols=None,
         error_bad_lines=True,
         warn_bad_lines=True,
         skipfooter=0,
@@ -647,6 +643,7 @@ class RayIO(BaseIO):
             "keep_date_col": keep_date_col,
             "date_parser": date_parser,
             "dayfirst": dayfirst,
+            "cache_dates": cache_dates,
             "iterator": iterator,
             "chunksize": chunksize,
             "compression": compression,
@@ -659,7 +656,6 @@ class RayIO(BaseIO):
             "comment": comment,
             "encoding": encoding,
             "dialect": dialect,
-            "tupleize_cols": tupleize_cols,
             "error_bad_lines": error_bad_lines,
             "warn_bad_lines": warn_bad_lines,
             "skipfooter": skipfooter,
@@ -727,13 +723,10 @@ class RayIO(BaseIO):
                 filepath_or_buffer, kwargs.get("compression")
             )
             if (
-                compression_type == "gzip" and sys.version_info[0] == 3
-            ):  # python2 cannot seek from end
-                filtered_kwargs["compression"] = compression_type
-            elif compression_type == "bz2":
-                filtered_kwargs["compression"] = compression_type
-            elif compression_type == "xz" and sys.version_info[0] == 3:
-                # .xz compression fails in pandas for python2
+                compression_type == "gzip"
+                or compression_type == "bz2"
+                or compression_type == "xz"
+            ):
                 filtered_kwargs["compression"] = compression_type
             elif (
                 compression_type == "zip"
@@ -743,7 +736,7 @@ class RayIO(BaseIO):
                 # need python3.7 to .seek and .tell ZipExtFile
                 filtered_kwargs["compression"] = compression_type
             else:
-                ErrorMessage.default_to_pandas("Compression detected.")
+                ErrorMessage.default_to_pandas("Unsupported compression detected.")
                 return cls._read_csv_from_pandas(filepath_or_buffer, filtered_kwargs)
 
         chunksize = kwargs.get("chunksize")

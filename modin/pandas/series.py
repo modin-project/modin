@@ -1,10 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import pandas
-from pandas.compat import string_types
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import (
     is_dict_like,
@@ -408,7 +403,7 @@ class Series(BasePandasDataset):
         except Exception:
             return_type = self.__name__
         if (
-            isinstance(func, string_types)
+            isinstance(func, str)
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
@@ -480,21 +475,6 @@ class Series(BasePandasDataset):
             pandas.Series.compress, condition, *args, **kwargs
         )
 
-    def convert_objects(
-        self,
-        convert_dates=True,
-        convert_numeric=False,
-        convert_timedeltas=True,
-        copy=True,
-    ):
-        return self._default_to_pandas(
-            pandas.Series.convert_objects,
-            convert_dates=convert_dates,
-            convert_numeric=convert_numeric,
-            convert_timedeltas=convert_timedeltas,
-            copy=copy,
-        )
-
     def corr(self, other, method="pearson", min_periods=None):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -550,6 +530,9 @@ class Series(BasePandasDataset):
             and self.eq(other).all()
         )
 
+    def explode(self):
+        return self._default_to_pandas(pandas.Series.explode)
+
     def factorize(self, sort=False, na_sentinel=-1):
         return self._default_to_pandas(
             pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
@@ -565,26 +548,6 @@ class Series(BasePandasDataset):
         self, arr, index=None, name=None, dtype=None, copy=False, fastpath=False
     ):
         raise NotImplementedError("Not Yet implemented.")
-
-    def from_csv(
-        self,
-        path,
-        sep=",",
-        parse_dates=True,
-        header=None,
-        index_col=0,
-        encoding=None,
-        infer_datetime_format=False,
-    ):
-        return super(Series, self).from_csv(
-            path,
-            sep=sep,
-            parse_dates=parse_dates,
-            header=header,
-            index_col=index_col,
-            encoding=encoding,
-            infer_datetime_format=infer_datetime_format,
-        )
 
     def ge(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -858,11 +821,6 @@ class Series(BasePandasDataset):
             fill_value=fill_value,
         )
 
-    def reindex_axis(self, labels, axis=0, **kwargs):
-        if axis != 0:
-            raise ValueError("cannot reindex series on non-zero axis!")
-        return self.reindex(index=labels, **kwargs)
-
     def rename(self, index=None, **kwargs):
         non_mapping = is_scalar(index) or (
             is_list_like(index) and not is_dict_like(index)
@@ -1036,6 +994,11 @@ class Series(BasePandasDataset):
             return Series(dtype=self.dtype)
         return super(Series, self).tail(n)
 
+    def take(self, indices, axis=0, is_copy=False, **kwargs):
+        self._default_to_pandas(
+            pandas.Series.take, indices, axis=axis, is_copy=is_copy, **kwargs
+        )
+
     def to_frame(self, name=None):
         from .dataframe import DataFrame
 
@@ -1078,6 +1041,7 @@ class Series(BasePandasDataset):
         dtype=False,
         name=False,
         max_rows=None,
+        min_rows=None,
     ):
         return self._default_to_pandas(
             pandas.Series.to_string,
@@ -1148,7 +1112,6 @@ class Series(BasePandasDataset):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         if isinstance(other, Series):
             other = to_pandas(other)
@@ -1161,7 +1124,6 @@ class Series(BasePandasDataset):
             level=level,
             errors=errors,
             try_cast=try_cast,
-            raise_on_error=raise_on_error,
         )
 
     def xs(self, key, axis=0, level=None, drop_level=True):  # pragma: no cover
@@ -1344,7 +1306,7 @@ class StringMethods(object):
         )
 
     def split(self, pat=None, n=-1, expand=False):
-        if not pat and pat is not None and pandas.compat.PY3:
+        if not pat and pat is not None:
             raise ValueError("split() requires a non-empty pattern match.")
 
         if expand:
@@ -1549,7 +1511,7 @@ class StringMethods(object):
         return Series(query_compiler=self._query_compiler.str_upper())
 
     def find(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1558,7 +1520,7 @@ class StringMethods(object):
         )
 
     def rfind(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1567,7 +1529,7 @@ class StringMethods(object):
         )
 
     def index(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1576,7 +1538,7 @@ class StringMethods(object):
         )
 
     def rindex(self, sub, start=0, end=None):
-        if not isinstance(sub, pandas.compat.string_types):
+        if not isinstance(sub, str):
             raise TypeError(
                 "expected a string object, not {0}".format(type(sub).__name__)
             )
@@ -1593,20 +1555,8 @@ class StringMethods(object):
     def normalize(self, form):
         return Series(query_compiler=self._query_compiler.str_normalize(form))
 
-    def translate(self, table, deletechars=None):
-        if pandas.compat.PY3:
-            if deletechars is not None:
-                raise ValueError(
-                    "deletechars is not a valid argument for "
-                    "str.translate in python 3. You should simply "
-                    "specify character deletions in the table "
-                    "argument"
-                )
-        return Series(
-            query_compiler=self._query_compiler.str_translate(
-                table, deletechars=deletechars
-            )
-        )
+    def translate(self, table):
+        return Series(query_compiler=self._query_compiler.str_translate(table))
 
     def isalnum(self):
         return Series(query_compiler=self._query_compiler.str_isalnum())
