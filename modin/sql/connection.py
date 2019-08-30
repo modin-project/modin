@@ -30,7 +30,7 @@ class Cursor(object):
             self._insert_into(split_query)
         else:
             raise NotImplementedError(
-                "This API is for demonstration purposes only. Coming Soon!"
+                "This API is for demonstration purposes " "only. Coming Soon!"
             )
 
     def _create_table(self, split_query):
@@ -45,6 +45,7 @@ class Cursor(object):
         values = " ".join(split_query[4:]).replace("(", "").replace(")", "").split(", ")
         to_append = Series([eval(i) for i in values], index=table.columns)
         self._tables[split_query[2]] = table.append(to_append, ignore_index=True)
+        print(self._tables[split_query[2]])
 
 
 def connect(name):
