@@ -43,7 +43,6 @@ matrix:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - black --check modin/
         - flake8 .
-        - [ $(grep -r print\(.*\) modin | wc -l) -eq 0 ]
 
     - os: linux
       dist: trusty

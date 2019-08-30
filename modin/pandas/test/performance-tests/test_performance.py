@@ -25,6 +25,7 @@ ray_df = pd.DataFrame(frame_data)
 # def test_read_csv(benchmark):
 #     path = "~/Downloads/201710k.csv"
 #     result = benchmark(pd.read_csv, path)
+#     print(result)
 
 
 def test_sum(benchmark):
