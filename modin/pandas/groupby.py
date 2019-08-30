@@ -108,10 +108,7 @@ class DataFrameGroupBy(object):
     def _iter(self):
         from .dataframe import DataFrame
 
-        if sys.version_info[0] == 2:
-            group_ids = self._index_grouped.iterkeys()
-        elif sys.version_info[0] == 3:
-            group_ids = self._index_grouped.keys()
+        group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (
                 (

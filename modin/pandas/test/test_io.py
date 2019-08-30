@@ -8,7 +8,6 @@ import pyarrow as pa
 import os
 import shutil
 import sqlalchemy as sa
-import sys
 
 from .utils import df_equals
 
@@ -23,7 +22,6 @@ else:
 pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
 
-PY2 = sys.version_info[0] == 2
 TEST_PARQUET_FILENAME = "test.parquet"
 TEST_CSV_FILENAME = "test.csv"
 TEST_JSON_FILENAME = "test.json"
@@ -488,8 +486,8 @@ def test_from_excel():
 def test_from_excel_all_sheets():
     setup_excel_file(SMALL_ROW_SIZE)
 
-    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
-    modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
+    modin_df = pd.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
 
     assert isinstance(pandas_df, OrderedDict)
     assert isinstance(modin_df, OrderedDict)
@@ -622,11 +620,10 @@ def test_from_csv(make_csv_file):
 
     df_equals(modin_df, pandas_df)
 
-    if not PY2:
-        pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
-        modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
+    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
-        df_equals(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_gzip(make_csv_file):
@@ -655,9 +652,6 @@ def test_from_csv_bz2(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skipif(
-    sys.version_info[0] == 2, reason="pandas implementation fails for python2"
-)
 def test_from_csv_xz(make_csv_file):
     make_csv_file(compression="xz")
     xz_path = "{}.xz".format(TEST_CSV_FILENAME)
@@ -826,11 +820,10 @@ def test_from_table(make_csv_file):
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
-    if not PY2:
-        pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
-        modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
+    pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
+    modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
 
-        assert modin_df_equals_pandas(modin_df, pandas_df)
+    assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
@@ -928,12 +921,11 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
         # Test nrows
         pd.read_csv(TEST_CSV_FILENAME, nrows=10)
 
-    if not PY2:
-        with pytest.warns(UserWarning):
-            # This tests that we default to pandas on a buffer
-            from io import StringIO
+    with pytest.warns(UserWarning):
+        # This tests that we default to pandas on a buffer
+        from io import StringIO
 
-            pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
+        pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
 
     with pytest.warns(UserWarning):
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])

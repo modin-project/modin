@@ -1,15 +1,10 @@
 import pytest
-import sys
 import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
 
 pd.DEFAULT_NPARTITIONS = 4
-
-PY2 = False
-if sys.version_info.major < 3:
-    PY2 = True
 
 
 @pytest.fixture
@@ -411,11 +406,9 @@ def test_simple_col_groupby():
     test_min(ray_groupby, pandas_groupby)
     test_ndim(ray_groupby, pandas_groupby)
 
-    if not PY2:
-        # idxmax and idxmin fail on column groupby in pandas with python2
-        test_idxmax(ray_groupby, pandas_groupby)
-        test_idxmin(ray_groupby, pandas_groupby)
-        test_quantile(ray_groupby, pandas_groupby)
+    test_idxmax(ray_groupby, pandas_groupby)
+    test_idxmin(ray_groupby, pandas_groupby)
+    test_quantile(ray_groupby, pandas_groupby)
 
     # https://github.com/pandas-dev/pandas/issues/21127
     # test_cumsum(ray_groupby, pandas_groupby)

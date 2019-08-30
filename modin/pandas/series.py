@@ -995,7 +995,9 @@ class Series(BasePandasDataset):
         return super(Series, self).tail(n)
 
     def take(self, indices, axis=0, is_copy=False, **kwargs):
-        self._default_to_pandas(pandas.Series.take, indices, axis=axis, is_copy=is_copy, **kwargs)
+        self._default_to_pandas(
+            pandas.Series.take, indices, axis=axis, is_copy=is_copy, **kwargs
+        )
 
     def to_frame(self, name=None):
         from .dataframe import DataFrame
@@ -1553,20 +1555,8 @@ class StringMethods(object):
     def normalize(self, form):
         return Series(query_compiler=self._query_compiler.str_normalize(form))
 
-    def translate(self, table, deletechars=None):
-        if pandas.compat.PY3:
-            if deletechars is not None:
-                raise ValueError(
-                    "deletechars is not a valid argument for "
-                    "str.translate in python 3. You should simply "
-                    "specify character deletions in the table "
-                    "argument"
-                )
-        return Series(
-            query_compiler=self._query_compiler.str_translate(
-                table, deletechars=deletechars
-            )
-        )
+    def translate(self, table):
+        return Series(query_compiler=self._query_compiler.str_translate(table))
 
     def isalnum(self):
         return Series(query_compiler=self._query_compiler.str_isalnum())

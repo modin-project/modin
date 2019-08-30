@@ -2082,6 +2082,7 @@ class BasePandasDataset(object):
                 if non_mapper:
                     newnames = v
                 else:
+
                     def _get_rename_function(mapper):
                         if isinstance(mapper, (dict, BasePandasDataset)):
 
@@ -2090,6 +2091,7 @@ class BasePandasDataset(object):
                                     return mapper[x]
                                 else:
                                     return x
+
                         else:
                             f = mapper
 
@@ -2779,7 +2781,6 @@ class BasePandasDataset(object):
         quotechar='"',
         line_terminator=None,
         chunksize=None,
-        tupleize_cols=None,
         date_format=None,
         doublequote=True,
         escapechar=None,
@@ -2804,7 +2805,6 @@ class BasePandasDataset(object):
             "quotechar": quotechar,
             "line_terminator": line_terminator,
             "chunksize": chunksize,
-            "tupleize_cols": tupleize_cols,
             "date_format": date_format,
             "doublequote": doublequote,
             "escapechar": escapechar,

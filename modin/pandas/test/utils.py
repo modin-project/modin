@@ -317,6 +317,7 @@ def df_equals(df1, df2):
                 check_dtype=False,
                 check_datetimelike_compat=True,
                 check_index_type=False,
+                check_column_type=False,
             )
         except Exception:
             assert_frame_equal(
@@ -325,6 +326,7 @@ def df_equals(df1, df2):
                 check_dtype=False,
                 check_datetimelike_compat=True,
                 check_index_type=False,
+                check_column_type=False,
             )
     elif isinstance(df1, types_for_almost_equals) and isinstance(
         df2, types_for_almost_equals
