@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
@@ -63,6 +59,7 @@ class BaseIO(object):
         keep_date_col=False,
         date_parser=None,
         dayfirst=False,
+        cache_dates=True,
         iterator=False,
         chunksize=None,
         compression="infer",
@@ -75,7 +72,6 @@ class BaseIO(object):
         comment=None,
         encoding=None,
         dialect=None,
-        tupleize_cols=None,
         error_bad_lines=True,
         warn_bad_lines=True,
         skipfooter=0,
@@ -114,6 +110,7 @@ class BaseIO(object):
             "keep_date_col": keep_date_col,
             "date_parser": date_parser,
             "dayfirst": dayfirst,
+            "cache_dates": cache_dates,
             "iterator": iterator,
             "chunksize": chunksize,
             "compression": compression,
@@ -126,7 +123,6 @@ class BaseIO(object):
             "comment": comment,
             "encoding": encoding,
             "dialect": dialect,
-            "tupleize_cols": tupleize_cols,
             "error_bad_lines": error_bad_lines,
             "warn_bad_lines": warn_bad_lines,
             "skipfooter": skipfooter,
@@ -242,7 +238,6 @@ class BaseIO(object):
         skiprows=None,
         attrs=None,
         parse_dates=False,
-        tupleize_cols=None,
         thousands=",",
         encoding=None,
         decimal=".",
@@ -261,7 +256,6 @@ class BaseIO(object):
             "skiprows": skiprows,
             "attrs": attrs,
             "parse_dates": parse_dates,
-            "tupleize_cols": tupleize_cols,
             "thousands": thousands,
             "encoding": encoding,
             "decimal": decimal,
@@ -285,7 +279,6 @@ class BaseIO(object):
         header=0,
         names=None,
         index_col=None,
-        parse_cols=None,
         usecols=None,
         squeeze=False,
         dtype=None,
@@ -317,7 +310,6 @@ class BaseIO(object):
             header=header,
             names=names,
             index_col=index_col,
-            parse_cols=parse_cols,
             usecols=usecols,
             squeeze=squeeze,
             dtype=dtype,
@@ -520,6 +512,11 @@ class BaseIO(object):
         )
 
     @classmethod
+    def read_spss(cls, path, usecols, convert_categoricals):
+        ErrorMessage.default_to_pandas("`read_spss`")
+        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
+
+    @classmethod
     def to_sql(
         cls,
         qc,
@@ -550,8 +547,6 @@ class BaseIO(object):
     @classmethod
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
         if protocol == 4:
-            # This forces pandas to use default pickling, which is different for python3
-            # and python2
             protocol = -1
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):

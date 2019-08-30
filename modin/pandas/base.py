@@ -2,8 +2,8 @@ import numpy as np
 from numpy import nan
 import pandas
 from pandas.api.types import is_scalar
-from pandas.compat import cPickle as pkl, numpy as numpy_compat, string_types, to_str
-from pandas.core.common import count_not_none, _get_rename_function, _pipe
+from pandas.compat import numpy as numpy_compat
+from pandas.core.common import count_not_none, _pipe
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -16,6 +16,7 @@ from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg
 import re
 import warnings
+import pickle as pkl
 
 from modin.error_message import ErrorMessage
 
@@ -324,7 +325,7 @@ class BasePandasDataset(object):
         _axis = kwargs.pop("_axis", 0)
         kwargs.pop("_level", None)
 
-        if isinstance(arg, string_types):
+        if isinstance(arg, str):
             kwargs.pop("is_transform", None)
             return self._string_function(arg, *args, **kwargs)
 
@@ -338,7 +339,7 @@ class BasePandasDataset(object):
             raise TypeError("type {} is not callable".format(type(arg)))
 
     def _string_function(self, func, *args, **kwargs):
-        assert isinstance(func, string_types)
+        assert isinstance(func, str)
         f = getattr(self, func, None)
         if f is not None:
             if callable(f):
@@ -494,7 +495,7 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
-        if isinstance(func, string_types):
+        if isinstance(func, str):
             if axis == 1:
                 kwds["axis"] = axis
             result = self._string_function(func, *args, **kwds)
@@ -692,7 +693,7 @@ class BasePandasDataset(object):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
-            if isinstance(level, string_types):
+            if isinstance(level, str):
                 level = self.axes[axis].names.index(level)
 
             new_names = dict(
@@ -1235,13 +1236,13 @@ class BasePandasDataset(object):
         elif like is not None:
 
             def f(x):
-                return like in to_str(x)
+                return like in str(x)
 
             bool_arr = labels.map(f).tolist()
         else:
 
             def f(x):
-                return matcher.search(to_str(x)) is not None
+                return matcher.search(str(x)) is not None
 
             matcher = re.compile(regex)
             bool_arr = labels.map(f).tolist()
@@ -1274,31 +1275,6 @@ class BasePandasDataset(object):
         """
         return self._binary_op(
             "floordiv", other, axis=axis, level=level, fill_value=fill_value
-        )
-
-    @classmethod
-    def from_csv(
-        cls,
-        path,
-        header=0,
-        sep=",",
-        index_col=0,
-        parse_dates=True,
-        encoding=None,
-        tupleize_cols=None,
-        infer_datetime_format=False,
-    ):
-        from .io import read_csv
-
-        return read_csv(
-            path,
-            header=header,
-            sep=sep,
-            index_col=index_col,
-            parse_dates=parse_dates,
-            encoding=encoding,
-            tupleize_cols=tupleize_cols,
-            infer_datetime_format=infer_datetime_format,
         )
 
     def ge(self, other, axis="columns", level=None):
@@ -1551,7 +1527,6 @@ class BasePandasDataset(object):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -1564,7 +1539,6 @@ class BasePandasDataset(object):
             level=level,
             errors=errors,
             try_cast=try_cast,
-            raise_on_error=raise_on_error,
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -2046,27 +2020,6 @@ class BasePandasDataset(object):
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
-    def reindex_axis(
-        self,
-        labels,
-        axis=0,
-        method=None,
-        level=None,
-        copy=True,
-        limit=None,
-        fill_value=nan,
-    ):
-        return self._default_to_pandas(
-            "reindex_axis",
-            labels,
-            axis=axis,
-            method=method,
-            level=level,
-            copy=copy,
-            limit=limit,
-            fill_value=fill_value,
-        )
-
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
         if isinstance(other, BasePandasDataset):
             other = other._to_pandas()
@@ -2106,16 +2059,7 @@ class BasePandasDataset(object):
             if non_mapper:
                 return self._set_axis_name(mapper, axis=axis, inplace=inplace)
             else:
-                # Deprecated (v0.21) behavior is if mapper is specified,
-                # and not a list or scalar, then call rename
-                msg = (
-                    "Using 'rename_axis' to alter labels is deprecated. "
-                    "Use '.rename' instead"
-                )
-                warnings.warn(msg, FutureWarning, stacklevel=3)
-                axis = pandas.DataFrame()._get_axis_name(axis)
-                d = {"copy": copy, "inplace": inplace, axis: mapper}
-                return self.rename(**d)
+                raise ValueError("Use `.rename` to alter labels " "with a mapper.")
         else:
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
@@ -2129,6 +2073,21 @@ class BasePandasDataset(object):
                 if non_mapper:
                     newnames = v
                 else:
+
+                    def _get_rename_function(mapper):
+                        if isinstance(mapper, (dict, BasePandasDataset)):
+
+                            def f(x):
+                                if x in mapper:
+                                    return mapper[x]
+                                else:
+                                    return x
+
+                        else:
+                            f = mapper
+
+                        return f
+
                     f = _get_rename_function(v)
                     curnames = self.index.names if axis == 0 else self.columns.names
                     newnames = [f(name) for name in curnames]
@@ -2390,7 +2349,7 @@ class BasePandasDataset(object):
                 weights = weights.reindex(self.axes[axis])
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
-            if isinstance(weights, string_types):
+            if isinstance(weights, str):
                 if axis == 0:
                     try:
                         weights = self[weights]
@@ -2498,9 +2457,6 @@ class BasePandasDataset(object):
             numeric_only=numeric_only,
             **kwargs
         )
-
-    def select(self, crit, axis=0):
-        return self._default_to_pandas("select", crit, axis=axis)
 
     def set_axis(self, labels, axis=0, inplace=None):
         """Assign desired index to given axis.
@@ -2778,9 +2734,9 @@ class BasePandasDataset(object):
     def swaplevel(self, i=-2, j=-1, axis=0):
         return self._default_to_pandas("swaplevel", i=i, j=j, axis=axis)
 
-    def take(self, indices, axis=0, convert=None, is_copy=True, **kwargs):
+    def take(self, indices, axis=0, is_copy=True, **kwargs):
         return self._default_to_pandas(
-            "take", indices, axis=axis, convert=convert, is_copy=is_copy, **kwargs
+            "take", indices, axis=axis, is_copy=is_copy, **kwargs
         )
 
     def tail(self, n=5):
@@ -2816,7 +2772,6 @@ class BasePandasDataset(object):
         quotechar='"',
         line_terminator=None,
         chunksize=None,
-        tupleize_cols=None,
         date_format=None,
         doublequote=True,
         escapechar=None,
@@ -2841,7 +2796,6 @@ class BasePandasDataset(object):
             "quotechar": quotechar,
             "line_terminator": line_terminator,
             "chunksize": chunksize,
-            "tupleize_cols": tupleize_cols,
             "date_format": date_format,
             "doublequote": doublequote,
             "escapechar": escapechar,
@@ -3022,6 +2976,7 @@ class BasePandasDataset(object):
         index_names=True,
         justify=None,
         max_rows=None,
+        min_rows=None,
         max_cols=None,
         show_dimensions=False,
         decimal=".",

@@ -1,12 +1,6 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# TODO: In the future `set_option` or similar needs to run on every node
-# in order to keep all pandas instances across nodes consistent
 import pandas
 
-__pandas_version__ = "0.24.2"
+__pandas_version__ = "0.25.1"
 
 if pandas.__version__ != __pandas_version__:
     raise ImportError(
@@ -24,7 +18,6 @@ from pandas import (
     factorize,
     test,
     qcut,
-    Panel,
     date_range,
     period_range,
     Index,
@@ -62,7 +55,6 @@ from pandas import (
     TimedeltaIndex,
     IntervalIndex,
     IndexSlice,
-    TimeGrouper,
     Grouper,
     array,
     Period,
@@ -76,6 +68,7 @@ from pandas import (
     SparseSeries,
     SparseDataFrame,
     datetime,
+    NamedAgg,
 )
 import threading
 import os
@@ -106,6 +99,7 @@ from .io import (
     read_fwf,
     read_sql_table,
     read_sql_query,
+    read_spss,
     ExcelFile,
     to_pickle,
     HDFStore,
@@ -248,6 +242,7 @@ __all__ = [
     "read_sql",
     "read_gbq",
     "read_table",
+    "read_spss",
     "concat",
     "eval",
     "unique",
@@ -263,7 +258,6 @@ __all__ = [
     "isnull",
     "merge",
     "pivot_table",
-    "Panel",
     "date_range",
     "Index",
     "MultiIndex",
@@ -306,7 +300,6 @@ __all__ = [
     "TimedeltaIndex",
     "IntervalIndex",
     "IndexSlice",
-    "TimeGrouper",
     "Grouper",
     "array",
     "Period",
@@ -333,6 +326,7 @@ __all__ = [
     "SparseSeries",
     "SparseDataFrame",
     "datetime",
+    "NamedAgg",
     "DEFAULT_NPARTITIONS",
 ]
 

@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pytest
 import numpy as np
 import pandas
@@ -11,7 +7,6 @@ import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
-import sys
 
 from .utils import (
     random_state,
@@ -52,11 +47,6 @@ pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
-
-if sys.version_info[0] < 3:
-    PY2 = True
-else:
-    PY2 = False
 
 
 class TestDFPartOne:
@@ -1046,10 +1036,7 @@ class TestDFPartOne:
 
         df = pd.DataFrame({"real": [1, 2, 3], "complex": [1j, 2j, 3j]})
         mat = df.as_matrix()
-        if PY2:
-            assert mat[0, 0] == 1j
-        else:
-            assert mat[0, 1] == 1j
+        assert mat[0, 1] == 1j
 
         # single block corner case
         mat = pd.DataFrame(test_data.frame).as_matrix(["A", "B"])
@@ -1297,11 +1284,6 @@ class TestDFPartOne:
         data = test_data_values[0]
         with pytest.warns(UserWarning):
             pd.DataFrame(data).compound()
-
-    def test_convert_objects(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).convert_objects()
 
     def test_corr(self):
         data = test_data_values[0]
@@ -1642,8 +1624,7 @@ class TestDFPartOne:
 
         # non-unique
         nu_df = pandas.DataFrame(
-            pandas.compat.lzip(range(3), range(-3, 1), list("abc")),
-            columns=["a", "a", "b"],
+            zip(range(3), range(-3, 1), list("abc")), columns=["a", "a", "b"]
         )
         modin_nu_df = pd.DataFrame(nu_df)
         df_equals(modin_nu_df.drop("a", axis=1), nu_df[["b"]])
@@ -2149,6 +2130,12 @@ class TestDFPartOne:
         data = test_data_values[0]
         with pytest.warns(UserWarning):
             pd.DataFrame(data).expanding()
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_explode(self, data):
+        modin_df = pd.DataFrame(data)
+        with pytest.warns(UserWarning):
+            modin_df.explode(modin_df.columns[0])
 
     def test_ffill(self):
         test_data = TestData()
@@ -3732,13 +3719,6 @@ class TestDFPartTwo:
             pandas_df.T.reindex(["col1", "col7", "col4", "col8"], axis=0),
         )
 
-    def test_reindex_axis(self):
-        df = pd.DataFrame(
-            {"num_legs": [4, 2], "num_wings": [0, 2]}, index=["dog", "hawk"]
-        )
-        with pytest.warns(UserWarning):
-            df.reindex_axis(["num_wings", "num_legs", "num_heads"], axis="columns")
-
     def test_reindex_like(self):
         df1 = pd.DataFrame(
             [
@@ -3977,7 +3957,7 @@ class TestDFPartTwo:
             ),
         )
 
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError):
             df_equals(
                 modin_df.rename_axis(str.upper, axis=1),
                 pandas_df.rename_axis(str.upper, axis=1),
@@ -4135,11 +4115,6 @@ class TestDFPartTwo:
         modin_result = modin_df.sample(n=2, random_state=42, axis=axis)
         pandas_result = pandas_df.sample(n=2, random_state=42, axis=axis)
         df_equals(modin_result, pandas_result)
-
-    def test_select(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).select(lambda x: x % 2 == 0)
 
     def test_select_dtypes(self):
         frame_data = {
@@ -5016,11 +4991,6 @@ class TestDFPartTwo:
         pandas_df = pandas.DataFrame(data)
 
         assert len(modin_df) == len(pandas_df)
-
-    def test___unicode__(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).__unicode__()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___neg__(self, request, data):

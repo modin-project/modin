@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 
 from .dataframe import DataFrame
@@ -19,7 +15,7 @@ def to_datetime(
     unit=None,
     infer_datetime_format=False,
     origin="unix",
-    cache=False,
+    cache=True,
 ):
     """Convert the arg to datetime format. If not Ray DataFrame, this falls
        back on pandas.

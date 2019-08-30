@@ -1,9 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
-from pandas.compat import string_types
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
@@ -19,6 +14,7 @@ import itertools
 import functools
 import numpy as np
 import sys
+from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -350,7 +346,7 @@ class DataFrame(BasePandasDataset):
         idx_name = None
         if callable(by):
             by = self.index.map(by)
-        elif isinstance(by, string_types):
+        elif isinstance(by, str):
             idx_name = by
             by = self.__getitem__(by)._query_compiler
         elif is_list_like(by):
@@ -504,21 +500,6 @@ class DataFrame(BasePandasDataset):
             other, func, fill_value=fill_value, overwrite=overwrite
         )
 
-    def convert_objects(
-        self,
-        convert_dates=True,
-        convert_numeric=False,
-        convert_timedeltas=True,
-        copy=True,
-    ):
-        return self._default_to_pandas(
-            pandas.DataFrame.convert_objects,
-            convert_dates=convert_dates,
-            convert_numeric=convert_numeric,
-            convert_timedeltas=convert_timedeltas,
-            copy=copy,
-        )
-
     def corr(self, method="pearson", min_periods=1):
         return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
@@ -554,6 +535,9 @@ class DataFrame(BasePandasDataset):
             and self.columns.equals(other.columns)
             and self.eq(other).all().all()
         )
+
+    def explode(self, column: Union[str, Tuple]):
+        return self._default_to_pandas(pandas.DataFrame.explode, column)
 
     def eval(self, expr, inplace=False, **kwargs):
         """Evaluate a Python expression as a string using various backends.
@@ -1158,6 +1142,7 @@ class DataFrame(BasePandasDataset):
         margins=False,
         dropna=True,
         margins_name="All",
+        observed=False,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.pivot_table,
@@ -1262,6 +1247,7 @@ class DataFrame(BasePandasDataset):
         copy=True,
         inplace=False,
         level=None,
+        errors="ignore",
     ):
         """Alters axes labels.
 
@@ -1477,6 +1463,9 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return frame
 
+    def sparse(self, data=None):
+        return self._default_to_pandas(pandas.DataFrame.sparse, data=data)
+
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
@@ -1616,9 +1605,6 @@ class DataFrame(BasePandasDataset):
             render_links=render_links,
         )
 
-    def to_panel(self):  # pragma: no cover
-        return self._default_to_pandas(pandas.DataFrame.to_panel)
-
     def to_parquet(
         self,
         fname,
@@ -1738,7 +1724,6 @@ class DataFrame(BasePandasDataset):
         level=None,
         errors="raise",
         try_cast=False,
-        raise_on_error=None,
     ):
         """Replaces values not meeting condition with values in other.
 
@@ -1752,7 +1737,6 @@ class DataFrame(BasePandasDataset):
             level: The MultiLevel index level to apply over.
             errors: Whether or not to raise errors. Does nothing in Pandas.
             try_cast: Try to cast the result back to the input type.
-            raise_on_error: Whether to raise invalid datatypes (deprecated).
 
         Returns:
             A new DataFrame with the replaced values.
@@ -1774,7 +1758,6 @@ class DataFrame(BasePandasDataset):
                 level=level,
                 errors=errors,
                 try_cast=try_cast,
-                raise_on_error=raise_on_error,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         axis = self._get_axis_number(axis) if axis is not None else 0
@@ -1961,9 +1944,6 @@ class DataFrame(BasePandasDataset):
             self._update_inplace(new_self._query_compiler)
         else:
             self._update_inplace(self._query_compiler.setitem(0, key, value))
-
-    def __unicode__(self):
-        return self._default_to_pandas(pandas.DataFrame.__unicode__)
 
     def __hash__(self):
         return self._default_to_pandas(pandas.DataFrame.__hash__)
