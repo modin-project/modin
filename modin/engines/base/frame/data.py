@@ -663,7 +663,7 @@ class BasePandasFrame(object):
             new_parts, index, columns, new_lengths, new_widths, new_dtypes
         )
 
-    def _map_reduce_full_axis(self, axis, func):
+    def _fold_reduce(self, axis, func):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
@@ -730,7 +730,7 @@ class BasePandasFrame(object):
             dtypes=dtypes,
         )
 
-    def _map_full_axis(self, axis, func):
+    def _fold(self, axis, func):
         """Perform a function across an entire axis.
 
         Note: The data shape is not changed (length and width of the table).
