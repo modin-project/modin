@@ -82,7 +82,6 @@ def test_dataframe_api_equality():
     ignore = ["timetuple"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(missing_from_modin - set(ignore))
-
     assert not len(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
@@ -134,7 +133,6 @@ def test_series_api_equality():
     ignore = ["timetuple"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(missing_from_modin - set(ignore)), missing_from_modin
-
     assert not len(set(modin_dir) - set(pandas_dir)), set(modin_dir) - set(pandas_dir)
 
     # These have to be checked manually
@@ -142,7 +140,6 @@ def test_series_api_equality():
     difference = []
 
     for m in modin_dir:
-        print(m)
         if m in allowed_different:
             continue
         try:
@@ -174,6 +171,4 @@ def test_series_api_equality():
                     difference.append(append_val)
             except IndexError:
                 pass
-
-    print(difference)
     assert not len(difference), "Differences found in API: {}".format(difference)

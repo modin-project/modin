@@ -348,8 +348,6 @@ def df_equals(df1, df2):
         assert df1.dtypes == df2.dtypes
     else:
         if df1 != df2:
-            print(df1)
-            print(df2)
             np.testing.assert_almost_equal(df1, df2)
 
 
