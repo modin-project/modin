@@ -8,10 +8,12 @@ from modin.engines.ray.utils import handle_ray_task_error
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id, length=None, width=None, call_queue=[]):
+    def __init__(self, object_id, length=None, width=None, call_queue=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
+        if call_queue is None:
+            call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
@@ -44,13 +46,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        new_obj, result, length, width = deploy_ray_func.remote(call_queue, oid)
-        if len(self.call_queue) > 0:
-            self.oid = new_obj
-            self.call_queue = []
-        return PandasOnRayFramePartition(
-            result, PandasOnRayFramePartition(length), PandasOnRayFramePartition(width)
-        )
+        result, length, width = deploy_ray_func.remote(call_queue, oid)
+        return PandasOnRayFramePartition(result, length, width)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnRayFramePartition(
@@ -62,12 +59,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        _, self.oid, length, width = deploy_ray_func.remote(call_queue, oid)
+        self.oid, self._length_cache, self._width_cache = deploy_ray_func.remote(
+            call_queue, oid
+        )
         self.call_queue = []
-        if self._length_cache is None:
-            self._length_cache = PandasOnRayFramePartition(length)
-        if self._width_cache is None:
-            self._width_cache = PandasOnRayFramePartition(width)
 
     def __copy__(self):
         return PandasOnRayFramePartition(
@@ -96,7 +91,16 @@ class PandasOnRayFramePartition(BaseFramePartition):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache, new_obj._width_cache = len(row_indices), len(col_indices)
+        new_obj._length_cache = (
+            len(row_indices)
+            if not isinstance(row_indices, slice)
+            else self._length_cache
+        )
+        new_obj._width_cache = (
+            len(col_indices)
+            if not isinstance(col_indices, slice)
+            else self._width_cache
+        )
         return new_obj
 
     @classmethod
@@ -123,6 +127,36 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         return ray.put(func)
 
+    def length(self):
+        if self._length_cache is None:
+            if len(self.call_queue):
+                self.drain_call_queue()
+            else:
+                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                    self.oid
+                )
+        if isinstance(self._length_cache, ray.ObjectID):
+            try:
+                self._length_cache = ray.get(self._length_cache)
+            except RayTaskError as e:
+                handle_ray_task_error(e)
+        return self._length_cache
+
+    def width(self):
+        if self._width_cache is None:
+            if len(self.call_queue):
+                self.drain_call_queue()
+            else:
+                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                    self.oid
+                )
+        if isinstance(self._width_cache, ray.ObjectID):
+            try:
+                self._width_cache = ray.get(self._width_cache)
+            except RayTaskError as e:
+                handle_ray_task_error(e)
+        return self._width_cache
+
     @classmethod
     def length_extraction_fn(cls):
         return length_fn_pandas
@@ -136,7 +170,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote(num_return_vals=4)
+@ray.remote(num_return_vals=2)
+def get_index_and_columns(df):
+    return len(df.index), len(df.columns)
+
+
+@ray.remote(num_return_vals=3)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
@@ -162,7 +201,6 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     except ValueError:
         result = func(partition.copy(), **kwargs)
     return (
-        partition if len(call_queue) > 1 else None,
         result,
         len(result) if hasattr(result, "__len__") else 0,
         len(result.columns) if hasattr(result, "columns") else 0,

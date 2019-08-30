@@ -115,9 +115,3 @@ def length_fn_pandas(df):
 def width_fn_pandas(df):
     assert isinstance(df, pandas.DataFrame)
     return len(df.columns)
-
-
-def set_indices_for_pandas_concat(df, transposed=False):
-    df.index = pandas.RangeIndex(len(df))
-    df.columns = pandas.RangeIndex(len(df.columns))
-    return df.T if transposed else df

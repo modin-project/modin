@@ -702,7 +702,6 @@ class BasePandasDataset(object):
                     self.axes[axis].levels[level],
                 )
             )
-
             return (
                 self.groupby(self.axes[axis].codes[level], axis=axis)
                 .count()
@@ -884,6 +883,8 @@ class BasePandasDataset(object):
 
         if isinstance(other, BasePandasDataset):
             other = other.reindex(index=self_labels)._query_compiler
+            # Change this to use the query compiler in #673.
+            other = other.to_pandas()
         return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def drop(
@@ -1623,7 +1624,6 @@ class BasePandasDataset(object):
             the memory usage of each of the columns in bytes. If `index=true`,
             then the first value of the Series will be 'Index' with its memory usage.
         """
-        assert not index, "Internal Error. Index must be evaluated in child class"
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
         )

@@ -1,3 +1,6 @@
+NOT_IMPLEMENTED_MESSAGE = "Must be implemented in children classes"
+
+
 class BaseQueryCompiler(object):
     """Abstract Class that handles the queries to Modin dataframes.
 
@@ -9,59 +12,13 @@ class BaseQueryCompiler(object):
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
-    def __init__(self, block_partitions_object, index, columns, dtypes=None):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # Dtypes and Indexing Abstract Methods
-    def _get_dtype(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_dtype(self, dtypes):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    def compute_index(self, axis, data_object, compute_diff=True):
-        """Computes the index after a number of rows have been removed.
-
-        Note: In order for this to be used properly, the indexes must not be
-            changed before you compute this.
-
-        Args:
-            axis: The axis to extract the index from.
-            data_object: The new data object to extract the index from.
-            compute_diff: True to use `self` to compute the index from self
-                rather than data_object. This is used when the dimension of the
-                index may have changed, but the deleted rows/columns are
-                unknown.
-
-        Returns:
-            A new Index object.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _get_index(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _get_columns(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_index(self, new_index):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_columns(self, new_columns):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    columns = property(_get_columns, _set_columns)
-    index = property(_get_index, _set_index)
-    # END dtypes and indexing abstract methods
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def add_suffix(self, suffix, axis=1):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Metadata modification abstract methods
 
@@ -70,34 +27,11 @@ class BaseQueryCompiler(object):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract copy
 
     # Abstract join and append helper functions
-    def _join_index_objects(self, axis, other_index, how, sort=True):
-        """Joins a pair of index objects (columns or rows) by a given strategy.
-
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other_index: The other_index to join on.
-            how: The type of join to join to make (e.g. right, left).
-
-        Returns:
-            Joined indices.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def join(self, other, **kwargs):
-        """Joins a list or two objects together.
-
-        Args:
-            other: The other object(s) to join on.
-
-        Returns:
-            Joined objects.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -109,13 +43,7 @@ class BaseQueryCompiler(object):
         Returns:
             Concatenated objects.
         """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _append_list_of_managers(self, others, axis, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _join_list_of_managers(self, others, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract join and append helper functions
 
@@ -124,7 +52,7 @@ class BaseQueryCompiler(object):
         """In the future, this will hopefully trigger a cleanup of this object.
         """
         # TODO create a way to clean up this object.
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Data Management Methods
 
@@ -135,7 +63,7 @@ class BaseQueryCompiler(object):
         Returns:
             Pandas DataFrame of the QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def from_pandas(cls, df, block_partitions_cls):
@@ -149,7 +77,7 @@ class BaseQueryCompiler(object):
         Returns:
             Returns QueryCompiler containing data from the Pandas DataFrame.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END To/From Pandas
 
@@ -160,47 +88,15 @@ class BaseQueryCompiler(object):
         Returns:
             NumPy Array of the QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END To NumPy
-
-    # Abstract copartition
-    def copartition(self, axis, other, how_to_join, sort, force_repartition=False):
-        """Copartition two QueryCompiler objects.
-
-        Args:
-            axis: The axis to copartition along.
-            other: The other Query Compiler(s) to copartition against.
-            how_to_join: How to manage joining the index object ("left", "right", etc.)
-            sort: Whether or not to sort the joined index.
-            force_repartition: Whether or not to force the repartitioning. By default,
-                this method will skip repartitioning if it is possible. This is because
-                reindexing is extremely inefficient. Because this method is used to
-                `join` or `append`, it is vital that the internal indices match.
-
-        Returns:
-            A tuple (left query compiler, right query compiler list, joined index).
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # END Abstract copartition
 
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
-    def inter_manager_operations(self, other, how_to_join, func):
-        """Inter-data operations (e.g. add, sub).
-
-        Args:
-            other: The other Manager for the operation.
-            how_to_join: The type of join to join to make (e.g. right, outer).
-
-        Returns:
-            New QueryCompiler with new data and index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
 
     def binary_op(self, op, other, **kwargs):
         """Perform an operation between two objects.
@@ -234,10 +130,10 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler object.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def clip(self, lower, upper, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def update(self, other, **kwargs):
         """Uses other manager to update corresponding values in this manager.
@@ -248,7 +144,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and index.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -259,7 +155,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and index.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract inter-data operations
 
@@ -270,7 +166,7 @@ class BaseQueryCompiler(object):
         Returns:
             Transposed new QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract Transpose
 
@@ -285,7 +181,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and new index.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def reset_index(self, **kwargs):
         """Removes all levels from index and sets a default level_0 index.
@@ -293,7 +189,7 @@ class BaseQueryCompiler(object):
         Returns:
             New QueryCompiler with updated data and reset index.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract reindex/reset_index
 
@@ -303,20 +199,6 @@ class BaseQueryCompiler(object):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
-    def full_reduce(self, axis, map_func, reduce_func=None, numeric_only=False):
-        """Apply function that will reduce the data to a Pandas Series.
-
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            map_func: Callable function to map the dataframe.
-            reduce_func: Callable function to reduce the dataframe. If none,
-                then apply map_func twice.
-            numeric_only: Apply only over the numeric rows.
-
-        Return:
-            Returns Pandas Series containing the results from map_func and reduce_func.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
 
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
@@ -324,7 +206,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series containing counts of non-NaN objects from each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def max(self, **kwargs):
         """Returns the maximum value for each column or row.
@@ -332,7 +214,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the maximum values from each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
@@ -340,7 +222,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series containing the mean from each numerical column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def min(self, **kwargs):
         """Returns the minimum from each column or row.
@@ -348,7 +230,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the minimum value from each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def prod(self, **kwargs):
         """Returns the product of each numerical column or row.
@@ -356,7 +238,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the product of each numerical column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def sum(self, **kwargs):
         """Returns the sum of each numerical column or row.
@@ -364,38 +246,38 @@ class BaseQueryCompiler(object):
         Return:
             Pandas series with the sum of each numerical column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract full Reduce operations
 
     # Abstract map partitions operations
     # These operations are operations that apply a function to every partition.
     def abs(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def applymap(self, func):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isin(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isna(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def isnull(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def negative(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def notna(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def notnull(self):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def round(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map partitions operations
 
@@ -410,7 +292,7 @@ class BaseQueryCompiler(object):
         Returns:
             DataFrame with updated dtypes.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map partitions across select indices
 
@@ -426,7 +308,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def any(self, **kwargs):
         """Returns whether any the elements are true, potentially over an axis.
@@ -434,7 +316,7 @@ class BaseQueryCompiler(object):
         Return:
             Pandas Series containing boolean values or boolean.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def first_valid_index(self):
         """Returns index of first non-NaN/NULL value.
@@ -442,7 +324,7 @@ class BaseQueryCompiler(object):
         Return:
             Scalar of index name.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def idxmax(self, **kwargs):
         """Returns the first occurance of the maximum over requested axis.
@@ -450,7 +332,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the maximum of each column or axis.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def idxmin(self, **kwargs):
         """Returns the first occurance of the minimum over requested axis.
@@ -458,7 +340,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the minimum of each column or axis.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
@@ -466,7 +348,7 @@ class BaseQueryCompiler(object):
         Return:
             Scalar of index name.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def median(self, **kwargs):
         """Returns median of each column or row.
@@ -474,7 +356,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the median of each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def memory_usage(self, **kwargs):
         """Returns the memory usage of each column.
@@ -482,7 +364,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the memory usage of each column.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def nunique(self, **kwargs):
         """Returns the number of unique items over each column or row.
@@ -490,7 +372,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series of ints indexed by column or index names.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
@@ -498,7 +380,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the quantile of each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def skew(self, **kwargs):
         """Returns skew of each column or row.
@@ -506,7 +388,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the skew of each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.
@@ -514,7 +396,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the standard deviation of each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def to_datetime(self, **kwargs):
         """Converts the Manager to a Series of DateTime objects.
@@ -522,7 +404,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series of DateTime objects.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def var(self, **kwargs):
         """Returns variance of each column or row.
@@ -530,7 +412,7 @@ class BaseQueryCompiler(object):
         Returns:
             Series containing the variance of each column or row.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract column/row partitions reduce operations
 
@@ -546,7 +428,7 @@ class BaseQueryCompiler(object):
         Returns:
             DataFrame object containing the descriptive statistics of the DataFrame.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract column/row partitions reduce operations over select indices
 
@@ -555,26 +437,26 @@ class BaseQueryCompiler(object):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
     def cumsum(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cummax(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cummin(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def cumprod(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def diff(self, **kwargs):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def dropna(self, **kwargs):
         """Returns a new QueryCompiler with null values dropped along given axis.
         Return:
             New QueryCompiler
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -585,7 +467,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with new columns after applying expr.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def mode(self, **kwargs):
         """Returns a new QueryCompiler with modes calculated for each label along given axis.
@@ -593,7 +475,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with modes calculated.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def fillna(self, **kwargs):
         """Replaces NaN values with the method provided.
@@ -601,7 +483,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with null values filled.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def query(self, expr, **kwargs):
         """Query columns of the QueryCompiler with a boolean expression.
@@ -612,7 +494,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the rows where the boolean expression is satisfied.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
@@ -620,7 +502,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the ranks of the values along an axis.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def sort_index(self, **kwargs):
         """Sorts the data with respect to either the columns or the indices.
@@ -628,7 +510,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the data sorted by columns or indices.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map across rows/columns
 
@@ -642,7 +524,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing quantiles of original QueryCompiler along an axis.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract map across rows/columns
 
@@ -656,7 +538,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the first n rows of the original QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def tail(self, n):
         """Returns the last n rows.
@@ -667,7 +549,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the last n rows of the original QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def front(self, n):
         """Returns the first n columns.
@@ -678,7 +560,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the first n columns of the original QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def back(self, n):
         """Returns the last n columns.
@@ -689,7 +571,7 @@ class BaseQueryCompiler(object):
         Returns:
             QueryCompiler containing the last n columns of the original QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END head/tail/front/back
 
@@ -703,7 +585,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new Query Compiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def getitem_row_array(self, key):
         """Get row data for target labels.
@@ -714,7 +596,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new Query Compiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract __getitem__ methods
 
@@ -734,7 +616,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler with new data inserted.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract insert
 
@@ -749,7 +631,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END drop
 
@@ -766,7 +648,7 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END UDF
 
@@ -775,7 +657,20 @@ class BaseQueryCompiler(object):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+
+    def groupby_reduce(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_func,
+        map_args,
+        reduce_func=None,
+        reduce_args=None,
+        numeric_only=True,
+    ):
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Manual Partitioning methods
 
@@ -788,33 +683,17 @@ class BaseQueryCompiler(object):
         Returns:
             A new QueryCompiler.
         """
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # Indexing
     def view(self, index=None, columns=None):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def squeeze(self, ndim=0, axis=None):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def global_idx_to_numeric_idx(self, axis, indices):
-        """
-        Note: this function involves making copies of the index in memory.
-
-        Args:
-            axis: Axis to extract indices.
-            indices: Indices to convert to numerical.
-
-        Returns:
-            An Index object.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def enlarge_partitions(self, new_row_labels=None, new_col_labels=None):
-        raise NotImplementedError("Must be implemented in children classes")
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     # END Abstract methods for QueryCompiler
 
@@ -829,73 +708,3 @@ class BaseQueryCompiler(object):
         return self.drop(columns=[key])
 
     # END __delitem__
-
-
-class BaseQueryCompilerView(BaseQueryCompiler):
-    """
-    This class represent a view of the BaseQueryCompiler
-
-    In particular, the following constraints are broken:
-    - (len(self.index), len(self.columns)) != self.data.shape
-
-    Note:
-        The constraint will be satisfied when we get the data
-    """
-
-    # Abstract Methods and Fields: Must implement in children classes
-    # In some cases, there you may be able to use the same implementation for
-    # some of these abstract methods, but for the sake of generality they are
-    # treated differently.
-    def __init__(
-        self,
-        block_partitions_object,
-        index,
-        column,
-        dtypes=None,
-        index_map_series=None,
-        columns_map_series=None,
-    ):
-        """
-        Args:
-            index_map_series: a Series Object mapping user-facing index to
-                numeric index.
-            columns_map_series: a Series Object mapping user-facing index to
-                numeric index.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    @property
-    def __constructor__(self):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    _dtype_cache = None
-
-    def _get_dtype(self):
-        """Override the parent on this to avoid getting the wrong dtypes."""
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_dtype(self, dtypes):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    dtypes = property(_get_dtype, _set_dtype)
-
-    def _get_data(self):
-        """Perform the map step
-
-        Returns:
-            A BaseFrameManager object.
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    def _set_data(self, new_data):
-        """Note this setter will be called by the
-            `super(BaseQueryCompiler).__init__` function
-        """
-        raise NotImplementedError("Must be implemented in children classes")
-
-    data = property(_get_data, _set_data)
-
-    def global_idx_to_numeric_idx(self, axis, indices):
-        raise NotImplementedError("Must be implemented in children classes")
-
-    # END Abstract functions for QueryCompilerView

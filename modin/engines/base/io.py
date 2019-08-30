@@ -7,7 +7,7 @@ from modin.backends.base.query_compiler import BaseQueryCompiler
 class BaseIO(object):
     @classmethod
     def from_pandas(cls, df):
-        return cls.query_compiler_cls.from_pandas(df, cls.frame_mgr_cls)
+        return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):

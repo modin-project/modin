@@ -74,6 +74,7 @@ import threading
 import os
 import ray
 import types
+import sys
 
 from .. import __version__
 from .concat import concat
@@ -173,6 +174,35 @@ def initialize_ray():
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
         ray.register_custom_serializer(types.MethodType, use_pickle=True)
+
+        # Register a fix import function to run on all_workers including the driver.
+        # This is a hack solution to fix #647, #746
+        def move_stdlib_ahead_of_site_packages(*args):
+            site_packages_path = None
+            site_packages_path_index = -1
+            for i, path in enumerate(sys.path):
+                if sys.exec_prefix in path and path.endswith("site-packages"):
+                    site_packages_path = path
+                    site_packages_path_index = i
+                    # break on first found
+                    break
+
+            if site_packages_path is not None:
+                # stdlib packages layout as follows:
+                # - python3.x
+                #   - typing.py
+                #   - site-packages/
+                #     - pandas
+                # So extracting the dirname of the site_packages can point us
+                # to the directory containing standard libraries.
+                sys.path.insert(
+                    site_packages_path_index, os.path.dirname(site_packages_path)
+                )
+
+        move_stdlib_ahead_of_site_packages()
+        ray.worker.global_worker.run_function_on_all_workers(
+            move_stdlib_ahead_of_site_packages
+        )
 
 
 if execution_engine == "Ray":
@@ -297,6 +327,7 @@ __all__ = [
     "SparseDataFrame",
     "datetime",
     "NamedAgg",
+    "DEFAULT_NPARTITIONS",
 ]
 
 del pandas
