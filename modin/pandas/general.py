@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
 
 from modin.error_message import ErrorMessage
@@ -185,6 +181,7 @@ def pivot_table(
     margins=False,
     dropna=True,
     margins_name="All",
+    observed=False,
 ):
     if not isinstance(data, DataFrame):
         raise ValueError(

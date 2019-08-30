@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pytest
 import numpy as np
 import json
@@ -9,7 +5,6 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
-import sys
 
 from modin.pandas.utils import to_pandas
 from .utils import (
@@ -46,11 +41,6 @@ pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
-
-if sys.version_info[0] < 3:
-    PY2 = True
-else:
-    PY2 = False
 
 
 def inter_df_math_helper(modin_series, pandas_series, op):
@@ -412,8 +402,7 @@ def test___repr__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___round__(data):
     modin_series, pandas_series = create_test_series(data)
-    if not PY2:
-        df_equals(round(modin_series), round(pandas_series))
+    df_equals(round(modin_series), round(pandas_series))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -960,15 +949,8 @@ def test_compound(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_compress(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with pytest.raises(KeyError):
         modin_series.compress(modin_series > 30)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_convert_objects(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.convert_objects()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2050,14 +2032,6 @@ def test_reindex(data):
         )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reindex_axis(data):
-    modin_series, pandas_series = create_test_series(data)
-    modin_series.reindex_axis(
-        [i for i in modin_series.index[: len(modin_series.index) // 2]]
-    )
-
-
 def test_reindex_like():
     df1 = pd.DataFrame(
         [
@@ -2241,13 +2215,6 @@ def test_searchsorted(data):
     modin_series, pandas_series = create_test_series(data)
     with pytest.warns(UserWarning):
         modin_series.searchsorted(3)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_select(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.select(lambda x: x == 4)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2480,6 +2447,15 @@ def test_take():
     series = pd.Series([1, 2, 3, 4], index=[0, 2, 3, 1])
     with pytest.warns(UserWarning):
         series.take([0, 3])
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_explode(data):
+    modin_series, pandas_series = create_test_series(data)
+    with pytest.warns(UserWarning):
+        modin_result = modin_series.explode()
+    pandas_result = pandas_series.explode()
+    df_equals(modin_result, pandas_result)
 
 
 def test_to_period():
@@ -3383,7 +3359,7 @@ def test_str_translate(data, pat):
         df_equals(modin_result, pandas_result)
 
     # Translation table with maketrans (python3 only)
-    if pat is not None and not PY2:
+    if pat is not None:
         table = str.maketrans(pat, "d" * len(pat))
         try:
             pandas_result = pandas_series.str.translate(table)

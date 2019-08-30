@@ -1,9 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pandas
-from pandas import compat
 from .dataframe import DataFrame
 from .series import Series
 
@@ -21,9 +16,7 @@ def concat(
     sort=None,
     copy=True,
 ):
-    if isinstance(
-        objs, (pandas.Series, Series, DataFrame, compat.string_types, pandas.DataFrame)
-    ):
+    if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
         raise TypeError(
             "first argument must be an iterable of pandas "
             "objects, you passed an object of type "
