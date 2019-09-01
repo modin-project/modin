@@ -1149,6 +1149,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 _setitem()
             return df
 
+        if isinstance(value, type(self)):
+            value = value.to_pandas()
         if is_list_like(value):
             new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
                 axis,

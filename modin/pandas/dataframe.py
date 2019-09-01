@@ -1943,6 +1943,8 @@ class DataFrame(BasePandasDataset):
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
+            if isinstance(value, Series):
+                value = value._query_compiler
             self._update_inplace(self._query_compiler.setitem(0, key, value))
 
     def __hash__(self):
