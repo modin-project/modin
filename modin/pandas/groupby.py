@@ -491,6 +491,6 @@ class DataFrameGroupBy(object):
             by = self._by
 
         def groupby_on_multiple_columns(df):
-            f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
+            return f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
 
         return self._df._default_to_pandas(groupby_on_multiple_columns)
