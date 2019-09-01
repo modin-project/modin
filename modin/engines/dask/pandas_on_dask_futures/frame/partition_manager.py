@@ -19,7 +19,7 @@ class DaskFrameManager(BaseFrameManager):
     _row_partition_class = PandasOnDaskFrameRowPartition
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func=None):
+    def get_indices(cls, axis, partitions, index_func):
         """This gets the internal indices stored in the partitions.
 
         Note: These are the global indices of the object. This is mostly useful
