@@ -4962,6 +4962,13 @@ class TestDFPartTwo:
 
         df_equals(modin_df, pandas_df)
 
+        # Test series assignment to column
+        modin_df = pd.DataFrame(columns=modin_df.columns)
+        pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+        modin_df[modin_df.columns[-1]] = modin_df[modin_df.columns[0]]
+        pandas_df[pandas_df.columns[-1]] = pandas_df[pandas_df.columns[0]]
+        df_equals(modin_df, pandas_df)
+
         # Transpose test
         modin_df = pd.DataFrame(data).T
         pandas_df = pandas.DataFrame(data).T
