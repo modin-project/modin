@@ -332,8 +332,6 @@ class TestDFPartOne:
                 getattr(modin_df, op)(modin_df)
         else:
             modin_result = getattr(modin_df, op)(modin_df)
-            print(modin_result)
-            print(pandas_result)
             df_equals(modin_result, pandas_result)
 
         try:
