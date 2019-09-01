@@ -1076,8 +1076,10 @@ class RayIO(BaseIO):
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
         if isinstance(con, (sa.engine.Engine, sa.engine.Connection)):
-            warnings.warn("To use parallel implementation of `read_sql`, pass the "
-                          "connection string as `con` instead of {}.".format(type(con)))
+            warnings.warn(
+                "To use parallel implementation of `read_sql`, pass the "
+                "connection string as `con` instead of {}.".format(type(con))
+            )
             return super(RayIO, cls).read_sql(sql, con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
