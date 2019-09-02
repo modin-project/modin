@@ -1078,7 +1078,7 @@ class RayIO(BaseIO):
         if isinstance(con, (sa.engine.Engine, sa.engine.Connection)):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass the "
-                "connection string as `con` instead of {}.".format(type(con))
+                "connection string instead of {}.".format(type(con))
             )
             return super(RayIO, cls).read_sql(sql, con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
