@@ -208,7 +208,7 @@ class PandasOnPythonFactory(BaseFactory):
 
 class PandasOnDaskFactory(BaseFactory):
 
-    from modin.engines.dask.pandas_on_dask_delayed.io import PandasOnDaskIO
+    from modin.engines.dask.pandas_on_dask_futures.io import PandasOnDaskIO
 
     io_cls = PandasOnDaskIO
 

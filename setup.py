@@ -18,6 +18,6 @@ setup(
     install_requires=["pandas==0.25.1", "ray==0.7.3"],
     extras_require={
         # can be installed by pip install modin[dask]
-        "dask": ["dask==1.1.0", "distributed==1.25.0"]
+        "dask": ["dask>=2.1.0", "distributed>=2.3.2"]
     },
 )

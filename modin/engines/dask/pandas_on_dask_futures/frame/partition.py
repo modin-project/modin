@@ -1,10 +1,17 @@
 import pandas
+from distributed.client import _get_global_client
 
-from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import BaseFramePartition
+from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 
-class PandasOnPythonFramePartition(BaseFramePartition):
+def apply_list_of_funcs(funcs, df):
+    for func, kwargs in funcs:
+        df = func(df, **kwargs)
+    return df
+
+
+class PandasOnDaskFramePartition(BaseFramePartition):
     """This abstract class holds the data and metadata for a single partition.
         The methods required for implementing this abstract class are listed in
         the section immediately following this.
@@ -16,13 +23,14 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         subclasses. There is no logic for updating inplace.
     """
 
-    def __init__(self, data, length=None, width=None, call_queue=None):
-        self.data = data
+    def __init__(self, future, length=None, width=None, call_queue=None):
+        self.future = future
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
+        self.client = _get_global_client()
 
     def get(self):
         """Flushes the call_queue and returns the data.
@@ -33,7 +41,10 @@ class PandasOnPythonFramePartition(BaseFramePartition):
             The object that was `put`.
         """
         self.drain_call_queue()
-        return self.data.copy()
+        # blocking operation
+        if isinstance(self.future, pandas.DataFrame):
+            return self.future
+        return self.future.result()
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -49,32 +60,21 @@ class PandasOnPythonFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-
-        def call_queue_closure(data, call_queues):
-            result = data.copy()
-            for func, kwargs in call_queues:
-                try:
-                    result = func(result, **kwargs)
-                except Exception as e:
-                    self.call_queue = []
-                    raise e
-            return result
-
-        self.data = call_queue_closure(self.data, self.call_queue)
-        self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
+        call_queue = self.call_queue + [[func, kwargs]]
+        future = self.client.submit(apply_list_of_funcs, call_queue, self.future)
+        return PandasOnDaskFramePartition(future)
 
     def add_to_apply_calls(self, func, **kwargs):
-        return PandasOnPythonFramePartition(
-            self.data.copy(), call_queue=self.call_queue + [(func, kwargs)]
+        return PandasOnDaskFramePartition(
+            self.future, call_queue=self.call_queue + [[func, kwargs]]
         )
 
     def drain_call_queue(self):
         if len(self.call_queue) == 0:
             return
-        self.apply(lambda x: x)
+        self.future = self.apply(lambda x: x).future
 
-    def mask(self, row_indices=None, col_indices=None):
+    def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
@@ -89,6 +89,11 @@ class PandasOnPythonFramePartition(BaseFramePartition):
             else self._width_cache
         )
         return new_obj
+
+    def __copy__(self):
+        return PandasOnDaskFramePartition(
+            self.future, self._length_cache, self._width_cache
+        )
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -105,12 +110,12 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         return dataframe
 
     def to_numpy(self):
-        """Convert the object stored in this partition to a NumPy Array.
+        """Convert the object stored in this parition to a Numpy Array.
 
         Returns:
-            A NumPy Array.
+            A Numpy Array.
         """
-        return self.apply(lambda df: df.values).get()
+        return self.apply(lambda df: df.to_numpy()).get()
 
     @classmethod
     def put(cls, obj):
@@ -122,7 +127,8 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         Returns:
             A `RemotePartitions` object.
         """
-        return cls(obj)
+        client = _get_global_client()
+        return cls(client.scatter(obj))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -164,14 +170,18 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
     def length(self):
         if self._length_cache is None:
-            self._length_cache = type(self).length_extraction_fn()(self.data)
+            self._length_cache = self.apply(lambda df: len(df)).future
+        if isinstance(self._length_cache, type(self.future)):
+            self._length_cache = self._length_cache.result()
         return self._length_cache
 
     def width(self):
         if self._width_cache is None:
-            self._width_cache = type(self).width_extraction_fn()(self.data)
+            self._width_cache = self.apply(lambda df: len(df.columns)).future
+        if isinstance(self._width_cache, type(self.future)):
+            self._width_cache = self._width_cache.result()
         return self._width_cache
 
     @classmethod
     def empty(cls):
-        return cls(pandas.DataFrame())
+        return cls(pandas.DataFrame(), 0, 0)
