@@ -83,7 +83,7 @@ class DataFrame(BasePandasDataset):
             self._query_compiler = query_compiler
 
     def __repr__(self):
-        num_rows = pandas.get_option("max_rows") or 60
+        num_rows = pandas.get_option("max_rows") or 10
         num_cols = pandas.get_option("max_columns") or 20
 
         result = repr(self._build_repr_df(num_rows, num_cols))
