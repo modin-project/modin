@@ -11,6 +11,7 @@ import re
 import sys
 import numpy as np
 import math
+import warnings
 
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
@@ -1075,7 +1076,11 @@ class RayIO(BaseIO):
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
         if isinstance(con, (sa.engine.Engine, sa.engine.Connection)):
-            con = repr(con.engine.url)
+            warnings.warn(
+                "To use parallel implementation of `read_sql`, pass the "
+                "connection string instead of {}.".format(type(con))
+            )
+            return super(RayIO, cls).read_sql(sql, con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
         cols_names_df = pandas.read_sql(
