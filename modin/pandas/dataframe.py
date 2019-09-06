@@ -348,7 +348,10 @@ class DataFrame(BasePandasDataset):
             by = self.index.map(by)
         elif isinstance(by, str):
             idx_name = by
-            if isinstance(self.axes[axis], pandas.MultiIndex) and by in self.axes[axis].names:
+            if (
+                isinstance(self.axes[axis], pandas.MultiIndex)
+                and by in self.axes[axis].names
+            ):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
                 pass
