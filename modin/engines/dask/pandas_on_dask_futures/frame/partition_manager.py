@@ -1,6 +1,3 @@
-from distributed import get_client
-
-
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
@@ -8,6 +5,10 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
+from modin import __execution_engine__
+
+if __execution_engine__ == "Dask":
+    from distributed.client import _get_global_client
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -35,7 +36,7 @@ class DaskFrameManager(BaseFrameManager):
         Returns:
             A Pandas Index object.
         """
-        client = get_client()
+        client = _get_global_client()
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:

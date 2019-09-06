@@ -72,7 +72,6 @@ from pandas import (
 )
 import threading
 import os
-import ray
 import types
 import sys
 
@@ -126,6 +125,8 @@ num_cpus = 1
 
 
 def initialize_ray():
+    import ray
+
     """Initializes ray based on environment variables and internal defaults."""
     if threading.current_thread().name == "MainThread":
         plasma_directory = None
@@ -206,6 +207,8 @@ def initialize_ray():
 
 
 if execution_engine == "Ray":
+    import ray
+
     initialize_ray()
     num_cpus = ray.cluster_resources()["CPU"]
 elif execution_engine == "Dask":  # pragma: no cover

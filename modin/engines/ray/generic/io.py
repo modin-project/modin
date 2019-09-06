@@ -6,7 +6,6 @@ from pandas.core.dtypes.cast import find_common_type
 import inspect
 import os
 import py
-import ray
 import re
 import sys
 import numpy as np
@@ -16,6 +15,11 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 from modin.data_management.utils import compute_chunksize
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
+    import pyarrow
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")

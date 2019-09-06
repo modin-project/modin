@@ -1,12 +1,15 @@
 import pandas
 
 from io import BytesIO
-import ray
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO, file_open
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
@@ -26,168 +29,165 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     return splits
 
 
-@ray.remote
-def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
-    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+if __execution_engine__ == "Ray":
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+    @ray.remote
+    def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
+        """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
-    Args:
-        path: The path of the Parquet file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-    import pyarrow.parquet as pq
+        Args:
+            path: The path of the Parquet file.
+            columns: The list of column names to read.
+            num_splits: The number of partitions to split the column into.
 
-    kwargs["use_pandas_metadata"] = True
-    df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
-    df = df[columns]
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element. If there is not `index_col` set, then we just return the length.
+                This is used to determine the total length of the DataFrame to build a
+                default Index.
+        """
+        import pyarrow.parquet as pq
 
+        kwargs["use_pandas_metadata"] = True
+        df = pq.read_table(path, columns=columns, **kwargs).to_pandas()
+        df = df[columns]
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
-@ray.remote
-def _read_csv_with_offset_pandas_on_ray(
-    fname, num_splits, start, end, kwargs, header
-):  # pragma: no cover
-    """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
+    @ray.remote
+    def _read_csv_with_offset_pandas_on_ray(
+        fname, num_splits, start, end, kwargs, header
+    ):  # pragma: no cover
+        """Use a Ray task to read a chunk of a CSV into a Pandas DataFrame.
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-    Args:
-        fname: The filename of the file to open.
-        num_splits: The number of splits (partitions) to separate the DataFrame into.
-        start: The start byte offset.
-        end: The end byte offset.
-        kwargs: The kwargs for the Pandas `read_csv` function.
-        header: The header of the file.
+        Args:
+            fname: The filename of the file to open.
+            num_splits: The number of splits (partitions) to separate the DataFrame into.
+            start: The start byte offset.
+            end: The end byte offset.
+            kwargs: The kwargs for the Pandas `read_csv` function.
+            header: The header of the file.
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-    index_col = kwargs.get("index_col", None)
-    # pop "compression" from kwargs because bio is uncompressed
-    bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
-    bio.seek(start)
-    to_read = header + bio.read(end - start)
-    bio.close()
-    pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-    if index_col is not None:
-        index = pandas_df.index
-        # Partitions must have RangeIndex
-    else:
-        # We will use the lengths to build the index if we are not given an
-        # `index_col`.
-        index = len(pandas_df)
-    return _split_result_for_readers(1, num_splits, pandas_df) + [
-        index,
-        pandas_df.dtypes,
-    ]
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element. If there is not `index_col` set, then we just return the length.
+                This is used to determine the total length of the DataFrame to build a
+                default Index.
+        """
+        index_col = kwargs.get("index_col", None)
+        # pop "compression" from kwargs because bio is uncompressed
+        bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
+        bio.seek(start)
+        to_read = header + bio.read(end - start)
+        bio.close()
+        pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+        if index_col is not None:
+            index = pandas_df.index
+            # Partitions must have RangeIndex
+        else:
+            # We will use the lengths to build the index if we are not given an
+            # `index_col`.
+            index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
 
+    @ray.remote
+    def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
+        """Use a Ray task to read a chunk of a JSON into a Pandas dataframe.
 
-@ray.remote
-def _read_json(fname, num_splits, start, end, kwargs):  # pragma: no cover
-    """Use a Ray task to read a chunk of a JSON into a Pandas dataframe.
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        Args:
+            fname: The filename of the file to open.
+            num_splits: The number of splits (partitions) to separate the DataFrame into.
+            start: The start byte offset.
+            end: The end byte offset.
+            kwargs: The kwargs for the Pandas `read_json` function.
 
-    Args:
-        fname: The filename of the file to open.
-        num_splits: The number of splits (partitions) to separate the DataFrame into.
-        start: The start byte offset.
-        end: The end byte offset.
-        kwargs: The kwargs for the Pandas `read_json` function.
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element.
+        """
+        bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
+        bio.seek(start)
+        to_read = b"" + bio.read(end - start)
+        bio.close()
+        columns = kwargs.pop("columns")
+        pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+        if not pandas_df.columns.equals(columns):
+            raise NotImplementedError("Columns must be the same across all rows.")
+        partition_columns = pandas_df.columns
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            len(pandas_df),
+            pandas_df.dtypes,
+            partition_columns,
+        ]
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element.
-    """
-    bio = file_open(fname, "rb", kwargs.pop("compression", "infer"))
-    bio.seek(start)
-    to_read = b"" + bio.read(end - start)
-    bio.close()
-    columns = kwargs.pop("columns")
-    pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
-    if not pandas_df.columns.equals(columns):
-        raise NotImplementedError("Columns must be the same across all rows.")
-    partition_columns = pandas_df.columns
-    return _split_result_for_readers(1, num_splits, pandas_df) + [
-        len(pandas_df),
-        pandas_df.dtypes,
-        partition_columns,
-    ]
+    @ray.remote
+    def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no cover
+        """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
 
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-@ray.remote
-def _read_hdf_columns(path_or_buf, columns, num_splits, kwargs):  # pragma: no cover
-    """Use a Ray task to read columns from HDF5 into a Pandas DataFrame.
+        Args:
+            path_or_buf: The path of the HDF5 file.
+            columns: The list of column names to read.
+            num_splits: The number of partitions to split the column into.
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element. If there is not `index_col` set, then we just return the length.
+                This is used to determine the total length of the DataFrame to build a
+                default Index.
+        """
 
-    Args:
-        path_or_buf: The path of the HDF5 file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
+        df = pandas.read_hdf(path_or_buf, columns=columns, **kwargs)
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
+    @ray.remote
+    def _read_feather_columns(path, columns, num_splits):  # pragma: no cover
+        """Use a Ray task to read columns from Feather into a Pandas DataFrame.
 
-    df = pandas.read_hdf(path_or_buf, columns=columns, **kwargs)
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
+        Args:
+            path: The path of the Feather file.
+            columns: The list of column names to read.
+            num_splits: The number of partitions to split the column into.
 
-@ray.remote
-def _read_feather_columns(path, columns, num_splits):  # pragma: no cover
-    """Use a Ray task to read columns from Feather into a Pandas DataFrame.
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element. If there is not `index_col` set, then we just return the length.
+                This is used to determine the total length of the DataFrame to build a
+                default Index.
+        """
+        from pyarrow import feather
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        df = feather.read_feather(path, columns=columns)
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
-    Args:
-        path: The path of the Feather file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
+    @ray.remote
+    def _read_sql_with_limit_offset(
+        num_splits, sql, con, index_col, kwargs
+    ):  # pragma: no cover
+        """Use a Ray task to read a chunk of SQL source.
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-    from pyarrow import feather
-
-    df = feather.read_feather(path, columns=columns)
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
-
-
-@ray.remote
-def _read_sql_with_limit_offset(
-    num_splits, sql, con, index_col, kwargs
-):  # pragma: no cover
-    """Use a Ray task to read a chunk of SQL source.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
-    """
-    pandas_df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
-    if index_col is None:
-        index = len(pandas_df)
-    else:
-        index = pandas_df.index
-    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        """
+        pandas_df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
+        if index_col is None:
+            index = len(pandas_df)
+        else:
+            index = pandas_df.index
+        return _split_result_for_readers(1, num_splits, pandas_df) + [index]
 
 
 class PandasOnRayIO(RayIO):
@@ -196,9 +196,10 @@ class PandasOnRayIO(RayIO):
     query_compiler_cls = PandasQueryCompiler
     frame_cls = PandasOnRayFrame
 
-    read_parquet_remote_task = _read_parquet_columns
-    read_csv_remote_task = _read_csv_with_offset_pandas_on_ray
-    read_json_remote_task = _read_json
-    read_hdf_remote_task = _read_hdf_columns
-    read_feather_remote_task = _read_feather_columns
-    read_sql_remote_task = _read_sql_with_limit_offset
+    if __execution_engine__ == "Ray":
+        read_parquet_remote_task = _read_parquet_columns
+        read_csv_remote_task = _read_csv_with_offset_pandas_on_ray
+        read_json_remote_task = _read_json
+        read_hdf_remote_task = _read_hdf_columns
+        read_feather_remote_task = _read_feather_columns
+        read_sql_remote_task = _read_sql_with_limit_offset

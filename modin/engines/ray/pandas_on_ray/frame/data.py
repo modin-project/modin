@@ -1,9 +1,12 @@
-import ray
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 
 from .partition_manager import PandasOnRayFrameManager
 from modin.engines.base.frame.data import BasePandasFrame
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
 
 
 class PandasOnRayFrame(BasePandasFrame):

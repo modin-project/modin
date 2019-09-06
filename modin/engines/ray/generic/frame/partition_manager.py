@@ -1,7 +1,10 @@
-import ray
 import numpy as np
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
 
 
 class RayFrameManager(BaseFrameManager):

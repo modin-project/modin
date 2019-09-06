@@ -1,5 +1,6 @@
 import os
 import warnings
+import sys
 
 
 def custom_formatwarning(msg, category, *args, **kwargs):
@@ -21,7 +22,26 @@ def get_execution_engine():
         # .title allows variants like ray, RAY, Ray
         engine = os.environ["MODIN_ENGINE"].title()
     else:
-        engine = "Ray" if "MODIN_DEBUG" not in os.environ else "Python"
+        if "MODIN_DEBUG" in os.environ:
+            engine = "Python"
+        else:
+            try:
+                import ray
+                engine = "Ray"
+            except ImportError:
+                try:
+                    import dask
+                    import distributed
+
+                    engine = "Dask"
+                except ImportError:
+                    raise ImportError("Please `pip install modin[ray] or modin[dask] to install an engine")
+                else:
+                    if str(dask.__version__) < "2.1.0" or str(distributed.__version__) < "2.3.2":
+                        raise ImportError("Please `pip install modin[dask] to install compatible Dask version.")
+            else:
+                if ray.__version__ != "0.7.3":
+                    raise ImportError("Please `pip install modin[ray] to install compatible Ray version.")
     return engine
 
 
