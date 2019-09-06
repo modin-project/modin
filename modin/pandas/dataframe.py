@@ -348,7 +348,12 @@ class DataFrame(BasePandasDataset):
             by = self.index.map(by)
         elif isinstance(by, str):
             idx_name = by
-            by = self.__getitem__(by)._query_compiler
+            if isinstance(self.axes[axis], pandas.MultiIndex) and by in self.axes[axis].names:
+                # In this case we pass the string value of the name through to the
+                # partitions. This is more efficient than broadcasting the values.
+                pass
+            else:
+                by = self.__getitem__(by)._query_compiler
         elif is_list_like(by):
             if isinstance(by, Series):
                 idx_name = by.name
@@ -363,6 +368,13 @@ class DataFrame(BasePandasDataset):
             elif mismatch:
                 raise KeyError(next(x for x in by if x not in self))
 
+        if by is None and level is not None and axis == 0:
+            if not isinstance(level, str):
+                by = self.axes[axis].names[level]
+                level = None
+            else:
+                by = level
+                level = None
         from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(

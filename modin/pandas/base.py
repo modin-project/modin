@@ -695,19 +695,7 @@ class BasePandasDataset(object):
 
             if isinstance(level, str):
                 level = self.axes[axis].names.index(level)
-
-            new_names = dict(
-                zip(
-                    range(len(self.axes[axis].levels[level])),
-                    self.axes[axis].levels[level],
-                )
-            )
-            return (
-                self.groupby(self.axes[axis].codes[level], axis=axis)
-                .count()
-                .rename(new_names, axis=axis)
-                .rename_axis(self.axes[axis].names[level], axis=axis)
-            )
+            return self.groupby(level=level, axis=axis).count()
 
         return self._reduce_dimension(
             self._query_compiler.count(
