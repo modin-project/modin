@@ -784,7 +784,7 @@ class BasePandasFrame(object):
             )
         if new_index is None:
             new_index = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.index
+                0, new_partitions, lambda df: df.index
             )
         # Length objects for new object creation. This is shorter than if..else
         # This object determines the lengths and widths based on the given parameters
