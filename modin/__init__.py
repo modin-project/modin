@@ -27,6 +27,7 @@ def get_execution_engine():
         else:
             try:
                 import ray
+
                 engine = "Ray"
             except ImportError:
                 try:
@@ -35,13 +36,22 @@ def get_execution_engine():
 
                     engine = "Dask"
                 except ImportError:
-                    raise ImportError("Please `pip install modin[ray] or modin[dask] to install an engine")
+                    raise ImportError(
+                        "Please `pip install modin[ray] or modin[dask] to install an engine"
+                    )
                 else:
-                    if str(dask.__version__) < "2.1.0" or str(distributed.__version__) < "2.3.2":
-                        raise ImportError("Please `pip install modin[dask] to install compatible Dask version.")
+                    if (
+                        str(dask.__version__) < "2.1.0"
+                        or str(distributed.__version__) < "2.3.2"
+                    ):
+                        raise ImportError(
+                            "Please `pip install modin[dask] to install compatible Dask version."
+                        )
             else:
                 if ray.__version__ != "0.7.3":
-                    raise ImportError("Please `pip install modin[ray] to install compatible Ray version.")
+                    raise ImportError(
+                        "Please `pip install modin[ray] to install compatible Ray version."
+                    )
     return engine
 
 
