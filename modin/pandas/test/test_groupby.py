@@ -813,5 +813,9 @@ def test_groupby_multiindex():
 
     modin_df = modin_df.T
     pandas_df = pandas_df.T
-    ray_df_equals_pandas(modin_df.groupby(level=1).count(), pandas_df.groupby(level=1).count())
-    ray_df_equals_pandas(modin_df.groupby(by="four").count(), pandas_df.groupby(by="four").count())
+    ray_df_equals_pandas(
+        modin_df.groupby(level=1).count(), pandas_df.groupby(level=1).count()
+    )
+    ray_df_equals_pandas(
+        modin_df.groupby(by="four").count(), pandas_df.groupby(by="four").count()
+    )
