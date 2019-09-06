@@ -801,9 +801,17 @@ def test_groupby_on_index_values_with_loop():
 def test_groupby_multiindex():
     frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
     modin_df = pd.DataFrame(frame_data)
+    pandas_df = pandas.DataFrame(frame_data)
+
     new_columns = pandas.MultiIndex.from_tuples(
-        [(i // 4, i // 2, i) for i in modin_df.columns]
+        [(i // 4, i // 2, i) for i in modin_df.columns], names=["four", "two", "one"]
     )
     modin_df.columns = new_columns
+    pandas_df.columns = new_columns
     with pytest.warns(UserWarning):
-        modin_df.groupby(level=0).sum()
+        modin_df.groupby(level=1, axis=1).sum()
+
+    modin_df = modin_df.T
+    pandas_df = pandas_df.T
+    ray_df_equals_pandas(modin_df.groupby(level=1).count(), pandas_df.groupby(level=1).count())
+    ray_df_equals_pandas(modin_df.groupby(by="four").count(), pandas_df.groupby(by="four").count())
