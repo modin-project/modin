@@ -19,7 +19,6 @@ from modin import __execution_engine__
 
 if __execution_engine__ == "Ray":
     import ray
-    import pyarrow
 
 PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")

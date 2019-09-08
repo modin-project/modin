@@ -1,6 +1,5 @@
 import os
 import warnings
-import sys
 
 
 def custom_formatwarning(msg, category, *args, **kwargs):
