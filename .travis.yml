@@ -45,9 +45,9 @@ matrix:
     - os: linux
       dist: trusty
       env:
-      - PYTHON=3.6
-      - MODIN_ENGINE=dask
-      - MODIN_DF_TEST=NONE
+        - PYTHON=3.6
+        - MODIN_ENGINE=dask
+        - MODIN_DF_TEST=NONE
 
     - os: linux
       dist: trusty
