@@ -28,12 +28,12 @@ matrix:
       - MODIN_ENGINE=ray
       - MODIN_DF_TEST=NONE
 
-  - os: linux
-      dist: trusty
-      env:
-        - PYTHON=3.6
-        - MODIN_ENGINE=dask
-        - MODIN_DF_TEST=ONE
+    - os: linux
+        dist: trusty
+        env:
+          - PYTHON=3.6
+          - MODIN_ENGINE=dask
+          - MODIN_DF_TEST=ONE
 
     - os: linux
       dist: trusty
