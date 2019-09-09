@@ -1,5 +1,4 @@
 import numpy as np
-import ray
 
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
 from .axis_partition import (
@@ -8,6 +7,10 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
 
 
 class PandasOnRayFrameManager(RayFrameManager):

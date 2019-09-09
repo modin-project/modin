@@ -1,8 +1,11 @@
 import pandas
-import ray
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
+from modin import __execution_engine__
+
+if __execution_engine__ == "Ray":
+    import ray
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
@@ -13,7 +16,8 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
-    instance_type = ray.ObjectID
+    if __execution_engine__ == "Ray":
+        instance_type = ray.ObjectID
 
     @classmethod
     def deploy_axis_func(
@@ -74,22 +78,24 @@ class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
     axis = 1
 
 
-@ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
-    """Run a function on a remote partition.
+if __execution_engine__ == "Ray":
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+    @ray.remote
+    def deploy_ray_func(func, *args):  # pragma: no cover
+        """Run a function on a remote partition.
 
-    Args:
-        func: The function to run.
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-    Returns:
-        The result of the function `func`.
-    """
-    result = func(*args)
-    if isinstance(result, pandas.DataFrame):
-        return result, len(result), len(result.columns)
-    elif all(isinstance(r, pandas.DataFrame) for r in result):
-        return [i for r in result for i in [r, len(r), len(r.columns)]]
-    else:
-        return [i for r in result for i in [r, None, None]]
+        Args:
+            func: The function to run.
+
+        Returns:
+            The result of the function `func`.
+        """
+        result = func(*args)
+        if isinstance(result, pandas.DataFrame):
+            return result, len(result), len(result.columns)
+        elif all(isinstance(r, pandas.DataFrame) for r in result):
+            return [i for r in result for i in [r, len(r), len(r.columns)]]
+        else:
+            return [i for r in result for i in [r, None, None]]

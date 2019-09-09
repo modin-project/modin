@@ -1,12 +1,10 @@
-# from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from distributed.client import _get_global_client
-from distributed import Future
-
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
+from modin import __execution_engine__
+
+if __execution_engine__ == "Dask":
+    from distributed.client import _get_global_client
+    from distributed import Future
 
 
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
@@ -17,7 +15,8 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
 
     partition_type = PandasOnDaskFramePartition
-    instance_type = Future
+    if __execution_engine__ == "Dask":
+        instance_type = Future
 
     @classmethod
     def deploy_axis_func(

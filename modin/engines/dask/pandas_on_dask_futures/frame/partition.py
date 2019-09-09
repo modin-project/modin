@@ -1,8 +1,11 @@
 import pandas
-from distributed.client import _get_global_client
 
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
+from modin import __execution_engine__
+
+if __execution_engine__ == "Dask":
+    from distributed.client import _get_global_client
 
 
 def apply_list_of_funcs(funcs, df):

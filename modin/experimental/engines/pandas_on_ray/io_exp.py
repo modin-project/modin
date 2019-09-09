@@ -1,44 +1,46 @@
 import numpy as np
 import pandas
-import ray
 import warnings
 
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin import __execution_engine__
 
+if __execution_engine__ == "Ray":
+    import ray
 
-@ray.remote
-def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
-    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+    @ray.remote
+    def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
+        """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
 
-    Args:
-        path: The path of the Parquet file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
+        Args:
+            path: The path of the Parquet file.
+            columns: The list of column names to read.
+            num_splits: The number of partitions to split the column into.
 
-    Returns:
-         A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
-    """
-    import pyarrow.parquet as pq
+        Returns:
+             A list containing the split Pandas DataFrames and the Index as the last
+                element. If there is not `index_col` set, then we just return the length.
+                This is used to determine the total length of the DataFrame to build a
+                default Index.
+        """
+        import pyarrow.parquet as pq
 
-    df = (
-        pq.ParquetDataset(path, **kwargs)
-        .read(columns=columns, use_pandas_metadata=True)
-        .to_pandas()
-    )
-    df = df[columns]
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
+        df = (
+            pq.ParquetDataset(path, **kwargs)
+            .read(columns=columns, use_pandas_metadata=True)
+            .to_pandas()
+        )
+        df = df[columns]
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
-
-    read_parquet_remote_task = _read_parquet_columns
+    if __execution_engine__ == "Ray":
+        read_parquet_remote_task = _read_parquet_columns
 
     @classmethod
     def read_sql(
@@ -146,38 +148,40 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         )
 
 
-@ray.remote
-def _read_sql_with_offset_pandas_on_ray(
-    partition_column,
-    start,
-    end,
-    num_splits,
-    sql,
-    con,
-    index_col=None,
-    coerce_float=True,
-    params=None,
-    parse_dates=None,
-    columns=None,
-    chunksize=None,
-):  # pragma: no cover
-    """Use a Ray task to read a chunk of SQL source.
+if __execution_engine__ == "Ray":
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
-    """
-
-    from .sql import query_put_bounders
-
-    query_with_bounders = query_put_bounders(sql, partition_column, start, end)
-    pandas_df = pandas.read_sql(
-        query_with_bounders,
+    @ray.remote
+    def _read_sql_with_offset_pandas_on_ray(
+        partition_column,
+        start,
+        end,
+        num_splits,
+        sql,
         con,
-        index_col=index_col,
-        coerce_float=coerce_float,
-        params=params,
-        parse_dates=parse_dates,
-        columns=columns,
-        chunksize=chunksize,
-    )
-    index = len(pandas_df)
-    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
+        index_col=None,
+        coerce_float=True,
+        params=None,
+        parse_dates=None,
+        columns=None,
+        chunksize=None,
+    ):  # pragma: no cover
+        """Use a Ray task to read a chunk of SQL source.
+
+        Note: Ray functions are not detected by codecov (thus pragma: no cover)
+        """
+
+        from .sql import query_put_bounders
+
+        query_with_bounders = query_put_bounders(sql, partition_column, start, end)
+        pandas_df = pandas.read_sql(
+            query_with_bounders,
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
+        )
+        index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [index]
