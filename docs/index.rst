@@ -81,13 +81,15 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
 **Modin is currently under active development. Requests and contributions are welcome!**
 
 
+:doc: Installation
+:doc: Using Modin
+
 .. toctree::
    :caption: Installation
 
    installation
 
 .. toctree::
-   :hidden:
    :caption: Using Modin
 
    using_modin
@@ -95,7 +97,6 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    pandas_supported
 
 .. toctree::
-   :hidden:
    :caption: Using Pandas on Ray
 
    UsingPandasonRay/index
@@ -106,14 +107,12 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    UsingPandasonRay/optimizations
 
 .. toctree::
-   :hidden:
    :caption: Using Pandas on Dask
 
    UsingPandasonDask/index
    UsingPandasonDask/optimizations
 
 .. toctree::
-   :hidden:
    :caption: Using Pyarrow on Ray (Experimental)
 
    UsingPyarrowonRay/index
