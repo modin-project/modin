@@ -1,10 +1,5 @@
 from io import BytesIO
 
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
 import pandas
 import pyarrow as pa
 import pyarrow.csv as csv
@@ -16,9 +11,10 @@ from modin.experimental.engines.pyarrow_on_ray.frame.data import PyarrowOnRayFra
 from modin.experimental.engines.pyarrow_on_ray.frame.partition import (
     PyarrowOnRayFramePartition,
 )
-
+from modin import __execution_engine__
 
 if __execution_engine__ == "Ray":
+    import ray
 
     @ray.remote
     def _read_csv_with_offset_pyarrow_on_ray(
