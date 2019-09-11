@@ -1,5 +1,5 @@
-:doc: Installation
-:doc: Using Modin
+.. image:: img/MODIN_ver2.png
+   :align: center
 
 .. toctree::
    :caption: Installation
@@ -19,8 +19,8 @@
    UsingPandasonRay/index
    UsingPandasonRay/dataframe_supported
    UsingPandasonRay/series_supported
-   UsingPandasonRay/io_supported
    UsingPandasonRay/utilities_supported
+   UsingPandasonRay/io_supported
    UsingPandasonRay/optimizations
 
 .. toctree::

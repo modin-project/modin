@@ -63,28 +63,14 @@ pygments_style = 'sphinx'
 
 # Maps git branches to Sphinx themes
 default_html_theme = 'sphinx_rtd_theme'
-branch_to_theme_mapping = {
-    # 3rd party themes
-    'master': default_html_theme,
-
-    # Sphinx built-in themes
-    'alabaster': 'alabaster',
-    'classic': 'classic',
-    'sphinxdoc': 'sphinxdoc',
-    'scrolls': 'scrolls',
-    'agogo': 'agogo',
-    'traditional': 'traditional',
-    'nature': 'nature',
-    'haiku': 'haiku',
-    'pyramid': 'pyramid',
-    'bizstyle': 'bizstyle',
-}
 current_branch = "nature"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 html_theme = "nature"
+
+html_logo = "img/MODIN_ver2.png"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
