@@ -1705,10 +1705,19 @@ def test_mad(data):
         modin_series.mad()
 
 
+@pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_map(data):
+def test_map(data, na_values):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.map(str), pandas_series.map(str))
+    df_equals(
+        modin_series.map(str, na_action=na_values),
+        pandas_series.map(str, na_action=na_values),
+    )
+    mapper = {i: str(i) for i in range(100)}
+    df_equals(
+        modin_series.map(mapper, na_action=na_values),
+        pandas_series.map(mapper, na_action=na_values),
+    )
 
 
 def test_mask():
