@@ -93,31 +93,47 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
    using_modin
    out_of_core
    pandas_supported
+
+.. toctree::
+   :hidden:
+   :caption: Using Pandas on Ray
+
    UsingPandasonRay/index
+   UsingPandasonRay/dataframe_supported
+   UsingPandasonRay/series_supported
+   UsingPandasonRay/io_supported
+   UsingPandasonRay/utilities_supported
+   UsingPandasonRay/optimizations
+
+.. toctree::
+   :hidden:
+   :caption: Using Pandas on Dask
+
    UsingPandasonDask/index
+   UsingPandasonDask/optimizations
+
+.. toctree::
+   :hidden:
+   :caption: Using Pyarrow on Ray (Experimental)
+
    UsingPyarrowonRay/index
+
+.. toctree::
+   :caption: Using SQL on Ray
+
+   UsingSQLonRay/index
 
 .. toctree::
    :caption: Contributing to Modin
 
    contributing
-
-.. toctree::
-   :caption: Architecture and Optimizations
-
    architecture
-   pandas_on_ray
 
 .. toctree::
    :caption: Help
 
    troubleshooting
    contact
-
-.. toctree::
-   :caption: SQL on Ray
-
-   sql_on_ray
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/

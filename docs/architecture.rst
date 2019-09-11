@@ -37,40 +37,120 @@ System Architecture
 
 The figure below outlines the general architecture for the implementation of Modin.
 
-.. image:: img/modin_architecture_diagram.png
+.. image:: img/modin_architecture.png
    :align: center
 
 Modin is logically separated into different layers that represent the hierarchy of a
-typical Database Management System. At the highest layer, we expose the pandas API. This
-is discussed in many other parts of the documentation, so we will not go into detail for
-it here. We will go through all of the other components in some detail below, starting
-with the next highest layer, the Query Compiler.
+typical Database Management System. Abstracting out each component allows us to
+individually optimize and swap out components without affecting the rest of the system.
+We can implement, for example, new compute kernels that are optimized for a certain type
+of data and can simply plug it in to the existing infrastructure by implementing a small
+interface. It will still be distributed by our choice of compute engine with the
+logic internally.
+
+API
+"""
+
+The API is the outer-most layer that faces users. The majority of our current effort is
+spent implementing the components of the pandas API. We have implemented a toy example
+for a sqlite API as a proof of concept, but this isn't ready for usage/testing. There
+are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
+the entire pandas/dataframe API.
 
 Query Compiler
 """"""""""""""
 
 The Query Compiler receives queries from the pandas API layer. The API layer's
 responsibility is to ensure clean input to the Query Compiler. The Query Compiler must
-have knowledge of the in-memory format of the data (currently a pandas DataFrame) in
-order to efficiently compile the queries.
+have knowledge of the compute kernels/in-memory format of the data in order to
+efficiently compile the queries.
 
-The Query Compiler is responsible for sending the compiled query to the Partition
-Management layer. In this design, the Query Compiler does not need to know what the
-execution framework is (Ray_ in this case), and gives the control of the partition
-layout to a lower layer.
+The Query Compiler is responsible for sending the compiled query to the Modin DataFrame.
+In this design, the Query Compiler does not have information about where or when the
+query will be executed, and gives the control of the partition layout to the Modin
+DataFrame.
+
+In the interest of reducing the pandas API, the Query Compiler layer closely follows the
+pandas API, but cuts out a large majority of the repetition.
+
+Modin DataFrame
+"""""""""""""""
 
 At this layer, operations can be performed lazily. Currently, Modin executes most
 operations eagerly in an attempt to behave as pandas does. Some operations, e.g.
 ``transpose`` are expensive and create full copies of the data in-memory. In these
-cases, we keep some metadata about the operations and queue them up so they are somewhat
-lazy. In the future, we plan to add additional query planning and laziness to Modin to
-ensure that queries are performed efficiently.
+cases, we can wait until another operation triggers computation. In the future, we plan
+to add additional query planning and laziness to Modin to ensure that queries are
+performed efficiently.
+
+The structure of the Modin DataFrame is extensible, such that any operation that could
+be better optimized for a given backend can be overridden and optimized in that way.
+
+This layer has a significantly reduced API from the QueryCompiler and the user-facing
+API. Each of these APIs represents a single way of performing a given operation or
+behavior. Some of these are expanded for convenience/understanding. The API abstractions
+are as follows:
+
+Modin DataFrame API
+'''''''''''''''''''
+
+* ``mask``: Indexing/masking/selecting on the data (by label or by integer index).
+* ``copy``: Create a copy of the data.
+* ``mapreduce``: Reduce the dimension of the data.
+* ``foldreduce``: Reduce the dimension of the data, but entire column/row information is needed.
+* ``map``: Perform a map.
+* ``fold``: Perform a fold.
+* ``apply_<type>``: Apply a function that may or may not change the shape of the data.
+
+   * ``full_axis``: Apply a function requires knowledge of the entire axis.
+   * ``full_axis_select_indices``: Apply a function performed on a subset of the data that requires knowledge of the entire axis.
+   * ``select_indices``: Apply a function to a subset of the data.
+
+* ``binary_op``: Perform a function between two dataframes.
+* ``concat``: Append one or more dataframes to either axis of this dataframe.
+* ``transpose``: Swap the axes (columns become rows, rows become columns).
+* ``groupby``:
+
+   * ``groupby_reduce``: Perform a reduction on each group.
+   * ``groupby_apply``: Apply a function to each group.
+
+* take functions
+   * ``head``: Take the first ``n`` rows.
+   * ``tail``: Take the last ``n`` rows.
+   * ``front``: Take the first ``n`` columns.
+   * ``back``: Take the last ``n`` columns.
+
+* import/export functions
+   * ``from_pandas``: Convert a pandas dataframe to a Modin dataframe.
+   * ``to_pandas``: Convert a Modin dataframe to a pandas dataframe.
+   * ``to_numpy``: Convert a Modin dataframe to a numpy array.
+
+More documentation can be found internally in the code_. This API is not complete, but
+represents an overwhelming majority of operations and behaviors.
+
+This API can be implemented by other distributed/parallel DataFrame libraries and
+plugged in to Modin as well. Create an issue_ or discuss on our Discourse_ for more
+information!
+
+The Modin DataFrame is responsible for the data layout and shuffling, partitioning,
+and serializing the tasks that get sent to each partition. Other implementations of the
+Modin DataFrame interface will have to handle these as well.
+
+Execution Engine/Framework
+""""""""""""""""""""""""""
+
+This layer is what Modin uses to perform computation on a partition of the data. The
+Modin DataFrame is designed to work with `task parallel`_ frameworks, but with some
+effort, a data parallel framework is possible if
+
+Internal abstractions
+"""""""""""""""""""""
+
+These abstractions are not found in the above architecture, but are important to the
+internals of Modin.
 
 Partition Manager
-"""""""""""""""""
-
-The Partition Manager is responsible for the data layout and shuffling, partitioning,
-and serializing the tasks that get sent to each partition.
+'''''''''''''''''
 
 The Partition Manager can change the size and shape of the partitions based on the type
 of operation. For example, certain operations are complex and require access to an
@@ -85,8 +165,12 @@ data, it can ship those queries directly to the correct partition. This is parti
 important for some operations in pandas which can accept different arguments and
 operations for different columns, e.g. ``fillna`` with a dictionary.
 
+This abstraction separates the actual data movement and function application from the
+DataFrame layer to keep the DataFrame API small and separately optimize the data
+movement and metadata management.
+
 Partition
-"""""""""
+'''''''''
 
 Partitions are responsible for managing a subset of the DataFrame. As is mentioned
 above, the DataFrame is partitioned both row and column-wise. This gives Modin
@@ -105,11 +189,23 @@ documentation page on Contributing_.
 
 - `Pandas on Ray`_
     - Uses the Ray_ execution framework.
-    - The in-memory format is a pandas DataFrame.
-- Coming Soon...
+    - The compute kernel/in-memory format is a pandas DataFrame.
+- `Pandas on Dask`_
+    - Uses the `Dask Futures`_ execution framework.
+    - The compute kernel/in-memory format is a pandas DataFrame.
+- `Pyarrow on Ray`_ (experimental)
+    - Uses the Ray_ execution framework.
+    - The compute kernel/in-memory format is a pyarrow Table.
 
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
+.. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
 .. _Contributing: contributing.html
-.. _Pandas on Ray: pandas_on_ray.html
+.. _Pandas on Ray: UsingPandasonRay/optimizations.html
+.. _Pandas on Dask: UsingPandasonDask/optimizations.html
+.. _Dask Futures: https://docs.dask.org/en/latest/futures.html
+.. _issue: https://github.com/modin-project/modin/issues
+.. _Discourse: https://discuss.modin.org
+.. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
+.. _Pyarrow on Ray: UsingPyarrowonRay/index.html
