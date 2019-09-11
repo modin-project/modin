@@ -4,7 +4,7 @@ from modin import __execution_engine__
 
 if __execution_engine__ == "Ray":
     import ray
-    
+
 import pandas
 import pyarrow as pa
 import pyarrow.csv as csv
@@ -19,6 +19,7 @@ from modin.experimental.engines.pyarrow_on_ray.frame.partition import (
 
 
 if __execution_engine__ == "Ray":
+
     @ray.remote
     def _read_csv_with_offset_pyarrow_on_ray(
         fname, num_splits, start, end, kwargs, header
@@ -54,7 +55,8 @@ if __execution_engine__ == "Ray":
         return chunks + [
             table.num_rows,
             pandas.Series(
-                [t.to_pandas_dtype() for t in table.schema.types], index=table.schema.names
+                [t.to_pandas_dtype() for t in table.schema.types],
+                index=table.schema.names,
             ),
         ]
 
