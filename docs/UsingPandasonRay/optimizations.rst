@@ -1,5 +1,5 @@
-Pandas on Ray
-=============
+Pandas on Ray Optimizations
+===========================
 
 Pandas on Ray is the component of Modin that runs on the Ray execution Framework.
 Currently, the in-memory format for Pandas on Ray is a pandas `DataFrame`_ on each

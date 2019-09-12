@@ -30,6 +30,7 @@ following environment variables:
 
 .. toctree::
    :maxdepth: 1
+
    dataframe_supported
    series_supported
    utilities_supported

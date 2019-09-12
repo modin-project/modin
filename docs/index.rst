@@ -10,9 +10,6 @@
 .. raw:: html
 
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
-  <embed>
-    <a href="https://github.com/modin-project/modin"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
-  </embed>
 
 .. code-block:: python
 
@@ -83,41 +80,61 @@ nature, you get a fast DataFrame at 1KB and 1TB+.
 
 .. toctree::
    :caption: Installation
+   :numbered:
 
    installation
 
 .. toctree::
-   :hidden:
    :caption: Using Modin
+   :numbered:
 
    using_modin
    out_of_core
    pandas_supported
+
+.. toctree::
+   :caption: Using Pandas on Ray
+   :numbered:
+
    UsingPandasonRay/index
+   UsingPandasonRay/dataframe_supported
+   UsingPandasonRay/series_supported
+   UsingPandasonRay/utilities_supported
+   UsingPandasonRay/io_supported
+   UsingPandasonRay/optimizations
+
+.. toctree::
+   :caption: Using Pandas on Dask
+   :numbered:
+
    UsingPandasonDask/index
+   UsingPandasonDask/optimizations
+
+.. toctree::
+   :caption: Using Pyarrow on Ray (Experimental)
+   :numbered:
+
    UsingPyarrowonRay/index
 
 .. toctree::
-   :caption: Contributing to Modin
+   :caption: Using SQL on Ray
+   :numbered:
 
-   contributing
+   UsingSQLonRay/index
 
 .. toctree::
-   :caption: Architecture and Optimizations
+   :caption: Contributing to Modin
+   :numbered:
 
+   contributing
    architecture
-   pandas_on_ray
 
 .. toctree::
    :caption: Help
+   :numbered:
 
    troubleshooting
    contact
-
-.. toctree::
-   :caption: SQL on Ray
-
-   sql_on_ray
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
