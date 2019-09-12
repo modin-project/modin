@@ -45,7 +45,7 @@ typical Database Management System. Abstracting out each component allows us to
 individually optimize and swap out components without affecting the rest of the system.
 We can implement, for example, new compute kernels that are optimized for a certain type
 of data and can simply plug it in to the existing infrastructure by implementing a small
-interface. It will still be distributed by our choice of compute engine with the
+interface. It can still be distributed by our choice of compute engine with the
 logic internally.
 
 API
@@ -104,7 +104,7 @@ Modin DataFrame API
 
    * ``full_axis``: Apply a function requires knowledge of the entire axis.
    * ``full_axis_select_indices``: Apply a function performed on a subset of the data that requires knowledge of the entire axis.
-   * ``select_indices``: Apply a function to a subset of the data.
+   * ``select_indices``: Apply a function to a subset of the data. This is mainly used for indexing.
 
 * ``binary_op``: Perform a function between two dataframes.
 * ``concat``: Append one or more dataframes to either axis of this dataframe.
@@ -141,12 +141,12 @@ Execution Engine/Framework
 
 This layer is what Modin uses to perform computation on a partition of the data. The
 Modin DataFrame is designed to work with `task parallel`_ frameworks, but with some
-effort, a data parallel framework is possible if
+effort, a data parallel framework is possible.
 
 Internal abstractions
 """""""""""""""""""""
 
-These abstractions are not found in the above architecture, but are important to the
+These abstractions are not included in the above architecture, but are important to the
 internals of Modin.
 
 Partition Manager
