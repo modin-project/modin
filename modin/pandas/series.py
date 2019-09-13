@@ -683,7 +683,7 @@ class Series(BasePandasDataset):
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
     def map(self, arg, na_action=None):
-        if not callable(arg):
+        if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 
             def arg(s):
