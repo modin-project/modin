@@ -361,10 +361,12 @@ class DataFrame(BasePandasDataset):
             if isinstance(by, Series):
                 idx_name = by.name
                 by = by.values
-            mismatch = (
-                len(by) != len(self) if axis == 0 else len(by) != len(self.columns)
-            )
-            if mismatch and all(obj in self for obj in by):
+            mismatch = len(by) != len(self.axes[axis])
+            if mismatch and all(
+                obj in self
+                or (hasattr(self.index, "names") and obj in self.index.names)
+                for obj in by
+            ):
                 # In the future, we will need to add logic to handle this, but for now
                 # we default to pandas in this case.
                 pass
