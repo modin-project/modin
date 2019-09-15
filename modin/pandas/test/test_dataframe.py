@@ -988,6 +988,23 @@ class TestDFPartOne:
             modin_result = modin_df.apply(func, axis)
             df_equals(modin_result, pandas_result)
 
+    def test_apply_metadata(self):
+        def add(a, b, c):
+            return a + b + c
+
+        data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+
+        modin_df = pd.DataFrame(data)
+        modin_df["add"] = modin_df.apply(
+            lambda row: add(row["A"], row["B"], row["C"]), axis=1
+        )
+
+        pandas_df = pandas.DataFrame(data)
+        pandas_df["add"] = pandas_df.apply(
+            lambda row: add(row["A"], row["B"], row["C"]), axis=1
+        )
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
