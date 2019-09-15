@@ -1,8 +1,6 @@
 from io import BytesIO
 
 import pandas
-import pyarrow as pa
-import pyarrow.csv as csv
 
 from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
 from modin.data_management.utils import get_default_chunksize
@@ -15,6 +13,8 @@ from modin import __execution_engine__
 
 if __execution_engine__ == "Ray":
     import ray
+    import pyarrow as pa
+    import pyarrow.csv as csv
 
     @ray.remote
     def _read_csv_with_offset_pyarrow_on_ray(
