@@ -32,12 +32,12 @@ class ErrorMessage(object):
         warnings.warn(message)
 
     @classmethod
-    def catch_bugs_and_request_email(cls, failure_condition):
+    def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
             raise Exception(
                 "Internal Error. "
                 "Please email bug_reports@modin.org with the traceback and command that"
-                " caused this error."
+                " caused this error.\n{}".format(extra_log)
             )
 
     @classmethod

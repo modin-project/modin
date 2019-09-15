@@ -44,7 +44,21 @@ class BasePandasFrame(object):
         self._partitions = partitions
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
+        if row_lengths is not None:
+            ErrorMessage.catch_bugs_and_request_email(
+                sum(row_lengths) != len(self._index_cache),
+                "Row lengths: {} != {}".format(
+                    sum(row_lengths), len(self._index_cache)
+                ),
+            )
         self._row_lengths_cache = row_lengths
+        if column_widths is not None:
+            ErrorMessage.catch_bugs_and_request_email(
+                sum(column_widths) == len(self._columns_cache),
+                "Column widths: {} != {}".format(
+                    sum(column_widths), len(self._columns_cache)
+                ),
+            )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
         self._filter_empties()
@@ -791,10 +805,7 @@ class BasePandasFrame(object):
         # and builds a dictionary used in the constructor below. 0 gives the row lengths
         # and 1 gives the column widths. Since the dimension of `axis` given may have
         # changed, we current just recompute it.
-        lengths_objs = {
-            axis: None,
-            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
-        }
+
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
@@ -802,12 +813,7 @@ class BasePandasFrame(object):
                 [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         return self.__constructor__(
-            new_partitions,
-            new_index,
-            new_columns,
-            lengths_objs[0],
-            lengths_objs[1],
-            dtypes,
+            new_partitions, new_index, new_columns, None, None, dtypes
         )
 
     def _apply_full_axis_select_indices(
@@ -1078,7 +1084,7 @@ class BasePandasFrame(object):
             )
         if new_index is None:
             new_index = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.index
+                0, new_partitions, lambda df: df.index
             )
         if axis == 0:
             new_widths = self._column_widths
