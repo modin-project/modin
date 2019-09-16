@@ -54,7 +54,7 @@ class BasePandasFrame(object):
         self._row_lengths_cache = row_lengths
         if column_widths is not None:
             ErrorMessage.catch_bugs_and_request_email(
-                sum(column_widths) == len(self._columns_cache),
+                sum(column_widths) != len(self._columns_cache),
                 "Column widths: {} != {}".format(
                     sum(column_widths), len(self._columns_cache)
                 ),
