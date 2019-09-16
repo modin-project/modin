@@ -1413,7 +1413,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def _map(df, other):
             return map_func(
-                df.groupby(by=other.squeeze(), axis=axis, **groupby_args), **map_args
+                df.groupby(by=other.squeeze(axis=axis ^ 1), axis=axis, **groupby_args),
+                **map_args
             ).reset_index(drop=False)
 
         if reduce_func is not None:
