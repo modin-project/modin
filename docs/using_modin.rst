@@ -115,11 +115,11 @@ used to create the blog post.
 
 .. _`DataFrame`: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
-.. _`installation page`: http://modin.readthedocs.io/en/latest/installation.html
-.. _`currently supported methods`: http://modin.readthedocs.io/en/latest/pandas_supported.html
-.. _`open an issue`: http://github.com/modin-project/modin/issues
+.. _`installation page`: https://modin.readthedocs.io/en/latest/installation.html
+.. _`currently supported methods`: https://modin.readthedocs.io/en/latest/pandas_supported.html
+.. _`open an issue`: https://github.com/modin-project/modin/issues
 .. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
-.. _`Jupyter Notebook`: http://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
+.. _`Jupyter Notebook`: https://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
 .. _`Out of Core`: out_of_core.html
