@@ -1684,6 +1684,7 @@ def test_loc(data):
     modin_series, pandas_series = create_test_series(data)
     for v in modin_series.index:
         df_equals(modin_series.loc[v], pandas_series.loc[v])
+        print(v)
         df_equals(modin_series.loc[v:], pandas_series.loc[v:])
 
     indices = [True if i % 3 == 0 else False for i in range(len(modin_series.index))]

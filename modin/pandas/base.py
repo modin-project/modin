@@ -3201,12 +3201,19 @@ class BasePandasDataset(object):
                 return self.copy()
 
             def compute_offset(value):
-                return value - len(self) if value >= 0 else value
+                return (
+                    value - len(self)
+                    if value > 0
+                    else value
+                    if value != 0
+                    else len(self)
+                )
 
             # Head is a negative number, Tail is a positive number
             if key.start is None:
                 return self.head(compute_offset(key.stop))
             elif key.stop is None:
+                print(compute_offset(-key.start))
                 return self.tail(compute_offset(-key.start))
             return self.head(compute_offset(key.stop)).tail(compute_offset(-key.start))
         # We convert to a RangeIndex because getitem_row_array is expecting a list
