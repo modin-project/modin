@@ -4883,6 +4883,22 @@ class TestDFPartTwo:
         pd_col = pandas_df[key]
         df_equals(pd_col, modin_col)
 
+        slices = [
+            (None, -1),
+            (-1, None),
+            (1, 2),
+            (1, None),
+            (None, 1),
+            (1, -1),
+            (-3, -1),
+            (1, -1, 2),
+        ]
+
+        # slice test
+        for slice_param in slices:
+            s = slice(*slice_param)
+            df_equals(modin_df[s], pandas_df[s])
+
         # Test empty
         df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
 
@@ -4914,6 +4930,15 @@ class TestDFPartTwo:
             modin_data[[False for _ in modin_data.index]],
             pandas_data[[False for _ in modin_data.index]],
         )
+
+    def test_getitem_datetime_slice(self):
+        data = {"data": range(1000)}
+        index = pd.date_range("2017/1/4", periods=1000)
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+
+        s = slice("2017-01-06", "2017-01-09")
+        df_equals(modin_df[s], pandas_df[s])
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___getattr__(self, request, data):
