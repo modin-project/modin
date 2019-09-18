@@ -4874,6 +4874,7 @@ class TestDFPartTwo:
             (None, 1),
             (1, -1),
             (-3, -1),
+            (1, -1, 2),
         ]
 
         # slice test

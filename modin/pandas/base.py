@@ -3194,8 +3194,8 @@ class BasePandasDataset(object):
         # head and tail, which is already pretty fast.
         if (
             key.step is None
-            and isinstance(key.start, int)
-            and isinstance(key.stop, int)
+            and (isinstance(key.start, int) or key.start is None)
+            and (isinstance(key.stop, int) or key.stop is None)
         ):
             if key.start is None and key.stop is None:
                 return self.copy()
