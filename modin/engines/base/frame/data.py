@@ -44,7 +44,7 @@ class BasePandasFrame(object):
         self._partitions = partitions
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
-        if row_lengths is not None:
+        if row_lengths is not None and len(self.index) > 0:
             ErrorMessage.catch_bugs_and_request_email(
                 sum(row_lengths) != len(self._index_cache),
                 "Row lengths: {} != {}".format(
@@ -52,7 +52,7 @@ class BasePandasFrame(object):
                 ),
             )
         self._row_lengths_cache = row_lengths
-        if column_widths is not None:
+        if column_widths is not None and len(self.columns) > 0:
             ErrorMessage.catch_bugs_and_request_email(
                 sum(column_widths) != len(self._columns_cache),
                 "Column widths: {} != {}".format(
@@ -71,7 +71,12 @@ class BasePandasFrame(object):
             A list of row lengths.
         """
         if self._row_lengths_cache is None:
-            self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
+            if len(self._partitions.T) > 0:
+                self._row_lengths_cache = [
+                    obj.length() for obj in self._partitions.T[0]
+                ]
+            else:
+                self._row_lengths_cache = []
         return self._row_lengths_cache
 
     @property
@@ -82,7 +87,10 @@ class BasePandasFrame(object):
             A list of column widths.
         """
         if self._column_widths_cache is None:
-            self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+            if len(self._partitions) > 0:
+                self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+            else:
+                self._column_widths_cache = []
         return self._column_widths_cache
 
     @property
@@ -194,20 +202,25 @@ class BasePandasFrame(object):
 
     def _filter_empties(self):
         """Removes empty partitions to avoid triggering excess computation."""
-        self._column_widths_cache = [w for w in self._column_widths if w > 0]
-        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
-
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            # This is the case for an empty frame. We don't want to completely remove
+            # all metadata and partitions so for the moment, we won't prune if the frame
+            # is empty.
+            # TODO: Handle empty dataframes better
+            return
         self._partitions = np.array(
             [
                 [
                     self._partitions[i][j]
                     for j in range(len(self._partitions[i]))
-                    if j < len(self._column_widths)
+                    if j < len(self._column_widths) and self._column_widths[j] > 0
                 ]
                 for i in range(len(self._partitions))
-                if i < len(self._row_lengths)
+                if i < len(self._row_lengths) and self._row_lengths[i] > 0
             ]
         )
+        self._column_widths_cache = [w for w in self._column_widths if w > 0]
+        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
