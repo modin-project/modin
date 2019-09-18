@@ -868,9 +868,7 @@ class BasePandasFrame(object):
             else [self._row_lengths, self._column_widths][axis],
             axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
         }
-        return self.__constructor__(
-            new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
-        )
+        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
     def _apply_select_indices(
         self,
