@@ -800,12 +800,6 @@ class BasePandasFrame(object):
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
             )
-        # Length objects for new object creation. This is shorter than if..else
-        # This object determines the lengths and widths based on the given parameters
-        # and builds a dictionary used in the constructor below. 0 gives the row lengths
-        # and 1 gives the column widths. Since the dimension of `axis` given may have
-        # changed, we current just recompute it.
-
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
