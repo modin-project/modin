@@ -68,7 +68,7 @@ Linux or Mac OS, you can install and use either engine.
 
 ### Full Documentation
 
-Visit the complete documentation on readthedocs: http://modin.readthedocs.io
+Visit the complete documentation on readthedocs: https://modin.readthedocs.io
 
 ### Scale your pandas workflow by changing a single line of code.
 
