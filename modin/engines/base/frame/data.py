@@ -775,7 +775,7 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, self._build_mapreduce_func(axis, func)
         )
         # Index objects for new object creation. This is shorter than if..else
         if new_columns is None:
