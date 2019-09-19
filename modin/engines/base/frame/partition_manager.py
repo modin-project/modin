@@ -310,13 +310,13 @@ class BaseFrameManager(object):
         else:
             row_lengths = [
                 row_chunksize
-                if i + row_chunksize < len(df) - 1
+                if i + row_chunksize < len(df)
                 else len(df) % row_chunksize or row_chunksize
                 for i in range(0, len(df), row_chunksize)
             ]
             col_widths = [
                 col_chunksize
-                if i + col_chunksize < len(df.columns) - 1
+                if i + col_chunksize < len(df.columns)
                 else len(df.columns) % col_chunksize or col_chunksize
                 for i in range(0, len(df.columns), col_chunksize)
             ]

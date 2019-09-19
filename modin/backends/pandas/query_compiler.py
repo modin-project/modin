@@ -1439,10 +1439,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else self._modin_frame._numeric_columns(True)
             )
             new_index = None
+            compute_qc = (
+                self.getitem_column_array(new_columns) if numeric_only else self
+            )
         else:
             new_index = self.index
             new_columns = None
-        new_modin_frame = self._modin_frame.groupby_reduce(
+            compute_qc = self
+        new_modin_frame = compute_qc._modin_frame.groupby_reduce(
             axis,
             by._modin_frame,
             _map,

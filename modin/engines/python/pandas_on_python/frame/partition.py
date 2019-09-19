@@ -164,12 +164,12 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
     def length(self):
         if self._length_cache is None:
-            self._length_cache = type(self).length_extraction_fn()(self.data)
+            self._length_cache = self.apply(self.length_extraction_fn()).data
         return self._length_cache
 
     def width(self):
         if self._width_cache is None:
-            self._width_cache = type(self).width_extraction_fn()(self.data)
+            self._width_cache = self.apply(self.width_extraction_fn()).data
         return self._width_cache
 
     @classmethod

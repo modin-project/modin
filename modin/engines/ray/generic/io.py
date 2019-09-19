@@ -303,7 +303,11 @@ class RayIO(BaseIO):
         dtypes_ids = list(blk_partitions[-1])
         dtypes = pandas.concat(ray.get(dtypes_ids), axis=0)
         if directory:
-            columns += partitioned_columns
+            if len(partitioned_columns) > 0:
+                columns += partitioned_columns
+                # We will have to recompute this because the lengths do not contain the
+                # partitioned columns lengths.
+                column_widths = None
         dtypes.index = columns
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(
@@ -516,6 +520,10 @@ class RayIO(BaseIO):
         # the column names, we remove the old names from the column names and
         # insert the new one at the front of the Index.
         if parse_dates is not None:
+            # We have to recompute the column widths if `parse_dates` is set because
+            # we are not guaranteed to have the correct information regarding how many
+            # columns are on each partition.
+            column_widths = None
             # Check if is list of lists
             if isinstance(parse_dates, list) and isinstance(parse_dates[0], list):
                 for group in parse_dates:

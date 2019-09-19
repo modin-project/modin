@@ -44,7 +44,21 @@ class BasePandasFrame(object):
         self._partitions = partitions
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
+        if row_lengths is not None and len(self.index) > 0:
+            ErrorMessage.catch_bugs_and_request_email(
+                sum(row_lengths) != len(self._index_cache),
+                "Row lengths: {} != {}".format(
+                    sum(row_lengths), len(self._index_cache)
+                ),
+            )
         self._row_lengths_cache = row_lengths
+        if column_widths is not None and len(self.columns) > 0:
+            ErrorMessage.catch_bugs_and_request_email(
+                sum(column_widths) != len(self._columns_cache),
+                "Column widths: {} != {}".format(
+                    sum(column_widths), len(self._columns_cache)
+                ),
+            )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
         self._filter_empties()
@@ -57,7 +71,12 @@ class BasePandasFrame(object):
             A list of row lengths.
         """
         if self._row_lengths_cache is None:
-            self._row_lengths_cache = [obj.length() for obj in self._partitions.T[0]]
+            if len(self._partitions.T) > 0:
+                self._row_lengths_cache = [
+                    obj.length() for obj in self._partitions.T[0]
+                ]
+            else:
+                self._row_lengths_cache = []
         return self._row_lengths_cache
 
     @property
@@ -68,7 +87,10 @@ class BasePandasFrame(object):
             A list of column widths.
         """
         if self._column_widths_cache is None:
-            self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+            if len(self._partitions) > 0:
+                self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+            else:
+                self._column_widths_cache = []
         return self._column_widths_cache
 
     @property
@@ -180,20 +202,25 @@ class BasePandasFrame(object):
 
     def _filter_empties(self):
         """Removes empty partitions to avoid triggering excess computation."""
-        self._column_widths_cache = [w for w in self._column_widths if w > 0]
-        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
-
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            # This is the case for an empty frame. We don't want to completely remove
+            # all metadata and partitions so for the moment, we won't prune if the frame
+            # is empty.
+            # TODO: Handle empty dataframes better
+            return
         self._partitions = np.array(
             [
                 [
                     self._partitions[i][j]
                     for j in range(len(self._partitions[i]))
-                    if j < len(self._column_widths)
+                    if j < len(self._column_widths) and self._column_widths[j] > 0
                 ]
                 for i in range(len(self._partitions))
-                if i < len(self._row_lengths)
+                if i < len(self._row_lengths) and self._row_lengths[i] > 0
             ]
         )
+        self._column_widths_cache = [w for w in self._column_widths if w > 0]
+        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
@@ -786,15 +813,6 @@ class BasePandasFrame(object):
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
             )
-        # Length objects for new object creation. This is shorter than if..else
-        # This object determines the lengths and widths based on the given parameters
-        # and builds a dictionary used in the constructor below. 0 gives the row lengths
-        # and 1 gives the column widths. Since the dimension of `axis` given may have
-        # changed, we current just recompute it.
-        lengths_objs = {
-            axis: None,
-            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
-        }
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
@@ -802,12 +820,7 @@ class BasePandasFrame(object):
                 [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         return self.__constructor__(
-            new_partitions,
-            new_index,
-            new_columns,
-            lengths_objs[0],
-            lengths_objs[1],
-            dtypes,
+            new_partitions, new_index, new_columns, None, None, dtypes
         )
 
     def _apply_full_axis_select_indices(
@@ -850,21 +863,7 @@ class BasePandasFrame(object):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        # Length objects for new object creation. This is shorter than if..else
-        # This object determines the lengths and widths based on the given parameters
-        # and builds a dictionary used in the constructor below. 0 gives the row lengths
-        # and 1 gives the column widths. Since the dimension of `axis` given may have
-        # changed, we currently just recompute it.
-        # TODO Determine lengths from current lengths if `keep_remaining=False`
-        lengths_objs = {
-            axis: None
-            if not keep_remaining
-            else [self._row_lengths, self._column_widths][axis],
-            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
-        }
-        return self.__constructor__(
-            new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
-        )
+        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
     def _apply_select_indices(
         self,
@@ -1078,7 +1077,7 @@ class BasePandasFrame(object):
             )
         if new_index is None:
             new_index = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.index
+                0, new_partitions, lambda df: df.index
             )
         if axis == 0:
             new_widths = self._column_widths
@@ -1122,7 +1121,7 @@ class BasePandasFrame(object):
         df = self._frame_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             if len(self.columns) != 0:
-                df = pandas.DataFrame(columns=self.columns).astype(self.dtypes)
+                df = pandas.DataFrame(columns=self.columns)
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
         df.index.name = self.index.name
