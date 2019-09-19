@@ -149,8 +149,10 @@ class DataFrameGroupBy(object):
     def mean(self, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
 
-    def any(self):
-        return self._groupby_reduce(lambda df: df.any(), None, numeric_only=False)
+    def any(self, **kwargs):
+        return self._groupby_reduce(
+            lambda df: df.any(**kwargs), None, numeric_only=False
+        )
 
     @property
     def plot(self):  # pragma: no cover
