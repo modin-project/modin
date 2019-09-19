@@ -863,18 +863,6 @@ class BasePandasFrame(object):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        # Length objects for new object creation. This is shorter than if..else
-        # This object determines the lengths and widths based on the given parameters
-        # and builds a dictionary used in the constructor below. 0 gives the row lengths
-        # and 1 gives the column widths. Since the dimension of `axis` given may have
-        # changed, we currently just recompute it.
-        # TODO Determine lengths from current lengths if `keep_remaining=False`
-        lengths_objs = {
-            axis: None
-            if not keep_remaining
-            else [self._row_lengths, self._column_widths][axis],
-            axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
-        }
         return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
     def _apply_select_indices(
