@@ -1,9 +1,13 @@
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-import pyarrow as pa
 import pandas
 from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
+
+from modin import __partition_format__
+
+if __partition_format__ == "Pyarrow":
+    import pyarrow as pa
 
 
 class FakeSeries:
