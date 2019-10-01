@@ -76,6 +76,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         if len(self.call_queue) == 0:
             return
         self.future = self.apply(lambda x: x).future
+        self.call_queue = []
 
     def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(
