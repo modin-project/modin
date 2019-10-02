@@ -9,7 +9,7 @@ from pandas.core.base import DataError
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.data_management.functions import MapFunction
+from modin.data_management.functions import MapFunction, MapReduceFunction
 
 
 def _get_axis(axis):
@@ -361,17 +361,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations result in a reduced dimensionality of data.
     # This will return a new QueryCompiler, which will be handled in the front end.
 
-    def count(self, **kwargs):
-        """Counts the number of non-NaN objects for each column or row.
-
-        Return:
-            A new QueryCompiler object containing counts of non-NaN objects from each
-            column or row.
-        """
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._map_reduce(
-            axis, lambda df: df.count(**kwargs), lambda df: df.sum(**kwargs)
-        )
+    count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
+    min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
+    sum = MapReduceFunction.register(pandas.DataFrame.sum, pandas.DataFrame.sum)
+    prod = MapReduceFunction.register(pandas.DataFrame.prod, pandas.DataFrame.prod)
+    any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
+    all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
+    memory_usage = MapReduceFunction.register(
+        pandas.DataFrame.memory_usage, pandas.DataFrame.sum, axis=0
+    )
 
     def dot(self, other):
         """Computes the matrix multiplication of self and other.
@@ -404,16 +403,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def max(self, **kwargs):
-        """Returns the maximum value for each column or row.
-
-        Return:
-            A new QueryCompiler object with the maximum values from each column or row.
-        """
-        return self._modin_frame._map_reduce(
-            kwargs.get("axis", 0), lambda df: df.max(**kwargs)
-        )
-
     def mean(self, **kwargs):
         """Returns the mean for each numerical column or row.
 
@@ -440,94 +429,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis=axis,
             ),
         )
-
-    def min(self, **kwargs):
-        """Returns the minimum from each column or row.
-
-        Return:
-            A new QueryCompiler object with the minimum value from each column or row.
-        """
-        return self._modin_frame._map_reduce(
-            kwargs.get("axis", 0), lambda df: df.min(**kwargs)
-        )
-
-    def _process_sum_prod(self, func, **kwargs):
-        """Calculates the sum or product of the DataFrame.
-
-        Args:
-            func: Pandas func to apply to DataFrame.
-            ignore_axis: Whether to ignore axis when raising TypeError
-        Return:
-            A new QueryCompiler object with sum or prod of the object.
-        """
-        axis = kwargs.get("axis", 0)
-        min_count = kwargs.get("min_count", 0)
-        if min_count <= 1:
-            return self.__constructor__(
-                self._modin_frame._map_reduce(axis, lambda df: func(df, **kwargs))
-            )
-        else:
-            return self.__constructor__(
-                self._modin_frame._fold_reduce(axis, lambda df: func(df, **kwargs))
-            )
-
-    def prod(self, **kwargs):
-        """Returns the product of each numerical column or row.
-
-        Return:
-            A new QueryCompiler object with the product of each numerical column or row.
-        """
-        return self._process_sum_prod(pandas.DataFrame.prod, **kwargs)
-
-    def sum(self, **kwargs):
-        """Returns the sum of each numerical column or row.
-
-        Return:
-            A new QueryCompiler object with the sum of each numerical column or row.
-        """
-        return self._process_sum_prod(pandas.DataFrame.sum, **kwargs)
-
-    def _process_all_any(self, func, **kwargs):
-        """Calculates if any or all the values are true.
-
-        Return:
-            A new QueryCompiler object containing boolean values or boolean.
-        """
-        axis = kwargs.get("axis", 0)
-        axis = 0 if axis is None else axis
-        kwargs["axis"] = axis
-        return self.__constructor__(
-            self._modin_frame._map_reduce(axis, lambda df: func(df, **kwargs))
-        )
-
-    def all(self, **kwargs):
-        """Returns whether all the elements are true, potentially over an axis.
-
-        Return:
-            A new QueryCompiler object containing boolean values or boolean.
-        """
-        return self._process_all_any(lambda df, **kwargs: df.all(**kwargs), **kwargs)
-
-    def any(self, **kwargs):
-        """Returns whether any the elements are true, potentially over an axis.
-
-        Return:
-            A new QueryCompiler object containing boolean values or boolean.
-        """
-        return self._process_all_any(lambda df, **kwargs: df.any(**kwargs), **kwargs)
-
-    def memory_usage(self, **kwargs):
-        """Returns the memory usage of each column.
-
-        Returns:
-            A new QueryCompiler object containing the memory usage of each column.
-        """
-        return self.__constructor__(
-            self._modin_frame._map_reduce(
-                0, lambda df: df.memory_usage(**kwargs), lambda df: df.sum()
-            )
-        )
-
     # END Full Reduce operations
 
     # Map partitions operations

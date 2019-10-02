@@ -1231,6 +1231,13 @@ class DataFrame(BasePandasDataset):
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
+        # For `min_count` parameter, run a count and filter
+        # This is not as efficient as the default behavior!
+        elif min_count > 1 and level is None:
+            counts = self.count(axis=axis) < min_count
+            return self.drop(labels=counts.index[counts], axis=axis ^ 1).prod(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
+            )
         return super(DataFrame, self).prod(
             axis=axis,
             skipna=skipna,
@@ -1522,6 +1529,13 @@ class DataFrame(BasePandasDataset):
         if min_count > len(new_index):
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+            )
+        # For `min_count` parameter, run a count and filter
+        # This is not as efficient as the default behavior!
+        elif min_count > 1 and level is None:
+            counts = self.count(axis=axis) < min_count
+            return self.drop(labels=counts.index[counts], axis=axis ^ 1).sum(
+                axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
             )
         return super(DataFrame, self).sum(
             axis=axis,
