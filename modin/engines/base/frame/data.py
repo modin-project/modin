@@ -1037,18 +1037,30 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         # Fast path for equivalent columns and partitioning
-        if axis == 0 and all(o.columns.equals(self.columns) for o in others) and all(o._column_widths == self._column_widths for o in others):
+        if (
+            axis == 0
+            and all(o.columns.equals(self.columns) for o in others)
+            and all(o._column_widths == self._column_widths for o in others)
+        ):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths + [l for o in others for l in o._row_lengths]
+            new_lengths = self._row_lengths + [
+                l for o in others for l in o._row_lengths
+            ]
             new_widths = self._column_widths
-        elif axis == 1 and all(o.index.equals(self.index) for o in others) and all(o._row_lengths == self._row_lengths for o in others):
+        elif (
+            axis == 1
+            and all(o.index.equals(self.index) for o in others)
+            and all(o._row_lengths == self._row_lengths for o in others)
+        ):
             joined_index = self.index
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths
-            new_widths = self._column_widths + [l for o in others for l in o._column_widths]
+            new_widths = self._column_widths + [
+                l for o in others for l in o._column_widths
+            ]
         else:
             left_parts, right_parts, joined_index = self._copartition(
                 axis ^ 1, others, how, sort, force_repartition=True
@@ -1062,7 +1074,9 @@ class BasePandasFrame(object):
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
-        return self.__constructor__(new_partitions, new_index, new_columns, new_lengths, new_widths)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, new_lengths, new_widths
+        )
 
     def groupby_reduce(
         self, axis, by, map_func, reduce_func, new_index=None, new_columns=None
