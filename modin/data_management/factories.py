@@ -32,6 +32,14 @@ class BaseFactory(object):
         return cls.io_cls.from_pandas(df)
 
     @classmethod
+    def from_non_pandas(cls, *args, **kwargs):
+        return cls._determine_engine()._from_non_pandas(*args, **kwargs)
+
+    @classmethod
+    def _from_non_pandas(cls, *args, **kwargs):
+        return cls.io_cls.from_non_pandas(*args, **kwargs)
+
+    @classmethod
     def read_parquet(cls, **kwargs):
         return cls._determine_engine()._read_parquet(**kwargs)
 

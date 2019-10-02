@@ -18,7 +18,7 @@ from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
-from .utils import from_pandas, to_pandas, _inherit_docstrings
+from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
@@ -61,6 +61,11 @@ class DataFrame(BasePandasDataset):
                 data._add_sibling(self)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
+            distributed_frame = from_non_pandas(data, index, columns, dtype)
+            if distributed_frame is not None:
+                self._query_compiler = distributed_frame._query_compiler
+                return
+
             warnings.warn(
                 "Distributing {} object. This may take some time.".format(type(data))
             )
