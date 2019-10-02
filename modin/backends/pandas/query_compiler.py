@@ -969,9 +969,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df.query(expr, inplace=False, **kwargs)
 
         return self.__constructor__(
-            self._modin_frame._apply_full_axis(
-                1, query_builder, new_columns=self.columns
-            )
+            self._modin_frame.filter_full_axis(1, query_builder)
         )
 
     def rank(self, **kwargs):
@@ -1162,67 +1160,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             a new QueryCompiler
         """
-        axis = kwargs.get("axis", 0)
-        subset = kwargs.get("subset", None)
-        thresh = kwargs.get("thresh", None)
-        how = kwargs.get("how", "any")
-        # We need to subset the axis that we care about with `subset`. This
-        # will be used to determine the number of values that are NA.
-        if subset is not None:
-            if not axis:
-                compute_na = self.getitem_column_array(subset)
-            else:
-                compute_na = self.getitem_row_array(self.index.get_indexer_for(subset))
-        else:
-            compute_na = self
-
-        if not isinstance(axis, list):
-            axis = [axis]
-        # We are building this dictionary first to determine which columns
-        # and rows to drop. This way we do not drop some columns before we
-        # know which rows need to be dropped.
-        if thresh is not None:
-            # Count the number of NA values and specify which are higher than
-            # thresh.
-            drop_values = {
-                ax ^ 1: compute_na.isna().sum(axis=ax ^ 1).to_pandas().squeeze()
-                > thresh
-                for ax in axis
-            }
-        else:
-            drop_values = {
-                ax
-                ^ 1: getattr(compute_na.isna(), how)(axis=ax ^ 1).to_pandas().squeeze()
-                for ax in axis
-            }
-
-        if 0 not in drop_values:
-            drop_values[0] = None
-
-        if 1 not in drop_values:
-            drop_values[1] = None
-
-            rm_from_index = (
-                [obj for obj in compute_na.index[drop_values[1]]]
-                if drop_values[1] is not None
-                else None
+        return self.__constructor__(
+            self._modin_frame.filter_full_axis(
+                kwargs.get("axis", 0) ^ 1,
+                lambda df: pandas.DataFrame.dropna(df, **kwargs),
             )
-            rm_from_columns = (
-                [obj for obj in compute_na.columns[drop_values[0]]]
-                if drop_values[0] is not None
-                else None
-            )
-        else:
-            rm_from_index = (
-                compute_na.index[drop_values[1]] if drop_values[1] is not None else None
-            )
-            rm_from_columns = (
-                compute_na.columns[drop_values[0]]
-                if drop_values[0] is not None
-                else None
-            )
-
-        return self.drop(index=rm_from_index, columns=rm_from_columns)
+        )
 
     def drop(self, index=None, columns=None):
         """Remove row data for target index and columns.
