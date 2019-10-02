@@ -356,10 +356,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Transpose
 
-    # Full Reduce operations
-    #
-    # These operations result in a reduced dimensionality of data.
-    # This will return a new QueryCompiler, which will be handled in the front end.
+    # MapReduce operations
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
@@ -369,7 +366,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
-        pandas.DataFrame.memory_usage, pandas.DataFrame.sum, axis=0
+        pandas.DataFrame.memory_usage,
+        lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
+        axis=0
     )
 
     def dot(self, other):
@@ -429,7 +428,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis=axis,
             ),
         )
-    # END Full Reduce operations
+
+    # END MapReduce operations
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
