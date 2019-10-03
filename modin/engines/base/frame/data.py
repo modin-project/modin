@@ -1279,7 +1279,7 @@ class BasePandasFrame(object):
             self.columns,
             new_row_lengths,
             self._column_widths,
-            self.dtypes,
+            self._dtypes,
         )
 
     def tail(self, n):
@@ -1304,7 +1304,7 @@ class BasePandasFrame(object):
             self.columns,
             new_row_lengths,
             self._column_widths,
-            self.dtypes,
+            self._dtypes,
         )
 
     def front(self, n):
@@ -1326,7 +1326,7 @@ class BasePandasFrame(object):
             self.columns[:n],
             self._row_lengths,
             new_col_lengths,
-            self.dtypes[:n],
+            self.dtypes[:n] if self._dtypes is not None else None,
         )
 
     def back(self, n):
@@ -1348,7 +1348,7 @@ class BasePandasFrame(object):
             self.columns[-n:],
             self._row_lengths,
             new_col_lengths,
-            self.dtypes[n:],
+            self.dtypes[n:] if self._dtypes is not None else None,
         )
 
     # End Head/Tail/Front/Back
