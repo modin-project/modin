@@ -135,7 +135,7 @@ def initialize_ray():
         total_mem = ray.utils.get_system_memory()
         # This is a vile hack.
         # TODO remove when ray-project/ray#5837 is resolved
-        ray.utils.get_system_memory = lambda: 10**20
+        ray.utils.get_system_memory = lambda: 10 ** 20
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
@@ -160,9 +160,7 @@ def initialize_ray():
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * total_mem // 10 ** 9 * 10 ** 9
-                )
+                object_store_memory = int(0.6 * total_mem // 10 ** 9 * 10 ** 9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
                     object_store_memory = None
