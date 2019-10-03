@@ -9,7 +9,11 @@ from pandas.core.base import DataError
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.data_management.functions import MapFunction, MapReduceFunction
+from modin.data_management.functions import (
+    MapFunction,
+    MapReduceFunction,
+    ReductionFunction,
+)
 
 
 def _get_axis(axis):
@@ -368,7 +372,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     memory_usage = MapReduceFunction.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
-        axis=0
+        axis=0,
     )
 
     def dot(self, other):
@@ -430,6 +434,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     # END MapReduce operations
+
+    # Reduction operations
+    idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
+    idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
+    median = ReductionFunction.register(pandas.DataFrame.median)
+    nunique = ReductionFunction.register(pandas.DataFrame.nunique)
+    skew = ReductionFunction.register(pandas.DataFrame.skew)
+    std = ReductionFunction.register(pandas.DataFrame.std)
+    var = ReductionFunction.register(pandas.DataFrame.var)
+    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
+    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+
+    # END Reduction operations
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
@@ -532,28 +549,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.index[first_result]
 
-    def idxmax(self, **kwargs):
-        """Returns the first occurrence of the maximum over requested axis.
-
-        Returns:
-            A new QueryCompiler object containing the maximum of each column or axis.
-        """
-        axis = kwargs.get("axis", 0)
-        return self.__constructor__(
-            self._modin_frame._fold_reduce(axis, lambda df: df.idxmax(**kwargs))
-        )
-
-    def idxmin(self, **kwargs):
-        """Returns the first occurrence of the minimum over requested axis.
-
-        Returns:
-            A new QueryCompiler object containing the minimum of each column or axis.
-        """
-        axis = kwargs.get("axis", 0)
-        return self.__constructor__(
-            self._modin_frame._fold_reduce(axis, lambda df: df.idxmin(**kwargs))
-        )
-
     def last_valid_index(self):
         """Returns index of last non-NaN/NULL value.
 
@@ -578,25 +573,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.index[first_result]
 
-    def median(self, **kwargs):
-        """Returns median of each column or row.
-
-        Returns:
-            A new QueryCompiler object containing the median of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._fold_reduce(axis, lambda df: df.median(**kwargs))
-
-    def nunique(self, **kwargs):
-        """Returns the number of unique items over each column or row.
-
-        Returns:
-            A new QueryCompiler object of ints indexed by column or index names.
-        """
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._fold_reduce(axis, lambda df: df.nunique(**kwargs))
-
     def quantile_for_single_value(self, **kwargs):
         """Returns quantile of each column or row.
 
@@ -619,37 +595,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             result.columns = [q]
         return self.__constructor__(result)
-
-    def skew(self, **kwargs):
-        """Returns skew of each column or row.
-
-        Returns:
-            A new QueryCompiler object containing the skew of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._fold_reduce(axis, lambda df: df.skew(**kwargs))
-
-    def std(self, **kwargs):
-        """Returns standard deviation of each column or row.
-
-        Returns:
-            A new QueryCompiler object containing the standard deviation of each column
-            or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._fold_reduce(axis, lambda df: df.std(**kwargs))
-
-    def var(self, **kwargs):
-        """Returns variance of each column or row.
-
-        Returns:
-            A new QueryCompiler object containing the variance of each column or row.
-        """
-        # Pandas default is 0 (though not mentioned in docs)
-        axis = kwargs.get("axis", 0)
-        return self._modin_frame._fold_reduce(axis, lambda df: df.var(**kwargs))
 
     # END Column/Row partitions reduce operations
 
