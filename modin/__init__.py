@@ -47,7 +47,7 @@ def get_execution_engine():
                             "Please `pip install modin[dask] to install compatible Dask version."
                         )
             else:
-                if ray.__version__ != "0.7.3":
+                if ray.__version__ != "0.7.5":
                     raise ImportError(
                         "Please `pip install modin[ray] to install compatible Ray version."
                     )
