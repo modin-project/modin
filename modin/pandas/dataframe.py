@@ -1231,6 +1231,17 @@ class DataFrame(BasePandasDataset):
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
+        if min_count > 1:
+            return self._reduce_dimension(
+                query_compiler=self._query_compiler.prod_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs
+                )
+            )
         return super(DataFrame, self).prod(
             axis=axis,
             skipna=skipna,

@@ -1805,6 +1805,17 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        if min_count > 1:
+            return data._reduce_dimension(
+                query_compiler=data._query_compiler.prod_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs
+                )
+            )
         return data._reduce_dimension(
             data._query_compiler.prod(
                 axis=axis,
@@ -2705,6 +2716,17 @@ class BasePandasDataset(object):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
+        if min_count > 1:
+            return data._reduce_dimension(
+                query_compiler=data._query_compiler.sum_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs
+                )
+            )
         return data._reduce_dimension(
             data._query_compiler.sum(
                 axis=axis,
