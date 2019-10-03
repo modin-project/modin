@@ -132,6 +132,10 @@ def initialize_ray():
         plasma_directory = None
         cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
+        total_mem = ray.utils.get_system_memory()
+        # This is a vile hack.
+        # TODO remove when ray-project/ray#5837 is resolved
+        ray.utils.get_system_memory = lambda: 10 ** 20
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
@@ -150,15 +154,13 @@ def initialize_ray():
                 # want to overwrite that value if we have.
                 if object_store_memory is None:
                     # Round down to the nearest Gigabyte.
-                    mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+                    mem_bytes = total_mem // 10 ** 9 * 10 ** 9
                     # Default to 8x memory for out of core
                     object_store_memory = 8 * mem_bytes
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                )
+                object_store_memory = int(0.6 * total_mem // 10 ** 9 * 10 ** 9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
                     object_store_memory = None
@@ -168,6 +170,7 @@ def initialize_ray():
                 include_webui=False,
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
+                memory=total_mem,
                 object_store_memory=object_store_memory,
                 redis_address=redis_address,
                 logging_level=100,
