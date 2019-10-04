@@ -375,64 +375,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis=0,
     )
 
-    def dot(self, other):
-        """Computes the matrix multiplication of self and other.
-
-        Args:
-            other: The other query compiler or other array-like to matrix
-            multiply with self.
-
-        Returns:
-            Returns the result of the matrix multiply.
-        """
-
-        def map_func(df, other=other):
-            if isinstance(other, pandas.DataFrame):
-                other = other.squeeze()
-            result = df.squeeze().dot(other)
-            if is_list_like(result):
-                return pandas.DataFrame(result)
-            else:
-                return pandas.DataFrame([result])
-
-        if len(self.columns) == 1:
-            axis = 0
-            new_index = ["__reduce__"]
-        else:
-            axis = 1
-            new_index = self.index
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
-        )
-        return self.__constructor__(new_modin_frame)
-
-    def mean(self, **kwargs):
-        """Returns the mean for each numerical column or row.
-
-        Return:
-            A new QueryCompiler object containing the mean from each numerical column or
-            row.
-        """
-        axis = kwargs.pop("axis", 0)
-        numeric_only = kwargs.pop("numeric_only", False)
-        if numeric_only:
-            obj = self._modin_frame.mask(
-                col_indices=self._modin_frame._numeric_columns()
-            )
-        else:
-            obj = self._modin_frame
-        return obj._map_reduce(
-            axis,
-            map_func=lambda df: df.apply(
-                lambda s: (s.sum(**kwargs), s.count()), axis=axis
-            ),
-            reduce_func=lambda df: df.apply(
-                lambda x: x.apply(lambda item: item[0]).sum(**kwargs)
-                / x.apply(lambda item: item[1]).sum(**kwargs),
-                axis=axis,
-            ),
-        )
-
     # END MapReduce operations
 
     # Reduction operations
@@ -445,6 +387,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+    mean = ReductionFunction.register(pandas.DataFrame.mean)
 
     # END Reduction operations
 
@@ -658,6 +601,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame._fold(axis, lambda df: df.diff(**kwargs))
         )
+
+    def dot(self, other):
+        """Computes the matrix multiplication of self and other.
+
+        Args:
+            other: The other query compiler or other array-like to matrix
+            multiply with self.
+
+        Returns:
+            Returns the result of the matrix multiply.
+        """
+
+        def map_func(df, other=other):
+            if isinstance(other, pandas.DataFrame):
+                other = other.squeeze()
+            result = df.squeeze().dot(other)
+            if is_list_like(result):
+                return pandas.DataFrame(result)
+            else:
+                return pandas.DataFrame([result])
+
+        if len(self.columns) == 1:
+            axis = 0
+            new_index = ["__reduce__"]
+        else:
+            axis = 1
+            new_index = self.index
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+        )
+        return self.__constructor__(new_modin_frame)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
