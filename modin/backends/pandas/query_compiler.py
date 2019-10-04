@@ -388,6 +388,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
     mean = ReductionFunction.register(pandas.DataFrame.mean)
+    quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
 
     # END Reduction operations
 
@@ -515,29 +516,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             .squeeze()
         )
         return self.index[first_result]
-
-    def quantile_for_single_value(self, **kwargs):
-        """Returns quantile of each column or row.
-
-        Returns:
-            A new QueryCompiler object containing the quantile of each column or row.
-        """
-        axis = kwargs.get("axis", 0)
-        q = kwargs.get("q", 0.5)
-        assert type(q) is float
-
-        def quantile_builder(df):
-            try:
-                return pandas.DataFrame.quantile(df, **kwargs)
-            except ValueError:
-                return pandas.Series()
-
-        result = self._modin_frame._fold_reduce(axis, quantile_builder)
-        if axis == 0:
-            result.index = [q]
-        else:
-            result.columns = [q]
-        return self.__constructor__(result)
 
     # END Column/Row partitions reduce operations
 

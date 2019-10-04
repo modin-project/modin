@@ -1894,7 +1894,7 @@ class BasePandasDataset(object):
                 )
             )
         else:
-            return self._reduce_dimension(
+            result = self._reduce_dimension(
                 self._query_compiler.quantile_for_single_value(
                     q=q,
                     axis=axis,
@@ -1902,6 +1902,9 @@ class BasePandasDataset(object):
                     interpolation=interpolation,
                 )
             )
+            if isinstance(result, BasePandasDataset):
+                result.name = q
+            return result
 
     def rank(
         self,
