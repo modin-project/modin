@@ -10,6 +10,7 @@ from pandas.core.base import DataError
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.data_management.functions import (
+    FoldFunction,
     MapFunction,
     MapReduceFunction,
     ReductionFunction,
@@ -579,28 +580,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
 
-    def _cumulative_builder(self, func, **kwargs):
-        axis = kwargs.get("axis", 0)
-        new_modin_frame = self._modin_frame._fold(axis, lambda df: func(df, **kwargs))
-        return self.__constructor__(new_modin_frame)
-
-    def cummax(self, **kwargs):
-        return self._cumulative_builder(pandas.DataFrame.cummax, **kwargs)
-
-    def cummin(self, **kwargs):
-        return self._cumulative_builder(pandas.DataFrame.cummin, **kwargs)
-
-    def cumsum(self, **kwargs):
-        return self._cumulative_builder(pandas.DataFrame.cumsum, **kwargs)
-
-    def cumprod(self, **kwargs):
-        return self._cumulative_builder(pandas.DataFrame.cumprod, **kwargs)
-
-    def diff(self, **kwargs):
-        axis = kwargs.get("axis", 0)
-        return self.__constructor__(
-            self._modin_frame._fold(axis, lambda df: df.diff(**kwargs))
-        )
+    cummax = FoldFunction.register(pandas.DataFrame.cummax)
+    cummin = FoldFunction.register(pandas.DataFrame.cummin)
+    cumsum = FoldFunction.register(pandas.DataFrame.cumsum)
+    cumprod = FoldFunction.register(pandas.DataFrame.cumprod)
+    diff = FoldFunction.register(pandas.DataFrame.diff)
 
     def dot(self, other):
         """Computes the matrix multiplication of self and other.

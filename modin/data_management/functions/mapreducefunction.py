@@ -18,5 +18,5 @@ class MapReduceFunction(Function):
         return caller
 
     @classmethod
-    def register(cls, function, *args, **kwargs):
-        return cls.call(function, *args, **kwargs)
+    def register(cls, map_function, reduce_function, **kwargs):
+        return cls.call(map_function, reduce_function, **kwargs)

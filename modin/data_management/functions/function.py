@@ -7,5 +7,9 @@ class Function(object):
         )
 
     @classmethod
+    def call(cls, func, **call_kwds):
+        raise NotImplementedError("Please implement in child class")
+
+    @classmethod
     def register(cls, func, **kwargs):
-        raise NotImplementedError("Implement in children classes")
+        return cls.call(func, **kwargs)
