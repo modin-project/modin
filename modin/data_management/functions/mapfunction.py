@@ -12,7 +12,3 @@ class MapFunction(Function):
             )
 
         return caller
-
-    @classmethod
-    def register(cls, function, *args, **kwargs):
-        return cls.call(function, *args, **kwargs)

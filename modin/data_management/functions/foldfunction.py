@@ -1,16 +1,16 @@
 from .function import Function
 
 
-class ReductionFunction(Function):
+class FoldFunction(Function):
     @classmethod
-    def call(cls, reduction_function, **call_kwds):
+    def call(cls, fold_function, **call_kwds):
         def caller(query_compiler, *args, **kwargs):
             return query_compiler.__constructor__(
-                query_compiler._modin_frame._fold_reduce(
+                query_compiler._modin_frame._fold(
                     call_kwds.get("axis")
                     if "axis" in call_kwds
                     else kwargs.get("axis"),
-                    lambda x: reduction_function(x, *args, **kwargs),
+                    lambda x: fold_function(x, *args, **kwargs),
                 )
             )
 
