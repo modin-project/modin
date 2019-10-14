@@ -6,6 +6,10 @@ from modin.backends.base.query_compiler import BaseQueryCompiler
 
 class BaseIO(object):
     @classmethod
+    def from_non_pandas(cls, *args, **kwargs):
+        return None
+
+    @classmethod
     def from_pandas(cls, df):
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 

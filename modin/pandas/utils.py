@@ -1,6 +1,15 @@
 from ..data_management.factories import BaseFactory
 
 
+def from_non_pandas(df, index, columns, dtype):
+    new_qc = BaseFactory.from_non_pandas(df, index, columns, dtype)
+    if new_qc is not None:
+        from .dataframe import DataFrame
+
+        return DataFrame(query_compiler=new_qc)
+    return new_qc
+
+
 def from_pandas(df):
     """Converts a pandas DataFrame to a Ray DataFrame.
     Args:
