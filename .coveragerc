@@ -12,7 +12,7 @@ omit =
     # Skip Dask until it is fully a part of the testing suite
     modin/engines/dask/*
     # Skip Gandiva because it is experimental
-    modin/experimental/*
+    modin/experimental/engines/pyarrow_on_ray/*
     modin/backends/pyarrow/*
 
 [report]
