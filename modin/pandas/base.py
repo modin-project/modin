@@ -428,7 +428,9 @@ class BasePandasDataset(object):
                         "Option bool_only is not implemented with option level."
                     )
 
-                return self._handle_level_agg(axis, level, "all", skipna=skipna, **kwargs)
+                return self._handle_level_agg(
+                    axis, level, "all", skipna=skipna, **kwargs
+                )
 
             return self._reduce_dimension(
                 self._query_compiler.all(
@@ -441,8 +443,10 @@ class BasePandasDataset(object):
             # Reduce to a scalar if axis is None.
 
             if level is not None:
-                kwargs["skipna"] = skipna
-                return self._handle_level_agg(axis, level, "all", **kwargs)
+
+                return self._handle_level_agg(
+                    axis, level, "all", skipna=skipna, **kwargs
+                )
             else:
                 result = self._reduce_dimension(
                     self._query_compiler.all(
@@ -486,7 +490,9 @@ class BasePandasDataset(object):
                         "Option bool_only is not implemented with option level."
                     )
 
-                return self._handle_level_agg(axis, level, "any", skipna=skipna, **kwargs)
+                return self._handle_level_agg(
+                    axis, level, "any", skipna=skipna, **kwargs
+                )
 
             return self._reduce_dimension(
                 self._query_compiler.any(
@@ -499,8 +505,9 @@ class BasePandasDataset(object):
             # Reduce to a scalar if axis is None.
 
             if level is not None:
-                kwargs["skipna"] = skipna
-                return self._handle_level_agg(axis, level, "any", **kwargs)
+                return self._handle_level_agg(
+                    axis, level, "any", skipna=skipna, **kwargs
+                )
             else:
                 result = self._reduce_dimension(
                     self._query_compiler.any(
@@ -741,7 +748,9 @@ class BasePandasDataset(object):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
-            return self._handle_level_agg(axis, level, "count", numeric_only=numeric_only)
+            return self._handle_level_agg(
+                axis, level, "count", numeric_only=numeric_only
+            )
 
         return self._reduce_dimension(
             self._query_compiler.count(
