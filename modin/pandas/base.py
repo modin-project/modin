@@ -420,7 +420,6 @@ class BasePandasDataset(object):
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
-
             if level is not None:
                 if bool_only is not None:
                     raise NotImplementedError(
