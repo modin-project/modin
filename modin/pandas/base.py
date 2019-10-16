@@ -731,16 +731,16 @@ class BasePandasDataset(object):
         """
 
         axis = self._get_axis_number(axis) if axis is not None else 0
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
 
         if level is not None:
-
             if not isinstance(self.axes[axis], pandas.MultiIndex):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
             return self._handle_level_agg(
-                axis, level, "count", numeric_only=numeric_only
-            )
+                axis, level, "count")
 
         return self._reduce_dimension(
             self._query_compiler.count(
