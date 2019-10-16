@@ -739,8 +739,7 @@ class BasePandasDataset(object):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
-            return self._handle_level_agg(
-                axis, level, "count")
+            return self._handle_level_agg(axis, level, "count")
 
         return self._reduce_dimension(
             self._query_compiler.count(
