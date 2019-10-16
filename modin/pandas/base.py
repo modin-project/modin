@@ -104,7 +104,6 @@ class BasePandasDataset(object):
         """
         if isinstance(level, str):
             level = self.axes[axis].names.index(level)
-
         return getattr(self.groupby(level=level, axis=axis), op)(**kwargs)
 
     def _validate_other(
@@ -427,11 +426,9 @@ class BasePandasDataset(object):
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-
                 return self._handle_level_agg(
                     axis, level, "all", skipna=skipna, **kwargs
                 )
-
             return self._reduce_dimension(
                 self._query_compiler.all(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -441,9 +438,7 @@ class BasePandasDataset(object):
             if bool_only:
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             # Reduce to a scalar if axis is None.
-
             if level is not None:
-
                 return self._handle_level_agg(
                     axis, level, "all", skipna=skipna, **kwargs
                 )
@@ -483,17 +478,14 @@ class BasePandasDataset(object):
                 return data_for_compute.any(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
-
             if level is not None:
                 if bool_only is not None:
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-
                 return self._handle_level_agg(
                     axis, level, "any", skipna=skipna, **kwargs
                 )
-
             return self._reduce_dimension(
                 self._query_compiler.any(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -503,7 +495,6 @@ class BasePandasDataset(object):
             if bool_only:
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             # Reduce to a scalar if axis is None.
-
             if level is not None:
                 return self._handle_level_agg(
                     axis, level, "any", skipna=skipna, **kwargs
