@@ -12,7 +12,7 @@ ray_deps = ["ray==0.7.3"]
 
 setup(
     name="modin",
-    version="0.6.1",
+    version="0.6.2",
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(),
     url="https://github.com/modin-project/modin",
