@@ -849,6 +849,45 @@ class TestDFPartOne:
             modin_result = modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
             df_equals(modin_result, pandas_result)
 
+        # test level
+        modin_df_multi_level = modin_df.copy()
+        pandas_df_multi_level = pandas_df.copy()
+        axis = modin_df._get_axis_number(axis) if axis is not None else 0
+        levels = 3
+        axis_names = ["a", "b", "c"]
+        if axis == 0:
+            new_idx = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
+                names=axis_names,
+            )
+            modin_df_multi_level.index = new_idx
+            pandas_df_multi_level.index = new_idx
+        else:
+            new_col = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+                names=axis_names,
+            )
+            modin_df_multi_level.columns = new_col
+            pandas_df_multi_level.columns = new_col
+
+        for level in list(range(levels)) + axis_names:
+            try:
+                pandas_multi_level_result = pandas_df_multi_level.all(
+                    axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                )
+
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.all(
+                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                    )
+            else:
+                modin_multi_level_result = modin_df_multi_level.all(
+                    axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                )
+
+                df_equals(modin_multi_level_result, pandas_multi_level_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -900,6 +939,45 @@ class TestDFPartOne:
         else:
             modin_result = modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
             df_equals(modin_result, pandas_result)
+
+        # test level
+        modin_df_multi_level = modin_df.copy()
+        pandas_df_multi_level = pandas_df.copy()
+        axis = modin_df._get_axis_number(axis) if axis is not None else 0
+        levels = 3
+        axis_names = ["a", "b", "c"]
+        if axis == 0:
+            new_idx = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
+                names=axis_names,
+            )
+            modin_df_multi_level.index = new_idx
+            pandas_df_multi_level.index = new_idx
+        else:
+            new_col = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+                names=axis_names,
+            )
+            modin_df_multi_level.columns = new_col
+            pandas_df_multi_level.columns = new_col
+
+        for level in list(range(levels)) + axis_names:
+            try:
+                pandas_multi_level_result = pandas_df_multi_level.any(
+                    axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                )
+
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df_multi_level.any(
+                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                    )
+            else:
+                modin_multi_level_result = modin_df_multi_level.any(
+                    axis=axis, bool_only=bool_only, level=level, skipna=skipna
+                )
+
+                df_equals(modin_multi_level_result, pandas_multi_level_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_append(self, data):
