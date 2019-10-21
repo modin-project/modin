@@ -808,8 +808,7 @@ def test_groupby_multiindex():
     )
     modin_df.columns = new_columns
     pandas_df.columns = new_columns
-    with pytest.warns(UserWarning):
-        modin_df.groupby(level=1, axis=1).sum()
+    modin_df.groupby(level=1, axis=1).sum()
 
     modin_df = modin_df.T
     pandas_df = pandas_df.T
