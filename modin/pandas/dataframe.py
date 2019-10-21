@@ -378,13 +378,6 @@ class DataFrame(BasePandasDataset):
             elif mismatch:
                 raise KeyError(next(x for x in by if x not in self))
 
-        if by is None and level is not None and axis == 0:
-            if not isinstance(level, str):
-                by = self.axes[axis].names[level]
-                level = None
-            else:
-                by = level
-                level = None
         from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
