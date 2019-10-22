@@ -36,7 +36,11 @@ class DataFrameGroupBy(object):
         self._columns = self._query_compiler.columns
         self._by = by
 
-        if level is None and not isinstance(by, type(self._query_compiler)):
+        if (
+            level is None
+            and not isinstance(by, type(self._query_compiler))
+            and is_list_like(by)
+        ):
             # This tells us whether or not there are multiple columns/rows in the groupby
             self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
         else:
@@ -410,7 +414,7 @@ class DataFrameGroupBy(object):
     def _groupby_reduce(
         self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
     ):
-        if self._is_multi_by or self._level is not None:
+        if self._is_multi_by:
             return self._default_to_pandas(map_func, **kwargs)
         if not isinstance(self._by, type(self._query_compiler)):
             return self._apply_agg_function(map_func, drop=drop, **kwargs)
@@ -455,7 +459,7 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        if self._is_multi_by or self._level is not None:
+        if self._is_multi_by:
             return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
