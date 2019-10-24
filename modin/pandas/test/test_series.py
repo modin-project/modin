@@ -1720,6 +1720,16 @@ def test_map(data, na_values):
         pandas_series.map(mapper, na_action=na_values),
     )
 
+    # Return list objects
+    modin_series_lists = modin_series.map(lambda s: [s, s, s])
+    pandas_series_lists = pandas_series.map(lambda s: [s, s, s])
+    df_equals(modin_series_lists, pandas_series_lists)
+
+    # Index into list objects
+    df_equals(
+        modin_series_lists.map(lambda l: l[0]), pandas_series_lists.map(lambda l: l[0])
+    )
+
 
 def test_mask():
     modin_series = pd.Series(np.arange(10))

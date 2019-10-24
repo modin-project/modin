@@ -691,7 +691,9 @@ class Series(BasePandasDataset):
 
         return self.__constructor__(
             query_compiler=self._query_compiler.applymap(
-                lambda s: arg(s) if not pandas.isnull(s) or na_action is None else s
+                lambda s: arg(s)
+                if pandas.isnull(s) is not True or na_action is None
+                else s
             )
         )
 
