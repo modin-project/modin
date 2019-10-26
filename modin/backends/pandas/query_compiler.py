@@ -1233,13 +1233,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-            new_modin_frame = self._modin_frame._fold(
-                0, lambda df: pandas.get_dummies(df, **kwargs)
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
             untouched_frame = None
         else:
-            new_modin_frame = self._modin_frame.mask(col_indices=columns)._fold(
-                0, lambda df: pandas.get_dummies(df, **kwargs)
+            new_modin_frame = self._modin_frame.mask(
+                col_indices=columns
+            )._apply_full_axis(
+                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
