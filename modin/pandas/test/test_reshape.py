@@ -25,12 +25,16 @@ def test_get_dummies():
     modin_result = pd.get_dummies(modin_df, prefix=["col1", "col2"])
     pandas_result = pandas.get_dummies(pandas_df, prefix=["col1", "col2"])
     df_equals(modin_result, pandas_result)
+    assert modin_result._to_pandas().columns.equals(pandas_result.columns)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.get_dummies(pd.DataFrame(pd.Series(list("abcdeabac"))))
     pandas_result = pandas.get_dummies(
         pandas.DataFrame(pandas.Series(list("abcdeabac")))
     )
     df_equals(modin_result, pandas_result)
+    assert modin_result._to_pandas().columns.equals(pandas_result.columns)
+    assert modin_result.shape == pandas_result.shape
 
     with pytest.raises(NotImplementedError):
         pd.get_dummies(modin_df, prefix=["col1", "col2"], sparse=True)
