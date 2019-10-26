@@ -48,29 +48,6 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
     return row_chunksize, col_chunksize
 
 
-def _get_nan_block_id(partition_class, n_row=1, n_col=1, transpose=False):
-    """A memory efficient way to get a block of NaNs.
-
-    Args:
-        partition_class (BaseFramePartition): The class to use to put the object
-            in the remote format.
-        n_row(int): The number of rows.
-        n_col(int): The number of columns.
-        transpose(bool): If true, swap rows and columns.
-    Returns:
-        ObjectID of the NaN block.
-    """
-    global _NAN_BLOCKS
-    if transpose:
-        n_row, n_col = n_col, n_row
-    shape = (n_row, n_col)
-    if shape not in _NAN_BLOCKS:
-        arr = np.tile(np.array(np.NaN), shape)
-        # TODO Not use pandas.DataFrame here, but something more general.
-        _NAN_BLOCKS[shape] = partition_class.put(pandas.DataFrame(data=arr))
-    return _NAN_BLOCKS[shape]
-
-
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
     """Split the Pandas result evenly based on the provided number of splits.
 
