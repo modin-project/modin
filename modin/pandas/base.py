@@ -1095,7 +1095,7 @@ class BasePandasDataset(object):
             duplicates = self.duplicated(keep=keep, **kwargs)
         else:
             duplicates = self.duplicated(keep=keep, **kwargs)
-        indices, = duplicates.values.nonzero()
+        (indices,) = duplicates.values.nonzero()
         return self.drop(index=self.index[indices], inplace=inplace)
 
     def duplicated(self, keep="first", **kwargs):
