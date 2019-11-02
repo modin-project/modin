@@ -1,0 +1,118 @@
+name: Continuous Integration
+on: [push, pull_request]
+jobs:
+  lint-black:
+    name: lint (black)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+      - run: pip install black
+      - run: black --check modin/
+  lint-flake8:
+    name: lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+      - run: pip install flake8
+      - run: flake8 .
+  test-all:
+    needs: [lint-flake8, lint-black]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.6.x', '3.7.x' ]
+        engine: [ 'debug', 'ray']
+        part: [ 1, 2, 3 ]
+    name: test (${{ matrix.engine }}, part ${{ matrix.part }}, python ${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: |
+          if [[ ${{ matrix.engine}} = debug ]]; then
+            export MODIN_DEBUG=1
+          else
+            export MODIN_ENGINE=${{ matrix.engine }}
+          fi
+      - run: python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartOne --cov-append
+        if: matrix.part == 1
+      - run: python -m pytest -n auto --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_dataframe.py::TestDFPartTwo --cov-append
+        if: matrix.part == 2
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_series.py --cov-append
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_concat.py --cov-append
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_groupby.py --cov-append
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_reshape.py --cov-append
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_general.py --cov-append
+        if: matrix.part == 3
+      - run: pip install numexpr
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
+        if: matrix.part == 3
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py --cov-append
+        if: matrix.part == 3
+      - run: bash <(curl -s https://codecov.io/bash)
+  test-pyarrow:
+    needs: [lint-flake8, lint-black]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.6.x', '3.7.x' ]
+    env:
+      MODIN_BACKEND: pyarrow
+      MODIN_EXPERIMENTAL: "True"
+    name: test (pyarrow, python ${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py::test_from_csv --cov-append
+      - run: bash <(curl -s https://codecov.io/bash)
+  test-api:
+    needs: [lint-flake8, lint-black]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7.x' ]
+    env:
+      MODIN_BACKEND: pyarrow
+      MODIN_EXPERIMENTAL: "True"
+    name: test (api, python ${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/pandas/test/test_api.py
