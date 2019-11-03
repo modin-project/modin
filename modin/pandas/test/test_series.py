@@ -5,6 +5,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
+import sys
 
 from modin.pandas.utils import to_pandas
 from .utils import (
@@ -2717,6 +2718,10 @@ def test_str_cat():
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_split(data, pat, n, expand):
+    # Empty pattern not supported on Python 3.7+
+    if sys.version_info[0] == 3 and sys.version_info[1] >= 7 and pat == "":
+        return
+
     modin_series, pandas_series = create_test_series(data)
 
     if n >= -1:
