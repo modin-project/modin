@@ -35,6 +35,8 @@ jobs:
         python-version: [ '3.6.x', '3.7.x' ]
         engine: [ 'debug', 'ray']
         part: [ 1, 2, 3 ]
+    env:
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
     name: test (${{ matrix.engine }}, part ${{ matrix.part }}, python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v1
@@ -82,6 +84,7 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
     name: test (pyarrow, python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v1
@@ -104,6 +107,7 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
     name: test (api, python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v1
