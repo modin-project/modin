@@ -15,11 +15,10 @@ from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
 from .utils import from_pandas, to_pandas
 
-
-try:
+if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     # Python >= 3.7
     from re import Pattern as _pattern_type
-except ImportError:
+else:
     # Python <= 3.6
     from re import _pattern_type
 
