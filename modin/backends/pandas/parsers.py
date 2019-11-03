@@ -5,7 +5,6 @@ from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 from io import BytesIO
-import os
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover

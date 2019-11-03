@@ -9,7 +9,16 @@ import sys
 
 class CSVReader(TextFileReader):
     @classmethod
-    def _skip_header(cls, f, comment=None, skiprows=None, encoding=None, header="infer", names=None, **kwargs):
+    def _skip_header(
+        cls,
+        f,
+        comment=None,
+        skiprows=None,
+        encoding=None,
+        header="infer",
+        names=None,
+        **kwargs
+    ):
         lines_read = 0
         if header is None:
             return lines_read
@@ -102,9 +111,12 @@ class CSVReader(TextFileReader):
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
             names = pandas.read_csv(
-                filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0, index_col=None)
+                filepath_or_buffer,
+                **dict(kwargs, nrows=0, skipfooter=0, index_col=None)
             ).columns
-        empty_pd_df = pandas.read_csv(filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0))
+        empty_pd_df = pandas.read_csv(
+            filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
+        )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
@@ -114,7 +126,8 @@ class CSVReader(TextFileReader):
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                cls.file_open(filepath_or_buffer, "rb"), **dict(kwargs, nrows=0, skipfooter=0)
+                cls.file_open(filepath_or_buffer, "rb"),
+                **dict(kwargs, nrows=0, skipfooter=0)
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
@@ -168,7 +181,11 @@ class CSVReader(TextFileReader):
                 ]
 
             while f.tell() < total_bytes:
-                args = {"fname": filepath_or_buffer, "num_splits": num_splits, **partition_kwargs}
+                args = {
+                    "fname": filepath_or_buffer,
+                    "num_splits": num_splits,
+                    **partition_kwargs,
+                }
                 partition_id = cls.call_deploy(f, chunk_size, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
