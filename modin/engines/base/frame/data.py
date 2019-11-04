@@ -544,15 +544,11 @@ class BasePandasFrame(object):
         else:
             indices = np.array(indices)
         if not axis:
-            # INT_MAX to make sure we don't try to compute on partitions that don't
-            # exist.
-            cumulative = np.array(
-                np.append(self._column_widths[:-1], np.iinfo(np.int32).max)
-            ).cumsum()
+            bins = np.array(self._column_widths)
         else:
-            cumulative = np.array(
-                np.append(self._row_lengths[:-1], np.iinfo(np.int32).max)
-            ).cumsum()
+            bins = np.array(self._row_lengths)
+        # INT_MAX to make sure we don't try to compute on partitions that don't exist.
+        cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
         def internal(block_idx, global_index):
             return (
