@@ -116,14 +116,15 @@ class PandasOnRayJSONReader(RayTask, PandasJSONParser, JSONReader):
 
 class PandasOnRayIO(RayIO):
 
-    frame_partition_cls = PandasOnRayFramePartition
-    query_compiler_cls = PandasQueryCompiler
-    frame_cls = PandasOnRayFrame
+    if __execution_engine__ == "Ray":
+        frame_partition_cls = PandasOnRayFramePartition
+        query_compiler_cls = PandasQueryCompiler
+        frame_cls = PandasOnRayFrame
 
-    read_parquet_remote_task = _read_parquet_columns
-    read_hdf_remote_task = _read_hdf_columns
-    read_feather_remote_task = _read_feather_columns
-    read_sql_remote_task = _read_sql_with_limit_offset
+        read_parquet_remote_task = _read_parquet_columns
+        read_hdf_remote_task = _read_hdf_columns
+        read_feather_remote_task = _read_feather_columns
+        read_sql_remote_task = _read_sql_with_limit_offset
 
     read_csv = PandasOnRayCSVReader.read
     read_json = PandasOnRayJSONReader.read
