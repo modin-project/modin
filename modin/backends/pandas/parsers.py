@@ -37,7 +37,13 @@ class PandasParser(object):
     def single_worker_read(cls, fname, **kwargs):
         ErrorMessage.default_to_pandas("Parameters provided")
         # Use default args for everything
-        pandas_frame = cls.parse(fname, **kwargs)[0]
+        pandas_frame = cls.parse(fname, **kwargs)
+        if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
+            pd_read = pandas_frame.read
+            pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
+                pd_read(*args, **kwargs), cls.frame_cls
+            )
+            return pandas_frame
         return cls.query_compiler_cls.from_pandas(pandas_frame, cls.frame_cls)
 
     infer_compression = _infer_compression
@@ -46,16 +52,15 @@ class PandasParser(object):
 class PandasCSVParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
-        num_splits = kwargs.pop("num_splits", 1)
+        num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         index_col = kwargs.get("index_col", None)
-        # pop "compression" from kwargs because bio is uncompressed
         if start is not None and end is not None:
+            # pop "compression" from kwargs because bio is uncompressed
             bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
             if kwargs.pop("encoding", False):
                 header = b"" + bio.readline()
-                kwargs["skiprows"] = kwargs.get("skiprows", 0) + 1
             else:
                 header = b""
             bio.seek(start)
@@ -63,13 +68,12 @@ class PandasCSVParser(PandasParser):
             bio.close()
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
         else:
-            pandas_df = pandas.read_csv(fname, **kwargs)
+            # This only happens when we are reading with only one worker (Default)
+            return pandas.read_csv(fname, **kwargs)
         if index_col is not None:
             index = pandas_df.index
-            # Partitions must have RangeIndex
         else:
-            # We will use the lengths to build the index if we are not given an
-            # `index_col`.
+            # The lengths will become the RangeIndex
             index = len(pandas_df)
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             index,
@@ -79,17 +83,21 @@ class PandasCSVParser(PandasParser):
 
 class PandasJSONParser(PandasParser):
     @staticmethod
-    def parse(**kwargs):
-        fname = kwargs.pop("fname", None)
+    def parse(fname, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
-        bio.seek(start)
-        to_read = b"" + bio.read(end - start)
-        bio.close()
-        columns = kwargs.pop("columns")
-        pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+        if start is not None and end is not None:
+            # pop "compression" from kwargs because bio is uncompressed
+            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio.seek(start)
+            to_read = b"" + bio.read(end - start)
+            bio.close()
+            columns = kwargs.pop("columns")
+            pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
+        else:
+            # This only happens when we are reading with only one worker (Default)
+            return pandas.read_json(fname, **kwargs)
         if not pandas_df.columns.equals(columns):
             raise NotImplementedError("Columns must be the same across all rows.")
         partition_columns = pandas_df.columns

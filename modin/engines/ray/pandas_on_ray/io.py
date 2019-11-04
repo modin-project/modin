@@ -110,6 +110,12 @@ class PandasOnRayCSVReader(RayTask, PandasCSVParser, CSVReader):
     query_compiler_cls = PandasQueryCompiler
 
 
+class PandasOnRayJSONReader(RayTask, PandasJSONParser, JSONReader):
+    frame_cls = PandasOnRayFrame
+    frame_partition_cls = PandasOnRayFramePartition
+    query_compiler_cls = PandasQueryCompiler
+
+
 class PandasOnRayIO(RayIO):
 
     frame_partition_cls = PandasOnRayFramePartition
@@ -122,41 +128,4 @@ class PandasOnRayIO(RayIO):
     read_sql_remote_task = _read_sql_with_limit_offset
 
     read_csv = PandasOnRayCSVReader.read
-
-    @classmethod
-    def read_json(
-        cls,
-        path_or_buf=None,
-        orient=None,
-        typ="frame",
-        dtype=True,
-        convert_axes=True,
-        convert_dates=True,
-        keep_default_dates=True,
-        numpy=False,
-        precise_float=False,
-        date_unit=None,
-        encoding=None,
-        lines=False,
-        chunksize=None,
-        compression="infer",
-    ):
-        kwargs = locals()
-        kwargs.pop("cls", None)
-        kwargs.pop("__class__", None)
-        if not lines:
-            ErrorMessage.default_to_pandas(
-                "`read_json` only optimized with `lines=True`"
-            )
-            return super(PandasOnRayIO, cls).read_json(**kwargs)
-        else:
-            # TODO: Pick up the columns in an optimized way from all data
-            # All rows must be read because some rows may have missing data
-            # Currently assumes all rows have the same columns
-            return PandasOnRayJSONReader.read(kwargs)
-
-
-class PandasOnRayJSONReader(RayTask, PandasJSONParser, JSONReader):
-    frame_cls = PandasOnRayFrame
-    frame_partition_cls = PandasOnRayFramePartition
-    query_compiler_cls = PandasQueryCompiler
+    read_json = PandasOnRayJSONReader.read

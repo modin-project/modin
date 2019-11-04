@@ -7,8 +7,9 @@ import numpy as np
 
 class JSONReader(TextFileReader):
     @classmethod
-    def read(cls, kwargs={}):
-        path_or_buf = kwargs.pop("path_or_buf")
+    def read(cls, path_or_buf, **kwargs):
+        if not kwargs.get("lines", False):
+            return cls.single_worker_read(path_or_buf, **kwargs)
         columns = pandas.read_json(
             BytesIO(b"" + open(path_or_buf, "rb").readline()), lines=True
         ).columns
@@ -52,7 +53,6 @@ class JSONReader(TextFileReader):
         new_index = pandas.RangeIndex(sum(row_lengths))
 
         dtypes = cls.get_dtypes(dtypes_ids)
-
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
         if isinstance(dtypes, pandas.Series):
