@@ -26,7 +26,7 @@ jobs:
           python-version: '3.7.x'
           architecture: 'x64'
       - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T .
+      - run: flake8 --enable=T modin
   test-all:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
