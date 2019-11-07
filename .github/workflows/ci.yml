@@ -95,9 +95,8 @@ jobs:
           architecture: 'x64'
       - run: pip install -r windows_test_requires.txt
       - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
-      - uses: codecov/codecov-action@v1.0.3
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
+      - run: choco install codecov
+      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
