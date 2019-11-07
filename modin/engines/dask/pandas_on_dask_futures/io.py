@@ -1,11 +1,10 @@
 from modin.engines.base.io import BaseIO
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.dask.pandas_on_dask_futures.frame.data import PandasOnDaskFrame
-from modin.engines.dask.pandas_on_dask_futures.frame.partition import PandasOnDaskFramePartition
-from modin.backends.pandas.parsers import (
-    PandasCSVParser,
-    PandasJSONParser,
+from modin.engines.dask.pandas_on_dask_futures.frame.partition import (
+    PandasOnDaskFramePartition,
 )
+from modin.backends.pandas.parsers import PandasCSVParser, PandasJSONParser
 from modin.engines.dask.task_wrapper import DaskTask
 from modin.engines.base.io import CSVReader, JSONReader
 

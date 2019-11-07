@@ -515,7 +515,7 @@ def test_from_feather():
     teardown_feather_file()
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="Windows not supported")
+@pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
 def test_from_hdf():
     setup_hdf_file(SMALL_ROW_SIZE, format=None)
 
@@ -527,7 +527,7 @@ def test_from_hdf():
     teardown_hdf_file()
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="Windows not supported")
+@pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
 def test_from_hdf_format():
     setup_hdf_file(SMALL_ROW_SIZE, format="table")
 
@@ -1209,7 +1209,7 @@ def test_to_stata():
     teardown_test_file(TEST_STATA_DF_FILENAME)
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="Windows not supported")
+@pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
 def test_HDFStore():
     modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
     pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
