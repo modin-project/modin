@@ -75,6 +75,28 @@ jobs:
       - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/experimental/pandas/test/test_io_exp.py --cov-append
         if: matrix.part == 3
       - run: bash <(curl -s https://codecov.io/bash)
+  test-windows:
+    needs: [lint-flake8, lint-black]
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [ '3.6.x', '3.7.x' ]
+    env:
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      MODIN_ENGINE: dask
+    name: test dask
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - run: pip install -r windows_test_requires.txt
+      - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
+      - run: choco install codecov
+      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest

@@ -32,6 +32,8 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             maintain_partitioning,
             *partitions
         )
+        if num_splits == 1:
+            return axis_result
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
@@ -50,6 +52,8 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             kwargs,
             *partitions
         )
+        if num_splits == 1:
+            return axis_result
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [client.submit(lambda l: l[i], axis_result) for i in range(num_splits)]
