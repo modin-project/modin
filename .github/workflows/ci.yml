@@ -83,6 +83,7 @@ jobs:
         python-version: [ '3.6.x', '3.7.x' ]
     env:
       CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      MODIN_ENGINE: dask
     name: test dask
     steps:
       - uses: actions/checkout@v1
@@ -93,9 +94,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: 'x64'
       - run: pip install -r windows_test_requires.txt
-      - run: set MODIN_ENGINE=dask
       - run: python -m pytest --disable-pytest-warnings --cov-config=.coveragerc --cov=modin modin/pandas/test/test_io.py --cov-append
-      - run: bash <(curl -s https://codecov.io/bash)
+      - name: Upload coverage to Codecov
+          uses: modin-project/modin@v0.6.2
+          with:
+            token: ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
