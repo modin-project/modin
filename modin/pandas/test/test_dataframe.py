@@ -3764,6 +3764,22 @@ class TestDFPartTwo:
             modin_result = modin_df.query(funcs)
             df_equals(modin_result, pandas_result)
 
+    def test_query_after_insert(self):
+        modin_df = pd.DataFrame({"x": [-1, 0, 1, None], "y": [1, 2, None, 3]})
+        modin_df["z"] = modin_df.eval("x / y")
+        modin_df = modin_df.query("z >= 0")
+        modin_result = modin_df.reset_index(drop=True)
+        modin_result.columns = ["a", "b", "c"]
+
+        pandas_df = pd.DataFrame({"x": [-1, 0, 1, None], "y": [1, 2, None, 3]})
+        pandas_df["z"] = pandas_df.eval("x / y")
+        pandas_df = pandas_df.query("z >= 0")
+        pandas_result = pandas_df.reset_index(drop=True)
+        pandas_result.columns = ["a", "b", "c"]
+
+        df_equals(modin_result, pandas_result)
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
