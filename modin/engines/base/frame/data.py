@@ -788,7 +788,7 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, keep_partitioning=True
         )
         if axis == 0:
             new_index = self.index
@@ -835,7 +835,10 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, self._build_mapreduce_func(axis, func)
+            axis,
+            self._partitions,
+            self._build_mapreduce_func(axis, func),
+            keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
         if new_columns is None:

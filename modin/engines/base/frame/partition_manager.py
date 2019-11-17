@@ -111,7 +111,7 @@ class BaseFrameManager(object):
         )
 
     @classmethod
-    def map_axis_partitions(cls, axis, partitions, map_func):
+    def map_axis_partitions(cls, axis, partitions, map_func, keep_partitioning=False):
         """Applies `map_func` to every partition.
 
         Note: This method should be used in the case that `map_func` relies on
@@ -127,10 +127,10 @@ class BaseFrameManager(object):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        num_splits = min(
-            cls._compute_num_partitions(),
-            len(partitions) if axis == 0 else len(partitions.T),
-        )
+        if keep_partitioning:
+            num_splits = len(partitions) if axis == 0 else len(partitions.T)
+        else:
+            num_splits = cls._compute_num_partitions()
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions = (
             cls.column_partitions(partitions)
