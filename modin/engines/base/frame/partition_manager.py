@@ -127,7 +127,10 @@ class BaseFrameManager(object):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        num_splits = cls._compute_num_partitions()
+        num_splits = min(
+            cls._compute_num_partitions(),
+            len(partitions) if axis == 0 else len(partitions.T),
+        )
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions = (
             cls.column_partitions(partitions)
