@@ -1222,6 +1222,24 @@ class TestDFPartOne:
         with pytest.raises(KeyError):
             modin_df.astype({"not_exists": np.uint8})
 
+    def test_astype_category(self):
+        modin_df = pd.DataFrame(
+            {"col1": ["A", "A", "B", "B", "A"], "col2": [1, 2, 3, 4, 5]}
+        )
+        pandas_df = pandas.DataFrame(
+            {"col1": ["A", "A", "B", "B", "A"], "col2": [1, 2, 3, 4, 5]}
+        )
+
+        modin_result = modin_df.astype({"col1": "category"})
+        pandas_result = pandas_df.astype({"col1": "category"})
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+        modin_result = modin_df.astype("category")
+        pandas_result = pandas_df.astype("category")
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
     def test_at_time(self):
         i = pd.date_range("2018-04-09", periods=4, freq="12H")
         ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)

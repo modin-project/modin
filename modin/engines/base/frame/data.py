@@ -450,12 +450,15 @@ class BasePandasFrame(object):
                     new_dtype = np.dtype(dtype)
                 except TypeError:
                     new_dtype = dtype
+
                 if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtype = np.dtype("int64")
+                    new_dtypes[column] = np.dtype("int64")
                 elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtype = np.dtype("float64")
-                new_dtypes[column] = new_dtype
-        # Update partitions for each dtype that is updated
+                    new_dtypes[column] = np.dtype("float64")
+                # We cannot infer without computing the dtype if
+                elif isinstance(new_dtype, str) and new_dtype == "category":
+                    new_dtypes = None
+                    break
 
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
