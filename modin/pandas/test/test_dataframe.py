@@ -3373,6 +3373,14 @@ class TestDFPartTwo:
             )
             df_equals(modin_result, pandas_result)
 
+        # Named Series promoted to DF
+        s = pd.Series(frame_data2.get("col1"))
+        with pytest.raises(ValueError):
+            modin_df.merge(s)
+
+        s = pd.Series(frame_data2.get("col1"), name="col1")
+        df_equals(modin_df.merge(s), modin_df.merge(modin_df2[["col1"]]))
+
         with pytest.raises(ValueError):
             modin_df.merge("Non-valid type")
 

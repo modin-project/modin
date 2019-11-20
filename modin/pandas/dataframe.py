@@ -1085,6 +1085,11 @@ class DataFrame(BasePandasDataset):
              A merged Dataframe
         """
 
+        if isinstance(right, Series):
+            if right.name is None:
+                raise ValueError("Cannot merge a Series without a name")
+            else:
+                right = right.to_frame()
         if not isinstance(right, DataFrame):
             raise ValueError(
                 "can not merge DataFrame with instance of type "
