@@ -949,6 +949,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    def duplicated(self, **kwargs):
+        return self.__constructor__(
+            self._modin_frame._apply_full_axis(
+                1, lambda df: pandas.DataFrame.duplicated(df, **kwargs),
+            )
+        )
+
     def drop(self, index=None, columns=None):
         """Remove row data for target index and columns.
 
