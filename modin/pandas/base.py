@@ -1095,9 +1095,9 @@ class BasePandasDataset(object):
         indices = duplicates.values.nonzero()[0]
         return self.drop(index=self.index[indices], inplace=inplace)
 
-    def duplicated(self, subset=None, keep="first", **kwargs):
+    def duplicated(self, keep="first", **kwargs):
         new_query_compiler = self._query_compiler.duplicated(
-            subset=subset, keep=keep, **kwargs
+            keep=keep, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler)
 
