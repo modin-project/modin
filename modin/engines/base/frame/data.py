@@ -112,7 +112,6 @@ class BasePandasFrame(object):
         """
 
         def dtype_builder(df):
-            print(df)
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
         map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
