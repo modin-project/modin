@@ -1264,8 +1264,7 @@ def test_dtype(data):
 @pytest.mark.parametrize("keep", ["last", "first"], ids=["last", "first"])
 def test_duplicated(data, keep):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.duplicated(keep=keep)
+    modin_result = modin_series.duplicated(keep=keep)
     df_equals(modin_result, pandas_series.duplicated(keep=keep))
 
 
