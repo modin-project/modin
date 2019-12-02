@@ -199,7 +199,11 @@ class DataFrame(BasePandasDataset):
         return self._query_compiler.dtypes
 
     def duplicated(self, subset=None, keep="first"):
-        return super(DataFrame, self).duplicated(subset=subset, keep=keep)
+        df = self[subset] if subset is not None else self
+        return super(
+            DataFrame,
+            DataFrame(df.apply(lambda s: hash(s.to_numpy().data.tobytes()), axis=1)),
+        ).duplicated(keep=keep)
 
     @property
     def empty(self):

@@ -524,7 +524,9 @@ class Series(BasePandasDataset):
         return super(Series, self).dropna(axis=axis, inplace=inplace)
 
     def duplicated(self, keep="first"):
-        return super(Series, self).duplicated(keep=keep)
+        from .dataframe import DataFrame
+
+        return super(DataFrame, DataFrame(self)).duplicated(keep=keep)
 
     def eq(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)

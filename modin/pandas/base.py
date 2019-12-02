@@ -1095,11 +1095,10 @@ class BasePandasDataset(object):
         indices = duplicates.values.nonzero()[0]
         return self.drop(index=self.index[indices], inplace=inplace)
 
-    def duplicated(self, keep="first", **kwargs):
-        new_query_compiler = self._query_compiler.duplicated(
-            keep=keep, **kwargs
-        )
-        return self._create_or_update_from_compiler(new_query_compiler)
+    def duplicated(self, keep="first"):
+        duplicates = self.apply(lambda s: s.duplicated(keep=keep))[0]
+        duplicates.name = None
+        return duplicates
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.
