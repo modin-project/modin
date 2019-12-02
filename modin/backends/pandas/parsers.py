@@ -1,3 +1,5 @@
+from functools import reduce
+import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.io.common import _infer_compression
@@ -24,12 +26,19 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     return splits
 
 
+def find_common_type_cat(types):
+    if all(isinstance(t, pandas.CategoricalDtype) for t in types):
+        return pandas.CategoricalDtype(reduce(np.union1d, [t.categories for t in types]), ordered=all(t.ordered for t in types))
+    else:
+        find_common_type(types)
+
+
 class PandasParser(object):
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         return (
             pandas.concat(cls.materialize(dtypes_ids), axis=1)
-            .apply(lambda row: find_common_type(row.values), axis=1)
+            .apply(lambda row: find_common_type_cat(row.values), axis=1)
             .squeeze(axis=0)
         )
 
