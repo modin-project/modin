@@ -28,7 +28,10 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
 
 def find_common_type_cat(types):
     if all(isinstance(t, pandas.CategoricalDtype) for t in types):
-        return pandas.CategoricalDtype(reduce(np.union1d, [t.categories for t in types]), ordered=all(t.ordered for t in types))
+        return pandas.CategoricalDtype(
+            reduce(np.union1d, [t.categories for t in types]),
+            ordered=all(t.ordered for t in types),
+        )
     else:
         find_common_type(types)
 
