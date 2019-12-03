@@ -199,11 +199,35 @@ class DataFrame(BasePandasDataset):
         return self._query_compiler.dtypes
 
     def duplicated(self, subset=None, keep="first"):
+        """
+        Return boolean Series denoting duplicate rows, optionally only
+        considering certain columns.
+
+        Args:
+            subset : column label or sequence of labels, optional
+                Only consider certain columns for identifying duplicates, by
+                default use all of the columns
+            keep : {'first', 'last', False}, default 'first'
+                - ``first`` : Mark duplicates as ``True`` except for the
+                  first occurrence.
+                - ``last`` : Mark duplicates as ``True`` except for the
+                  last occurrence.
+                - False : Mark all duplicates as ``True``.
+
+        Returns:
+            Series
+        """
         df = self[subset] if subset is not None else self
-        return super(
-            DataFrame,
-            DataFrame(df.apply(lambda s: hash(s.to_numpy().data.tobytes()), axis=1)),
-        ).duplicated(keep=keep)
+        # if the number of columns we are checking for duplicates is larger than 1, we must
+        # hash them to generate a single value that can be compared across rows.
+        if len(df.columns) > 1:
+            hashed = df.apply(lambda s: hash(tuple(s)), axis=1).to_frame()
+        else:
+            hashed = df
+        duplicates = hashed.apply(lambda s: s.duplicated(keep=keep)).squeeze(axis=1)
+        # remove Series name which was assigned automatically by .apply
+        duplicates.name = None
+        return duplicates
 
     @property
     def empty(self):
