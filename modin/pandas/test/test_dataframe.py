@@ -1867,17 +1867,18 @@ class TestDFPartOne:
 
         df_equals(
             modin_df.drop_duplicates(keep=keep, inplace=inplace),
-            pandas_df.drop_duplicates(keep=keep, inplace=inplace),
+            pandas_df.drop_duplicates(keep=keep, inplace=inplace)
         )
 
-        frame_data = {
-            "A": list(range(3)) * 2,
-            "B": list(range(1, 4)) * 2,
-            "C": list(range(6)),
-        }
-        modin_df = pd.DataFrame(frame_data)
-        modin_df.drop_duplicates(subset=["A", "B"], keep=keep, inplace=inplace)
-        df_equals(modin_df, pandas.DataFrame({"A": [], "B": [], "C": []}))
+        import random
+
+        subset = random.sample(
+            list(pandas_df.columns), random.randint(1, len(pandas_df.columns))
+        )
+        df_equals(
+            modin_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace),
+            pandas_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace)
+        )
 
     def test_drop_duplicates_with_missing_index_values(self):
         data = {

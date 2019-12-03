@@ -1091,7 +1091,10 @@ class BasePandasDataset(object):
                 deduplicated : DataFrame
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        duplicates = self.duplicated(keep=keep)
+        if kwargs.get("subset", None) is not None:
+            duplicates = self.duplicated(keep=keep, subset=kwargs.get("subset"))
+        else:
+            duplicates = self.duplicated(keep=keep)
         indices = duplicates.values.nonzero()[0]
         return self.drop(index=self.index[indices], inplace=inplace)
 
