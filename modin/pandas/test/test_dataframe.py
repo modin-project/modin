@@ -1867,7 +1867,7 @@ class TestDFPartOne:
 
         df_equals(
             modin_df.drop_duplicates(keep=keep, inplace=inplace),
-            pandas_df.drop_duplicates(keep=keep, inplace=inplace)
+            pandas_df.drop_duplicates(keep=keep, inplace=inplace),
         )
 
         import random
@@ -1877,7 +1877,7 @@ class TestDFPartOne:
         )
         df_equals(
             modin_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace),
-            pandas_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace)
+            pandas_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace),
         )
 
     def test_drop_duplicates_with_missing_index_values(self):
