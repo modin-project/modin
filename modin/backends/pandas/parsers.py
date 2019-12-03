@@ -1,5 +1,7 @@
+import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
+from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import _infer_compression
 from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
@@ -24,12 +26,27 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     return splits
 
 
+def find_common_type_cat(types):
+    if all(isinstance(t, pandas.CategoricalDtype) for t in types):
+        if all(t.ordered for t in types):
+            return pandas.CategoricalDtype(
+                np.sort(np.unique([c for t in types for c in t.categories])[0]),
+                ordered=True,
+            )
+        return union_categoricals(
+            [pandas.Categorical([], dtype=t) for t in types],
+            sort_categories=all(t.ordered for t in types),
+        ).dtype
+    else:
+        return find_common_type(types)
+
+
 class PandasParser(object):
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         return (
             pandas.concat(cls.materialize(dtypes_ids), axis=1)
-            .apply(lambda row: find_common_type(row.values), axis=1)
+            .apply(lambda row: find_common_type_cat(row.values), axis=1)
             .squeeze(axis=0)
         )
 

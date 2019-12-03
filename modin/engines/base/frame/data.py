@@ -2,12 +2,12 @@ from itertools import groupby
 import numpy as np
 from operator import itemgetter
 import pandas
-from pandas.core.dtypes.cast import find_common_type
 from pandas.core.index import ensure_index
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 
 class BasePandasFrame(object):
@@ -112,7 +112,7 @@ class BasePandasFrame(object):
         """
 
         def dtype_builder(df):
-            return df.apply(lambda row: find_common_type(row.values), axis=0)
+            return df.apply(lambda col: find_common_type(col.values), axis=0)
 
         map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
         reduce_func = self._build_mapreduce_func(0, dtype_builder)
