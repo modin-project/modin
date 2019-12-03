@@ -1857,32 +1857,18 @@ class TestDFPartOne:
             df.droplevel("level_2", axis=1)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_drop_duplicates(self, data):
+    @pytest.mark.parametrize(
+        "keep", ["last", "first", False], ids=["last", "first", "False"]
+    )
+    @pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
+    def test_drop_duplicates(self, data, keep, inplace):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
         df_equals(
-            modin_df.drop_duplicates(keep="first", inplace=False),
-            pandas_df.drop_duplicates(keep="first", inplace=False),
+            modin_df.drop_duplicates(keep=keep, inplace=inplace),
+            pandas_df.drop_duplicates(keep=keep, inplace=inplace),
         )
-
-        df_equals(
-            modin_df.drop_duplicates(keep="last", inplace=False),
-            pandas_df.drop_duplicates(keep="last", inplace=False),
-        )
-
-        df_equals(
-            modin_df.drop_duplicates(keep=False, inplace=False),
-            pandas_df.drop_duplicates(keep=False, inplace=False),
-        )
-
-        df_equals(
-            modin_df.drop_duplicates(inplace=False),
-            pandas_df.drop_duplicates(inplace=False),
-        )
-
-        modin_df.drop_duplicates(inplace=True)
-        df_equals(modin_df, pandas_df.drop_duplicates(inplace=False))
 
         frame_data = {
             "A": list(range(3)) * 2,
@@ -1890,7 +1876,7 @@ class TestDFPartOne:
             "C": list(range(6)),
         }
         modin_df = pd.DataFrame(frame_data)
-        modin_df.drop_duplicates(subset=["A", "B"], keep=False, inplace=True)
+        modin_df.drop_duplicates(subset=["A", "B"], keep=keep, inplace=inplace)
         df_equals(modin_df, pandas.DataFrame({"A": [], "B": [], "C": []}))
 
     def test_drop_duplicates_with_missing_index_values(self):
@@ -2136,12 +2122,24 @@ class TestDFPartOne:
             modin_df.dot(modin_df.T)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_duplicated(self, data):
+    @pytest.mark.parametrize(
+        "keep", ["last", "first", False], ids=["last", "first", "False"]
+    )
+    def test_duplicated(self, data, keep):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        pandas_result = pandas_df.duplicated()
-        modin_result = modin_df.duplicated()
+        pandas_result = pandas_df.duplicated(keep=keep)
+        modin_result = modin_df.duplicated(keep=keep)
+        df_equals(modin_result, pandas_result)
+
+        import random
+
+        subset = random.sample(
+            list(pandas_df.columns), random.randint(1, len(pandas_df.columns))
+        )
+        pandas_result = pandas_df.duplicated(keep=keep, subset=subset)
+        modin_result = modin_df.duplicated(keep=keep, subset=subset)
 
         df_equals(modin_result, pandas_result)
 

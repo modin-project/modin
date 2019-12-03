@@ -1091,14 +1091,9 @@ class BasePandasDataset(object):
                 deduplicated : DataFrame
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        duplicates = self.duplicated(keep=keep, **kwargs)
+        duplicates = self.duplicated(keep=keep)
         indices = duplicates.values.nonzero()[0]
         return self.drop(index=self.index[indices], inplace=inplace)
-
-    def duplicated(self, keep="first"):
-        duplicates = self.apply(lambda s: s.duplicated(keep=keep))[0]
-        duplicates.name = None
-        return duplicates
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.

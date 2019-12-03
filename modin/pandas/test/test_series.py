@@ -1200,26 +1200,16 @@ def test_drop():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_drop_duplicates(data):
+@pytest.mark.parametrize(
+    "keep", ["last", "first", False], ids=["last", "first", "False"]
+)
+@pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
+def test_drop_duplicates(data, keep, inplace):
     modin_series, pandas_series = create_test_series(data)
     df_equals(
-        modin_series.drop_duplicates(keep="first", inplace=False),
-        pandas_series.drop_duplicates(keep="first", inplace=False),
+        modin_series.drop_duplicates(keep=keep, inplace=inplace),
+        pandas_series.drop_duplicates(keep=keep, inplace=inplace),
     )
-    df_equals(
-        modin_series.drop_duplicates(keep="last", inplace=False),
-        pandas_series.drop_duplicates(keep="last", inplace=False),
-    )
-    df_equals(
-        modin_series.drop_duplicates(keep=False, inplace=False),
-        pandas_series.drop_duplicates(keep=False, inplace=False),
-    )
-    df_equals(
-        modin_series.drop_duplicates(inplace=False),
-        pandas_series.drop_duplicates(inplace=False),
-    )
-    modin_series.drop_duplicates(inplace=True)
-    df_equals(modin_series, pandas_series.drop_duplicates(inplace=False))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1261,7 +1251,9 @@ def test_dtype(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("keep", ["last", "first"], ids=["last", "first"])
+@pytest.mark.parametrize(
+    "keep", ["last", "first", False], ids=["last", "first", "False"]
+)
 def test_duplicated(data, keep):
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.duplicated(keep=keep)
