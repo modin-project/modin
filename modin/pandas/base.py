@@ -193,8 +193,6 @@ class BasePandasDataset(object):
     def _binary_op(self, op, other, axis=None, **kwargs):
         axis = self._get_axis_number(axis) if axis is not None else 1
         if kwargs.get("level", None) is not None:
-            if isinstance(other, BasePandasDataset):
-                other = other._to_pandas()
             return self._default_to_pandas(
                 getattr(getattr(pandas, self.__name__), op), other, axis=axis, **kwargs
             )
@@ -214,6 +212,11 @@ class BasePandasDataset(object):
                 empty_self_str,
             )
         )
+        args = (a._to_pandas() if hasattr(a, "_to_pandas") else a for a in args)
+        kwargs = {
+            k: v._to_pandas() if hasattr(v, "_to_pandas") else v
+            for k, v in kwargs.items()
+        }
         if callable(op):
             result = op(self._to_pandas(), *args, **kwargs)
         elif isinstance(op, str):
@@ -382,8 +385,6 @@ class BasePandasDataset(object):
         fill_axis=0,
         broadcast_axis=None,
     ):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
         return self._default_to_pandas(
             "align",
             other,
@@ -687,15 +688,11 @@ class BasePandasDataset(object):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._to_pandas()
         return self._default_to_pandas(
             "combine", other, func, fill_value=fill_value, **kwargs
         )
 
     def combine_first(self, other):
-        if isinstance(other, type(self)):
-            other = other._to_pandas()
         return self._default_to_pandas("combine_first", other=other)
 
     def compound(self, axis=None, skipna=None, level=None):
@@ -899,7 +896,6 @@ class BasePandasDataset(object):
             if len(common) > len(self_labels) or len(common) > len(other.index):
                 raise ValueError("matrices are not aligned")
             if isinstance(self, DataFrame) and isinstance(other, DataFrame):
-                other = other._to_pandas()
                 return self._default_to_pandas("dot", other)
         else:
             other = np.asarray(other)
@@ -1193,7 +1189,7 @@ class BasePandasDataset(object):
         if isinstance(value, BasePandasDataset):
             new_query_compiler = self._default_to_pandas(
                 "fillna",
-                value=value._to_pandas(),
+                value=value,
                 method=method,
                 axis=axis,
                 inplace=False,
@@ -1558,8 +1554,6 @@ class BasePandasDataset(object):
         errors="raise",
         try_cast=False,
     ):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
         return self._default_to_pandas(
             "mask",
             cond,
@@ -2065,8 +2059,6 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
         return self._default_to_pandas(
             "reindex_like",
             other,
@@ -3236,8 +3228,6 @@ class BasePandasDataset(object):
         return self.eq(other)
 
     def __finalize__(self, other, method=None, **kwargs):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
         return self._default_to_pandas("__finalize__", other, method=method, **kwargs)
 
     def __ge__(self, other):
