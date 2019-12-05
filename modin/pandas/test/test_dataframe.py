@@ -18,6 +18,8 @@ from .utils import (
     name_contains,
     test_data_values,
     test_data_keys,
+    test_data_with_duplicates_values,
+    test_data_with_duplicates_keys,
     numeric_dfs,
     no_numeric_dfs,
     test_func_keys,
@@ -1856,29 +1858,30 @@ class TestDFPartOne:
         with pytest.warns(UserWarning):
             df.droplevel("level_2", axis=1)
 
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
+    )
     @pytest.mark.parametrize(
         "keep", ["last", "first", False], ids=["last", "first", "False"]
     )
-    @pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
-    def test_drop_duplicates(self, data, keep, inplace):
+    @pytest.mark.parametrize(
+        "subset", [None, ["col1", "col3", "col7"]], ids=["None", "subset"]
+    )
+    def test_drop_duplicates(self, data, keep, subset):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
         df_equals(
-            modin_df.drop_duplicates(keep=keep, inplace=inplace),
-            pandas_df.drop_duplicates(keep=keep, inplace=inplace),
+            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
+            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
         )
 
-        import random
+        modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        pandas_results = pandas_df.drop_duplicates(
+            keep=keep, inplace=True, subset=subset
+        )
 
-        subset = random.sample(
-            list(pandas_df.columns), random.randint(1, len(pandas_df.columns))
-        )
-        df_equals(
-            modin_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace),
-            pandas_df.drop_duplicates(keep=keep, subset=subset, inplace=inplace),
-        )
+        df_equals(modin_results, pandas_results)
 
     def test_drop_duplicates_with_missing_index_values(self):
         data = {
