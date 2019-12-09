@@ -1088,14 +1088,11 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if kwargs.get("subset", None) is not None:
-            duplicates = self.duplicated(keep=keep, **kwargs)
+            duplicates = self.duplicated(keep=keep, subset=kwargs.get("subset"))
         else:
-            duplicates = self.duplicated(keep=keep, **kwargs)
-        (indices,) = duplicates.values.nonzero()
+            duplicates = self.duplicated(keep=keep)
+        indices = duplicates.values.nonzero()[0]
         return self.drop(index=self.index[indices], inplace=inplace)
-
-    def duplicated(self, keep="first", **kwargs):
-        return self._default_to_pandas("duplicated", keep=keep, **kwargs)
 
     def eq(self, other, axis="columns", level=None):
         """Checks element-wise that this is equal to other.

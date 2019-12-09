@@ -99,6 +99,35 @@ test_data = {
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
 
+test_data_with_duplicates = {
+    "no_duplicates": {
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): range(NROWS)
+        for i in range(NCOLS)
+    },
+    "all_duplicates": {
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            float(i) for _ in range(NROWS)
+        ]
+        for i in range(NCOLS)
+    },
+    "some_duplicates": {
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            i if j % 7 == 0 else x for j, x in enumerate(range(NROWS))
+        ]
+        for i in range(NCOLS)
+    },
+    "subset_duplicates": {
+        "col{}".format(i): [
+            i if j % 7 == 0 and i in [1, 3, 7] else x
+            for j, x in enumerate(range(NROWS))
+        ]
+        for i in range(NCOLS)
+    },
+}
+
+test_data_with_duplicates_values = list(test_data_with_duplicates.values())
+test_data_with_duplicates_keys = list(test_data_with_duplicates.keys())
+
 numeric_dfs = [
     "empty_data",
     "columns_only",
