@@ -964,8 +964,13 @@ def test_compound(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_compress(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.raises(KeyError):
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    try:
+        pandas_series.compress(pandas_series > 30)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.compress(modin_series > 30)
+    else:
         modin_series.compress(modin_series > 30)
 
 

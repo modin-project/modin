@@ -1180,8 +1180,12 @@ class TestDFPartOne:
 
     def test_assign(self):
         data = test_data_values[0]
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
         with pytest.warns(UserWarning):
-            pd.DataFrame(data).assign()
+            modin_result = modin_df.assign(new_column=pd.Series(modin_df.iloc[:, 0]))
+        pandas_result = pandas_df.assign(new_column=pd.Series(pandas_df.iloc[:, 0]))
+        df_equals(modin_result, pandas_result)
 
     def test_astype(self):
         td = TestData()
