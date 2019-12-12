@@ -1532,7 +1532,7 @@ class DataFrame(BasePandasDataset):
         if axis == 1 and len(self.columns) == 1:
             return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
-            return Series(query_compiler=self._query_compiler)
+            return Series(query_compiler=self.T._query_compiler)
         else:
             return self.copy()
 

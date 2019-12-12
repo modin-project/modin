@@ -4635,6 +4635,21 @@ class TestDFPartTwo:
         ray_df_5 = pd.DataFrame(frame_data_5).squeeze()
         df_equals(ray_df_5, pandas_df_5)
 
+        data = [
+            [
+                pd.Timestamp("2019-01-02"),
+                pd.Timestamp("2019-01-03"),
+                pd.Timestamp("2019-01-04"),
+                pd.Timestamp("2019-01-05"),
+            ],
+            [1, 1, 1, 2],
+        ]
+        df = pd.DataFrame(data, index=["date", "value"]).T
+        pf = pandas.DataFrame(data, index=["date", "value"]).T
+        df.set_index("date", inplace=True)
+        pf.set_index("date", inplace=True)
+        df_equals(df.iloc[0], pf.iloc[0])
+
     def test_stack(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
