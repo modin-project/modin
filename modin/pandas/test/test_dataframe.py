@@ -3919,9 +3919,9 @@ class TestDFPartTwo:
         tm.assert_index_equal(
             modin_df.rename(index=str.upper).index, df.rename(index=str.upper).index
         )
-
         # have to pass something
-        pytest.raises(TypeError, modin_df.rename())
+        with pytest.raises(TypeError):
+            modin_df.rename()
 
         # partial columns
         renamed = test_data.frame.rename(columns={"C": "foo", "D": "bar"})
