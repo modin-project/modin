@@ -128,6 +128,7 @@ class Series(BasePandasDataset):
 
     def __array__(self, dtype=None):
         return super(Series, self).__array__(dtype).flatten()
+
     @property
     def __array_priority__(self):  # pragma: no cover
         return self._to_pandas().__array_priority__
