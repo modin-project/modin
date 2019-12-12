@@ -11,6 +11,13 @@ class FileReader:
     query_compiler_cls = None
 
     @classmethod
+    def get_path(cls, file_path):
+        if S3_ADDRESS_REGEX.search(file_path):
+            return file_path
+        else:
+            return os.path.abspath(file_path)
+
+    @classmethod
     def file_open(cls, file_path, mode="rb", compression="infer"):
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
