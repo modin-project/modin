@@ -65,9 +65,7 @@ def test_ray_concat():
     df, df2 = generate_dfs()
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
-    df_equals(
-        pd.concat([modin_df, modin_df2]), pandas.concat([df, df2])
-    )
+    df_equals(pd.concat([modin_df, modin_df2]), pandas.concat([df, df2]))
 
 
 def test_ray_concat_with_series():

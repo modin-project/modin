@@ -477,15 +477,12 @@ def test_multi_column_groupby():
         ray_df.groupby(by, axis=1).count()
 
 
-
 def eval_ngroups(ray_groupby, pandas_groupby):
     assert ray_groupby.ngroups == pandas_groupby.ngroups
 
 
-
 def eval_skew(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.skew(), pandas_groupby.skew())
-
 
 
 def eval_ffill(ray_groupby, pandas_groupby):
@@ -496,26 +493,21 @@ def eval_ffill(ray_groupby, pandas_groupby):
             pass
 
 
-
 def eval_sem(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.sem()
-
 
 
 def eval_mean(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.mean(), pandas_groupby.mean())
 
 
-
 def eval_any(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.any(), pandas_groupby.any())
 
 
-
 def eval_min(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.min(), pandas_groupby.min())
-
 
 
 def eval_idxmax(ray_groupby, pandas_groupby):
@@ -523,17 +515,14 @@ def eval_idxmax(ray_groupby, pandas_groupby):
         ray_groupby.idxmax()
 
 
-
 def eval_ndim(ray_groupby, pandas_groupby):
     assert ray_groupby.ndim == pandas_groupby.ndim
-
 
 
 def eval_cumsum(ray_groupby, pandas_groupby, axis=0):
     ray_df_equals_pandas(
         ray_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis)
     )
-
 
 
 def eval_pct_change(ray_groupby, pandas_groupby):
@@ -544,28 +533,23 @@ def eval_pct_change(ray_groupby, pandas_groupby):
             pass
 
 
-
 def eval_cummax(ray_groupby, pandas_groupby, axis=0):
     ray_df_equals_pandas(
         ray_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis)
     )
 
 
-
 def eval_apply(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.apply(func), pandas_groupby.apply(func))
-
 
 
 def eval_dtypes(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.dtypes, pandas_groupby.dtypes)
 
 
-
 def eval_first(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.first()
-
 
 
 def eval_backfill(ray_groupby, pandas_groupby):
@@ -576,12 +560,10 @@ def eval_backfill(ray_groupby, pandas_groupby):
             pass
 
 
-
 def eval_cummin(ray_groupby, pandas_groupby, axis=0):
     ray_df_equals_pandas(
         ray_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis)
     )
-
 
 
 def eval_bfill(ray_groupby, pandas_groupby):
@@ -592,31 +574,25 @@ def eval_bfill(ray_groupby, pandas_groupby):
             pass
 
 
-
 def eval_idxmin(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.idxmin()
-
 
 
 def eval_prod(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.prod(), pandas_groupby.prod())
 
 
-
 def eval_std(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.std(), pandas_groupby.std())
-
 
 
 def eval_aggregate(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
 
-
 def eval_agg(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.agg(func), pandas_groupby.agg(func))
-
 
 
 def eval_last(ray_groupby, pandas_groupby):
@@ -624,57 +600,46 @@ def eval_last(ray_groupby, pandas_groupby):
         ray_groupby.last()
 
 
-
 def eval_mad(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.mad()
-
 
 
 def eval_rank(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.rank(), pandas_groupby.rank())
 
 
-
 def eval_max(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.max(), pandas_groupby.max())
-
 
 
 def eval_var(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.var(), pandas_groupby.var())
 
 
-
 def eval_len(ray_groupby, pandas_groupby):
     assert len(ray_groupby) == len(pandas_groupby)
-
 
 
 def eval_sum(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.sum(), pandas_groupby.sum())
 
 
-
 def eval_ngroup(ray_groupby, pandas_groupby):
     ray_series_equals_pandas(ray_groupby.ngroup(), pandas_groupby.ngroup())
-
 
 
 def eval_nunique(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.nunique(), pandas_groupby.nunique())
 
 
-
 def eval_median(ray_groupby, pandas_groupby):
     ray_df_almost_equals_pandas(ray_groupby.median(), pandas_groupby.median())
-
 
 
 def eval_head(ray_groupby, pandas_groupby, n):
     with pytest.warns(UserWarning):
         ray_groupby.head()
-
 
 
 def eval_cumprod(ray_groupby, pandas_groupby, axis=0):
@@ -684,22 +649,18 @@ def eval_cumprod(ray_groupby, pandas_groupby, axis=0):
     )
 
 
-
 def eval_cov(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.cov()
-
 
 
 def eval_transform(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.transform(func), pandas_groupby.transform(func))
 
 
-
 def eval_corr(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         ray_groupby.corr()
-
 
 
 def eval_fillna(ray_groupby, pandas_groupby):
@@ -708,21 +669,17 @@ def eval_fillna(ray_groupby, pandas_groupby):
     )
 
 
-
 def eval_count(ray_groupby, pandas_groupby):
     ray_df_equals_pandas(ray_groupby.count(), pandas_groupby.count())
-
 
 
 def eval_pipe(ray_groupby, pandas_groupby, func):
     ray_df_equals_pandas(ray_groupby.pipe(func), pandas_groupby.pipe(func))
 
 
-
 def eval_tail(ray_groupby, pandas_groupby, n):
     with pytest.warns(UserWarning):
         ray_groupby.tail()
-
 
 
 def eval_quantile(ray_groupby, pandas_groupby):
@@ -735,14 +692,12 @@ def eval_quantile(ray_groupby, pandas_groupby):
         ray_df_equals_pandas(ray_groupby.quantile(q=0.4), pandas_result)
 
 
-
 def eval_take(ray_groupby, pandas_groupby):
     with pytest.warns(UserWarning):
         try:
             ray_groupby.take()
         except Exception:
             pass
-
 
 
 def eval___getattr__(ray_groupby, pandas_groupby):
@@ -753,11 +708,9 @@ def eval___getattr__(ray_groupby, pandas_groupby):
         ray_groupby.col1
 
 
-
 def eval_groups(ray_groupby, pandas_groupby):
     for k, v in ray_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
-
 
 
 def eval_shift(ray_groupby, pandas_groupby):

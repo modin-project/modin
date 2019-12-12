@@ -1219,7 +1219,9 @@ def test_HDFStore():
     modin_store["foo"] = modin_df
     pandas_store["foo"] = pandas_df
 
-    assert assert_files_eq(TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS)
+    assert assert_files_eq(
+        TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS
+    )
     modin_df = modin_store.get("foo")
     pandas_df = pandas_store.get("foo")
     df_equals(modin_df, pandas_df)
@@ -1325,23 +1327,25 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
 
     teardown_fwf_file()
 
+
 def test_cleanup():
-    filenames = [TEST_PARQUET_FILENAME,
-                 TEST_CSV_FILENAME,
-                 TEST_JSON_FILENAME,
-    TEST_HTML_FILENAME,
-    TEST_EXCEL_FILENAME,
-    TEST_FEATHER_FILENAME,
-    TEST_READ_HDF_FILENAME,
-    TEST_WRITE_HDF_FILENAME_MODIN,
-    TEST_WRITE_HDF_FILENAME_PANDAS,
-    TEST_MSGPACK_FILENAME,
-    TEST_STATA_FILENAME,
-    TEST_PICKLE_FILENAME,
-    TEST_SAS_FILENAME,
-    TEST_FWF_FILENAME,
-    TEST_GBQ_FILENAME,
-                 ]
+    filenames = [
+        TEST_PARQUET_FILENAME,
+        TEST_CSV_FILENAME,
+        TEST_JSON_FILENAME,
+        TEST_HTML_FILENAME,
+        TEST_EXCEL_FILENAME,
+        TEST_FEATHER_FILENAME,
+        TEST_READ_HDF_FILENAME,
+        TEST_WRITE_HDF_FILENAME_MODIN,
+        TEST_WRITE_HDF_FILENAME_PANDAS,
+        TEST_MSGPACK_FILENAME,
+        TEST_STATA_FILENAME,
+        TEST_PICKLE_FILENAME,
+        TEST_SAS_FILENAME,
+        TEST_FWF_FILENAME,
+        TEST_GBQ_FILENAME,
+    ]
     for f in filenames:
         if os.path.exists(f):
             os.remove(f)
