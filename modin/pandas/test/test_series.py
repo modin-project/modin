@@ -3249,6 +3249,20 @@ def test_str_upper(data):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_title(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.title()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.title()
+    else:
+        modin_result = modin_series.str.title()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
