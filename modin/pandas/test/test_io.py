@@ -125,8 +125,7 @@ def create_test_pandas_dataframe():
     return df
 
 
-@pytest.fixture
-def test_files_eq(path1, path2):
+def assert_files_eq(path1, path2):
     with open(path1, "rb") as file1, open(path2, "rb") as file2:
         file1_content = file1.read()
         file2_content = file2.read()
@@ -991,7 +990,7 @@ def test_to_csv():
     modin_df.to_csv(TEST_CSV_DF_FILENAME)
     pandas_df.to_csv(TEST_CSV_pandas_FILENAME)
 
-    assert test_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
+    assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
 
     teardown_test_file(TEST_CSV_pandas_FILENAME)
     teardown_test_file(TEST_CSV_DF_FILENAME)
@@ -1027,7 +1026,7 @@ def test_to_excel():
     modin_writer.save()
     pandas_writer.save()
 
-    assert test_files_eq(TEST_EXCEL_DF_FILENAME, TEST_EXCEL_pandas_FILENAME)
+    assert assert_files_eq(TEST_EXCEL_DF_FILENAME, TEST_EXCEL_pandas_FILENAME)
 
     teardown_test_file(TEST_EXCEL_DF_FILENAME)
     teardown_test_file(TEST_EXCEL_pandas_FILENAME)
@@ -1043,7 +1042,7 @@ def test_to_feather():
     modin_df.to_feather(TEST_FEATHER_DF_FILENAME)
     pandas_df.to_feather(TEST_FEATHER_pandas_FILENAME)
 
-    assert test_files_eq(TEST_FEATHER_DF_FILENAME, TEST_FEATHER_pandas_FILENAME)
+    assert assert_files_eq(TEST_FEATHER_DF_FILENAME, TEST_FEATHER_pandas_FILENAME)
 
     teardown_test_file(TEST_FEATHER_pandas_FILENAME)
     teardown_test_file(TEST_FEATHER_DF_FILENAME)
@@ -1066,7 +1065,7 @@ def test_to_html():
     modin_df.to_html(TEST_HTML_DF_FILENAME)
     pandas_df.to_html(TEST_HTML_pandas_FILENAME)
 
-    assert test_files_eq(TEST_HTML_DF_FILENAME, TEST_HTML_pandas_FILENAME)
+    assert assert_files_eq(TEST_HTML_DF_FILENAME, TEST_HTML_pandas_FILENAME)
 
     teardown_test_file(TEST_HTML_pandas_FILENAME)
     teardown_test_file(TEST_HTML_DF_FILENAME)
@@ -1082,7 +1081,7 @@ def test_to_json():
     modin_df.to_json(TEST_JSON_DF_FILENAME)
     pandas_df.to_json(TEST_JSON_pandas_FILENAME)
 
-    assert test_files_eq(TEST_JSON_DF_FILENAME, TEST_JSON_pandas_FILENAME)
+    assert assert_files_eq(TEST_JSON_DF_FILENAME, TEST_JSON_pandas_FILENAME)
 
     teardown_test_file(TEST_JSON_pandas_FILENAME)
     teardown_test_file(TEST_JSON_DF_FILENAME)
@@ -1103,7 +1102,7 @@ def test_to_msgpack():
     modin_df.to_msgpack(TEST_MSGPACK_DF_FILENAME)
     pandas_df.to_msgpack(TEST_MSGPACK_pandas_FILENAME)
 
-    assert test_files_eq(TEST_MSGPACK_DF_FILENAME, TEST_MSGPACK_pandas_FILENAME)
+    assert assert_files_eq(TEST_MSGPACK_DF_FILENAME, TEST_MSGPACK_pandas_FILENAME)
 
     teardown_test_file(TEST_MSGPACK_pandas_FILENAME)
     teardown_test_file(TEST_MSGPACK_DF_FILENAME)
@@ -1119,7 +1118,7 @@ def test_to_parquet():
     modin_df.to_parquet(TEST_PARQUET_DF_FILENAME)
     pandas_df.to_parquet(TEST_PARQUET_pandas_FILENAME)
 
-    assert test_files_eq(TEST_PARQUET_DF_FILENAME, TEST_PARQUET_pandas_FILENAME)
+    assert assert_files_eq(TEST_PARQUET_DF_FILENAME, TEST_PARQUET_pandas_FILENAME)
 
     teardown_test_file(TEST_PARQUET_pandas_FILENAME)
     teardown_test_file(TEST_PARQUET_DF_FILENAME)
@@ -1143,7 +1142,7 @@ def test_to_pickle():
     modin_df.to_pickle(TEST_PICKLE_DF_FILENAME)
     pandas_df.to_pickle(TEST_PICKLE_pandas_FILENAME)
 
-    assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
+    assert assert_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
 
     teardown_test_file(TEST_PICKLE_pandas_FILENAME)
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
@@ -1151,7 +1150,7 @@ def test_to_pickle():
     pd.to_pickle(modin_df, TEST_PICKLE_DF_FILENAME)
     pandas.to_pickle(pandas_df, TEST_PICKLE_pandas_FILENAME)
 
-    assert test_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
+    assert assert_files_eq(TEST_PICKLE_DF_FILENAME, TEST_PICKLE_pandas_FILENAME)
 
     teardown_test_file(TEST_PICKLE_pandas_FILENAME)
     teardown_test_file(TEST_PICKLE_DF_FILENAME)
@@ -1203,7 +1202,7 @@ def test_to_stata():
     modin_df.to_stata(TEST_STATA_DF_FILENAME)
     pandas_df.to_stata(TEST_STATA_pandas_FILENAME)
 
-    assert test_files_eq(TEST_STATA_DF_FILENAME, TEST_STATA_pandas_FILENAME)
+    assert assert_files_eq(TEST_STATA_DF_FILENAME, TEST_STATA_pandas_FILENAME)
 
     teardown_test_file(TEST_STATA_pandas_FILENAME)
     teardown_test_file(TEST_STATA_DF_FILENAME)
@@ -1220,7 +1219,7 @@ def test_HDFStore():
     modin_store["foo"] = modin_df
     pandas_store["foo"] = pandas_df
 
-    assert test_files_eq(TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS)
+    assert assert_files_eq(TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS)
     modin_df = modin_store.get("foo")
     pandas_df = pandas_store.get("foo")
     df_equals(modin_df, pandas_df)
@@ -1325,3 +1324,24 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
     df_equals(modin_df, pandas_df)
 
     teardown_fwf_file()
+
+def test_cleanup():
+    filenames = [TEST_PARQUET_FILENAME,
+                 TEST_CSV_FILENAME,
+                 TEST_JSON_FILENAME,
+    TEST_HTML_FILENAME,
+    TEST_EXCEL_FILENAME,
+    TEST_FEATHER_FILENAME,
+    TEST_READ_HDF_FILENAME,
+    TEST_WRITE_HDF_FILENAME_MODIN,
+    TEST_WRITE_HDF_FILENAME_PANDAS,
+    TEST_MSGPACK_FILENAME,
+    TEST_STATA_FILENAME,
+    TEST_PICKLE_FILENAME,
+    TEST_SAS_FILENAME,
+    TEST_FWF_FILENAME,
+    TEST_GBQ_FILENAME,
+                 ]
+    for f in filenames:
+        if os.path.exists(f):
+            os.remove(f)
