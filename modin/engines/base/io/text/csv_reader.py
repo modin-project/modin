@@ -61,6 +61,7 @@ class CSVReader(TextFileReader):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not isinstance(filepath_or_buffer, py.path.local):
             read_from_pandas = True
             # Pandas read_csv supports pathlib.Path
