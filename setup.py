@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
@@ -25,4 +21,5 @@ setup(
         "ray": ray_deps,
         "all": dask_deps + ray_deps,
     },
+    python_requires=">=3.5",
 )
