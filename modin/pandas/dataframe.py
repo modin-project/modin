@@ -1322,6 +1322,8 @@ class DataFrame(BasePandasDataset):
             If inplace is False, a new DataFrame with the updated axes.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
+        if mapper is None and index is None and columns is None:
+            raise TypeError("must pass an index to rename")
         # We have to do this with the args because of how rename handles kwargs. It
         # doesn't ignore None values passed in, so we have to filter them ourselves.
         args = locals()
