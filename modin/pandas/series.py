@@ -129,11 +129,6 @@ class Series(BasePandasDataset):
     def __array__(self, dtype=None):
         return super(Series, self).__array__(dtype).flatten()
 
-    def __array_prepare__(self, result, context=None):  # pragma: no cover
-        return self._default_to_pandas(
-            pandas.Series.__array_prepare__, result, context=context
-        )
-
     @property
     def __array_priority__(self):  # pragma: no cover
         return self._to_pandas().__array_priority__
