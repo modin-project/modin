@@ -1518,6 +1518,9 @@ class StringMethods(object):
     def upper(self):
         return Series(query_compiler=self._query_compiler.str_upper())
 
+    def title(self):
+        return Series(query_compiler=self._query_compiler.str_title())
+
     def find(self, sub, start=0, end=None):
         if not isinstance(sub, str):
             raise TypeError(

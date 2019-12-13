@@ -449,6 +449,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_startswith = MapFunction.register(_str_map("startswith"), dtypes=np.bool)
     str_strip = MapFunction.register(_str_map("strip"), dtypes="copy")
     str_swapcase = MapFunction.register(_str_map("swapcase"), dtypes="copy")
+    str_title = MapFunction.register(_str_map("title"), dtypes="copy")
     str_translate = MapFunction.register(_str_map("translate"), dtypes="copy")
     str_upper = MapFunction.register(_str_map("upper"), dtypes="copy")
     str_wrap = MapFunction.register(_str_map("wrap"), dtypes="copy")
