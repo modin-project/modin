@@ -1430,6 +1430,7 @@ def test_get_values(data):
     with pytest.warns(UserWarning):
         modin_series.get_values()
 
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_groupby(data):
     modin_series, _ = create_test_series(data)
