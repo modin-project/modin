@@ -230,8 +230,7 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
-        # This operation requires a SeriesGroupBy Object
-        return self._default_to_pandas(lambda df: df.__getitem__(key))
+        return SeriesGroupBy(self._default_to_pandas(lambda df: df.__getitem__(key)))
 
     def cummin(self, axis=0, **kwargs):
         return self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
@@ -491,3 +490,37 @@ class DataFrameGroupBy(object):
             return f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
 
         return self._df._default_to_pandas(groupby_on_multiple_columns)
+
+
+class SeriesGroupBy(object):  # pragma: no cover
+    def __init__(self, pandas_groupby_obj):
+        self._pandas_groupby_obj = pandas_groupby_obj
+
+    def __getattribute__(self, item):
+        if item in ["_pandas_groupby_obj"]:
+            return object.__getattribute__(self, item)
+        return_val = self._pandas_groupby_obj.__getattribute__(item)
+        from .series import Series
+        from .dataframe import DataFrame
+
+        if isinstance(return_val, pandas.Series):
+            return Series(return_val)
+        elif isinstance(return_val, pandas.DataFrame):
+            return DataFrame(return_val)
+        elif callable(return_val):
+
+            # This wraps the pandas callable and intercepts the return value before it
+            # is given back to the user to re-distribute it.
+            def wrapper(*args, **kwargs):
+                pandas_return_val = return_val(*args, **kwargs)
+                if isinstance(pandas_return_val, pandas.Series):
+                    return Series(pandas_return_val)
+                elif isinstance(pandas_return_val, pandas.DataFrame):
+                    return DataFrame(pandas_return_val)
+                else:
+                    return pandas_return_val
+
+            return wrapper
+
+        else:
+            return return_val

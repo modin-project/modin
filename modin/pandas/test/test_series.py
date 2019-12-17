@@ -1431,12 +1431,14 @@ def test_get_values(data):
         modin_series.get_values()
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_groupby():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_groupby(data):
+    modin_series, _ = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.groupby(None, None, None, None, None, None, None)
+    with pytest.warns(UserWarning):
+        result = modin_series.groupby(modin_series).count()
+
+    assert isinstance(result, pd.Series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

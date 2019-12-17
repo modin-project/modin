@@ -572,17 +572,21 @@ class Series(BasePandasDataset):
         observed=False,
         **kwargs
     ):
-        return self._default_to_pandas(
-            pandas.Series.groupby,
-            by=by,
-            axis=axis,
-            level=level,
-            as_index=as_index,
-            sort=sort,
-            group_keys=group_keys,
-            squeeze=squeeze,
-            observed=observed,
-            **kwargs
+        from .groupby import SeriesGroupBy
+
+        return SeriesGroupBy(
+            self._default_to_pandas(
+                pandas.Series.groupby,
+                by=by,
+                axis=axis,
+                level=level,
+                as_index=as_index,
+                sort=sort,
+                group_keys=group_keys,
+                squeeze=squeeze,
+                observed=observed,
+                **kwargs
+            )
         )
 
     def gt(self, other, level=None, fill_value=None, axis=0):
