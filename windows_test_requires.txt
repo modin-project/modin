@@ -10,7 +10,7 @@ tables==3.4.4
 scipy
 s3fs
 pytest
-coverage
+coverage<5.0
 pytest-cov
 pytest-xdist
 feather-format
