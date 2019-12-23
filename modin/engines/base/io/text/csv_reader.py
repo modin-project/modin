@@ -9,54 +9,6 @@ import sys
 
 class CSVReader(TextFileReader):
     @classmethod
-    def _skip_header(
-        cls,
-        f,
-        comment=None,
-        skiprows=None,
-        encoding=None,
-        header="infer",
-        names=None,
-        **kwargs
-    ):
-        lines_read = 0
-        if header is None:
-            return lines_read
-        elif header == "infer":
-            if names is not None:
-                return lines_read
-            else:
-                header = 0
-        # Skip lines before the header
-        if isinstance(skiprows, int):
-            lines_read += skiprows
-            for _ in range(skiprows):
-                f.readline()
-            skiprows = None
-
-        header_lines = header + 1 if isinstance(header, int) else max(header) + 1
-        header_lines_skipped = 0
-        # Python 2 files use a read-ahead buffer which breaks our use of tell()
-        for line in iter(f.readline, ""):
-            lines_read += 1
-            skip = False
-            if not skip and comment is not None:
-                if encoding is not None:
-                    skip |= line.decode(encoding)[0] == comment
-                else:
-                    skip |= line.decode()[0] == comment
-            if not skip and callable(skiprows):
-                skip |= skiprows(lines_read)
-            elif not skip and hasattr(skiprows, "__contains__"):
-                skip |= lines_read in skiprows
-
-            if not skip:
-                header_lines_skipped += 1
-                if header_lines_skipped == header_lines:
-                    return lines_read
-        return lines_read
-
-    @classmethod
     def read(cls, filepath_or_buffer, **kwargs):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
@@ -142,14 +94,24 @@ class CSVReader(TextFileReader):
             usecols=usecols,
         )
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
-            if kwargs.get("encoding", None) is not None:
-                partition_kwargs["skiprows"] = 1
-                f.seek(0, os.SEEK_SET)  # Return to beginning of file
-
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
-            kwargs["skiprows"] = skiprows
-            cls._skip_header(f, **kwargs)
+            if isinstance(skiprows, int) or skiprows is None:
+                if skiprows is None:
+                    skiprows = 0
+                header = kwargs.get("header", "infer")
+                if header == "infer" and kwargs.get("names", None) is None:
+                    skiprows += 1
+                elif isinstance(header, int):
+                    skiprows += header + 1
+                elif hasattr(header, "__iter__") and not isinstance(header, str):
+                    skiprows += max(header) + 1
+                for _ in range(skiprows):
+                    f.readline()
+            elif skiprows is not None:
+                partition_kwargs["skiprows"] = skiprows
+            if kwargs.get("encoding", None) is not None:
+                partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
@@ -197,6 +159,11 @@ class CSVReader(TextFileReader):
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
+            # pandas has a really weird edge case here.
+            if kwargs.get("names", None) is not None and skiprows > 1:
+                new_index = pandas.RangeIndex(
+                    skiprows - 1, new_index.stop + skiprows - 1
+                )
         else:
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
