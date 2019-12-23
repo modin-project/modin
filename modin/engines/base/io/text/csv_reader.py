@@ -3,7 +3,6 @@ from modin.data_management.utils import compute_chunksize
 from pandas.io.parsers import _validate_usecols_arg
 import pandas
 import py
-import os
 import sys
 
 
