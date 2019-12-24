@@ -107,8 +107,6 @@ class CSVReader(TextFileReader):
                     skiprows += max(header) + 1
                 for _ in range(skiprows):
                     f.readline()
-            elif skiprows is not None:
-                partition_kwargs["skiprows"] = skiprows
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
