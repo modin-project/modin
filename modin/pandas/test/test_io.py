@@ -905,8 +905,23 @@ def test_from_csv_skiprows(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2)
+    df_equals(modin_df, pandas_df)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2
+    )
+    modin_df = pd.read_csv(
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2
+    )
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=lambda x: x % 2
+    )
+    modin_df = pd.read_csv(
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=lambda x: x % 2
+    )
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_encoding(make_csv_file):
