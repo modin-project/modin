@@ -608,6 +608,18 @@ def test_from_sql(make_sql_connection):
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+def test_from_sql_with_chunksize(make_sql_connection):
+    filename = "test_from_sql.db"
+    table = "test_from_sql"
+    conn = make_sql_connection(filename, table)
+    query = "select * from {0}".format(table)
+
+    pandas_gen = pandas.read_sql(query, conn, chunksize=10)
+    modin_gen = pd.read_sql(query, conn, chunksize=10)
+    for modin_df, pandas_df in zip(modin_gen, pandas_gen):
+        assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
 def test_from_sas():
     pandas_df = pandas.read_sas(TEST_SAS_FILENAME)
