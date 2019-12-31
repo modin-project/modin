@@ -153,7 +153,7 @@ def make_csv_file(delimiter=",", compression="infer"):
     def _make_csv_file(
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
-        force=False,
+        force=True,
         delimiter=delimiter,
         encoding=None,
         compression=compression,
@@ -671,8 +671,6 @@ def test_from_csv_bz2(make_csv_file):
 def test_from_csv_xz(make_csv_file):
     make_csv_file(compression="xz")
     xz_path = "{}.xz".format(TEST_CSV_FILENAME)
-
-    assert os.path.exists(xz_path)
 
     pandas_df = pandas.read_csv(xz_path)
     modin_df = pd.read_csv(xz_path)
