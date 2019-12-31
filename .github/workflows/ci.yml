@@ -49,9 +49,9 @@ jobs:
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: export MODIN_ENGINE=${{matrix.engine}}
-      - run: python -m pytest -n auto modin/pandas/test/test_dataframe.py::TestDFPartOne
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartOne
         if: matrix.part == 1
-      - run: python -m pytest -n auto modin/pandas/test/test_dataframe.py::TestDFPartTwo
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartTwo
         if: matrix.part == 2
       - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
