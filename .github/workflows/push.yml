@@ -11,6 +11,9 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
+      - run: pip install -U awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_ray .
+      - run: mv testmondata_ray .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
@@ -19,6 +22,14 @@ jobs:
         with:
           name: testmondata_ray
           path: testmondata_ray
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: modin-testing
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          SOURCE_DIR: "testmondata_ray"
   testmon_python:
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +40,9 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
+      - run: pip install -U awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_python .
+      - run: mv testmondata_python .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
@@ -37,6 +51,14 @@ jobs:
         with:
           name: testmondata_python
           path: testmondata_python
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: modin-testing
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          SOURCE_DIR: "testmondata_python"
   testmon_dask:
     runs-on: ubuntu-latest
     steps:
@@ -47,6 +69,9 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
+      - run: pip install -U awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
+      - run: mv testmondata_dask .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
@@ -55,6 +80,14 @@ jobs:
         with:
           name: testmondata_dask
           path: testmondata_dask
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: modin-testing
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          SOURCE_DIR: "testmondata_dask"
   testmon_pyarrow:
     runs-on: ubuntu-latest
     env:
@@ -68,6 +101,9 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
+      - run: pip install -U awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
+      - run: mv testmondata_pyarrow .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
@@ -76,6 +112,14 @@ jobs:
         with:
           name: testmondata_pyarrow
           path: testmondata_pyarrow
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: modin-testing
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          SOURCE_DIR: "testmondata_pyarrow"
   test-all:
     runs-on: ubuntu-latest
     strategy:
