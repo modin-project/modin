@@ -13,6 +13,7 @@ pytest
 coverage<5.0
 pytest-cov
 pytest-testmon
+pytest-custom_exit_code
 feather-format
 lxml
 openpyxl
