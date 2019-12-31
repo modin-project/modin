@@ -35,8 +35,6 @@ jobs:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray"]
         part: [1, 2, 3]
-    env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
@@ -67,15 +65,12 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
     needs: [lint-flake8, lint-black]
     runs-on: windows-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-    env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       MODIN_ENGINE: dask
     name: test dask
     steps:
@@ -88,8 +83,6 @@ jobs:
           architecture: "x64"
       - run: pip install -r windows_test_requires.txt
       - run: python -m pytest modin/pandas/test/test_io.py
-      - run: choco install codecov
-      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
@@ -99,7 +92,6 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
@@ -112,7 +104,6 @@ jobs:
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
-      - run: bash <(curl -s https://codecov.io/bash)
   test-api:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
