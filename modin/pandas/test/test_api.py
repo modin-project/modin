@@ -11,6 +11,7 @@ def test_top_level_api_equality():
     ignore = [
         "np",
         "testing",
+        "tests",
         "pandas",
         "core",
         "compat",
