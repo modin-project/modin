@@ -153,7 +153,7 @@ def make_csv_file(delimiter=",", compression="infer"):
     def _make_csv_file(
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
-        force=False,
+        force=True,
         delimiter=delimiter,
         encoding=None,
         compression=compression,
