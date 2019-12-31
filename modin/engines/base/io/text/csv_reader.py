@@ -2,8 +2,25 @@ from modin.engines.base.io.text.text_file_reader import TextFileReader
 from modin.data_management.utils import compute_chunksize
 from pandas.io.parsers import _validate_usecols_arg
 import pandas
-import py
 import sys
+
+
+def pathlib_or_pypath(filepath_or_buffer):
+    try:
+        import py
+
+        if isinstance(filepath_or_buffer, py.path.local):
+            return True
+    except ImportError:  # pragma: no cover
+        pass
+    try:
+        import pathlib
+
+        if isinstance(filepath_or_buffer, pathlib.Path):
+            return True
+    except ImportError:  # pragma: no cover
+        pass
+    return False
 
 
 class CSVReader(TextFileReader):
@@ -13,18 +30,8 @@ class CSVReader(TextFileReader):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
-        elif not isinstance(filepath_or_buffer, py.path.local):
-            read_from_pandas = True
-            # Pandas read_csv supports pathlib.Path
-            try:
-                import pathlib
-
-                if isinstance(filepath_or_buffer, pathlib.Path):
-                    read_from_pandas = False
-            except ImportError:  # pragma: no cover
-                pass
-            if read_from_pandas:
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+        elif not pathlib_or_pypath(filepath_or_buffer):
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
