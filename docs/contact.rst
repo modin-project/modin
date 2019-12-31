@@ -8,7 +8,7 @@ https://groups.google.com/forum/#!forum/modin-dev
 
 General questions, potential contributors, and ideas should be directed to the
 `developer mailing list`_. It is an open Google Group, so feel free to join anytime! If
-you are unsure about where to ask or post something, the mailing list is a good place to
+you are unsure about where to ask or post something, then the mailing list is a good place to
 ask as well.
 
 Issues
