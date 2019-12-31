@@ -63,7 +63,6 @@ jobs:
         if: matrix.part == 3
       - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
-    needs: [lint-flake8, lint-black]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -85,7 +84,6 @@ jobs:
       - run: choco install codecov
       - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
-    needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -108,7 +106,6 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: bash <(curl -s https://codecov.io/bash)
   test-api:
-    needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
     name: test api
     steps:
