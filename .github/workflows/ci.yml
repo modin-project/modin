@@ -44,6 +44,10 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
+      - uses: actions/download-artifact@v1
+        with:
+          name: testmondata_${{matrix.engine}}
+      - run: mv testmondata__${{matrix.engine}} .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: export MODIN_ENGINE=${{matrix.engine}}
@@ -82,6 +86,10 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
+      - uses: actions/download-artifact@v1
+        with:
+          name: testmondata_dask
+      - run: mv testmondata_dask .testmondata
       - run: pip install -r windows_test_requires.txt
       - run: python -m pytest modin/pandas/test/test_io.py
   test-pyarrow:
@@ -102,6 +110,10 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
+      - uses: actions/download-artifact@v1
+        with:
+          name: testmondata_pyarrow
+      - run: mv testmondata_pyarrow .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
