@@ -57,6 +57,9 @@ jobs:
           path: testmondata_dask
   testmon_pyarrow:
     runs-on: ubuntu-latest
+    env:
+      MODIN_BACKEND: pyarrow
+      MODIN_EXPERIMENTAL: "True"
     steps:
       - uses: actions/checkout@v1
         with:
