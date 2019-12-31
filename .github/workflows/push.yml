@@ -29,7 +29,7 @@ jobs:
           AWS_S3_BUCKET: modin-testing
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          SOURCE_DIR: "testmondata_ray"
+          SOURCE_DIR: "./testmondata_ray"
   testmon_python:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +58,7 @@ jobs:
           AWS_S3_BUCKET: modin-testing
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          SOURCE_DIR: "testmondata_python"
+          SOURCE_DIR: "./testmondata_python"
   testmon_dask:
     runs-on: ubuntu-latest
     steps:
@@ -87,7 +87,7 @@ jobs:
           AWS_S3_BUCKET: modin-testing
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          SOURCE_DIR: "testmondata_dask"
+          SOURCE_DIR: "./testmondata_dask"
   testmon_pyarrow:
     runs-on: ubuntu-latest
     env:
@@ -119,7 +119,7 @@ jobs:
           AWS_S3_BUCKET: modin-testing
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          SOURCE_DIR: "testmondata_pyarrow"
+          SOURCE_DIR: "./testmondata_pyarrow"
   test-all:
     runs-on: ubuntu-latest
     strategy:
