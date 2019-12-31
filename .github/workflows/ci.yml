@@ -71,6 +71,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
+    env:
       MODIN_ENGINE: dask
     name: test dask
     steps:
