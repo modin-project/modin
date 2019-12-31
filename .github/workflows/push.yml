@@ -19,9 +19,9 @@ jobs:
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - uses: actions/upload-artifact@v1
-          with:
-            name: .testmondata
-            path: .testmondata
+        with:
+          name: .testmondata
+          path: .testmondata
   test-all:
     runs-on: ubuntu-latest
     strategy:
