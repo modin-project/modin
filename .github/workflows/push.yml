@@ -1,34 +1,28 @@
-name: Modin_CI_PR
-on: pull_request
+name: Modin_CI_Master_Build
+on: push
 jobs:
-  lint-black:
-    name: lint (black)
+  testmon:
     runs-on: ubuntu-latest
+    strategy:
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v1
         with:
-          python-version: "3.7.x"
+          python-version: "3.6.x"
           architecture: "x64"
-      - run: pip install black
-      - run: black --check modin/
-  lint-flake8:
-    name: lint (flake8)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
+      - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
+      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
+      - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
+      - uses: actions/upload-artifact@v1
+          with:
+            name: .testmondata
+            path: .testmondata
   test-all:
-    needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -37,6 +31,7 @@ jobs:
         part: [1, 2, 3]
     env:
       CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      PYTEST_ADDOPTS:  "--cov-config=.coveragerc --cov=modin  --cov-append"
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
@@ -46,9 +41,6 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: export MODIN_ENGINE=${{matrix.engine}}
