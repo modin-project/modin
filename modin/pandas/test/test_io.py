@@ -672,6 +672,8 @@ def test_from_csv_xz(make_csv_file):
     make_csv_file(compression="xz")
     xz_path = "{}.xz".format(TEST_CSV_FILENAME)
 
+    assert os.path.exists(xz_path)
+
     pandas_df = pandas.read_csv(xz_path)
     modin_df = pd.read_csv(xz_path)
     df_equals(modin_df, pandas_df)
