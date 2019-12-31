@@ -1,7 +1,7 @@
 name: Modin_CI_Master_Build
 on: push
 jobs:
-  testmon:
+  testmon_ray:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -14,13 +14,65 @@ jobs:
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
-      - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
-      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
-      - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
+      - run: mv .testmondata testmondata_ray
       - uses: actions/upload-artifact@v1
         with:
-          name: .testmondata
-          path: .testmondata
+          name: testmondata_ray
+          path: testmondata_ray
+  testmon_python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6.x"
+          architecture: "x64"
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
+      - run: mv .testmondata testmondata_python
+      - uses: actions/upload-artifact@v1
+        with:
+          name: testmondata_python
+          path: testmondata_python
+  testmon_dask:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6.x"
+          architecture: "x64"
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
+      - run: mv .testmondata testmondata_dask
+      - uses: actions/upload-artifact@v1
+        with:
+          name: testmondata_dask
+          path: testmondata_dask
+  testmon_pyarrow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6.x"
+          architecture: "x64"
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
+      - run: mv .testmondata testmondata_pyarrow
+      - uses: actions/upload-artifact@v1
+        with:
+          name: testmondata_pyarrow
+          path: testmondata_pyarrow
   test-all:
     runs-on: ubuntu-latest
     strategy:
