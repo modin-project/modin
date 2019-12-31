@@ -11,10 +11,6 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: testmondata_ray
-      - run: mv testmondata__ray .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
@@ -33,10 +29,6 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: testmondata_python
-      - run: mv testmondata__python .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
@@ -55,10 +47,6 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: testmondata_dask
-      - run: mv testmondata_dask .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
@@ -80,10 +68,6 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: testmondata_pyarrow
-      - run: mv testmondata_pyarrow .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
