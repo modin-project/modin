@@ -45,7 +45,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: pip install -U awscli
-      - run: aws s3 cp s3://modin-testing/testmondata_${{matrix.engine}} .
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
@@ -86,7 +86,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: pip install -U awscli
-      - run: aws s3 cp s3://modin-testing/testmondata_dask .
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
       - run: pip install -r windows_test_requires.txt
       - run: python -m pytest modin/pandas/test/test_io.py
@@ -109,7 +109,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: pip install -U awscli
-      - run: aws s3 cp s3://modin-testing/testmondata_pyarrow .
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
       - run: mv testmondata_pyarrow .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
