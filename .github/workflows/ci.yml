@@ -46,9 +46,6 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/download-artifact@v1
-        with:
-          name: .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: export MODIN_ENGINE=${{matrix.engine}}
