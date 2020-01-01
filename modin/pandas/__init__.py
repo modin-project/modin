@@ -171,6 +171,7 @@ def initialize_ray():
                 object_store_memory=object_store_memory,
                 redis_address=redis_address,
                 logging_level=100,
+                memory=object_store_memory,
             )
         # Register custom serializer for method objects to avoid warning message.
         # We serialize `MethodType` objects when we use AxisPartition operations.
