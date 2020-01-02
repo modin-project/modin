@@ -1,7 +1,6 @@
 import pandas
 
 import os
-import re
 import numpy as np
 import math
 import warnings
@@ -13,8 +12,6 @@ from modin import __execution_engine__
 
 if __execution_engine__ == "Ray":
     import ray
-
-PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
 class RayIO(BaseIO):
@@ -88,6 +85,7 @@ class RayIO(BaseIO):
         """
 
         from pyarrow.parquet import ParquetFile, ParquetDataset
+        from modin.pandas.io import PQ_INDEX_REGEX
 
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)

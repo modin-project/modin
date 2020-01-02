@@ -9,7 +9,7 @@ from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
 from modin.data_management.factories import BaseFactory
 
-PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
+PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
 # Parquet
