@@ -141,9 +141,17 @@ class _LocationIndexerBase(object):
             item: The new item needs to be set. It can be any shape that's
                 broadcast-able to the product of the lookup tables.
         """
-        to_shape = (len(row_lookup), len(col_lookup))
-        item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
-        self._write_items(row_lookup, col_lookup, item)
+        if len(row_lookup) == len(self.qc.index) and len(col_lookup) == 1:
+            self.df[self.df.columns[col_lookup][0]] = item
+        elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
+            if hasattr(item, "_query_compiler"):
+                item = item._query_compiler
+            new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
+            self.df._create_or_update_from_compiler(new_qc, inplace=True)
+        else:
+            to_shape = (len(row_lookup), len(col_lookup))
+            item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
+            self._write_items(row_lookup, col_lookup, item)
 
     def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
         """Use numpy to broadcast or reshape item.

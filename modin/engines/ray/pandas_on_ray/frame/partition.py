@@ -69,7 +69,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def __copy__(self):
         return PandasOnRayFramePartition(
-            self.oid, self._length_cache, self._width_cache
+            self.oid, self._length_cache, self._width_cache, self.call_queue
         )
 
     def to_pandas(self):
@@ -91,6 +91,18 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return self.apply(lambda df: df.values).get()
 
     def mask(self, row_indices, col_indices):
+        if (
+            isinstance(row_indices, slice)
+            or (
+                self._length_cache is not None
+                and len(row_indices) == self._length_cache
+            )
+        ) and (
+            isinstance(col_indices, slice)
+            or (self._width_cache is not None and len(col_indices) == self._width_cache)
+        ):
+            return self.__copy__()
+
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
