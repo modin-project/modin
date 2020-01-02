@@ -1070,6 +1070,26 @@ class TestDFPartOne:
             modin_result = modin_df.apply(func, axis)
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    def test_apply_args(self, data, axis):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+
+        def apply_func(series, y):
+            try:
+                return series + y
+            except TypeError:
+                return series.map(str) + str(y)
+
+        modin_result = modin_df.apply(apply_func, axis=axis, args=(1,))
+        pandas_result = pandas_df.apply(apply_func, axis=axis, args=(1,))
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.apply(apply_func, axis=axis, args=("_A",))
+        pandas_result = pandas_df.apply(apply_func, axis=axis, args=("_A",))
+        df_equals(modin_result, pandas_result)
+
     def test_apply_metadata(self):
         def add(a, b, c):
             return a + b + c

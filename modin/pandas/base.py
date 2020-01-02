@@ -561,7 +561,7 @@ class BasePandasDataset(object):
                 )
         elif not callable(func) and not is_list_like(func):
             raise TypeError("{} object is not callable".format(type(func)))
-        query_compiler = self._query_compiler.apply(func, axis, *args, **kwds)
+        query_compiler = self._query_compiler.apply(func, axis, args=args, **kwds)
         return query_compiler
 
     def as_blocks(self, copy=True):
