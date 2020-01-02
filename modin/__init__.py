@@ -1,4 +1,5 @@
 import os
+import sys
 import warnings
 
 
@@ -19,39 +20,42 @@ def get_execution_engine():
     # execution engine + backing (Pandas + Ray).
     if "MODIN_ENGINE" in os.environ:
         # .title allows variants like ray, RAY, Ray
-        engine = os.environ["MODIN_ENGINE"].title()
+        return os.environ["MODIN_ENGINE"].title()
     else:
         if "MODIN_DEBUG" in os.environ:
-            engine = "Python"
+            return "Python"
         else:
-            try:
-                import ray
-
-                engine = "Ray"
-            except ImportError:
+            if sys.platform != "win32":
                 try:
-                    import dask
-                    import distributed
+                    import ray
 
-                    engine = "Dask"
                 except ImportError:
-                    raise ImportError(
-                        "Please `pip install modin[ray] or modin[dask] to install an engine"
-                    )
+                    pass
                 else:
-                    if (
-                        str(dask.__version__) < "2.1.0"
-                        or str(distributed.__version__) < "2.3.2"
-                    ):
+                    if ray.__version__ != "0.8.0":
                         raise ImportError(
-                            "Please `pip install modin[dask] to install compatible Dask version."
+                            "Please `pip install modin[ray]` to install compatible Ray version."
                         )
-            else:
-                if ray.__version__ != "0.8.0":
-                    raise ImportError(
-                        "Please `pip install modin[ray] to install compatible Ray version."
+                    return "Ray"
+            try:
+                import dask
+                import distributed
+
+            except ImportError:
+                raise ImportError(
+                    "Please `pip install {}modin[dask]` to install an engine".format(
+                        "modin[ray]` or `" if sys.platform != "win32" else ""
                     )
-    return engine
+                )
+            else:
+                if (
+                    str(dask.__version__) < "2.1.0"
+                    or str(distributed.__version__) < "2.3.2"
+                ):
+                    raise ImportError(
+                        "Please `pip install modin[dask]` to install compatible Dask version."
+                    )
+                return "Dask"
 
 
 def get_partition_format():
