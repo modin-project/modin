@@ -9,7 +9,6 @@ from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 from modin.data_management.utils import compute_chunksize
 from modin import __execution_engine__
-from modin.pandas.io import PQ_INDEX_REGEX
 
 if __execution_engine__ == "Ray":
     import ray
@@ -86,6 +85,7 @@ class RayIO(BaseIO):
         """
 
         from pyarrow.parquet import ParquetFile, ParquetDataset
+        from modin.pandas.io import PQ_INDEX_REGEX
 
         if cls.read_parquet_remote_task is None:
             return super(RayIO, cls).read_parquet(path, engine, columns, **kwargs)
