@@ -5,6 +5,7 @@ from collections import OrderedDict
 from modin.pandas.utils import to_pandas
 from pathlib import Path
 import pyarrow as pa
+import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
@@ -80,7 +81,7 @@ def make_parquet_file():
             else:
                 os.mkdir(TEST_PARQUET_FILENAME)
             table = pa.Table.from_pandas(df)
-            pa.parquet.write_to_dataset(table, root_path=TEST_PARQUET_FILENAME)
+            pq.write_to_dataset(table, root_path=TEST_PARQUET_FILENAME)
         elif len(partitioned_columns) > 0:
             df.to_parquet(TEST_PARQUET_FILENAME, partition_cols=partitioned_columns)
         else:
