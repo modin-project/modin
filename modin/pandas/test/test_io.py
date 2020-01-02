@@ -1375,4 +1375,8 @@ def test_cleanup():
     ]
     for f in filenames:
         if os.path.exists(f):
-            os.remove(f)
+            # Need try..except for Windows
+            try:
+                os.remove(f)
+            except PermissionError:
+                pass
