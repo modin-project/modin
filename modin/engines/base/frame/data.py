@@ -356,14 +356,20 @@ class BasePandasFrame(object):
             )
             new_col_widths = [len(indices) for _, indices in col_partitions_list]
             new_columns = self.columns[col_numeric_idx]
-            new_dtypes = self.dtypes[col_numeric_idx]
+            if self._dtypes is not None:
+                new_dtypes = self.dtypes[col_numeric_idx]
+            else:
+                new_dtypes = None
         else:
             col_partitions_list = [
                 (i, slice(None)) for i in range(len(self._column_widths))
             ]
             new_col_widths = self._column_widths
             new_columns = self.columns
-            new_dtypes = self.dtypes
+            if self._dtypes is not None:
+                new_dtypes = self.dtypes
+            else:
+                new_dtypes = None
         new_partitions = np.array(
             [
                 [
@@ -1110,11 +1116,17 @@ class BasePandasFrame(object):
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
+            # TODO: Can optimize by combining if all dtypes are materialized
+            new_dtypes = None
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
+            if self._dtypes is not None and all(o._dtypes is not None for o in others):
+                new_dtypes = self.dtypes.append([o.dtypes for o in others])
+            else:
+                new_dtypes = None
         return self.__constructor__(
-            new_partitions, new_index, new_columns, new_lengths, new_widths
+            new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
     def groupby_reduce(

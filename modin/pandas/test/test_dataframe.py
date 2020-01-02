@@ -2792,6 +2792,18 @@ class TestDFPartOne:
             modin_df.iloc[[1, 2]] = 42
             pandas_df.iloc[[1, 2]] = 42
             df_equals(modin_df, pandas_df)
+
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+            modin_df.iloc[0] = modin_df.iloc[1]
+            pandas_df.iloc[0] = pandas_df.iloc[1]
+            df_equals(modin_df, pandas_df)
+
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+            modin_df.iloc[:, 0] = modin_df.iloc[:, 1]
+            pandas_df.iloc[:, 0] = pandas_df.iloc[:, 1]
+            df_equals(modin_df, pandas_df)
         else:
             with pytest.raises(IndexError):
                 modin_df.iloc[0, 1]
