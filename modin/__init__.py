@@ -34,7 +34,7 @@ def get_execution_engine():
                 else:
                     if ray.__version__ != "0.8.0":
                         raise ImportError(
-                            "Please `pip install modin[ray] to install compatible Ray version."
+                            "Please `pip install modin[ray]` to install compatible Ray version."
                         )
                     return "Ray"
             try:
@@ -43,8 +43,8 @@ def get_execution_engine():
 
             except ImportError:
                 raise ImportError(
-                    "Please `pip install {}modin[dask] to install an engine".format(
-                        "modin[ray] or " if sys.platform != "win32" else ""
+                    "Please `pip install {}modin[dask]` to install an engine".format(
+                        "modin[ray]` or `" if sys.platform != "win32" else ""
                     )
                 )
             else:
@@ -53,7 +53,7 @@ def get_execution_engine():
                     or str(distributed.__version__) < "2.3.2"
                 ):
                     raise ImportError(
-                        "Please `pip install modin[dask] to install compatible Dask version."
+                        "Please `pip install modin[dask]` to install compatible Dask version."
                     )
                 return "Dask"
 
