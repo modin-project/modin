@@ -10,11 +10,10 @@ from modin.error_message import ErrorMessage
 from modin.engines.base.io import BaseIO
 from modin.data_management.utils import compute_chunksize
 from modin import __execution_engine__
+from modin.pandas.io import PQ_INDEX_REGEX
 
 if __execution_engine__ == "Ray":
     import ray
-
-PQ_INDEX_REGEX = re.compile("__index_level_\d+__")  # noqa W605
 
 
 class RayIO(BaseIO):
