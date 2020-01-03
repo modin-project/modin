@@ -50,6 +50,8 @@ class JSONReader(TextFileReader):
                 index_ids.append(partition_id[-3])
                 dtypes_ids.append(partition_id[-2])
 
+        # partition_id[-1] contains the columns for each partition, which will be useful
+        # for implementing when `lines=False`.
         row_lengths = cls.materialize(index_ids)
         new_index = pandas.RangeIndex(sum(row_lengths))
 

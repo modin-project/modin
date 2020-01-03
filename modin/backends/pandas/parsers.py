@@ -123,3 +123,59 @@ class PandasJSONParser(PandasParser):
             pandas_df.dtypes,
             partition_columns,
         ]
+
+
+class PandasParquetParser(PandasParser):
+    @staticmethod
+    def parse(fname, **kwargs):
+        import pyarrow.parquet as pq
+
+        num_splits = kwargs.pop("num_splits", None)
+        columns = kwargs.get("columns", None)
+        if num_splits is None:
+            return pandas.read_parquet(fname, **kwargs)
+        kwargs["use_pandas_metadata"] = True
+        df = pq.read_table(fname, **kwargs).to_pandas()
+        if columns is not None:
+            df = df[columns]
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+
+
+class PandasHDFParser(PandasParser):  # pragma: no cover
+    @staticmethod
+    def parse(fname, **kwargs):
+        kwargs["key"] = kwargs.pop("_key", None)
+        num_splits = kwargs.pop("num_splits", None)
+        if num_splits is None:
+            return pandas.read_hdf(fname, **kwargs)
+        df = pandas.read_hdf(fname, **kwargs)
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+
+
+class PandasFeatherParser(PandasParser):
+    @staticmethod
+    def parse(fname, **kwargs):
+        from pyarrow import feather
+
+        num_splits = kwargs.pop("num_splits", None)
+        if num_splits is None:
+            return pandas.read_feather(fname, **kwargs)
+        df = feather.read_feather(fname, **kwargs)
+        # Append the length of the index here to build it externally
+        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+
+
+class PandasSQLParser(PandasParser):
+    @staticmethod
+    def parse(sql, con, index_col, **kwargs):
+        num_splits = kwargs.pop("num_splits", None)
+        if num_splits is None:
+            return pandas.read_sql(sql, con, index_col=index_col, **kwargs)
+        df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
+        if index_col is None:
+            index = len(df)
+        else:
+            index = df.index
+        return _split_result_for_readers(1, num_splits, df) + [index, df.dtypes]

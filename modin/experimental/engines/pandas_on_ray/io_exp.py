@@ -2,7 +2,8 @@ import numpy as np
 import pandas
 import warnings
 
-from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO, _split_result_for_readers
+from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
+from modin.backends.pandas.parsers import _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin import __execution_engine__
 
