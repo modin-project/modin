@@ -44,7 +44,9 @@ class ParquetReader(ColumnStoreReader):
             partitioned_columns = list(partitioned_columns)
             if len(partitioned_columns):
                 ErrorMessage.default_to_pandas("Partitioned Columns in Parquet")
-                return cls.single_worker_read(original_path, engine=engine, columns=columns, **kwargs)
+                return cls.single_worker_read(
+                    original_path, engine=engine, columns=columns, **kwargs
+                )
         else:
             directory = False
 
