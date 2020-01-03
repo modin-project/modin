@@ -21,6 +21,8 @@ from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 
 class PandasOnRayIO(RayIO):
 
+    frame_cls = PandasOnRayFrame
+    query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_partition_cls=PandasOnRayFramePartition,
         query_compiler_cls=PandasQueryCompiler,
