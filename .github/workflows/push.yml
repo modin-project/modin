@@ -69,7 +69,7 @@ jobs:
       - run: mv testmondata_dask .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/test_io.py
+      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_dask
       - uses: actions/upload-artifact@v1
         with:

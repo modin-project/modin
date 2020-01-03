@@ -23,7 +23,7 @@ if [ "$arg" == "dask" ] || [ "$arg" == "all" ]; then
     echo "Running Dask tests"
     aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
     mv testmondata_dask .testmondata
-    MODIN_ENGINE=dask pytest modin/pandas/test/test_io.py $@
+    MODIN_ENGINE=dask pytest modin/pandas/test/ $@
 fi
 if [ "$arg" == "pyarrow" ] || [ "$arg" == "all" ]; then
     echo "Running Pyarrow tests"

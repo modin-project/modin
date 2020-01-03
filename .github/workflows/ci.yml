@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        engine: ["python", "ray"]
+        engine: ["python", "ray", "dask"]
         part: [1, 2, 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -75,6 +75,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
+        part: [1, 2, 3]
     env:
       MODIN_ENGINE: dask
     name: test dask
@@ -90,7 +91,24 @@ jobs:
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
       - run: pip install -U -r windows_test_requires.txt
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartOne
+        if: matrix.part == 1
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartTwo
+        if: matrix.part == 2
+      - run: python -m pytest modin/pandas/test/test_series.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_concat.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_groupby.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_reshape.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_general.py
+        if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_io.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+        if: matrix.part == 3
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
