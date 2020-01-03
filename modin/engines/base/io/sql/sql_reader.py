@@ -44,7 +44,7 @@ class SQLReader(FileReader):
                 "To use parallel implementation of `read_sql`, pass the "
                 "connection string instead of {}.".format(type(con))
             )
-            return cls.single_worker_read(sql, con, index_col=index_col, **kwargs)
+            return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
         cols_names_df = pandas.read_sql(

@@ -1,6 +1,7 @@
 import os
 
 from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreReader
+from modin.error_message import ErrorMessage
 
 
 class ParquetReader(ColumnStoreReader):
@@ -23,9 +24,10 @@ class ParquetReader(ColumnStoreReader):
         from pyarrow.parquet import ParquetFile, ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
 
-        partitioned_columns = set()
         if os.path.isdir(path):
+            partitioned_columns = set()
             directory = True
+            original_path = path
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
@@ -40,35 +42,19 @@ class ParquetReader(ColumnStoreReader):
                     path = os.path.join(root, files[0])
                     break
             partitioned_columns = list(partitioned_columns)
+            if len(partitioned_columns):
+                ErrorMessage.default_to_pandas("Partitioned Columns in Parquet")
+                return cls.single_worker_read(original_path, engine=engine, columns=columns, **kwargs)
         else:
             directory = False
 
         if not columns:
             if directory:
-                # Path of the sample file that we will read to get the remaining
-                # columns.
-                from pyarrow import ArrowIOError
-
-                try:
-                    pd = ParquetDataset(path)
-                except ArrowIOError:
-                    pd = ParquetDataset(path)
+                # Path of the sample file that we will read to get the remaining columns
+                pd = ParquetDataset(path)
                 column_names = pd.schema.names
             else:
                 pf = ParquetFile(path)
                 column_names = pf.metadata.schema.names
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
-
-        # Cannot read in parquet file by only reading in the partitioned column.
-        # Thus, we have to remove the partition columns from the columns to
-        # ensure that when we do the math for the blocks, the partition column
-        # will be read in along with a non partition column.
-        if columns and directory and any(col in partitioned_columns for col in columns):
-            columns = [col for col in columns if col not in partitioned_columns]
-            # If all of the columns wanted are partition columns, return an
-            # empty dataframe with the desired columns.
-            if len(columns) == 0 or len(partitioned_columns) > 0:
-                return cls.single_worker_read(
-                    path, engine, **dict(columns=partitioned_columns, **kwargs)
-                )
         return cls.build_query_compiler(path, columns, **kwargs)
