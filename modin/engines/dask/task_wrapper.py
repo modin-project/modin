@@ -10,7 +10,7 @@ class DaskTask:
         client = _get_global_client()
         remote_task_future = client.submit(func, **kwargs)
         return [
-            client.submit(lambda l: l[i], remote_task_future)
+            client.submit(lambda l, i: l[i], remote_task_future, i)
             for i in range(num_return_vals)
         ]
 
