@@ -4139,7 +4139,7 @@ class TestDataFrameWindow:
             df_equals(modin_result, pandas_result)
 
 
-class DataFrameIndexing:
+class TestDataFrameIndexing:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_first_valid_index(self, data):
         modin_df = pd.DataFrame(data)
