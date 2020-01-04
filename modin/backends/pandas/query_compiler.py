@@ -1040,6 +1040,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler with new data inserted.
         """
         if is_list_like(value):
+            # TODO make work with another querycompiler object as `value`.
             # This will require aligning the indices with a `reindex` and ensuring that
             # the data is partitioned identically.
             if isinstance(value, pandas.Series):
