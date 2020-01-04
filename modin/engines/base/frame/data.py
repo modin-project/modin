@@ -241,7 +241,9 @@ class BasePandasFrame(object):
         if axis is None:
 
             def apply_idx_objs(df, idx, cols):
-                return df.set_axis(idx, axis="index", inplace=False).set_axis(cols, axis="columns", inplace=False)
+                return df.set_axis(idx, axis="index", inplace=False).set_axis(
+                    cols, axis="columns", inplace=False
+                )
 
             self._partitions = np.array(
                 [

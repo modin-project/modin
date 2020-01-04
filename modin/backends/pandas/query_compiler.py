@@ -479,7 +479,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def first_valid_index_builder(df):
-            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index", inplace=False).apply(lambda df: df.first_valid_index())
+            return df.set_axis(
+                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
+            ).apply(lambda df: df.first_valid_index())
 
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
@@ -502,7 +504,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def last_valid_index_builder(df):
-            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index", inplace=False).apply(lambda df: df.last_valid_index())
+            return df.set_axis(
+                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
+            ).apply(lambda df: df.last_valid_index())
 
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
