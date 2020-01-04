@@ -544,6 +544,37 @@ class TestDataFrameBinary:
 
 
 class TestDataFrameMapMetadata:
+    def test_empty_df(self):
+        df = pd.DataFrame(index=["a", "b"])
+        df_is_empty(df)
+        tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+        assert len(df.columns) == 0
+
+        df = pd.DataFrame(columns=["a", "b"])
+        df_is_empty(df)
+        assert len(df.index) == 0
+        tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+
+        df = pd.DataFrame()
+        df_is_empty(df)
+        assert len(df.index) == 0
+        assert len(df.columns) == 0
+
+        df = pd.DataFrame(index=["a", "b"])
+        df_is_empty(df)
+        tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+        assert len(df.columns) == 0
+
+        df = pd.DataFrame(columns=["a", "b"])
+        df_is_empty(df)
+        assert len(df.index) == 0
+        tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+
+        df = pd.DataFrame()
+        df_is_empty(df)
+        assert len(df.index) == 0
+        assert len(df.columns) == 0
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_abs(self, request, data):
         modin_df = pd.DataFrame(data)
