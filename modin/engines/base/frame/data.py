@@ -241,8 +241,7 @@ class BasePandasFrame(object):
         if axis is None:
 
             def apply_idx_objs(df, idx, cols):
-                df.index, df.columns = idx, cols
-                return df
+                return df.set_axis(idx, axis="index", inplace=False).set_axis(cols, axis="columns", inplace=False)
 
             self._partitions = np.array(
                 [
@@ -264,8 +263,7 @@ class BasePandasFrame(object):
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
-                df.index = idx
-                return df
+                return df.set_axis(idx, axis="index", inplace=False)
 
             self._partitions = np.array(
                 [
@@ -284,8 +282,7 @@ class BasePandasFrame(object):
         elif axis == 1:
 
             def apply_idx_objs(df, cols):
-                df.columns = cols
-                return df
+                return df.set_axis(cols, axis="columns", inplace=False)
 
             self._partitions = np.array(
                 [
