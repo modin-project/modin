@@ -34,7 +34,7 @@ jobs:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray", "dask"]
-        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
@@ -73,7 +73,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: dask
     name: test-windows
