@@ -107,8 +107,6 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-        if: matrix.part == 3
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
