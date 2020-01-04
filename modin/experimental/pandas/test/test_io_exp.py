@@ -10,7 +10,7 @@ from modin.pandas.test.test_io import (  # noqa: F401
 
 @pytest.mark.skipif(
     os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
-    "Dask does not have experimental API",
+    reason="Dask does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if os.environ.get("MODIN_ENGINE", "") == "Ray":
@@ -33,7 +33,7 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
 @pytest.mark.skipif(
     os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
-    "Dask does not have experimental API",
+    reason="Dask does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     filename = "test_from_sql_distributed.db"
