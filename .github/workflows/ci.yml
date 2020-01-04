@@ -35,6 +35,8 @@ jobs:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray"]
         part: [1, 2, 3]
+    env:
+      MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
@@ -49,7 +51,6 @@ jobs:
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -U -r requirements.txt
-      - run: export MODIN_ENGINE=${{matrix.engine}}
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartOne
         if: matrix.part == 1
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartTwo
