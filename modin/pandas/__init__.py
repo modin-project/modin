@@ -223,9 +223,10 @@ elif execution_engine == "Dask":  # pragma: no cover
         client = _get_global_client()
         if client is None:
             from distributed import Client
+            import multiprocessing
 
-            client = Client()
-        num_cpus = sum(client.ncores().values())
+            num_cpus = multiprocessing.cpu_count()
+            client = Client(n_workers=num_cpus)
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
