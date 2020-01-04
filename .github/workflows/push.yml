@@ -109,7 +109,7 @@ jobs:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray", "dask"]
-        part: ["Binary", "MapMetadata", "UDF", "Default", "Reduction", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       PYTEST_ADDOPTS:  "--cov-config=.coveragerc --cov=modin  --cov-append"
@@ -147,7 +147,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: ["Binary", "MapMetadata", "UDF", "Default", "Reduction", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: dask
     name: test-windows

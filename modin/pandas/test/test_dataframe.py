@@ -2623,7 +2623,7 @@ class TestDataFrameDefault:
                 pass
 
 
-class TestDataFrameReduction:
+class TestDataFrameReduction_A:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -2968,6 +2968,8 @@ class TestDataFrameReduction:
 
         df_equals(modin_result, pandas_result)
 
+
+class TestDataFrameReduction_B:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
