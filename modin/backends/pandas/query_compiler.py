@@ -479,8 +479,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def first_valid_index_builder(df):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.apply(lambda df: df.first_valid_index())
+            return df.set_axis(
+                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
+            ).apply(lambda df: df.first_valid_index())
 
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
@@ -503,8 +504,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def last_valid_index_builder(df):
-            df.index = pandas.RangeIndex(len(df.index))
-            return df.apply(lambda df: df.last_valid_index())
+            return df.set_axis(
+                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
+            ).apply(lambda df: df.last_valid_index())
 
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
@@ -892,24 +894,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def setitem_builder(df, internal_indices=[]):
-            def _setitem():
-                if len(internal_indices) == 1:
-                    if axis == 0:
-                        df[df.columns[internal_indices[0]]] = value
-                    else:
-                        df.iloc[internal_indices[0]] = value
+            df = df.copy()
+            if len(internal_indices) == 1:
+                if axis == 0:
+                    df[df.columns[internal_indices[0]]] = value
                 else:
-                    if axis == 0:
-                        df[df.columns[internal_indices]] = value
-                    else:
-                        df.iloc[internal_indices] = value
-
-            try:
-                _setitem()
-            except ValueError:
-                # TODO: This is a workaround for a pyarrow serialization issue
-                df = df.copy()
-                _setitem()
+                    df.iloc[internal_indices[0]] = value
+            else:
+                if axis == 0:
+                    df[df.columns[internal_indices]] = value
+                else:
+                    df.iloc[internal_indices] = value
             return df
 
         if isinstance(value, type(self)):
