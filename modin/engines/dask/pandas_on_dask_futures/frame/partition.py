@@ -64,7 +64,9 @@ class PandasOnDaskFramePartition(BaseFramePartition):
              applied to it.
         """
         call_queue = self.call_queue + [[func, kwargs]]
-        future = self.client.submit(apply_list_of_funcs, call_queue, self.future)
+        future = self.client.submit(
+            apply_list_of_funcs, call_queue, self.future, pure=False
+        )
         return PandasOnDaskFramePartition(future)
 
     def add_to_apply_calls(self, func, **kwargs):
@@ -132,7 +134,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
             A `RemotePartitions` object.
         """
         client = _get_global_client()
-        return cls(client.scatter(obj))
+        return cls(client.scatter(obj, hash=False))
 
     @classmethod
     def preprocess_func(cls, func):

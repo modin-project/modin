@@ -8,6 +8,10 @@ from modin.pandas.test.test_io import (  # noqa: F401
 )
 
 
+@pytest.mark.skipif(
+    os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
+    reason="Dask does not have experimental API",
+)
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if os.environ.get("MODIN_ENGINE", "") == "Ray":
         filename = "test_from_sql_distributed.db"
@@ -27,6 +31,10 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
         assert modin_df_equals_pandas(modin_df_from_table, pandas_df)
 
 
+@pytest.mark.skipif(
+    os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
+    reason="Dask does not have experimental API",
+)
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     filename = "test_from_sql_distributed.db"
     table = "test_from_sql_distributed"
