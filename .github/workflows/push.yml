@@ -1,4 +1,4 @@
-name: Modin_CI_Master_Build
+name: master
 on: push
 jobs:
   testmon_ray:
@@ -53,10 +53,10 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - run: mv testmondata_python .testmondata
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
+      - run: mv testmondata_python .testmondata
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_python .
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'

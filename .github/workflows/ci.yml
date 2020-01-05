@@ -1,4 +1,4 @@
-name: Modin_CI_PR
+name: ci
 on: pull_request
 jobs:
   lint-black:
