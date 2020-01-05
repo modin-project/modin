@@ -146,7 +146,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: matrix.part == 3
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3

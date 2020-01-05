@@ -58,7 +58,7 @@ jobs:
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: matrix.part == 3
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3
