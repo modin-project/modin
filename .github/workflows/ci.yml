@@ -37,7 +37,7 @@ jobs:
         part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-    name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
+    name: test ubuntu (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
         with:
@@ -61,10 +61,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py

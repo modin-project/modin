@@ -29,10 +29,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_ray
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_ray --body=./testmondata_ray
@@ -64,10 +62,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_python
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_python --body=./testmondata_python
@@ -99,10 +95,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_dask
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_dask --body=./testmondata_dask
@@ -136,14 +130,12 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: mv .testmondata testmondata_pyarrow
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
-  test-all:
+  test-ubuntu:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -154,7 +146,7 @@ jobs:
       CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       PYTEST_ADDOPTS:  "--cov-config=.coveragerc --cov=modin  --cov-append"
       MODIN_ENGINE: ${{matrix.engine}}
-    name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
+    name: test ubuntu (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
         with:
@@ -173,12 +165,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
-      - run: pip install coverage pytest-cov
-        if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
