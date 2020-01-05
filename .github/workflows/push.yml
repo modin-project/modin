@@ -24,9 +24,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_ray
       - uses: actions/upload-artifact@v1
@@ -57,9 +57,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_python
       - uses: actions/upload-artifact@v1
@@ -90,9 +90,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_dask
       - uses: actions/upload-artifact@v1
@@ -125,9 +125,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: mv .testmondata testmondata_pyarrow
       - uses: actions/upload-artifact@v1
@@ -162,9 +162,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -209,7 +209,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: pip install -U -r windows_test_requires.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -249,9 +249,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: bash <(curl -s https://codecov.io/bash)
   test-api:
@@ -272,7 +272,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_api.py

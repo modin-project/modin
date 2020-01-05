@@ -56,9 +56,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -103,7 +103,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: pip install -U -r windows_test_requires.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -146,9 +146,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
   test-api:
     needs: [lint-flake8, lint-black]
@@ -169,7 +169,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: pip install -U -r requirements.txt
-        if: steps.cache.outputs.cache-hit != "true"
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: python -m pytest modin/pandas/test/test_api.py
