@@ -1,11 +1,9 @@
 pandas==0.25.3
 numpy
-dask[complete]>=2.1.0
-distributed>=2.3.2
-ray==0.8.0
 psutil==5.4.8
 pytest
 pytest-testmon
 pytest-custom_exit_code
 matplotlib
 xarray
+scipy

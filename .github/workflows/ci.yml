@@ -65,6 +65,10 @@ jobs:
         run: pip install -r requirements.txt
       - run: pip install -r df_test_requires.txt
         if: matrix.part != 3
+      - run: pip install ray==0.8
+        if: matrix.engine == 'ray'
+      - run: pip install dask[complete] distributed
+        if: martrix.engine == 'dask'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
