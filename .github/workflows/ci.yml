@@ -46,19 +46,23 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -U awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
-      - run: mv testmondata_${{matrix.engine}} .testmondata
       - uses: actions/cache@v1
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - run: sudo apt install -y libhdf5-dev
+      - name: InstallAWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
-      - run: pip install -U -r requirements.txt
+        run: pip install awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
+      - run: mv testmondata_${{matrix.engine}} .testmondata
+      - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo apt install -y libhdf5-dev
+      - name: Install pip requirements
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -93,17 +97,20 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -U awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
-      - run: mv testmondata_dask .testmondata
       - uses: actions/cache@v1
         with:
           path: ~\AppData\Local\pip\Cache
           key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - run: pip install -U -r windows_test_requires.txt
+      - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
+      - run: mv testmondata_dask .testmondata
+      - name: Install pip requirements
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install -r windows_test_requires.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -136,19 +143,23 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -U awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
-      - run: mv testmondata_pyarrow .testmondata
       - uses: actions/cache@v1
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - run: sudo apt install -y libhdf5-dev
+      - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
-      - run: pip install -U -r requirements.txt
+        run: pip install awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
+      - run: mv testmondata_pyarrow .testmondata
+      - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo apt install -y libhdf5-dev
+      - name: Install pip requirements
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
   test-api:
     needs: [lint-flake8, lint-black]
@@ -168,8 +179,10 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - run: sudo apt install -y libhdf5-dev
+      - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
-      - run: pip install -U -r requirements.txt
+        run: sudo apt install -y libhdf5-dev
+      - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_api.py
