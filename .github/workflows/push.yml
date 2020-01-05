@@ -29,10 +29,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_ray
-      - uses: actions/upload-artifact@v1
-        with:
-          name: testmondata_ray
-          path: testmondata_ray
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_ray --body=./testmondata_ray
   testmon_python:
     runs-on: ubuntu-latest
@@ -62,10 +58,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_python
-      - uses: actions/upload-artifact@v1
-        with:
-          name: testmondata_python
-          path: testmondata_python
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_python --body=./testmondata_python
   testmon_dask:
     runs-on: ubuntu-latest
@@ -95,10 +87,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_dask
-      - uses: actions/upload-artifact@v1
-        with:
-          name: testmondata_dask
-          path: testmondata_dask
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_dask --body=./testmondata_dask
   testmon_pyarrow:
     runs-on: ubuntu-latest
@@ -130,10 +118,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: mv .testmondata testmondata_pyarrow
-      - uses: actions/upload-artifact@v1
-        with:
-          name: testmondata_pyarrow
-          path: testmondata_pyarrow
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
   test-all:
     runs-on: ubuntu-latest
