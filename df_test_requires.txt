@@ -7,3 +7,4 @@ pytest-custom_exit_code
 matplotlib
 xarray
 scipy
+Jinja2
