@@ -49,8 +49,16 @@ jobs:
       - run: pip install -U awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
       - run: mv testmondata_${{matrix.engine}} .testmondata
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
+        if: steps.cache.outputs.cache-hit != "true"
       - run: pip install -U -r requirements.txt
+        if: steps.cache.outputs.cache-hit != "true"
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -88,7 +96,14 @@ jobs:
       - run: pip install -U awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
+      - uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{runner.os}}-pip-${{hashFiles("**/requirements.txt")}}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - run: pip install -U -r windows_test_requires.txt
+        if: steps.cache.outputs.cache-hit != "true"
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -124,8 +139,16 @@ jobs:
       - run: pip install -U awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
       - run: mv testmondata_pyarrow .testmondata
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
+        if: steps.cache.outputs.cache-hit != "true"
       - run: pip install -U -r requirements.txt
+        if: steps.cache.outputs.cache-hit != "true"
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
   test-api:
     needs: [lint-flake8, lint-black]
@@ -139,6 +162,14 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - run: sudo apt install -y libhdf5-dev
+        if: steps.cache.outputs.cache-hit != "true"
       - run: pip install -U -r requirements.txt
+        if: steps.cache.outputs.cache-hit != "true"
       - run: python -m pytest modin/pandas/test/test_api.py
