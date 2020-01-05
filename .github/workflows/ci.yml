@@ -99,7 +99,7 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: ~\AppData\Local\pip\Cache
-          key: ${{runner.os}}-pip-${{hashFiles("**/requirements.txt")}}
+          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
           restore-keys: |
             ${{ runner.os }}-pip-
       - run: pip install -U -r windows_test_requires.txt
