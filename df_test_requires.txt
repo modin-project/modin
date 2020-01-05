@@ -8,3 +8,4 @@ pytest
 pytest-testmon
 pytest-custom_exit_code
 matplotlib
+xarray
