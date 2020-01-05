@@ -58,8 +58,8 @@ jobs:
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: mv testmondata_python .testmondata
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_python .
+      - run: mv testmondata_python .testmondata
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
@@ -176,6 +176,8 @@ jobs:
         if: matrix.part == 3
         run: pip install -r requirements.txt
       - run: pip install -r df_test_requires.txt
+        if: matrix.part != 3
+      - run: pip install coverage pytest-cov
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
