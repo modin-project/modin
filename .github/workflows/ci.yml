@@ -61,8 +61,10 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: matrix.part == 3
         run: pip install -r requirements.txt
+      - run: pip install -r df_test_requires.txt
+        if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
