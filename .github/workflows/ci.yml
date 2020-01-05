@@ -34,7 +34,7 @@ jobs:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray", "dask"]
-        part: [1, 2, 3]
+        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
@@ -51,10 +51,8 @@ jobs:
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -U -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartOne
-        if: matrix.part == 1
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartTwo
-        if: matrix.part == 2
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+        if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
@@ -75,10 +73,10 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: [1, 2, 3]
+        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: dask
-    name: test dask
+    name: test-windows
     steps:
       - uses: actions/checkout@v1
         with:
@@ -91,10 +89,8 @@ jobs:
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
       - run: pip install -U -r windows_test_requires.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartOne
-        if: matrix.part == 1
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDFPartTwo
-        if: matrix.part == 2
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+        if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
