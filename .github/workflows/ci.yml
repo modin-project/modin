@@ -58,13 +58,17 @@ jobs:
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: matrix.part == 3
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3
         run: pip install -r requirements.txt
       - run: pip install -r df_test_requires.txt
         if: matrix.part != 3
+      - run: pip install ray==0.8
+        if: matrix.engine == 'ray'
+      - run: pip install dask[complete] distributed
+        if: matrix.engine == 'dask'
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py

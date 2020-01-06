@@ -25,14 +25,8 @@ jobs:
         run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_ray .
       - run: mv testmondata_ray .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_ray
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_ray --body=./testmondata_ray
@@ -60,14 +54,8 @@ jobs:
         run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_python .
       - run: mv testmondata_python .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_python
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_python --body=./testmondata_python
@@ -95,14 +83,8 @@ jobs:
         run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
       - run: mv .testmondata testmondata_dask
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_dask --body=./testmondata_dask
@@ -132,14 +114,8 @@ jobs:
         run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
       - run: mv testmondata_pyarrow .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
+      - run: sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: mv .testmondata testmondata_pyarrow
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
@@ -170,13 +146,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: matrix.part == 3
         run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3
         run: pip install -r requirements.txt
       - run: pip install -r df_test_requires.txt
         if: matrix.part != 3
+      - run: pip install ray==0.8
+        if: matrix.engine == 'ray'
+      - run: pip install dask[complete] distributed
+        if: matrix.engine == 'dask'
       - run: pip install coverage pytest-cov
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
