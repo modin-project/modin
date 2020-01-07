@@ -9,14 +9,6 @@
 <a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.6.3-blue.svg" align="center"></a>
 </p>
 
-### API Coverage
-
-| pandas Object   | Ray Coverage                                                                       | Dask Coverage |
-|-----------------|:------------------------------------------------------------------------------------:|:---------------:|
-| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-76.31%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-75.93%25-orange.svg> |
-| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> |
-| `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
-
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 ```python
@@ -43,6 +35,19 @@ pip install modin[all] # Install all of the above
 ```
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation!
+
+### API Coverage
+
+<p align="center">
+
+| pandas Object   | Ray Engine Coverage                                                                  | Dask Engine Coverage |
+|-----------------|:------------------------------------------------------------------------------------:|:---------------:|
+| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-76.31%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-75.93%25-orange.svg> |
+| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> |
+| `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
+
+</p>
+
 
 ##### Choosing a Compute Engine
 
