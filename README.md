@@ -4,12 +4,18 @@
 <p align="center">
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" align="center"></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
-<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/Modin_CI/badge.svg" align="center"></a>
+<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
-<a href="https://modin.readthedocs.io/en/latest/pandas_supported.html"><img src="https://img.shields.io/badge/pandas%20api%20coverage-71.77%25-orange.svg" align="center"></a>
 <a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.6.3-blue.svg" align="center"></a>
 </p>
 
+### API Coverage
+
+| pandas Object   | Ray Coverage                                                                       | Dask Coverage |
+|-----------------|:------------------------------------------------------------------------------------:|:---------------:|
+| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-76.31%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-75.93%25-orange.svg> |
+| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> |
+| `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
