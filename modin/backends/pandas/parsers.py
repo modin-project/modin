@@ -76,7 +76,7 @@ class PandasCSVParser(PandasParser):
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
             bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
-            if kwargs.pop("encoding", False):
+            if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
                 header = b""

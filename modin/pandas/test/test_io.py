@@ -937,11 +937,14 @@ def test_from_csv_skiprows(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_encoding(make_csv_file):
-    make_csv_file(encoding="latin8")
+@pytest.mark.parametrize(
+    "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
+)
+def test_from_csv_encoding(make_csv_file, encoding):
+    make_csv_file(encoding=encoding)
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding="latin8")
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding="latin8")
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding=encoding)
 
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
