@@ -575,6 +575,18 @@ class TestDataFrameMapMetadata:
         assert len(df.index) == 0
         assert len(df.columns) == 0
 
+        df = pd.DataFrame()
+        pd_df = pandas.DataFrame()
+        df["a"] = [1, 2, 3, 4, 5]
+        pd_df["a"] = [1, 2, 3, 4, 5]
+        df_equals(df, pd_df)
+
+        df = pd.DataFrame()
+        pd_df = pandas.DataFrame()
+        df["a"] = list("ABCDEF")
+        pd_df["a"] = list("ABCDEF")
+        df_equals(df, pd_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_abs(self, request, data):
         modin_df = pd.DataFrame(data)

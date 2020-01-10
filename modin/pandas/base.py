@@ -217,17 +217,23 @@ class BasePandasDataset(object):
             k: v._to_pandas() if hasattr(v, "_to_pandas") else v
             for k, v in kwargs.items()
         }
+        pandas_obj = self._to_pandas()
         if callable(op):
-            result = op(self._to_pandas(), *args, **kwargs)
+            result = op(pandas_obj, *args, **kwargs)
         elif isinstance(op, str):
             # The inner `getattr` is ensuring that we are treating this object (whether
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
             result = getattr(getattr(pandas, self.__name__), op)(
-                self._to_pandas(), *args, **kwargs
+                pandas_obj, *args, **kwargs
             )
-        # SparseDataFrames cannot be serialize by arrow and cause problems for Modin.
+        else:
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=True,
+                extra_log="{} is an unsupported operation".format(op),
+            )
+        # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
         # For now we will use pandas.
         if isinstance(result, type(self)) and not isinstance(
             result, (pandas.SparseDataFrame, pandas.SparseSeries)
@@ -243,6 +249,14 @@ class BasePandasDataset(object):
             from .series import Series
 
             return Series(result)
+        # inplace
+        elif result is None:
+            import modin.pandas as pd
+
+            return self._create_or_update_from_compiler(
+                getattr(pd, type(pandas_obj).__name__)(pandas_obj)._query_compiler,
+                inplace=True,
+            )
         else:
             try:
                 if (
@@ -3415,6 +3429,8 @@ class BasePandasDataset(object):
             "_reduce_dimension",
             "__repr__",
             "__len__",
+            "_create_or_update_from_compiler",
+            "_update_inplace",
         ]
         if item not in default_behaviors:
             method = object.__getattribute__(self, item)
