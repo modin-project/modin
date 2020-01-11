@@ -44,6 +44,7 @@ def find_common_type_cat(types):
 class PandasParser(object):
     infer_compression = infer_compression
     5
+
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         return (
