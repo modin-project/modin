@@ -1,4 +1,4 @@
-pandas==0.25.3
+pandas==1.0.0rc0
 numpy
 dask[complete]>=2.1.0
 distributed>=2.3.2

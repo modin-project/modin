@@ -5,7 +5,6 @@ from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
     is_scalar,
-    is_string_like,
 )
 import sys
 import warnings
@@ -1374,7 +1373,7 @@ class StringMethods(object):
         )
 
     def replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
-        if not (is_string_like(repl) or callable(repl)):
+        if not (isinstance(repl, str) or callable(repl)):
             raise TypeError("repl must be a string or callable")
         return Series(
             query_compiler=self._query_compiler.str_replace(

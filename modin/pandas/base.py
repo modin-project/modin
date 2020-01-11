@@ -3,7 +3,7 @@ from numpy import nan
 import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, _pipe
+from pandas.core.common import count_not_none, pipe
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -1797,7 +1797,7 @@ class BasePandasDataset(object):
         Returns:
             object: the return type of ``func``.
         """
-        return _pipe(self, func, *args, **kwargs)
+        return pipe(self, func, *args, **kwargs)
 
     def pop(self, item):
         """Pops an item from this DataFrame and returns it.

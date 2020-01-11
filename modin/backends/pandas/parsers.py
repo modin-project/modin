@@ -2,7 +2,7 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
-from pandas.io.common import _infer_compression
+from pandas.io.common import infer_compression
 from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
@@ -42,6 +42,8 @@ def find_common_type_cat(types):
 
 
 class PandasParser(object):
+    infer_compression = infer_compression
+    5
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         return (
@@ -62,8 +64,6 @@ class PandasParser(object):
             )
             return pandas_frame
         return cls.query_compiler_cls.from_pandas(pandas_frame, cls.frame_cls)
-
-    infer_compression = _infer_compression
 
 
 class PandasCSVParser(PandasParser):
