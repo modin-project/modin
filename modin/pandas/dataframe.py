@@ -92,7 +92,9 @@ class DataFrame(BasePandasDataset):
 
         num_rows = pandas.get_option("display.max_rows") or 10
         num_cols = pandas.get_option("display.max_columns") or 20
-        if pandas.get_option("display.expand_frame_repr"):
+        if pandas.get_option("display.max_columns") is None and pandas.get_option(
+            "display.expand_frame_repr"
+        ):
             width, _ = console.get_console_size()
             col_counter = 0
             i = 0
