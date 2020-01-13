@@ -465,8 +465,7 @@ def test_multi_column_groupby():
     ray_df = from_pandas(pandas_df)
     by = ["col1", "col2"]
 
-    with pytest.warns(UserWarning):
-        ray_df.groupby(by).count()
+    ray_df_equals_pandas(ray_df.groupby(by).count(), pandas_df.groupby(by).count())
 
     with pytest.warns(UserWarning):
         for k, _ in ray_df.groupby(by):

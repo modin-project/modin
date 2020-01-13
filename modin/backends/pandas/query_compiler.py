@@ -1181,25 +1181,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by, type(self)
         ), "Can only use groupby reduce with another Query Compiler"
 
+        other_len = len(by.columns)
+
         def _map(df, other):
+            other = other.squeeze(axis=axis ^ 1)
+            if isinstance(other, pandas.DataFrame):
+                df = pandas.concat(
+                    [df] + [other[[o for o in other if o not in df]]], axis=1
+                )
+                other = list(other.columns)
             return map_func(
-                df.groupby(by=other.squeeze(axis=axis ^ 1), axis=axis, **groupby_args),
-                **map_args
+                df.groupby(by=other, axis=axis, **groupby_args), **map_args
             ).reset_index(drop=False)
 
         if reduce_func is not None:
 
             def _reduce(df):
+                if other_len > 1:
+                    by = list(df.columns[0:other_len])
+                else:
+                    by = df.columns[0]
                 return reduce_func(
-                    df.groupby(by=df.columns[0], axis=axis, **groupby_args),
-                    **reduce_args
+                    df.groupby(by=by, axis=axis, **groupby_args), **reduce_args
                 )
 
         else:
 
             def _reduce(df):
+                if other_len > 1:
+                    by = list(df.columns[0:other_len])
+                else:
+                    by = df.columns[0]
                 return map_func(
-                    df.groupby(by=df.columns[0], axis=axis, **groupby_args), **map_args
+                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
 
         if axis == 0:
