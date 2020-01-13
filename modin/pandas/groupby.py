@@ -84,7 +84,13 @@ class DataFrameGroupBy(object):
     @property
     def _index_grouped(self):
         if self._index_grouped_cache is None:
-            if self._is_multi_by:
+            if hasattr(self._by, "columns") and len(self._by.columns) > 1:
+                by = list(self._by.columns)
+                is_multi_by = True
+            else:
+                by = self._by
+                is_multi_by = self._is_multi_by
+            if is_multi_by:
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
                 # aware.
@@ -92,9 +98,9 @@ class DataFrameGroupBy(object):
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
                 self._index_grouped_cache = {
                     k: v.index
-                    for k, v in self._df._query_compiler.getitem_column_array(self._by)
+                    for k, v in self._df._query_compiler.getitem_column_array(by)
                     .to_pandas()
-                    .groupby(by=self._by)
+                    .groupby(by=by)
                 }
             else:
                 if isinstance(self._by, type(self._query_compiler)):
