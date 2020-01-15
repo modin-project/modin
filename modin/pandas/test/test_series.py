@@ -858,10 +858,21 @@ def test_between():
 
 
 def test_between_time():
-    i = pd.date_range("2018-04-09", periods=4, freq="12H")
-    ts = pd.Series([1, 2, 3, 4], index=i)
-    with pytest.warns(UserWarning):
-        ts.between_time("0:15", "0:45")
+    i = pd.date_range("2008-01-01", periods=1000, freq="12H")
+    modin_series = pd.Series(list(range(1000)), index=i)
+    pandas_series = pandas.Series(list(range(1000)), index=i)
+    df_equals(
+        modin_series.between_time("12:00", "17:00"),
+        pandas_series.between_time("12:00", "17:00"),
+    )
+    df_equals(
+        modin_series.between_time("3:00", "8:00"),
+        pandas_series.between_time("3:00", "8:00"),
+    )
+    df_equals(
+        modin_series.between_time("3:00", "8:00", False),
+        pandas_series.between_time("3:00", "8:00", False),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

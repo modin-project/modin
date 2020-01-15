@@ -642,14 +642,12 @@ class BasePandasDataset(object):
     def between_time(
         self, start_time, end_time, include_start=True, include_end=True, axis=None
     ):
-        return self._default_to_pandas(
-            "between_time",
-            start_time,
-            end_time,
-            include_start=include_start,
-            include_end=include_end,
-            axis=axis,
+        axis = self._get_axis_number(axis) if axis is not None else 0
+        idx = self.index if axis == 0 else self.columns
+        indexer = idx.indexer_between_time(
+            start_time, end_time, include_start=include_start, include_end=include_end
         )
+        return self.iloc[indexer] if axis == 0 else self.iloc[:, indexer]
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
         """Synonym for DataFrame.fillna(method='bfill')"""
