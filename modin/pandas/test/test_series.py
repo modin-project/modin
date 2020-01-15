@@ -862,10 +862,12 @@ def test_between_time():
     modin_series = pd.Series(list(range(1000)), index=i)
     pandas_series = pandas.Series(list(range(1000)), index=i)
     df_equals(
-        modin_series.between_time("12:00", "17:00"), pandas_series.between_time("12:00", "17:00")
+        modin_series.between_time("12:00", "17:00"),
+        pandas_series.between_time("12:00", "17:00"),
     )
     df_equals(
-        modin_series.between_time("3:00", "8:00"), pandas_series.between_time("3:00", "8:00")
+        modin_series.between_time("3:00", "8:00"),
+        pandas_series.between_time("3:00", "8:00"),
     )
     df_equals(
         modin_series.between_time("3:00", "8:00", False),
