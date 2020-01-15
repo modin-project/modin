@@ -1137,12 +1137,8 @@ class TestDataFrameMapMetadata:
         df.columns = pd.MultiIndex.from_tuples(
             [("c", "e"), ("d", "f")], names=["level_1", "level_2"]
         )
-
-        with pytest.warns(UserWarning):
-            df.droplevel("a")
-
-        with pytest.warns(UserWarning):
-            df.droplevel("level_2", axis=1)
+        df.droplevel("a")
+        df.droplevel("level_2", axis=1)
 
     @pytest.mark.parametrize(
         "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
