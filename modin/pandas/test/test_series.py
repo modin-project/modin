@@ -965,6 +965,7 @@ def test_combine_first(data):
     pandas_series2 = pandas_series % (max(pandas_series) // 2)
     modin_result = modin_series.combine_first(modin_series2)
     pandas_result = pandas_series.combine_first(pandas_series2)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
