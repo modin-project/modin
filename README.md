@@ -42,8 +42,8 @@ scheduling computation!
 
 | pandas Object   | Ray Engine Coverage                                                                  | Dask Engine Coverage |
 |-----------------|:------------------------------------------------------------------------------------:|:---------------:|
-| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-76.31%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-75.93%25-orange.svg> |
-| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-73.02%25-orange.svg> |
+| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-76.66%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-76.66%25-orange.svg> |
+| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-73.33%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-73.33%25-orange.svg> |
 | `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
 
 </p>

@@ -821,10 +821,11 @@ def test_at(data):
 
 
 def test_at_time():
-    i = pd.date_range("2018-04-09", periods=4, freq="12H")
-    ts = pd.Series([1, 2, 3, 4], index=i)
-    with pytest.warns(UserWarning):
-        ts.at_time("12:00")
+    i = pd.date_range("2008-01-01", periods=1000, freq="12H")
+    modin_series = pd.Series(list(range(1000)), index=i)
+    pandas_series = pandas.Series(list(range(1000)), index=i)
+    df_equals(modin_series.at_time("12:00"), pandas_series.at_time("12:00"))
+    df_equals(modin_series.at_time("3:00"), pandas_series.at_time("3:00"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
