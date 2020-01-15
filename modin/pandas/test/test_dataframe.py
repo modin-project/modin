@@ -2173,6 +2173,9 @@ class TestDataFrameDefault:
         )
         df_equals(modin_df.at_time("12:00"), pandas_df.at_time("12:00"))
         df_equals(modin_df.at_time("3:00"), pandas_df.at_time("3:00"))
+        df_equals(
+            modin_df.T.at_time("12:00", axis=1), pandas_df.T.at_time("12:00", axis=1)
+        )
 
     def test_between_time(self):
         i = pd.date_range("2018-04-09", periods=4, freq="12H")
