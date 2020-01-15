@@ -955,8 +955,7 @@ def test_clip_upper(request, data):
 def test_combine(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
     modin_series2 = modin_series % (max(modin_series) // 2)
-    with pytest.warns(UserWarning):
-        modin_series.combine(modin_series2, lambda s1, s2: s1 if s1 < s2 else s2)
+    modin_series.combine(modin_series2, lambda s1, s2: s1 if s1 < s2 else s2)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

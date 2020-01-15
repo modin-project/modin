@@ -190,16 +190,21 @@ class BasePandasDataset(object):
                 )
         return result
 
-    def _binary_op(self, op, other, axis=None, **kwargs):
-        axis = self._get_axis_number(axis) if axis is not None else 1
+    def _binary_op(self, op, other, **kwargs):
+        # _axis indicates the operator will use the default axis
+        if kwargs.pop("_axis", None) is None:
+            if kwargs.get("axis", None) is not None:
+                kwargs["axis"] = axis = self._get_axis_number(kwargs.get("axis", None))
+            else:
+                kwargs["axis"] = axis = 1
+        else:
+            axis = 0
         if kwargs.get("level", None) is not None:
             return self._default_to_pandas(
-                getattr(getattr(pandas, self.__name__), op), other, axis=axis, **kwargs
+                getattr(getattr(pandas, self.__name__), op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
-        new_query_compiler = self._query_compiler.binary_op(
-            op, other=other, axis=axis, **kwargs
-        )
+        new_query_compiler = self._query_compiler.binary_op(op, other=other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
     def _default_to_pandas(self, op, *args, **kwargs):
@@ -703,8 +708,8 @@ class BasePandasDataset(object):
         return self.clip(upper=threshold, axis=axis, inplace=inplace)
 
     def combine(self, other, func, fill_value=None, **kwargs):
-        return self._default_to_pandas(
-            "combine", other, func, fill_value=fill_value, **kwargs
+        return self._binary_op(
+            "combine", other, _axis=0, func=func, fill_value=fill_value, **kwargs
         )
 
     def combine_first(self, other):
