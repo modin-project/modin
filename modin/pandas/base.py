@@ -713,7 +713,7 @@ class BasePandasDataset(object):
         )
 
     def combine_first(self, other):
-        return self._default_to_pandas("combine_first", other=other)
+        return self._binary_op("combine_first", other, _axis=0)
 
     def compound(self, axis=None, skipna=None, level=None):
         return self._default_to_pandas(

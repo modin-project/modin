@@ -2236,11 +2236,15 @@ class TestDataFrameDefault:
         assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
     def test_combine_first(self):
-        df1 = pd.DataFrame({"A": [None, 0], "B": [None, 4]})
-        df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
-
-        with pytest.warns(UserWarning):
-            df1.combine_first(df2)
+        data1 = {"A": [None, 0], "B": [None, 4]}
+        modin_df1 = pd.DataFrame(data1)
+        pandas_df1 = pandas.DataFrame(data1)
+        data2 = {"A": [1, 1], "B": [3, 3]}
+        modin_df2 = pd.DataFrame(data2)
+        pandas_df2 = pandas.DataFrame(data2)
+        df_equals(
+            modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2)
+        )
 
     def test_compound(self):
         data = test_data_values[0]

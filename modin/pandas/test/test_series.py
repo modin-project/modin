@@ -960,10 +960,11 @@ def test_combine(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine_first(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
+    modin_series, pandas_series = create_test_series(data)
     modin_series2 = modin_series % (max(modin_series) // 2)
-    with pytest.warns(UserWarning):
-        modin_series.combine_first(modin_series2)
+    pandas_series2 = pandas_series % (max(pandas_series) // 2)
+    modin_result = modin_series.combine_first(modin_series2)
+    pandas_result = pandas_series.combine_first(pandas_series2)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
