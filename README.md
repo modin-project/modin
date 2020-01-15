@@ -36,7 +36,7 @@ pip install modin[all] # Install all of the above
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation!
 
-### API Coverage
+### Pandas API Coverage
 
 <p align="center">
 
@@ -47,6 +47,8 @@ scheduling computation!
 | `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
 
 </p>
+Some pandas APIs are easier to implement than other, so if something is missing feel
+free to open an issue!
 
 
 ##### Choosing a Compute Engine
@@ -75,7 +77,37 @@ import modin.pandas as pd
 ##### Which engine should I use?
 
 If you are on Windows, you must use Dask. Ray does not support Windows. If you are on
-Linux or Mac OS, you can install and use either engine. 
+Linux or Mac OS, you can install and use either engine. There is no knowledge required
+to use either of these engines as Modin abstracts away all of the complexity, so feel
+free to pick either!
+
+##### Advanced usage
+
+In Modin, you can start a custom environment in Dask or Ray and Modin will connect to
+that environment automatically. For example, if you'd like to limit the amount of
+resources that Modin uses, you can start a Dask Client or Initialize Ray and Modin will
+use those instances. Make sure you've set the correct environment variable so Modin
+knows which engine to connect to!
+
+For Ray:
+```python
+import ray
+ray.init(plasma_directory="/path/to/custom/dir", object_store_memory=10**10)
+# Modin will connect to the existing Ray environment
+import modin.pandas as pd
+```
+
+For Dask:
+```python
+from distributed import Client
+client = Client(n_workers=6)
+# Modin will connect to the Dask Client
+import modin.pandas as pd
+```
+
+This gives you the flexibility to start with custom resource constraints and limit the
+amount of resources Modin uses.
+
 
 ### Full Documentation
 
