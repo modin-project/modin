@@ -2164,10 +2164,15 @@ class TestDataFrameDefault:
         df_equals(modin_result, pandas_result)
 
     def test_at_time(self):
-        i = pd.date_range("2018-04-09", periods=4, freq="12H")
-        ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
-        with pytest.warns(UserWarning):
-            ts.at_time("12:00")
+        i = pd.date_range("2008-01-01", periods=1000, freq="12H")
+        modin_df = pd.DataFrame(
+            {"A": list(range(1000)), "B": list(range(1000))}, index=i
+        )
+        pandas_df = pandas.DataFrame(
+            {"A": list(range(1000)), "B": list(range(1000))}, index=i
+        )
+        df_equals(modin_df.at_time("12:00"), pandas_df.at_time("12:00"))
+        df_equals(modin_df.at_time("3:00"), pandas_df.at_time("3:00"))
 
     def test_between_time(self):
         i = pd.date_range("2018-04-09", periods=4, freq="12H")

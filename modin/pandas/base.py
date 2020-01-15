@@ -634,7 +634,10 @@ class BasePandasDataset(object):
         return _LocIndexer(self)
 
     def at_time(self, time, asof=False, axis=None):
-        return self._default_to_pandas("at_time", time, asof=asof, axis=axis)
+        axis = self._get_axis_number(axis) if axis is not None else 0
+        if axis == 0:
+            return self.iloc[self.index.indexer_at_time(time, asof=asof)]
+        return self.iloc[:, self.columns.indexer_at_time(time, asof=asof)]
 
     def between_time(
         self, start_time, end_time, include_start=True, include_end=True, axis=None
