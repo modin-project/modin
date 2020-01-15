@@ -465,7 +465,9 @@ class Series(BasePandasDataset):
         )
 
     def combine(self, other, func, fill_value=None):
-        return super(Series, self).combine(other, func, fill_value=fill_value)
+        return super(Series, self).combine(
+            other, lambda s1, s2: s1.combine(s2, func, fill_value=fill_value)
+        )
 
     def compound(self, axis=None, skipna=None, level=None):
         return self._default_to_pandas(

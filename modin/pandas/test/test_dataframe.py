@@ -2220,13 +2220,6 @@ class TestDataFrameDefault:
 
         assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
-    def test_combine(self):
-        df1 = pd.DataFrame({"A": [0, 0], "B": [4, 4]})
-        df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
-
-        with pytest.warns(UserWarning):
-            df1.combine(df2, lambda s1, s2: s1 if s1.sum() < s2.sum() else s2)
-
     def test_combine_first(self):
         df1 = pd.DataFrame({"A": [None, 0], "B": [None, 4]})
         df2 = pd.DataFrame({"A": [1, 1], "B": [3, 3]})
@@ -5312,6 +5305,18 @@ class TestDataFrameIter:
 
 
 class TestDataFrameJoinSort:
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_combine(self, data):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
+
+        modin_df.combine(
+            modin_df + 1, lambda s1, s2: s1 if s1.count() < s2.count() else s2
+        )
+        pandas_df.combine(
+            pandas_df + 1, lambda s1, s2: s1 if s1.count() < s2.count() else s2
+        )
+
     def test_join(self):
         frame_data = {
             "col1": [0, 1, 2, 3],
