@@ -2382,8 +2382,12 @@ class TestDataFrameDefault:
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
         pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")
-        modin_df = pd.DataFrame({"A": list(range(400)), "B": list(range(400))}, index=modin_index)
-        pandas_df = pandas.DataFrame({"A": list(range(400)), "B": list(range(400))}, index=pandas_index)
+        modin_df = pd.DataFrame(
+            {"A": list(range(400)), "B": list(range(400))}, index=modin_index
+        )
+        pandas_df = pandas.DataFrame(
+            {"A": list(range(400)), "B": list(range(400))}, index=pandas_index
+        )
         df_equals(modin_df.last("3D"), pandas_df.last("3D"))
         df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
