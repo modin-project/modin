@@ -746,8 +746,8 @@ class BasePandasDataset(object):
         """
 
         axis = self._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
+        if numeric_only is not None and numeric_only:
+            self._validate_dtypes(numeric_only=numeric_only)
 
         if level is not None:
             if not isinstance(self.axes[axis], pandas.MultiIndex):
