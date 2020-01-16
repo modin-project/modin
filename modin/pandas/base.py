@@ -1087,7 +1087,14 @@ class BasePandasDataset(object):
         Returns:
             Index or MultiIndex
         """
-        return self._default_to_pandas("droplevel", level, axis=axis)
+        axis = self._get_axis_number(axis)
+        new_axis = self.axes[axis].droplevel(level)
+        result = self.copy()
+        if axis == 0:
+            result.index = new_axis
+        else:
+            result.columns = new_axis
+        return result
 
     def drop_duplicates(self, keep="first", inplace=False, **kwargs):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns

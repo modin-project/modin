@@ -114,6 +114,8 @@ default to pandas.
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `drop`_                   | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
+| `droplevel`_              | Y                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
 | `drop_duplicates`_        | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `dropna`_                 | Y                               |                                                    |
@@ -505,6 +507,7 @@ default to pandas.
 .. _`divide`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.divide.html#pandas.DataFrame.divide
 .. _`dot`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dot.html#pandas.DataFrame.dot
 .. _`drop`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop.html#pandas.DataFrame.drop
+.. _`droplevel`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.droplevel.html
 .. _`drop_duplicates`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop_duplicates.html#pandas.DataFrame.drop_duplicates
 .. _`dropna`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dropna.html#pandas.DataFrame.dropna
 .. _`dtypes`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dtypes.html#pandas.DataFrame.dtypes
