@@ -537,7 +537,13 @@ class DataFrame(BasePandasDataset):
         return DataFrame(query_compiler=query_compiler)
 
     def assign(self, **kwargs):
-        return self._default_to_pandas(pandas.DataFrame.assign, **kwargs)
+        df = self.copy()
+        for k, v in kwargs.items():
+            if callable(v):
+                df[k] = v(df)
+            else:
+                df[k] = v
+        return df
 
     def boxplot(
         self,

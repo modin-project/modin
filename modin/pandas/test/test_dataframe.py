@@ -2154,9 +2154,17 @@ class TestDataFrameDefault:
         data = test_data_values[0]
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-        with pytest.warns(UserWarning):
-            modin_result = modin_df.assign(new_column=pd.Series(modin_df.iloc[:, 0]))
-        pandas_result = pandas_df.assign(new_column=pd.Series(pandas_df.iloc[:, 0]))
+        modin_result = modin_df.assign(new_column=pd.Series(modin_df.iloc[:, 0]))
+        pandas_result = pandas_df.assign(new_column=pandas.Series(pandas_df.iloc[:, 0]))
+        df_equals(modin_result, pandas_result)
+        modin_result = modin_df.assign(
+            new_column=pd.Series(modin_df.iloc[:, 0]),
+            new_column2=pd.Series(modin_df.iloc[:, 1]),
+        )
+        pandas_result = pandas_df.assign(
+            new_column=pandas.Series(pandas_df.iloc[:, 0]),
+            new_column2=pandas.Series(pandas_df.iloc[:, 1]),
+        )
         df_equals(modin_result, pandas_result)
 
     def test_at_time(self):
