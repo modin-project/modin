@@ -1368,10 +1368,11 @@ def test_filter():
 
 
 def test_first():
-    i = pd.date_range("2018-04-09", periods=4, freq="2D")
-    ts = pd.Series([1, 2, 3, 4], index=i)
-    with pytest.warns(UserWarning):
-        ts.first("3D")
+    i = pd.date_range("2010-04-09", periods=400, freq="2D")
+    modin_series = pd.Series(list(range(400)), index=i)
+    pandas_series = pandas.Series(list(range(400)), index=i)
+    df_equals(modin_series.first("3D"), pandas_series.first("3D"))
+    df_equals(modin_series.first("20D"), pandas_series.first("20D"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
