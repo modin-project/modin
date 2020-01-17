@@ -1518,7 +1518,7 @@ class BasePandasDataset(object):
         )
 
     def last(self, offset):
-        return self._default_to_pandas("last", offset)
+        return self.loc[pandas.Series(index=self.index).last(offset).index]
 
     def last_valid_index(self):
         """Return index for last non-NA/null value.

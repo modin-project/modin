@@ -1689,10 +1689,12 @@ def test_kurtosis(data):
 
 
 def test_last():
-    i = pd.date_range("2018-04-09", periods=4, freq="2D")
-    ts = pd.Series([1, 2, 3, 4], index=i)
-    with pytest.warns(UserWarning):
-        ts.last("3D")
+    modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
+    pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")
+    modin_series = pd.Series(list(range(400)), index=modin_index)
+    pandas_series = pandas.Series(list(range(400)), index=pandas_index)
+    df_equals(modin_series.last("3D"), pandas_series.last("3D"))
+    df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
