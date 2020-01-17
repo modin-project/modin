@@ -2459,10 +2459,18 @@ def test_sum(data, skipna, min_count):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_swapaxes(data):
+@pytest.mark.parametrize("axis1", [0, 1, "columns", "index"])
+@pytest.mark.parametrize("axis2", [0, 1, "columns", "index"])
+def test_swapaxes(data, axis1, axis2):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.swapaxes(0, 0)
+    try:
+        pandas_result = pandas_series.swapaxes(axis1, axis2)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.swapaxes(axis1, axis2)
+    else:
+        modin_result = modin_series.swapaxes(axis1, axis2)
+        df_equals(modin_result, pandas_result)
 
 
 def test_swaplevel():
