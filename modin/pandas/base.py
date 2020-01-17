@@ -3161,15 +3161,20 @@ class BasePandasDataset(object):
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
     ):
-        return self._default_to_pandas(
-            "tz_localize",
-            tz,
-            axis=axis,
-            level=level,
-            copy=copy,
-            ambiguous=ambiguous,
-            nonexistent=nonexistent,
+        axis = self._get_axis_number(axis)
+        new_labels = (
+            pandas.Series(index=self.axes[axis])
+            .tz_localize(
+                tz,
+                axis=axis,
+                level=level,
+                copy=False,
+                ambiguous=ambiguous,
+                nonexistent=nonexistent,
+            )
+            .index
         )
+        return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
     def unstack(self, level=-1, fill_value=None):
         return self._default_to_pandas("unstack", level=level, fill_value=fill_value)
