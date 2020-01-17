@@ -1301,7 +1301,7 @@ class BasePandasDataset(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
-        return self._default_to_pandas("first", offset)
+        return self.loc[pandas.Series(index=self.index).first(offset).index]
 
     def first_valid_index(self):
         """Return index for first non-NA/null value.

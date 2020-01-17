@@ -2317,10 +2317,13 @@ class TestDataFrameDefault:
             modin_df.explode(modin_df.columns[0])
 
     def test_first(self):
-        i = pd.date_range("2018-04-09", periods=4, freq="2D")
-        ts = pd.DataFrame({"A": [1, 2, 3, 4]}, index=i)
-        with pytest.warns(UserWarning):
-            ts.first("3D")
+        i = pd.date_range("2010-04-09", periods=400, freq="2D")
+        modin_df = pd.DataFrame({"A": list(range(400)), "B": list(range(400))}, index=i)
+        pandas_df = pandas.DataFrame(
+            {"A": list(range(400)), "B": list(range(400))}, index=i
+        )
+        df_equals(modin_df.first("3D"), pandas_df.first("3D"))
+        df_equals(modin_df.first("20D"), pandas_df.first("20D"))
 
     @pytest.mark.skip(reason="Defaulting to Pandas")
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
