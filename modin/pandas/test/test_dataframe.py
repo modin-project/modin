@@ -2633,7 +2633,7 @@ class TestDataFrameDefault:
             [pandas_idx, range(len(modin_idx))]
         )
         modin_series = pd.DataFrame(data, index=modin_multi)
-        pandas_series = pandas.DataFrame(data, index=modin_multi)
+        pandas_series = pandas.DataFrame(data, index=pandas_multi)
         df_equals(
             modin_series.tz_convert("UTC", axis=0, level=0),
             pandas_series.tz_convert("UTC", axis=0, level=0),

@@ -2614,7 +2614,7 @@ def test_tz_convert():
     modin_multi = pd.MultiIndex.from_arrays([modin_idx, range(len(modin_idx))])
     pandas_multi = pandas.MultiIndex.from_arrays([pandas_idx, range(len(modin_idx))])
     modin_series = pd.Series(data, index=modin_multi)
-    pandas_series = pandas.Series(data, index=modin_multi)
+    pandas_series = pandas.Series(data, index=pandas_multi)
     df_equals(
         modin_series.tz_convert("UTC", axis=0, level=0),
         pandas_series.tz_convert("UTC", axis=0, level=0),
