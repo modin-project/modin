@@ -2619,10 +2619,10 @@ class TestDataFrameDefault:
 
     def test_tshift(self):
         idx = pd.date_range("1/1/2012", periods=5, freq="M")
-        df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
-
-        with pytest.warns(UserWarning):
-            df.to_period().tshift()
+        data = np.random.randint(0, 100, size=(len(idx), 4))
+        modin_df = pd.DataFrame(data, index=idx)
+        pandas_df = pandas.DataFrame(data, index=idx)
+        df_equals(modin_df.tshift(4), pandas_df.tshift(4))
 
     def test_tz_convert(self):
         modin_idx = pd.date_range(
