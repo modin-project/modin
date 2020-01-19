@@ -2548,7 +2548,9 @@ class TestDataFrameDefault:
             df_equals(modin_result, pandas_result)
 
     def test_swaplevel(self):
-        df = pd.DataFrame(
+        data = np.random.randint(1, 100, 12)
+        modin_df = pd.DataFrame(
+            data,
             index=pd.MultiIndex.from_tuples(
                 [
                     (num, letter, color)
@@ -2557,11 +2559,26 @@ class TestDataFrameDefault:
                     for color in ["Red", "Green"]
                 ],
                 names=["Number", "Letter", "Color"],
-            )
+            ),
         )
-        df["Value"] = np.random.randint(1, 100, len(df))
-        with pytest.warns(UserWarning):
-            df.swaplevel("Number", "Color")
+        pandas_df = pandas.DataFrame(
+            data,
+            index=pandas.MultiIndex.from_tuples(
+                [
+                    (num, letter, color)
+                    for num in range(1, 3)
+                    for letter in ["a", "b", "c"]
+                    for color in ["Red", "Green"]
+                ],
+                names=["Number", "Letter", "Color"],
+            ),
+        )
+        df_equals(
+            modin_df.swaplevel("Number", "Color"),
+            pandas_df.swaplevel("Number", "Color"),
+        )
+        df_equals(modin_df.swaplevel(), pandas_df.swaplevel())
+        df_equals(modin_df.swaplevel(0, 1), pandas_df.swaplevel(0, 1))
 
     def test_take(self):
         df = pd.DataFrame(
