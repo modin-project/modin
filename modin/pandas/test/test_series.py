@@ -2600,9 +2600,10 @@ def test_truncate(data):
 
 def test_tshift():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    modin_series = pd.Series(np.random.randint(0, 100, size=len(idx)), index=idx)
-    with pytest.warns(UserWarning):
-        modin_series.to_period().tshift()
+    data = np.random.randint(0, 100, size=len(idx))
+    modin_series = pd.Series(data, index=idx)
+    pandas_series = pandas.Series(data, index=idx)
+    df_equals(modin_series.tshift(4), pandas_series.tshift(4))
 
 
 def test_tz_convert():

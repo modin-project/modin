@@ -3148,7 +3148,9 @@ class BasePandasDataset(object):
         )
 
     def tshift(self, periods=1, freq=None, axis=0):
-        return self._default_to_pandas("tshift", periods=periods, freq=freq, axis=axis)
+        axis = self._get_axis_number(axis)
+        new_labels = self.axes[axis].shift(periods, freq=freq)
+        return self.set_axis(new_labels, axis=axis, inplace=False)
 
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
