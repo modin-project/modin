@@ -2504,7 +2504,6 @@ def test_take():
     modin_s = pd.Series(["falcon", "parrot", "lion", "cat"], index=[0, 2, 3, 1])
     pandas_s = pandas.Series(["falcon", "parrot", "lion", "cat"], index=[0, 2, 3, 1])
     a = modin_s.take([0, 3])
-    print(type(a))
     df_equals(a, pandas_s.take([0, 3]))
     try:
         pandas_s.take([2], axis=1)
