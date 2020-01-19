@@ -2809,7 +2809,9 @@ class BasePandasDataset(object):
         return self
 
     def swaplevel(self, i=-2, j=-1, axis=0):
-        return self._default_to_pandas("swaplevel", i=i, j=j, axis=axis)
+        axis = self._get_axis_number(axis)
+        idx = self.index if axis == 0 else self.columns
+        return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
 
     def take(self, indices, axis=0, is_copy=True, **kwargs):
         return self._default_to_pandas(

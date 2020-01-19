@@ -2474,8 +2474,9 @@ def test_swapaxes(data, axis1, axis2):
 
 
 def test_swaplevel():
-    s = pd.Series(
-        np.random.randint(1, 100, 12),
+    data = np.random.randint(1, 100, 12)
+    modin_s = pd.Series(
+        data,
         index=pd.MultiIndex.from_tuples(
             [
                 (num, letter, color)
@@ -2486,8 +2487,23 @@ def test_swaplevel():
             names=["Number", "Letter", "Color"],
         ),
     )
-    with pytest.warns(UserWarning):
-        s.swaplevel("Number", "Color")
+    pandas_s = pandas.Series(
+        data,
+        index=pandas.MultiIndex.from_tuples(
+            [
+                (num, letter, color)
+                for num in range(1, 3)
+                for letter in ["a", "b", "c"]
+                for color in ["Red", "Green"]
+            ],
+            names=["Number", "Letter", "Color"],
+        ),
+    )
+    df_equals(
+        modin_s.swaplevel("Number", "Color"), pandas_s.swaplevel("Number", "Color")
+    )
+    df_equals(modin_s.swaplevel(), pandas_s.swaplevel())
+    df_equals(modin_s.swaplevel(1, 0), pandas_s.swaplevel(1, 0))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
