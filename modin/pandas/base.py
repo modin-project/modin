@@ -2812,9 +2812,10 @@ class BasePandasDataset(object):
         return self._default_to_pandas("swaplevel", i=i, j=j, axis=axis)
 
     def take(self, indices, axis=0, is_copy=True, **kwargs):
-        return self._default_to_pandas(
-            "take", indices, axis=axis, is_copy=is_copy, **kwargs
-        )
+        axis = self._get_axis_number(axis)
+        slice_obj = indices if axis == 0 else (slice(None), indices)
+        result = self.iloc[slice_obj]
+        return result if not is_copy else result.copy()
 
     def tail(self, n=5):
         """Get the last n rows of the DataFrame.

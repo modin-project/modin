@@ -1014,11 +1014,6 @@ class Series(BasePandasDataset):
             return Series(dtype=self.dtype)
         return super(Series, self).tail(n)
 
-    def take(self, indices, axis=0, is_copy=False, **kwargs):
-        self._default_to_pandas(
-            pandas.Series.take, indices, axis=axis, is_copy=is_copy, **kwargs
-        )
-
     def to_frame(self, name=None):
         from .dataframe import DataFrame
 
