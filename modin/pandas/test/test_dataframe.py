@@ -4769,7 +4769,9 @@ class TestDataFrameIndexing:
         df_equals(modin_result, result)
 
     def test_reorder_levels(self):
-        df = pd.DataFrame(
+        data = np.random.randint(1, 100, 12)
+        modin_df = pd.DataFrame(
+            data,
             index=pd.MultiIndex.from_tuples(
                 [
                     (num, letter, color)
@@ -4778,11 +4780,24 @@ class TestDataFrameIndexing:
                     for color in ["Red", "Green"]
                 ],
                 names=["Number", "Letter", "Color"],
-            )
+            ),
         )
-        df["Value"] = np.random.randint(1, 100, len(df))
-        with pytest.warns(UserWarning):
-            df.reorder_levels(["Letter", "Color", "Number"])
+        pandas_df = pandas.DataFrame(
+            data,
+            index=pandas.MultiIndex.from_tuples(
+                [
+                    (num, letter, color)
+                    for num in range(1, 3)
+                    for letter in ["a", "b", "c"]
+                    for color in ["Red", "Green"]
+                ],
+                names=["Number", "Letter", "Color"],
+            ),
+        )
+        df_equals(
+            modin_df.reorder_levels(["Letter", "Color", "Number"]),
+            pandas_df.reorder_levels(["Letter", "Color", "Number"]),
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_reset_index(self, data):

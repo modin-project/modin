@@ -2155,6 +2155,11 @@ class BasePandasDataset(object):
             if not inplace:
                 return result
 
+    def reorder_levels(self, order, axis=0):
+        axis = self._get_axis_number(axis)
+        new_labels = self.axes[axis].reorder_levels(order)
+        return self.set_axis(new_labels, axis=axis, inplace=False)
+
     def replace(
         self,
         to_replace=None,

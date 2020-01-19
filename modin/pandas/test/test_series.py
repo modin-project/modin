@@ -2122,8 +2122,9 @@ def test_rename(data):
 
 
 def test_reorder_levels():
-    series = pd.Series(
-        np.random.randint(1, 100, 12),
+    data = np.random.randint(1, 100, 12)
+    modin_series = pd.Series(
+        data,
         index=pd.MultiIndex.from_tuples(
             [
                 (num, letter, color)
@@ -2134,8 +2135,21 @@ def test_reorder_levels():
             names=["Number", "Letter", "Color"],
         ),
     )
-    with pytest.warns(UserWarning):
-        series.reorder_levels(["Letter", "Color", "Number"])
+    pandas_series = pandas.Series(
+        data,
+        index=pandas.MultiIndex.from_tuples(
+            [
+                (num, letter, color)
+                for num in range(1, 3)
+                for letter in ["a", "b", "c"]
+                for color in ["Red", "Green"]
+            ],
+            names=["Number", "Letter", "Color"],
+        ),
+    )
+    modin_result = modin_series.reorder_levels(["Letter", "Color", "Number"])
+    pandas_result = pandas_series.reorder_levels(["Letter", "Color", "Number"])
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
