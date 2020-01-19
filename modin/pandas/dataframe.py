@@ -1405,11 +1405,6 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return renamed
 
-    def reorder_levels(self, order, axis=0):
-        return self._default_to_pandas(
-            pandas.DataFrame.reorder_levels, order, axis=axis
-        )
-
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()

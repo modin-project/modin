@@ -859,9 +859,6 @@ class Series(BasePandasDataset):
             result.name = self.name
             return result
 
-    def reorder_levels(self, order):
-        return self._default_to_pandas(pandas.Series.reorder_levels, order)
-
     def repeat(self, repeats, axis=None):
         return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
 
