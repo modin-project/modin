@@ -2581,7 +2581,7 @@ class TestDataFrameDefault:
         df_equals(modin_df.swaplevel(0, 1), pandas_df.swaplevel(0, 1))
 
     def test_take(self):
-        df = pd.DataFrame(
+        modin_df = pd.DataFrame(
             [
                 ("falcon", "bird", 389.0),
                 ("parrot", "bird", 24.0),
@@ -2591,8 +2591,18 @@ class TestDataFrameDefault:
             columns=["name", "class", "max_speed"],
             index=[0, 2, 3, 1],
         )
-        with pytest.warns(UserWarning):
-            df.take([0, 3])
+        pandas_df = pandas.DataFrame(
+            [
+                ("falcon", "bird", 389.0),
+                ("parrot", "bird", 24.0),
+                ("lion", "mammal", 80.5),
+                ("monkey", "mammal", np.nan),
+            ],
+            columns=["name", "class", "max_speed"],
+            index=[0, 2, 3, 1],
+        )
+        df_equals(modin_df.take([0, 3]), pandas_df.take([0, 3]))
+        df_equals(modin_df.take([2], axis=1), pandas_df.take([2], axis=1))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_records(self, request, data):

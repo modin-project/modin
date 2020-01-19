@@ -2531,9 +2531,15 @@ def test_tail(data, n):
 
 
 def test_take():
-    series = pd.Series([1, 2, 3, 4], index=[0, 2, 3, 1])
-    with pytest.warns(UserWarning):
-        series.take([0, 3])
+    modin_s = pd.Series(["falcon", "parrot", "lion", "cat"], index=[0, 2, 3, 1])
+    pandas_s = pandas.Series(["falcon", "parrot", "lion", "cat"], index=[0, 2, 3, 1])
+    a = modin_s.take([0, 3])
+    df_equals(a, pandas_s.take([0, 3]))
+    try:
+        pandas_s.take([2], axis=1)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_s.take([2], axis=1)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
