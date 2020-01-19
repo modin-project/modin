@@ -2800,7 +2800,13 @@ class BasePandasDataset(object):
         )
 
     def swapaxes(self, axis1, axis2, copy=True):
-        return self._default_to_pandas("swapaxes", axis1, axis2, copy=copy)
+        axis1 = self._get_axis_number(axis1)
+        axis2 = self._get_axis_number(axis2)
+        if axis1 != axis2:
+            return self.transpose()
+        if copy:
+            return self.copy()
+        return self
 
     def swaplevel(self, i=-2, j=-1, axis=0):
         return self._default_to_pandas("swaplevel", i=i, j=j, axis=axis)

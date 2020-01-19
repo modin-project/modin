@@ -2532,10 +2532,20 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).style
 
-    def test_swapaxes(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).swapaxes(0, 1)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("axis1", [0, 1, "columns", "index"])
+    @pytest.mark.parametrize("axis2", [0, 1, "columns", "index"])
+    def test_swapaxes(self, data, axis1, axis2):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        try:
+            pandas_result = pandas_df.swapaxes(axis1, axis2)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.swapaxes(axis1, axis2)
+        else:
+            modin_result = modin_df.swapaxes(axis1, axis2)
+            df_equals(modin_result, pandas_result)
 
     def test_swaplevel(self):
         df = pd.DataFrame(
