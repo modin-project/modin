@@ -3160,9 +3160,15 @@ class BasePandasDataset(object):
         return result
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
-        return self._default_to_pandas(
-            "tz_convert", tz, axis=axis, level=level, copy=copy
-        )
+        axis = self._get_axis_number(axis)
+        if level is not None:
+            new_labels = (
+                pandas.Series(index=self.axes[axis]).tz_convert(tz, level=level).index
+            )
+        else:
+            new_labels = self.axes[axis].tz_convert(tz)
+        obj = self.copy() if copy else self
+        return obj.set_axis(new_labels, axis, inplace=not copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"

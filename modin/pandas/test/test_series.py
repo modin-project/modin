@@ -2606,12 +2606,27 @@ def test_tshift():
 
 
 def test_tz_convert():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    modin_series = pd.Series(np.random.randint(0, 100, size=len(idx)), index=idx)
-    with pytest.warns(UserWarning):
-        modin_series.tz_localize("America/Los_Angeles").tz_convert(
-            "America/Los_Angeles"
-        )
+    modin_idx = pd.date_range(
+        "1/1/2012", periods=400, freq="2D", tz="America/Los_Angeles"
+    )
+    pandas_idx = pandas.date_range(
+        "1/1/2012", periods=400, freq="2D", tz="America/Los_Angeles"
+    )
+    data = np.random.randint(0, 100, size=len(modin_idx))
+    modin_series = pd.Series(data, index=modin_idx)
+    pandas_series = pandas.Series(data, index=pandas_idx)
+    modin_result = modin_series.tz_convert("UTC", axis=0)
+    pandas_result = pandas_series.tz_convert("UTC", axis=0)
+    df_equals(modin_result, pandas_result)
+
+    modin_multi = pd.MultiIndex.from_arrays([modin_idx, range(len(modin_idx))])
+    pandas_multi = pandas.MultiIndex.from_arrays([pandas_idx, range(len(modin_idx))])
+    modin_series = pd.Series(data, index=modin_multi)
+    pandas_series = pandas.Series(data, index=pandas_multi)
+    df_equals(
+        modin_series.tz_convert("UTC", axis=0, level=0),
+        pandas_series.tz_convert("UTC", axis=0, level=0),
+    )
 
 
 def test_tz_localize():
