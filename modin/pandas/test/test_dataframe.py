@@ -2650,11 +2650,17 @@ class TestDataFrameDefault:
         )
 
     def test_tz_localize(self):
-        idx = pd.date_range("1/1/2012", periods=5, freq="M")
-        df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
-
-        with pytest.warns(UserWarning):
-            df.tz_localize("America/Los_Angeles")
+        idx = pd.date_range("1/1/2012", periods=400, freq="2D")
+        data = np.random.randint(0, 100, size=(len(idx), 4))
+        modin_df = pd.DataFrame(data, index=idx)
+        pandas_df = pandas.DataFrame(data, index=idx)
+        df_equals(
+            modin_df.tz_localize("UTC", axis=0), pandas_df.tz_localize("UTC", axis=0)
+        )
+        df_equals(
+            modin_df.tz_localize("America/Los_Angeles", axis=0),
+            pandas_df.tz_localize("America/Los_Angeles", axis=0),
+        )
 
     def test_unstack(self):
         data = test_data_values[0]

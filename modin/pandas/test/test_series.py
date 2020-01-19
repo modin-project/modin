@@ -2630,10 +2630,17 @@ def test_tz_convert():
 
 
 def test_tz_localize():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    modin_series = pd.Series(np.random.randint(0, 100, size=len(idx)), index=idx)
-    with pytest.warns(UserWarning):
-        modin_series.tz_localize("America/Los_Angeles")
+    idx = pd.date_range("1/1/2012", periods=400, freq="2D")
+    data = np.random.randint(0, 100, size=len(idx))
+    modin_series = pd.Series(data, index=idx)
+    pandas_series = pandas.Series(data, index=idx)
+    df_equals(
+        modin_series.tz_localize("America/Los_Angeles"),
+        pandas_series.tz_localize("America/Los_Angeles"),
+    )
+    df_equals(
+        modin_series.tz_localize("UTC"), pandas_series.tz_localize("UTC"),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
