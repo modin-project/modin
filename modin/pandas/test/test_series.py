@@ -2633,15 +2633,21 @@ def test_truncate(data):
 
     before = 1
     after = len(modin_series - 3)
-    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
+    df_equals(
+        modin_series.truncate(before, after), pandas_series.truncate(before, after)
+    )
 
     before = 1
     after = 3
-    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
+    df_equals(
+        modin_series.truncate(before, after), pandas_series.truncate(before, after)
+    )
 
     before = None
     after = None
-    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
+    df_equals(
+        modin_series.truncate(before, after), pandas_series.truncate(before, after)
+    )
 
 
 def test_tshift():

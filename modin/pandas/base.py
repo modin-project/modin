@@ -3152,7 +3152,10 @@ class BasePandasDataset(object):
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
         axis = self._get_axis_number(axis) if axis is not None else 0
-        if not self.axes[axis].is_monotonic_increasing and not self.axes[axis].is_monotonic_decreasing:
+        if (
+            not self.axes[axis].is_monotonic_increasing
+            and not self.axes[axis].is_monotonic_decreasing
+        ):
             raise ValueError("truncate requires a sorted index")
         s = slice(*self.axes[axis].slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
