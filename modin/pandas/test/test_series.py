@@ -2629,9 +2629,19 @@ def test_truediv(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_truncate(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.truncate()
+    modin_series, pandas_series = create_test_series(data)
+
+    before = 1
+    after = len(modin_series - 3)
+    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
+
+    before = 1
+    after = 3
+    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
+
+    before = None
+    after = None
+    df_equals(modin_series.truncate(before, after), pandas_series.truncate(before, after))
 
 
 def test_tshift():
