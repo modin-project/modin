@@ -997,6 +997,12 @@ def test_from_csv_parse_dates(make_csv_file):
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
 
+def test_from_csv_newlines_in_quotes():
+    pandas_df = pandas.read_csv("modin/pandas/test/data/newlines.csv")
+    modin_df = pd.read_csv("modin/pandas/test/data/newlines.csv")
+    assert modin_df_equals_pandas(modin_df, pandas_df)
+
+
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_to_clipboard():
     modin_df = create_test_ray_dataframe()

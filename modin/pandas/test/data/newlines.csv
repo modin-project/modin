@@ -1,0 +1,22 @@
+col1,col2,col3,col4
+"This is a very long
+string with several
+newline characters
+that will probably cause some
+problem for Modin
+and I suspect that
+we
+will hopefully
+reproduce the issue",2,3,4
+"H",2,3,4
+"I",2,3,4
+"J",2,3,4
+"H",2,3,4
+"I",2,3,4
+"J",2,3,4
+"H",2,3,4
+"I",2,3,4
+"J",2,3,4
+"H",2,3,4
+"I",2,3,4
+"J",2,3,4
