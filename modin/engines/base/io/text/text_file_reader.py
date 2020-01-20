@@ -1,14 +1,20 @@
 from modin.engines.base.io.file_reader import FileReader
-import os
+import re
 import numpy as np
 
 
 class TextFileReader(FileReader):
     @classmethod
-    def call_deploy(cls, f, chunk_size, num_return_vals, args):
+    def call_deploy(cls, f, chunk_size, num_return_vals, args, quotechar=b'"'):
         args["start"] = f.tell()
-        f.seek(chunk_size, os.SEEK_CUR)
-        f.readline()  # Read a whole number of lines
+        chunk = f.read(chunk_size)
+        line = f.readline()  # Ensure we read up to a newline
+        # We need to ensure that
+        quote_count = (
+            re.subn(quotechar, b"", chunk)[1] + re.subn(quotechar, b"", line)[1]
+        )
+        while quote_count % 2 != 0:
+            quote_count += re.subn(quotechar, b"", f.readline())[1]
         # The workers return multiple objects for each part of the file read:
         # - The first n - 2 objects are partitions of data
         # - The n - 1 object is the length of the partition or the index if

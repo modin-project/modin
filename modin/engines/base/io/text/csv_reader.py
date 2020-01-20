@@ -79,7 +79,6 @@ class CSVReader(TextFileReader):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-
         usecols = kwargs.get("usecols", None)
         usecols_md = _validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
@@ -98,6 +97,10 @@ class CSVReader(TextFileReader):
             skiprows=None,
             parse_dates=parse_dates,
             usecols=usecols,
+        )
+        encoding = kwargs.get("encoding", None)
+        quotechar = kwargs.get("quotechar", '"').encode(
+            encoding if encoding is not None else "UTF-8"
         )
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
@@ -153,7 +156,9 @@ class CSVReader(TextFileReader):
                     "num_splits": num_splits,
                     **partition_kwargs,
                 }
-                partition_id = cls.call_deploy(f, chunk_size, num_splits + 2, args)
+                partition_id = cls.call_deploy(
+                    f, chunk_size, num_splits + 2, args, quotechar=quotechar
+                )
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])
