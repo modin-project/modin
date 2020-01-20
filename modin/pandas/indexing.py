@@ -212,7 +212,11 @@ class _LocIndexer(_LocationIndexerBase):
             if len(key) > self.df.ndim:
                 raise IndexingError("Too many indexers")
             if isinstance(key[0], slice) and key[0] == slice(None):
-                return self.df.__getitem__(key[1])
+                if not isinstance(key[1], slice):
+                    return self.df.__getitem__(key[1])
+                else:
+                    result_slice = self.df.columns.slice_locs(key[1].start, key[1].stop)
+                    return self.df.iloc[:, slice(*result_slice)]
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         # Check that the row_lookup/col_lookup is longer than 1 or that the

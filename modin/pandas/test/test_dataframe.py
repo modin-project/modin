@@ -4414,6 +4414,11 @@ class TestDataFrameIndexing:
             df_equals(modin_df.loc[:, [key2, key1]], pandas_df.loc[:, [key2, key1]])
             df_equals(modin_df.loc[[2, 1], :], pandas_df.loc[[2, 1], :])
 
+            # From issue #1023
+            key1 = modin_df.columns[0]
+            key2 = modin_df.columns[-2]
+            df_equals(modin_df.loc[:, key1:key2], pandas_df.loc[:, key1:key2])
+
             # Write Item
             modin_df_copy = modin_df.copy()
             pandas_df_copy = pandas_df.copy()
