@@ -2639,10 +2639,52 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).to_xarray()
 
-    def test_truncate(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).truncate()
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_truncate(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+
+        before = 1
+        after = len(modin_df - 3)
+        df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
+
+        before = 1
+        after = 3
+        df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
+
+        before = modin_df.columns[1]
+        after = modin_df.columns[-3]
+        try:
+            pandas_result = pandas_df.truncate(before, after, axis=1)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.truncate(before, after, axis=1)
+        else:
+            modin_result = modin_df.truncate(before, after, axis=1)
+            df_equals(modin_result, pandas_result)
+
+        before = modin_df.columns[1]
+        after = modin_df.columns[3]
+        try:
+            pandas_result = pandas_df.truncate(before, after, axis=1)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.truncate(before, after, axis=1)
+        else:
+            modin_result = modin_df.truncate(before, after, axis=1)
+            df_equals(modin_result, pandas_result)
+
+        before = None
+        after = None
+        df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
+        try:
+            pandas_result = pandas_df.truncate(before, after, axis=1)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.truncate(before, after, axis=1)
+        else:
+            modin_result = modin_df.truncate(before, after, axis=1)
+            df_equals(modin_result, pandas_result)
 
     def test_tshift(self):
         idx = pd.date_range("1/1/2012", periods=5, freq="M")
