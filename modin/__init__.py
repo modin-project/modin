@@ -70,3 +70,7 @@ __partition_format__ = get_partition_format()
 # We don't want these used outside of this file.
 del get_execution_engine
 del get_partition_format
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+import versioneer
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -8,7 +9,8 @@ ray_deps = ["ray==0.8.0"]
 
 setup(
     name="modin",
-    version="0.6.3",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(),
     url="https://github.com/modin-project/modin",
