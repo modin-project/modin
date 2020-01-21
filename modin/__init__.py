@@ -73,5 +73,5 @@ __partition_format__ = get_partition_format()
 del get_execution_engine
 del get_partition_format
 
-__version__ = get_versions()['version']
+__version__ = get_versions()["version"]
 del get_versions
