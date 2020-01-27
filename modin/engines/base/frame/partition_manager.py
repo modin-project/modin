@@ -3,6 +3,7 @@ import pandas
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
+from tqdm import tqdm_notebook, tqdm
 
 
 class BaseFrameManager(object):
@@ -99,6 +100,8 @@ class BaseFrameManager(object):
                 for row_of_parts in partitions
             ]
         )
+        
+
 
     @classmethod
     def lazy_map_partitions(cls, partitions, map_func):
@@ -298,16 +301,23 @@ class BaseFrameManager(object):
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):
+        def update_bar(pbar, f):
+            pbar.update(1)
+            return f
+
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
+        update_count = df.size / (col_chunksize * row_chunksize)
+        pbar = tqdm_notebook(total=update_count, desc="Building DataFrame")# add argument leave=None to make it disappear
         parts = [
             [
-                put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy())
+                update_bar(pbar, put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()))
                 for j in range(0, len(df.columns), col_chunksize)
             ]
             for i in range(0, len(df), row_chunksize)
         ]
+        pbar.close()
         if not return_dims:
             return np.array(parts)
         else:

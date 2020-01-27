@@ -9,6 +9,7 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
+from tqdm import tqdm_notebook, tqdm
 
 class BasePandasFrame(object):
 
@@ -656,7 +657,9 @@ class BasePandasFrame(object):
         """
 
         def _map_reduce_func(df):
+            #print("Computing")
             series_result = func(df)
+            #print("Shipping")
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
                 # consistent with what we have done. In the case of a reduction, the
@@ -727,7 +730,6 @@ class BasePandasFrame(object):
             reduce_func = map_func
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
-
         map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
