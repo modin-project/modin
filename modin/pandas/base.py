@@ -32,6 +32,7 @@ import warnings
 import pickle as pkl
 
 from modin.error_message import ErrorMessage
+import modin
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -48,6 +49,9 @@ class BasePandasDataset(object):
     # Siblings are other objects that share the same query compiler. We use this list
     # to update inplace when there is a shallow copy.
     _siblings = []
+
+    def toggleprogressbar(self, val):
+        setattr(modin, "show-progress-bar", val)
 
     def _add_sibling(self, sibling):
         sibling._siblings = self._siblings + [self]

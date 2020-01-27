@@ -43,6 +43,10 @@ if __execution_engine__ == "Ray":
                 other = call(other, **kwargs)
         return apply_func(df, other)
 
+from tqdm import tqdm_notebook
+import threading
+import modin
+
 
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
@@ -51,6 +55,8 @@ class PandasOnRayFrameManager(RayFrameManager):
     _partition_class = PandasOnRayFramePartition
     _column_partitions_class = PandasOnRayFrameColumnPartition
     _row_partition_class = PandasOnRayFrameRowPartition
+    progress_bar = None
+    bar_count = 0
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
@@ -117,6 +123,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
+<<<<<<< HEAD
     def broadcast_apply(cls, axis, apply_func, left, right):
         map_func = ray.put(apply_func)
         right_parts = np.squeeze(right)
@@ -147,4 +154,105 @@ class PandasOnRayFrameManager(RayFrameManager):
                 ]
                 for row_idx in range(len(left))
             ]
+=======
+    def progress_bar_wrapper(cls, function, *args, **kwargs):
+        """Wraps computation function inside a progress bar. Spawns another thread 
+            which displays a progress bar showing estimated completion time.
+
+        Args:
+            function: The name of the function to be wrapped.
+
+        Returns:
+            A new BaseFrameManager object, the type of object that called this.
+        """
+        result_parts = getattr(super(PandasOnRayFrameManager, cls), function)(
+            *args, **kwargs
+        )
+        futures = [x.oid for row in result_parts for x in row]
+
+        def display_progress_bar(futures):
+            for i in tqdm_notebook(range(1, len(futures) + 1)):
+                ray.wait(futures, i)
+
+        def update_progress_bar(futures, bar):
+            for i in range(1, len(futures) + 1):
+                ray.wait(futures, i)
+                bar.update(1)
+            cls.bar_count -= 1
+            if cls.bar_count == 0:
+                cls.progress_bar = None
+
+        if (hasattr(modin, "show-progress-bar")) and getattr(modin, "show-progress-bar") == True:
+            if cls.progress_bar:
+                cls.progress_bar.total += len(futures) - 1
+                threading.Thread(target=update_progress_bar, args=(futures, cls.progress_bar)).start()
+            else:
+                threading.Thread(target=display_progress_bar, args=(futures, )).start()
+        return result_parts
+
+    @classmethod
+    def map_partitions(cls, partitions, map_func):
+        return cls.progress_bar_wrapper("map_partitions", partitions, map_func)
+
+    @classmethod
+    def map_axis_partitions(cls, axis, partitions, map_func):
+        return cls.progress_bar_wrapper(
+            "map_axis_partitions", axis, partitions, map_func
+        )
+
+    @classmethod
+    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
+        return cls.progress_bar_wrapper(
+            "_apply_func_to_list_of_partitions", func, partitions, **kwargs
+        )
+
+    @classmethod
+    def apply_func_to_select_indices(
+        cls, axis, partitions, func, indices, keep_remaining=False
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices",
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
+
+    @classmethod
+    def apply_func_to_select_indices_along_full_axis(
+        cls, axis, partitions, func, indices, keep_remaining=False
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices_along_full_axis",
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
+
+    @classmethod
+    def apply_func_to_indices_both_axis(
+        cls,
+        partitions,
+        func,
+        row_partitions_list,
+        col_partitions_list,
+        item_to_distribute=None,
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_indices_both_axis",
+            partitions,
+            func,
+            row_partitions_list,
+            col_partitions_list,
+            item_to_distribute=None,
+        )
+
+    @classmethod
+    def binary_operation(cls, axis, left, func, right):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices", axis, left, func, right
+>>>>>>> updates
         )

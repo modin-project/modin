@@ -2747,9 +2747,7 @@ def test_tz_localize():
         modin_series.tz_localize("America/Los_Angeles"),
         pandas_series.tz_localize("America/Los_Angeles"),
     )
-    df_equals(
-        modin_series.tz_localize("UTC"), pandas_series.tz_localize("UTC"),
-    )
+    df_equals(modin_series.tz_localize("UTC"), pandas_series.tz_localize("UTC"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

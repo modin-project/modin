@@ -17,6 +17,8 @@ import pandas
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
 from pandas.api.types import union_categoricals
+from tqdm import tqdm_notebook
+import modin
 
 
 class BaseFrameManager(object):
@@ -289,16 +291,37 @@ class BaseFrameManager(object):
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):
+        def update_bar(pbar, f):
+            if show_bar == True:
+                pbar.update(1)
+            return f
+        
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
+        update_count = df.size / (col_chunksize * row_chunksize)
+
+        show_bar = (hasattr(modin, "show-progress-bar")) and getattr(modin, "show-progress-bar")
+        if show_bar:
+            pbar = tqdm_notebook(
+                total=update_count, desc="Building DataFrame"
+            )
+        else:
+            pbar = None
         parts = [
             [
-                put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy())
+                update_bar(
+                    pbar,
+                    put_func(
+                        df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
+                    ),
+                )
                 for j in range(0, len(df.columns), col_chunksize)
             ]
             for i in range(0, len(df), row_chunksize)
         ]
+        if show_bar:
+            pbar.close()
         if not return_dims:
             return np.array(parts)
         else:

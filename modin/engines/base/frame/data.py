@@ -21,6 +21,8 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
+from tqdm import tqdm_notebook
+
 
 class BasePandasFrame(object):
 
@@ -792,6 +794,10 @@ class BasePandasFrame(object):
         Return:
             A new dataframe.
         """
+        progress_bar_size = 2#(int) (2 * getattr(self._frame_mgr_cls, "progress-bar-size"))
+        self._frame_mgr_cls.progress_bar = tqdm_notebook(total = progress_bar_size, leave=True)
+        self._frame_mgr_cls.bar_count = 2
+
         map_func = self._build_mapreduce_func(axis, map_func)
         if reduce_func is None:
             reduce_func = map_func
@@ -802,6 +808,7 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
+
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
     def _map(self, func, dtypes=None):
