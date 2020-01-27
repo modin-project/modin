@@ -19,6 +19,11 @@ from .dataframe import DataFrame
 from .series import Series
 from modin.utils import to_pandas
 
+import modin
+
+# def toggleprogressbar(val):
+# setattr(modin, "show-progress-bar", val)
+
 
 def isna(obj):
     """

@@ -34,6 +34,7 @@ import pickle as pkl
 from modin.utils import try_cast_to_pandas
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
+import modin
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.

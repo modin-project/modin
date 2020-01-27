@@ -23,6 +23,9 @@ from modin.error_message import ErrorMessage
 import pandas
 
 import ray
+from tqdm import tqdm_notebook
+import threading
+import os
 
 
 @ray.remote
@@ -55,6 +58,8 @@ class PandasOnRayFrameManager(RayFrameManager):
     _partition_class = PandasOnRayFramePartition
     _column_partitions_class = PandasOnRayFrameColumnPartition
     _row_partition_class = PandasOnRayFrameRowPartition
+    progress_bar = None
+    bar_count = 0
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
@@ -129,5 +134,110 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(left))
             ]
         )
-
         return new_partitions
+
+    @classmethod
+    def progress_bar_wrapper(cls, function, name=None, *args, **kwargs):
+        """Wraps computation function inside a progress bar. Spawns another thread
+            which displays a progress bar showing estimated completion time.
+
+        Args:
+            function: The name of the function to be wrapped.
+
+        Returns:
+            A new BaseFrameManager object, the type of object that called this.
+        """
+        result_parts = getattr(super(PandasOnRayFrameManager, cls), function)(
+            *args, **kwargs
+        )
+        futures = [x.oid for row in result_parts for x in row]
+
+        def display_progress_bar(futures):
+            for i in tqdm_notebook(range(1, len(futures) + 1), desc=name):
+                ray.wait(futures, i)
+
+        if (
+            "MODIN_PROGRESS_BAR" in os.environ
+            and os.environ["MODIN_PROGRESS_BAR"] == "True"
+            and name != None
+        ):
+            threading.Thread(target=display_progress_bar, args=(futures,)).start()
+        return result_parts
+
+    @classmethod
+    def map_partitions(cls, partitions, map_func, name=None):
+        return cls.progress_bar_wrapper("map_partitions", name, partitions, map_func)
+
+    @classmethod
+    def lazy_map_partitions(cls, partitions, map_func, name=None):
+        return cls.progress_bar_wrapper(
+            "lazy_map_partitions", name, partitions, map_func
+        )
+
+    @classmethod
+    def map_axis_partitions(
+        cls, axis, partitions, map_func, keep_partitioning=False, name=None
+    ):
+        return cls.progress_bar_wrapper(
+            "map_axis_partitions", name, axis, partitions, map_func, keep_partitioning
+        )
+
+    @classmethod
+    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
+        return cls.progress_bar_wrapper(
+            "_apply_func_to_list_of_partitions", None, func, partitions, **kwargs
+        )
+
+    @classmethod
+    def apply_func_to_select_indices(
+        cls, axis, partitions, func, indices, keep_remaining=False, name=None
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices",
+            name,
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
+
+    @classmethod
+    def apply_func_to_select_indices_along_full_axis(
+        cls, axis, partitions, func, indices, keep_remaining=False, name=None
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices_along_full_axis",
+            name,
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
+
+    @classmethod
+    def apply_func_to_indices_both_axis(
+        cls,
+        partitions,
+        func,
+        row_partitions_list,
+        col_partitions_list,
+        item_to_distribute=None,
+        name=None,
+    ):
+        return cls.progress_bar_wrapper(
+            "apply_func_to_indices_both_axis",
+            name,
+            partitions,
+            func,
+            row_partitions_list,
+            col_partitions_list,
+            item_to_distribute=None,
+        )
+
+    @classmethod
+    def binary_operation(cls, axis, left, func, right, name=None):
+        return cls.progress_bar_wrapper(
+            "binary_operation", name, axis, left, func, right
+        )

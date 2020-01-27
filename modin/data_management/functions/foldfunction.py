@@ -24,6 +24,7 @@ class FoldFunction(Function):
                     if "axis" in call_kwds
                     else kwargs.get("axis"),
                     lambda x: fold_function(x, *args, **kwargs),
+                    name=fold_function.__name__,
                 )
             )
 

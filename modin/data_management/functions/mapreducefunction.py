@@ -27,6 +27,8 @@ class MapReduceFunction(Function):
                     lambda x: map_function(x, *args, **kwargs),
                     lambda y: reduce_function(y, *args, **kwargs),
                     preserve_index=preserve_index,
+                    map_name=call_kwds.get("map_name"),
+                    reduce_name=call_kwds.get("reduce_name"),
                 )
             )
 
