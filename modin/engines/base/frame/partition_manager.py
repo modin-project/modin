@@ -3,7 +3,7 @@ import pandas
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
-from tqdm import tqdm_notebook, tqdm
+from tqdm import tqdm_notebook
 
 
 class BaseFrameManager(object):
@@ -101,8 +101,6 @@ class BaseFrameManager(object):
             ]
         )
         
-
-
     @classmethod
     def lazy_map_partitions(cls, partitions, map_func):
         preprocessed_map_func = cls.preprocess_func(map_func)

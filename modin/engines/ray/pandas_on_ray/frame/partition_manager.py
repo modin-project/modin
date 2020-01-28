@@ -12,8 +12,7 @@ from modin import __execution_engine__
 if __execution_engine__ == "Ray":
     import ray
 
-from tqdm import tqdm_notebook, tqdm
-from progressbar import ProgressBar
+from tqdm import tqdm_notebook
 import threading
 
 class PandasOnRayFrameManager(RayFrameManager):
@@ -98,21 +97,10 @@ class PandasOnRayFrameManager(RayFrameManager):
         )
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
-    
-    @classmethod
-    @ray.remote
-    # This doesn't work because the progress bar does not output correctly
-    def run_progress_bar(futures):
-        pbar = ProgressBar()
-        for i in pbar(range(1, len(futures)+1)):
-            ray.wait(futures, i)
-    
-
-
     @classmethod
     def progress_bar_wrapper(cls, function, *args, **kwargs):
-        """Wraps computation function inside a progress bar. Displays a progress
-            bar showing estimated completion time.
+        """Wraps computation function inside a progress bar. Spawns another thread 
+            which displays a progress bar showing estimated completion time.
 
         Args:
             function: The name of the function to be wrapped.
@@ -120,20 +108,12 @@ class PandasOnRayFrameManager(RayFrameManager):
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
-
         result_parts = getattr(super(PandasOnRayFrameManager, cls), function)(*args, **kwargs)
         futures = [[x.oid for row in result_parts for x in row]]
-        
         def display_progress_bar(futures):
             for i in tqdm_notebook(range(1, len(futures)+1)):
                 ray.wait(futures, i)
-        x = threading.Thread(target=display_progress_bar, args=futures).start()
-        
-        '''
-        ### This doesn't work ###
-        cls.run_progress_bar.remote(futures)
-        '''
-
+        threading.Thread(target=display_progress_bar, args=futures).start()
         return result_parts
 
     @classmethod
@@ -143,10 +123,6 @@ class PandasOnRayFrameManager(RayFrameManager):
     @classmethod
     def map_axis_partitions(cls, axis, partitions, map_func):
         return cls.progress_bar_wrapper("map_axis_partitions", axis, partitions, map_func)
-
-    """@classmethod
-    def concat(cls, axis, left_parts, right_parts):
-        return cls.progress_bar_wrapper("concat", axis, left_parts, right_parts)"""
     
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):

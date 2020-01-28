@@ -2792,7 +2792,7 @@ class BasePandasDataset(object):
                     min_count=min_count,
                     **kwargs
                 )
-            )        
+            )
         return data._reduce_dimension(
             data._query_compiler.sum(
                 axis=axis,
