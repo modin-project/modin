@@ -15,6 +15,7 @@ if __execution_engine__ == "Ray":
 from tqdm import tqdm_notebook
 import threading
 
+
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
@@ -108,11 +109,15 @@ class PandasOnRayFrameManager(RayFrameManager):
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
-        result_parts = getattr(super(PandasOnRayFrameManager, cls), function)(*args, **kwargs)
+        result_parts = getattr(super(PandasOnRayFrameManager, cls), function)(
+            *args, **kwargs
+        )
         futures = [[x.oid for row in result_parts for x in row]]
+
         def display_progress_bar(futures):
-            for i in tqdm_notebook(range(1, len(futures)+1)):
+            for i in tqdm_notebook(range(1, len(futures) + 1)):
                 ray.wait(futures, i)
+
         threading.Thread(target=display_progress_bar, args=futures).start()
         return result_parts
 
@@ -122,23 +127,41 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def map_axis_partitions(cls, axis, partitions, map_func):
-        return cls.progress_bar_wrapper("map_axis_partitions", axis, partitions, map_func)
-    
+        return cls.progress_bar_wrapper(
+            "map_axis_partitions", axis, partitions, map_func
+        )
+
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
-        return cls.progress_bar_wrapper("_apply_func_to_list_of_partitions", func, partitions, **kwargs)
+        return cls.progress_bar_wrapper(
+            "_apply_func_to_list_of_partitions", func, partitions, **kwargs
+        )
 
     @classmethod
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        return cls.progress_bar_wrapper("apply_func_to_select_indices", axis, partitions, func, indices, keep_remaining)
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices",
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
 
     @classmethod
     def apply_func_to_select_indices_along_full_axis(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        return cls.progress_bar_wrapper("apply_func_to_select_indices_along_full_axis", axis, partitions, func, indices, keep_remaining)
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices_along_full_axis",
+            axis,
+            partitions,
+            func,
+            indices,
+            keep_remaining,
+        )
 
     @classmethod
     def apply_func_to_indices_both_axis(
@@ -149,8 +172,17 @@ class PandasOnRayFrameManager(RayFrameManager):
         col_partitions_list,
         item_to_distribute=None,
     ):
-        return cls.progress_bar_wrapper("apply_func_to_indices_both_axis", partitions, func, row_partitions_list, col_partitions_list, item_to_distribute=None)
+        return cls.progress_bar_wrapper(
+            "apply_func_to_indices_both_axis",
+            partitions,
+            func,
+            row_partitions_list,
+            col_partitions_list,
+            item_to_distribute=None,
+        )
 
     @classmethod
     def binary_operation(cls, axis, left, func, right):
-        return cls.progress_bar_wrapper("apply_func_to_select_indices", axis, left, func, right)
+        return cls.progress_bar_wrapper(
+            "apply_func_to_select_indices", axis, left, func, right
+        )

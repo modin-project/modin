@@ -11,6 +11,7 @@ from modin.backends.pandas.parsers import find_common_type_cat as find_common_ty
 
 from tqdm import tqdm_notebook
 
+
 class BasePandasFrame(object):
 
     _frame_mgr_cls = None
@@ -728,7 +729,7 @@ class BasePandasFrame(object):
             reduce_func = map_func
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
-            
+
         map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
