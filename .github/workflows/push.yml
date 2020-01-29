@@ -114,7 +114,6 @@ jobs:
       - run: mv .testmondata testmondata_pyarrow
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
   test-all:
-    needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -171,52 +170,51 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-    test-windows:
-      needs: [lint-flake8, lint-black]
-      runs-on: windows-latest
-      strategy:
-        matrix:
-          python-version: ["3.6.x", "3.7.x"]
-          part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
-      env:
-        MODIN_ENGINE: dask
-      name: test-windows
-      steps:
-        - uses: actions/checkout@v1
-          with:
-            fetch-depth: 1
-        - uses: actions/setup-python@v1
-          with:
-            python-version: ${{matrix.python-version}}
-            architecture: "x64"
-        - uses: actions/cache@v1
-          with:
-            path: ~\AppData\Local\pip\Cache
-            key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-            restore-keys: |
-              ${{ runner.os }}-pip-
-        - name: Install AWSCLI
-          if: steps.cache.outputs.cache-hit != 'true'
-          run: pip install awscli
-        - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
-        - run: mv testmondata_dask .testmondata
-        - name: Install pip requirements
-          if: steps.cache.outputs.cache-hit != 'true'
-          run: pip install -r windows_test_requires.txt
-        - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
-          if: matrix.part != 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
-          if: matrix.part == 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
-          if: matrix.part == 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
-          if: matrix.part == 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
-          if: matrix.part == 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
-          if: matrix.part == 3
-        - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
-          if: matrix.part == 3
+  test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.6.x", "3.7.x"]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+    env:
+      MODIN_ENGINE: dask
+    name: test-windows
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{matrix.python-version}}
+          architecture: "x64"
+      - uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install AWSCLI
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
+      - run: mv testmondata_dask .testmondata
+      - name: Install pip requirements
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install -r windows_test_requires.txt
+      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
+        if: matrix.part != 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
+        if: matrix.part == 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
+        if: matrix.part == 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
+        if: matrix.part == 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
+        if: matrix.part == 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
+        if: matrix.part == 3
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
+        if: matrix.part == 3
   test-pyarrow:
     runs-on: ubuntu-latest
     strategy:
