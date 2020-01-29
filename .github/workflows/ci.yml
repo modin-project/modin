@@ -34,7 +34,7 @@ jobs:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray", "dask"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
@@ -69,21 +69,21 @@ jobs:
         if: matrix.engine == 'ray'
       - run: pip install dask[complete] distributed
         if: matrix.engine == 'dask'
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
   test-windows:
     needs: [lint-flake8, lint-black]
@@ -91,7 +91,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: dask
     name: test-windows
@@ -117,19 +117,19 @@ jobs:
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r windows_test_requires.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
         if: matrix.part == 3
   test-pyarrow:
     needs: [lint-flake8, lint-black]

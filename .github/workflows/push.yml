@@ -23,11 +23,9 @@ jobs:
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_ray .
-      - run: mv testmondata_ray .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: MODIN_ENGINE=ray python -m pytest modin/pandas/test/
+      - run: bash run-tests.sh ray
       - run: mv .testmondata testmondata_ray
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_ray --body=./testmondata_ray
   testmon_python:
@@ -52,11 +50,9 @@ jobs:
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_python .
-      - run: mv testmondata_python .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: MODIN_ENGINE=python python -m pytest modin/pandas/test/
+      - run: bash run-tests.sh python
       - run: mv .testmondata testmondata_python
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_python --body=./testmondata_python
   testmon_dask:
@@ -81,11 +77,9 @@ jobs:
       - name: InstallAWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
-      - run: mv testmondata_dask .testmondata
       - run: sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: MODIN_ENGINE=dask python -m pytest modin/pandas/test/
+      - run: bash run-tests.sh dask
       - run: mv .testmondata testmondata_dask
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_dask --body=./testmondata_dask
   testmon_pyarrow:
@@ -120,15 +114,14 @@ jobs:
       - run: mv .testmondata testmondata_pyarrow
       - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
   test-all:
+    needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
         engine: ["python", "ray", "dask"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-      PYTEST_ADDOPTS:  "--cov-config=.coveragerc --cov=modin  --cov-append"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
@@ -145,6 +138,11 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: InstallAWSCLI
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pip install awscli
+      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
+      - run: mv testmondata_${{matrix.engine}} .testmondata
       - name: Install HDF5
         if: matrix.part == 3
         run: sudo apt install -y libhdf5-dev
@@ -157,70 +155,68 @@ jobs:
         if: matrix.engine == 'ray'
       - run: pip install dask[complete] distributed
         if: matrix.engine == 'dask'
-      - run: pip install coverage pytest-cov
+      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
-        if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
-  test-windows:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        python-version: ["3.6.x", "3.7.x"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
-    env:
-      MODIN_ENGINE: dask
-    name: test-windows
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: ${{matrix.python-version}}
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
-      - run: mv testmondata_dask .testmondata
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r windows_test_requires.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
-        if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
-        if: matrix.part == 3
+    test-windows:
+      needs: [lint-flake8, lint-black]
+      runs-on: windows-latest
+      strategy:
+        matrix:
+          python-version: ["3.6.x", "3.7.x"]
+          part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+      env:
+        MODIN_ENGINE: dask
+      name: test-windows
+      steps:
+        - uses: actions/checkout@v1
+          with:
+            fetch-depth: 1
+        - uses: actions/setup-python@v1
+          with:
+            python-version: ${{matrix.python-version}}
+            architecture: "x64"
+        - uses: actions/cache@v1
+          with:
+            path: ~\AppData\Local\pip\Cache
+            key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
+            restore-keys: |
+              ${{ runner.os }}-pip-
+        - name: Install AWSCLI
+          if: steps.cache.outputs.cache-hit != 'true'
+          run: pip install awscli
+        - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
+        - run: mv testmondata_dask .testmondata
+        - name: Install pip requirements
+          if: steps.cache.outputs.cache-hit != 'true'
+          run: pip install -r windows_test_requires.txt
+        - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
+          if: matrix.part != 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
+          if: matrix.part == 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
+          if: matrix.part == 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
+          if: matrix.part == 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
+          if: matrix.part == 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
+          if: matrix.part == 3
+        - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
+          if: matrix.part == 3
   test-pyarrow:
     runs-on: ubuntu-latest
     strategy:
