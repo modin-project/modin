@@ -1,4 +1,7 @@
+from typing import Type
+
 import pandas
+from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
@@ -75,7 +78,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
 
     # Child classes must have these in order to correctly subclass.
     instance_type = None
-    partition_type = None
+    partition_type: Type[BaseFramePartition] = BaseFramePartition
 
     def _wrap_partitions(self, partitions):
         if isinstance(partitions, self.instance_type):

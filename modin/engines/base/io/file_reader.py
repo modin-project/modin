@@ -1,5 +1,6 @@
 import os
 import re
+from typing import IO
 
 S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -18,7 +19,7 @@ class FileReader:
             return os.path.abspath(file_path)
 
     @classmethod
-    def file_open(cls, file_path, mode="rb", compression="infer"):
+    def file_open(cls, file_path, mode="rb", compression="infer") -> IO:
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
             if match:
