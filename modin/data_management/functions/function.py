@@ -1,3 +1,6 @@
+from typing import Callable
+
+
 class Function(object):
     def __init__(self):
         raise ValueError(
@@ -7,7 +10,7 @@ class Function(object):
         )
 
     @classmethod
-    def call(cls, func, **call_kwds):
+    def call(cls, func: Callable, **call_kwds):
         raise NotImplementedError("Please implement in child class")
 
     @classmethod

@@ -1,3 +1,5 @@
+from typing import Union, Tuple
+
 import numpy as np
 import pandas
 
@@ -17,7 +19,9 @@ def get_default_chunksize(length, num_splits):
     )
 
 
-def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
+def compute_chunksize(
+    df, num_splits, default_block_size=32, axis: Union[int, None] = None
+) -> Union[int, Tuple[int, int]]:
     """Computes the number of rows and/or columns to include in each partition.
 
     Args:
@@ -30,25 +34,25 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
          If axis is 1 or 0, returns an integer number of rows/columns to split the
          DataFrame. If axis is None, return a tuple containing both.
     """
-    if axis == 0 or axis is None:
-        row_chunksize = get_default_chunksize(len(df.index), num_splits)
+
+    def get_chunk_size(length):
+        chunksize = get_default_chunksize(length, num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
         # large amount of small partitions.
-        row_chunksize = max(1, row_chunksize, default_block_size)
-        if axis == 0:
-            return row_chunksize
-    # We always execute this because we can only get here if axis is 1 or None.
-    col_chunksize = get_default_chunksize(len(df.columns), num_splits)
-    # Take the min of the default and the memory-usage chunksize first to avoid a
-    # large amount of small partitions.
-    col_chunksize = max(1, col_chunksize, default_block_size)
-    if axis == 1:
-        return col_chunksize
+        return max(1, chunksize, default_block_size)
 
-    return row_chunksize, col_chunksize
+    if axis == 0:
+        return get_chunk_size(len(df.index))
+    elif axis == 1:
+        return get_chunk_size(len(df.columns))
+    else:
+        assert axis is None
+        row_chunksize = get_chunk_size(len(df.index))
+        col_chunk_size = get_chunk_size(len(df.columns))
+        return (row_chunksize, col_chunk_size)
 
 
-def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
+def split_result_of_axis_func_pandas(axis: int, num_splits, result, length_list=None):
     """Split the Pandas result evenly based on the provided number of splits.
 
     Args:
@@ -73,6 +77,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
             return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     # We do this to restore block partitioning
     chunksize = compute_chunksize(result, num_splits, axis=axis)
+    assert isinstance(chunksize, int)
     if axis == 0:
         return [
             result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)

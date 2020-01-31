@@ -4,11 +4,12 @@ import warnings
 
 from modin import __execution_engine__ as execution_engine
 from modin import __partition_format__ as partition_format
+from modin.engines.base.io import BaseIO
 
 
 class BaseFactory(object):
     @property
-    def io_cls(self):
+    def io_cls(self) -> BaseIO:
         """The module where the I/O functionality exists."""
         raise NotImplementedError("Implement in children classes!")
 
