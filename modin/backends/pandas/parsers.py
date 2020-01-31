@@ -1,11 +1,15 @@
 import numpy as np
+from typing import Union, List
 import pandas
+from pandas.io.parsers import TextFileReader
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import _infer_compression
 from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
+from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.engines.base.frame.data import BasePandasFrame
 from io import BytesIO
 
 
@@ -42,6 +46,25 @@ def find_common_type_cat(types):
 
 
 class PandasParser(object):
+    # Expected to be overriden in
+    query_compiler_cls: BaseQueryCompiler
+    frame_cls: BasePandasFrame
+
+    @classmethod
+    def materialize(cls, future):
+        raise NotImplementedError(
+            "This method is expected to be overriden by a task_wrapper! "
+            "For example, RayTask or DaskTask."
+        )
+
+    @staticmethod
+    def parse(
+        fname, **kwargs
+    ) -> Union[pandas.DataFrame, List[pandas.DataFrame], TextFileReader]:
+        raise NotImplementedError(
+            "This method is expected to be implemented by a child class."
+        )
+
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         return (
@@ -55,7 +78,11 @@ class PandasParser(object):
         ErrorMessage.default_to_pandas("Parameters provided")
         # Use default args for everything
         pandas_frame = cls.parse(fname, **kwargs)
-        if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
+
+        if isinstance(pandas_frame, TextFileReader):
+            # Have to provide hint to type checker
+            pandas_frame: TextFileReader
+
             pd_read = pandas_frame.read
             pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
                 pd_read(*args, **kwargs), cls.frame_cls

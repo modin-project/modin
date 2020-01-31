@@ -3,7 +3,7 @@ import sys
 import warnings
 
 
-def custom_formatwarning(msg, category, *args, **kwargs):
+def custom_formatwarning(message, category, filename, lineno, line=None):
     # ignore everything except the message
     return "{}: {}\n".format(category.__name__, msg)
 

@@ -8,11 +8,11 @@ class PyarrowCSVParser:
         import pyarrow as pa
         import pyarrow.csv as csv
 
-        fname = kwargs.pop("fname", None)
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        header = kwargs.pop("header", None)
+        fname = kwargs.pop("fname")
+        num_splits = kwargs.pop("num_splits")
+        start = kwargs.pop("start")
+        end = kwargs.pop("end")
+        header = kwargs.pop("header")
         bio = open(fname, "rb")
         # The header line for the CSV file
         first_line = bio.readline()

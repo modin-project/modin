@@ -1,3 +1,6 @@
+# Note: We ignore type checking due to gandiva use Cython binding
+#       making it impossible to typecheck
+# type: ignore
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 import pandas
 from pandas.core.computation.expr import Expr
