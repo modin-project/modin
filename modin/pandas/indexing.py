@@ -211,8 +211,13 @@ class _LocIndexer(_LocationIndexerBase):
         else:
             if len(key) > self.df.ndim:
                 raise IndexingError("Too many indexers")
+            # If we're only slicing columns, handle the case with `__getitem__`
             if isinstance(key[0], slice) and key[0] == slice(None):
                 if not isinstance(key[1], slice):
+                    # Boolean indexers can just be sliced into the columns object and
+                    # then passed to `__getitem__`
+                    if is_boolean_array(key[1]):
+                        return self.df.__getitem__(self.df.columns[key[1]])
                     return self.df.__getitem__(key[1])
                 else:
                     result_slice = self.df.columns.slice_locs(key[1].start, key[1].stop)

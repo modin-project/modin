@@ -4438,14 +4438,18 @@ class TestDataFrameIndexing:
             df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
             # List-like of booleans
-            indices = [
-                True if i % 3 == 0 else False for i in range(len(modin_df.index))
-            ]
-            columns = [
-                True if i % 5 == 0 else False for i in range(len(modin_df.columns))
-            ]
+            indices = [i % 3 == 0 for i in range(len(modin_df.index))]
+            columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
             modin_result = modin_df.loc[indices, columns]
             pandas_result = pandas_df.loc[indices, columns]
+            df_equals(modin_result, pandas_result)
+
+            modin_result = modin_df.loc[:, columns]
+            pandas_result = pandas_df.loc[:, columns]
+            df_equals(modin_result, pandas_result)
+
+            modin_result = modin_df.loc[indices]
+            pandas_result = pandas_df.loc[indices]
             df_equals(modin_result, pandas_result)
 
             # See issue #80
