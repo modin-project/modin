@@ -245,3 +245,14 @@ def test_pivot_table():
         pd.pivot_table(
             test_df["C"], values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
         )
+
+
+def test_to_datetime():
+    value = 1490195805
+    assert pd.to_datetime(value, unit="s") == pandas.to_datetime(value, unit="s")
+    value = 1490195805433502912
+    assert pd.to_datetime(value, unit="ns") == pandas.to_datetime(value, unit="ns")
+    value = [1, 2, 3]
+    assert pd.to_datetime(value, unit="D", origin=pd.Timestamp("2000-01-01")).equals(
+        pandas.to_datetime(value, unit="D", origin=pandas.Timestamp("2000-01-01"))
+    )

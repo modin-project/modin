@@ -2613,6 +2613,13 @@ class TestDataFrameDefault:
         if not name_contains(request.node.name, ["nan"]):
             assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
 
+    def test_to_datetime(self):
+        modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
+        pandas_df = pandas.DataFrame(
+            {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
+        )
+        df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
+
     def test_to_sparse(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
