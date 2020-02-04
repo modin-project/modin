@@ -1,6 +1,5 @@
 import pandas
 
-from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
 from .series import Series
 
