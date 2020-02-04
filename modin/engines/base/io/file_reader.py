@@ -1,7 +1,7 @@
 import os
 import re
 
-S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
+S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
@@ -21,7 +21,9 @@ class FileReader:
     def file_open(cls, file_path, mode="rb", compression="infer"):
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
-            if match:
+            if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
                 import s3fs as S3FS
                 from botocore.exceptions import NoCredentialsError
 
@@ -78,7 +80,9 @@ class FileReader:
     def file_exists(cls, file_path):
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
-            if match:
+            if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
                 import s3fs as S3FS
                 from botocore.exceptions import NoCredentialsError
 
