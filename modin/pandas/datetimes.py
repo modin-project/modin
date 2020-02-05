@@ -1,6 +1,7 @@
 import pandas
 
 from .dataframe import DataFrame
+from .series import Series
 
 
 def to_datetime(
@@ -40,14 +41,13 @@ def to_datetime(
         - Series: Series of datetime64 dtype
         - scalar: Timestamp
     """
-    if not isinstance(arg, DataFrame):
+    if not isinstance(arg, (DataFrame, Series)):
         return pandas.to_datetime(
             arg,
             errors=errors,
             dayfirst=dayfirst,
             yearfirst=yearfirst,
             utc=utc,
-            box=box,
             format=format,
             exact=exact,
             unit=unit,
@@ -55,14 +55,12 @@ def to_datetime(
             origin=origin,
             cache=cache,
         )
-    # Pandas seems to ignore this kwarg so we will too
-    pandas.to_datetime(
-        pandas.DataFrame(columns=arg.columns),
+    return arg._default_to_pandas(
+        pandas.to_datetime,
         errors=errors,
         dayfirst=dayfirst,
         yearfirst=yearfirst,
         utc=utc,
-        box=box,
         format=format,
         exact=exact,
         unit=unit,
@@ -70,4 +68,3 @@ def to_datetime(
         origin=origin,
         cache=cache,
     )
-    return arg._query_compiler.to_datetime()
