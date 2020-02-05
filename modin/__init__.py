@@ -1,6 +1,7 @@
 import os
 import sys
 import warnings
+from packaging import version
 
 from ._version import get_versions
 
@@ -34,7 +35,7 @@ def get_execution_engine():
                 except ImportError:
                     pass
                 else:
-                    if ray.__version__ != "0.8.0":
+                    if version.parse(ray.__version__) != version.parse("0.8.0"):
                         raise ImportError(
                             "Please `pip install modin[ray]` to install compatible Ray version."
                         )
@@ -50,10 +51,9 @@ def get_execution_engine():
                     )
                 )
             else:
-                if (
-                    str(dask.__version__) < "2.1.0"
-                    or str(distributed.__version__) < "2.3.2"
-                ):
+                if version.parse(dask.__version__) < version.parse(
+                    "2.1.0"
+                ) or version.parse(distributed.__version__) < version.parse("2.3.2"):
                     raise ImportError(
                         "Please `pip install modin[dask]` to install compatible Dask version."
                     )
