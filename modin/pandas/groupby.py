@@ -229,13 +229,15 @@ class DataFrameGroupBy(object):
         return result
 
     def apply(self, func, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.apply(func, *args, **kwargs), drop=self._as_index
+        )
 
     @property
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
-        return self._apply_agg_function(lambda df: df.dtypes)
+        return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -274,7 +276,9 @@ class DataFrameGroupBy(object):
             return self._default_to_pandas(
                 lambda df: df.aggregate(arg, *args, **kwargs)
             )
-        return self._apply_agg_function(lambda df: df.aggregate(arg, *args, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.aggregate(arg, *args, **kwargs), drop=self._as_index
+        )
 
     def last(self, **kwargs):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
@@ -393,7 +397,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.fillna(**kwargs), drop=self._as_index
+        )
         # pandas does not name the index on fillna
         result.index.name = None
         return result
@@ -472,6 +478,7 @@ class DataFrameGroupBy(object):
                 reduce_func=reduce_func,
                 reduce_args=kwargs,
                 numeric_only=numeric_only,
+                drop=self._drop,
             )
         )
 
@@ -501,7 +508,9 @@ class DataFrameGroupBy(object):
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler
-        new_manager = groupby_qc.groupby_agg(by, self._axis, f, self._kwargs, kwargs)
+        new_manager = groupby_qc.groupby_agg(
+            by, self._axis, f, self._kwargs, kwargs, drop=self._drop
+        )
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
         return DataFrame(query_compiler=new_manager)

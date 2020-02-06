@@ -1176,6 +1176,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         reduce_func=None,
         reduce_args=None,
         numeric_only=True,
+        drop=False,
     ):
         assert isinstance(
             by, type(self)
@@ -1205,6 +1206,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if reduce_func is not None:
 
             def _reduce(df):
+                groupby_args["as_index"] = True
                 if other_len > 1:
                     by = list(df.columns[0:other_len])
                 else:
@@ -1223,6 +1225,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
 
             def _reduce(df):
+                groupby_args["as_index"] = True
                 if other_len > 1:
                     by = list(df.columns[0:other_len])
                 else:
@@ -1260,9 +1263,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=new_columns,
             new_index=new_index,
         )
-        return self.__constructor__(new_modin_frame)
+        return (
+            self.__constructor__(new_modin_frame)
+            if groupby_args.get("as_index", True)
+            else self.__constructor__(new_modin_frame).reset_index(drop=not drop)
+        )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
+    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
         def groupby_agg_builder(df):
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
