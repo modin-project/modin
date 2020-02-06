@@ -14,6 +14,7 @@ omit =
     # Skip Gandiva because it is experimental
     modin/experimental/engines/pyarrow_on_ray/*
     modin/backends/pyarrow/*
+parallel = True
 
 [report]
 exclude_lines =
@@ -25,5 +26,3 @@ exclude_lines =
     raise ImportError
     assert
 
-[run]
-parallel = True
