@@ -1184,15 +1184,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         other_len = len(by.columns)
 
         def _map(df, other):
+            groupby_args["as_index"] = True
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]], axis=1
                 )
                 other = list(other.columns)
-            return map_func(
+            result = map_func(
                 df.groupby(by=other, axis=axis, **groupby_args), **map_args
-            ).reset_index(drop=False)
+            )
+            if (
+                not isinstance(result.index, pandas.MultiIndex)
+                and result.index.name is not None
+                and result.index.name in result.columns
+            ):
+                result.index.name = "{}{}".format("_modin_groupby_", result.index.name)
+            return result.reset_index(drop=False)
 
         if reduce_func is not None:
 
@@ -1201,9 +1209,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     by = list(df.columns[0:other_len])
                 else:
                     by = df.columns[0]
-                return reduce_func(
+                result = reduce_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **reduce_args
                 )
+                if (
+                    not isinstance(result.index, pandas.MultiIndex)
+                    and result.index.name is not None
+                    and "_modin_groupby_" in result.index.name
+                ):
+                    result.index.name = result.index.name[len("_modin_groupby_") :]
+                return result
 
         else:
 
@@ -1212,9 +1227,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     by = list(df.columns[0:other_len])
                 else:
                     by = df.columns[0]
-                return map_func(
+                result = map_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
+                if (
+                    not isinstance(result.index, pandas.MultiIndex)
+                    and result.index.name is not None
+                    and "_modin_groupby_" in result.index.name
+                ):
+                    result.index.name = result.index.name[len("_modin_groupby_") :]
+                return result
 
         if axis == 0:
             new_columns = (

@@ -26,6 +26,7 @@ class DataFrameGroupBy(object):
         group_keys,
         squeeze,
         idx_name,
+        drop,
         **kwargs
     ):
         self._axis = axis
@@ -35,6 +36,7 @@ class DataFrameGroupBy(object):
         self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
+        self._drop = drop
 
         if (
             level is None
@@ -203,7 +205,10 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
+        result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
+        # pandas does not name the index on cumsum
+        result.index.name = None
+        return result
 
     @property
     def indices(self):
@@ -218,7 +223,10 @@ class DataFrameGroupBy(object):
         )
 
     def cummax(self, axis=0, **kwargs):
-        return self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
+        result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
+        # pandas does not name the index on cummax
+        result.index.name = None
+        return result
 
     def apply(self, func, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
@@ -239,7 +247,10 @@ class DataFrameGroupBy(object):
         return SeriesGroupBy(self._default_to_pandas(lambda df: df.__getitem__(key)))
 
     def cummin(self, axis=0, **kwargs):
-        return self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
+        result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
+        # pandas does not name the index on cummin
+        result.index.name = None
+        return result
 
     def bfill(self, limit=None):
         return self._default_to_pandas(lambda df: df.bfill(limit=limit))
@@ -272,7 +283,10 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.mad())
 
     def rank(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.rank(**kwargs))
+        result = self._apply_agg_function(lambda df: df.rank(**kwargs))
+        # pandas does not name the index on rank
+        result.index.name = None
+        return result
 
     @property
     def corrwith(self):
@@ -353,7 +367,10 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
+        result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
+        # pandas does not name the index on cumprod
+        result.index.name = None
+        return result
 
     def __iter__(self):
         return self._iter.__iter__()
@@ -365,13 +382,21 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.cov())
 
     def transform(self, func, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.transform(func, *args, **kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.transform(func, *args, **kwargs)
+        )
+        # pandas does not name the index on transform
+        result.index.name = None
+        return result
 
     def corr(self, **kwargs):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.fillna(**kwargs))
+        result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
+        # pandas does not name the index on fillna
+        result.index.name = None
+        return result
 
     def count(self, **kwargs):
         return self._groupby_reduce(
@@ -384,7 +409,10 @@ class DataFrameGroupBy(object):
         return com._pipe(self, func, *args, **kwargs)
 
     def cumcount(self, ascending=True):
-        return self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
+        result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
+        # pandas does not name the index on cumcount
+        result.index.name = None
+        return result
 
     def tail(self, n=5):
         return self._default_to_pandas(lambda df: df.tail(n))
@@ -427,7 +455,7 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop:
+        if self._idx_name is not None and drop and self._drop:
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler
@@ -469,7 +497,7 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop:
+        if self._idx_name is not None and drop and self._drop:
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler

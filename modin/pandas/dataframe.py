@@ -396,9 +396,11 @@ class DataFrame(BasePandasDataset):
         """
         axis = self._get_axis_number(axis)
         idx_name = None
+        drop = False
         if callable(by):
             by = self.index.map(by)
         elif isinstance(by, str):
+            drop = by in self.columns
             idx_name = by
             if (
                 isinstance(self.axes[axis], pandas.MultiIndex)
@@ -409,18 +411,18 @@ class DataFrame(BasePandasDataset):
                 pass
             else:
                 by = self.__getitem__(by)._query_compiler
+        elif isinstance(by, Series):
+            idx_name = by.name
+            by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if axis == 0 and all(o in self for o in by):
+            if not isinstance(by, Series) and axis == 0 and all(o in self for o in by):
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."
                 )
                 by = self.__getitem__(by)._query_compiler
             else:
-                if isinstance(by, Series):
-                    idx_name = by.name
-                    by = by.values
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(
                     obj in self
@@ -446,6 +448,7 @@ class DataFrame(BasePandasDataset):
             squeeze,
             idx_name,
             observed=observed,
+            drop=drop,
             **kwargs
         )
 
