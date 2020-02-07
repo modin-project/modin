@@ -3,6 +3,8 @@ Installation
 
 There are a couple of ways to install Modin. Most users will want to install with
 ``pip``, but some users may want to build from the master branch on the `GitHub repo`_.
+The master branch has the most recent patches, but may be less stable than a release
+installed from ``pip``.
 
 Installing with pip
 -------------------
@@ -10,11 +12,22 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with pip. To install the most stable release run the following:
+Modin can be installed with pip. To install the most recent stable release run the following:
 
 .. code-block:: bash
 
-  pip install modin
+  pip install -U modin # -U for upgrade in case you have an older version
+
+If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+
+.. code-block:: bash
+
+  pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
+  pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
+  pip install modin[all] # Install all of the above
+
+Modin will automatically detect which engine you have installed and use that for
+scheduling computation!
 
 Release candidates
 """"""""""""""""""
@@ -44,46 +57,29 @@ Installing from the GitHub master branch
 ----------------------------------------
 
 If you'd like to try Modin using the most recent updates from the master branch, you can
-also use `pip`.
+also use ``pip``.
 
 .. code-block:: bash
 
   pip install git+https://github.com/modin-project/modin
 
-This will install directly from the repo without you having to clone it! Please be aware
+This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
 
 Windows
 -------
 
-For installation on Windows, we recommend using Windows Subsystem for Linux (WSL_). This
-will allow you to use Linux commands on your Windows machine.
-
-One of our dependencies is Ray_. Ray is not yet supported natively on Windows, so in
-order to install it you need to use the WSL if you are on Windows.
-
-Once you've installed WSL, you can install Modin in the WSL bash shell just like you
-would on Linux or Mac:
+For installation on Windows, we recommend using the Dask_ Engine. Ray does not support Windows,
+so it will not be possible to install ``modin[ray]`` or ``modin[all]``. It is possible to use
+Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
+and poor performance of Ray on WSL, a roughly 2-3x cost. To install with the Dask_ engine, run the
+following using ``pip``:
 
 .. code-block:: bash
 
-    pip install modin
+    pip install modin[dask]
 
-Once you've done this, Modin will be installed. However, it is important to note that
-you must execute `python`, `ipython` and `jupyter` from the WSL application.
-
-
-Dependencies
-------------
-
-Currently, Modin depends on pandas version 0.23.4. The API of pandas has a
-tendency to change some with each release, so we pin our current version to the
-most recent version to take advantage of the newest additions. This also
-typically means better performance and more correct code.
-
-Modin also depends on Ray_. Ray is a task-parallel execution framework for
-parallelizing new and existing applications with minor code changes. Currently,
-we depend on the most recent Ray release: https://pypi.org/project/ray/.
+You may already have a recent version of Dask_ installed, in which case you can simply ``pip install modin``.
 
 Building Modin from Source
 --------------------------
@@ -97,11 +93,12 @@ issues, we recommend uninstalling Modin before you install from source:
 
   pip uninstall modin
 
-To build from source, you first must clone the repo:
+To build from source, you first must clone the repo. We recommend forking the repository first
+through the GitHub interface, then cloning as follows:
 
 .. code-block:: bash
 
-  git clone https://github.com/modin-project/modin.git
+  git clone https://github.com/<your-github-username>/modin.git
 
 Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 
@@ -116,3 +113,4 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _contributing: contributing.html
+.. _Dask: https://github.com/dask/dask
