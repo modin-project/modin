@@ -1,9 +1,10 @@
 import pandas
-import warnings
 
 __pandas_version__ = "0.25.3"
 
 if pandas.__version__ != __pandas_version__:
+    import warnings
+
     warnings.warn(
         "The pandas version installed does not match the required pandas version in "
         "Modin. This may cause undesired side effects!".format(__pandas_version__)
