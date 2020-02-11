@@ -25,7 +25,8 @@ def ray_groupby_equals_pandas(ray_groupby, pandas_groupby):
         df_equals(g1[1], g2[1])
 
 
-def test_mixed_dtypes_groupby():
+@pytest.mark.parametrize("as_index", [True, False])
+def test_mixed_dtypes_groupby(as_index):
     frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
     pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
     # Convert every other column to string
@@ -40,12 +41,11 @@ def test_mixed_dtypes_groupby():
     by_values = [("col1",), (lambda x: x % 2,), (ray_df["col0"], pandas_df["col0"])]
 
     for by in by_values:
-        ray_groupby = ray_df.groupby(by=by[0])
-        pandas_groupby = pandas_df.groupby(by=by[-1])
+        ray_groupby = ray_df.groupby(by=by[0], as_index=as_index)
+        pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
 
         ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
         eval_ngroups(ray_groupby, pandas_groupby)
-        eval_skew(ray_groupby, pandas_groupby)
         eval_ffill(ray_groupby, pandas_groupby)
         eval_sem(ray_groupby, pandas_groupby)
         eval_mean(ray_groupby, pandas_groupby)
@@ -69,7 +69,10 @@ def test_mixed_dtypes_groupby():
         eval_bfill(ray_groupby, pandas_groupby)
         eval_idxmin(ray_groupby, pandas_groupby)
         eval_prod(ray_groupby, pandas_groupby)
-        eval_std(ray_groupby, pandas_groupby)
+        if as_index:
+            eval_std(ray_groupby, pandas_groupby)
+            eval_var(ray_groupby, pandas_groupby)
+            eval_skew(ray_groupby, pandas_groupby)
 
         agg_functions = ["min", "max"]
         for func in agg_functions:
@@ -79,7 +82,6 @@ def test_mixed_dtypes_groupby():
         eval_last(ray_groupby, pandas_groupby)
         eval_mad(ray_groupby, pandas_groupby)
         eval_max(ray_groupby, pandas_groupby)
-        eval_var(ray_groupby, pandas_groupby)
         eval_len(ray_groupby, pandas_groupby)
         eval_sum(ray_groupby, pandas_groupby)
         eval_ngroup(ray_groupby, pandas_groupby)
@@ -89,7 +91,7 @@ def test_mixed_dtypes_groupby():
         eval_cumprod(ray_groupby, pandas_groupby)
         eval_cov(ray_groupby, pandas_groupby)
 
-        transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+        transform_functions = [lambda df: df, lambda df: df + df]
         for func in transform_functions:
             eval_transform(ray_groupby, pandas_groupby, func)
 
@@ -107,7 +109,9 @@ def test_mixed_dtypes_groupby():
         eval_groups(ray_groupby, pandas_groupby)
 
 
-def test_simple_row_groupby():
+@pytest.mark.parametrize("by", [[1, 2, 1, 2], lambda x: x % 3, "col1"])
+@pytest.mark.parametrize("as_index", [True, False])
+def test_simple_row_groupby(by, as_index):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
@@ -119,75 +123,73 @@ def test_simple_row_groupby():
     )
 
     ray_df = from_pandas(pandas_df)
-
-    by_values = [[1, 2, 1, 2], lambda x: x % 3, "col1"]
     n = 1
-    for by in by_values:
-        ray_groupby = ray_df.groupby(by=by)
-        pandas_groupby = pandas_df.groupby(by=by)
+    ray_groupby = ray_df.groupby(by=by, as_index=as_index)
+    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
 
-        ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
-        eval_ngroups(ray_groupby, pandas_groupby)
-        eval_skew(ray_groupby, pandas_groupby)
-        eval_ffill(ray_groupby, pandas_groupby)
-        eval_sem(ray_groupby, pandas_groupby)
-        eval_mean(ray_groupby, pandas_groupby)
-        eval_any(ray_groupby, pandas_groupby)
-        eval_min(ray_groupby, pandas_groupby)
-        eval_idxmax(ray_groupby, pandas_groupby)
-        eval_ndim(ray_groupby, pandas_groupby)
-        eval_cumsum(ray_groupby, pandas_groupby)
-        eval_pct_change(ray_groupby, pandas_groupby)
-        eval_cummax(ray_groupby, pandas_groupby)
+    ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
+    eval_ngroups(ray_groupby, pandas_groupby)
+    eval_ffill(ray_groupby, pandas_groupby)
+    eval_sem(ray_groupby, pandas_groupby)
+    eval_mean(ray_groupby, pandas_groupby)
+    eval_any(ray_groupby, pandas_groupby)
+    eval_min(ray_groupby, pandas_groupby)
+    eval_idxmax(ray_groupby, pandas_groupby)
+    eval_ndim(ray_groupby, pandas_groupby)
+    eval_cumsum(ray_groupby, pandas_groupby)
+    eval_pct_change(ray_groupby, pandas_groupby)
+    eval_cummax(ray_groupby, pandas_groupby)
 
-        apply_functions = [lambda df: df.sum(), min]
-        for func in apply_functions:
-            eval_apply(ray_groupby, pandas_groupby, func)
+    apply_functions = [lambda df: df.sum(), min]
+    for func in apply_functions:
+        eval_apply(ray_groupby, pandas_groupby, func)
 
-        eval_dtypes(ray_groupby, pandas_groupby)
-        eval_first(ray_groupby, pandas_groupby)
-        eval_backfill(ray_groupby, pandas_groupby)
-        eval_cummin(ray_groupby, pandas_groupby)
-        eval_bfill(ray_groupby, pandas_groupby)
-        eval_idxmin(ray_groupby, pandas_groupby)
-        eval_prod(ray_groupby, pandas_groupby)
+    eval_dtypes(ray_groupby, pandas_groupby)
+    eval_first(ray_groupby, pandas_groupby)
+    eval_backfill(ray_groupby, pandas_groupby)
+    eval_cummin(ray_groupby, pandas_groupby)
+    eval_bfill(ray_groupby, pandas_groupby)
+    eval_idxmin(ray_groupby, pandas_groupby)
+    eval_prod(ray_groupby, pandas_groupby)
+    if as_index:
         eval_std(ray_groupby, pandas_groupby)
-
-        agg_functions = ["min", "max"]
-        for func in agg_functions:
-            eval_agg(ray_groupby, pandas_groupby, func)
-            eval_aggregate(ray_groupby, pandas_groupby, func)
-
-        eval_last(ray_groupby, pandas_groupby)
-        eval_mad(ray_groupby, pandas_groupby)
-        eval_rank(ray_groupby, pandas_groupby)
-        eval_max(ray_groupby, pandas_groupby)
         eval_var(ray_groupby, pandas_groupby)
-        eval_len(ray_groupby, pandas_groupby)
-        eval_sum(ray_groupby, pandas_groupby)
-        eval_ngroup(ray_groupby, pandas_groupby)
-        eval_nunique(ray_groupby, pandas_groupby)
-        eval_median(ray_groupby, pandas_groupby)
-        eval_head(ray_groupby, pandas_groupby, n)
-        eval_cumprod(ray_groupby, pandas_groupby)
-        eval_cov(ray_groupby, pandas_groupby)
+        eval_skew(ray_groupby, pandas_groupby)
 
-        transform_functions = [lambda df: df + 4, lambda df: -df - 10]
-        for func in transform_functions:
-            eval_transform(ray_groupby, pandas_groupby, func)
+    agg_functions = ["min", "max"]
+    for func in agg_functions:
+        eval_agg(ray_groupby, pandas_groupby, func)
+        eval_aggregate(ray_groupby, pandas_groupby, func)
 
-        pipe_functions = [lambda dfgb: dfgb.sum()]
-        for func in pipe_functions:
-            eval_pipe(ray_groupby, pandas_groupby, func)
+    eval_last(ray_groupby, pandas_groupby)
+    eval_mad(ray_groupby, pandas_groupby)
+    eval_rank(ray_groupby, pandas_groupby)
+    eval_max(ray_groupby, pandas_groupby)
+    eval_len(ray_groupby, pandas_groupby)
+    eval_sum(ray_groupby, pandas_groupby)
+    eval_ngroup(ray_groupby, pandas_groupby)
+    eval_nunique(ray_groupby, pandas_groupby)
+    eval_median(ray_groupby, pandas_groupby)
+    eval_head(ray_groupby, pandas_groupby, n)
+    eval_cumprod(ray_groupby, pandas_groupby)
+    eval_cov(ray_groupby, pandas_groupby)
 
-        eval_corr(ray_groupby, pandas_groupby)
-        eval_fillna(ray_groupby, pandas_groupby)
-        eval_count(ray_groupby, pandas_groupby)
-        eval_tail(ray_groupby, pandas_groupby, n)
-        eval_quantile(ray_groupby, pandas_groupby)
-        eval_take(ray_groupby, pandas_groupby)
-        eval___getattr__(ray_groupby, pandas_groupby)
-        eval_groups(ray_groupby, pandas_groupby)
+    transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+    for func in transform_functions:
+        eval_transform(ray_groupby, pandas_groupby, func)
+
+    pipe_functions = [lambda dfgb: dfgb.sum()]
+    for func in pipe_functions:
+        eval_pipe(ray_groupby, pandas_groupby, func)
+
+    eval_corr(ray_groupby, pandas_groupby)
+    eval_fillna(ray_groupby, pandas_groupby)
+    eval_count(ray_groupby, pandas_groupby)
+    eval_tail(ray_groupby, pandas_groupby, n)
+    eval_quantile(ray_groupby, pandas_groupby)
+    eval_take(ray_groupby, pandas_groupby)
+    eval___getattr__(ray_groupby, pandas_groupby)
+    eval_groups(ray_groupby, pandas_groupby)
 
 
 def test_single_group_row_groupby():
