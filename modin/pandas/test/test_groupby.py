@@ -46,7 +46,6 @@ def test_mixed_dtypes_groupby(as_index):
 
         ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
         eval_ngroups(ray_groupby, pandas_groupby)
-        eval_skew(ray_groupby, pandas_groupby)
         eval_ffill(ray_groupby, pandas_groupby)
         eval_sem(ray_groupby, pandas_groupby)
         eval_mean(ray_groupby, pandas_groupby)
@@ -70,7 +69,10 @@ def test_mixed_dtypes_groupby(as_index):
         eval_bfill(ray_groupby, pandas_groupby)
         eval_idxmin(ray_groupby, pandas_groupby)
         eval_prod(ray_groupby, pandas_groupby)
-        eval_std(ray_groupby, pandas_groupby)
+        if as_index:
+            eval_std(ray_groupby, pandas_groupby)
+            eval_var(ray_groupby, pandas_groupby)
+            eval_skew(ray_groupby, pandas_groupby)
 
         agg_functions = ["min", "max"]
         for func in agg_functions:
@@ -80,7 +82,6 @@ def test_mixed_dtypes_groupby(as_index):
         eval_last(ray_groupby, pandas_groupby)
         eval_mad(ray_groupby, pandas_groupby)
         eval_max(ray_groupby, pandas_groupby)
-        eval_var(ray_groupby, pandas_groupby)
         eval_len(ray_groupby, pandas_groupby)
         eval_sum(ray_groupby, pandas_groupby)
         eval_ngroup(ray_groupby, pandas_groupby)
@@ -128,7 +129,6 @@ def test_simple_row_groupby(by, as_index):
 
     ray_groupby_equals_pandas(ray_groupby, pandas_groupby)
     eval_ngroups(ray_groupby, pandas_groupby)
-    eval_skew(ray_groupby, pandas_groupby)
     eval_ffill(ray_groupby, pandas_groupby)
     eval_sem(ray_groupby, pandas_groupby)
     eval_mean(ray_groupby, pandas_groupby)
@@ -151,7 +151,10 @@ def test_simple_row_groupby(by, as_index):
     eval_bfill(ray_groupby, pandas_groupby)
     eval_idxmin(ray_groupby, pandas_groupby)
     eval_prod(ray_groupby, pandas_groupby)
-    eval_std(ray_groupby, pandas_groupby)
+    if as_index:
+        eval_std(ray_groupby, pandas_groupby)
+        eval_var(ray_groupby, pandas_groupby)
+        eval_skew(ray_groupby, pandas_groupby)
 
     agg_functions = ["min", "max"]
     for func in agg_functions:
@@ -162,7 +165,6 @@ def test_simple_row_groupby(by, as_index):
     eval_mad(ray_groupby, pandas_groupby)
     eval_rank(ray_groupby, pandas_groupby)
     eval_max(ray_groupby, pandas_groupby)
-    eval_var(ray_groupby, pandas_groupby)
     eval_len(ray_groupby, pandas_groupby)
     eval_sum(ray_groupby, pandas_groupby)
     eval_ngroup(ray_groupby, pandas_groupby)

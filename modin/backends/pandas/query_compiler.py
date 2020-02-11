@@ -1183,8 +1183,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ), "Can only use groupby reduce with another Query Compiler"
 
         other_len = len(by.columns)
+        as_index = groupby_args.get("as_index", True)
 
         def _map(df, other):
+            # Set `as_index` to True to track the metadata of the grouping object
+            # It is used to make sure that between phases we are constructing the
+            # right index and placing columns in the correct order.
             groupby_args["as_index"] = True
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
@@ -1206,6 +1210,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if reduce_func is not None:
 
             def _reduce(df):
+                # See note above about setting `as_index`
                 groupby_args["as_index"] = True
                 if other_len > 1:
                     by = list(df.columns[0:other_len])
@@ -1225,6 +1230,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
 
             def _reduce(df):
+                # See note above about setting `as_index`
                 groupby_args["as_index"] = True
                 if other_len > 1:
                     by = list(df.columns[0:other_len])
@@ -1263,14 +1269,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=new_columns,
             new_index=new_index,
         )
-        return (
-            self.__constructor__(new_modin_frame)
-            if groupby_args.get("as_index", True)
-            else self.__constructor__(new_modin_frame).reset_index(drop=not drop)
-        )
+        result = self.__constructor__(new_modin_frame)
+        # Reset `as_index` because it was edited inplace.
+        groupby_args["as_index"] = as_index
+        if as_index:
+            return result
+        else:
+            if result.index.name is None or result.index.name in result.columns:
+                drop = False
+            return result.reset_index(drop=not drop)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+        as_index = groupby_args.get("as_index", True)
+
         def groupby_agg_builder(df):
+            # Set `as_index` to True to track the metadata of the grouping object
+            # It is used to make sure that between phases we are constructing the
+            # right index and placing columns in the correct order.
+            groupby_args["as_index"] = True
+
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
                 try:
@@ -1292,7 +1309,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, lambda df: groupby_agg_builder(df)
         )
-        return self.__constructor__(new_modin_frame)
+        result = self.__constructor__(new_modin_frame)
+        # Reset `as_index` because it was edited inplace.
+        groupby_args["as_index"] = as_index
+        if as_index:
+            return result
+        else:
+            if result.index.name is None or result.index.name in result.columns:
+                drop = False
+            return result.reset_index(drop=not drop)
 
     # END Manual Partitioning methods
 
