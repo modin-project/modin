@@ -27,7 +27,6 @@ class ParquetReader(ColumnStoreReader):
         if os.path.isdir(path):
             partitioned_columns = set()
             directory = True
-            original_path = path
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
@@ -39,17 +38,15 @@ class ParquetReader(ColumnStoreReader):
                     # Metadata files, git files, .DSStore
                     if files[0][0] == ".":
                         continue
-                    path = os.path.join(root, files[0])
                     break
             partitioned_columns = list(partitioned_columns)
             if len(partitioned_columns):
-                ErrorMessage.default_to_pandas("Partitioned Columns in Parquet")
+                ErrorMessage.default_to_pandas("Mixed Partitioning Columns in Parquet")
                 return cls.single_worker_read(
-                    original_path, engine=engine, columns=columns, **kwargs
+                    path, engine=engine, columns=columns, **kwargs
                 )
         else:
             directory = False
-
         if not columns:
             if directory:
                 # Path of the sample file that we will read to get the remaining columns

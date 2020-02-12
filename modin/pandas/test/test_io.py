@@ -433,6 +433,13 @@ def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
     df_equals(modin_df, pandas_df)
 
 
+def test_from_parquet_hdfs():
+    path = "modin/pandas/test/data/hdfs.parquet"
+    pandas_df = pandas.read_parquet(path)
+    modin_df = pd.read_parquet(path)
+    df_equals(modin_df, pandas_df)
+
+
 def test_from_json():
     setup_json_file(SMALL_ROW_SIZE)
 
