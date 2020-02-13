@@ -122,6 +122,9 @@ class Series(BasePandasDataset):
     def __add__(self, right):
         return self.add(right)
 
+    def __radd__(self, left):
+        return self.add(left)
+
     def __and__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
@@ -153,14 +156,23 @@ class Series(BasePandasDataset):
     def __div__(self, right):
         return self.div(right)
 
+    def __rdiv__(self, left):
+        return self.rdiv(left)
+
     def __divmod__(self, right):
         return self.divmod(right)
+
+    def __rdivmod__(self, left):
+        return self.rdivmod(left)
 
     def __float__(self):
         return float(self.squeeze())
 
     def __floordiv__(self, right):
         return self.floordiv(right)
+
+    def __rfloordiv__(self, right):
+        return self.rfloordiv(right)
 
     def _getitem(self, key):
         key = apply_if_callable(key, self)
@@ -223,8 +235,14 @@ class Series(BasePandasDataset):
     def __mod__(self, right):
         return self.mod(right)
 
+    def __rmod__(self, left):
+        return self.rmod(left)
+
     def __mul__(self, right):
         return self.mul(right)
+
+    def __rmul__(self, left):
+        return self.rmul(left)
 
     def __or__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
@@ -232,6 +250,9 @@ class Series(BasePandasDataset):
 
     def __pow__(self, right):
         return self.pow(right)
+
+    def __rpow__(self, left):
+        return self.rpow(left)
 
     def __repr__(self):
         num_rows = pandas.get_option("max_rows") or 60
@@ -270,8 +291,14 @@ class Series(BasePandasDataset):
     def __sub__(self, right):
         return self.sub(right)
 
+    def __rsub__(self, left):
+        return self.rsub(left)
+
     def __truediv__(self, right):
         return self.truediv(right)
+
+    def __rtruediv__(self, left):
+        return self.rtruediv(left)
 
     __iadd__ = __add__
     __imul__ = __add__

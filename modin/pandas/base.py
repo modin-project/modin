@@ -3245,6 +3245,9 @@ class BasePandasDataset(object):
     def __and__(self, other):
         return self._binary_op("__and__", other, axis=0)
 
+    def __rand__(self, other):
+        return self._binary_op("__and__", other, axis=0)
+
     def __array__(self, dtype=None):
         arr = self.to_numpy(dtype)
         return arr
@@ -3287,8 +3290,8 @@ class BasePandasDataset(object):
     def __finalize__(self, other, method=None, **kwargs):
         return self._default_to_pandas("__finalize__", other, method=method, **kwargs)
 
-    def __ge__(self, other):
-        return self.ge(other)
+    def __ge__(self, right):
+        return self.ge(right)
 
     def __getitem__(self, key):
         if len(self) == 0:
@@ -3353,8 +3356,8 @@ class BasePandasDataset(object):
     def __getstate__(self):
         return self._default_to_pandas("__getstate__")
 
-    def __gt__(self, other):
-        return self.gt(other)
+    def __gt__(self, right):
+        return self.gt(right)
 
     def __invert__(self):
         if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
@@ -3365,8 +3368,8 @@ class BasePandasDataset(object):
             )
         return self.__constructor__(query_compiler=self._query_compiler.invert())
 
-    def __le__(self, other):
-        return self.le(other)
+    def __le__(self, right):
+        return self.le(right)
 
     def __len__(self):
         """Gets the length of the DataFrame.
@@ -3376,8 +3379,8 @@ class BasePandasDataset(object):
         """
         return len(self.index)
 
-    def __lt__(self, other):
-        return self.lt(other)
+    def __lt__(self, right):
+        return self.lt(right)
 
     def __ne__(self, other):
         return self.ne(other)
@@ -3404,6 +3407,9 @@ class BasePandasDataset(object):
     def __or__(self, other):
         return self._binary_op("__or__", other, axis=0)
 
+    def __ror__(self, other):
+        return self._binary_op("__or__", other, axis=0)
+
     def __sizeof__(self):
         return self._default_to_pandas("__sizeof__")
 
@@ -3411,6 +3417,9 @@ class BasePandasDataset(object):
         return repr(self)
 
     def __xor__(self, other):
+        return self._binary_op("__xor__", other, axis=0)
+
+    def __rxor__(self, other):
         return self._binary_op("__xor__", other, axis=0)
 
     @property
