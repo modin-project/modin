@@ -1908,8 +1908,11 @@ class DataFrame(BasePandasDataset):
     def _getitem_column(self, key):
         if key not in self.keys():
             raise KeyError("{}".format(key))
-        s = self._reduce_dimension(self._query_compiler.getitem_column_array([key]))
-        s._parent = self
+        s = DataFrame(
+            query_compiler=self._query_compiler.getitem_column_array([key])
+        ).squeeze(axis=1)
+        if isinstance(s, Series):
+            s._parent = self
         return s
 
     def _getitem_array(self, key):
