@@ -5095,6 +5095,16 @@ class TestDataFrameIndexing:
         s = slice("2017-01-06", "2017-01-09")
         df_equals(modin_df[s], pandas_df[s])
 
+    def test_getitem_same_name(self):
+        data = [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]]
+        columns = ["c1", "c2", "c1", "c3"]
+        modin_df = pd.DataFrame(data, columns=columns)
+        pandas_df = pandas.DataFrame(data, columns=columns)
+        df_equals(modin_df["c1"], pandas_df["c1"])
+        df_equals(modin_df["c2"], pandas_df["c2"])
+        df_equals(modin_df[["c1", "c2"]], pandas_df[["c1", "c2"]])
+        df_equals(modin_df["c3"], pandas_df["c3"])
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___getattr__(self, request, data):
         modin_df = pd.DataFrame(data)
