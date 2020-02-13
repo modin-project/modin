@@ -1,6 +1,6 @@
 import numpy as np
 import pandas
-from pandas.core.common import is_bool_indexer
+from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
@@ -163,6 +163,7 @@ class Series(BasePandasDataset):
         return self.floordiv(right)
 
     def _getitem(self, key):
+        key = apply_if_callable(key, self)
         if isinstance(key, Series) and key.dtype == np.bool:
             # This ends up being significantly faster than looping through and getting
             # each item individually.
