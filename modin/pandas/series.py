@@ -197,6 +197,22 @@ class Series(BasePandasDataset):
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
 
+    def __getattr__(self, key):
+        """After regular attribute access, looks up the name in the index
+
+        Args:
+            key (str): Attribute name.
+
+        Returns:
+            The value of the attribute.
+        """
+        try:
+            return object.__getattribute__(self, key)
+        except AttributeError as e:
+            if key in self.index:
+                return self[key]
+            raise e
+
     def __int__(self):
         return int(self.squeeze())
 
@@ -1020,7 +1036,7 @@ class Series(BasePandasDataset):
         self_cp = self.copy()
         if name is not None:
             self_cp.name = name
-        return DataFrame(self.copy())
+        return DataFrame(self_cp)
 
     def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list)
