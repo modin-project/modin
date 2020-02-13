@@ -5096,7 +5096,13 @@ class TestDataFrameIndexing:
         df_equals(modin_df[s], pandas_df[s])
 
     def test_getitem_same_name(self):
-        data = [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]]
+        data = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12],
+            [13, 14, 15, 16],
+            [17, 18, 19, 20],
+        ]
         columns = ["c1", "c2", "c1", "c3"]
         modin_df = pd.DataFrame(data, columns=columns)
         pandas_df = pandas.DataFrame(data, columns=columns)

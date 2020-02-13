@@ -1908,7 +1908,9 @@ class DataFrame(BasePandasDataset):
     def _getitem_column(self, key):
         if key not in self.keys():
             raise KeyError("{}".format(key))
-        s = DataFrame(query_compiler=self._query_compiler.getitem_column_array([key])).squeeze(axis=1)
+        s = DataFrame(
+            query_compiler=self._query_compiler.getitem_column_array([key])
+        ).squeeze(axis=1)
         if isinstance(s, Series):
             s._parent = self
         return s
