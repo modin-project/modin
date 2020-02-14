@@ -90,8 +90,8 @@ def _parse_tuple(tup):
 def _compute_ndim(row_loc, col_loc):
     """Compute the ndim of result from locators
     """
-    row_scaler = is_scalar(row_loc)
-    col_scaler = is_scalar(col_loc)
+    row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
+    col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
 
     if row_scaler and col_scaler:
         ndim = 0
