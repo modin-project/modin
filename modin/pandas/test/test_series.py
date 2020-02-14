@@ -43,17 +43,20 @@ pd.DEFAULT_NPARTITIONS = 4
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 
+
 def get_rop(op):
     if op.startswith('__') and op.endswith('__'):
         return '__r' + op[2:]
     else:
         return None
 
+
 def inter_df_math_helper(modin_series, pandas_series, op):
     inter_df_math_helper_one_side(modin_series, pandas_series, op)
     rop = get_rop(op)
     if rop:
         inter_df_math_helper_one_side(modin_series, pandas_series, rop)
+
 
 def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     try:
@@ -176,7 +179,9 @@ def test_accessing_index_element_as_property():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_callable_key_in_getitem(data):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series[lambda s:s.index%2==0], pandas_series[lambda s:s.index%2==0])
+    df_equals(
+        modin_series[lambda s:s.index % 2 == 0],
+        pandas_series[lambda s:s.index % 2 == 0])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
