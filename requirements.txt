@@ -7,7 +7,7 @@ psutil==5.4.8
 xarray
 Jinja2
 pathlib
-tables==3.4.4
+tables
 scipy
 s3fs
 pytest
