@@ -10,7 +10,6 @@ def to_datetime(
     dayfirst=False,
     yearfirst=False,
     utc=None,
-    box=True,
     format=None,
     exact=True,
     unit=None,

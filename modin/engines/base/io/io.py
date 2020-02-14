@@ -335,8 +335,8 @@ class BaseIO(object):
             mangle_dupe_cols=mangle_dupe_cols,
             **kwds
         )
-        if isinstance(intermediate, OrderedDict):
-            parsed = OrderedDict()
+        if isinstance(intermediate, (OrderedDict, dict)):
+            parsed = type(intermediate)()
             for key in intermediate.keys():
                 parsed[key] = cls.from_pandas(intermediate.get(key))
             return parsed
@@ -344,10 +344,35 @@ class BaseIO(object):
             return cls.from_pandas(intermediate)
 
     @classmethod
-    def read_hdf(cls, path_or_buf, key=None, mode="r", columns=None):
+    def read_hdf(
+        cls,
+        path_or_buf,
+        key=None,
+        mode: str = "r",
+        errors: str = "strict",
+        where=None,
+        start=None,
+        stop=None,
+        columns=None,
+        iterator=False,
+        chunksize=None,
+        **kwargs
+    ):
         ErrorMessage.default_to_pandas("`read_hdf`")
         return cls.from_pandas(
-            pandas.read_hdf(path_or_buf, key=key, mode=mode, columns=columns)
+            pandas.read_hdf(
+                path_or_buf,
+                key=key,
+                mode=mode,
+                columns=columns,
+                errors=errors,
+                where=where,
+                start=start,
+                stop=stop,
+                iterator=iterator,
+                chunksize=chunksize,
+                **kwargs
+            )
         )
 
     @classmethod
@@ -358,21 +383,11 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_msgpack(cls, path_or_buf, encoding="utf-8", iterator=False, **kwargs):
-        ErrorMessage.default_to_pandas("`read_msgpack`")
-        return cls.from_pandas(
-            pandas.read_msgpack(
-                path_or_buf, encoding=encoding, iterator=iterator, **kwargs
-            )
-        )
-
-    @classmethod
     def read_stata(
         cls,
         filepath_or_buffer,
         convert_dates=True,
         convert_categoricals=True,
-        encoding=None,
         index_col=None,
         convert_missing=False,
         preserve_dtypes=True,
@@ -386,7 +401,6 @@ class BaseIO(object):
             "filepath_or_buffer": filepath_or_buffer,
             "convert_dates": convert_dates,
             "convert_categoricals": convert_categoricals,
-            "encoding": encoding,
             "index_col": index_col,
             "convert_missing": convert_missing,
             "preserve_dtypes": preserve_dtypes,
@@ -420,9 +434,11 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_pickle(cls, path, compression="infer"):
+    def read_pickle(cls, filepath_or_buffer, compression="infer"):
         ErrorMessage.default_to_pandas("`read_pickle`")
-        return cls.from_pandas(pandas.read_pickle(path, compression=compression))
+        return cls.from_pandas(
+            pandas.read_pickle(filepath_or_buffer, compression=compression)
+        )
 
     @classmethod
     def read_sql(

@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 import pandas
 import pandas.util.testing as tm
-from pandas.tests.frame.common import TestData
 import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
@@ -794,13 +793,6 @@ class TestDataFrameMapMetadata:
         df_equals(modin_df.dtypes, pandas_df.dtypes)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_ftypes(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        df_equals(modin_df.ftypes, pandas_df.ftypes)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("key", indices_values, ids=indices_keys)
     def test_get(self, data, key):
         modin_df = pd.DataFrame(data)
@@ -810,13 +802,6 @@ class TestDataFrameMapMetadata:
         df_equals(
             modin_df.get(key, default="default"), pandas_df.get(key, default="default")
         )
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_get_dtype_counts(self, data):
-        modin_result = pd.DataFrame(data).get_dtype_counts().sort_index()
-        pandas_result = pandas.DataFrame(data).get_dtype_counts().sort_index()
-
-        df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize(
@@ -841,13 +826,6 @@ class TestDataFrameMapMetadata:
                 modin_df, dummy_na=dummy_na, drop_first=drop_first
             )
             df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_get_ftype_counts(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        df_equals(modin_df.get_ftype_counts(), pandas_df.get_ftype_counts())
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_isna(self, data):
@@ -938,13 +916,9 @@ class TestDataFrameMapMetadata:
                 df_equals(modin_result, pandas_result)
 
     def test_astype(self):
-        td = TestData()
-        modin_df = pd.DataFrame(
-            td.frame.values, index=td.frame.index, columns=td.frame.columns
-        )
-        expected_df = pandas.DataFrame(
-            td.frame.values, index=td.frame.index, columns=td.frame.columns
-        )
+        td = pandas.DataFrame(tm.getSeriesData())
+        modin_df = pd.DataFrame(td.values, index=td.index, columns=td.columns)
+        expected_df = pandas.DataFrame(td.values, index=td.index, columns=td.columns)
 
         modin_df_casted = modin_df.astype(np.int32)
         expected_df_casted = expected_df.astype(np.int32)
@@ -1033,58 +1007,6 @@ class TestDataFrameMapMetadata:
 
             with pytest.raises(ValueError):
                 modin_df.clip(lower=[1, 2, 3], axis=None)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    def test_clip_lower(self, request, data, axis):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        if name_contains(request.node.name, numeric_dfs):
-            ind_len = (
-                len(modin_df.index)
-                if not pandas.DataFrame()._get_axis_number(axis)
-                else len(modin_df.columns)
-            )
-            # set bounds
-            lower = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
-            lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-
-            # test lower scalar bound
-            pandas_result = pandas_df.clip_lower(lower, axis=axis)
-            modin_result = modin_df.clip_lower(lower, axis=axis)
-            df_equals(modin_result, pandas_result)
-
-            # test lower list bound on each column
-            pandas_result = pandas_df.clip_lower(lower_list, axis=axis)
-            modin_result = modin_df.clip_lower(lower_list, axis=axis)
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    def test_clip_upper(self, request, data, axis):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        if name_contains(request.node.name, numeric_dfs):
-            ind_len = (
-                len(modin_df.index)
-                if not pandas.DataFrame()._get_axis_number(axis)
-                else len(modin_df.columns)
-            )
-            # set bounds
-            upper = random_state.random_integers(RAND_LOW, RAND_HIGH, 1)[0]
-            upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-
-            # test upper scalar bound
-            modin_result = modin_df.clip_upper(upper, axis=axis)
-            pandas_result = pandas_df.clip_upper(upper, axis=axis)
-            df_equals(modin_result, pandas_result)
-
-            # test upper list bound on each column
-            modin_result = modin_df.clip_upper(upper_list, axis=axis)
-            pandas_result = pandas_df.clip_upper(upper_list, axis=axis)
-            df_equals(modin_result, pandas_result)
 
     def test_drop(self):
         frame_data = {"A": [1, 2, 3, 4], "B": [0, 1, 2, 3]}
@@ -1381,37 +1303,11 @@ class TestDataFrameMapMetadata:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dropna_multiple_axes(self, data):
         modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
 
-        df_equals(
-            modin_df.dropna(how="all", axis=[0, 1]),
-            pandas_df.dropna(how="all", axis=[0, 1]),
-        )
-        df_equals(
-            modin_df.dropna(how="all", axis=(0, 1)),
-            pandas_df.dropna(how="all", axis=(0, 1)),
-        )
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_dropna_multiple_axes_inplace(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_df_copy = modin_df.copy()
-        pandas_df_copy = pandas_df.copy()
-
-        modin_df_copy.dropna(how="all", axis=[0, 1], inplace=True)
-        pandas_df_copy.dropna(how="all", axis=[0, 1], inplace=True)
-
-        df_equals(modin_df_copy, pandas_df_copy)
-
-        modin_df_copy = modin_df.copy()
-        pandas_df_copy = pandas_df.copy()
-
-        modin_df_copy.dropna(how="all", axis=(0, 1), inplace=True)
-        pandas_df_copy.dropna(how="all", axis=(0, 1), inplace=True)
-
-        df_equals(modin_df_copy, pandas_df_copy)
+        with pytest.raises(TypeError):
+            modin_df.dropna(how="all", axis=[0, 1])
+        with pytest.raises(TypeError):
+            modin_df.dropna(how="all", axis=(0, 1))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dropna_subset(self, request, data):
@@ -1442,7 +1338,6 @@ class TestDataFrameMapMetadata:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dropna_subset_error(self, data):
         modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)  # noqa F841
 
         # pandas_df is unused so there won't be confusing list comprehension
         # stuff in the pytest.mark.parametrize
@@ -1532,11 +1427,6 @@ class TestDataFrameMapMetadata:
         )
         df_equals(modin_result, pandas_result)
 
-    def test_is_copy(self):
-        data = test_data_values[0]
-        with pytest.warns(FutureWarning):
-            assert pd.DataFrame(data).is_copy == pandas.DataFrame(data).is_copy
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_ndim(self, data):
         modin_df = pd.DataFrame(data)
@@ -1580,9 +1470,6 @@ class TestDataFrameMapMetadata:
         pandas_result = pandas_df.set_axis(labels, axis=axis, inplace=False)
         df_equals(modin_result, pandas_result)
 
-        with pytest.warns(FutureWarning):
-            modin_df.set_axis(axis, labels, inplace=False)
-
         modin_df_copy = modin_df.copy()
         modin_df.set_axis(labels, axis=axis, inplace=True)
 
@@ -1596,9 +1483,6 @@ class TestDataFrameMapMetadata:
 
         pandas_df.set_axis(labels, axis=axis, inplace=True)
         df_equals(modin_df, pandas_df)
-
-        with pytest.warns(FutureWarning):
-            modin_df.set_axis(labels, axis=axis, inplace=None)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize(
@@ -2156,46 +2040,15 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).align(pd.DataFrame(data))
 
-    def test_as_blocks(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).as_blocks()
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_to_numpy(self, data):
+        modin_frame = pd.DataFrame(data)
+        pandas_frame = pandas.DataFrame(data)
+        assert_array_equal(modin_frame.values, pandas_frame.values)
 
-    def test_as_matrix(self):
-        test_data = TestData()
-        frame = pd.DataFrame(test_data.frame)
-        mat = frame.as_matrix()
-
-        frame_columns = frame.columns
-        for i, row in enumerate(mat):
-            for j, value in enumerate(row):
-                col = frame_columns[j]
-                if np.isnan(value):
-                    assert np.isnan(frame[col][i])
-                else:
-                    assert value == frame[col][i]
-
-        # mixed type
-        mat = pd.DataFrame(test_data.mixed_frame).as_matrix(["foo", "A"])
-        assert mat[0, 0] == "bar"
-
-        df = pd.DataFrame({"real": [1, 2, 3], "complex": [1j, 2j, 3j]})
-        mat = df.as_matrix()
-        assert mat[0, 1] == 1j
-
-        # single block corner case
-        mat = pd.DataFrame(test_data.frame).as_matrix(["A", "B"])
-        expected = test_data.frame.reindex(columns=["A", "B"]).values
-        tm.assert_almost_equal(mat, expected)
-
-    def test_to_numpy(self):
-        test_data = TestData()
-        frame = pd.DataFrame(test_data.frame)
-        assert_array_equal(frame.values, test_data.frame.values)
-
-    def test_partition_to_numpy(self):
-        test_data = TestData()
-        frame = pd.DataFrame(test_data.frame)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_partition_to_numpy(self, data):
+        frame = pd.DataFrame(data)
         for (
             partition
         ) in frame._query_compiler._modin_frame._partitions.flatten().tolist():
@@ -2278,17 +2131,11 @@ class TestDataFrameDefault:
             pandas_df.T.between_time("12:00", "17:00", axis=1),
         )
 
-    def test_bfill(self):
-        test_data = TestData()
-        test_data.tsframe["A"][:5] = np.nan
-        test_data.tsframe["A"][-5:] = np.nan
-        modin_df = pd.DataFrame(test_data.tsframe)
-        df_equals(modin_df.bfill(), test_data.tsframe.bfill())
-
-    def test_blocks(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).blocks
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_bfill(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        df_equals(modin_df.bfill(), pandas_df.bfill())
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_bool(self, data):
@@ -2325,11 +2172,6 @@ class TestDataFrameDefault:
         df_equals(
             modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2)
         )
-
-    def test_compound(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).compound()
 
     def test_corr(self):
         data = test_data_values[0]
@@ -2583,11 +2425,6 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).sem()
 
-    def test_set_value(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).set_value(0, 0, 0)
-
     def test_shift(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):
@@ -2695,11 +2532,6 @@ class TestDataFrameDefault:
             {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
         )
         df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
-
-    def test_to_sparse(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).to_sparse()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_string(self, request, data):
@@ -3682,13 +3514,11 @@ class TestDataFrameWindow:
 
         df_equals(modin_result, pandas_result)
 
-    def test_ffill(self):
-        test_data = TestData()
-        test_data.tsframe["A"][:5] = np.nan
-        test_data.tsframe["A"][-5:] = np.nan
-        modin_df = pd.DataFrame(test_data.tsframe)
-
-        df_equals(modin_df.ffill(), test_data.tsframe.ffill())
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_ffill(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        df_equals(modin_df.ffill(), pandas_df.ffill())
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize(
@@ -3717,56 +3547,6 @@ class TestDataFrameWindow:
                 df_equals(modin_result, pandas_result)
 
     def test_fillna_sanity(self):
-        test_data = TestData()
-        tf = test_data.tsframe
-        tf.loc[tf.index[:5], "A"] = np.nan
-        tf.loc[tf.index[-5:], "A"] = np.nan
-
-        zero_filled = test_data.tsframe.fillna(0)
-        modin_df = pd.DataFrame(test_data.tsframe).fillna(0)
-        df_equals(modin_df, zero_filled)
-
-        padded = test_data.tsframe.fillna(method="pad")
-        modin_df = pd.DataFrame(test_data.tsframe).fillna(method="pad")
-        df_equals(modin_df, padded)
-
-        # mixed type
-        mf = test_data.mixed_frame
-        mf.loc[mf.index[5:20], "foo"] = np.nan
-        mf.loc[mf.index[-10:], "A"] = np.nan
-
-        result = test_data.mixed_frame.fillna(value=0)
-        modin_df = pd.DataFrame(test_data.mixed_frame).fillna(value=0)
-        df_equals(modin_df, result)
-
-        result = test_data.mixed_frame.fillna(method="pad")
-        modin_df = pd.DataFrame(test_data.mixed_frame).fillna(method="pad")
-        df_equals(modin_df, result)
-
-        pytest.raises(ValueError, test_data.tsframe.fillna)
-        pytest.raises(ValueError, pd.DataFrame(test_data.tsframe).fillna)
-        with pytest.raises(ValueError):
-            pd.DataFrame(test_data.tsframe).fillna(5, method="ffill")
-
-        # mixed numeric (but no float16)
-        mf = test_data.mixed_float.reindex(columns=["A", "B", "D"])
-        mf.loc[mf.index[-10:], "A"] = np.nan
-        result = mf.fillna(value=0)
-        modin_df = pd.DataFrame(mf).fillna(value=0)
-        df_equals(modin_df, result)
-
-        result = mf.fillna(method="pad")
-        modin_df = pd.DataFrame(mf).fillna(method="pad")
-        df_equals(modin_df, result)
-
-        # TODO: Use this when Arrow issue resolves:
-        # (https://issues.apache.org/jira/browse/ARROW-2122)
-        # empty frame
-        # df = DataFrame(columns=['x'])
-        # for m in ['pad', 'backfill']:
-        #     df.x.fillna(method=m, inplace=True)
-        #     df.x.fillna(method=m)
-
         # with different dtype
         frame_data = [
             ["a", "a", np.nan, "a"],
@@ -3824,24 +3604,6 @@ class TestDataFrameWindow:
         result = df.fillna({"a": 0}, downcast="infer")
         modin_df = pd.DataFrame(frame_data).fillna({"a": 0}, downcast="infer")
         df_equals(modin_df, result)
-
-    def test_ffill2(self):
-        test_data = TestData()
-        test_data.tsframe["A"][:5] = np.nan
-        test_data.tsframe["A"][-5:] = np.nan
-        modin_df = pd.DataFrame(test_data.tsframe)
-        df_equals(
-            modin_df.fillna(method="ffill"), test_data.tsframe.fillna(method="ffill")
-        )
-
-    def test_bfill2(self):
-        test_data = TestData()
-        test_data.tsframe["A"][:5] = np.nan
-        test_data.tsframe["A"][-5:] = np.nan
-        modin_df = pd.DataFrame(test_data.tsframe)
-        df_equals(
-            modin_df.fillna(method="bfill"), test_data.tsframe.fillna(method="bfill")
-        )
 
     def test_fillna_inplace(self):
         frame_data = random_state.randn(10, 4)
@@ -3998,12 +3760,12 @@ class TestDataFrameWindow:
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)  # noqa F841
 
-        with tm.assert_raises_regex(ValueError, "ffil"):
+        with pytest.raises(ValueError):
             modin_df.fillna(method="ffil")
 
-    def test_fillna_invalid_value(self):
-        test_data = TestData()
-        modin_df = pd.DataFrame(test_data.frame)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_fillna_invalid_value(self, data):
+        modin_df = pd.DataFrame(data)
         # list
         pytest.raises(TypeError, modin_df.fillna, [1, 2])
         # tuple
@@ -4380,16 +4142,6 @@ class TestDataFrameIndexing:
 
         assert modin_df.first_valid_index() == (pandas_df.first_valid_index())
 
-    def test_get_value(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).get_value(0, "col1")
-
-    def test_get_values(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).get_values()
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("n", int_arg_values, ids=arg_keys("n", int_arg_keys))
     def test_head(self, data, n):
@@ -4484,14 +4236,6 @@ class TestDataFrameIndexing:
             modin_df.loc[0, modin_df.columns[0:4]],
             pandas_df.loc[0, pandas_df.columns[0:4]],
         )
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_ix(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)  # noqa F841
-
-        with pytest.raises(NotImplementedError):
-            modin_df.ix()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_keys(self, data):
@@ -4685,15 +4429,13 @@ class TestDataFrameIndexing:
             df2.reindex_like(df1)
 
     def test_rename_sanity(self):
-        test_data = TestData()
+        test_data = pandas.DataFrame(tm.getSeriesData())
         mapping = {"A": "a", "B": "b", "C": "c", "D": "d"}
 
-        modin_df = pd.DataFrame(test_data.frame)
-        df_equals(
-            modin_df.rename(columns=mapping), test_data.frame.rename(columns=mapping)
-        )
+        modin_df = pd.DataFrame(test_data)
+        df_equals(modin_df.rename(columns=mapping), test_data.rename(columns=mapping))
 
-        renamed2 = test_data.frame.rename(columns=str.lower)
+        renamed2 = test_data.rename(columns=str.lower)
         df_equals(modin_df.rename(columns=str.lower), renamed2)
 
         modin_df = pd.DataFrame(renamed2)
@@ -4730,19 +4472,19 @@ class TestDataFrameIndexing:
             modin_df.rename()
 
         # partial columns
-        renamed = test_data.frame.rename(columns={"C": "foo", "D": "bar"})
-        modin_df = pd.DataFrame(test_data.frame)
+        renamed = test_data.rename(columns={"C": "foo", "D": "bar"})
+        modin_df = pd.DataFrame(test_data)
         tm.assert_index_equal(
             modin_df.rename(columns={"C": "foo", "D": "bar"}).index,
-            test_data.frame.rename(columns={"C": "foo", "D": "bar"}).index,
+            test_data.rename(columns={"C": "foo", "D": "bar"}).index,
         )
 
-        # TODO: Uncomment when transpose works
         # other axis
-        # renamed = test_data.frame.T.rename(index={'C': 'foo', 'D': 'bar'})
-        # tm.assert_index_equal(
-        #     test_data.frame.T.rename(index={'C': 'foo', 'D': 'bar'}).index,
-        #     modin_df.T.rename(index={'C': 'foo', 'D': 'bar'}).index)
+        renamed = test_data.T.rename(index={"C": "foo", "D": "bar"})
+        tm.assert_index_equal(
+            test_data.T.rename(index={"C": "foo", "D": "bar"}).index,
+            modin_df.T.rename(index={"C": "foo", "D": "bar"}).index,
+        )
 
         # index with name
         index = pandas.Index(["foo", "bar"], name="name")
@@ -4834,14 +4576,14 @@ class TestDataFrameIndexing:
 
     @pytest.mark.skip(reason="Pandas does not pass this test")
     def test_rename_nocopy(self):
-        test_data = TestData().frame
+        test_data = pandas.DataFrame(tm.getSeriesData())
         modin_df = pd.DataFrame(test_data)
         modin_renamed = modin_df.rename(columns={"C": "foo"}, copy=False)
         modin_renamed["foo"] = 1
         assert (modin_df["C"] == 1).all()
 
     def test_rename_inplace(self):
-        test_data = TestData().frame
+        test_data = pandas.DataFrame(tm.getSeriesData())
         modin_df = pd.DataFrame(test_data)
 
         df_equals(
@@ -4920,7 +4662,7 @@ class TestDataFrameIndexing:
             )
 
     def test_rename_axis_inplace(self):
-        test_frame = TestData().frame
+        test_frame = pandas.DataFrame(tm.getSeriesData())
         modin_df = pd.DataFrame(test_frame)
 
         result = test_frame.copy()

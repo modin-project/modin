@@ -112,14 +112,6 @@ class BaseFactory(object):
         return cls.io_cls.read_feather(**kwargs)
 
     @classmethod
-    def read_msgpack(cls, **kwargs):
-        return cls._determine_engine()._read_msgpack(**kwargs)
-
-    @classmethod
-    def _read_msgpack(cls, **kwargs):
-        return cls.io_cls.read_msgpack(**kwargs)
-
-    @classmethod
     def read_stata(cls, **kwargs):
         return cls._determine_engine()._read_stata(**kwargs)
 

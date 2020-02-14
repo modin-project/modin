@@ -1,4 +1,4 @@
-pandas==0.25.3
+pandas==1.0.1
 numpy
 psutil==5.4.8
 pytest

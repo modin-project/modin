@@ -189,21 +189,9 @@ class DataFrame(BasePandasDataset):
         # DataFrames have an invariant that requires they be 2 dimensions.
         return 2
 
-    @property
-    def ftypes(self):
-        """Get the ftypes for this DataFrame.
-
-        Returns:
-            The ftypes for this DataFrame.
-        """
-        # The ftypes are common across all partitions.
-        # The first partition will be enough.
-        dtypes = self.dtypes.copy()
-        ftypes = ["{0}:dense".format(str(dtype)) for dtype in dtypes.values]
-        result = pandas.Series(ftypes, index=self.columns)
-        return result
-
-    def drop_duplicates(self, subset=None, keep="first", inplace=False):
+    def drop_duplicates(
+        self, subset=None, keep="first", inplace=False, ignore_index=False
+    ):
         return super(DataFrame, self).drop_duplicates(
             subset=subset, keep=keep, inplace=inplace
         )
@@ -303,29 +291,10 @@ class DataFrame(BasePandasDataset):
         ErrorMessage.non_verified_udf()
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
-    def apply(
-        self,
-        func,
-        axis=0,
-        broadcast=None,
-        raw=False,
-        reduce=None,
-        result_type=None,
-        convert_dtype=True,
-        args=(),
-        **kwds
-    ):
+    def apply(self, func, axis=0, raw=False, result_type=None, args=(), **kwds):
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
-            func,
-            axis=axis,
-            broadcast=broadcast,
-            raw=raw,
-            reduce=reduce,
-            result_type=result_type,
-            convert_dtype=convert_dtype,
-            args=args,
-            **kwds
+            func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
             return query_compiler
@@ -342,12 +311,7 @@ class DataFrame(BasePandasDataset):
                 init_kwargs = {"columns": self.columns}
             return_type = type(
                 getattr(pandas, self.__name__)(**init_kwargs).apply(
-                    func,
-                    axis=axis,
-                    broadcast=broadcast,
-                    raw=raw,
-                    reduce=reduce,
-                    result_type=result_type,
+                    func, axis=axis, raw=raw, result_type=result_type,
                 )
             ).__name__
         except Exception:
@@ -365,11 +329,6 @@ class DataFrame(BasePandasDataset):
                     result.name = None
             return result
 
-    def get_value(self, index, col, takeable=False):
-        return self._default_to_pandas(
-            pandas.DataFrame.get_value, index, col, takeable=takeable
-        )
-
     def groupby(
         self,
         by=None,
@@ -380,7 +339,6 @@ class DataFrame(BasePandasDataset):
         group_keys=True,
         squeeze=False,
         observed=False,
-        **kwargs
     ):
         """Apply a groupby to this DataFrame. See _groupby() remote task.
         Args:
@@ -449,7 +407,6 @@ class DataFrame(BasePandasDataset):
             idx_name,
             observed=observed,
             drop=drop,
-            **kwargs
         )
 
     def _reduce_dimension(self, query_compiler):
@@ -463,13 +420,13 @@ class DataFrame(BasePandasDataset):
         """
         return self.columns
 
-    def transpose(self, *args, **kwargs):
+    def transpose(self, copy=False, *args):
         """Transpose columns and rows for the DataFrame.
 
         Returns:
             A new DataFrame transposed from this DataFrame.
         """
-        return DataFrame(query_compiler=self._query_compiler.transpose(*args, **kwargs))
+        return DataFrame(query_compiler=self._query_compiler.transpose(*args))
 
     T = property(transpose)
 
@@ -480,7 +437,7 @@ class DataFrame(BasePandasDataset):
             other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def append(self, other, ignore_index=False, verify_integrity=False, sort=None):
+    def append(self, other, ignore_index=False, verify_integrity=False, sort=False):
         """Append another DataFrame/list/Series to this one.
 
         Args:
@@ -559,7 +516,8 @@ class DataFrame(BasePandasDataset):
         figsize=None,
         layout=None,
         return_type=None,
-        **kwds
+        backend=None,
+        **kwargs
     ):
         return to_pandas(self).boxplot(
             column=column,
@@ -571,7 +529,8 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             return_type=return_type,
-            **kwds
+            backend=backend,
+            **kwargs
         )
 
     def combine(self, other, func, fill_value=None, overwrite=True):
@@ -696,13 +655,6 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.from_dict(
                 data, orient=orient, dtype=dtype, columns=columns
             )
-        )
-
-    @classmethod
-    def from_items(cls, items, columns=None, orient="columns"):  # pragma: no cover
-        ErrorMessage.default_to_pandas("`from_items`")
-        return from_pandas(
-            pandas.DataFrame.from_items(items, columns=columns, orient=orient)
         )
 
     @classmethod
@@ -1557,6 +1509,7 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return frame
 
+    @property
     def sparse(self, data=None):
         return self._default_to_pandas(pandas.DataFrame.sparse, data=data)
 
@@ -1614,8 +1567,8 @@ class DataFrame(BasePandasDataset):
             return DataFrame(columns=self.columns)
         return super(DataFrame, self).tail(n)
 
-    def to_feather(self, fname):  # pragma: no cover
-        return self._default_to_pandas(pandas.DataFrame.to_feather, fname)
+    def to_feather(self, path):  # pragma: no cover
+        return self._default_to_pandas(pandas.DataFrame.to_feather, path)
 
     def to_gbq(
         self,
@@ -1629,8 +1582,6 @@ class DataFrame(BasePandasDataset):
         location=None,
         progress_bar=True,
         credentials=None,
-        verbose=None,
-        private_key=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
@@ -1644,8 +1595,6 @@ class DataFrame(BasePandasDataset):
             location=location,
             progress_bar=progress_bar,
             credentials=credentials,
-            verbose=verbose,
-            private_key=private_key,
         )
 
     def to_html(
@@ -1672,6 +1621,7 @@ class DataFrame(BasePandasDataset):
         border=None,
         table_id=None,
         render_links=False,
+        encoding=None,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
@@ -1697,11 +1647,12 @@ class DataFrame(BasePandasDataset):
             border=border,
             table_id=table_id,
             render_links=render_links,
+            encoding=None,
         )
 
     def to_parquet(
         self,
-        fname,
+        path,
         engine="auto",
         compression="snappy",
         index=None,
@@ -1710,7 +1661,7 @@ class DataFrame(BasePandasDataset):
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
-            fname,
+            path,
             engine=engine,
             compression=compression,
             index=index,
@@ -1721,23 +1672,19 @@ class DataFrame(BasePandasDataset):
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
         return super(DataFrame, self).to_period(freq=freq, axis=axis, copy=copy)
 
-    def to_records(
-        self, index=True, convert_datetime64=None, column_dtypes=None, index_dtypes=None
-    ):
+    def to_records(self, index=True, column_dtypes=None, index_dtypes=None):
         return self._default_to_pandas(
             pandas.DataFrame.to_records,
             index=index,
-            convert_datetime64=convert_datetime64,
             column_dtypes=column_dtypes,
             index_dtypes=index_dtypes,
         )
 
     def to_stata(
         self,
-        fname,
+        path,
         convert_dates=None,
         write_index=True,
-        encoding="latin-1",
         byteorder=None,
         time_stamp=None,
         data_label=None,
@@ -1747,10 +1694,9 @@ class DataFrame(BasePandasDataset):
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
-            fname,
+            path,
             convert_dates=convert_dates,
             write_index=write_index,
-            encoding=encoding,
             byteorder=byteorder,
             time_stamp=time_stamp,
             data_label=data_label,
@@ -2167,6 +2113,13 @@ class DataFrame(BasePandasDataset):
 
     def __rdiv__(self, other, axis=None, level=None, fill_value=None):
         return self.rdiv(other, axis=axis, level=level, fill_value=fill_value)
+
+    @property
+    def attrs(self):
+        def attrs(df):
+            return df.attrs
+
+        self._default_to_pandas(attrs)
 
     @property
     def __doc__(self):  # pragma: no cover

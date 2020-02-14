@@ -3,7 +3,7 @@ from numpy import nan
 import pandas
 from pandas.api.types import is_scalar
 from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, _pipe
+from pandas.core.common import count_not_none, pipe
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -13,7 +13,7 @@ from pandas.core.dtypes.common import (
     is_object_dtype,
 )
 from pandas.core.indexing import convert_to_index_sliceable
-from pandas.util._validators import validate_bool_kwarg
+from pandas.util._validators import validate_bool_kwarg, validate_percentile
 import re
 import warnings
 import pickle as pkl
@@ -585,23 +585,6 @@ class BasePandasDataset(object):
         query_compiler = self._query_compiler.apply(func, axis, args=args, **kwds)
         return query_compiler
 
-    def as_blocks(self, copy=True):
-        return self._default_to_pandas("as_blocks", copy=copy)
-
-    def as_matrix(self, columns=None):
-        """Convert the frame to its Numpy-array representation.
-
-        Args:
-            columns: If None, return all columns, otherwise,
-                returns specified columns.
-
-        Returns:
-            values: ndarray
-        """
-        if columns is None:
-            return self.to_numpy()
-        return self.__getitem__(columns).to_numpy()
-
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
         return self._default_to_pandas(
             "asfreq",
@@ -615,7 +598,7 @@ class BasePandasDataset(object):
     def asof(self, where, subset=None):
         return self._default_to_pandas("asof", where, subset=subset)
 
-    def astype(self, dtype, copy=True, errors="raise", **kwargs):
+    def astype(self, dtype, copy=True, errors="raise"):
         col_dtypes = {}
         if isinstance(dtype, dict):
             if (
@@ -631,7 +614,7 @@ class BasePandasDataset(object):
             for column in self._query_compiler.columns:
                 col_dtypes[column] = dtype
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes, **kwargs)
+        new_query_compiler = self._query_compiler.astype(col_dtypes)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
     @property
@@ -703,12 +686,6 @@ class BasePandasDataset(object):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def clip_lower(self, threshold, axis=None, inplace=False):
-        return self.clip(lower=threshold, axis=axis, inplace=inplace)
-
-    def clip_upper(self, threshold, axis=None, inplace=False):
-        return self.clip(upper=threshold, axis=axis, inplace=inplace)
-
     def combine(self, other, func, fill_value=None, **kwargs):
         return self._binary_op(
             "combine", other, _axis=0, func=func, fill_value=fill_value, **kwargs
@@ -716,11 +693,6 @@ class BasePandasDataset(object):
 
     def combine_first(self, other):
         return self._binary_op("combine_first", other, _axis=0)
-
-    def compound(self, axis=None, skipna=None, level=None):
-        return self._default_to_pandas(
-            "compound", axis=axis, skipna=skipna, level=level
-        )
 
     def copy(self, deep=True):
         """Creates a shallow copy of the DataFrame.
@@ -887,7 +859,18 @@ class BasePandasDataset(object):
                 # This is the error that pandas throws.
                 raise ValueError("No objects to concatenate")
         if percentiles is not None:
-            pandas.DataFrame()._check_percentile(percentiles)
+            # explicit conversion of `percentiles` to list
+            percentiles = list(percentiles)
+
+            # get them all to be in [0, 1]
+            validate_percentile(percentiles)
+
+            # median should always be included
+            if 0.5 not in percentiles:
+                percentiles.append(0.5)
+            percentiles = np.asarray(percentiles)
+        else:
+            percentiles = np.array([0.25, 0.5, 0.75])
         return self.__constructor__(
             query_compiler=self._query_compiler.describe(
                 percentiles=percentiles, include=include, exclude=exclude
@@ -1052,12 +1035,7 @@ class BasePandasDataset(object):
         inplace = validate_bool_kwarg(inplace, "inplace")
 
         if is_list_like(axis):
-            axis = [self._get_axis_number(ax) for ax in axis]
-            result = self
-
-            for ax in axis:
-                result = result.dropna(axis=ax, how=how, thresh=thresh, subset=subset)
-            return self._create_or_update_from_compiler(result._query_compiler, inplace)
+            raise TypeError("supplying multiple axes to axis is no longer supported.")
 
         axis = self._get_axis_number(axis)
         if how is not None and how not in ["any", "all"]:
@@ -1179,7 +1157,6 @@ class BasePandasDataset(object):
         inplace=False,
         limit=None,
         downcast=None,
-        **kwargs
     ):
         """Fill NA/NaN values using the specified method.
 
@@ -1221,7 +1198,6 @@ class BasePandasDataset(object):
                 inplace=False,
                 limit=limit,
                 downcast=downcast,
-                **kwargs
             )._query_compiler
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         inplace = validate_bool_kwarg(inplace, "inplace")
@@ -1254,7 +1230,6 @@ class BasePandasDataset(object):
             inplace=False,
             limit=limit,
             downcast=downcast,
-            **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -1359,31 +1334,6 @@ class BasePandasDataset(object):
         else:
             return default
 
-    def get_dtype_counts(self):
-        """Get the counts of dtypes in this object.
-
-        Returns:
-            The counts of dtypes in this object.
-        """
-        if hasattr(self, "dtype"):
-            return pandas.Series({str(self.dtype): 1})
-        result = self.dtypes.value_counts()
-        result.index = result.index.map(lambda x: str(x))
-        return result
-
-    def get_ftype_counts(self):
-        """Get the counts of ftypes in this object.
-
-        Returns:
-            The counts of ftypes in this object.
-        """
-        if hasattr(self, "ftype"):
-            return pandas.Series({self.ftype: 1})
-        return self.ftypes.value_counts().sort_index()
-
-    def get_values(self):
-        return self._default_to_pandas("get_values")
-
     def gt(self, other, axis="columns", level=None):
         """Checks element-wise that this is greater than other.
 
@@ -1416,7 +1366,7 @@ class BasePandasDataset(object):
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
+    def idxmax(self, axis=0, skipna=True):
         """Get the index of the first occurrence of the max value of the axis.
 
         Args:
@@ -1434,7 +1384,7 @@ class BasePandasDataset(object):
             self._query_compiler.idxmax(axis=axis, skipna=skipna)
         )
 
-    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
+    def idxmin(self, axis=0, skipna=True):
         """Get the index of the first occurrence of the min value of the axis.
 
         Args:
@@ -1447,13 +1397,28 @@ class BasePandasDataset(object):
         """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmin' not allowed for this dtype")
-        axis = self._get_axis_number(axis)
+        axis = self._get_axis_number(axis) if axis is not None else 0
         return self._reduce_dimension(
             self._query_compiler.idxmin(axis=axis, skipna=skipna)
         )
 
     def infer_objects(self):
         return self._default_to_pandas("infer_objects")
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+    ):
+        return self._default_to_pandas(
+            "convert_dtypes",
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+        )
 
     def isin(self, values):
         """Fill a DataFrame with booleans for cells contained in values.
@@ -1483,10 +1448,6 @@ class BasePandasDataset(object):
         return self.__constructor__(query_compiler=self._query_compiler.isna())
 
     isnull = isna
-
-    @property
-    def ix(self, axis=None):
-        raise ErrorMessage.not_implemented("ix is not implemented.")
 
     @property
     def iloc(self):
@@ -1812,7 +1773,7 @@ class BasePandasDataset(object):
         Returns:
             object: the return type of ``func``.
         """
-        return _pipe(self, func, *args, **kwargs)
+        return pipe(self, func, *args, **kwargs)
 
     def pop(self, item):
         """Pops an item from this DataFrame and returns it.
@@ -1943,7 +1904,7 @@ class BasePandasDataset(object):
                 raise ValueError("need at least one array to concatenate")
 
         # check that all qs are between 0 and 1
-        pandas.DataFrame()._check_percentile(q)
+        validate_percentile(q)
         axis = self._get_axis_number(axis)
 
         if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
@@ -2184,15 +2145,12 @@ class BasePandasDataset(object):
     def resample(
         self,
         rule,
-        how=None,
         axis=0,
-        fill_method=None,
         closed=None,
         label=None,
         convention="start",
         kind=None,
         loffset=None,
-        limit=None,
         base=0,
         on=None,
         level=None,
@@ -2200,15 +2158,12 @@ class BasePandasDataset(object):
         return self._default_to_pandas(
             "resample",
             rule,
-            how=how,
             axis=axis,
-            fill_method=fill_method,
             closed=closed,
             label=label,
             convention=convention,
             kind=kind,
             loffset=loffset,
-            limit=limit,
             base=base,
             on=on,
             level=level,
@@ -2525,7 +2480,7 @@ class BasePandasDataset(object):
             **kwargs
         )
 
-    def set_axis(self, labels, axis=0, inplace=None):
+    def set_axis(self, labels, axis=0, inplace=False):
         """Assign desired index to given axis.
 
         Args:
@@ -2546,26 +2501,12 @@ class BasePandasDataset(object):
                 stacklevel=2,
             )
             labels, axis = axis, labels
-        if inplace is None:
-            warnings.warn(
-                "set_axis currently defaults to operating inplace.\nThis "
-                "will change in a future version of pandas, use "
-                "inplace=True to avoid this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            inplace = True
         if inplace:
             setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
         else:
             obj = self.copy()
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
-
-    def set_value(self, index, col, value, takeable=False):
-        return self._default_to_pandas(
-            "set_value", index, col, value, takeable=takeable
-        )
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
         return self._default_to_pandas(
@@ -2610,7 +2551,7 @@ class BasePandasDataset(object):
         kind="quicksort",
         na_position="last",
         sort_remaining=True,
-        by=None,
+        ignore_index: bool = False,
     ):
         """Sort a DataFrame by one of the indices (columns or index).
 
@@ -2643,16 +2584,6 @@ class BasePandasDataset(object):
                 sort_remaining=sort_remaining,
             )._query_compiler
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
-        if by is not None:
-            warnings.warn(
-                "by argument to sort_index is deprecated, "
-                "please use .sort_values(by=...)",
-                FutureWarning,
-                stacklevel=2,
-            )
-            if level is not None:
-                raise ValueError("unable to simultaneously sort by and level")
-            return self.sort_values(by, axis=axis, ascending=ascending, inplace=inplace)
         new_query_compiler = self._query_compiler.sort_index(
             axis=axis, ascending=ascending, kind=kind, na_position=na_position
         )
@@ -2666,9 +2597,10 @@ class BasePandasDataset(object):
         by,
         axis=0,
         ascending=True,
-        inplace=False,
+        inplace: bool = False,
         kind="quicksort",
         na_position="last",
+        ignore_index: bool = False,
     ):
         """Sorts by a column/row or list of columns/rows.
 
@@ -2820,7 +2752,7 @@ class BasePandasDataset(object):
         idx = self.index if axis == 0 else self.columns
         return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
 
-    def take(self, indices, axis=0, is_copy=True, **kwargs):
+    def take(self, indices, axis=0, is_copy=None, **kwargs):
         axis = self._get_axis_number(axis)
         slice_obj = indices if axis == 0 else (slice(None), indices)
         result = self.iloc[slice_obj]
@@ -2863,8 +2795,6 @@ class BasePandasDataset(object):
         doublequote=True,
         escapechar=None,
         decimal=".",
-        *args,
-        **kwargs
     ):  # pragma: no cover
 
         kwargs = {
@@ -2889,9 +2819,6 @@ class BasePandasDataset(object):
             "decimal": decimal,
         }
         return self._default_to_pandas("to_csv", **kwargs)
-
-    def to_dense(self):  # pragma: no cover
-        return self._default_to_pandas("to_dense")
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
@@ -2952,6 +2879,7 @@ class BasePandasDataset(object):
         lines=False,
         compression="infer",
         index=True,
+        indent=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             "to_json",
@@ -2965,6 +2893,7 @@ class BasePandasDataset(object):
             lines=lines,
             compression=compression,
             index=index,
+            indent=indent,
         )
 
     def to_latex(
@@ -2988,6 +2917,8 @@ class BasePandasDataset(object):
         multicolumn=None,
         multicolumn_format=None,
         multirow=None,
+        caption=None,
+        label=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             "to_latex",
@@ -3010,14 +2941,12 @@ class BasePandasDataset(object):
             multicolumn=multicolumn,
             multicolumn_format=multicolumn_format,
             multirow=multirow,
+            caption=None,
+            label=None,
         )
 
-    def to_msgpack(
-        self, path_or_buf=None, encoding="utf-8", **kwargs
-    ):  # pragma: no cover
-        return self._default_to_pandas(
-            "to_msgpack", path_or_buf=path_or_buf, encoding=encoding, **kwargs
-        )
+    def to_markdown(self, buf=None, mode=None, **kwargs):
+        return self._default_to_pandas("to_markdown", buf=buf, mode=mode, **kwargs)
 
     def to_numpy(self, dtype=None, copy=False):
         """Convert the DataFrame to a NumPy array.
@@ -3046,9 +2975,6 @@ class BasePandasDataset(object):
             "to_pickle", path, compression=compression, protocol=protocol
         )
 
-    def to_sparse(self, fill_value=None, kind="block"):
-        return self._default_to_pandas("to_sparse", fill_value=fill_value, kind=kind)
-
     def to_string(
         self,
         buf=None,
@@ -3068,6 +2994,8 @@ class BasePandasDataset(object):
         show_dimensions=False,
         decimal=".",
         line_width=None,
+        max_colwidth=None,
+        encoding=None,
     ):
         return self._default_to_pandas(
             "to_string",
@@ -3087,6 +3015,8 @@ class BasePandasDataset(object):
             show_dimensions=show_dimensions,
             decimal=decimal,
             line_width=line_width,
+            max_colwidth=max_colwidth,
+            encoding=encoding,
         )
 
     def to_sql(
@@ -3423,24 +3353,6 @@ class BasePandasDataset(object):
 
     def __rxor__(self, other):
         return self._binary_op("__rxor__", other, axis=0)
-
-    @property
-    def blocks(self):
-        def blocks(df):
-            """Defined because properties do not have a __name__"""
-            return df.blocks
-
-        return self._default_to_pandas(blocks)
-
-    @property
-    def is_copy(self):
-        warnings.warn(
-            "Attribute `is_copy` is deprecated and will be removed in a "
-            "future version.",
-            FutureWarning,
-        )
-        # Pandas doesn't do anything so neither do we.
-        return
 
     @property
     def size(self):

@@ -1,6 +1,6 @@
 import pandas
 
-__pandas_version__ = "0.25.3"
+__pandas_version__ = "1.0.1"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -45,6 +45,8 @@ from pandas import (
     Int16Dtype,
     Int32Dtype,
     Int64Dtype,
+    StringDtype,
+    BooleanDtype,
     CategoricalDtype,
     DatetimeTZDtype,
     IntervalDtype,
@@ -65,11 +67,9 @@ from pandas import (
     infer_freq,
     interval_range,
     ExcelWriter,
-    SparseArray,
-    SparseSeries,
-    SparseDataFrame,
     datetime,
     NamedAgg,
+    NA,
 )
 import threading
 import os
@@ -89,7 +89,6 @@ from .io import (
     read_excel,
     read_hdf,
     read_feather,
-    read_msgpack,
     read_stata,
     read_sas,
     read_pickle,
@@ -103,6 +102,8 @@ from .io import (
     ExcelFile,
     to_pickle,
     HDFStore,
+    json_normalize,
+    read_orc,
 )
 from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
 from .series import Series
@@ -248,7 +249,6 @@ __all__ = [
     "read_excel",
     "read_hdf",
     "read_feather",
-    "read_msgpack",
     "read_stata",
     "read_sas",
     "read_pickle",
@@ -256,6 +256,8 @@ __all__ = [
     "read_gbq",
     "read_table",
     "read_spss",
+    "read_orc",
+    "json_normalize",
     "concat",
     "eval",
     "unique",
@@ -306,6 +308,9 @@ __all__ = [
     "DatetimeTZDtype",
     "IntervalDtype",
     "PeriodDtype",
+    "BooleanDtype",
+    "StringDtype",
+    "NA",
     "RangeIndex",
     "Int64Index",
     "UInt64Index",
@@ -335,9 +340,6 @@ __all__ = [
     "notnull",
     "notna",
     "pivot",
-    "SparseArray",
-    "SparseSeries",
-    "SparseDataFrame",
     "datetime",
     "NamedAgg",
     "DEFAULT_NPARTITIONS",
