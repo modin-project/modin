@@ -4639,6 +4639,16 @@ class TestDataFrameIndexing:
         tm.assert_index_equal(
             modin_df.rename(index=str.upper).index, df.rename(index=str.upper).index
         )
+
+        # Using the `mapper` functionality with `axis`
+        tm.assert_index_equal(
+            modin_df.rename(str.upper, axis=0).index, df.rename(str.upper, axis=0).index
+        )
+        tm.assert_index_equal(
+            modin_df.rename(str.upper, axis=1).columns,
+            df.rename(str.upper, axis=1).columns,
+        )
+
         # have to pass something
         with pytest.raises(TypeError):
             modin_df.rename()
