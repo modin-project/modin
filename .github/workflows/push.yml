@@ -149,7 +149,7 @@ jobs:
         if: matrix.part != 3
       - run: pip install ray==0.8
         if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
+      - run: pip install dask[complete]<2.10.1 distributed
         if: matrix.engine == 'dask'
       - run: pip install coverage pytest-cov
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}

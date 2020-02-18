@@ -1,6 +1,6 @@
 pandas==0.25.3
 numpy
-dask[complete]>=2.1.0
+dask[complete]<2.10.1
 distributed>=2.3.2
 psutil==5.4.8
 xarray

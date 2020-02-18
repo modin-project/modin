@@ -67,7 +67,7 @@ jobs:
         if: matrix.part != 3
       - run: pip install ray==0.8
         if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
+      - run: pip install dask[complete]<2.10.1 distributed
         if: matrix.engine == 'dask'
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3

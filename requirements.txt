@@ -1,6 +1,6 @@
 pandas==0.25.3
 numpy
-dask[complete]>=2.5.0
+dask[complete]<2.10.1
 distributed>=2.5.0
 ray==0.8.0
 psutil==5.4.8
