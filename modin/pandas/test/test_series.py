@@ -43,17 +43,20 @@ pd.DEFAULT_NPARTITIONS = 4
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 
+
 def get_rop(op):
-    if op.startswith('__') and op.endswith('__'):
-        return '__r' + op[2:]
+    if op.startswith("__") and op.endswith("__"):
+        return "__r" + op[2:]
     else:
         return None
+
 
 def inter_df_math_helper(modin_series, pandas_series, op):
     inter_df_math_helper_one_side(modin_series, pandas_series, op)
     rop = get_rop(op)
     if rop:
         inter_df_math_helper_one_side(modin_series, pandas_series, rop)
+
 
 def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     try:
@@ -103,9 +106,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pandas_result = pandas_attr(pandas_series)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(
-                modin_attr(modin_series)
-            )  # repr to force materialization
+            repr(modin_attr(modin_series))  # repr to force materialization
     else:
         modin_result = modin_attr(modin_series)
         df_equals(modin_result, pandas_result)
@@ -126,9 +127,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pandas_result = pandas_attr(series_test_pandas)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(
-                modin_attr(series_test_modin)
-            )  # repr to force materialization
+            repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
         modin_result = modin_attr(series_test_modin)
         df_equals(modin_result, pandas_result)
