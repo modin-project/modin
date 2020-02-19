@@ -115,7 +115,7 @@ class BasePandasDataset(object):
     ):
         """Helper method to check validity of other in inter-df operations"""
         # We skip dtype checking if the other is a scalar.
-        if is_scalar(other):
+        if is_scalar(other) or is_list_like(other):
             return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
