@@ -123,7 +123,7 @@ class TestDataFrameBinary:
             modin_result = getattr(modin_df, op)(list_test, axis=1)
             df_equals(modin_result, pandas_result)
 
-        # Test dataframe to series
+        # Test dataframe to series axis=0
         series_test_modin = modin_df[modin_df.columns[0]]
         series_test_pandas = pandas_df[pandas_df.columns[0]]
         try:
@@ -133,6 +133,30 @@ class TestDataFrameBinary:
                 getattr(modin_df, op)(series_test_modin, axis=0)
         else:
             modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
+            df_equals(modin_result, pandas_result)
+
+        # Test dataframe to series axis=1
+        series_test_modin = modin_df.iloc[0]
+        series_test_pandas = pandas_df.iloc[0]
+        try:
+            pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=1)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df, op)(series_test_modin, axis=1)
+        else:
+            modin_result = getattr(modin_df, op)(series_test_modin, axis=1)
+            df_equals(modin_result, pandas_result)
+
+        # Test dataframe to series missing values
+        series_test_modin = modin_df.iloc[0, :-2]
+        series_test_pandas = pandas_df.iloc[0, :-2]
+        try:
+            pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=1)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df, op)(series_test_modin, axis=1)
+        else:
+            modin_result = getattr(modin_df, op)(series_test_modin, axis=1)
             df_equals(modin_result, pandas_result)
 
         # Test dataframe to series with different index
