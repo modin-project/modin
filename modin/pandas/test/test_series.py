@@ -44,23 +44,45 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
+def get_rop(op):
+    if op.startswith("__") and op.endswith("__"):
+        return "__r" + op[2:]
+    else:
+        return None
+
+
 def inter_df_math_helper(modin_series, pandas_series, op):
+    inter_df_math_helper_one_side(modin_series, pandas_series, op)
+    rop = get_rop(op)
+    if rop:
+        inter_df_math_helper_one_side(modin_series, pandas_series, rop)
+
+
+def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     try:
-        pandas_result = getattr(pandas_series, op)(4)
+        pandas_attr = getattr(pandas_series, op)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(getattr(modin_series, op)(4))  # repr to force materialization
+            _ = getattr(modin_series, op)
+        return
+    modin_attr = getattr(modin_series, op)
+
+    try:
+        pandas_result = pandas_attr(4)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            repr(modin_attr(4))  # repr to force materialization
     else:
-        modin_result = getattr(modin_series, op)(4)
+        modin_result = modin_attr(4)
         df_equals(modin_result, pandas_result)
 
     try:
-        pandas_result = getattr(pandas_series, op)(4.0)
+        pandas_result = pandas_attr(4.0)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(getattr(modin_series, op)(4.0))  # repr to force materialization
+            repr(modin_attr(4.0))  # repr to force materialization
     else:
-        modin_result = getattr(modin_series, op)(4.0)
+        modin_result = modin_attr(4.0)
         df_equals(modin_result, pandas_result)
 
     # These operations don't support non-scalar `other` or have a strange behavior in
@@ -81,37 +103,33 @@ def inter_df_math_helper(modin_series, pandas_series, op):
         return
 
     try:
-        pandas_result = getattr(pandas_series, op)(pandas_series)
+        pandas_result = pandas_attr(pandas_series)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(
-                getattr(modin_series, op)(modin_series)
-            )  # repr to force materialization
+            repr(modin_attr(modin_series))  # repr to force materialization
     else:
-        modin_result = getattr(modin_series, op)(modin_series)
+        modin_result = modin_attr(modin_series)
         df_equals(modin_result, pandas_result)
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
-        pandas_result = getattr(pandas_series, op)(list_test)
+        pandas_result = pandas_attr(list_test)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(getattr(modin_series, op)(list_test))  # repr to force materialization
+            repr(modin_attr(list_test))  # repr to force materialization
     else:
-        modin_result = getattr(modin_series, op)(list_test)
+        modin_result = modin_attr(list_test)
         df_equals(modin_result, pandas_result)
 
     series_test_modin = pd.Series(list_test, index=modin_series.index)
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
     try:
-        pandas_result = getattr(pandas_series, op)(series_test_pandas)
+        pandas_result = pandas_attr(series_test_pandas)
     except Exception as e:
         with pytest.raises(type(e)):
-            repr(
-                getattr(modin_series, op)(series_test_modin)
-            )  # repr to force materialization
+            repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
-        modin_result = getattr(modin_series, op)(series_test_modin)
+        modin_result = modin_attr(series_test_modin)
         df_equals(modin_result, pandas_result)
 
     # Level test
