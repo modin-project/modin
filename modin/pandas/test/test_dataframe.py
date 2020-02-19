@@ -544,6 +544,58 @@ class TestDataFrameBinary:
 
 
 class TestDataFrameMapMetadata:
+    def test_indexing(self):
+        modin_df = pd.DataFrame(
+            dict(a=[1, 2, 3], b=[4, 5, 6], c=[7, 8, 9]), index=["a", "b", "c"]
+        )
+        pandas_df = pandas.DataFrame(
+            dict(a=[1, 2, 3], b=[4, 5, 6], c=[7, 8, 9]), index=["a", "b", "c"]
+        )
+
+        modin_result = modin_df
+        pandas_result = pandas_df
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df["b"]
+        pandas_result = pandas_df["b"]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df[["b"]]
+        pandas_result = pandas_df[["b"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df[["b", "a"]]
+        pandas_result = pandas_df[["b", "a"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc["b"]
+        pandas_result = pandas_df.loc["b"]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[["b"]]
+        pandas_result = pandas_df.loc[["b"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[["b", "a"]]
+        pandas_result = pandas_df.loc[["b", "a"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[["b", "a"], ["a", "c"]]
+        pandas_result = pandas_df.loc[["b", "a"], ["a", "c"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[:, ["a", "c"]]
+        pandas_result = pandas_df.loc[:, ["a", "c"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[:, ["c"]]
+        pandas_result = pandas_df.loc[:, ["c"]]
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.loc[[]]
+        pandas_result = pandas_df.loc[[]]
+        df_equals(modin_result, pandas_result)
+
     def test_empty_df(self):
         df = pd.DataFrame(index=["a", "b"])
         df_is_empty(df)
