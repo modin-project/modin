@@ -21,3 +21,4 @@ openpyxl
 xlrd
 matplotlib
 sqlalchemy
+msgpack<1.0
