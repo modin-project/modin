@@ -155,6 +155,15 @@ def test_accessing_index_element_as_property():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_callable_key_in_getitem(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series[lambda s: s.index % 2 == 0],
+        pandas_series[lambda s: s.index % 2 == 0],
+    )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_T(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.T, pandas_series.T)
