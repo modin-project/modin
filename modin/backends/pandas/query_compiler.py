@@ -195,7 +195,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func = getattr(pandas.DataFrame, op)
         else:
             func = op
-        axis = kwargs.get("axis", 1)
+        axis = kwargs.get("axis", 0)
         if isinstance(other, type(self)):
             return self.__constructor__(
                 self._modin_frame._binary_op(
