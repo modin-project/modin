@@ -122,6 +122,8 @@ class BasePandasDataset(object):
         if isinstance(other, BasePandasDataset):
             return other._query_compiler
         elif is_list_like(other):
+            if isinstance(other, pandas.Series):
+                other = other.reindex(self.axes[axis])
             if axis == 0:
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
