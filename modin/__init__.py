@@ -14,6 +14,7 @@ def custom_formatwarning(msg, category, *args, **kwargs):
 warnings.formatwarning = custom_formatwarning
 # Filter numpy version warnings because they are not relevant
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="Large object of size")
 
 
 def get_execution_engine():

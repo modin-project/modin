@@ -3,7 +3,7 @@ from .partition import PandasOnDaskFramePartition
 from modin import __execution_engine__
 
 if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
+    from distributed.client import get_client
     from distributed import Future
 
 
@@ -22,7 +22,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
-        client = _get_global_client()
+        client = get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_axis_func,
             axis,
@@ -46,7 +46,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
-        client = _get_global_client()
+        client = get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
