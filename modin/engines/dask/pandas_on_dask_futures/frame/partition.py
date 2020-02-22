@@ -5,11 +5,14 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin import __execution_engine__
 
 if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
+    from distributed.client import get_client
+    import cloudpickle as pkl
 
 
 def apply_list_of_funcs(funcs, df):
     for func, kwargs in funcs:
+        if isinstance(func, bytes):
+            func = pkl.loads(func)
         df = func(df, **kwargs)
     return df
 
@@ -33,7 +36,6 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
-        self.client = _get_global_client()
 
     def get(self):
         """Flushes the call_queue and returns the data.
@@ -63,15 +65,16 @@ class PandasOnDaskFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
+        func = pkl.dumps(func)
         call_queue = self.call_queue + [[func, kwargs]]
-        future = self.client.submit(
+        future = get_client().submit(
             apply_list_of_funcs, call_queue, self.future, pure=False
         )
         return PandasOnDaskFramePartition(future)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnDaskFramePartition(
-            self.future, call_queue=self.call_queue + [[func, kwargs]]
+            self.future, call_queue=self.call_queue + [[pkl.dumps(func), kwargs]]
         )
 
     def drain_call_queue(self):
@@ -133,7 +136,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         Returns:
             A `RemotePartitions` object.
         """
-        client = _get_global_client()
+        client = get_client()
         return cls(client.scatter(obj, hash=False))
 
     @classmethod

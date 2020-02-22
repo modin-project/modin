@@ -214,15 +214,14 @@ if execution_engine == "Ray":
     initialize_ray()
     num_cpus = ray.cluster_resources()["CPU"]
 elif execution_engine == "Dask":  # pragma: no cover
-    from distributed.client import _get_global_client
+    from distributed.client import get_client
     import warnings
 
-    warnings.warn("The Dask Engine for Modin is experimental.")
-
     if threading.current_thread().name == "MainThread":
-        # initialize the dask client
-        client = _get_global_client()
-        if client is None:
+        warnings.warn("The Dask Engine for Modin is experimental.")
+        try:
+            client = get_client()
+        except ValueError:
             from distributed import Client
             import multiprocessing
 
