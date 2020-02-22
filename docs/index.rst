@@ -5,8 +5,6 @@
 
 ====
 
-*Scale your pandas workflows by changing one line of code*
-
 .. raw:: html
 
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -17,13 +15,13 @@
   import modin.pandas as pd
 
 
-Scale your pandas workflow by changing a single line of code.
--------------------------------------------------------------
+Scale your pandas workflow by changing a single line of code
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Modin uses Ray_ to provide an effortless way to speed up your pandas notebooks, scripts,
-and libraries. Unlike other distributed DataFrame libraries, Modin provides seamless
-integration and compatibility with existing pandas code. Even using the DataFrame
-constructor is identical.
+Modin uses Ray_ or Dask_ to provide an effortless way to speed up your pandas notebooks,
+scripts, and libraries. Unlike other distributed DataFrame libraries, Modin provides
+seamless integration and compatibility with existing pandas code. Even using the
+DataFrame constructor is identical.
 
 .. code-block:: python
 
@@ -34,13 +32,54 @@ constructor is identical.
   df = pd.DataFrame(frame_data)
 
 To use Modin, you do not need to know how many cores your system has and you do not need
-to  specify how to distribute the data. In fact, you can continue using your previous
+to specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you’ve changed your import statement, you’re ready to use Modin just like
 you would pandas.
 
+Installation and choosing your compute engine
+"""""""""""""""""""""""""""""""""""""""""""""
+
+Modin can be installed from PyPI:
+
+.. code-block:: bash
+
+   pip install modin
+
+
+If you don't have Ray_ or Dask_ installed, you will need to install Modin with one
+of the targets:
+
+.. code-block:: bash
+
+   pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
+   pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
+   pip install modin[all] # Install all of the above
+
+Modin will automatically detect which engine you have installed and use that for
+scheduling computation!
+
+If you want to choose a specific compute engine to run on, you can set the environment
+variable ``MODIN_ENGINE`` and Modin will do computation with that engine:
+
+.. code-block:: bash
+
+   export MODIN_ENGINE=ray  # Modin will use Ray
+   export MODIN_ENGINE=dask  # Modin will use Dask
+
+This can also be done within a notebook/interpreter before you import Modin:
+
+.. code-block:: python
+
+   import os
+
+   os.environ["MODIN_ENGINE"] = "ray"  # Modin will use Ray
+   os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
+
+   import modin.pandas as pd
+
 Faster pandas, even on your laptop
-----------------------------------
+""""""""""""""""""""""""""""""""""
 
 .. image:: img/read_csv_benchmark.png
    :height: 350px
@@ -65,76 +104,59 @@ machine.
 
   df = pd.read_csv("my_dataset.csv")
 
-Modin is a DataFrame for datasets from 1KB to 1TB+
---------------------------------------------------
+Modin is a DataFrame for datasets from 1MB to 1TB+
+""""""""""""""""""""""""""""""""""""""""""""""""""
 
 We have focused heavily on bridging the solutions between DataFrames for small data
 (e.g. pandas) and large data. Often data scientists require different tools for doing
-the same thing on different sizes of data. The DataFrame solutions that exist for 1KB do
+the same thing on different sizes of data. The DataFrame solutions that exist for 1MB do
 not scale to 1TB+, and the overheads of the solutions for 1TB+ are too costly for
 datasets in the 1KB range. With Modin, because of its light-weight, robust, and scalable
-nature, you get a fast DataFrame at 1KB and 1TB+.
+nature, you get a fast DataFrame at 1MB and 1TB+.
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
 
 .. toctree::
    :caption: Installation
-   :numbered:
 
    installation
 
 .. toctree::
    :caption: Using Modin
-   :numbered:
 
    using_modin
    out_of_core
-   pandas_supported
 
 .. toctree::
-   :caption: Using Pandas on Ray
-   :numbered:
+   :caption: Supported APIs
+
+   supported_apis/index
+   supported_apis/dataframe_supported
+   supported_apis/series_supported
+   supported_apis/utilities_supported
+   supported_apis/io_supported
+
+.. toctree::
+   :caption: Engines, Backends, and APIs
 
    UsingPandasonRay/index
-   UsingPandasonRay/dataframe_supported
-   UsingPandasonRay/series_supported
-   UsingPandasonRay/utilities_supported
-   UsingPandasonRay/io_supported
-   UsingPandasonRay/optimizations
-
-.. toctree::
-   :caption: Using Pandas on Dask
-   :numbered:
-
    UsingPandasonDask/index
-   UsingPandasonDask/optimizations
-
-.. toctree::
-   :caption: Using Pyarrow on Ray (Experimental)
-   :numbered:
-
    UsingPyarrowonRay/index
-
-.. toctree::
-   :caption: Using SQL on Ray
-   :numbered:
-
    UsingSQLonRay/index
 
 .. toctree::
    :caption: Contributing to Modin
-   :numbered:
 
    contributing
    architecture
 
 .. toctree::
    :caption: Help
-   :numbered:
 
    troubleshooting
    contact
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
+.. _Dask: https://dask.org/
