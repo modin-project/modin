@@ -47,28 +47,18 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - uses: actions/cache@v1
+        id: cache
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: InstallAWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
       - run: mv testmondata_${{matrix.engine}} .testmondata
-      - name: Install HDF5
-        if: matrix.part == 3
-        run: sudo apt install -y libhdf5-dev
+      - run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
-        if: matrix.part == 3
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
-      - run: pip install ray==0.8
-        if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
-        if: matrix.engine == 'dask'
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
@@ -104,14 +94,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - uses: actions/cache@v1
+        id: cache
         with:
           path: ~\AppData\Local\pip\Cache
-          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
+          key: ${{runner.os}}-pip-${{hashFiles('**/windows_test_requires.txt')}}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
       - run: mv testmondata_dask .testmondata
       - name: Install pip requirements
@@ -150,19 +138,15 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - uses: actions/cache@v1
+        id: cache
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
       - run: mv testmondata_pyarrow .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+      - run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
@@ -180,14 +164,13 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - uses: actions/cache@v1
+        id: cache
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+      - run: sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt

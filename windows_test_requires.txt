@@ -21,3 +21,4 @@ xlrd
 matplotlib
 sqlalchemy
 msgpack<1.0
+awscli
