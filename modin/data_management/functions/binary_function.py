@@ -12,7 +12,7 @@ class BinaryFunction(Function):
             if isinstance(other, type(query_compiler)):
                 return query_compiler.__constructor__(
                     query_compiler._modin_frame._binary_op(
-                        lambda x, y: func(x, y, *call_args, **call_kwds),
+                        lambda x, y: func(x, y, *args, **kwargs),
                         other._modin_frame,
                     )
                 )
@@ -26,13 +26,13 @@ class BinaryFunction(Function):
                         new_columns = query_compiler.columns
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
-                        lambda df: func(df, other, *call_args, **call_kwds),
+                        lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=new_columns,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame._map(
-                        lambda df: func(df, other, *call_args, **call_kwds)
+                        lambda df: func(df, other, *args, **kwargs)
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 
