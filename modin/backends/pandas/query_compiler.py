@@ -56,6 +56,7 @@ def copy_df_for_func(func):
     Returns:
         A callable function to be applied in the partitions
     """
+
     def caller(df, *args, **kwargs):
         df = df.copy()
         func(df, *args, **kwargs)

@@ -12,8 +12,7 @@ class BinaryFunction(Function):
             if isinstance(other, type(query_compiler)):
                 return query_compiler.__constructor__(
                     query_compiler._modin_frame._binary_op(
-                        lambda x, y: func(x, y, *args, **kwargs),
-                        other._modin_frame,
+                        lambda x, y: func(x, y, *args, **kwargs), other._modin_frame,
                     )
                 )
             else:
