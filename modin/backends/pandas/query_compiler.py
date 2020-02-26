@@ -14,6 +14,7 @@ from modin.data_management.functions import (
     MapFunction,
     MapReduceFunction,
     ReductionFunction,
+    BinaryFunction,
 )
 
 
@@ -44,6 +45,24 @@ def _str_map(func_name):
         return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
 
     return str_op_builder
+
+
+def copy_df_for_func(func):
+    """Create a function that copies the dataframe, likely because `func` is inplace.
+
+    Args:
+        func: The function, usually updates a dataframe inplace.
+
+    Returns:
+        A callable function to be applied in the partitions
+    """
+
+    def caller(df, *args, **kwargs):
+        df = df.copy()
+        func(df, *args, **kwargs)
+        return df
+
+    return caller
 
 
 class PandasQueryCompiler(BaseQueryCompiler):
@@ -159,96 +178,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    def binary_op(self, op, other, **kwargs):
-        """Perform an operation between two objects.
-
-        Note: The list of operations is as follows:
-            - add
-            - eq
-            - floordiv
-            - ge
-            - gt
-            - le
-            - lt
-            - mod
-            - mul
-            - ne
-            - pow
-            - rfloordiv
-            - rmod
-            - rpow
-            - rsub
-            - rtruediv
-            - sub
-            - truediv
-            - __and__
-            - __or__
-            - __xor__
-        Args:
-            op: The operation. See list of operations above
-            other: The object to operate against.
-
-        Returns:
-            A new QueryCompiler object.
-        """
-        if not callable(op):
-            func = getattr(pandas.DataFrame, op)
-        else:
-            func = op
-        axis = kwargs.get("axis", 0)
-        if isinstance(other, type(self)):
-            return self.__constructor__(
-                self._modin_frame._binary_op(
-                    lambda x, y: func(x, y, **kwargs), other._modin_frame
-                )
-            )
-        else:
-            if isinstance(other, (list, np.ndarray, pandas.Series)):
-                if axis == 1 and isinstance(other, pandas.Series):
-                    new_columns = self.columns.join(other.index, how="outer")
-                else:
-                    new_columns = self.columns
-                new_modin_frame = self._modin_frame._apply_full_axis(
-                    axis,
-                    lambda df: func(df, other, **kwargs),
-                    new_index=self.index,
-                    new_columns=new_columns,
-                )
-            else:
-                new_modin_frame = self._modin_frame._map(
-                    lambda df: func(df, other, **kwargs)
-                )
-            return self.__constructor__(new_modin_frame)
-
-    def clip(self, lower, upper, **kwargs):
-        kwargs["upper"] = upper
-        kwargs["lower"] = lower
-        axis = kwargs.get("axis", 0)
-        if is_list_like(lower) or is_list_like(upper):
-            new_modin_frame = self._modin_frame._fold(
-                axis, lambda df: df.clip(**kwargs)
-            )
-        else:
-            new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
-        return self.__constructor__(new_modin_frame)
-
-    def update(self, other, **kwargs):
-        """Uses other manager to update corresponding values in this manager.
-
-        Args:
-            other: The other manager.
-
-        Returns:
-            New QueryCompiler with updated data and index.
-        """
-
-        def update_builder(df, other, **kwargs):
-            # This is because of a requirement in Arrow
-            df = df.copy()
-            df.update(other, **kwargs)
-            return df
-
-        return self.binary_op(update_builder, other, **kwargs)
+    add = BinaryFunction.register(pandas.DataFrame.add)
+    combine = BinaryFunction.register(pandas.DataFrame.combine)
+    combine_first = BinaryFunction.register(pandas.DataFrame.combine_first)
+    eq = BinaryFunction.register(pandas.DataFrame.eq)
+    floordiv = BinaryFunction.register(pandas.DataFrame.floordiv)
+    ge = BinaryFunction.register(pandas.DataFrame.ge)
+    gt = BinaryFunction.register(pandas.DataFrame.gt)
+    le = BinaryFunction.register(pandas.DataFrame.le)
+    lt = BinaryFunction.register(pandas.DataFrame.lt)
+    mod = BinaryFunction.register(pandas.DataFrame.mod)
+    mul = BinaryFunction.register(pandas.DataFrame.mul)
+    ne = BinaryFunction.register(pandas.DataFrame.ne)
+    pow = BinaryFunction.register(pandas.DataFrame.pow)
+    rfloordiv = BinaryFunction.register(pandas.DataFrame.rfloordiv)
+    rmod = BinaryFunction.register(pandas.DataFrame.rmod)
+    rpow = BinaryFunction.register(pandas.DataFrame.rpow)
+    rsub = BinaryFunction.register(pandas.DataFrame.rsub)
+    rtruediv = BinaryFunction.register(pandas.DataFrame.rtruediv)
+    sub = BinaryFunction.register(pandas.DataFrame.sub)
+    truediv = BinaryFunction.register(pandas.DataFrame.truediv)
+    __and__ = BinaryFunction.register(pandas.DataFrame.__and__)
+    __or__ = BinaryFunction.register(pandas.DataFrame.__or__)
+    __rand__ = BinaryFunction.register(pandas.DataFrame.__rand__)
+    __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
+    __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
+    __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
+    update = BinaryFunction.register(copy_df_for_func(pandas.DataFrame.update))
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -566,6 +522,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     cumsum = FoldFunction.register(pandas.DataFrame.cumsum)
     cumprod = FoldFunction.register(pandas.DataFrame.cumprod)
     diff = FoldFunction.register(pandas.DataFrame.diff)
+
+    def clip(self, lower, upper, **kwargs):
+        kwargs["upper"] = upper
+        kwargs["lower"] = lower
+        axis = kwargs.get("axis", 0)
+        if is_list_like(lower) or is_list_like(upper):
+            new_modin_frame = self._modin_frame._fold(
+                axis, lambda df: df.clip(**kwargs)
+            )
+        else:
+            new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
+        return self.__constructor__(new_modin_frame)
 
     def dot(self, other):
         """Computes the matrix multiplication of self and other.

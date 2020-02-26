@@ -206,7 +206,7 @@ class BasePandasDataset(object):
                 getattr(getattr(pandas, self.__name__), op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
-        new_query_compiler = self._query_compiler.binary_op(op, other=other, **kwargs)
+        new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
     def _default_to_pandas(self, op, *args, **kwargs):
@@ -3248,7 +3248,7 @@ class BasePandasDataset(object):
         return self._binary_op("__and__", other, axis=0)
 
     def __rand__(self, other):
-        return self._binary_op("__and__", other, axis=0)
+        return self._binary_op("__rand__", other, axis=0)
 
     def __array__(self, dtype=None):
         arr = self.to_numpy(dtype)
@@ -3410,7 +3410,7 @@ class BasePandasDataset(object):
         return self._binary_op("__or__", other, axis=0)
 
     def __ror__(self, other):
-        return self._binary_op("__or__", other, axis=0)
+        return self._binary_op("__ror__", other, axis=0)
 
     def __sizeof__(self):
         return self._default_to_pandas("__sizeof__")
@@ -3422,7 +3422,7 @@ class BasePandasDataset(object):
         return self._binary_op("__xor__", other, axis=0)
 
     def __rxor__(self, other):
-        return self._binary_op("__xor__", other, axis=0)
+        return self._binary_op("__rxor__", other, axis=0)
 
     @property
     def blocks(self):
