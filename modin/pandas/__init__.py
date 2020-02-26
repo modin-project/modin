@@ -130,15 +130,19 @@ def initialize_ray():
 
     """Initializes ray based on environment variables and internal defaults."""
     if threading.current_thread().name == "MainThread":
+        import secrets
+
         plasma_directory = None
         cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
+        redis_password = secrets.token_hex(16)
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
                 include_webui=False,
                 ignore_reinit_error=True,
                 redis_address=redis_address,
+                redis_password=redis_password,
                 logging_level=100,
             )
         elif cluster is None:
@@ -171,6 +175,7 @@ def initialize_ray():
                 plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
                 redis_address=redis_address,
+                redis_password=redis_password,
                 logging_level=100,
                 memory=object_store_memory,
             )
