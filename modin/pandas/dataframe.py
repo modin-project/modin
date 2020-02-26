@@ -1580,7 +1580,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).sub(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     subtract = sub
