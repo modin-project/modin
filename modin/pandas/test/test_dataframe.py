@@ -112,6 +112,16 @@ class TestDataFrameBinary:
             modin_result = getattr(modin_df, op)(modin_df2)
             df_equals(modin_result, pandas_result)
 
+        # Test dataframe fill value
+        try:
+            pandas_result = getattr(pandas_df, op)(pandas_df2, fill_value=0)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                getattr(modin_df, op)(modin_df2, fill_value=0)
+        else:
+            modin_result = getattr(modin_df, op)(modin_df2, fill_value=0)
+            df_equals(modin_result, pandas_result)
+
         # Test dataframe to list
         list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_df.shape[1]))
         try:
