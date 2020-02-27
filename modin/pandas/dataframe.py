@@ -684,7 +684,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).floordiv(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     @classmethod
@@ -1186,14 +1186,14 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).mod(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def mul(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).mul(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     rmul = multiply = mul
@@ -1280,7 +1280,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).pow(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def prod(
@@ -1414,35 +1414,35 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).rfloordiv(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).rmod(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rpow(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).rpow(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rsub(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).rsub(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rtruediv(self, other, axis="columns", level=None, fill_value=None):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).rtruediv(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     rdiv = rtruediv
@@ -1768,7 +1768,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             other = other._to_pandas()
         return super(DataFrame, self).truediv(
-            other, axis=axis, level=level, fill_value=None
+            other, axis=axis, level=level, fill_value=fill_value
         )
 
     div = divide = truediv
