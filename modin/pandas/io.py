@@ -221,8 +221,8 @@ def read_excel(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     intermediate = BaseFactory.read_excel(**kwargs)
-    if isinstance(intermediate, OrderedDict):
-        parsed = OrderedDict()
+    if isinstance(intermediate, (OrderedDict, dict)):
+        parsed = type(intermediate)()
         for key in intermediate.keys():
             parsed[key] = DataFrame(query_compiler=intermediate.get(key))
         return parsed
