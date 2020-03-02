@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pandas
 import pandas.util.testing as tm
+import os
 import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
@@ -3200,6 +3201,10 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="Windows has a memory issue for large numbers on this test",
+    )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -3251,6 +3256,10 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="Windows has a memory issue for large numbers on this test",
+    )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(

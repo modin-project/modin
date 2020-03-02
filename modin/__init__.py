@@ -15,6 +15,16 @@ warnings.formatwarning = custom_formatwarning
 # Filter numpy version warnings because they are not relevant
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="Large object of size")
+warnings.filterwarnings(
+    "ignore",
+    message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
+    "Import from datetime module instead.",
+)
+warnings.filterwarnings(
+    "ignore",
+    message="pandas.core.index is deprecated and will be removed in a future version. "
+    "The public classes are available in the top-level namespace.",
+)
 
 
 def get_execution_engine():
