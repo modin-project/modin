@@ -412,7 +412,7 @@ class DataFrameGroupBy(object):
         )
 
     def pipe(self, func, *args, **kwargs):
-        return com._pipe(self, func, *args, **kwargs)
+        return com.pipe(self, func, *args, **kwargs)
 
     def cumcount(self, ascending=True):
         result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))

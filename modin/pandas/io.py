@@ -3,7 +3,8 @@ import pandas
 import pathlib
 import re
 from collections import OrderedDict
-from typing import Union, IO, AnyStr, Sequence
+from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
+from pandas._typing import FilePathOrBuffer
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
@@ -13,7 +14,7 @@ PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
 # Parquet
-def read_parquet(path, engine="auto", columns=None, **kwargs):
+def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
     """Load a parquet object from the file path, returning a DataFrame.
 
     Args:
@@ -74,7 +75,7 @@ def _make_parser_func(sep):
         chunksize=None,
         compression="infer",
         thousands=None,
-        decimal=b".",
+        decimal: str = ".",
         lineterminator=None,
         quotechar='"',
         quoting=0,
@@ -143,20 +144,21 @@ def read_json(
 
 
 def read_gbq(
-    query,
-    project_id=None,
-    index_col=None,
-    col_order=None,
-    reauth=False,
-    auth_local_webserver=False,
-    dialect=None,
-    location=None,
-    configuration=None,
+    query: str,
+    project_id: Optional[str] = None,
+    index_col: Optional[str] = None,
+    col_order: Optional[List[str]] = None,
+    reauth: bool = False,
+    auth_local_webserver: bool = False,
+    dialect: Optional[str] = None,
+    location: Optional[str] = None,
+    configuration: Optional[Dict[str, Any]] = None,
     credentials=None,
-    use_bqstorage_api=None,
+    use_bqstorage_api: Optional[bool] = None,
     private_key=None,
     verbose=None,
-):
+    progress_bar_type: Optional[str] = None,
+) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_gbq(**kwargs))
@@ -211,17 +213,16 @@ def read_excel(
     date_parser=None,
     thousands=None,
     comment=None,
-    skip_footer=0,
     skipfooter=0,
     convert_float=True,
     mangle_dupe_cols=True,
-    **kwds
+    **kwds,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     intermediate = BaseFactory.read_excel(**kwargs)
-    if isinstance(intermediate, OrderedDict):
-        parsed = OrderedDict()
+    if isinstance(intermediate, (OrderedDict, dict)):
+        parsed = type(intermediate)()
         for key in intermediate.keys():
             parsed[key] = DataFrame(query_compiler=intermediate.get(key))
         return parsed
@@ -229,28 +230,33 @@ def read_excel(
         return DataFrame(query_compiler=intermediate)
 
 
-def read_hdf(path_or_buf, key=None, mode="r", **kwargs):
+def read_hdf(
+    path_or_buf,
+    key=None,
+    mode: str = "r",
+    errors: str = "strict",
+    where=None,
+    start: Optional[int] = None,
+    stop: Optional[int] = None,
+    columns=None,
+    iterator=False,
+    chunksize: Optional[int] = None,
+    **kwargs,
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
 
-def read_feather(path, columns=None, use_threads=True):
+def read_feather(path, columns=None, use_threads: bool = True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
-
-
-def read_msgpack(path_or_buf, encoding="utf-8", iterator=False, **kwargs):
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    kwargs.update(kwargs.pop("kwargs", {}))
-    return DataFrame(query_compiler=BaseFactory.read_msgpack(**kwargs))
 
 
 def read_stata(
     filepath_or_buffer,
     convert_dates=True,
     convert_categoricals=True,
-    encoding=None,
     index_col=None,
     convert_missing=False,
     preserve_dtypes=True,
@@ -275,7 +281,9 @@ def read_sas(
     return DataFrame(query_compiler=BaseFactory.read_sas(**kwargs))
 
 
-def read_pickle(path, compression="infer"):
+def read_pickle(
+    filepath_or_buffer: FilePathOrBuffer, compression: Optional[str] = "infer"
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=BaseFactory.read_pickle(**kwargs))
 
@@ -330,7 +338,7 @@ def read_fwf(
     colspecs="infer",
     widths=None,
     infer_nrows=100,
-    **kwds
+    **kwds,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
@@ -374,10 +382,17 @@ def read_spss(
     )
 
 
-def to_pickle(obj, path, compression="infer", protocol=4):
+def to_pickle(
+    obj: Any,
+    filepath_or_buffer: Union[str, pathlib.Path],
+    compression: Optional[str] = "infer",
+    protocol: int = 4,
+):
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
-    return BaseFactory.to_pickle(obj, path, compression=compression, protocol=protocol)
+    return BaseFactory.to_pickle(
+        obj, filepath_or_buffer, compression=compression, protocol=protocol
+    )
 
 
 class ExcelFile(pandas.ExcelFile):
@@ -420,6 +435,31 @@ class ExcelFile(pandas.ExcelFile):
                 # We replace the method with `return_handler` for inplace operations
                 method = return_handler
         return method
+
+
+def json_normalize(
+    data: Union[Dict, List[Dict]],
+    record_path: Optional[Union[str, List]] = None,
+    meta: Optional[Union[str, List[Union[str, List[str]]]]] = None,
+    meta_prefix: Optional[str] = None,
+    record_prefix: Optional[str] = None,
+    errors: Optional[str] = "raise",
+    sep: str = ".",
+    max_level: Optional[int] = None,
+) -> DataFrame:
+    ErrorMessage.default_to_pandas("json_normalize")
+    return DataFrame(
+        pandas.json_normalize(
+            data, record_path, meta, meta_prefix, record_prefix, errors, sep, max_level
+        )
+    )
+
+
+def read_orc(
+    path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
+) -> DataFrame:
+    ErrorMessage.default_to_pandas("read_orc")
+    return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 
 class HDFStore(pandas.HDFStore):

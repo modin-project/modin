@@ -1,21 +1,26 @@
 import pandas
+
+from typing import Hashable, Iterable, Mapping, Optional, Union
+from pandas._typing import FrameOrSeriesUnion
+
 from .dataframe import DataFrame
 from .series import Series
 
 
 def concat(
-    objs,
+    objs: Union[
+        Iterable[FrameOrSeriesUnion], Mapping[Optional[Hashable], FrameOrSeriesUnion]
+    ],
     axis=0,
     join="outer",
-    join_axes=None,
-    ignore_index=False,
+    ignore_index: bool = False,
     keys=None,
     levels=None,
     names=None,
-    verify_integrity=False,
-    sort=None,
-    copy=True,
-):
+    verify_integrity: bool = False,
+    sort: bool = False,
+    copy: bool = True,
+) -> FrameOrSeriesUnion:
     if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
         raise TypeError(
             "first argument must be an iterable of pandas "

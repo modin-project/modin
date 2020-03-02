@@ -322,14 +322,18 @@ def df_equals(df1, df2):
                 return
         assert False
 
+    if isinstance(df1, (list, tuple)) and all(
+        isinstance(d, (pd.DataFrame, pd.Series, pandas.DataFrame, pandas.Series))
+        for d in df1
+    ):
+        assert isinstance(df2, type(df1)), "Different type of collection"
+        assert len(df1) == len(df2), "Different length result"
+        return (df_equals(d1, d2) for d1, d2 in zip(df1, df2))
+
     # Convert to pandas
-    if isinstance(df1, pd.DataFrame):
+    if isinstance(df1, (pd.DataFrame, pd.Series)):
         df1 = to_pandas(df1)
-    if isinstance(df2, pd.DataFrame):
-        df2 = to_pandas(df2)
-    if isinstance(df1, pd.Series):
-        df1 = to_pandas(df1)
-    if isinstance(df2, pd.Series):
+    if isinstance(df2, (pd.DataFrame, pd.Series)):
         df2 = to_pandas(df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):

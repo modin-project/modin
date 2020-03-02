@@ -19,8 +19,6 @@ if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
 else:
     import modin.experimental.pandas as pd
 
-# needed to resolve ray-project/ray#3744
-pa.__version__ = "0.11.0"
 pd.DEFAULT_NPARTITIONS = 4
 
 TEST_PARQUET_FILENAME = "test.parquet"
@@ -32,7 +30,6 @@ TEST_FEATHER_FILENAME = "test.feather"
 TEST_READ_HDF_FILENAME = "test.hdf"
 TEST_WRITE_HDF_FILENAME_MODIN = "test_write_modin.hdf"
 TEST_WRITE_HDF_FILENAME_PANDAS = "test_write_pandas.hdf"
-TEST_MSGPACK_FILENAME = "test.msg"
 TEST_STATA_FILENAME = "test.dta"
 TEST_PICKLE_FILENAME = "test.pkl"
 TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
@@ -284,21 +281,6 @@ def teardown_hdf_file():
         os.remove(TEST_READ_HDF_FILENAME)
 
 
-def setup_msgpack_file(row_size, force=False):
-    if os.path.exists(TEST_MSGPACK_FILENAME) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_msgpack(TEST_MSGPACK_FILENAME)
-
-
-def teardown_msgpack_file():
-    if os.path.exists(TEST_MSGPACK_FILENAME):
-        os.remove(TEST_MSGPACK_FILENAME)
-
-
 def setup_stata_file(row_size, force=False):
     if os.path.exists(TEST_STATA_FILENAME) and not force:
         pass
@@ -499,8 +481,8 @@ def test_from_excel_all_sheets():
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
 
-    assert isinstance(pandas_df, OrderedDict)
-    assert isinstance(modin_df, OrderedDict)
+    assert isinstance(pandas_df, (OrderedDict, dict))
+    assert isinstance(modin_df, type(pandas_df))
 
     assert pandas_df.keys() == modin_df.keys()
 
@@ -544,17 +526,6 @@ def test_from_hdf_format():
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_hdf_file()
-
-
-def test_from_msgpack():
-    setup_msgpack_file(SMALL_ROW_SIZE)
-
-    pandas_df = pandas.read_msgpack(TEST_MSGPACK_FILENAME)
-    modin_df = pd.read_msgpack(TEST_MSGPACK_FILENAME)
-
-    assert modin_df_equals_pandas(modin_df, pandas_df)
-
-    teardown_msgpack_file()
 
 
 def test_from_stata():
@@ -1136,22 +1107,6 @@ def test_to_latex():
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
-def test_to_msgpack():
-    modin_df = create_test_ray_dataframe()
-    pandas_df = create_test_pandas_dataframe()
-
-    TEST_MSGPACK_DF_FILENAME = "test_df.msgpack"
-    TEST_MSGPACK_pandas_FILENAME = "test_pandas.msgpack"
-
-    modin_df.to_msgpack(TEST_MSGPACK_DF_FILENAME)
-    pandas_df.to_msgpack(TEST_MSGPACK_pandas_FILENAME)
-
-    assert assert_files_eq(TEST_MSGPACK_DF_FILENAME, TEST_MSGPACK_pandas_FILENAME)
-
-    teardown_test_file(TEST_MSGPACK_pandas_FILENAME)
-    teardown_test_file(TEST_MSGPACK_DF_FILENAME)
-
-
 def test_to_parquet():
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
@@ -1383,7 +1338,6 @@ def test_cleanup():
         TEST_READ_HDF_FILENAME,
         TEST_WRITE_HDF_FILENAME_MODIN,
         TEST_WRITE_HDF_FILENAME_PANDAS,
-        TEST_MSGPACK_FILENAME,
         TEST_STATA_FILENAME,
         TEST_PICKLE_FILENAME,
         TEST_SAS_FILENAME,

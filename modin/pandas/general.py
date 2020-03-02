@@ -37,18 +37,18 @@ notnull = notna
 def merge(
     left,
     right,
-    how="inner",
+    how: str = "inner",
     on=None,
     left_on=None,
     right_on=None,
-    left_index=False,
-    right_index=False,
-    sort=False,
+    left_index: bool = False,
+    right_index: bool = False,
+    sort: bool = False,
     suffixes=("_x", "_y"),
-    copy=True,
-    indicator=False,
+    copy: bool = True,
+    indicator: bool = False,
     validate=None,
-):
+) -> DataFrame:
     """Database style join, where common columns in "on" are merged.
 
     Args:
@@ -103,8 +103,8 @@ def merge_ordered(
     right_by=None,
     fill_method=None,
     suffixes=("_x", "_y"),
-    how="outer",
-):
+    how: str = "outer",
+) -> DataFrame:
     if not isinstance(left, DataFrame):
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
@@ -134,16 +134,16 @@ def merge_asof(
     on=None,
     left_on=None,
     right_on=None,
-    left_index=False,
-    right_index=False,
+    left_index: bool = False,
+    right_index: bool = False,
     by=None,
     left_by=None,
     right_by=None,
     suffixes=("_x", "_y"),
     tolerance=None,
-    allow_exact_matches=True,
-    direction="backward",
-):
+    allow_exact_matches: bool = True,
+    direction: str = "backward",
+) -> DataFrame:
     if not isinstance(left, DataFrame):
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
