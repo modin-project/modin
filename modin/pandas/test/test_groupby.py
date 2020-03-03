@@ -109,7 +109,9 @@ def test_mixed_dtypes_groupby(as_index):
         eval_groups(ray_groupby, pandas_groupby)
 
 
-@pytest.mark.parametrize("by", [[1, 2, 1, 2], lambda x: x % 3, "col1"])
+@pytest.mark.parametrize(
+    "by", [[1, 2, 1, 2], lambda x: x % 3, "col1", ["col1", "col2"]]
+)
 @pytest.mark.parametrize("as_index", [True, False])
 def test_simple_row_groupby(by, as_index):
     pandas_df = pandas.DataFrame(

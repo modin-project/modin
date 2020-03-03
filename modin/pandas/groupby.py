@@ -40,11 +40,17 @@ class DataFrameGroupBy(object):
 
         if (
             level is None
-            and not isinstance(by, type(self._query_compiler))
             and is_list_like(by)
+            or isinstance(by, type(self._query_compiler))
         ):
             # This tells us whether or not there are multiple columns/rows in the groupby
-            self._is_multi_by = all(obj in self._df for obj in self._by) and axis == 0
+            self._is_multi_by = (
+                isinstance(by, type(self._query_compiler)) and len(by.columns) > 1
+            ) or (
+                not isinstance(by, type(self._query_compiler))
+                and all(obj in self._df for obj in self._by)
+                and axis == 0
+            )
         else:
             self._is_multi_by = False
         self._level = level
@@ -453,7 +459,7 @@ class DataFrameGroupBy(object):
     def _groupby_reduce(
         self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
     ):
-        if self._is_multi_by:
+        if self._is_multi_by and not isinstance(self._by, type(self._query_compiler)):
             return self._default_to_pandas(map_func, **kwargs)
         if not isinstance(self._by, type(self._query_compiler)):
             return self._apply_agg_function(map_func, drop=drop, **kwargs)
@@ -494,13 +500,14 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
         from .dataframe import DataFrame
 
+        if self._is_multi_by:
+            return self._default_to_pandas(f, **kwargs)
+
         if isinstance(self._by, type(self._query_compiler)):
             by = self._by.to_pandas().squeeze()
         else:
             by = self._by
 
-        if self._is_multi_by:
-            return self._default_to_pandas(f, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
@@ -524,8 +531,13 @@ class DataFrameGroupBy(object):
         Returns:
              A new Modin DataFrame with the result of the pandas function.
         """
-        if isinstance(self._by, type(self._query_compiler)):
+        if (
+            isinstance(self._by, type(self._query_compiler))
+            and len(self._by.columns) == 1
+        ):
             by = self._by.to_pandas().squeeze()
+        elif isinstance(self._by, type(self._query_compiler)):
+            by = list(self._by.columns)
         else:
             by = self._by
 
