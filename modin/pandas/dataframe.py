@@ -322,7 +322,7 @@ class DataFrame(BasePandasDataset):
             result = getattr(sys.modules[self.__module__], return_type)(
                 query_compiler=query_compiler
             )
-            if hasattr(result, "name"):
+            if isinstance(result, Series):
                 if axis == 0 and result.name == self.index[0]:
                     result.name = None
                 elif axis == 1 and result.name == self.columns[0]:

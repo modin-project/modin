@@ -1156,23 +1156,36 @@ class TestDataFrameMapMetadata:
         "keep", ["last", "first", False], ids=["last", "first", "False"]
     )
     @pytest.mark.parametrize(
-        "subset", [None, ["col1", "col3", "col7"]], ids=["None", "subset"]
+        "subset", [None,
+                   "col1",
+                   "name",
+                   ("col1", "col3"),
+                   ["col1", "col3", "col7"]],
+        ids=["None", "string", "name", "tuple", "list"]
     )
     def test_drop_duplicates(self, data, keep, subset):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        df_equals(
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
-            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
-        )
+        try:
+            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+        else:
+            df_equals(
+                pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
+                modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+            )
 
-        modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
-        pandas_results = pandas_df.drop_duplicates(
-            keep=keep, inplace=True, subset=subset
-        )
-
-        df_equals(modin_results, pandas_results)
+        try:
+            pandas_results = pandas_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        else:
+            modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+            df_equals(modin_results, pandas_results)
 
     def test_drop_duplicates_with_missing_index_values(self):
         data = {
