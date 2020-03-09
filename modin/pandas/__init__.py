@@ -75,6 +75,7 @@ import threading
 import os
 import types
 import sys
+import multiprocessing
 
 from .. import __version__
 from .concat import concat
@@ -232,7 +233,6 @@ elif execution_engine == "Dask":  # pragma: no cover
             client = get_client()
         except ValueError:
             from distributed import Client
-            import multiprocessing
 
             num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
             client = Client(n_workers=int(num_cpus))
