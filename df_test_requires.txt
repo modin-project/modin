@@ -4,6 +4,7 @@ psutil==5.4.8
 pytest
 pytest-testmon
 pytest-custom_exit_code
+pytest-xdist
 matplotlib
 xarray
 scipy
