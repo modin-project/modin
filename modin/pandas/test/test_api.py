@@ -51,6 +51,10 @@ def test_top_level_api_equality():
         "num_cpus",
         "warnings",
         "os",
+        "multiprocessing",
+        "Client",
+        "client",
+        "get_client",
     ]
 
     assert not len(

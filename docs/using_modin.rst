@@ -96,7 +96,26 @@ Reducing or limiting the resources Modin can use
 
 By default, Modin will use all of the resources available on your machine. It is
 possible, however, to limit the amount of resources Modin uses to free resources for
-another task or user. Here is how you would limit the number of CPUs Modin used:
+another task or user. Here is how you would limit the number of CPUs Modin used in
+your bash environment variables:
+
+.. code-block:: bash
+
+   export MODIN_CPUS=4
+
+
+You can also specify this in your python script with ``os.environ``. **Make sure
+you update the CPUS before you import Modin!**:
+
+.. code-block:: python
+
+   import os
+   os.environ["MODIN_CPUS"] = "4"
+   import modin.pandas as pd
+
+If you're using a specific engine and want more control over the environment Modin
+uses, you can start Ray or Dask in your environment and Modin will connect to it.
+**Make sure you start the environment before you import Modin!**
 
 .. code-block:: python
 

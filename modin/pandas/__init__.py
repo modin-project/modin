@@ -75,6 +75,7 @@ import threading
 import os
 import types
 import sys
+import multiprocessing
 
 from .. import __version__
 from .concat import concat
@@ -134,12 +135,14 @@ def initialize_ray():
         import secrets
 
         plasma_directory = None
+        num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
         cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
         redis_password = secrets.token_hex(16)
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
+                num_cpus=int(num_cpus),
                 include_webui=False,
                 ignore_reinit_error=True,
                 redis_address=redis_address,
@@ -171,6 +174,7 @@ def initialize_ray():
             else:
                 object_store_memory = int(object_store_memory)
             ray.init(
+                num_cpus=int(num_cpus),
                 include_webui=False,
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
@@ -229,10 +233,9 @@ elif execution_engine == "Dask":  # pragma: no cover
             client = get_client()
         except ValueError:
             from distributed import Client
-            import multiprocessing
 
-            num_cpus = multiprocessing.cpu_count()
-            client = Client(n_workers=num_cpus)
+            num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
+            client = Client(n_workers=int(num_cpus))
 elif execution_engine != "Python":
     raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
