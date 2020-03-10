@@ -123,6 +123,12 @@ test_data_with_duplicates = {
         ]
         for i in range(NCOLS)
     },
+    "has_name_column": {
+        "name": ["one", "two", "two", "three"],
+        "col1": [1, 2, 2, 3],
+        "col3": [10, 20, 20, 3],
+        "col7": [100, 201, 200, 300],
+    },
 }
 
 test_data_with_duplicates_values = list(test_data_with_duplicates.values())
