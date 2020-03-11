@@ -18,7 +18,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
-
+from .series import Series
 
 @_inherit_docstrings(
     pandas.core.groupby.DataFrameGroupBy,
@@ -368,7 +368,15 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
+        result = self._groupby_reduce(
+            lambda df: pandas.DataFrame(df.size()),
+            lambda df: df.sum(),
+            numeric_only=False,
+        )
+        series_result = Series(query_compiler=result._query_compiler)
+        # Pandas does not name size() output
+        series_result.name = None
+        return series_result
 
     def sum(self, **kwargs):
         return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
@@ -605,8 +613,6 @@ class SeriesGroupBy(DataFrameGroupBy):
 
     @property
     def _iter(self):
-        from .dataframe import Series
-
         group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (

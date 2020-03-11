@@ -205,8 +205,8 @@ def test_simple_row_groupby(by, as_index):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [3, 8, 12, 10],
+            "col2": [4, 5, np.NaN, 7],
+            "col3": [np.NaN, np.NaN, 12, 10],
             "col4": [17, 13, 16, 15],
             "col5": [-4, -5, -6, -7],
         }
@@ -311,6 +311,7 @@ def test_simple_row_groupby(by, as_index):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -426,6 +427,7 @@ def test_single_group_row_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -535,6 +537,7 @@ def test_large_row_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -645,6 +648,7 @@ def test_simple_col_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
     eval_groups(modin_groupby, pandas_groupby)
 
@@ -922,6 +926,10 @@ def eval_fillna(modin_groupby, pandas_groupby):
 
 def eval_count(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.count(), pandas_groupby.count())
+
+
+def eval_size(modin_groupby, pandas_groupby):
+    df_equals(modin_groupby.size(), pandas_groupby.size())
 
 
 def eval_pipe(modin_groupby, pandas_groupby, func):
