@@ -380,6 +380,7 @@ class DataFrame(BasePandasDataset):
                     "Please report any bugs/issues to bug_reports@modin.org."
                 )
                 by = self.__getitem__(by)._query_compiler
+                drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(

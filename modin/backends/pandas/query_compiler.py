@@ -1151,6 +1151,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ), "Can only use groupby reduce with another Query Compiler"
 
         other_len = len(by.columns)
+        if numeric_only:
+            qc = self.getitem_column_array(self._modin_frame._numeric_columns(True))
+        else:
+            qc = self
+        first_column = qc.columns[0]
+        drop_by = drop and all(c in qc.columns for c in by.columns)
         as_index = groupby_args.get("as_index", True)
 
         def _map(df, other):
@@ -1179,13 +1185,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def _reduce(df):
                 # See note above about setting `as_index`
-                groupby_args["as_index"] = True
+                groupby_args["as_index"] = as_index
                 if other_len > 1:
-                    by = list(df.columns[0:other_len])
+                    by_part = list(df.columns[0:other_len])
                 else:
-                    by = df.columns[0]
+                    by_part = df.columns[0]
                 result = reduce_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **reduce_args
+                    df.groupby(by=by_part, axis=axis, **groupby_args), **reduce_args
                 )
                 if (
                     not isinstance(result.index, pandas.MultiIndex)
@@ -1193,19 +1199,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     and "_modin_groupby_" in result.index.name
                 ):
                     result.index.name = result.index.name[len("_modin_groupby_") :]
+                if not as_index and (first_column not in df.columns or drop_by):
+                    return result.drop(columns=by_part)
                 return result
 
         else:
 
             def _reduce(df):
                 # See note above about setting `as_index`
-                groupby_args["as_index"] = True
+                groupby_args["as_index"] = as_index
                 if other_len > 1:
-                    by = list(df.columns[0:other_len])
+                    by_part = list(df.columns[0:other_len])
                 else:
-                    by = df.columns[0]
+                    by_part = df.columns[0]
                 result = map_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                    df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
                 )
                 if (
                     not isinstance(result.index, pandas.MultiIndex)
@@ -1213,23 +1221,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     and "_modin_groupby_" in result.index.name
                 ):
                     result.index.name = result.index.name[len("_modin_groupby_") :]
+                if not as_index and (first_column not in df.columns or drop_by):
+                    return result.drop(columns=by_part)
                 return result
 
         if axis == 0:
-            new_columns = (
-                self.columns
-                if not numeric_only
-                else self._modin_frame._numeric_columns(True)
-            )
+            if not as_index and drop:
+                new_columns = by.columns.append(qc.columns)
+            else:
+                new_columns = qc.columns
             new_index = None
-            compute_qc = (
-                self.getitem_column_array(new_columns) if numeric_only else self
-            )
         else:
             new_index = self.index
             new_columns = None
-            compute_qc = self
-        new_modin_frame = compute_qc._modin_frame.groupby_reduce(
+        new_modin_frame = qc._modin_frame.groupby_reduce(
             axis,
             by._modin_frame,
             _map,
@@ -1237,15 +1242,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=new_columns,
             new_index=new_index,
         )
-        result = self.__constructor__(new_modin_frame)
-        # Reset `as_index` because it was edited inplace.
-        groupby_args["as_index"] = as_index
-        if as_index:
-            return result
-        else:
-            if result.index.name is None or result.index.name in result.columns:
-                drop = False
-            return result.reset_index(drop=not drop)
+        return self.__constructor__(new_modin_frame)
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
         as_index = groupby_args.get("as_index", True)

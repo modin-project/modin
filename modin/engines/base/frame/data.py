@@ -1157,15 +1157,7 @@ class BasePandasFrame(object):
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
             )
-        if axis == 0:
-            new_widths = self._column_widths
-            new_lengths = None
-        else:
-            new_widths = None
-            new_lengths = self._row_lengths
-        return self.__constructor__(
-            new_partitions, new_index, new_columns, new_lengths, new_widths
-        )
+        return self.__constructor__(new_partitions, new_index, new_columns)
 
     @classmethod
     def from_pandas(cls, df):
