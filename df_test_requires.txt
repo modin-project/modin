@@ -1,6 +1,6 @@
 pandas==1.0.1
 numpy
-psutil==5.4.8
+psutil==5.6.6
 pytest
 pytest-testmon
 pytest-custom_exit_code
