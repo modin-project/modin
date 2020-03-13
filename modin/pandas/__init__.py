@@ -70,6 +70,9 @@ from pandas import (
     datetime,
     NamedAgg,
     NA,
+    SparseArray,
+    SparseDataFrame,
+    SparseSeries,
 )
 import threading
 import os
@@ -346,6 +349,9 @@ __all__ = [
     "datetime",
     "NamedAgg",
     "DEFAULT_NPARTITIONS",
+    "SparseArray",
+    "SparseDataFrame",
+    "SparseSeries",
 ]
 
 del pandas
