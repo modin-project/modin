@@ -38,7 +38,11 @@ def test_mixed_dtypes_groupby(as_index):
 
     n = 1
 
-    by_values = [("col1",), (lambda x: x % 2,), (ray_df["col0"], pandas_df["col0"])]
+    by_values = [
+        ("col1",),
+        (lambda x: x % 2,),
+        (ray_df["col0"].copy(), pandas_df["col0"].copy()),
+    ]
 
     for by in by_values:
         ray_groupby = ray_df.groupby(by=by[0], as_index=as_index)
@@ -109,7 +113,9 @@ def test_mixed_dtypes_groupby(as_index):
         eval_groups(ray_groupby, pandas_groupby)
 
 
-@pytest.mark.parametrize("by", [[1, 2, 1, 2], lambda x: x % 3, "col1"])
+@pytest.mark.parametrize(
+    "by", [[1, 2, 1, 2], lambda x: x % 3, "col1", ["col1", "col2"]]
+)
 @pytest.mark.parametrize("as_index", [True, False])
 def test_simple_row_groupby(by, as_index):
     pandas_df = pandas.DataFrame(
@@ -140,9 +146,13 @@ def test_simple_row_groupby(by, as_index):
     eval_pct_change(ray_groupby, pandas_groupby)
     eval_cummax(ray_groupby, pandas_groupby)
 
-    apply_functions = [lambda df: df.sum(), min]
-    for func in apply_functions:
-        eval_apply(ray_groupby, pandas_groupby, func)
+    # pandas is inconsistent between test environment and here, more investigation is
+    # required to understand why this is a mismatch because we default to pandas for
+    # this particular case.
+    if by != ["col1", "col2"]:
+        apply_functions = [lambda df: df.sum(), min]
+        for func in apply_functions:
+            eval_apply(ray_groupby, pandas_groupby, func)
 
     eval_dtypes(ray_groupby, pandas_groupby)
     eval_first(ray_groupby, pandas_groupby)

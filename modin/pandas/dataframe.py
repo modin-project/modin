@@ -354,6 +354,11 @@ class DataFrame(BasePandasDataset):
         """
         axis = self._get_axis_number(axis)
         idx_name = None
+        # Drop here indicates whether or not to drop the data column before doing the
+        # groupby. The typical pandas behavior is to drop when the data came from this
+        # dataframe. When a string, Series directly from this dataframe, or list of
+        # strings is passed in, the data used for the groupby is dropped before the
+        # groupby takes place.
         drop = False
         if callable(by):
             by = self.index.map(by)
@@ -370,6 +375,7 @@ class DataFrame(BasePandasDataset):
             else:
                 by = self.__getitem__(by)._query_compiler
         elif isinstance(by, Series):
+            drop = by._parent is self
             idx_name = by.name
             by = by._query_compiler
         elif is_list_like(by):
@@ -380,6 +386,7 @@ class DataFrame(BasePandasDataset):
                     "Please report any bugs/issues to bug_reports@modin.org."
                 )
                 by = self.__getitem__(by)._query_compiler
+                drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(
