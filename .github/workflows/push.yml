@@ -23,7 +23,7 @@ jobs:
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: sudo apt install -y libhdf5-dev
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: bash run-tests.sh ray
       - run: mv .testmondata testmondata_ray
@@ -50,7 +50,7 @@ jobs:
       - name: Install AWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: sudo apt install -y libhdf5-dev
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: bash run-tests.sh python
       - run: mv .testmondata testmondata_python
@@ -77,7 +77,7 @@ jobs:
       - name: InstallAWSCLI
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install awscli
-      - run: sudo apt install -y libhdf5-dev
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: bash run-tests.sh dask
       - run: mv .testmondata testmondata_dask
@@ -108,7 +108,7 @@ jobs:
         run: pip install awscli
       - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
       - run: mv testmondata_pyarrow .testmondata
-      - run: sudo apt install -y libhdf5-dev
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: mv .testmondata testmondata_pyarrow
@@ -141,7 +141,7 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install HDF5
         if: matrix.part == 3
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3
         run: pip install -r requirements.txt
@@ -238,7 +238,7 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
@@ -263,7 +263,7 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt

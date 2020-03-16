@@ -59,7 +59,7 @@ jobs:
       - run: mv testmondata_${{matrix.engine}} .testmondata
       - name: Install HDF5
         if: matrix.part == 3
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: matrix.part == 3
         run: pip install -r requirements.txt
@@ -162,7 +162,7 @@ jobs:
       - run: mv testmondata_pyarrow .testmondata
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
@@ -187,7 +187,7 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install HDF5
         if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pip requirements
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
