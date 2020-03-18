@@ -1974,7 +1974,9 @@ class DataFrame(BasePandasDataset):
                 assert (
                     len(value.shape) < 3
                 ), "Shape of new values must be compatible with manager shape"
-                value = value.T.reshape(-1)[: len(self)]
+                value = value.T.reshape(-1)
+                if len(self) > 0:
+                    value = value[: len(self)]
             if not isinstance(value, Series):
                 value = list(value)
         if key not in self.columns:
