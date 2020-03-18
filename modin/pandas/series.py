@@ -595,18 +595,23 @@ class Series(BasePandasDataset):
     ):
         from .groupby import SeriesGroupBy
 
+        if isinstance(by, Series):
+            by = by._query_compiler
+        elif by is None:
+            by = self._query_compiler
+
         return SeriesGroupBy(
-            self._default_to_pandas(
-                pandas.Series.groupby,
-                by=by,
-                axis=axis,
-                level=level,
-                as_index=as_index,
-                sort=sort,
-                group_keys=group_keys,
-                squeeze=squeeze,
-                observed=observed,
-            )
+            self,
+            by,
+            axis,
+            level,
+            as_index,
+            sort,
+            group_keys,
+            squeeze,
+            idx_name=None,
+            observed=observed,
+            drop=False,
         )
 
     def gt(self, other, level=None, fill_value=None, axis=0):

@@ -253,8 +253,22 @@ class DataFrameGroupBy(object):
 
     def __getitem__(self, key):
         if isinstance(key, list):
-            return DataFrameGroupBy(self._df[key], self._by, self._axis, idx_name=self._idx_name, drop=self._drop, **self._kwargs)
-        return SeriesGroupBy(self._df[[key]], self._by, self._axis, idx_name=self._idx_name, drop=self._drop, **self._kwargs)
+            return DataFrameGroupBy(
+                self._df[key],
+                self._by,
+                self._axis,
+                idx_name=self._idx_name,
+                drop=self._drop,
+                **self._kwargs
+            )
+        return SeriesGroupBy(
+            self._df[key],
+            self._by,
+            self._axis,
+            idx_name=self._idx_name,
+            drop=self._drop,
+            **self._kwargs
+        )
 
     def cummin(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
@@ -474,9 +488,7 @@ class DataFrameGroupBy(object):
         else:
             groupby_qc = self._query_compiler
 
-        from .dataframe import DataFrame
-
-        return DataFrame(
+        return type(self._df)(
             query_compiler=groupby_qc.groupby_reduce(
                 self._by,
                 self._axis,
@@ -500,7 +512,6 @@ class DataFrameGroupBy(object):
              A new combined DataFrame with the result of all groups.
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
-        from .dataframe import DataFrame
 
         if self._is_multi_by:
             return self._default_to_pandas(f, **kwargs)
@@ -522,7 +533,7 @@ class DataFrameGroupBy(object):
         )
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
-        return DataFrame(query_compiler=new_manager)
+        return type(self._df)(query_compiler=new_manager)
 
     def _default_to_pandas(self, f, **kwargs):
         """Defailts the execution of this function to pandas.
@@ -550,7 +561,6 @@ class DataFrameGroupBy(object):
 
 
 class SeriesGroupBy(DataFrameGroupBy):  # pragma: no cover
-
     def __getattribute__(self, item):
         obj = object.__getattribute__(self, item)
 
@@ -559,7 +569,7 @@ class SeriesGroupBy(DataFrameGroupBy):  # pragma: no cover
             # is given back to the user to re-distribute it.
             def wrapper(*args, **kwargs):
                 return_val = obj(*args, **kwargs)
-                return return_val.squeeze()
+                return return_val
 
             return wrapper
 
