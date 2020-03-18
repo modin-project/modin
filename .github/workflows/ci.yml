@@ -27,14 +27,28 @@ jobs:
           architecture: "x64"
       - run: pip install flake8 flake8-print
       - run: flake8 --enable=T modin
+  test-api:
+    runs-on: ubuntu-latest
+    name: test api
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/pandas/test/test_api.py
   test-all:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black, test-api]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        engine: ["python", "ray", "dask"]
-        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        engine: ["ray"]
+        part: [3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
@@ -46,47 +60,14 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: InstallAWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_${{matrix.engine}} .
-      - run: mv testmondata_${{matrix.engine}} .testmondata
-      - name: Install HDF5
-        if: matrix.part == 3
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
-      - run: pip install ray==0.8
-        if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
-        if: matrix.engine == 'dask'
-      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
-        if: matrix.part != 3
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_series.py
-        if: matrix.part == 3
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_concat.py
-        if: matrix.part == 3
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_groupby.py
-        if: matrix.part == 3
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_reshape.py
-        if: matrix.part == 3
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_general.py
-        if: matrix.part == 3
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
         if: matrix.part == 3
       - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
   test-windows:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black, test-api]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -103,20 +84,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_dask .
-      - run: mv testmondata_dask .testmondata
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r windows_test_requires.txt
+      - run: pip install -r windows_test_requires.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -132,7 +100,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
   test-pyarrow:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black, test-api]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -149,46 +117,6 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
-      - run: mv testmondata_pyarrow .testmondata
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
-  test-api:
-    needs: [lint-flake8, lint-black]
-    runs-on: ubuntu-latest
-    name: test api
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_api.py
