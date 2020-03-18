@@ -5066,6 +5066,16 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
+    def test_setitem_on_empty_df(self):
+        columns = ["id", "max_speed", "health"]
+        modin_df = pd.DataFrame(columns=columns)
+        pandas_df = pandas.DataFrame(columns=columns)
+        a = np.array(["one", "two"])
+
+        modin_df["id"] = a
+        pandas_df["id"] = a
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___len__(self, data):
         modin_df = pd.DataFrame(data)
