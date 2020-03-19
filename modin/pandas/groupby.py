@@ -48,8 +48,8 @@ class DataFrameGroupBy(object):
                 isinstance(by, type(self._query_compiler)) and len(by.columns) > 1
             ) or (
                 not isinstance(by, type(self._query_compiler))
-                and all(obj in self._df for obj in self._by)
                 and axis == 0
+                and all(obj in self._query_compiler.columns for obj in self._by)
             )
         else:
             self._is_multi_by = False
@@ -252,6 +252,15 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
+        kwargs = self._kwargs.copy()
+        if self._drop:
+            if not isinstance(key, list):
+                key = [key]
+                kwargs["squeeze"] = True
+        # When `as_index` is False, pandas will always convert to a `DataFrame`, we
+        # convert to a list here so that the result will be a `DataFrame`.
+        elif not self._as_index and not isinstance(key, list):
+            key = [key]
         if isinstance(key, list):
             return DataFrameGroupBy(
                 self._df[key],
@@ -259,15 +268,15 @@ class DataFrameGroupBy(object):
                 self._axis,
                 idx_name=self._idx_name,
                 drop=self._drop,
-                **self._kwargs
+                **kwargs
             )
         return SeriesGroupBy(
             self._df[key],
             self._by,
             self._axis,
             idx_name=self._idx_name,
-            drop=self._drop,
-            **self._kwargs
+            drop=False,
+            **kwargs
         )
 
     def cummin(self, axis=0, **kwargs):
@@ -459,7 +468,12 @@ class DataFrameGroupBy(object):
     def quantile(self, q=0.5, **kwargs):
         import numpy as np
 
-        if self._df.dtypes.map(lambda x: x == np.dtype("O")).any():
+        if self.ndim > 1:
+            if self._df.dtypes.map(lambda x: x == np.dtype("O")).any():
+                raise TypeError(
+                    "'quantile' cannot be performed against 'object' dtypes!"
+                )
+        elif self._df.dtypes == np.dtype("O"):
             raise TypeError("'quantile' cannot be performed against 'object' dtypes!")
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
@@ -488,7 +502,7 @@ class DataFrameGroupBy(object):
         else:
             groupby_qc = self._query_compiler
 
-        return type(self._df)(
+        result = type(self._df)(
             query_compiler=groupby_qc.groupby_reduce(
                 self._by,
                 self._axis,
@@ -501,6 +515,9 @@ class DataFrameGroupBy(object):
                 drop=self._drop,
             )
         )
+        if self._kwargs.get("squeeze", False):
+            return result.squeeze()
+        return result
 
     def _apply_agg_function(self, f, drop=True, **kwargs):
         """Perform aggregation and combine stages based on a given function.
@@ -533,7 +550,10 @@ class DataFrameGroupBy(object):
         )
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
-        return type(self._df)(query_compiler=new_manager)
+        result = type(self._df)(query_compiler=new_manager)
+        if self._kwargs.get("squeeze", False):
+            return result.squeeze()
+        return result
 
     def _default_to_pandas(self, f, **kwargs):
         """Defailts the execution of this function to pandas.
@@ -560,18 +580,37 @@ class DataFrameGroupBy(object):
         return self._df._default_to_pandas(groupby_on_multiple_columns)
 
 
-class SeriesGroupBy(DataFrameGroupBy):  # pragma: no cover
-    def __getattribute__(self, item):
-        obj = object.__getattribute__(self, item)
+class SeriesGroupBy(DataFrameGroupBy):
+    @property
+    def ndim(self):
+        return 1  # ndim is always 1 for Series
 
-        if callable(obj):
-            # This wraps the pandas callable and intercepts the return value before it
-            # is given back to the user to re-distribute it.
-            def wrapper(*args, **kwargs):
-                return_val = obj(*args, **kwargs)
-                return return_val
+    @property
+    def _iter(self):
+        from .dataframe import Series
 
-            return wrapper
-
+        group_ids = self._index_grouped.keys()
+        if self._axis == 0:
+            return (
+                (
+                    k,
+                    Series(
+                        query_compiler=self._query_compiler.getitem_row_array(
+                            self._index.get_indexer_for(self._index_grouped[k].unique())
+                        )
+                    ),
+                )
+                for k in (sorted(group_ids) if self._sort else group_ids)
+            )
         else:
-            return obj
+            return (
+                (
+                    k,
+                    Series(
+                        query_compiler=self._query_compiler.getitem_column_array(
+                            self._index_grouped[k].unique()
+                        )
+                    ),
+                )
+                for k in (sorted(group_ids) if self._sort else group_ids)
+            )

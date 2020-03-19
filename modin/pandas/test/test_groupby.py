@@ -9,7 +9,6 @@ pd.DEFAULT_NPARTITIONS = 4
 
 
 def ray_df_almost_equals_pandas(ray_df, pandas_df):
-    assert isinstance(ray_df, pd.DataFrame)
     difference = to_pandas(ray_df) - pandas_df
     diff_max = difference.max().max()
     assert (
@@ -109,7 +108,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_tail(ray_groupby, pandas_groupby, n)
         eval_quantile(ray_groupby, pandas_groupby)
         eval_take(ray_groupby, pandas_groupby)
-        eval___getattr__(ray_groupby, pandas_groupby)
+        eval___getattr__(ray_groupby, pandas_groupby, "col2")
         eval_groups(ray_groupby, pandas_groupby)
 
 
@@ -198,7 +197,7 @@ def test_simple_row_groupby(by, as_index):
     eval_tail(ray_groupby, pandas_groupby, n)
     eval_quantile(ray_groupby, pandas_groupby)
     eval_take(ray_groupby, pandas_groupby)
-    eval___getattr__(ray_groupby, pandas_groupby)
+    eval___getattr__(ray_groupby, pandas_groupby, "col3")
     eval_groups(ray_groupby, pandas_groupby)
 
 
@@ -281,7 +280,7 @@ def test_single_group_row_groupby():
     eval_tail(ray_groupby, pandas_groupby, n)
     eval_quantile(ray_groupby, pandas_groupby)
     eval_take(ray_groupby, pandas_groupby)
-    eval___getattr__(ray_groupby, pandas_groupby)
+    eval___getattr__(ray_groupby, pandas_groupby, "col2")
     eval_groups(ray_groupby, pandas_groupby)
 
 
@@ -434,8 +433,86 @@ def test_simple_col_groupby():
     eval_fillna(ray_groupby, pandas_groupby)
     eval_count(ray_groupby, pandas_groupby)
     eval_take(ray_groupby, pandas_groupby)
-    eval___getattr__(ray_groupby, pandas_groupby)
     eval_groups(ray_groupby, pandas_groupby)
+
+
+@pytest.mark.parametrize(
+    "by", [np.random.randint(0, 100, size=2 ** 8), lambda x: x % 3, None]
+)
+@pytest.mark.parametrize("as_index", [True, False])
+def test_series_groupby(by, as_index):
+    series_data = np.random.randint(97, 198, size=2 ** 8)
+    modin_series = pd.Series(series_data)
+    pandas_series = pandas.Series(series_data)
+    n = 1
+
+    try:
+        pandas_groupby = pandas_series.groupby(by, as_index=as_index)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.groupby(by, as_index=as_index)
+    else:
+        modin_groupby = modin_series.groupby(by, as_index=as_index)
+
+        ray_groupby_equals_pandas(modin_groupby, pandas_groupby)
+        eval_ngroups(modin_groupby, pandas_groupby)
+        eval_ffill(modin_groupby, pandas_groupby)
+        eval_sem(modin_groupby, pandas_groupby)
+        eval_mean(modin_groupby, pandas_groupby)
+        eval_any(modin_groupby, pandas_groupby)
+        eval_min(modin_groupby, pandas_groupby)
+        eval_idxmax(modin_groupby, pandas_groupby)
+        eval_ndim(modin_groupby, pandas_groupby)
+        eval_cumsum(modin_groupby, pandas_groupby)
+        eval_pct_change(modin_groupby, pandas_groupby)
+        eval_cummax(modin_groupby, pandas_groupby)
+
+        apply_functions = [lambda df: df.sum(), min]
+        for func in apply_functions:
+            eval_apply(modin_groupby, pandas_groupby, func)
+
+        eval_first(modin_groupby, pandas_groupby)
+        eval_backfill(modin_groupby, pandas_groupby)
+        eval_cummin(modin_groupby, pandas_groupby)
+        eval_bfill(modin_groupby, pandas_groupby)
+        eval_idxmin(modin_groupby, pandas_groupby)
+        eval_prod(modin_groupby, pandas_groupby)
+        if as_index:
+            eval_std(modin_groupby, pandas_groupby)
+            eval_var(modin_groupby, pandas_groupby)
+            eval_skew(modin_groupby, pandas_groupby)
+
+        agg_functions = ["min", "max"]
+        for func in agg_functions:
+            eval_agg(modin_groupby, pandas_groupby, func)
+            eval_aggregate(modin_groupby, pandas_groupby, func)
+
+        eval_last(modin_groupby, pandas_groupby)
+        eval_mad(modin_groupby, pandas_groupby)
+        eval_rank(modin_groupby, pandas_groupby)
+        eval_max(modin_groupby, pandas_groupby)
+        eval_len(modin_groupby, pandas_groupby)
+        eval_sum(modin_groupby, pandas_groupby)
+        eval_ngroup(modin_groupby, pandas_groupby)
+        eval_nunique(modin_groupby, pandas_groupby)
+        eval_median(modin_groupby, pandas_groupby)
+        eval_head(modin_groupby, pandas_groupby, n)
+        eval_cumprod(modin_groupby, pandas_groupby)
+
+        transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+        for func in transform_functions:
+            eval_transform(modin_groupby, pandas_groupby, func)
+
+        pipe_functions = [lambda dfgb: dfgb.sum()]
+        for func in pipe_functions:
+            eval_pipe(modin_groupby, pandas_groupby, func)
+
+        eval_fillna(modin_groupby, pandas_groupby)
+        eval_count(modin_groupby, pandas_groupby)
+        eval_tail(modin_groupby, pandas_groupby, n)
+        eval_quantile(modin_groupby, pandas_groupby)
+        eval_take(modin_groupby, pandas_groupby)
+        eval_groups(modin_groupby, pandas_groupby)
 
 
 def test_multi_column_groupby():
@@ -677,12 +754,14 @@ def eval_take(ray_groupby, pandas_groupby):
             pass
 
 
-def eval___getattr__(ray_groupby, pandas_groupby):
-    with pytest.warns(UserWarning):
-        ray_groupby["col1"]
-
-    with pytest.warns(UserWarning):
-        ray_groupby.col1
+def eval___getattr__(modin_groupby, pandas_groupby, item):
+    try:
+        pandas_result = pandas_groupby[item].count()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_groupby[item].count()
+    else:
+        df_equals(modin_groupby[item].count(), pandas_result)
 
 
 def eval_groups(ray_groupby, pandas_groupby):

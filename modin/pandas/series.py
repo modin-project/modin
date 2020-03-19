@@ -595,11 +595,15 @@ class Series(BasePandasDataset):
     ):
         from .groupby import SeriesGroupBy
 
+        if not as_index:
+            raise TypeError("as_index=False only valid with DataFrame")
+        # SeriesGroupBy expects a query compiler object if it is available
         if isinstance(by, Series):
             by = by._query_compiler
-        elif by is None:
-            by = self._query_compiler
-
+        elif callable(by):
+            by = by(self.index)
+        elif by is None and level is None:
+            raise TypeError("You have to supply one of 'by' and 'level'")
         return SeriesGroupBy(
             self,
             by,
