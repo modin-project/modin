@@ -1,128 +1,14 @@
 name: master
 on: push
 jobs:
-  testmon_ray:
-    runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.6.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: bash run-tests.sh ray
-      - run: mv .testmondata testmondata_ray
-      - run: aws s3api put-object --bucket=modin-testing --key=testmondata_ray --body=./testmondata_ray
-  testmon_python:
-    runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.6.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install AWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: bash run-tests.sh python
-      - run: mv .testmondata testmondata_python
-      - run: aws s3api put-object --bucket=modin-testing --key=testmondata_python --body=./testmondata_python
-  testmon_dask:
-    runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.6.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: InstallAWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: bash run-tests.sh dask
-      - run: mv .testmondata testmondata_dask
-      - run: aws s3api put-object --bucket=modin-testing --key=testmondata_dask --body=./testmondata_dask
-  testmon_pyarrow:
-    runs-on: ubuntu-latest
-    env:
-      MODIN_BACKEND: pyarrow
-      MODIN_EXPERIMENTAL: "True"
-      AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.6.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: InstallAWSCLI
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install awscli
-      - run: aws s3 cp  --no-sign-request s3://modin-testing/testmondata_pyarrow .
-      - run: mv testmondata_pyarrow .testmondata
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: MODIN_BACKEND=pyarrow python -m pytest modin/pandas/test/test_io.py::test_from_csv
-      - run: mv .testmondata testmondata_pyarrow
-      - run: aws s3api put-object --bucket=modin-testing --key=testmondata_pyarrow --body=./testmondata_pyarrow
   test-all:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        engine: ["python", "ray", "dask"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        engine: ["ray"]
+        part: [3]
     env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-      PYTEST_ADDOPTS:  "--cov-config=.coveragerc --cov=modin  --cov-append"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
@@ -133,42 +19,12 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install HDF5
-        if: matrix.part == 3
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
-      - run: pip install ray==0.8
-        if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
-        if: matrix.engine == 'dask'
-      - run: pip install coverage pytest-cov
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
-        if: matrix.part != 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_series.py
-        if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_concat.py
-        if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_groupby.py
-        if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_reshape.py
-        if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_general.py
-        if: matrix.part == 3
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
     runs-on: windows-latest
     strategy:
@@ -186,16 +42,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r windows_test_requires.txt
-      - run: pip install coverage pytest-cov
+      - run: pip install -r windows_test_requires.txt
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_series.py
@@ -210,8 +57,6 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: choco install codecov
-      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     runs-on: ubuntu-latest
     strategy:
@@ -230,41 +75,6 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py::test_from_csv
-      - run: bash <(curl -s https://codecov.io/bash)
-  test-api:
-    runs-on: ubuntu-latest
-    name: test api
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install HDF5
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_api.py
