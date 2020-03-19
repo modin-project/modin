@@ -1,0 +1,40 @@
+name: modin
+channels:
+  - defaults
+dependencies:
+  - openssl=1.1.1d=he774522_4
+  - pip=20.0.2=py38_1
+  - python=3.8.1=h5fd99cc_8_cpython
+  - setuptools=46.0.0=py38_0
+  - sqlite=3.31.1=he774522_0
+  - vc=14.1=h0510ff6_4
+  - vs2015_runtime=14.16.27012=hf0eaf9b_1
+  - wheel=0.34.2=py38_0
+  - wincertstore=0.2=py38_0
+  - pip:
+    - pandas==1.0.1
+    - numpy
+    - pyarrow>=0.13.0
+    - dask[complete]>=2.1.0
+    - distributed>=2.3.2
+    - ray==0.8.0
+    - psutil==5.6.6
+    - xarray
+    - Jinja2
+    - pathlib
+    - tables
+    - scipy
+    - s3fs
+    - pytest
+    - coverage<5.0
+    - pytest-cov
+    - pytest-testmon
+    - pytest-custom_exit_code
+    - pytest-xdist
+    - feather-format
+    - lxml
+    - openpyxl
+    - xlrd
+    - matplotlib
+    - sqlalchemy
+    - msgpack<1.0
