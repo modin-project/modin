@@ -595,18 +595,27 @@ class Series(BasePandasDataset):
     ):
         from .groupby import SeriesGroupBy
 
+        if not as_index:
+            raise TypeError("as_index=False only valid with DataFrame")
+        # SeriesGroupBy expects a query compiler object if it is available
+        if isinstance(by, Series):
+            by = by._query_compiler
+        elif callable(by):
+            by = by(self.index)
+        elif by is None and level is None:
+            raise TypeError("You have to supply one of 'by' and 'level'")
         return SeriesGroupBy(
-            self._default_to_pandas(
-                pandas.Series.groupby,
-                by=by,
-                axis=axis,
-                level=level,
-                as_index=as_index,
-                sort=sort,
-                group_keys=group_keys,
-                squeeze=squeeze,
-                observed=observed,
-            )
+            self,
+            by,
+            axis,
+            level,
+            as_index,
+            sort,
+            group_keys,
+            squeeze,
+            idx_name=None,
+            observed=observed,
+            drop=False,
         )
 
     def gt(self, other, level=None, fill_value=None, axis=0):

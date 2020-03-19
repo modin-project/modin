@@ -1365,16 +1365,6 @@ def test_get(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_groupby(data):
-    modin_series, _ = create_test_series(data)
-
-    with pytest.warns(UserWarning):
-        result = modin_series.groupby(modin_series).count()
-
-    assert isinstance(result, pd.Series)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_gt(data):
     modin_series, pandas_series = create_test_series(data)
     inter_df_math_helper(modin_series, pandas_series, "gt")
