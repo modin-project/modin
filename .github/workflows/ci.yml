@@ -41,8 +41,21 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_api.py
+  test-headers:
+    runs-on: ubuntu-latest
+    name: test-headers
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/test/test_headers.py
   test-all:
-    needs: [lint-flake8, lint-black, test-api]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -67,7 +80,7 @@ jobs:
       - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
   test-windows:
-    needs: [lint-flake8, lint-black, test-api]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -100,7 +113,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
   test-pyarrow:
-    needs: [lint-flake8, lint-black, test-api]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:

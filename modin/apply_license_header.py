@@ -15,6 +15,7 @@ import os
 from os.path import dirname, abspath
 
 
+# This is the python file root directory (modin/modin)
 rootdir = dirname(abspath(__file__))
 exclude_files = ["_version.py"]
 
@@ -31,7 +32,8 @@ for subdir, dirs, files in os.walk(rootdir):
                 py_file_lines = f.readlines()
                 if len(py_file_lines):
                     first_non_comment_idx = next(
-                        i for i in range(len(py_file_lines))
+                        i
+                        for i in range(len(py_file_lines))
                         if not py_file_lines[i].startswith("# ")
                     )
                     py_file_lines = py_file_lines[first_non_comment_idx:]
