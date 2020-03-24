@@ -1884,10 +1884,7 @@ class DataFrame(BasePandasDataset):
         return s
 
     def _getitem_array(self, key):
-        # TODO: dont convert to pandas for array indexing
-        if isinstance(key, Series):
-            key = key._to_pandas()
-        if is_bool_indexer(key):
+        if is_bool_indexer(key) or (isinstance(key, Series) and key.dtype == np.bool_):
             if isinstance(key, pandas.Series) and not key.index.equals(self.index):
                 warnings.warn(
                     "Boolean Series key will be reindexed to match DataFrame index.",
@@ -1900,17 +1897,17 @@ class DataFrame(BasePandasDataset):
                         len(key), len(self.index)
                     )
                 )
-            key = check_bool_indexer(self.index, key)
-            # We convert to a RangeIndex because getitem_row_array is expecting a list
-            # of indices, and RangeIndex will give us the exact indices of each boolean
-            # requested.
-            key = pandas.RangeIndex(len(self.index))[key]
-            if len(key):
-                return DataFrame(
-                    query_compiler=self._query_compiler.getitem_row_array(key)
-                )
+            if not isinstance(key, Series):
+                key = check_bool_indexer(self.index, key)
+                # We convert to a RangeIndex because getitem_row_array is expecting a
+                # list of indices, and RangeIndex will give us the exact indices of each
+                # boolean requested.
+                key = pandas.RangeIndex(len(self.index))[key]
             else:
-                return DataFrame(columns=self.columns)
+                key = key._query_compiler
+            return DataFrame(
+                query_compiler=self._query_compiler.getitem_row_array(key)
+            )
         else:
             if any(k not in self.columns for k in key):
                 raise KeyError(
