@@ -1026,8 +1026,10 @@ class BasePandasFrame(object):
         Returns:
              A new Modin DataFrame
         """
+        assert preserve_labels, "`preserve_labels=False` Not Yet Implemented"
+        # Only sort the indices if they do not match
         left_parts, right_parts, joined_index = self._copartition(
-            axis, other, "left", sort=False
+            axis, other, "left", sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
@@ -1036,20 +1038,8 @@ class BasePandasFrame(object):
         )
         if dtypes == "copy":
             dtypes = self._dtypes
-        if preserve_labels:
-            new_index = self.index
-            new_columns = self.columns
-        else:
-            if axis == 0:
-                new_columns = self.columns
-                new_index = self._frame_mgr_cls.get_indices(
-                    0, new_frame, lambda df: df.index
-                )
-            else:
-                new_columns = self._frame_mgr_cls.get_indices(
-                    1, new_frame, lambda df: df.columns
-                )
-                new_index = self.index
+        new_index = self.index
+        new_columns = self.columns
         return self.__constructor__(
             new_frame, new_index, new_columns, None, None, dtypes=dtypes
         )

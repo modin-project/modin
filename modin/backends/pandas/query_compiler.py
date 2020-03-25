@@ -861,10 +861,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        if isinstance(key, type(self)):
-            return self._modin_frame.broadcast_apply(
-                0, lambda l, r: l[r.squeeze(axis=1)], key._modin_frame, False, "copy"
-            )
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
     def setitem(self, axis, key, value):

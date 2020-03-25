@@ -215,6 +215,8 @@ class BasePandasDataset(object):
         else:
             axis = 0
         if kwargs.get("level", None) is not None:
+            # Broadcast is an internally used argument
+            kwargs.pop("broadcast")
             return self._default_to_pandas(
                 getattr(getattr(pandas, self.__name__), op), other, **kwargs
             )
@@ -338,7 +340,7 @@ class BasePandasDataset(object):
 
         Args:
             other: What to add this this DataFrame.
-            axis: The axis to apply addition over. Only applicaable to Series
+            axis: The axis to apply addition over. Only applicable to Series
                 or list 'other'.
             level: A level in the multilevel axis to add over.
             fill_value: The value to fill NaN.

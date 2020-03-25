@@ -25,15 +25,27 @@ class BinaryFunction(Function):
             broadcast = kwargs.pop("broadcast", False)
             if isinstance(other, type(query_compiler)):
                 if broadcast:
+                    assert (
+                        len(other.columns) == 1
+                    ), "Invalid broadcast argument for `broadcast_apply`, too many columns: {}".format(
+                        len(other.columns)
+                    )
+                    # Transpose on `axis=1` because we always represent an individual
+                    # column or row as a single-column Modin DataFrame
+                    if axis == 1:
+                        other = other.transpose()
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
-                            lambda x, y: func(x, y.squeeze(axis=axis ^ 1), *args, **kwargs), other._modin_frame,
+                            axis,
+                            lambda l, r: func(l, r.squeeze(), *args, **kwargs),
+                            other._modin_frame,
                         )
                     )
                 else:
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame._binary_op(
-                            lambda x, y: func(x, y, *args, **kwargs), other._modin_frame,
+                            lambda x, y: func(x, y, *args, **kwargs),
+                            other._modin_frame,
                         )
                     )
             else:
