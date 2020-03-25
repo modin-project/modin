@@ -29,6 +29,10 @@ if __execution_engine__ == "Ray":
     def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
         if call_queue_df is not None and len(call_queue_df) > 0:
             for call, kwargs in call_queue_df:
+                if isinstance(call, ray.ObjectID):
+                    call = ray.get(call)
+                if isinstance(kwargs, ray.ObjectID):
+                    kwargs = ray.get(kwargs)
                 df = call(df, **kwargs)
         if call_queue_other is not None and len(call_queue_other) > 0:
             for call, kwargs in call_queue_other:
@@ -116,7 +120,6 @@ class PandasOnRayFrameManager(RayFrameManager):
     def broadcast_apply(cls, axis, apply_func, left, right):
         map_func = ray.put(apply_func)
         right_parts = np.squeeze(right)
-
         if len(right_parts.shape) == 0:
             right_parts = np.array([right_parts.item()])
         assert (

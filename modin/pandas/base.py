@@ -135,8 +135,6 @@ class BasePandasDataset(object):
         if isinstance(other, BasePandasDataset):
             return other._query_compiler
         elif is_list_like(other):
-            if isinstance(other, pandas.Series):
-                other = other.reindex(self.axes[axis])
             if axis == 0:
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
@@ -216,7 +214,7 @@ class BasePandasDataset(object):
             axis = 0
         if kwargs.get("level", None) is not None:
             # Broadcast is an internally used argument
-            kwargs.pop("broadcast")
+            kwargs.pop("broadcast", None)
             return self._default_to_pandas(
                 getattr(getattr(pandas, self.__name__), op), other, **kwargs
             )
