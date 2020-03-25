@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.1.0", "distributed>=2.3.2"]
-ray_deps = ["ray==0.8.0"]
+ray_deps = ["ray==0.8.3"]
 
 setup(
     name="modin",
