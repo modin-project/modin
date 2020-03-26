@@ -86,7 +86,6 @@ from pandas import (
 )
 import threading
 import os
-import types
 import sys
 import multiprocessing
 
@@ -197,9 +196,6 @@ def initialize_ray():
                 logging_level=100,
                 memory=object_store_memory,
             )
-        # Register custom serializer for method objects to avoid warning message.
-        # We serialize `MethodType` objects when we use AxisPartition operations.
-        ray.register_custom_serializer(types.MethodType, use_pickle=True)
 
         # Register a fix import function to run on all_workers including the driver.
         # This is a hack solution to fix #647, #746
