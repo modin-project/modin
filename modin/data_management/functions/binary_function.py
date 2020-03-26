@@ -50,12 +50,7 @@ class BinaryFunction(Function):
                     )
             else:
                 if isinstance(other, (list, np.ndarray, pandas.Series)):
-                    if axis == 1 and isinstance(other, pandas.Series):
-                        new_columns = query_compiler.columns.join(
-                            other.index, how="outer"
-                        )
-                    else:
-                        new_columns = query_compiler.columns
+                    new_columns = query_compiler.columns
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),
