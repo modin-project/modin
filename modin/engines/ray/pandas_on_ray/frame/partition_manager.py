@@ -25,6 +25,24 @@ from modin import __execution_engine__
 if __execution_engine__ == "Ray":
     import ray
 
+    @ray.remote
+    def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+        if call_queue_df is not None and len(call_queue_df) > 0:
+            for call, kwargs in call_queue_df:
+                if isinstance(call, ray.ObjectID):
+                    call = ray.get(call)
+                if isinstance(kwargs, ray.ObjectID):
+                    kwargs = ray.get(kwargs)
+                df = call(df, **kwargs)
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, ray.ObjectID):
+                    call = ray.get(call)
+                if isinstance(kwargs, ray.ObjectID):
+                    kwargs = ray.get(kwargs)
+                other = call(other, **kwargs)
+        return apply_func(df, other)
+
 
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
@@ -73,16 +91,6 @@ class PandasOnRayFrameManager(RayFrameManager):
     def groupby_reduce(
         cls, axis, partitions, by, map_func, reduce_func
     ):  # pragma: no cover
-        @ray.remote
-        def func(df, other, map_func, call_queue_df=[], call_queue_other=[]):
-            if len(call_queue_df) > 0:
-                for call, kwargs in call_queue_df:
-                    df = call(df, **kwargs)
-            if len(call_queue_other) > 0:
-                for call, kwargs in call_queue_other:
-                    other = call(other, **kwargs)
-            return map_func(df, other)
-
         map_func = ray.put(map_func)
         by_parts = np.squeeze(by)
         if len(by_parts.shape) == 0:
@@ -107,3 +115,36 @@ class PandasOnRayFrameManager(RayFrameManager):
             ]
         )
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
+
+    @classmethod
+    def broadcast_apply(cls, axis, apply_func, left, right):
+        map_func = ray.put(apply_func)
+        right_parts = np.squeeze(right)
+        if len(right_parts.shape) == 0:
+            right_parts = np.array([right_parts.item()])
+        assert (
+            len(right_parts.shape) == 1
+        ), "Invalid broadcast partitions shape {}\n{}".format(
+            right_parts.shape, [[i.get() for i in j] for j in right_parts]
+        )
+        return np.array(
+            [
+                [
+                    PandasOnRayFramePartition(
+                        func.remote(
+                            part.oid,
+                            right_parts[col_idx].oid
+                            if axis
+                            else right_parts[row_idx].oid,
+                            map_func,
+                            part.call_queue,
+                            right_parts[col_idx].call_queue
+                            if axis
+                            else right_parts[row_idx].call_queue,
+                        )
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
+            ]
+        )

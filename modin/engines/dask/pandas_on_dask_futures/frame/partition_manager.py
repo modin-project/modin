@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import numpy as np
+
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
@@ -22,6 +24,26 @@ from modin import __execution_engine__
 
 if __execution_engine__ == "Dask":
     from distributed.client import _get_global_client
+    import cloudpickle as pkl
+
+    def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+        if call_queue_df is not None and len(call_queue_df) > 0:
+            for call, kwargs in call_queue_df:
+                if isinstance(call, bytes):
+                    call = pkl.loads(call)
+                if isinstance(kwargs, bytes):
+                    kwargs = pkl.loads(kwargs)
+                df = call(df, **kwargs)
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, bytes):
+                    call = pkl.loads(call)
+                if isinstance(kwargs, bytes):
+                    kwargs = pkl.loads(kwargs)
+                other = call(other, **kwargs)
+        if isinstance(apply_func, bytes):
+            apply_func = pkl.loads(apply_func)
+        return apply_func(df, other)
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -67,3 +89,38 @@ class DaskFrameManager(BaseFrameManager):
             )
         new_idx = client.gather(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+
+    @classmethod
+    def broadcast_apply(cls, axis, apply_func, left, right):
+        client = _get_global_client()
+        right_parts = np.squeeze(right)
+        if len(right_parts.shape) == 0:
+            right_parts = np.array([right_parts.item()])
+        assert (
+            len(right_parts.shape) == 1
+        ), "Invalid broadcast partitions shape {}\n{}".format(
+            right_parts.shape, [[i.get() for i in j] for j in right_parts]
+        )
+        return np.array(
+            [
+                [
+                    PandasOnDaskFramePartition(
+                        client.submit(
+                            deploy_func,
+                            part.future,
+                            right_parts[col_idx].future
+                            if axis
+                            else right_parts[row_idx].future,
+                            apply_func,
+                            part.call_queue,
+                            right_parts[col_idx].call_queue
+                            if axis
+                            else right_parts[row_idx].call_queue,
+                            pure=False,
+                        )
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
+            ]
+        )
