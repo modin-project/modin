@@ -13,10 +13,8 @@
 
 from modin.engines.base.io import BaseIO
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.engines.dask.pandas_on_dask_futures.frame.data import PandasOnDaskFrame
-from modin.engines.dask.pandas_on_dask_futures.frame.partition import (
-    PandasOnDaskFramePartition,
-)
+from modin.engines.dask.pandas_on_dask.frame.data import PandasOnDaskFrame
+from modin.engines.dask.pandas_on_dask.frame.partition import PandasOnDaskFramePartition
 from modin.engines.base.io import (
     CSVReader,
     JSONReader,
