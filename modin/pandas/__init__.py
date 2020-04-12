@@ -226,6 +226,14 @@ def initialize_ray():
             move_stdlib_ahead_of_site_packages
         )
 
+        # Register a fix to import pandas on all workers before running tasks.
+        # This prevents a race condition between two threads deserializing functions
+        # and trying to import pandas at the same time.
+        def import_pandas(*args):
+            import pandas
+
+        ray.worker.global_worker.run_function_on_all_workers(import_pandas)
+
 
 if execution_engine == "Ray":
     import ray
