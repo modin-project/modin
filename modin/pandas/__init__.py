@@ -230,7 +230,7 @@ def initialize_ray():
         # This prevents a race condition between two threads deserializing functions
         # and trying to import pandas at the same time.
         def import_pandas(*args):
-            import pandas
+            import pandas  # noqa F401
 
         ray.worker.global_worker.run_function_on_all_workers(import_pandas)
 
