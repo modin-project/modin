@@ -569,7 +569,7 @@ class DataFrameGroupBy(object):
         return result
 
     def _default_to_pandas(self, f, **kwargs):
-        """Defailts the execution of this function to pandas.
+        """Defailts the execution of this function to pandas
 
         Args:
             f: The function to apply to each group.
