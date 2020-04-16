@@ -69,14 +69,14 @@ repo = g.get_repo("modin-project/modin")
 pr = repo.get_pull(pr_id)
 if any(
     i.user.login == "modin-bot"
-    and "TeamCity {} test results bot".format(engine.title()) in i.body.lower()
+    and "TeamCity {} test results bot".format(engine).lower() in i.body.lower()
     for i in pr.get_issue_comments()
 ):
     pr_comment_list = [
         i
         for i in list(pr.get_issue_comments())
         if i.user.login == "modin-bot"
-        and "TeamCity {} test results bot".format(engine.title()) in i.body.lower()
+        and "TeamCity {} test results bot".format(engine).lower() in i.body.lower()
     ]
     assert len(pr_comment_list) == 1, "Too many comments from modin-bot already"
     pr_comment_list[0].edit(full_comment)
