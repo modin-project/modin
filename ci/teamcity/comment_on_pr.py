@@ -50,7 +50,7 @@ for out in pytest_outputs:
                 i.split(split_by_first)[-1].split(split_by_second)[-1],
             ]
         )
-        for i in content.split("+ python3 -m pytest -n=48 ")
+        for i in content.split("+ python3 -m pytest ")
     )
     if len(full_comment) > 65_000:
         full_comment = full_comment[-65_000:] + "\n\n<b>Remaining output truncated<b>\n\n"
