@@ -19,7 +19,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
 )
-from pandas.core.index import ensure_index_from_sequences
+from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
 
