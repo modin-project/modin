@@ -27,12 +27,6 @@ if HAS_WHEEL:
             return py, abi, plat
 
 
-else:
-
-    class ModinWheel(bdist_wheel):
-        pass
-
-
 class ModinDistribution(Distribution):
     def __init__(self, *attrs):
         Distribution.__init__(self, *attrs)
