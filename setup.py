@@ -2,8 +2,10 @@ from setuptools import setup, find_packages
 import versioneer
 import os
 from setuptools.dist import Distribution
+
 try:
     from wheel.bdist_wheel import bdist_wheel
+
     HAS_WHEEL = True
 except ImportError:
     HAS_WHEEL = False
@@ -12,6 +14,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 if HAS_WHEEL:
+
     class ModinWheel(bdist_wheel):
         def finalize_options(self):
             bdist_wheel.finalize_options(self)
@@ -22,17 +25,19 @@ if HAS_WHEEL:
             py = "py3"
             abi = "none"
             return py, abi, plat
+
+
 else:
+
     class ModinWheel(bdist_wheel):
         pass
 
 
 class ModinDistribution(Distribution):
-
     def __init__(self, *attrs):
         Distribution.__init__(self, *attrs)
         if HAS_WHEEL:
-            self.cmdclass['bdist_wheel'] = ModinWheel
+            self.cmdclass["bdist_wheel"] = ModinWheel
 
     def is_pure(self):
         return False
