@@ -15,7 +15,7 @@ from itertools import groupby
 import numpy as np
 from operator import itemgetter
 import pandas
-from pandas.core.index import ensure_index
+from pandas.core.indexes.api import ensure_index
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
