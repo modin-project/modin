@@ -33,11 +33,6 @@ warnings.filterwarnings(
     message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
     "Import from datetime module instead.",
 )
-warnings.filterwarnings(
-    "ignore",
-    message="pandas.core.index is deprecated and will be removed in a future version. "
-    "The public classes are available in the top-level namespace.",
-)
 
 
 def get_execution_engine():
