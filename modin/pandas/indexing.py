@@ -227,6 +227,11 @@ class _LocIndexer(_LocationIndexerBase):
                 return self.df.iloc[:, slice(*result_slice)]
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+        if any(i == -1 for i in row_lookup) or any(i == -1 for i in col_lookup):
+            raise KeyError(
+                "Passing list-likes to .loc or [] with any missing labels is no longer "
+                "supported, see https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike"
+            )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):

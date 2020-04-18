@@ -4367,6 +4367,10 @@ class TestDataFrameIndexing:
             pandas_df_copy.loc[[1, 2]] = 42
             df_equals(modin_df_copy, pandas_df_copy)
 
+        # From issue #1374
+        with pytest.raises(KeyError):
+            modin_df.loc["NO_EXIST"]
+
     def test_loc_multi_index(self):
         modin_df = pd.read_csv(
             "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
@@ -5390,6 +5394,44 @@ class TestDataFrameIter:
         pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
         modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
         df_equals(pandas_df, modin_df)
+
+    def test_constructor_columns_and_index(self):
+        modin_df = pd.DataFrame(
+            [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
+            index=[1, 2, 3],
+            columns=["id", "max_speed", "health"],
+        )
+        pandas_df = pandas.DataFrame(
+            [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
+            index=[1, 2, 3],
+            columns=["id", "max_speed", "health"],
+        )
+        df_equals(modin_df, pandas_df)
+        df_equals(pd.DataFrame(modin_df), pandas.DataFrame(pandas_df))
+        df_equals(
+            pd.DataFrame(modin_df, columns=["max_speed", "health"]),
+            pandas.DataFrame(pandas_df, columns=["max_speed", "health"]),
+        )
+        df_equals(
+            pd.DataFrame(modin_df, index=[1, 2]),
+            pandas.DataFrame(pandas_df, index=[1, 2]),
+        )
+        df_equals(
+            pd.DataFrame(modin_df, index=[1, 2], columns=["health"]),
+            pandas.DataFrame(pandas_df, index=[1, 2], columns=["health"]),
+        )
+        df_equals(
+            pd.DataFrame(modin_df.iloc[:, 0], index=[1, 2, 3]),
+            pandas.DataFrame(pandas_df.iloc[:, 0], index=[1, 2, 3]),
+        )
+        df_equals(
+            pd.DataFrame(modin_df.iloc[:, 0], columns=["NO_EXIST"]),
+            pandas.DataFrame(pandas_df.iloc[:, 0], columns=["NO_EXIST"]),
+        )
+        with pytest.raises(NotImplementedError):
+            pd.DataFrame(modin_df, index=[1, 2, 99999])
+        with pytest.raises(NotImplementedError):
+            pd.DataFrame(modin_df, columns=["NO_EXIST"])
 
 
 class TestDataFrameJoinSort:

@@ -67,11 +67,38 @@ class DataFrame(BasePandasDataset):
             query_compiler: A query compiler object to manage distributed computation.
         """
         if isinstance(data, (DataFrame, Series)):
-            self._query_compiler = data._query_compiler
-            if isinstance(data, Series) and data.name is None:
-                self.columns = [0]
-            else:
+            self._query_compiler = data._query_compiler.copy()
+            if index is not None and any(i not in data.index for i in index):
+                raise NotImplementedError(
+                    "Passing non-existant columns or index values to constructor not"
+                    " yet implemented."
+                )
+            if isinstance(data, Series):
+                # We set the column name if it is not in the provided Series
+                if data.name is None:
+                    self.columns = [0] if columns is None else columns
+                # If the columns provided are not in the named Series, pandas clears
+                # the DataFrame and sets columns to the columns provided.
+                elif columns is not None and data.name not in columns:
+                    self._query_compiler = from_pandas(
+                        DataFrame(columns=columns)
+                    )._query_compiler
+                if index is not None:
+                    self._query_compiler = data.loc[index]._query_compiler
+            elif columns is None and index is None:
                 data._add_sibling(self)
+            else:
+                if columns is not None and any(i not in data.columns for i in columns):
+                    raise NotImplementedError(
+                        "Passing non-existant columns or index values to constructor not"
+                        " yet implemented."
+                    )
+                if index is None:
+                    index = slice(None)
+                if columns is None:
+                    columns = slice(None)
+                self._query_compiler = data.loc[index, columns]._query_compiler
+
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
