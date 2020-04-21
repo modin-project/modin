@@ -20,7 +20,7 @@ import numpy as np
 
 class JSONReader(TextFileReader):
     @classmethod
-    def read(cls, path_or_buf, **kwargs):
+    def _read(cls, path_or_buf, **kwargs):
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):
                 return cls.single_worker_read(path_or_buf, **kwargs)

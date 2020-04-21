@@ -18,6 +18,10 @@ import warnings
 from modin import __execution_engine__ as execution_engine
 from modin import __partition_format__ as partition_format
 
+import pandas
+
+types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
+
 
 class BaseFactory(object):
     @property
