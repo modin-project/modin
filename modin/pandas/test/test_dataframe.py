@@ -1020,6 +1020,34 @@ class TestDataFrameMapMetadata:
         df_equals(modin_result, pandas_result)
         assert modin_result.dtypes.equals(pandas_result.dtypes)
 
+    @pytest.mark.xfail(
+        reason="Categorical dataframe created in memory don't work yet and categorical dtype is lost"
+    )
+    def test_astype_category_large(self):
+        series_length = 10_000
+        modin_df = pd.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+        pandas_df = pandas.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+
+        modin_result = modin_df.astype({"col1": "category"})
+        pandas_result = pandas_df.astype({"col1": "category"})
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+        modin_result = modin_df.astype("category")
+        pandas_result = pandas_df.astype("category")
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     def test_clip(self, request, data, axis):
