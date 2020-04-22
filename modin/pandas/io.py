@@ -21,7 +21,6 @@ from pandas._typing import FilePathOrBuffer
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
-from modin.data_management.factories import BaseFactory
 
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
@@ -36,6 +35,8 @@ def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
         engine: This argument doesn't do anything for now.
         kwargs: Pass into parquet's read_pandas function.
     """
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(
         query_compiler=BaseFactory.read_parquet(
             path=path, columns=columns, engine=engine, **kwargs
@@ -121,6 +122,8 @@ def _read(**kwargs):
               We only support local files for now.
         kwargs: Keyword arguments in pandas.read_csv
     """
+    from modin.data_management.factories import BaseFactory
+
     pd_obj = BaseFactory.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -153,6 +156,9 @@ def read_json(
     compression="infer",
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_json(**kwargs))
 
 
@@ -174,6 +180,9 @@ def read_gbq(
 ) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_gbq(**kwargs))
 
 
@@ -195,12 +204,18 @@ def read_html(
     displayed_only=True,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_html(**kwargs))
 
 
 def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_clipboard(**kwargs))
 
 
@@ -231,8 +246,12 @@ def read_excel(
     mangle_dupe_cols=True,
     **kwds,
 ):
+
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
+
+    from modin.data_management.factories import BaseFactory
+
     intermediate = BaseFactory.read_excel(**kwargs)
     if isinstance(intermediate, (OrderedDict, dict)):
         parsed = type(intermediate)()
@@ -258,11 +277,17 @@ def read_hdf(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_hdf(**kwargs))
 
 
 def read_feather(path, columns=None, use_threads: bool = True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_feather(**kwargs))
 
 
@@ -279,6 +304,9 @@ def read_stata(
     iterator=False,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_stata(**kwargs))
 
 
@@ -291,6 +319,9 @@ def read_sas(
     iterator=False,
 ):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_sas(**kwargs))
 
 
@@ -298,6 +329,9 @@ def read_pickle(
     filepath_or_buffer: FilePathOrBuffer, compression: Optional[str] = "infer"
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_pickle(**kwargs))
 
 
@@ -339,6 +373,9 @@ def read_sql(
         Modin Dataframe
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
@@ -353,6 +390,8 @@ def read_fwf(
     infer_nrows=100,
     **kwds,
 ):
+    from modin.data_management.factories import BaseFactory
+
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     return DataFrame(query_compiler=BaseFactory.read_fwf(**kwargs))
@@ -369,6 +408,9 @@ def read_sql_table(
     chunksize=None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_sql_table(**kwargs))
 
 
@@ -382,6 +424,9 @@ def read_sql_query(
     chunksize=None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(query_compiler=BaseFactory.read_sql_query(**kwargs))
 
 
@@ -390,6 +435,8 @@ def read_spss(
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
+    from modin.data_management.factories import BaseFactory
+
     return DataFrame(
         query_compiler=BaseFactory.read_spss(path, usecols, convert_categoricals)
     )
@@ -401,6 +448,8 @@ def to_pickle(
     compression: Optional[str] = "infer",
     protocol: int = 4,
 ):
+    from modin.data_management.factories import BaseFactory
+
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return BaseFactory.to_pickle(
