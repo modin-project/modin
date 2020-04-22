@@ -1,30 +1,6 @@
 name: master
 on: push
 jobs:
-  test-all:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.6.x", "3.7.x"]
-        engine: ["ray"]
-        part: [3]
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-    name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: ${{matrix.python-version}}
-          architecture: "x64"
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
-        if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
-        if: matrix.part == 3
   test-windows:
     runs-on: windows-latest
     strategy:
