@@ -968,6 +968,30 @@ def test_compress(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_constructor(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series, pandas_series)
+    df_equals(pd.Series(modin_series), pandas.Series(pandas_series))
+
+
+def test_constructor_columns_and_index():
+    modin_series = pd.Series([1, 1, 10], index=[1, 2, 3], name="health")
+    pandas_series = pandas.Series([1, 1, 10], index=[1, 2, 3], name="health")
+    df_equals(modin_series, pandas_series)
+    df_equals(pd.Series(modin_series), pandas.Series(pandas_series))
+    df_equals(
+        pd.Series(modin_series, name="max_speed"),
+        pandas.Series(pandas_series, name="max_speed"),
+    )
+    df_equals(
+        pd.Series(modin_series, index=[1, 2]),
+        pandas.Series(pandas_series, index=[1, 2]),
+    )
+    with pytest.raises(NotImplementedError):
+        pd.Series(modin_series, index=[1, 2, 99999])
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series, modin_series.copy())

@@ -48,14 +48,29 @@ class Series(BasePandasDataset):
         fastpath=False,
         query_compiler=None,
     ):
-        """Constructor for a Series object.
-
-        Args:
-            series_oids ([ObjectID]): The list of remote Series objects.
         """
+    One-dimensional ndarray with axis labels (including time series).
+
+    Args:
+        data: Contains data stored in Series.
+        index: Values must be hashable and have the same length as `data`.
+        dtype: Data type for the output Series. If not specified, this will be
+            inferred from `data`.
+        name: The name to give to the Series.
+        copy: Copy input data.
+        query_compiler: A query compiler object to create the Series from.
+    """
         if isinstance(data, type(self)):
-            query_compiler = data._query_compiler
+            query_compiler = data._query_compiler.copy()
+            if index is not None:
+                if any(i not in data.index for i in index):
+                    raise NotImplementedError(
+                        "Passing non-existant columns or index values to constructor "
+                        "not yet implemented."
+                    )
+                query_compiler = data.loc[index]._query_compiler
         if query_compiler is None:
+            # Defaulting to pandas
             warnings.warn(
                 "Distributing {} object. This may take some time.".format(type(data))
             )
@@ -78,6 +93,9 @@ class Series(BasePandasDataset):
         ):
             query_compiler = query_compiler.transpose()
         self._query_compiler = query_compiler
+        if name is not None:
+            self._query_compiler = self._query_compiler
+            self.name = name
 
     def _get_name(self):
         name = self._query_compiler.columns[0]
