@@ -2066,7 +2066,7 @@ class DataFrame(BasePandasDataset):
         if key not in self.columns:
             if isinstance(value, Series):
                 if len(self.columns) == 0:
-                    self._query_compiler = value._query_compiler
+                    self._query_compiler = value._query_compiler.copy()
                 else:
                     self._create_or_update_from_compiler(
                         self._query_compiler.concat(1, value._query_compiler),
