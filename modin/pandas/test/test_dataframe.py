@@ -708,6 +708,12 @@ class TestDataFrameMapMetadata:
         pd_df["a"] = list("ABCDEF")
         df_equals(df, pd_df)
 
+        df = pd.DataFrame()
+        pd_df = pandas.DataFrame()
+        df["a"] = pd.Series([1, 2, 3, 4, 5])
+        pd_df["a"] = pandas.Series([1, 2, 3, 4, 5])
+        df_equals(df, pd_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_abs(self, request, data):
         modin_df = pd.DataFrame(data)

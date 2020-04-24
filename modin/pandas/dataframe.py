@@ -2065,9 +2065,13 @@ class DataFrame(BasePandasDataset):
                 value = list(value)
         if key not in self.columns:
             if isinstance(value, Series):
-                self._create_or_update_from_compiler(
-                    self._query_compiler.concat(1, value._query_compiler), inplace=True
-                )
+                if len(self.columns) == 0:
+                    self._query_compiler = value._query_compiler.copy()
+                else:
+                    self._create_or_update_from_compiler(
+                        self._query_compiler.concat(1, value._query_compiler),
+                        inplace=True,
+                    )
                 # Now that the data is appended, we need to update the column name for
                 # that column to `key`, otherwise the name could be incorrect. Drop the
                 # last column name from the list (the appended value's name and append
