@@ -338,6 +338,14 @@ def test___getitem__(data):
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
 
 
+def test___getitem__1383():
+    # see #1383 for more details
+    data = ["", "a", "b", "c", "a"]
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+    df_equals(modin_series[3:7], pandas_series[3:7])
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___gt__(data):
     modin_series, pandas_series = create_test_series(data)
