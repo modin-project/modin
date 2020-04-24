@@ -11,10 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from ..data_management.factories import BaseFactory
-
 
 def from_non_pandas(df, index, columns, dtype):
+    from modin.data_management.factories import BaseFactory
+
     new_qc = BaseFactory.from_non_pandas(df, index, columns, dtype)
     if new_qc is not None:
         from .dataframe import DataFrame
@@ -31,6 +31,7 @@ def from_pandas(df):
     Returns:
         A new Ray DataFrame object.
     """
+    from modin.data_management.factories import BaseFactory
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=BaseFactory.from_pandas(df))
