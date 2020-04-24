@@ -428,6 +428,32 @@ def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
     df_equals(modin_df, pandas_df)
 
 
+def test_from_parquet_pandas_index():
+    # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
+    pandas_df = pandas.DataFrame(
+        {
+            "idx": np.random.randint(0, 100_000, size=2000),
+            "A": np.random.randint(0, 100_000, size=2000),
+            "B": ["a", "b"] * 1000,
+            "C": ["c"] * 2000,
+        }
+    )
+    pandas_df.set_index("idx").to_parquet("tmp.parquet")
+    # read the same parquet using modin.pandas
+    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+
+    pandas_df = pandas.DataFrame(
+        {
+            "idx": np.random.randint(0, 100_000, size=2000),
+            "A": np.random.randint(0, 100_000, size=2000),
+            "B": ["a", "b"] * 1000,
+            "C": ["c"] * 2000,
+        }
+    )
+    pandas_df.set_index(["idx", "A"]).to_parquet("tmp.parquet")
+    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+
+
 def test_from_parquet_hdfs():
     path = "modin/pandas/test/data/hdfs.parquet"
     pandas_df = pandas.read_parquet(path)
