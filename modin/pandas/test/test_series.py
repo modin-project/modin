@@ -346,6 +346,15 @@ def test___getitem__1383():
     df_equals(modin_series[3:7], pandas_series[3:7])
 
 
+@pytest.mark.parametrize("start", [-7, -5, -3, 0, None, 3, 5, 7])
+@pytest.mark.parametrize("stop", [-7, -5, -3, 0, None, 3, 5, 7])
+def test___getitem_edge_cases(start, stop):
+    data = ["", "a", "b", "c", "a"]
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+    df_equals(modin_series[start:stop], pandas_series[start:stop])
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___gt__(data):
     modin_series, pandas_series = create_test_series(data)
