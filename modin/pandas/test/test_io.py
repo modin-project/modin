@@ -1076,13 +1076,6 @@ def test_to_feather():
     teardown_test_file(TEST_FEATHER_DF_FILENAME)
 
 
-def test_to_gbq():
-    modin_df = create_test_ray_dataframe()
-    pandas_df = create_test_pandas_dataframe()
-    # Because we default to pandas, we can just test the equality of the two frames.
-    assert to_pandas(modin_df).equals(pandas_df)
-
-
 def test_to_html():
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
@@ -1338,6 +1331,23 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
     df_equals(modin_df, pandas_df)
 
     teardown_fwf_file()
+
+
+def test_from_gbq():
+    # Test API, but do not supply credentials until credits can be secured.
+    with pytest.raises(
+        ValueError, match="Could not determine project ID and one was not supplied."
+    ):
+        pd.read_gbq("SELECT 1")
+
+
+def test_to_gbq():
+    modin_df = create_test_ray_dataframe()
+    # Test API, but do not supply credentials until credits can be secured.
+    with pytest.raises(
+        ValueError, match="Could not determine project ID and one was not supplied."
+    ):
+        modin_df.to_gbq("modin.table")
 
 
 def test_cleanup():
