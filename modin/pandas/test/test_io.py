@@ -1333,6 +1333,7 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
     teardown_fwf_file()
 
 
+@pytest.mark.skip(reason="Need to verify GBQ access")
 def test_from_gbq():
     # Test API, but do not supply credentials until credits can be secured.
     with pytest.raises(
@@ -1341,6 +1342,7 @@ def test_from_gbq():
         pd.read_gbq("SELECT 1")
 
 
+@pytest.mark.skip(reason="Need to verify GBQ access")
 def test_to_gbq():
     modin_df = create_test_ray_dataframe()
     # Test API, but do not supply credentials until credits can be secured.
