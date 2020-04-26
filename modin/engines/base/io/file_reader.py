@@ -33,7 +33,9 @@ class FileReader:
             raise NotImplementedError("FIXME")
         import pandas
 
-        if any(isinstance(t, pandas.CategoricalDtype) for t in query_compiler.dtypes):
+        if hasattr(query_compiler, "dtypes") and any(
+            isinstance(t, pandas.CategoricalDtype) for t in query_compiler.dtypes
+        ):
             dtypes = query_compiler.dtypes
             return query_compiler.astype(
                 {
