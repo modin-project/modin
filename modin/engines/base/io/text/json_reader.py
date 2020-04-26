@@ -21,7 +21,12 @@ import numpy as np
 class JSONReader(TextFileReader):
     @classmethod
     def read(cls, path_or_buf, **kwargs):
-        path_or_buf = cls.get_path(path_or_buf)
+        if isinstance(path_or_buf, str):
+            if not cls.file_exists(path_or_buf):
+                return cls.single_worker_read(path_or_buf, **kwargs)
+            path_or_buf = cls.get_path(path_or_buf)
+        elif not cls.pathlib_or_pypath(path_or_buf):
+            return cls.single_worker_read(path_or_buf, **kwargs)
         if not kwargs.get("lines", False):
             return cls.single_worker_read(path_or_buf, **kwargs)
         columns = pandas.read_json(
