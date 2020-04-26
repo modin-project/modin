@@ -19,7 +19,7 @@ from modin.error_message import ErrorMessage
 
 class ParquetReader(ColumnStoreReader):
     @classmethod
-    def read(cls, path, engine, columns, **kwargs):
+    def _read(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.
 
