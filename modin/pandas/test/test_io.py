@@ -22,9 +22,14 @@ import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
-from io import BytesIO
 
-from .utils import df_equals
+from .utils import (
+    df_equals,
+    json_short_string,
+    json_short_bytes,
+    json_long_string,
+    json_long_bytes,
+)
 
 from modin import __execution_engine__
 
@@ -457,102 +462,16 @@ def test_from_json_lines():
     teardown_json_file()
 
 
-def test_from_json_string():
-    json_string = """[{"project": "modin"}]"""
+@pytest.mark.parametrize(
+    "data", [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
+)
+def test_read_json_string_bytes(data):
     with pytest.warns(UserWarning):
-        modin_df = pd.read_json(json_string)
-    df_equals(modin_df, pandas.read_json(json_string))
-
-    json_string = """{
-        "quiz": {
-            "sport": {
-                "q1": {
-                    "question": "Which one is correct team name in NBA?",
-                    "options": [
-                        "New York Bulls",
-                        "Los Angeles Kings",
-                        "Golden State Warriros",
-                        "Huston Rocket"
-                    ],
-                    "answer": "Huston Rocket"
-                }
-            },
-            "maths": {
-                "q1": {
-                    "question": "5 + 7 = ?",
-                    "options": [
-                        "10",
-                        "11",
-                        "12",
-                        "13"
-                    ],
-                    "answer": "12"
-                },
-                "q2": {
-                    "question": "12 - 8 = ?",
-                    "options": [
-                        "1",
-                        "2",
-                        "3",
-                        "4"
-                    ],
-                    "answer": "4"
-                }
-            }
-        }
-    }"""
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_json(json_string)
-    df_equals(modin_df, pandas.read_json(json_string))
-
-
-def test_from_json_bytesio():
-    json_bytes = b"""[{"project": "modin"}]"""
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_json(BytesIO(json_bytes))
-    df_equals(modin_df, pandas.read_json(BytesIO(json_bytes)))
-
-    json_bytes = b"""{
-            "quiz": {
-                "sport": {
-                    "q1": {
-                        "question": "Which one is correct team name in NBA?",
-                        "options": [
-                            "New York Bulls",
-                            "Los Angeles Kings",
-                            "Golden State Warriros",
-                            "Huston Rocket"
-                        ],
-                        "answer": "Huston Rocket"
-                    }
-                },
-                "maths": {
-                    "q1": {
-                        "question": "5 + 7 = ?",
-                        "options": [
-                            "10",
-                            "11",
-                            "12",
-                            "13"
-                        ],
-                        "answer": "12"
-                    },
-                    "q2": {
-                        "question": "12 - 8 = ?",
-                        "options": [
-                            "1",
-                            "2",
-                            "3",
-                            "4"
-                        ],
-                        "answer": "4"
-                    }
-                }
-            }
-        }"""
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_json(BytesIO(json_bytes))
-    df_equals(modin_df, pandas.read_json(BytesIO(json_bytes)))
+        modin_df = pd.read_json(data)
+    # For I/O objects we need to rewind to reuse the same object.
+    if hasattr(data, "seek"):
+        data.seek(0)
+    df_equals(modin_df, pandas.read_json(data))
 
 
 def test_from_html():

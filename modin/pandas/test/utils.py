@@ -16,6 +16,7 @@ import pandas
 from pandas.util.testing import assert_almost_equal, assert_frame_equal
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
+from io import BytesIO
 
 random_state = np.random.RandomState(seed=42)
 
@@ -299,6 +300,48 @@ int_arg_keys = list(int_arg.keys())
 int_arg_values = list(int_arg.values())
 
 # END parametrizations of common kwargs
+
+json_short_string = """[{"project": "modin"}]"""
+json_long_string = """{
+        "quiz": {
+            "sport": {
+                "q1": {
+                    "question": "Which one is correct team name in NBA?",
+                    "options": [
+                        "New York Bulls",
+                        "Los Angeles Kings",
+                        "Golden State Warriros",
+                        "Huston Rocket"
+                    ],
+                    "answer": "Huston Rocket"
+                }
+            },
+            "maths": {
+                "q1": {
+                    "question": "5 + 7 = ?",
+                    "options": [
+                        "10",
+                        "11",
+                        "12",
+                        "13"
+                    ],
+                    "answer": "12"
+                },
+                "q2": {
+                    "question": "12 - 8 = ?",
+                    "options": [
+                        "1",
+                        "2",
+                        "3",
+                        "4"
+                    ],
+                    "answer": "4"
+                }
+            }
+        }
+    }"""
+json_long_bytes = BytesIO(json_long_string.encode(encoding="UTF-8"))
+json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
 
 
 def df_equals(df1, df2):
