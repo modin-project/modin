@@ -24,12 +24,12 @@ def from_non_pandas(df, index, columns, dtype):
 
 
 def from_pandas(df):
-    """Converts a pandas DataFrame to a Ray DataFrame.
+    """Converts a pandas DataFrame to a Modin DataFrame.
     Args:
         df (pandas.DataFrame): The pandas DataFrame to convert.
 
     Returns:
-        A new Ray DataFrame object.
+        A new Modin DataFrame object.
     """
     from .dataframe import DataFrame
 
