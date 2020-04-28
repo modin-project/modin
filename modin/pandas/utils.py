@@ -41,7 +41,7 @@ def to_pandas(modin_obj):
     """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
 
     Args:
-        obj {modin.DataFrame, modin.Series}: The Ray DataFrame/Series to convert.
+        obj {modin.DataFrame, modin.Series}: The Modin DataFrame/Series to convert.
 
     Returns:
         A new pandas DataFrame or Series.
