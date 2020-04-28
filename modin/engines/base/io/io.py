@@ -213,7 +213,7 @@ class BaseIO(object):
     @classmethod
     def read_gbq(
         cls,
-        query,
+        query: str,
         project_id=None,
         index_col=None,
         col_order=None,
@@ -223,8 +223,10 @@ class BaseIO(object):
         location=None,
         configuration=None,
         credentials=None,
+        use_bqstorage_api=None,
         private_key=None,
         verbose=None,
+        progress_bar_type=None,
     ):
         ErrorMessage.default_to_pandas("`read_gbq`")
         return cls.from_pandas(
@@ -239,8 +241,10 @@ class BaseIO(object):
                 location=location,
                 configuration=configuration,
                 credentials=credentials,
+                use_bqstorage_api=use_bqstorage_api,
                 private_key=private_key,
                 verbose=verbose,
+                progress_bar_type=progress_bar_type,
             )
         )
 
