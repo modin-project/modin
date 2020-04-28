@@ -23,13 +23,13 @@ from .series import Series
 """Indexing Helper Class works as follows:
 
 _LocationIndexerBase provide methods framework for __getitem__
-  and __setitem__ that work with Ray DataFrame's internal index. Base
+  and __setitem__ that work with Modin DataFrame's internal index. Base
   class's __{get,set}item__ takes in partitions & idx_in_partition data
   and perform lookup/item write.
 
 _LocIndexer and _iLocIndexer is responsible for indexer specific logic and
   lookup computation. Loc will take care of enlarge DataFrame. Both indexer
-  will take care of translating pandas's lookup to Ray DataFrame's internal
+  will take care of translating pandas's lookup to Modin DataFrame's internal
   lookup.
 
 An illustration is available at

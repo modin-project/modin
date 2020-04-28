@@ -30,7 +30,7 @@ def to_datetime(
     origin="unix",
     cache=True,
 ):
-    """Convert the arg to datetime format. If not Ray DataFrame, this falls
+    """Convert the arg to datetime format. If not Modin DataFrame, this falls
        back on pandas.
 
     Args:

@@ -20,13 +20,13 @@ from modin.error_message import ErrorMessage
 class ParquetReader(ColumnStoreReader):
     @classmethod
     def read(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a DataFrame.
-           Ray DataFrame only supports pyarrow engine for now.
+        """Load a parquet object from the file path, returning a Modin DataFrame.
+           Modin only supports pyarrow engine for now.
 
         Args:
             path: The filepath of the parquet file.
                   We only support local files for now.
-            engine: Ray only support pyarrow reader.
+            engine: Modin only supports pyarrow reader.
                     This argument doesn't do anything for now.
             kwargs: Pass into parquet's read_pandas function.
 

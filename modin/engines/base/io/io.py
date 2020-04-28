@@ -28,13 +28,13 @@ class BaseIO(object):
 
     @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a DataFrame.
-           Ray DataFrame only supports pyarrow engine for now.
+        """Load a parquet object from the file path, returning a Modin DataFrame.
+           Modin only supports pyarrow engine for now.
 
         Args:
             path: The filepath of the parquet file.
                   We only support local files for now.
-            engine: Ray only support pyarrow reader.
+            engine: Modin only supports pyarrow reader.
                     This argument doesn't do anything for now.
             kwargs: Pass into parquet's read_pandas function.
 
@@ -165,7 +165,7 @@ class BaseIO(object):
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
-            # Overwriting the read method should return a ray DataFrame for calls
+            # Overwriting the read method should return a Modin DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
             pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
