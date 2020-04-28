@@ -442,14 +442,6 @@ def test_from_parquet_pandas_index():
     # read the same parquet using modin.pandas
     df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
 
-    pandas_df = pandas.DataFrame(
-        {
-            "idx": np.random.randint(0, 100_000, size=2000),
-            "A": np.random.randint(0, 100_000, size=2000),
-            "B": ["a", "b"] * 1000,
-            "C": ["c"] * 2000,
-        }
-    )
     pandas_df.set_index(["idx", "A"]).to_parquet("tmp.parquet")
     df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
 
