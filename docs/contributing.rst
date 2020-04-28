@@ -89,7 +89,7 @@ dependencies for running the tests and formatting the code:
 
 .. code-block:: bash
 
-  pip install -r requirements.txt
+  pip install -r env/requirements.txt
 
 
 Code Formatting and Lint
