@@ -20,7 +20,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r env/requirements.txt
+      - run: pip install -r requirements.txt
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
@@ -76,5 +76,5 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r env/requirements.txt
+      - run: pip install -r requirements.txt
       - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py::test_from_csv
