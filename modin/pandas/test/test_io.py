@@ -23,7 +23,13 @@ import os
 import shutil
 import sqlalchemy as sa
 
-from .utils import df_equals
+from .utils import (
+    df_equals,
+    json_short_string,
+    json_short_bytes,
+    json_long_string,
+    json_long_bytes,
+)
 
 from modin import __execution_engine__
 
@@ -472,6 +478,18 @@ def test_from_json_lines():
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_json_file()
+
+
+@pytest.mark.parametrize(
+    "data", [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
+)
+def test_read_json_string_bytes(data):
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_json(data)
+    # For I/O objects we need to rewind to reuse the same object.
+    if hasattr(data, "seek"):
+        data.seek(0)
+    df_equals(modin_df, pandas.read_json(data))
 
 
 def test_from_html():
