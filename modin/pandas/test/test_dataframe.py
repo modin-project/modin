@@ -2596,7 +2596,14 @@ class TestDataFrameDefault:
 
         # Skips nan because only difference is nan instead of NaN
         if not name_contains(request.node.name, ["nan"]):
-            assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
+            try:
+                pandas_result = pandas_df.to_records()
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.to_records()
+            else:
+                modin_result = modin_df.to_records()
+                assert np.array_equal(modin_result, pandas_result)
 
     def test_to_datetime(self):
         modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})

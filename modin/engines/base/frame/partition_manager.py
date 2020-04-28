@@ -111,7 +111,10 @@ class BaseFrameManager(object):
         Returns:
             A new `np.array` of partition objects.
         """
-        right_parts = np.squeeze(right)
+        if right.shape == (1, 1):
+            right_parts = right[0]
+        else:
+            right_parts = np.squeeze(right)
 
         [obj.drain_call_queue() for obj in right_parts]
         return np.array(

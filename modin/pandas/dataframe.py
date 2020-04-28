@@ -2048,7 +2048,7 @@ class DataFrame(BasePandasDataset):
         # _query_compiler before we check if the key is in self
         if key in ["_query_compiler"] or key in self.__dict__:
             pass
-        elif key in self:
+        elif key in self and key not in dir(self):
             self.__setitem__(key, value)
         elif isinstance(value, pandas.Series):
             warnings.warn(
