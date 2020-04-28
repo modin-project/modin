@@ -1,6 +1,6 @@
 FROM python:3.6.6-stretch
 
-COPY requirements.txt requirements.txt
+COPY env/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 COPY . .
