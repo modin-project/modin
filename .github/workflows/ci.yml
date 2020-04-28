@@ -39,7 +39,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip install -r env/requirements.txt
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install -r requirements.txt
+      - run: pip install -r env/requirements.txt
       - run: python -m pytest modin/test/test_headers.py
   test-all:
     needs: [lint-flake8, lint-black, test-api, test-headers]
@@ -74,7 +74,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip install -r env/requirements.txt
       - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
         if: matrix.part == 3
       - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
@@ -131,5 +131,5 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip install -r env/requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
