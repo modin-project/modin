@@ -60,7 +60,11 @@ class ColumnStoreReader(FileReader):
         from modin.pandas import DEFAULT_NPARTITIONS
 
         index_len = cls.materialize(partition_ids[-2][0])
-        index = pandas.RangeIndex(index_len)
+        if isinstance(index_len, int):
+            index = pandas.RangeIndex(index_len)
+        else:
+            index = index_len
+            index_len = len(index)
         index_chunksize = compute_chunksize(
             pandas.DataFrame(index=index), DEFAULT_NPARTITIONS, axis=0
         )
