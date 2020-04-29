@@ -120,9 +120,9 @@ class _LocationIndexerBase(object):
     """Base class for location indexer like loc and iloc
     """
 
-    def __init__(self, ray_df):
-        self.df = ray_df
-        self.qc = ray_df._query_compiler
+    def __init__(self, modin_df):
+        self.df = modin_df
+        self.qc = modin_df._query_compiler
         self.row_scaler = False
         self.col_scaler = False
 
@@ -210,7 +210,7 @@ class _LocationIndexerBase(object):
 
 
 class _LocIndexer(_LocationIndexerBase):
-    """A indexer for ray_df.loc[] functionality"""
+    """A indexer for modin_df.loc[] functionality"""
 
     def __getitem__(self, key):
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
@@ -331,7 +331,7 @@ class _LocIndexer(_LocationIndexerBase):
 
 
 class _iLocIndexer(_LocationIndexerBase):
-    """A indexer for ray_df.iloc[] functionality"""
+    """A indexer for modin_df.iloc[] functionality"""
 
     def __getitem__(self, key):
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
