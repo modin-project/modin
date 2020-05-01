@@ -76,6 +76,9 @@ class Series(BasePandasDataset):
             )
             if name is None:
                 name = "__reduced__"
+                if isinstance(data, pandas.Series) and data.name is not None:
+                    name = data.name
+
             query_compiler = from_pandas(
                 pandas.DataFrame(
                     pandas.Series(
