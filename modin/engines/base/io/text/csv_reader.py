@@ -18,24 +18,6 @@ import pandas
 import sys
 
 
-def pathlib_or_pypath(filepath_or_buffer):
-    try:
-        import py
-
-        if isinstance(filepath_or_buffer, py.path.local):
-            return True
-    except ImportError:  # pragma: no cover
-        pass
-    try:
-        import pathlib
-
-        if isinstance(filepath_or_buffer, pathlib.Path):
-            return True
-    except ImportError:  # pragma: no cover
-        pass
-    return False
-
-
 class CSVReader(TextFileReader):
     @classmethod
     def read(cls, filepath_or_buffer, **kwargs):
@@ -43,7 +25,7 @@ class CSVReader(TextFileReader):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
-        elif not pathlib_or_pypath(filepath_or_buffer):
+        elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
