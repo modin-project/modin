@@ -1271,11 +1271,10 @@ class Series(BasePandasDataset):
 
     @property
     def nbytes(self):
-        # We cannot default to pandas without a named function to call.
-        def nbytes(df):
-            return df.nbytes
-
-        return self._default_to_pandas(nbytes)
+        """
+        Returns the number of bytes in the containing data.
+        """
+        return self.memory_usage(index=False)
 
     @property
     def ndim(self):
