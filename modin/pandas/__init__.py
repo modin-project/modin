@@ -195,6 +195,7 @@ def initialize_ray():
                 redis_password=redis_password,
                 logging_level=100,
                 memory=object_store_memory,
+                lru_evict=True,
             )
 
         # Register a fix import function to run on all_workers including the driver.
