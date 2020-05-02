@@ -1044,7 +1044,7 @@ def test_to_clipboard():
     assert modin_as_clip.equals(pandas_as_clip)
 
 
-def test_to_csv():
+def test_dataframe_to_csv():
     modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
@@ -1054,6 +1054,26 @@ def test_to_csv():
     modin_df.to_csv(TEST_CSV_DF_FILENAME)
     pandas_df.to_csv(TEST_CSV_pandas_FILENAME)
 
+    assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
+
+    teardown_test_file(TEST_CSV_pandas_FILENAME)
+    teardown_test_file(TEST_CSV_DF_FILENAME)
+
+
+def test_series_to_csv():
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
+
+    TEST_CSV_DF_FILENAME = "test_df.csv"
+    TEST_CSV_pandas_FILENAME = "test_pandas.csv"
+
+    modin_s = modin_df["col1"]
+    pandas_s = pandas_df["col1"]
+    modin_s.to_csv(TEST_CSV_DF_FILENAME)
+    pandas_s.to_csv(TEST_CSV_pandas_FILENAME)
+
+    assert modin_df_equals_pandas(modin_s, pandas_s)
+    assert modin_s.name == pandas_s.name
     assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
 
     teardown_test_file(TEST_CSV_pandas_FILENAME)

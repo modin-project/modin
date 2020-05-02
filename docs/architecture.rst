@@ -122,7 +122,7 @@ Modin DataFrame API
 
 * import/export functions
    * ``from_pandas``: Convert a pandas dataframe to a Modin dataframe.
-   * ``to_pandas``: Convert a Modin dataframe to a Pandas dataframe.
+   * ``to_pandas``: Convert a Modin dataframe to a pandas dataframe.
    * ``to_numpy``: Convert a Modin dataframe to a NumPy array.
 
 More documentation can be found internally in the code_. This API is not complete, but

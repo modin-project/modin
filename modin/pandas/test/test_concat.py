@@ -81,7 +81,7 @@ def test_concat():
     df_equals(pd.concat([modin_df, modin_df2]), pandas.concat([df, df2]))
 
 
-def test_modin_concat_with_series():
+def test_concat_with_series():
     df, df2 = generate_dfs()
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
     pandas_series = pandas.Series([1, 2, 3, 4], name="new_col")
@@ -97,7 +97,7 @@ def test_modin_concat_with_series():
     )
 
 
-def test_modin_concat_on_index():
+def test_concat_on_index():
     df, df2 = generate_dfs()
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
@@ -116,7 +116,7 @@ def test_modin_concat_on_index():
     )
 
 
-def test_modin_concat_on_column():
+def test_concat_on_column():
     df, df2 = generate_dfs()
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
