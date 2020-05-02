@@ -74,7 +74,7 @@ def test_df_concat():
     df_equals(pd.concat([df, df2]), pandas.concat([df, df2]))
 
 
-def test_modin_concat():
+def test_concat():
     df, df2 = generate_dfs()
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
