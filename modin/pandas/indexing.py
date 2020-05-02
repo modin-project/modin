@@ -331,7 +331,7 @@ class _LocIndexer(_LocationIndexerBase):
 
 
 class _iLocIndexer(_LocationIndexerBase):
-    """A indexer for modin_df.iloc[] functionality"""
+    """An indexer for modin_df.iloc[] functionality"""
 
     def __getitem__(self, key):
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
