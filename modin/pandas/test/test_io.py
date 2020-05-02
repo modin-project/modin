@@ -1061,7 +1061,7 @@ def test_dataframe_to_csv():
 
 
 def test_series_to_csv():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
