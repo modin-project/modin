@@ -52,3 +52,21 @@ class TextFileReader(FileReader):
                 for i in range(len(partition_ids))
             ]
         )
+
+    @classmethod
+    def pathlib_or_pypath(cls, filepath_or_buffer):
+        try:
+            import py
+
+            if isinstance(filepath_or_buffer, py.path.local):
+                return True
+        except ImportError:  # pragma: no cover
+            pass
+        try:
+            import pathlib
+
+            if isinstance(filepath_or_buffer, pathlib.Path):
+                return True
+        except ImportError:  # pragma: no cover
+            pass
+        return False

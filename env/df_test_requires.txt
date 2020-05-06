@@ -10,3 +10,4 @@ xarray
 scipy
 Jinja2
 msgpack<1.0
+pandas_gbq

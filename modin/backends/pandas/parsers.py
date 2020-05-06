@@ -141,18 +141,21 @@ class PandasJSONParser(PandasParser):
 class PandasParquetParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
-        import pyarrow.parquet as pq
-
         num_splits = kwargs.pop("num_splits", None)
         columns = kwargs.get("columns", None)
         if num_splits is None:
             return pandas.read_parquet(fname, **kwargs)
         kwargs["use_pandas_metadata"] = True
-        df = pq.read_table(fname, **kwargs).to_pandas()
+        df = pandas.read_parquet(fname, **kwargs)
+        if isinstance(df.index, pandas.RangeIndex):
+            idx = len(df.index)
+        else:
+            idx = df.index
+        columns = [c for c in columns if c not in df.index.names and c in df.columns]
         if columns is not None:
             df = df[columns]
         # Append the length of the index here to build it externally
-        return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
+        return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
 
 
 class PandasHDFParser(PandasParser):  # pragma: no cover

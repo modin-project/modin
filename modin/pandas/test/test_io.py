@@ -23,7 +23,13 @@ import os
 import shutil
 import sqlalchemy as sa
 
-from .utils import df_equals
+from .utils import (
+    df_equals,
+    json_short_string,
+    json_short_bytes,
+    json_long_string,
+    json_long_bytes,
+)
 
 from modin import __execution_engine__
 
@@ -428,6 +434,24 @@ def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
     df_equals(modin_df, pandas_df)
 
 
+def test_from_parquet_pandas_index():
+    # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
+    pandas_df = pandas.DataFrame(
+        {
+            "idx": np.random.randint(0, 100_000, size=2000),
+            "A": np.random.randint(0, 100_000, size=2000),
+            "B": ["a", "b"] * 1000,
+            "C": ["c"] * 2000,
+        }
+    )
+    pandas_df.set_index("idx").to_parquet("tmp.parquet")
+    # read the same parquet using modin.pandas
+    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+
+    pandas_df.set_index(["idx", "A"]).to_parquet("tmp.parquet")
+    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+
+
 def test_from_parquet_hdfs():
     path = "modin/pandas/test/data/hdfs.parquet"
     pandas_df = pandas.read_parquet(path)
@@ -454,6 +478,18 @@ def test_from_json_lines():
     assert modin_df_equals_pandas(modin_df, pandas_df)
 
     teardown_json_file()
+
+
+@pytest.mark.parametrize(
+    "data", [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
+)
+def test_read_json_string_bytes(data):
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_json(data)
+    # For I/O objects we need to rewind to reuse the same object.
+    if hasattr(data, "seek"):
+        data.seek(0)
+    df_equals(modin_df, pandas.read_json(data))
 
 
 def test_from_html():
@@ -1008,7 +1044,7 @@ def test_to_clipboard():
     assert modin_as_clip.equals(pandas_as_clip)
 
 
-def test_to_csv():
+def test_dataframe_to_csv():
     modin_df = create_test_ray_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
@@ -1018,6 +1054,26 @@ def test_to_csv():
     modin_df.to_csv(TEST_CSV_DF_FILENAME)
     pandas_df.to_csv(TEST_CSV_pandas_FILENAME)
 
+    assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
+
+    teardown_test_file(TEST_CSV_pandas_FILENAME)
+    teardown_test_file(TEST_CSV_DF_FILENAME)
+
+
+def test_series_to_csv():
+    modin_df = create_test_ray_dataframe()
+    pandas_df = create_test_pandas_dataframe()
+
+    TEST_CSV_DF_FILENAME = "test_df.csv"
+    TEST_CSV_pandas_FILENAME = "test_pandas.csv"
+
+    modin_s = modin_df["col1"]
+    pandas_s = pandas_df["col1"]
+    modin_s.to_csv(TEST_CSV_DF_FILENAME)
+    pandas_s.to_csv(TEST_CSV_pandas_FILENAME)
+
+    assert modin_df_equals_pandas(modin_s, pandas_s)
+    assert modin_s.name == pandas_s.name
     assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
 
     teardown_test_file(TEST_CSV_pandas_FILENAME)
@@ -1074,13 +1130,6 @@ def test_to_feather():
 
     teardown_test_file(TEST_FEATHER_pandas_FILENAME)
     teardown_test_file(TEST_FEATHER_DF_FILENAME)
-
-
-def test_to_gbq():
-    modin_df = create_test_ray_dataframe()
-    pandas_df = create_test_pandas_dataframe()
-    # Because we default to pandas, we can just test the equality of the two frames.
-    assert to_pandas(modin_df).equals(pandas_df)
 
 
 def test_to_html():
@@ -1338,6 +1387,25 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
     df_equals(modin_df, pandas_df)
 
     teardown_fwf_file()
+
+
+@pytest.mark.skip(reason="Need to verify GBQ access")
+def test_from_gbq():
+    # Test API, but do not supply credentials until credits can be secured.
+    with pytest.raises(
+        ValueError, match="Could not determine project ID and one was not supplied."
+    ):
+        pd.read_gbq("SELECT 1")
+
+
+@pytest.mark.skip(reason="Need to verify GBQ access")
+def test_to_gbq():
+    modin_df = create_test_ray_dataframe()
+    # Test API, but do not supply credentials until credits can be secured.
+    with pytest.raises(
+        ValueError, match="Could not determine project ID and one was not supplied."
+    ):
+        modin_df.to_gbq("modin.table")
 
 
 def test_cleanup():
