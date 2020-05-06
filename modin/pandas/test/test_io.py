@@ -825,25 +825,18 @@ def test_parse_dates_read_csv():
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_with_args():
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
-    modin_df = pd.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
-    )
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"header": None, "usecols": [0, 7]},
+        {"usecols": [0, 7]},
+        {"names": [0, 7], "usecols": [0, 7]},
+    ],
+)
+def test_from_csv_with_args(kwargs):
+    file_name = "modin/pandas/test/data/issue_621.csv"
+    pandas_df = pandas.read_csv(file_name, **kwargs)
+    modin_df = pd.read_csv(file_name, **kwargs)
     df_equals(modin_df, pandas_df)
 
 
