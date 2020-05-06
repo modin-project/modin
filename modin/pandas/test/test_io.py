@@ -57,15 +57,6 @@ TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
 
-def modin_df_equals_pandas(modin_df, pandas_df):
-    df1 = to_pandas(modin_df).sort_index()
-    df2 = pandas_df.sort_index()
-    if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
-        if not df1.dtypes.equals(df2.dtypes):
-            return df2.astype(df1.dtypes).equals(df1)
-    return df1.equals(df2)
-
-
 @pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
