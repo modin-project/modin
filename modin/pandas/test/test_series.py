@@ -1612,8 +1612,7 @@ def test_keys(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_kurt(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurt()
+    df_equals(modin_series.kurt(), pandas_series.kurt())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

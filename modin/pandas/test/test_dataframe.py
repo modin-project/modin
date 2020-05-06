@@ -2358,8 +2358,8 @@ class TestDataFrameDefault:
 
     def test_kurt(self):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).kurt()
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        df_equals(modin_df.kurt(), pandas_df.kurt())
 
     def test_kurtosis(self):
         data = test_data_values[0]
