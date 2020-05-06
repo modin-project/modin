@@ -864,7 +864,10 @@ class Series(BasePandasDataset):
     radd = add
 
     def ravel(self, order="C"):
-        return self._default_to_pandas(pandas.Series.ravel, order=order)
+        """
+        Returns the flattened containing data as ndarray.
+        """
+        return self._reduce_dimension(self._query_compiler.ravel(order=order))
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)

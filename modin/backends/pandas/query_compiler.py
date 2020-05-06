@@ -348,6 +348,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END MapReduce operations
 
     # Reduction operations
+    ravel = ReductionFunction.register(pandas.Series.ravel)
     idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
