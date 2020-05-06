@@ -20,13 +20,13 @@ from modin.error_message import ErrorMessage
 class ParquetReader(ColumnStoreReader):
     @classmethod
     def read(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a DataFrame.
-           Ray DataFrame only supports pyarrow engine for now.
+        """Load a parquet object from the file path, returning a Modin DataFrame.
+           Modin only supports pyarrow engine for now.
 
         Args:
             path: The filepath of the parquet file.
                   We only support local files for now.
-            engine: Ray only support pyarrow reader.
+            engine: Modin only supports pyarrow reader.
                     This argument doesn't do anything for now.
             kwargs: Pass into parquet's read_pandas function.
 
@@ -66,7 +66,18 @@ class ParquetReader(ColumnStoreReader):
                 pd = ParquetDataset(path)
                 column_names = pd.schema.names
             else:
-                pf = ParquetFile(path)
-                column_names = pf.metadata.schema.names
+                meta = ParquetFile(path).metadata
+                column_names = meta.schema.names
+                # This is how we convert the metadata from pyarrow to a python
+                # dictionary, from which we then get the index columns.
+                # We use these to filter out from the columns in the metadata since
+                # the pyarrow storage has no concept of row labels/index.
+                # This ensures that our metadata lines up with the partitions without
+                # extra communication steps once we `have done all the remote
+                # computation.
+                index_columns = eval(
+                    meta.metadata[b"pandas"].replace(b"null", b"None")
+                ).get("index_columns", [])
+                column_names = [c for c in column_names if c not in index_columns]
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         return cls.build_query_compiler(path, columns, **kwargs)

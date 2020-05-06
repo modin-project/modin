@@ -24,3 +24,4 @@ xlrd
 matplotlib
 sqlalchemy
 msgpack<1.0
+pandas_gbq
