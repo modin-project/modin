@@ -3342,7 +3342,7 @@ class BasePandasDataset(object):
 
     @property
     def values(self):
-        """Create a numpy array with the values from this object.
+        """Create a NumPy array with the values from this object.
 
         Returns:
             The numpy representation of this object.

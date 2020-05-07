@@ -195,7 +195,7 @@ class BaseFrameManager(object):
             ]
         )
         # If we are mapping over columns, they are returned to use the same as
-        # rows, so we need to transpose the returned 2D numpy array to return
+        # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
         return result_blocks.T if not axis else result_blocks
 
@@ -336,10 +336,10 @@ class BaseFrameManager(object):
 
     @classmethod
     def to_numpy(cls, partitions):
-        """Convert this object into a NumPy Array from the partitions.
+        """Convert this object into a NumPy array from the partitions.
 
         Returns:
-            A NumPy Array
+            A NumPy array
         """
         return np.block([[block.to_numpy() for block in row] for row in partitions])
 

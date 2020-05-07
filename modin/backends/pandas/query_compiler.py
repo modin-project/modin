@@ -172,10 +172,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # To NumPy
     def to_numpy(self):
-        """Converts Modin DataFrame to NumPy Array.
+        """Converts Modin DataFrame to NumPy array.
 
         Returns:
-            NumPy Array of the QueryCompiler.
+            NumPy array of the QueryCompiler.
         """
         arr = self._modin_frame.to_numpy()
         ErrorMessage.catch_bugs_and_request_email(
@@ -267,7 +267,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
-        """Fits a new index for this Manger.
+        """Fits a new index for this Manager.
 
         Args:
             axis: The axis index object to target the reindex on.
@@ -965,6 +965,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
         """Returns a new QueryCompiler with null values dropped along given axis.
+
         Return:
             a new QueryCompiler
         """

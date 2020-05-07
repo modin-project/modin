@@ -80,13 +80,13 @@ class BaseFramePartition(object):  # pragma: no cover
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def to_numpy(self):
-        """Convert the object stored in this partition to a NumPy Array.
+        """Convert the object stored in this partition to a NumPy array.
 
         Note: If the underlying object is a Pandas DataFrame, this will return
             a 2D NumPy array.
 
         Returns:
-            A NumPy Array.
+            A NumPy array.
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 

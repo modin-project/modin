@@ -118,10 +118,10 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         return dataframe
 
     def to_numpy(self):
-        """Convert the object stored in this partition to a NumPy Array.
+        """Convert the object stored in this partition to a NumPy array.
 
         Returns:
-            A NumPy Array.
+            A NumPy array.
         """
         return self.apply(lambda df: df.values).get()
 
