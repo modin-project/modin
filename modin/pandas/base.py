@@ -1559,6 +1559,7 @@ class BasePandasDataset(object):
         Returns:
             Series or DataFrame (if level specified)
         """
+        axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
         )

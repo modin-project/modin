@@ -2383,7 +2383,7 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
 
-    @pytest.mark.parametrize("data", test_data_values[0])
+    @pytest.mark.parametrize("data", test_data_values)
     def test_mad(self, data):
         modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
         df_equals(modin_df.mad(), pandas_df.mad())
