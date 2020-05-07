@@ -1507,15 +1507,7 @@ class BasePandasDataset(object):
             )
         )
 
-    def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas(
-            "kurtosis",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs
-        )
+    kurtosis = kurt
 
     def last(self, offset):
         return self.loc[pandas.Series(index=self.index).last(offset).index]
