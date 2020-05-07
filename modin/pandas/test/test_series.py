@@ -1666,7 +1666,7 @@ def test_lt(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_mad(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
-    df_equals(modin_series.mad(), pandas_series.mad())   
+    df_equals(modin_series.mad(), pandas_series.mad())
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
