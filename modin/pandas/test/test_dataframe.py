@@ -2383,10 +2383,10 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
 
-    def test_mad(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).mad()
+    @pytest.mark.parametrize("data", test_data_values[0])
+    def test_mad(self, data):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        df_equals(modin_df.mad(), pandas_df.mad())
 
     def test_mask(self):
         df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])

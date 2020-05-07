@@ -1548,7 +1548,20 @@ class BasePandasDataset(object):
         return _LocIndexer(self)
 
     def mad(self, axis=None, skipna=None, level=None):
-        return self._default_to_pandas("mad", axis=axis, skipna=skipna, level=level)
+        """Return the mean absolute deviation of the values for the requested axis.
+
+        Args:
+            axis: {index (0), columns (1)}
+            skipna: bool, default True
+                Exclude NA/null values when computing the result.
+            level: int or level name, default None
+
+        Returns:
+            Series or DataFrame (if level specified)
+        """
+        return self._reduce_dimension(
+            self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
+        )
 
     def mask(
         self,
