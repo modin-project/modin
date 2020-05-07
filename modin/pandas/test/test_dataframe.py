@@ -2363,8 +2363,8 @@ class TestDataFrameDefault:
 
     def test_kurtosis(self):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).kurtosis()
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        df_equals(modin_df.kurtosis(), pandas_df.kurtosis())
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")

@@ -1618,8 +1618,7 @@ def test_kurt(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_kurtosis(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurtosis()
+    df_equals(modin_series.kurtosis(), pandas_series.kurtosis())
 
 
 def test_last():
