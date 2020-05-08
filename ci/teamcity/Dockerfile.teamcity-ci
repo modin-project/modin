@@ -1,6 +1,4 @@
-ARG BASE_IMAGE=ray-project/deploy
-
-FROM ${BASE_IMAGE}
+FROM modin-project/modin-base
 
 ARG REQUIREMENTS=requirements.txt
 

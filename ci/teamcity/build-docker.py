@@ -16,14 +16,21 @@ if sys.platform.startswith("linux"):
     )
     base_image = "ray-project/deploy"
     requirements = "requirements.txt"
+    execute_command(
+        "docker build -f Dockerfile.modin-base --build-arg BASE_IMAGE={} -t modin-project/modin-base .".format(
+            base_image
+        )
+    )
 else:
     raise SystemExit(
         "TeamCity CI in Docker containers is supported only on Linux at the moment."
     )
 
 execute_command(
-    "docker build --build-arg BASE_IMAGE={} --build-arg REQUIREMENTS={} -t modin-project/teamcity-ci .".format(
-        base_image, requirements
+    "docker build -f Dockerfile.teamcity-ci --build-arg REQUIREMENTS={} -t modin-project/teamcity-ci .".format(
+        requirements
     )
 )
-execute_command("rm ./modin.tar ./git-rev")
+
+if sys.platform.startswith("linux"):
+    execute_command("rm ./modin.tar ./git-rev")
