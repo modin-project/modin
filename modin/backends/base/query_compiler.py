@@ -89,7 +89,7 @@ class BaseQueryCompiler(abc.ABC):
         """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
 
         Args:
-            cls: DataManger object to convert the DataFrame to.
+            cls: DataManager object to convert the DataFrame to.
             df: Pandas DataFrame object.
             block_partitions_cls: BlockParitions object to store partitions
 
@@ -103,10 +103,10 @@ class BaseQueryCompiler(abc.ABC):
     # To NumPy
     @abc.abstractmethod
     def to_numpy(self):
-        """Converts Modin DataFrame to NumPy DataFrame.
+        """Converts Modin DataFrame to NumPy array.
 
         Returns:
-            NumPy Array of the QueryCompiler.
+            NumPy array of the QueryCompiler.
         """
         pass
 

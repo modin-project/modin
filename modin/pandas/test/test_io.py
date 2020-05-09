@@ -105,7 +105,7 @@ def make_parquet_file():
             os.remove(TEST_PARQUET_FILENAME)
 
 
-def create_test_ray_dataframe():
+def create_test_modin_dataframe():
     df = pd.DataFrame(
         {
             "col1": [0, 1, 2, 3],
@@ -1016,7 +1016,7 @@ def test_from_csv_newlines_in_quotes():
 
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_to_clipboard():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     modin_df.to_clipboard()
@@ -1029,7 +1029,7 @@ def test_to_clipboard():
 
 
 def test_dataframe_to_csv():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
@@ -1045,7 +1045,7 @@ def test_dataframe_to_csv():
 
 
 def test_series_to_csv():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
@@ -1066,20 +1066,20 @@ def test_series_to_csv():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_dense():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
 
     with pytest.raises(NotImplementedError):
         modin_df.to_dense()
 
 
 def test_to_dict():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
 
 
 @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
 def test_to_excel():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_EXCEL_DF_FILENAME = "test_df.xlsx"
@@ -1101,7 +1101,7 @@ def test_to_excel():
 
 
 def test_to_feather():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_FEATHER_DF_FILENAME = "test_df.feather"
@@ -1117,7 +1117,7 @@ def test_to_feather():
 
 
 def test_to_html():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_HTML_DF_FILENAME = "test_df.html"
@@ -1133,7 +1133,7 @@ def test_to_html():
 
 
 def test_to_json():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_JSON_DF_FILENAME = "test_df.json"
@@ -1149,12 +1149,12 @@ def test_to_json():
 
 
 def test_to_latex():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
 def test_to_parquet():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PARQUET_DF_FILENAME = "test_df.parquet"
@@ -1171,14 +1171,14 @@ def test_to_parquet():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_period():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
 
     with pytest.raises(NotImplementedError):
         modin_df.to_period()
 
 
 def test_to_pickle():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PICKLE_DF_FILENAME = "test_df.pkl"
@@ -1203,7 +1203,7 @@ def test_to_pickle():
 
 def test_to_sql_without_index(make_sql_connection):
     table_name = "tbl_without_index"
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     # We do not pass the table name so the fixture won't generate a table
@@ -1221,7 +1221,7 @@ def test_to_sql_without_index(make_sql_connection):
 
 def test_to_sql_with_index(make_sql_connection):
     table_name = "tbl_with_index"
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     # We do not pass the table name so the fixture won't generate a table
@@ -1238,7 +1238,7 @@ def test_to_sql_with_index(make_sql_connection):
 
 
 def test_to_stata():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_STATA_DF_FILENAME = "test_df.stata"
@@ -1258,7 +1258,7 @@ def test_HDFStore():
     modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
     pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
 
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     modin_store["foo"] = modin_df
@@ -1384,7 +1384,7 @@ def test_from_gbq():
 
 @pytest.mark.skip(reason="Need to verify GBQ access")
 def test_to_gbq():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     # Test API, but do not supply credentials until credits can be secured.
     with pytest.raises(
         ValueError, match="Could not determine project ID and one was not supplied."
