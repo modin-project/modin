@@ -21,9 +21,9 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
   test-windows:
     runs-on: windows-latest
@@ -43,19 +43,19 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: pip install -r windows_test_requires.txt
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_series.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_concat.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_groupby.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_reshape.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_general.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
   test-pyarrow:
     runs-on: ubuntu-latest
@@ -77,4 +77,4 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: python -m pytest --cov-config=.coveragerc --cov=modin --cov-append modin/pandas/test/test_io.py::test_from_csv
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py::test_from_csv

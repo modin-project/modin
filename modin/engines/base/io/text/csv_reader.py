@@ -66,7 +66,7 @@ class CSVReader(TextFileReader):
             # be assigned correctly
             names = pandas.read_csv(
                 filepath_or_buffer,
-                **dict(kwargs, nrows=0, skipfooter=0, index_col=None)
+                **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None)
             ).columns
         empty_pd_df = pandas.read_csv(
             filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
