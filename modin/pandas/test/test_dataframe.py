@@ -5111,6 +5111,11 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
+        modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
+        pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
+
+        df_equals(modin_df, pandas_df)
+
     def test_setitem_on_empty_df(self):
         columns = ["id", "max_speed", "health"]
         modin_df = pd.DataFrame(columns=columns)

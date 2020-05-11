@@ -323,6 +323,9 @@ class Series(BasePandasDataset):
         self._create_or_update_from_compiler(
             self._query_compiler.setitem(1, key, value), inplace=True
         )
+        # Propagate changes back to parent so that column in dataframe had the same contents
+        if self._parent is not None:
+            self._parent[self.name] = self
 
     def __sub__(self, right):
         return self.sub(right)
