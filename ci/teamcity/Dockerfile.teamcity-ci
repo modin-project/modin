@@ -1,6 +1,6 @@
 FROM modin-project/modin-base
 
-ARG REQUIREMENTS=requirements.txt
+ARG REQUIREMENTS=requirements/requirements.txt
 
 ADD modin.tar /modin
 ADD git-rev /modin/git-rev
