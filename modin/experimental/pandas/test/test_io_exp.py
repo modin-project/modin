@@ -16,7 +16,7 @@ import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.pandas.test.test_io import (  # noqa: F401
-    modin_df_equals_pandas,
+    df_equals,
     make_sql_connection,
 )
 
@@ -40,8 +40,8 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
             table, conn, partition_column="col1", lower_bound=0, upper_bound=6
         )
 
-        assert modin_df_equals_pandas(modin_df_from_query, pandas_df)
-        assert modin_df_equals_pandas(modin_df_from_table, pandas_df)
+        df_equals(modin_df_from_query, pandas_df)
+        df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.skipif(
@@ -60,5 +60,5 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     with pytest.warns(UserWarning):
         modin_df_from_table = pd.read_sql(table, conn)
 
-    assert modin_df_equals_pandas(modin_df_from_query, pandas_df)
-    assert modin_df_equals_pandas(modin_df_from_table, pandas_df)
+    df_equals(modin_df_from_query, pandas_df)
+    df_equals(modin_df_from_table, pandas_df)

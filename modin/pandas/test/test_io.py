@@ -57,15 +57,6 @@ TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
 
-def modin_df_equals_pandas(modin_df, pandas_df):
-    df1 = to_pandas(modin_df).sort_index()
-    df2 = pandas_df.sort_index()
-    if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pyarrow":
-        if not df1.dtypes.equals(df2.dtypes):
-            return df2.astype(df1.dtypes).equals(df1)
-    return df1.equals(df2)
-
-
 @pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
@@ -114,7 +105,7 @@ def make_parquet_file():
             os.remove(TEST_PARQUET_FILENAME)
 
 
-def create_test_ray_dataframe():
+def create_test_modin_dataframe():
     df = pd.DataFrame(
         {
             "col1": [0, 1, 2, 3],
@@ -465,7 +456,7 @@ def test_from_json():
     pandas_df = pandas.read_json(TEST_JSON_FILENAME)
     modin_df = pd.read_json(TEST_JSON_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_json_file()
 
@@ -475,7 +466,7 @@ def test_from_json_lines():
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME, lines=True)
     modin_df = pd.read_json(TEST_JSON_FILENAME, lines=True)
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_json_file()
 
@@ -498,7 +489,7 @@ def test_from_html():
     pandas_df = pandas.read_html(TEST_HTML_FILENAME)[0]
     modin_df = pd.read_html(TEST_HTML_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_html_file()
 
@@ -510,7 +501,7 @@ def test_from_clipboard():
     pandas_df = pandas.read_clipboard()
     modin_df = pd.read_clipboard()
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_excel():
@@ -519,7 +510,7 @@ def test_from_excel():
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_excel_file()
 
@@ -536,7 +527,7 @@ def test_from_excel_all_sheets():
     assert pandas_df.keys() == modin_df.keys()
 
     for key in pandas_df.keys():
-        assert modin_df_equals_pandas(modin_df.get(key), pandas_df.get(key))
+        df_equals(modin_df.get(key), pandas_df.get(key))
 
     teardown_excel_file()
 
@@ -548,7 +539,7 @@ def test_from_feather():
     pandas_df = pandas.read_feather(TEST_FEATHER_FILENAME)
     modin_df = pd.read_feather(TEST_FEATHER_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_feather_file()
 
@@ -560,7 +551,7 @@ def test_from_hdf():
     pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
     modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_hdf_file()
 
@@ -572,7 +563,7 @@ def test_from_hdf_format():
     pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
     modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_hdf_file()
 
@@ -583,7 +574,7 @@ def test_from_stata():
     pandas_df = pandas.read_stata(TEST_STATA_FILENAME)
     modin_df = pd.read_stata(TEST_STATA_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_stata_file()
 
@@ -594,7 +585,7 @@ def test_from_pickle():
     pandas_df = pandas.read_pickle(TEST_PICKLE_FILENAME)
     modin_df = pd.read_pickle(TEST_PICKLE_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     teardown_pickle_file()
 
@@ -608,12 +599,12 @@ def test_from_sql(make_sql_connection):
     pandas_df = pandas.read_sql(query, conn)
     modin_df = pd.read_sql(query, conn)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_sql(query, conn, index_col="index")
     modin_df = pd.read_sql(query, conn, index_col="index")
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     with pytest.warns(UserWarning):
         pd.read_sql_query(query, conn)
@@ -626,14 +617,14 @@ def test_from_sql(make_sql_connection):
     pandas_df = pandas.read_sql(query, conn)
     modin_df = pd.read_sql(query, conn)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     # Test SQLAlchemy Connection
     conn = conn.connect()
     pandas_df = pandas.read_sql(query, conn)
     modin_df = pd.read_sql(query, conn)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_sql_with_chunksize(make_sql_connection):
@@ -645,7 +636,7 @@ def test_from_sql_with_chunksize(make_sql_connection):
     pandas_gen = pandas.read_sql(query, conn, chunksize=10)
     modin_gen = pd.read_sql(query, conn, chunksize=10)
     for modin_df, pandas_df in zip(modin_gen, pandas_gen):
-        assert modin_df_equals_pandas(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No SAS write methods in Pandas")
@@ -653,7 +644,7 @@ def test_from_sas():
     pandas_df = pandas.read_sas(TEST_SAS_FILENAME)
     modin_df = pd.read_sas(TEST_SAS_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv(make_csv_file):
@@ -725,7 +716,7 @@ def test_from_csv_zip(make_csv_file):
 def test_parse_dates_read_csv():
     pandas_df = pandas.read_csv("modin/pandas/test/data/test_time_parsing.csv")
     modin_df = pd.read_csv("modin/pandas/test/data/test_time_parsing.csv")
-    modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
         "modin/pandas/test/data/test_time_parsing.csv",
@@ -759,7 +750,7 @@ def test_parse_dates_read_csv():
         index_col=0,
         encoding="utf-8",
     )
-    modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
         "modin/pandas/test/data/test_time_parsing.csv",
@@ -795,7 +786,7 @@ def test_parse_dates_read_csv():
         parse_dates=["timestamp"],
         encoding="utf-8",
     )
-    modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
         "modin/pandas/test/data/test_time_parsing.csv",
@@ -831,29 +822,22 @@ def test_parse_dates_read_csv():
         parse_dates=["timestamp"],
         encoding="utf-8",
     )
-    modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_with_args():
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/issue_621.csv", header=None, usecols=[0, 7]
-    )
-    modin_df_equals_pandas(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
-    modin_df = pd.read_csv("modin/pandas/test/data/issue_621.csv", usecols=[0, 7])
-    modin_df_equals_pandas(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/issue_621.csv", usecols=[0, 7], names=[0, 7]
-    )
-    modin_df_equals_pandas(modin_df, pandas_df)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"header": None, "usecols": [0, 7]},
+        {"usecols": [0, 7]},
+        {"names": [0, 7], "usecols": [0, 7]},
+    ],
+)
+def test_from_csv_with_args(kwargs):
+    file_name = "modin/pandas/test/data/issue_621.csv"
+    pandas_df = pandas.read_csv(file_name, **kwargs)
+    modin_df = pd.read_csv(file_name, **kwargs)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_table(make_csv_file):
@@ -862,12 +846,12 @@ def test_from_table(make_csv_file):
     pandas_df = pandas.read_table(TEST_CSV_FILENAME)
     modin_df = pd.read_table(TEST_CSV_FILENAME)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
     modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
@@ -896,7 +880,7 @@ def test_from_csv_s3(make_csv_file):
         "defaulting to pandas implementation" in str(err) for err in record.list
     )
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_default(make_csv_file):
@@ -907,7 +891,7 @@ def test_from_csv_default(make_csv_file):
     with pytest.warns(UserWarning):
         modin_df = pd.read_csv(dataset_url)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_chunksize(make_csv_file):
@@ -919,7 +903,7 @@ def test_from_csv_chunksize(make_csv_file):
     pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
 
     for modin_df, pd_df in zip(rdf_reader, pd_reader):
-        assert modin_df_equals_pandas(modin_df, pd_df)
+        df_equals(modin_df, pd_df)
 
     # Tests that get_chunk works correctly
     rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
@@ -928,7 +912,7 @@ def test_from_csv_chunksize(make_csv_file):
     modin_df = rdf_reader.get_chunk(1)
     pd_df = pd_reader.get_chunk(1)
 
-    assert modin_df_equals_pandas(modin_df, pd_df)
+    df_equals(modin_df, pd_df)
 
     # Tests that read works correctly
     rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
@@ -937,7 +921,7 @@ def test_from_csv_chunksize(make_csv_file):
     modin_df = rdf_reader.read()
     pd_df = pd_reader.read()
 
-    assert modin_df_equals_pandas(modin_df, pd_df)
+    df_equals(modin_df, pd_df)
 
 
 def test_from_csv_skiprows(make_csv_file):
@@ -973,7 +957,7 @@ def test_from_csv_encoding(make_csv_file, encoding):
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding=encoding)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_default_to_pandas_behavior(make_csv_file):
@@ -998,7 +982,7 @@ def test_from_csv_index_col(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_skipfooter(make_csv_file):
@@ -1007,7 +991,7 @@ def test_from_csv_skipfooter(make_csv_file):
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
 
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_parse_dates(make_csv_file):
@@ -1015,24 +999,24 @@ def test_from_csv_parse_dates(make_csv_file):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
     modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
         TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]}
     )
     modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]})
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_newlines_in_quotes():
     pandas_df = pandas.read_csv("modin/pandas/test/data/newlines.csv")
     modin_df = pd.read_csv("modin/pandas/test/data/newlines.csv")
-    assert modin_df_equals_pandas(modin_df, pandas_df)
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_to_clipboard():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     modin_df.to_clipboard()
@@ -1045,7 +1029,7 @@ def test_to_clipboard():
 
 
 def test_dataframe_to_csv():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
@@ -1061,7 +1045,7 @@ def test_dataframe_to_csv():
 
 
 def test_series_to_csv():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_CSV_DF_FILENAME = "test_df.csv"
@@ -1072,7 +1056,7 @@ def test_series_to_csv():
     modin_s.to_csv(TEST_CSV_DF_FILENAME)
     pandas_s.to_csv(TEST_CSV_pandas_FILENAME)
 
-    assert modin_df_equals_pandas(modin_s, pandas_s)
+    df_equals(modin_s, pandas_s)
     assert modin_s.name == pandas_s.name
     assert assert_files_eq(TEST_CSV_DF_FILENAME, TEST_CSV_pandas_FILENAME)
 
@@ -1082,20 +1066,20 @@ def test_series_to_csv():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_dense():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
 
     with pytest.raises(NotImplementedError):
         modin_df.to_dense()
 
 
 def test_to_dict():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
 
 
 @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
 def test_to_excel():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_EXCEL_DF_FILENAME = "test_df.xlsx"
@@ -1117,7 +1101,7 @@ def test_to_excel():
 
 
 def test_to_feather():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_FEATHER_DF_FILENAME = "test_df.feather"
@@ -1133,7 +1117,7 @@ def test_to_feather():
 
 
 def test_to_html():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_HTML_DF_FILENAME = "test_df.html"
@@ -1149,7 +1133,7 @@ def test_to_html():
 
 
 def test_to_json():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_JSON_DF_FILENAME = "test_df.json"
@@ -1165,12 +1149,12 @@ def test_to_json():
 
 
 def test_to_latex():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
 def test_to_parquet():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PARQUET_DF_FILENAME = "test_df.parquet"
@@ -1187,14 +1171,14 @@ def test_to_parquet():
 
 @pytest.mark.skip(reason="Defaulting to Pandas")
 def test_to_period():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
 
     with pytest.raises(NotImplementedError):
         modin_df.to_period()
 
 
 def test_to_pickle():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_PICKLE_DF_FILENAME = "test_df.pkl"
@@ -1219,7 +1203,7 @@ def test_to_pickle():
 
 def test_to_sql_without_index(make_sql_connection):
     table_name = "tbl_without_index"
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     # We do not pass the table name so the fixture won't generate a table
@@ -1237,7 +1221,7 @@ def test_to_sql_without_index(make_sql_connection):
 
 def test_to_sql_with_index(make_sql_connection):
     table_name = "tbl_with_index"
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     # We do not pass the table name so the fixture won't generate a table
@@ -1254,7 +1238,7 @@ def test_to_sql_with_index(make_sql_connection):
 
 
 def test_to_stata():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     TEST_STATA_DF_FILENAME = "test_df.stata"
@@ -1274,7 +1258,7 @@ def test_HDFStore():
     modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
     pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
 
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     pandas_df = create_test_pandas_dataframe()
 
     modin_store["foo"] = modin_df
@@ -1400,7 +1384,7 @@ def test_from_gbq():
 
 @pytest.mark.skip(reason="Need to verify GBQ access")
 def test_to_gbq():
-    modin_df = create_test_ray_dataframe()
+    modin_df = create_test_modin_dataframe()
     # Test API, but do not supply credentials until credits can be secured.
     with pytest.raises(
         ValueError, match="Could not determine project ID and one was not supplied."

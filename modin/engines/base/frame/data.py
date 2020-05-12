@@ -45,7 +45,7 @@ class BasePandasFrame(object):
         """Initialize a dataframe.
 
         Args:
-            partitions: A 2D numpy array of partitions. Must contain partition objects.
+            partitions: A 2D NumPy array of partitions. Must contain partition objects.
             index: The index object for the dataframe. Converts to a pandas.Index.
             columns: The columns object for the dataframe. Converts to a pandas.Index.
             row_lengths: (optional) The lengths of each partition in the rows. The
@@ -1135,7 +1135,7 @@ class BasePandasFrame(object):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths + [
-                l for o in others for l in o._row_lengths
+                length for o in others for length in o._row_lengths
             ]
             new_widths = self._column_widths
         elif (
@@ -1148,7 +1148,7 @@ class BasePandasFrame(object):
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths
             new_widths = self._column_widths + [
-                l for o in others for l in o._column_widths
+                length for o in others for length in o._column_widths
             ]
         else:
             left_parts, right_parts, joined_index = self._copartition(
@@ -1243,10 +1243,10 @@ class BasePandasFrame(object):
         return df
 
     def to_numpy(self):
-        """Converts Modin DataFrame to a 2D numpy array.
+        """Converts Modin DataFrame to a 2D NumPy array.
 
         Returns:
-            Numpy array.
+            NumPy array.
         """
         return self._frame_mgr_cls.to_numpy(self._partitions)
 

@@ -1619,24 +1619,24 @@ class TestDataFrameMapMetadata:
         frame_data_5 = {"col1": ["string"]}
         # Different data for different cases
         pandas_df = pandas.DataFrame(frame_data).squeeze()
-        ray_df = pd.DataFrame(frame_data).squeeze()
-        df_equals(ray_df, pandas_df)
+        modin_df = pd.DataFrame(frame_data).squeeze()
+        df_equals(modin_df, pandas_df)
 
         pandas_df_2 = pandas.DataFrame(frame_data_2).squeeze()
-        ray_df_2 = pd.DataFrame(frame_data_2).squeeze()
-        df_equals(ray_df_2, pandas_df_2)
+        modin_df_2 = pd.DataFrame(frame_data_2).squeeze()
+        df_equals(modin_df_2, pandas_df_2)
 
         pandas_df_3 = pandas.DataFrame(frame_data_3).squeeze()
-        ray_df_3 = pd.DataFrame(frame_data_3).squeeze()
-        df_equals(ray_df_3, pandas_df_3)
+        modin_df_3 = pd.DataFrame(frame_data_3).squeeze()
+        df_equals(modin_df_3, pandas_df_3)
 
         pandas_df_4 = pandas.DataFrame(frame_data_4).squeeze()
-        ray_df_4 = pd.DataFrame(frame_data_4).squeeze()
-        df_equals(ray_df_4, pandas_df_4)
+        modin_df_4 = pd.DataFrame(frame_data_4).squeeze()
+        df_equals(modin_df_4, pandas_df_4)
 
         pandas_df_5 = pandas.DataFrame(frame_data_5).squeeze()
-        ray_df_5 = pd.DataFrame(frame_data_5).squeeze()
-        df_equals(ray_df_5, pandas_df_5)
+        modin_df_5 = pd.DataFrame(frame_data_5).squeeze()
+        df_equals(modin_df_5, pandas_df_5)
 
         data = [
             [
@@ -2450,19 +2450,19 @@ class TestDataFrameDefault:
         if name_contains(request.node.name, numeric_dfs):
             # We have to test this way because equality in plots means same object.
             zipped_plot_lines = zip(modin_df.plot().lines, pandas_df.plot().lines)
-            for l, r in zipped_plot_lines:
-                if isinstance(l.get_xdata(), np.ma.core.MaskedArray) and isinstance(
-                    r.get_xdata(), np.ma.core.MaskedArray
+            for left, right in zipped_plot_lines:
+                if isinstance(left.get_xdata(), np.ma.core.MaskedArray) and isinstance(
+                    right.get_xdata(), np.ma.core.MaskedArray
                 ):
-                    assert all((l.get_xdata() == r.get_xdata()).data)
+                    assert all((left.get_xdata() == right.get_xdata()).data)
                 else:
-                    assert np.array_equal(l.get_xdata(), r.get_xdata())
-                if isinstance(l.get_ydata(), np.ma.core.MaskedArray) and isinstance(
-                    r.get_ydata(), np.ma.core.MaskedArray
+                    assert np.array_equal(left.get_xdata(), right.get_xdata())
+                if isinstance(left.get_ydata(), np.ma.core.MaskedArray) and isinstance(
+                    right.get_ydata(), np.ma.core.MaskedArray
                 ):
-                    assert all((l.get_ydata() == r.get_ydata()).data)
+                    assert all((left.get_ydata() == right.get_ydata()).data)
                 else:
-                    assert np.array_equal(l.get_xdata(), r.get_xdata())
+                    assert np.array_equal(left.get_xdata(), right.get_xdata())
 
     def test_replace(self):
         data = test_data_values[0]
@@ -5108,6 +5108,11 @@ class TestDataFrameIndexing:
 
         modin_df[modin_df.columns[0]] = 0
         pandas_df[pandas_df.columns[0]] = 0
+
+        df_equals(modin_df, pandas_df)
+
+        modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
+        pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
 
         df_equals(modin_df, pandas_df)
 

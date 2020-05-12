@@ -53,7 +53,7 @@ class DataFrame(BasePandasDataset):
         """Distributed DataFrame object backed by Pandas dataframes.
 
         Args:
-            data (numpy ndarray (structured or homogeneous) or dict):
+            data (NumPy ndarray (structured or homogeneous) or dict):
                 Dict can contain Series, arrays, constants, or list-like
                 objects.
             index (pandas.Index, list, ObjectID): The row index for this

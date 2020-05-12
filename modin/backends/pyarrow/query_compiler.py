@@ -195,9 +195,9 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         return self._modin_frame.to_pandas()
 
     def to_numpy(self):
-        """Converts Modin DataFrame to NumPy Array.
+        """Converts Modin DataFrame to NumPy array.
 
         Returns:
-            NumPy Array of the QueryCompiler.
+            NumPy array of the QueryCompiler.
         """
         return self._modin_frame.to_numpy()
