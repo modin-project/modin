@@ -45,7 +45,7 @@ class BasePandasFrame(object):
         """Initialize a dataframe.
 
         Args:
-            partitions: A 2D numpy array of partitions. Must contain partition objects.
+            partitions: A 2D NumPy array of partitions. Must contain partition objects.
             index: The index object for the dataframe. Converts to a pandas.Index.
             columns: The columns object for the dataframe. Converts to a pandas.Index.
             row_lengths: (optional) The lengths of each partition in the rows. The
@@ -1243,10 +1243,10 @@ class BasePandasFrame(object):
         return df
 
     def to_numpy(self):
-        """Converts Modin DataFrame to a 2D numpy array.
+        """Converts Modin DataFrame to a 2D NumPy array.
 
         Returns:
-            Numpy array.
+            NumPy array.
         """
         return self._frame_mgr_cls.to_numpy(self._partitions)
 

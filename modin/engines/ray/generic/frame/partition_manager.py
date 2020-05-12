@@ -25,10 +25,10 @@ class RayFrameManager(BaseFrameManager):
 
     @classmethod
     def to_numpy(cls, partitions):
-        """Convert this object into a NumPy Array from the partitions.
+        """Convert this object into a NumPy array from the partitions.
 
         Returns:
-            A NumPy Array
+            A NumPy array
         """
         parts = ray.get(
             [

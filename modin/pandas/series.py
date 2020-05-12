@@ -323,6 +323,9 @@ class Series(BasePandasDataset):
         self._create_or_update_from_compiler(
             self._query_compiler.setitem(1, key, value), inplace=True
         )
+        # Propagate changes back to parent so that column in dataframe had the same contents
+        if self._parent is not None:
+            self._parent[self.name] = self
 
     def __sub__(self, right):
         return self.sub(right)
@@ -344,10 +347,10 @@ class Series(BasePandasDataset):
 
     @property
     def values(self):
-        """Create a numpy array with the values from this Series.
+        """Create a NumPy array with the values from this Series.
 
         Returns:
-            The numpy representation of this object.
+            The NumPy representation of this object.
         """
         return super(Series, self).to_numpy().flatten()
 
@@ -1100,7 +1103,7 @@ class Series(BasePandasDataset):
                 array.
 
         Returns:
-            A numpy array.
+            A NumPy array.
         """
         return super(Series, self).to_numpy(dtype, copy).flatten()
 

@@ -1619,24 +1619,24 @@ class TestDataFrameMapMetadata:
         frame_data_5 = {"col1": ["string"]}
         # Different data for different cases
         pandas_df = pandas.DataFrame(frame_data).squeeze()
-        ray_df = pd.DataFrame(frame_data).squeeze()
-        df_equals(ray_df, pandas_df)
+        modin_df = pd.DataFrame(frame_data).squeeze()
+        df_equals(modin_df, pandas_df)
 
         pandas_df_2 = pandas.DataFrame(frame_data_2).squeeze()
-        ray_df_2 = pd.DataFrame(frame_data_2).squeeze()
-        df_equals(ray_df_2, pandas_df_2)
+        modin_df_2 = pd.DataFrame(frame_data_2).squeeze()
+        df_equals(modin_df_2, pandas_df_2)
 
         pandas_df_3 = pandas.DataFrame(frame_data_3).squeeze()
-        ray_df_3 = pd.DataFrame(frame_data_3).squeeze()
-        df_equals(ray_df_3, pandas_df_3)
+        modin_df_3 = pd.DataFrame(frame_data_3).squeeze()
+        df_equals(modin_df_3, pandas_df_3)
 
         pandas_df_4 = pandas.DataFrame(frame_data_4).squeeze()
-        ray_df_4 = pd.DataFrame(frame_data_4).squeeze()
-        df_equals(ray_df_4, pandas_df_4)
+        modin_df_4 = pd.DataFrame(frame_data_4).squeeze()
+        df_equals(modin_df_4, pandas_df_4)
 
         pandas_df_5 = pandas.DataFrame(frame_data_5).squeeze()
-        ray_df_5 = pd.DataFrame(frame_data_5).squeeze()
-        df_equals(ray_df_5, pandas_df_5)
+        modin_df_5 = pd.DataFrame(frame_data_5).squeeze()
+        df_equals(modin_df_5, pandas_df_5)
 
         data = [
             [
@@ -5108,6 +5108,11 @@ class TestDataFrameIndexing:
 
         modin_df[modin_df.columns[0]] = 0
         pandas_df[pandas_df.columns[0]] = 0
+
+        df_equals(modin_df, pandas_df)
+
+        modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
+        pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
 
         df_equals(modin_df, pandas_df)
 

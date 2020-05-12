@@ -132,10 +132,10 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return dataframe
 
     def to_numpy(self):
-        """Convert the object stored in this parition to a Numpy Array.
+        """Convert the object stored in this parition to a NumPy array.
 
         Returns:
-            A Numpy Array.
+            A NumPy array.
         """
         return self.apply(lambda df: df.to_numpy()).get()
 
