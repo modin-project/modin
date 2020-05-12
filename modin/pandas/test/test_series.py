@@ -1663,10 +1663,14 @@ def test_lt(data):
     inter_df_math_helper(modin_series, pandas_series, "lt")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_mad(data):
+# @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+# @pytest.mark.parametrize("axis", [None, 0])
+# @pytest.mark.parametrize("skipna", [None, True, False])
+@pytest.mark.parametrize("level", [0, -1])
+def test_mad(level, data=test_data_values[0], axis=None, skipna=None):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
-    df_equals(modin_series.mad(), pandas_series.mad())
+    import pdb; pdb.set_trace()
+    df_equals(modin_series.mad(axis=axis, skipna=skipna, level=level), pandas_series.mad(axis=axis, skipna=skipna, level=level))
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])

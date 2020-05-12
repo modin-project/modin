@@ -1560,6 +1560,10 @@ class BasePandasDataset(object):
             Series or DataFrame (if level specified)
         """
         axis = self._get_axis_number(axis)
+
+        if level is not None:
+            return self._handle_level_agg(axis=axis, level=level, skipna=skipna, op="mad")
+
         return self._reduce_dimension(
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
         )
