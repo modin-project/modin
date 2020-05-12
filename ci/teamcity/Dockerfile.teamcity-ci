@@ -9,3 +9,4 @@ RUN pip install -U pip setuptools
 RUN pip install -U -r ${REQUIREMENTS}
 RUN pip install -U pytest-remotedata
 RUN pip install -e .[all]
+RUN pip install PyGithub
