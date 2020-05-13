@@ -1314,9 +1314,8 @@ def test_fwf_file():
     setup_fwf_file()
 
     colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
-    with pytest.warns(UserWarning):
-        df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
-        assert isinstance(df, pd.DataFrame)
+    df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
+    assert isinstance(df, pd.DataFrame)
 
     teardown_fwf_file()
 
@@ -1363,14 +1362,13 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
     ]
     column_names = ["stationID", "year", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     nan_values = ["-9999"]
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_fwf(
-            TEST_FWF_FILENAME,
-            colspecs=column_specs,
-            names=column_names,
-            na_values=nan_values,
-            index_col=["stationID", "year"],
-        )
+    modin_df = pd.read_fwf(
+        TEST_FWF_FILENAME,
+        colspecs=column_specs,
+        names=column_names,
+        na_values=nan_values,
+        index_col=["stationID", "year"],
+    )
     pandas_df = pd.read_fwf(
         TEST_FWF_FILENAME,
         colspecs=column_specs,
