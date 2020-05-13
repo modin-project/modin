@@ -372,6 +372,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    to_datetime = MapFunction.register(pandas.to_datetime)
 
     # END Map partitions operations
 

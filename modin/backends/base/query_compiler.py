@@ -382,6 +382,23 @@ class BaseQueryCompiler(abc.ABC):
     def round(self, **kwargs):
         pass
 
+    @abc.abstractmethod
+    def to_datetime(
+        self,
+        arg,
+        errors="raise",
+        dayfirst=False,
+        yearfirst=False,
+        utc=None,
+        format=None,
+        exact=True,
+        unit=None,
+        infer_datetime_format=False,
+        origin="unix",
+        cache=True,
+    ):
+        pass
+
     # END Abstract map partitions operations
 
     # Abstract map partitions across select indices

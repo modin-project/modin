@@ -67,8 +67,7 @@ def to_datetime(
             origin=origin,
             cache=cache,
         )
-    return arg._default_to_pandas(
-        pandas.to_datetime,
+    return arg._to_datetime(
         errors=errors,
         dayfirst=dayfirst,
         yearfirst=yearfirst,
