@@ -2389,7 +2389,10 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("level", [0, -1])
     def test_mad(self, level, data, axis, skipna):
         modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-        df_equals(modin_df.mad(axis=axis, skipna=skipna, level=level), pandas_df.mad(axis=axis, skipna=skipna, level=level))
+        df_equals(
+            modin_df.mad(axis=axis, skipna=skipna, level=level),
+            pandas_df.mad(axis=axis, skipna=skipna, level=level),
+        )
 
     def test_mask(self):
         df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])

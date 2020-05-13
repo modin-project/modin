@@ -1669,7 +1669,10 @@ def test_lt(data):
 @pytest.mark.parametrize("level", [0, -1])
 def test_mad(level, data, axis, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.mad(axis=axis, skipna=skipna, level=level), pandas_series.mad(axis=axis, skipna=skipna, level=level))
+    df_equals(
+        modin_series.mad(axis=axis, skipna=skipna, level=level),
+        pandas_series.mad(axis=axis, skipna=skipna, level=level),
+    )
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
