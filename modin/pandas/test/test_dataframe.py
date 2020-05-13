@@ -2356,15 +2356,26 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).interpolate()
 
-    def test_kurt(self):
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+    @pytest.mark.parametrize("level", [None, -1, 0, 1])
+    @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
+    @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
+    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
         data = test_data_values[0]
         modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-        df_equals(modin_df.kurt(), pandas_df.kurt())
-
-    def test_kurtosis(self):
-        data = test_data_values[0]
-        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-        df_equals(modin_df.kurtosis(), pandas_df.kurtosis())
+        try:
+            pandas_result = getattr(pandas_df, method)(
+                axis, skipna, level, numeric_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                repr(
+                    getattr(modin_df, method)(axis, skipna, level, numeric_only)
+                )  # repr to force materialization
+        else:
+            modin_result = getattr(modin_df, method)(axis, skipna, level, numeric_only)
+            df_equals(modin_result, pandas_result)
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
