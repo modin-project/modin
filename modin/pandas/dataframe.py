@@ -603,6 +603,34 @@ class DataFrame(BasePandasDataset):
     def cov(self, min_periods=None):
         return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
 
+    def dot(self, other):
+        if isinstance(other, BasePandasDataset):
+            common = self.columns.union(other.index)
+            if len(common) > len(self.columns) or len(common) > len(other.index):
+                raise ValueError("Matrices are not aligned")
+
+            other = other.reindex(index=self.columns)._query_compiler
+            other = other.to_pandas().squeeze()
+            if isinstance(other, pandas.DataFrame):
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(other)
+                )
+            if isinstance(other, pandas.Series):
+                return self._reduce_dimension(
+                    query_compiler=self._query_compiler.dot(other)
+                )
+
+        other = np.asarray(other)
+        if self.shape[1] != other.shape[0]:
+            raise ValueError(
+                "Dot product shape mismatch, {} vs {}".format(self.shape, other.shape)
+            )
+
+        if len(other.shape) > 1:
+            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
             "eq", other, axis=axis, level=level, broadcast=isinstance(other, Series)

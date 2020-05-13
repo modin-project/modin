@@ -2281,9 +2281,6 @@ class TestDataFrameDefault:
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
 
-        with pytest.warns(UserWarning):
-            modin_df.dot(modin_df.T)
-
     def test_ewm(self):
         df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
         with pytest.warns(UserWarning):
