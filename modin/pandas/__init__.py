@@ -19,8 +19,10 @@ if pandas.__version__ != __pandas_version__:
     import warnings
 
     warnings.warn(
-        "The pandas version installed does not match the required pandas version in "
-        "Modin. This may cause undesired side effects!".format(__pandas_version__)
+        "The pandas version installed {} does not match the supported pandas version in"
+        " Modin {}. This may cause undesired side effects!".format(
+            pandas.__version__, __pandas_version__
+        )
     )
 
 from pandas import (

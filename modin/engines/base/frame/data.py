@@ -1135,7 +1135,7 @@ class BasePandasFrame(object):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths + [
-                l for o in others for l in o._row_lengths
+                length for o in others for length in o._row_lengths
             ]
             new_widths = self._column_widths
         elif (
@@ -1148,7 +1148,7 @@ class BasePandasFrame(object):
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths
             new_widths = self._column_widths + [
-                l for o in others for l in o._column_widths
+                length for o in others for length in o._column_widths
             ]
         else:
             left_parts, right_parts, joined_index = self._copartition(
