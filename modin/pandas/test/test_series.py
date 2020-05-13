@@ -1948,10 +1948,12 @@ def test_rank(data, na_option):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("order", [None, 'C', 'F', 'A', 'K'])
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
 def test_ravel(data, order):
     modin_series, pandas_series = create_test_series(data)
-    np.testing.assert_equal(modin_series.ravel(order=order), pandas_series.ravel(order=order))
+    np.testing.assert_equal(
+        modin_series.ravel(order=order), pandas_series.ravel(order=order)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
