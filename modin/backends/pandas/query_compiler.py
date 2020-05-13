@@ -788,53 +788,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Map across rows/columns
 
-    # Head/Tail/Front/Back
-    def head(self, n):
-        """Returns the first n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the first n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.head(n))
-
-    def tail(self, n):
-        """Returns the last n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the last n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.tail(n))
-
-    def front(self, n):
-        """Returns the first n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the first n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.front(n))
-
-    def back(self, n):
-        """Returns the last n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the last n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.back(n))
-
-    # End Head/Tail/Front/Back
-
     # __getitem__ methods
     def getitem_column_array(self, key, numeric=False):
         """Get column data for target labels.
