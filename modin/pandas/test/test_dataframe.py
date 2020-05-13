@@ -2386,7 +2386,7 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("data", test_data_values)
     @pytest.mark.parametrize("axis", [None, 0, 1])
     @pytest.mark.parametrize("skipna", [None, True, False])
-    @pytest.mark.parametrize("level", [0, -1])
+    @pytest.mark.parametrize("level", [0, -1, None])
     def test_mad(self, level, data, axis, skipna):
         modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
         df_equals(

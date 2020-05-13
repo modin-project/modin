@@ -1666,7 +1666,7 @@ def test_lt(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", [None, 0])
 @pytest.mark.parametrize("skipna", [None, True, False])
-@pytest.mark.parametrize("level", [0, -1])
+@pytest.mark.parametrize("level", [0, -1, None])
 def test_mad(level, data, axis, skipna):
     modin_series, pandas_series = create_test_series(data)
     df_equals(
