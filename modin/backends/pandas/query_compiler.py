@@ -352,6 +352,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
+    nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
+    nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
