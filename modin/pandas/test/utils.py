@@ -75,6 +75,18 @@ test_data = {
         ]
         for i in range(NCOLS)
     },
+    "only_numbers": {
+        "col1": [8.0, 9.4, 10.1, 11.3],
+        "col3": [1, 2, 3, 4],
+        "col4": [4, 5, 6, 7],
+    },
+    "only_strings": {"col1": ["1", "2", "3", "4"], "col4": ["4", "5", "6", "7"]},
+    "mixed_types": {
+        "col1": [8.0, 9.4, 10.1, 11.3],
+        "col2": ["a", "b", "c", "d"],
+        "col3": [1, 2, 3, 4],
+        "col4": [4, 5, 6, 7],
+    },
     # "int_float_object_data": {
     #     "col3": [1, 2, 3, 4],
     #     "col4": [4, 5, 6, 7],
@@ -209,6 +221,9 @@ numeric_dfs = [
     "int_data",
     "float_nan_data",
     "with_index_column",
+    "only_numbers",
+    "only_strings",
+    "mixed_types",
 ]
 
 no_numeric_dfs = ["datetime_timedelta_data"]

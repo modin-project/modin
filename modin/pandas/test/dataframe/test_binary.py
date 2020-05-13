@@ -36,6 +36,8 @@ matplotlib.use("Agg")
     "other",
     [
         lambda df: 4,
+        lambda df: 4.4,
+        lambda df: "4",
         lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
     ],
     ids=["scalar", "series_or_list"],
