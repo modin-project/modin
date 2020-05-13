@@ -867,7 +867,17 @@ class Series(BasePandasDataset):
     radd = add
 
     def ravel(self, order="C"):
-        """Returns the flattened containing data as ndarray.
+        """
+        Returns the flattened containing data as ndarray.
+
+        Parameters
+        ----------
+        order : {'C', 'F', 'A', 'K'}, optional
+
+        Returns
+        ----------
+        numpy.ndarray or ndarray-like
+            Flattened data of the Series.
 
         """
         return self._query_compiler.to_numpy().flatten(order=order)
