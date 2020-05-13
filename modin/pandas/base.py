@@ -1548,16 +1548,20 @@ class BasePandasDataset(object):
         return _LocIndexer(self)
 
     def mad(self, axis=None, skipna=None, level=None):
-        """Return the mean absolute deviation of the values for the requested axis.
+        """
+        Return the mean absolute deviation of the values for the requested axis.
 
-        Args:
-            axis: {index (0), columns (1)}
-            skipna: bool, default True
+        Parameters
+        ----------
+            axis : {index (0), columns (1)}
+            skipna : bool, default True
                 Exclude NA/null values when computing the result.
-            level: int or level name, default None
+            level : int or level name, default None
 
-        Returns:
+        Returns
+        -------
             Series or DataFrame (if level specified)
+
         """
         axis = self._get_axis_number(axis)
 
