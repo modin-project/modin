@@ -3933,68 +3933,70 @@ class TestDataFrameWindow:
             df_equals(modin_result, pandas_result)
 
     def test_nlargest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nlargest(3, "population"), pandas_df.nlargest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nlargest(3, "population")
 
     def test_nsmallest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nsmallest(3, "population"), pandas_df.nsmallest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nsmallest(3, "population")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
