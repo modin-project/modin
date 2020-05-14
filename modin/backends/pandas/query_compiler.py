@@ -361,6 +361,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
     mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
+    mad = ReductionFunction.register(pandas.DataFrame.mad)
 
     # END Reduction operations
 
