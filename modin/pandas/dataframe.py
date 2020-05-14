@@ -1243,11 +1243,55 @@ class DataFrame(BasePandasDataset):
         )
 
     def nlargest(self, n, columns, keep="first"):
-        return self._default_to_pandas(pandas.DataFrame.nlargest, n, columns, keep=keep)
+        """
+        Return the first `n` rows ordered by `columns` in descending order.
+        Return the first `n` rows with the largest values in `columns`, in
+        descending order. The columns that are not specified are returned as
+        well, but not used for ordering.
+        This method is equivalent to
+        ``df.sort_values(columns, ascending=False).head(n)``, but more
+        performant.
+        Parameters
+        ----------
+        n : int
+            Number of rows to return.
+        columns : label or list of labels
+            Column label(s) to order by.
+        keep : {'first', 'last', 'all'}, default 'first'
+            Where there are duplicate values:
+            - `first` : prioritize the first occurrence(s)
+            - `last` : prioritize the last occurrence(s)
+            - ``all`` : do not drop any duplicates, even it means
+                        selecting more than `n` items.
+            .. versionadded:: 0.24.0
+        """
+        return DataFrame(query_compiler=self._query_compiler.nlargest(n, columns, keep))
 
     def nsmallest(self, n, columns, keep="first"):
-        return self._default_to_pandas(
-            pandas.DataFrame.nsmallest, n, columns, keep=keep
+        """
+        Return the first `n` rows ordered by `columns` in ascending order.
+        Return the first `n` rows with the smallest values in `columns`, in
+        ascending order. The columns that are not specified are returned as
+        well, but not used for ordering.
+        This method is equivalent to
+        ``df.sort_values(columns, ascending=True).head(n)``, but more
+        performant.
+        Parameters
+        ----------
+        n : int
+            Number of items to retrieve.
+        columns : list or str
+            Column name or names to order by.
+        keep : {'first', 'last', 'all'}, default 'first'
+            Where there are duplicate values:
+            - ``first`` : take the first occurrence.
+            - ``last`` : take the last occurrence.
+            - ``all`` : do not drop any duplicates, even it means
+              selecting more than `n` items.
+            .. versionadded:: 0.24.0
+        """
+        return DataFrame(
+            query_compiler=self._query_compiler.nsmallest(n, columns, keep)
         )
 
     def pivot(self, index=None, columns=None, values=None):

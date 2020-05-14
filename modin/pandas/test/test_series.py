@@ -1871,19 +1871,19 @@ def test_plot(request, data):
     if name_contains(request.node.name, numeric_dfs):
         # We have to test this way because equality in plots means same object.
         zipped_plot_lines = zip(modin_series.plot().lines, pandas_series.plot().lines)
-        for l, r in zipped_plot_lines:
-            if isinstance(l.get_xdata(), np.ma.core.MaskedArray) and isinstance(
-                r.get_xdata(), np.ma.core.MaskedArray
+        for left, right in zipped_plot_lines:
+            if isinstance(left.get_xdata(), np.ma.core.MaskedArray) and isinstance(
+                right.get_xdata(), np.ma.core.MaskedArray
             ):
-                assert all((l.get_xdata() == r.get_xdata()).data)
+                assert all((left.get_xdata() == right.get_xdata()).data)
             else:
-                assert np.array_equal(l.get_xdata(), r.get_xdata())
-            if isinstance(l.get_ydata(), np.ma.core.MaskedArray) and isinstance(
-                r.get_ydata(), np.ma.core.MaskedArray
+                assert np.array_equal(left.get_xdata(), right.get_xdata())
+            if isinstance(left.get_ydata(), np.ma.core.MaskedArray) and isinstance(
+                right.get_ydata(), np.ma.core.MaskedArray
             ):
-                assert all((l.get_ydata() == r.get_ydata()).data)
+                assert all((left.get_ydata() == right.get_ydata()).data)
             else:
-                assert np.array_equal(l.get_xdata(), r.get_xdata())
+                assert np.array_equal(left.get_xdata(), right.get_xdata())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1948,10 +1948,12 @@ def test_rank(data, na_option):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_ravel(data):
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel(data, order):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        np.testing.assert_equal(modin_series.ravel(), pandas_series.ravel())
+    np.testing.assert_equal(
+        modin_series.ravel(order=order), pandas_series.ravel(order=order)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
