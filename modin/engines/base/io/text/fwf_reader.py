@@ -51,6 +51,12 @@ class FWFReader(TextFileReader):
         if chunksize is not None:
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
+        # If infer_nrows is a significant portion of the number of rows, pandas may be
+        # faster.
+        infer_nrows = kwargs.get("infer_nrows", 100)
+        if infer_nrows > 100:
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
