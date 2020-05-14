@@ -2277,6 +2277,11 @@ class TestDataFrameDefault:
         pandas_result = pandas_df.dot(pandas_series)
         df_equals(modin_result, pandas_result)
 
+        # Test dataframe input
+        modin_result = modin_df.dot(modin_df.T)
+        pandas_result = pandas_df.dot(pandas_df.T)
+        df_equals(modin_result, pandas_result)
+
         # Test when input series index doesn't line up with columns
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))

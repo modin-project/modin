@@ -582,6 +582,38 @@ class Series(BasePandasDataset):
         )
 
     def dot(self, other):
+        """
+        Compute the dot product between the Series and the columns of other.
+
+        This method computes the dot product between the Series and another
+        one, or the Series and each columns of a DataFrame, or the Series and
+        each columns of an array.
+
+        It can also be called using `self @ other` in Python >= 3.5.
+
+        Parameters
+        ----------
+        other : Series, DataFrame or array-like
+            The other object to compute the dot product with its columns.
+
+        Returns
+        -------
+        scalar, Series or numpy.ndarray
+            Return the dot product of the Series and other if other is a
+            Series, the Series of the dot product of Series and each rows of
+            other if other is a DataFrame or a numpy.ndarray between the Series
+            and each columns of the numpy array.
+
+        See Also
+        --------
+        DataFrame.dot: Compute the matrix product with the DataFrame.
+        Series.mul: Multiplication of series and other, element-wise.
+
+        Notes
+        -----
+        The Series and other has to share the same index if other is a Series
+        or a DataFrame.
+        """
         if isinstance(other, BasePandasDataset):
             common = self.index.union(other.index)
             if len(common) > len(self.index) or len(common) > len(other.index):
@@ -604,9 +636,7 @@ class Series(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.dot(other)
-            ).to_numpy()
+            return self._query_compiler.dot(other).to_numpy()
 
         return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 

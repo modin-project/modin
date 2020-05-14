@@ -1205,11 +1205,18 @@ def test_dot(data):
     with pytest.raises(ValueError):
         modin_result = modin_series.dot(np.arange(ind_len + 10))
 
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series.dot(modin_df)
+    pandas_result = pandas_series.dot(pandas_df)
+    df_equals(modin_result, pandas_result)
+
     # Test series input
-    modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
-    pandas_series = pandas.Series(np.arange(ind_len), index=modin_series.index)
-    modin_result = modin_series.dot(modin_series)
-    pandas_result = pandas_series.dot(pandas_series)
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    modin_result = modin_series.dot(modin_series_2)
+    pandas_result = pandas_series.dot(pandas_series_2)
     df_equals(modin_result, pandas_result)
 
     # Test when input series index doesn't line up with columns
@@ -1219,8 +1226,6 @@ def test_dot(data):
                 np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
             )
         )
-
-    # modin_series.dot(modin_series.T)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
