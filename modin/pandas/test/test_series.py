@@ -2363,9 +2363,11 @@ def test_shape(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_shift(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.shift()
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.shift(), pandas_series.shift())
+    df_equals(modin_series.shift(fill_value=777), pandas_series.shift(fill_value=777))
+    df_equals(modin_series.shift(periods=7), pandas_series.shift(periods=7))
+    df_equals(modin_series.shift(periods=-3), pandas_series.shift(periods=-3))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

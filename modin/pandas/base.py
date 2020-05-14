@@ -2551,9 +2551,83 @@ class BasePandasDataset(object):
             return obj
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
-        return self._default_to_pandas(
-            "shift", periods=periods, freq=freq, axis=axis, fill_value=fill_value
+        """
+        Shift index by desired number of periods with an optional time `freq`.
+        When `freq` is not passed, shift the index without realigning the data.
+        If `freq` is passed (in this case, the index must be date or datetime,
+        or it will raise a `NotImplementedError`), the index will be
+        increased using the periods and the `freq`.
+        Parameters
+        ----------
+        periods : int
+            Number of periods to shift. Can be positive or negative.
+        freq : DateOffset, tseries.offsets, timedelta, or str, optional
+            Offset to use from the tseries module or time rule (e.g. 'EOM').
+            If `freq` is specified then the index values are shifted but the
+            data is not realigned. That is, use `freq` if you would like to
+            extend the index when shifting and preserve the original data.
+        axis : {{0 or 'index', 1 or 'columns', None}}, default None
+            Shift direction.
+        fill_value : object, optional
+            The scalar value to use for newly introduced missing values.
+            the default depends on the dtype of `self`.
+            For numeric data, ``np.nan`` is used.
+            For datetime, timedelta, or period data, etc. :attr:`NaT` is used.
+            For extension dtypes, ``self.dtype.na_value`` is used.
+        Returns
+        -------
+            Copy of input object, shifted.
+        """
+
+        fill_index = (
+            pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+            if axis == "index" or axis == 0
+            else self.index
         )
+        from .dataframe import DataFrame
+
+        fill_columns = None
+        if isinstance(self, DataFrame):
+            fill_columns = (
+                pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+                if axis == "columns" or axis == 1
+                else self.columns
+            )
+
+        filled_df = (
+            self.__constructor__(index=fill_index, columns=fill_columns)
+            if isinstance(self, DataFrame)
+            else self.__constructor__(index=fill_index)
+        )
+        if fill_value is not None:
+            filled_df.fillna(fill_value, inplace=True)
+
+        if freq is None:
+            if axis == "index" or axis == 0:
+                if periods > 0:
+                    dropped_df = self.drop(self.index[-periods:])
+                    new_frame = filled_df.append(dropped_df, ignore_index=True)
+                    return new_frame
+                else:
+                    dropped_df = self.drop(self.index[:-periods])
+                    new_frame = dropped_df.append(filled_df, ignore_index=True)
+                    return new_frame
+            else:
+                res_columns = self.columns
+                from .concat import concat
+
+                if periods > 0:
+                    dropped_df = self.drop(self.columns[-periods:], axis="columns")
+                    new_frame = concat([filled_df, dropped_df], axis="columns")
+                    new_frame.columns = res_columns
+                    return new_frame
+                else:
+                    dropped_df = self.drop(self.columns[:-periods], axis="columns")
+                    new_frame = concat([dropped_df, filled_df], axis="columns")
+                    new_frame.columns = res_columns
+                    return new_frame
+        else:
+            return self.tshift(periods, freq)
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         """Return unbiased skew over requested axis Normalized by N-1
