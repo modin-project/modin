@@ -576,9 +576,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             axis = 1
             new_index = self.index
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
-        )
+
+        if isinstance(other, PandasQueryCompiler):
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+            )
+        else:
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                axis, map_func, new_columns=["__reduced__"]
+            )
         return self.__constructor__(new_modin_frame)
 
     def eval(self, expr, **kwargs):

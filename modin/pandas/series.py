@@ -634,7 +634,7 @@ class Series(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self._query_compiler.dot(other).to_numpy()
+            return self._query_compiler.dot(other).to_numpy().squeeze()
 
         return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 

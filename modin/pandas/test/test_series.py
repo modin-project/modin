@@ -1195,11 +1195,17 @@ def test_dot(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     ind_len = len(modin_series)
 
-    # Test list input
+    # Test 1D array input
     arr = np.arange(ind_len)
     modin_result = modin_series.dot(arr)
     pandas_result = pandas_series.dot(arr)
     df_equals(modin_result, pandas_result)
+
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series.dot(arr)
+    pandas_result = pandas_series.dot(arr)
+    assert_array_equal(modin_result, pandas_result)
 
     # Test bad dimensions
     with pytest.raises(ValueError):
@@ -1233,11 +1239,17 @@ def test_matmul(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     ind_len = len(modin_series)
 
-    # Test list input
+    # Test 1D array input
     arr = np.arange(ind_len)
     modin_result = modin_series @ arr
     pandas_result = pandas_series @ arr
     df_equals(modin_result, pandas_result)
+
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    assert_array_equal(modin_result, pandas_result)
 
     # Test bad dimensions
     with pytest.raises(ValueError):
