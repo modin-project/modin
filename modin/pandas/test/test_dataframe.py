@@ -2286,6 +2286,38 @@ class TestDataFrameDefault:
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_matmul(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        col_len = len(modin_df.columns)
+
+        # Test list input
+        arr = np.arange(col_len)
+        modin_result = modin_df @ arr
+        pandas_result = pandas_df @ arr
+        df_equals(modin_result, pandas_result)
+
+        # Test bad dimensions
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ np.arange(col_len + 10)
+
+        # Test series input
+        modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        modin_result = modin_df @ modin_series
+        pandas_result = pandas_df @ pandas_series
+        df_equals(modin_result, pandas_result)
+
+        # Test dataframe input
+        modin_result = modin_df @ modin_df.T
+        pandas_result = pandas_df @ pandas_df.T
+        df_equals(modin_result, pandas_result)
+
+        # Test when input series index doesn't line up with columns
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ pd.Series(np.arange(col_len))
+
     def test_ewm(self):
         df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
         with pytest.warns(UserWarning):

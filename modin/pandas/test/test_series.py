@@ -1228,6 +1228,42 @@ def test_dot(data):
         )
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_matmul(data):
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    ind_len = len(modin_series)
+
+    # Test list input
+    arr = np.arange(ind_len)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    df_equals(modin_result, pandas_result)
+
+    # Test bad dimensions
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ np.arange(ind_len + 10)
+
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series @ modin_df
+    pandas_result = pandas_series @ pandas_df
+    df_equals(modin_result, pandas_result)
+
+    # Test series input
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    modin_result = modin_series @ modin_series_2
+    pandas_result = pandas_series @ pandas_series_2
+    df_equals(modin_result, pandas_result)
+
+    # Test when input series index doesn't line up with columns
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ pd.Series(
+            np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
+        )
+
+
 @pytest.mark.skip(reason="Using pandas Series.")
 def test_drop():
     modin_series = create_test_series()

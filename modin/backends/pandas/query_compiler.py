@@ -562,8 +562,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         def map_func(df, other=other):
-            if isinstance(other, pandas.DataFrame):
-                other = other.squeeze()
+            if isinstance(other, PandasQueryCompiler):
+                other = other.to_pandas().squeeze()
             result = df.squeeze().dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)

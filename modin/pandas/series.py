@@ -618,16 +618,14 @@ class Series(BasePandasDataset):
             common = self.index.union(other.index)
             if len(common) > len(self.index) or len(common) > len(other.index):
                 raise ValueError("Matrices are not aligned")
-            other = other.reindex(index=self.index)._query_compiler
-            other = other.to_pandas().squeeze()
-            if isinstance(other, pandas.DataFrame):
-                return self.__constructor__(
-                    query_compiler=self._query_compiler.dot(other)
-                )
-            if isinstance(other, pandas.Series):
+
+            qc = other.reindex(index=common)._query_compiler
+            if isinstance(other, Series):
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(other)
+                    query_compiler=self._query_compiler.dot(qc)
                 )
+            else:
+                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
 
         other = np.asarray(other)
         if self.shape[0] != other.shape[0]:
