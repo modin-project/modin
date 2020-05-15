@@ -1717,10 +1717,15 @@ def test_lt(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_mad(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.mad()
+@pytest.mark.parametrize("axis", [None, 0])
+@pytest.mark.parametrize("skipna", [None, True, False])
+@pytest.mark.parametrize("level", [0, -1, None])
+def test_mad(level, data, axis, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.mad(axis=axis, skipna=skipna, level=level),
+        pandas_series.mad(axis=axis, skipna=skipna, level=level),
+    )
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])

@@ -327,8 +327,8 @@ class DataFrameGroupBy(object):
     def last(self, **kwargs):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
 
-    def mad(self):
-        return self._default_to_pandas(lambda df: df.mad())
+    def mad(self, **kwargs):
+        return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):
         result = self._apply_agg_function(lambda df: df.rank(**kwargs))
