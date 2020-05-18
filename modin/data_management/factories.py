@@ -294,3 +294,10 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
     io_cls = PyarrowOnRayIO
+
+
+class ExperimentalOmnisciOnRayFactory(BaseFactory):
+
+    from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
+
+    io_cls = OmnisciOnRayIO
