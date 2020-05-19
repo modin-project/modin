@@ -1401,17 +1401,33 @@ id1948  502.953953  173.237159 12468.3"""
     teardown_fwf_file()
 
 
-@pytest.mark.skip(reason="Chunksize doesn't work with read_fwf yet")
 def test_fwf_file_chunksize():
     setup_fwf_file(overwrite=True)
 
     # Tests __next__ and correctness of reader as an iterator
-    # Use larger chunksize to read through file quicker
-    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=50)
-    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=50)
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=5)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=5)
 
     for modin_df, pd_df in zip(rdf_reader, pd_reader):
         df_equals(modin_df, pd_df)
+
+    # Tests that get_chunk works correctly
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.get_chunk(1)
+    pd_df = pd_reader.get_chunk(1)
+
+    df_equals(modin_df, pd_df)
+
+    # Tests that read works correctly
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.read()
+    pd_df = pd_reader.read()
+
+    df_equals(modin_df, pd_df)
 
 
 def test_fwf_file_skiprows():
