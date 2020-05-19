@@ -391,7 +391,10 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
 
 def teardown_fwf_file():
     if os.path.exists(TEST_FWF_FILENAME):
-        os.remove(TEST_FWF_FILENAME)
+        try:
+            os.remove(TEST_FWF_FILENAME)
+        except PermissionError:
+            pass
 
 
 def test_from_parquet(make_parquet_file):
