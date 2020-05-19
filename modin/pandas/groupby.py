@@ -366,7 +366,7 @@ class DataFrameGroupBy(object):
         return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
 
     def sum(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
+        return type(self._df)(query_compiler=self._query_compiler.groupby_sum(self._by, self._axis, self._kwargs, **kwargs))
 
     def describe(self, **kwargs):
         return self._default_to_pandas(lambda df: df.describe(**kwargs))

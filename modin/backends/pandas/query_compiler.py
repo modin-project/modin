@@ -1104,6 +1104,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
+    def groupby_sum(self, by, axis, groupby_args, **kwargs):
+        return self.groupby_reduce(by, axis, groupby_args, lambda df: df.sum(**kwargs), {})
+
     def groupby_reduce(
         self,
         by,
