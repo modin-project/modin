@@ -14,6 +14,7 @@
 import server.server as server
 import server_worker.server_worker as worker
 import uuid
+import os
 
 
 class OmnisciServer:
@@ -23,12 +24,13 @@ class OmnisciServer:
     @classmethod
     def start_server(cls):
         if cls._server is None:
+            server_path = os.environ.get("OMNISCI_SERVER")
+            if server_path is None:
+                raise KeyError(
+                    "you should set OMNISCI_SERVER variable to provide path to OmniSci server executable"
+                )
             cls._server = server.OmnisciServer(
-                "/localdisk/ilyaenko/omnisci/build_debug/bin/omnisci_server",
-                6001,
-                "modin_db",
-                6002,
-                6003,
+                server_path, 6001, "modin_db", 6002, 6003,
             )
             cls._server.launch()
             cls._worker = worker.OmnisciServerWorker(cls._server)

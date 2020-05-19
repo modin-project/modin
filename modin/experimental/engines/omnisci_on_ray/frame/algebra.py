@@ -127,7 +127,7 @@ class FrameNode(DFAlgNode):
         out_nodes.append(node)
 
     def _append_partitions(self, partitions):
-        partitions.extend(self.modin_frame._partitions.flatten())
+        partitions += self.modin_frame._partitions.flatten()
 
     def _append_frames(self, frames):
         frames.append(self.modin_frame)
