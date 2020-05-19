@@ -1114,7 +1114,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis : (0 or 1)
             The axis the group by
         groupby_args : dict of {"str": value}
-            The arguments for groupby. These can include
+            The arguments for groupby. These can include 'level', 'sort', 'as_index',
+            'group_keys', and 'squeeze'.
         kwargs
             The keyword arguments for the sum operation
 
