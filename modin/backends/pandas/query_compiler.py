@@ -1105,6 +1105,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # after the shuffle, there should be only a local map required.
 
     def groupby_sum(self, by, axis, groupby_args, **kwargs):
+        """Groupby with sum aggregation.
+
+        Parameters
+        ----------
+        by
+            The column value to group by. This can come in the form of a query compiler
+        axis : (0 or 1)
+            The axis the group by
+        groupby_args : dict of {"str": value}
+            The arguments for groupby. These can include
+        kwargs
+            The keyword arguments for the sum operation
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new PandasQueryCompiler
+        """
         return self.groupby_reduce(by, axis, groupby_args, lambda df: df.sum(**kwargs), {})
 
     def groupby_reduce(
