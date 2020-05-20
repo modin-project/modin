@@ -17,7 +17,7 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index
 
-from .algebra import MaskNode, FrameNode
+from .df_algebra import MaskNode, FrameNode
 
 import ray
 
@@ -62,11 +62,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if col_indices:
             new_columns = col_indices
         elif col_numeric_idx is not None:
-            new_columns = [self.columns[col_numeric_idx]]
+            new_columns = self.columns[col_numeric_idx]
         else:
             new_columns = self.columns
 
-        new_frame = self.__constructor__(columns=new_columns)
         op = MaskNode(
             self,
             row_indices=row_indices,
@@ -103,6 +102,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     # columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
+
+    def to_pandas(self):
+        self._execute()
+        return super(OmnisciOnRayFrame, self).to_pandas()
 
     # @classmethod
     # def from_pandas(cls, df):

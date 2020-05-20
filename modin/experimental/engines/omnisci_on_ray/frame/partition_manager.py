@@ -54,6 +54,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         # Therefore remote execution is not necessary and will be added
         # later.
 
+        print("Executing DF plan:")
         plan.dump()
 
         # First step is to make sure all partitions are in OmniSci.

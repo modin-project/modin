@@ -12,48 +12,7 @@
 # governing permissions and limitations under the License.
 
 import abc
-
-
-class CalciteBaseExpr(abc.ABC):
-    pass
-
-
-class CalciteInputRefExpr(CalciteBaseExpr):
-    def __init__(self, input_idx):
-        self.input = input_idx
-
-
-class CalciteBaseNode(abc.ABC):
-    _next_id = [0]
-
-    def __init__(self):
-        self.id = str(type(self)._next_id[0])
-        type(self)._next_id[0] += 1
-
-    @classmethod
-    def reset_id(cls):
-        cls._next_id[0] = 0
-
-
-class CalciteScanNode(CalciteBaseNode):
-    def __init__(self, modin_frame):
-        assert modin_frame._partitions.size == 1
-        assert modin_frame._partitions[0][0].frame_id is not None
-        super(CalciteScanNode, self).__init__()
-        self.relOp = "EnumerableTableScan"
-        self.table = ["modin_db", modin_frame._partitions[0][0].frame_id]
-        self.fieldNames = modin_frame.columns.tolist()
-        # OmniSci expects from scan node to have 'inputs' field
-        # holding empty list
-        self.inputs = []
-
-
-class CalciteProjectionNode(CalciteBaseNode):
-    def __init__(self, fields, exprs):
-        super(CalciteProjectionNode, self).__init__()
-        self.relOp = "LogicalProject"
-        self.fields = fields
-        self.exprs = exprs
+from .calcite_algebra import *
 
 
 class DFAlgNode(abc.ABC):
@@ -64,6 +23,7 @@ class DFAlgNode(abc.ABC):
         pass
 
     def to_calcite(self):
+        CalciteBaseNode.reset_id()
         res = []
         self._to_calcite(res)
         return res
@@ -161,27 +121,41 @@ class MaskNode(DFAlgNode):
         )
 
     def _to_calcite(self, out_nodes):
-        if self.row_indices is not None or self.row_numeric_idx is not None:
-            raise NotImplementedError("row masking is not yet supported")
+        if self.row_indices is not None:
+            raise NotImplementedError("row indices masking is not yet supported")
+
+        frame = self.input[0]
 
         self._input_to_calcite(out_nodes)
 
-        frame = self.input[0]
-        fields = []
-        exprs = []
+        # select rows by rowid
+        if self.row_numeric_idx is not None:
+            # rowid is an additional virtual column which is always in
+            # the end of the list
+            rowid_col = CalciteInputRefExpr(len(frame.columns))
+            condition = build_calcite_row_idx_filter_expr(
+                self.row_numeric_idx, rowid_col
+            )
+            filter_node = CalciteFilterNode(condition)
+            out_nodes.append(filter_node)
 
-        if self.col_indices is not None:
-            fields = self.col_indices
-            exprs = [
-                CalciteInputRefExpr(frame.columns.tolist().index(col))
-                for col in self.col_indices
-            ]
-        elif self.col_numeric_idx is not None:
-            fields = [frame.columns[self.col_numeric_idx]]
-            exprs = CalciteInputRefExpr(self.col_numeric_idx)
+        # make projection
+        if self.col_indices is not None or self.col_numeric_idx is not None:
+            fields = []
+            exprs = []
 
-        node = CalciteProjectionNode(fields, exprs)
-        out_nodes.append(node)
+            if self.col_indices is not None:
+                fields = to_list(self.col_indices)
+                exprs = [
+                    CalciteInputRefExpr(frame.columns.tolist().index(col))
+                    for col in self.col_indices
+                ]
+            elif self.col_numeric_idx is not None:
+                fields = frame.columns[self.col_numeric_idx].tolist()
+                exprs = [CalciteInputRefExpr(x) for x in self.col_numeric_idx]
+
+            node = CalciteProjectionNode(fields, exprs)
+            out_nodes.append(node)
 
     def _print(self, prefix):
         print("{}MaskNode:".format(prefix))
@@ -194,3 +168,9 @@ class MaskNode(DFAlgNode):
         if self.col_numeric_idx is not None:
             print("{}  col_numeric_idx: {}".format(prefix, self.col_numeric_idx))
         self._print_input(prefix + "  ")
+
+
+def to_list(indices):
+    if isinstance(indices, list):
+        return indices
+    return indices.tolist()

@@ -50,6 +50,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.mask(col_indices=key)
         return self.__constructor__(new_modin_frame)
 
+    def view(self, index=None, columns=None):
+        return self.__constructor__(
+            self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
+        )
+
     def _get_index(self):
         return self._modin_frame.index
 
@@ -153,6 +158,5 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     truediv = DFAlgNotSupported("truediv")
     update = DFAlgNotSupported("update")
     var = DFAlgNotSupported("var")
-    view = DFAlgNotSupported("view")
     where = DFAlgNotSupported("where")
     write_items = DFAlgNotSupported("write_items")
