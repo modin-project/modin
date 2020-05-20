@@ -28,7 +28,7 @@ class FWFReader(TextFileReader):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         compression_type = cls.infer_compression(
-            filepath_or_buffer, kwargs.get("compression")
+            filepath_or_buffer, kwargs.get("compression", "infer")
         )
         if compression_type is not None:
             if (
