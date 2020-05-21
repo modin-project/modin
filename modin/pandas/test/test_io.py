@@ -14,6 +14,7 @@
 import pytest
 import numpy as np
 import pandas
+from pandas.errors import ParserWarning
 from collections import OrderedDict
 from modin.pandas.utils import to_pandas
 from pathlib import Path
@@ -658,6 +659,16 @@ def test_from_csv(make_csv_file):
     pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
     modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
 
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_sep_none(make_csv_file):
+    make_csv_file()
+
+    with pytest.warns(ParserWarning):
+        pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None)
+    with pytest.warns(ParserWarning):
+        modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None)
     df_equals(modin_df, pandas_df)
 
 
