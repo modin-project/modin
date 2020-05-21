@@ -2176,14 +2176,24 @@ def test_rtruediv(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sample(data):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.sample(frac=0.5, random_state=21019),
-        pandas_series.sample(frac=0.5, random_state=21019),
-    )
-    df_equals(
-        modin_series.sample(n=12, random_state=21019),
-        pandas_series.sample(n=12, random_state=21019),
-    )
+    try:
+        pandas_result = pandas_series.sample(frac=0.5, random_state=21019)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.sample(frac=0.5, random_state=21019)
+    else:
+        modin_result = modin_series.sample(frac=0.5, random_state=21019)
+        df_equals(pandas_result, modin_result)
+
+    try:
+        pandas_result = pandas_series.sample(n=12, random_state=21019)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.sample(n=12, random_state=21019)
+    else:
+        modin_result = modin_series.sample(n=12, random_state=21019)
+        df_equals(pandas_result, modin_result)
+
     with pytest.warns(UserWarning):
         df_equals(
             modin_series.sample(n=0, random_state=21019),
