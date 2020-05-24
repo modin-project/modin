@@ -2272,7 +2272,7 @@ class TestDataFrameDefault:
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
-        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
         modin_result = modin_df.dot(modin_series)
         pandas_result = pandas_df.dot(pandas_series)
         df_equals(modin_result, pandas_result)
@@ -2304,7 +2304,7 @@ class TestDataFrameDefault:
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
-        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
         modin_result = modin_df @ modin_series
         pandas_result = pandas_df @ pandas_series
         df_equals(modin_result, pandas_result)

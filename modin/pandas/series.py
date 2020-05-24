@@ -65,7 +65,7 @@ class Series(BasePandasDataset):
             if index is not None:
                 if any(i not in data.index for i in index):
                     raise NotImplementedError(
-                        "Passing non-existant columns or index values to constructor "
+                        "Passing non-existent columns or index values to constructor "
                         "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler

@@ -561,10 +561,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Returns the result of the matrix multiply.
         """
+        if isinstance(other, PandasQueryCompiler):
+            other = other.to_pandas().squeeze()
 
         def map_func(df, other=other):
-            if isinstance(other, PandasQueryCompiler):
-                other = other.to_pandas().squeeze()
             result = df.squeeze().dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
@@ -578,7 +578,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis = 1
             new_index = self.index
 
-        if isinstance(other, PandasQueryCompiler):
+        if isinstance(other, (pandas.DataFrame, pandas.Series)):
             new_modin_frame = self._modin_frame._apply_full_axis(
                 axis, map_func, new_index=new_index, new_columns=["__reduced__"]
             )

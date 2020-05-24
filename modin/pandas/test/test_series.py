@@ -1220,7 +1220,7 @@ def test_dot(data):
 
     # Test series input
     modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
-    pandas_series_2 = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
     modin_result = modin_series.dot(modin_series_2)
     pandas_result = pandas_series.dot(pandas_series_2)
     df_equals(modin_result, pandas_result)
@@ -1264,7 +1264,7 @@ def test_matmul(data):
 
     # Test series input
     modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
-    pandas_series_2 = pandas.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
     modin_result = modin_series @ modin_series_2
     pandas_result = pandas_series @ pandas_series_2
     df_equals(modin_result, pandas_result)
