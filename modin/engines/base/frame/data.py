@@ -962,7 +962,7 @@ class BasePandasFrame(object):
 
         Returns:
             A new dataframe.
-        """
+        """ 
         assert apply_indices is not None or numeric_indices is not None
         # Convert indices to numeric indices
         old_index = self.index if axis else self.columns

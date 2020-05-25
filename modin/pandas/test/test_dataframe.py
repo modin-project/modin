@@ -1444,7 +1444,8 @@ class TestDataFrameMapMetadata:
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
-    def test_insert(self, data, loc):
+    @pytest.mark.parametrize("astype", ["int32", "category"])
+    def test_insert(self, data, loc, astype):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
@@ -1467,6 +1468,17 @@ class TestDataFrameMapMetadata:
 
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
+
+        if astype:
+            md_value, pd_value = modin_df[:, 0], pandas_df[:, 0]
+            md_value, pd_value = md_value.astype(astype), pd_value.astype(astype)
+
+            modin_df.insert(0, "TypeSaver", md_value)
+            pandas_df.insert(0, "TypeSaver", pd_value)
+            df_equals(modin_df, pandas_df)
+
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
 
         modin_df.insert(0, "Duplicate", modin_df[modin_df.columns[0]])
         pandas_df.insert(0, "Duplicate", pandas_df[pandas_df.columns[0]])
