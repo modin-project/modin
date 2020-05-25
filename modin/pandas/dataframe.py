@@ -456,7 +456,7 @@ class DataFrame(BasePandasDataset):
             idx_name,
             observed=observed,
             drop=drop,
-            by_type=by_type
+            by_type=by_type,
         )
 
     def _reduce_dimension(self, query_compiler):
