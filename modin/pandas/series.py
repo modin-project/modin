@@ -47,6 +47,7 @@ class Series(BasePandasDataset):
         copy=False,
         fastpath=False,
         query_compiler=None,
+        shape_hint=None,
     ):
         """
     One-dimensional ndarray with axis labels (including time series).
@@ -91,7 +92,11 @@ class Series(BasePandasDataset):
                     )
                 )
             )._query_compiler
-        if len(query_compiler.columns) != 1 or (
+        if shape_hint == "column":
+            assert len(query_compiler.columns) == 1, "wrong shape hint"
+        elif shape_hint == "row":
+            query_compiler = query_compiler.transpose()
+        elif len(query_compiler.columns) != 1 or (
             len(query_compiler.index) == 1 and query_compiler.index[0] == "__reduced__"
         ):
             query_compiler = query_compiler.transpose()

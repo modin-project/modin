@@ -25,6 +25,8 @@ class BaseQueryCompiler(abc.ABC):
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
 
+    default_for_empty = True
+
     # Metadata modification abstract methods
     @abc.abstractmethod
     def add_prefix(self, prefix, axis=1):

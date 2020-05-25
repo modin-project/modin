@@ -30,6 +30,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a lazy DataFrame Algebra based backend."""
 
+    default_for_empty = False
+
     def __init__(self, frame):
         self._modin_frame = frame
 
@@ -54,6 +56,34 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
         )
+
+    def groupby_sum(self, by, axis, groupby_args, **kwargs):
+        """Groupby with sum aggregation.
+
+        Parameters
+        ----------
+        by
+            The column value to group by. This can come in the form of a query compiler
+        axis : (0 or 1)
+            The axis the group by
+        groupby_args : dict of {"str": value}
+            The arguments for groupby. These can include 'level', 'sort', 'as_index',
+            'group_keys', and 'squeeze'.
+        kwargs
+            The keyword arguments for the sum operation
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new PandasQueryCompiler
+        """
+        new_frame = self._modin_frame.groupby_agg(
+            by, axis, "sum", groupby_args, **kwargs
+        )
+        new_qc = self.__constructor__(new_frame)
+        if groupby_args["squeeze"]:
+            new_qc = new_qc.squeeze()
+        return new_qc
 
     def _get_index(self):
         return self._modin_frame.index

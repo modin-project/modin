@@ -48,14 +48,14 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         return 1
 
     @classmethod
-    def run_exec_plan(cls, plan):
+    def run_exec_plan(cls, plan, index_cols):
         # TODO: this plan is supposed to be executed remotely using Ray.
         # For now OmniSci engine support only a single node cluster.
         # Therefore remote execution is not necessary and will be added
         # later.
 
         print("Executing DF plan:")
-        plan.dump()
+        plan.dump(">")
 
         # First step is to make sure all partitions are in OmniSci.
         frames = plan.collect_frames()
@@ -66,13 +66,21 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:
-                    p.frame_id = put_to_omnisci(ray.get(p.oid))
+                    df = ray.get(p.oid)
+                    if frame._index_cols is not None:
+                        df = df.reset_index()
+                    p.frame_id = put_to_omnisci(df)
 
         calcite_plan = plan.to_calcite()
         calcite_json = json.dumps({"rels": calcite_plan}, default=lambda o: o.__dict__)
 
         sql = "execute relalg " + calcite_json
         df = OmnisciServer()._worker._conn._execute(sql).to_df()
+        if index_cols is not None:
+            df = df.set_index(index_cols)
+
+        # print("Execution result:")
+        # print(df)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class.put(df)
