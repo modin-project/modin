@@ -668,57 +668,6 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Abstract map across rows/columns
 
-    # Abstract head/tail/front/back
-    @abc.abstractmethod
-    def head(self, n):
-        """Returns the first n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the first n rows of the original QueryCompiler.
-        """
-        pass
-
-    @abc.abstractmethod
-    def tail(self, n):
-        """Returns the last n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the last n rows of the original QueryCompiler.
-        """
-        pass
-
-    @abc.abstractmethod
-    def front(self, n):
-        """Returns the first n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the first n columns of the original QueryCompiler.
-        """
-        pass
-
-    @abc.abstractmethod
-    def back(self, n):
-        """Returns the last n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the last n columns of the original QueryCompiler.
-        """
-        pass
-
-    # END head/tail/front/back
-
     # Abstract __getitem__ methods
     @abc.abstractmethod
     def getitem_column_array(self, key):

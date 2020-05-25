@@ -352,6 +352,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
+    nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
+    nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
@@ -359,6 +361,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
     mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
+    mad = ReductionFunction.register(pandas.DataFrame.mad)
 
     # END Reduction operations
 
@@ -786,53 +789,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     # END Map across rows/columns
-
-    # Head/Tail/Front/Back
-    def head(self, n):
-        """Returns the first n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the first n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.head(n))
-
-    def tail(self, n):
-        """Returns the last n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the last n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.tail(n))
-
-    def front(self, n):
-        """Returns the first n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the first n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.front(n))
-
-    def back(self, n):
-        """Returns the last n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the last n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.back(n))
-
-    # End Head/Tail/Front/Back
 
     # __getitem__ methods
     def getitem_column_array(self, key, numeric=False):

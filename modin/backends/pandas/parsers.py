@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from io import BytesIO
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
+import warnings
+
 from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
-from io import BytesIO
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
@@ -82,6 +84,7 @@ class PandasParser(object):
 class PandasCSVParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)

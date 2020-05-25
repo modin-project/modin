@@ -2383,10 +2383,16 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
 
-    def test_mad(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).mad()
+    @pytest.mark.parametrize("data", test_data_values)
+    @pytest.mark.parametrize("axis", [None, 0, 1])
+    @pytest.mark.parametrize("skipna", [None, True, False])
+    @pytest.mark.parametrize("level", [0, -1, None])
+    def test_mad(self, level, data, axis, skipna):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        df_equals(
+            modin_df.mad(axis=axis, skipna=skipna, level=level),
+            pandas_df.mad(axis=axis, skipna=skipna, level=level),
+        )
 
     def test_mask(self):
         df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])
@@ -3933,68 +3939,70 @@ class TestDataFrameWindow:
             df_equals(modin_result, pandas_result)
 
     def test_nlargest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nlargest(3, "population"), pandas_df.nlargest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nlargest(3, "population")
 
     def test_nsmallest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nsmallest(3, "population"), pandas_df.nsmallest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nsmallest(3, "population")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)

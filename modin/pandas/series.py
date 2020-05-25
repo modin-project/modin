@@ -659,11 +659,6 @@ class Series(BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).gt(new_other, level=level, axis=axis)
 
-    def head(self, n=5):
-        if n == 0:
-            return Series(dtype=self.dtype)
-        return super(Series, self).head(n)
-
     def hist(
         self,
         by=None,
@@ -867,7 +862,20 @@ class Series(BasePandasDataset):
     radd = add
 
     def ravel(self, order="C"):
-        return self._default_to_pandas(pandas.Series.ravel, order=order)
+        """
+        Returns the flattened containing data as ndarray.
+
+        Parameters
+        ----------
+        order : {'C', 'F', 'A', 'K'}, optional
+
+        Returns
+        ----------
+        numpy.ndarray or ndarray-like
+            Flattened data of the Series.
+
+        """
+        return self._query_compiler.to_numpy().flatten(order=order)
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)
@@ -1071,11 +1079,6 @@ class Series(BasePandasDataset):
 
     def swaplevel(self, i=-2, j=-1, copy=True):
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
-
-    def tail(self, n=5):
-        if n == 0:
-            return Series(dtype=self.dtype)
-        return super(Series, self).tail(n)
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):
         return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)

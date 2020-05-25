@@ -1,0 +1,13 @@
+pandas==1.0.3
+numpy
+psutil==5.6.6
+pytest
+pytest-testmon
+pytest-custom_exit_code
+pytest-xdist
+matplotlib
+xarray
+scipy
+Jinja2
+msgpack<1.0
+pandas_gbq
