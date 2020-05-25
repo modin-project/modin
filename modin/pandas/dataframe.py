@@ -394,6 +394,7 @@ class DataFrame(BasePandasDataset):
         """
         axis = self._get_axis_number(axis)
         idx_name = None
+        by_type = None
         # Drop here indicates whether or not to drop the data column before doing the
         # groupby. The typical pandas behavior is to drop when the data came from this
         # dataframe. When a string, Series directly from this dataframe, or list of
@@ -405,6 +406,7 @@ class DataFrame(BasePandasDataset):
         elif isinstance(by, str):
             drop = by in self.columns
             idx_name = by
+            by_type = str
             if (
                 isinstance(self.axes[axis], pandas.MultiIndex)
                 and by in self.axes[axis].names
@@ -454,6 +456,7 @@ class DataFrame(BasePandasDataset):
             idx_name,
             observed=observed,
             drop=drop,
+            by_type=by_type
         )
 
     def _reduce_dimension(self, query_compiler):

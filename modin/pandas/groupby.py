@@ -40,6 +40,7 @@ class DataFrameGroupBy(object):
         squeeze,
         idx_name,
         drop,
+        by_type=None,
         **kwargs
     ):
         self._axis = axis
@@ -50,6 +51,7 @@ class DataFrameGroupBy(object):
         self._columns = self._query_compiler.columns
         self._by = by
         self._drop = drop
+        self._by_type = by_type if by_type else type(self._by)
 
         if (
             level is None
@@ -281,6 +283,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 idx_name=self._idx_name,
                 drop=self._drop,
+                by_type=self._by_type,
                 **kwargs
             )
         return SeriesGroupBy(
@@ -289,6 +292,7 @@ class DataFrameGroupBy(object):
             self._axis,
             idx_name=self._idx_name,
             drop=False,
+            by_type=self._by_type,
             **kwargs
         )
 
@@ -581,7 +585,11 @@ class DataFrameGroupBy(object):
             isinstance(self._by, type(self._query_compiler))
             and len(self._by.columns) == 1
         ):
-            by = self._by.to_pandas().squeeze()
+            by = (
+                self._by.columns[0]
+                if self._by_type is str
+                else self._by.to_pandas().squeeze()
+            )
         elif isinstance(self._by, type(self._query_compiler)):
             by = list(self._by.columns)
         else:
