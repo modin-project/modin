@@ -55,13 +55,13 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
   test-all:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        engine: ["ray"]
-        part: [3]
+        engine: ["python", "ray", "dask"]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
@@ -73,14 +73,29 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Install HDF5
+        if: matrix.part == 3
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: python -m pytest --testmon-noselect modin/pandas/test/test_io.py
+      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
+        if: matrix.part != 3
+      - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest --testmon-noselect modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_groupby.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_reshape.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_general.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_io.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+        if: matrix.part == 3
+      - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -112,8 +127,10 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
+      - run: choco install codecov
+      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
