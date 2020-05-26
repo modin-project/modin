@@ -23,10 +23,18 @@ class CalciteBaseExpr(abc.ABC):
         new_expr = CalciteOpExpr("=", [self, other], res_type)
         return new_expr
 
+    def is_null(self):
+        res_type = CalciteOpExprType("BOOLEAN", False)
+        new_expr = CalciteOpExpr("IS NULL", [self], res_type)
+        return new_expr
+
 
 class CalciteInputRefExpr(CalciteBaseExpr):
     def __init__(self, input_idx):
         self.input = input_idx
+
+    def __repr__(self):
+        return "(INPUT {})".format(self.input)
 
 
 class CalciteLiteralExpr(CalciteBaseExpr):
@@ -44,11 +52,25 @@ class CalciteLiteralExpr(CalciteBaseExpr):
         self.type_scale = 0
         self.type_precision = 19
 
+    def __repr__(self):
+        return str(self.literal)
+
 
 class CalciteOpExprType(CalciteBaseExpr):
     def __init__(self, expr_type, nullable):
         self.type = expr_type
         self.nullable = nullable
+
+    @classmethod
+    def from_scalar(cls, val, nullable=True):
+        if isinstance(val, int):
+            return cls("INTEGER", nullable)
+        # elif isinstance(val, float):
+        #    return cls("INTEGER", nullable)
+        # elif isinstance(val, bool):
+        #    return cls("BOOLEAN", nullable)
+        else:
+            raise RuntimeError("unexpected value type {}".format(type(val)))
 
 
 class CalciteOpExpr(CalciteBaseExpr):
@@ -56,6 +78,11 @@ class CalciteOpExpr(CalciteBaseExpr):
         self.op = op
         self.operands = operands
         self.type = res_type
+
+    def __repr__(self):
+        if len(self.operands) == 1:
+            return "({} {})".format(self.op.upper(), self.operands[0])
+        return "({} {})".format(self.op.upper(), self.operands)
 
 
 class CalciteAggregateExpr(CalciteBaseExpr):
@@ -152,3 +179,7 @@ def build_calcite_row_idx_filter_expr(row_idx, row_col):
     res = CalciteOpExpr("OR", exprs, res_type)
 
     return res
+
+
+def build_calcite_if_then_else(cond, then_val, else_val, res_type):
+    return CalciteOpExpr("CASE", [cond, then_val, else_val], res_type)

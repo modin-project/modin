@@ -97,6 +97,24 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def _set_columns(self, columns):
         self._modin_frame.columns = columns
 
+    def fillna(
+        self,
+        value=None,
+        method=None,
+        axis=None,
+        inplace=False,
+        limit=None,
+        downcast=None,
+    ):
+        assert not inplace, "inplace=True should be handled on upper level"
+        new_frame = self._modin_frame.fillna(
+            value=value, method=method, axis=axis, limit=limit, downcast=downcast,
+        )
+        return self.__constructor__(new_frame)
+
+    def free(self):
+        return
+
     index = property(_get_index, _set_index)
     columns = property(_get_columns, _set_columns)
 
@@ -131,10 +149,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     dropna = DFAlgNotSupported("dropna")
     eq = DFAlgNotSupported("eq")
     eval = DFAlgNotSupported("eval")
-    fillna = DFAlgNotSupported("fillna")
     first_valid_index = DFAlgNotSupported("first_valid_index")
     floordiv = DFAlgNotSupported("floordiv")
-    free = DFAlgNotSupported("free")
     front = DFAlgNotSupported("front")
     ge = DFAlgNotSupported("ge")
     get_dummies = DFAlgNotSupported("get_dummies")

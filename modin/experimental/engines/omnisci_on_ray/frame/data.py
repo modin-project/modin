@@ -17,9 +17,16 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index
 
-from .df_algebra import MaskNode, FrameNode, GroupbyAggNode
+from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode
+from .calcite_algebra import (
+    CalciteInputRefExpr,
+    CalciteLiteralExpr,
+    CalciteOpExprType,
+    build_calcite_if_then_else,
+)
 
 import ray
+import numpy as np
 
 
 class OmnisciOnRayFrame(BasePandasFrame):
@@ -134,6 +141,51 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_op = GroupbyAggNode(self, groupby_cols, agg, groupby_args)
         new_frame = self.__constructor__(
             columns=new_columns, op=new_op, index_cols=index_cols
+        )
+
+        return new_frame
+
+    def fillna(
+        self, value=None, method=None, axis=None, limit=None, downcast=None,
+    ):
+        if axis != 0:
+            raise NotImplementedError("fillna is supported for axis = 0 only")
+
+        if limit is not None:
+            raise NotImplementedError("fillna doesn't support limit yet")
+
+        if downcast is not None:
+            raise NotImplementedError("fillna doesn't support downcast yet")
+
+        if method is not None:
+            raise NotImplementedError("fillna doesn't support method yet")
+
+        exprs = {}
+        if isinstance(value, dict):
+            for col in self.columns:
+                col_expr = CalciteInputRefExpr(self._table_cols.index(col))
+                if col in value:
+                    value_expr = CalciteLiteralExpr(value[col])
+                    res_type = CalciteOpExprType.from_scalar(value[col], False)
+                    exprs[col] = build_calcite_if_then_else(
+                        col_expr.is_null(), value_expr, col_expr, res_type
+                    )
+                else:
+                    exprs[col] = col_expr
+        elif np.isscalar(value):
+            value_expr = CalciteLiteralExpr(value)
+            res_type = CalciteOpExprType.from_scalar(value, False)
+            for col in self.columns:
+                col_expr = CalciteInputRefExpr(self._table_cols.index(col))
+                exprs[col] = build_calcite_if_then_else(
+                    col_expr.is_null(), value_expr, col_expr, res_type
+                )
+        else:
+            raise NotImplementedError("unsupported value for fillna")
+
+        new_op = TransformNode(self, exprs)
+        new_frame = self.__constructor__(
+            columns=self.columns, op=new_op, index_cols=self._index_cols
         )
 
         return new_frame
