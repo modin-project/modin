@@ -903,13 +903,12 @@ class DataFrame(BasePandasDataset):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
             value = value.iloc[:, 0]
-        
-        
+
+        if isinstance(value, Series):
+            # TODO: Remove broadcast of Series
+            value = value._to_pandas()
 
         if len(self.index) == 0:
-            if isinstance(value, Series):
-                # TODO: Remove broadcast of Series
-                value = value._to_pandas()
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):

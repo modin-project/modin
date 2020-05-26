@@ -14,7 +14,11 @@
 import copy
 import numpy as np
 import pandas
-from pandas.util.testing import assert_almost_equal, assert_frame_equal
+from pandas.util.testing import (
+    assert_almost_equal,
+    assert_frame_equal,
+    assert_categorical_equal,
+)
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from io import BytesIO
@@ -354,6 +358,22 @@ json_long_bytes = BytesIO(json_long_string.encode(encoding="UTF-8"))
 json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
 
 
+def df_categories_equals(df1, df2):
+    categories_columns = df1.select_dtypes(include="category").columns
+
+    # import pdb; pdb.set_trace()
+    # np.testing.assert_equal(categories_columns, df2.select_dtypes(include="category").columns)
+
+    for column in categories_columns:
+        is_category_ordered = df1[column].dtype.ordered
+        assert_categorical_equal(
+            df1[column].values,
+            df2[column].values,
+            check_dtype=False,
+            check_category_order=is_category_ordered,
+        )
+
+
 def df_equals(df1, df2):
     """Tests if df1 and df2 are equal.
 
@@ -423,6 +443,7 @@ def df_equals(df1, df2):
                 check_datetimelike_compat=True,
                 check_index_type=False,
                 check_column_type=False,
+                check_categorical=False,
             )
         except Exception:
             assert_frame_equal(
@@ -432,7 +453,9 @@ def df_equals(df1, df2):
                 check_datetimelike_compat=True,
                 check_index_type=False,
                 check_column_type=False,
+                check_categorical=False,
             )
+        df_categories_equals(df1, df2)
     elif isinstance(df1, types_for_almost_equals) and isinstance(
         df2, types_for_almost_equals
     ):
