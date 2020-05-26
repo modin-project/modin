@@ -16,6 +16,7 @@ import pandas
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
+from pandas.api.types import union_categoricals
 
 
 class BaseFrameManager(object):
@@ -223,6 +224,27 @@ class BaseFrameManager(object):
         else:
             return np.append(left_parts, right_parts, axis=axis)
 
+
+    @classmethod
+    def concatenate(cls, dfs):
+        """Concatenate while preserving categorical columns.
+
+        NB: We change the categories in-place for the input dataframes"""
+        # Iterate on categorical columns common to all dfs
+        for col in set.intersection(
+            *[
+                set(df.select_dtypes(include='category').columns)
+                for df in dfs
+            ]
+        ):
+            # Generate the union category across dfs for this column
+            uc = union_categoricals([df[col] for df in dfs])
+            # Change to union category for all dataframes
+            for df in dfs:
+                df[col] = pandas.Categorical( df[col], categories=uc.categories )
+        return pandas.concat(dfs)
+
+
     @classmethod
     def to_pandas(cls, partitions):
         """Convert this object into a Pandas DataFrame from the partitions.
@@ -248,10 +270,11 @@ class BaseFrameManager(object):
             for row in retrieved_objects
             if not all(part.empty for part in row)
         ]
+
         if len(df_rows) == 0:
             return pandas.DataFrame()
         else:
-            return pandas.concat(df_rows)
+            return cls.concatenate(df_rows)
 
     @classmethod
     def to_numpy(cls, partitions):

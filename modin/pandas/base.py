@@ -66,7 +66,7 @@ class BasePandasDataset(object):
             )
         # Add one here so that pandas automatically adds the dots
         # It turns out to be faster to extract 2 extra rows and columns than to
-        # build the dots ourselves.
+        # build the dots ourselves.  
         num_rows_for_head = num_rows // 2 + 1
         num_rows_for_tail = (
             num_rows_for_head
