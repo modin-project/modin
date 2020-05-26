@@ -23,11 +23,7 @@ jobs:
       - name: Install HDF5
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Install pip requirements
-        if: matrix.part == 3
-        run: pip install -r requirements.txt
-      - run: pip install -r df_test_requires.txt
-        if: matrix.part != 3
+      - run: pip install -r requirements.txt
       - run: pip install ray==0.8
         if: matrix.engine == 'ray'
       - run: pip install dask[complete] distributed
@@ -107,17 +103,3 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
       - run: bash <(curl -s https://codecov.io/bash)
-  test-api:
-    runs-on: ubuntu-latest
-    name: test api
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_api.py
