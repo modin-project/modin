@@ -6,10 +6,9 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        engine: ["python", "ray", "dask"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        engine: ["ray"]
+        part: [3]
     env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       MODIN_ENGINE: ${{matrix.engine}}
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
@@ -20,32 +19,12 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - name: Install HDF5
-        if: matrix.part == 3
-        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: pip install ray==0.8
-        if: matrix.engine == 'ray'
-      - run: pip install dask[complete] distributed
-        if: matrix.engine == 'dask'
-      - run: pip install coverage pytest-cov
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
-        if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
-        if: matrix.part == 3
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-        if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
     runs-on: windows-latest
     strategy:
@@ -63,24 +42,21 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r windows_test_requires.txt
-      - run: pip install coverage pytest-cov
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+      - run: pip install -r requirements/windows_test_requires.txt
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: choco install codecov
-      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     runs-on: ubuntu-latest
     strategy:
@@ -101,5 +77,4 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_io.py::test_from_csv
