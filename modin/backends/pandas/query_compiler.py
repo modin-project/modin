@@ -1124,7 +1124,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             A new PandasQueryCompiler
         """
-        return self.groupby_reduce(by, axis, groupby_args, lambda df: df.sum(**kwargs), {})
+        return self.groupby_reduce(
+            by, axis, groupby_args, lambda df: df.sum(**kwargs), {}
+        )
 
     def groupby_reduce(
         self,
