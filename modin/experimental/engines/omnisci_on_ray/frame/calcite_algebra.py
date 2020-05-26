@@ -58,12 +58,23 @@ class CalciteOpExpr(CalciteBaseExpr):
         self.type = res_type
 
 
+class CalciteAggregateExpr(CalciteBaseExpr):
+    def __init__(self, agg, operands, res_type, distinct):
+        self.agg = agg.upper()
+        self.operands = operands
+        if not isinstance(self.operands, list):
+            self.operands = [self.operands]
+        self.type = res_type
+        self.distinct = distinct
+
+
 class CalciteBaseNode(abc.ABC):
     _next_id = [0]
 
-    def __init__(self):
+    def __init__(self, relOp):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
+        self.relOp = relOp
 
     @classmethod
     def reset_id(cls):
@@ -74,11 +85,9 @@ class CalciteScanNode(CalciteBaseNode):
     def __init__(self, modin_frame):
         assert modin_frame._partitions.size == 1
         assert modin_frame._partitions[0][0].frame_id is not None
-        super(CalciteScanNode, self).__init__()
-        self.relOp = "EnumerableTableScan"
+        super(CalciteScanNode, self).__init__("EnumerableTableScan")
         self.table = ["modin_db", modin_frame._partitions[0][0].frame_id]
-        self.fieldNames = modin_frame.columns.tolist()
-        self.fieldNames.append("rowid")
+        self.fieldNames = modin_frame._table_cols + ["rowid"]
         # OmniSci expects from scan node to have 'inputs' field
         # holding empty list
         self.inputs = []
@@ -86,17 +95,36 @@ class CalciteScanNode(CalciteBaseNode):
 
 class CalciteProjectionNode(CalciteBaseNode):
     def __init__(self, fields, exprs):
-        super(CalciteProjectionNode, self).__init__()
-        self.relOp = "LogicalProject"
+        super(CalciteProjectionNode, self).__init__("LogicalProject")
         self.fields = fields
         self.exprs = exprs
 
 
 class CalciteFilterNode(CalciteBaseNode):
     def __init__(self, condition):
-        super(CalciteFilterNode, self).__init__()
-        self.relOp = "LogicalFilter"
+        super(CalciteFilterNode, self).__init__("LogicalFilter")
         self.condition = condition
+
+
+class CalciteAggregateNode(CalciteBaseNode):
+    def __init__(self, fields, group, aggs):
+        super(CalciteAggregateNode, self).__init__("LogicalAggregate")
+        self.fields = fields
+        self.group = group
+        self.aggs = aggs
+
+
+class CalciteCollation:
+    def __init__(self, field, dir="ASCENDING", nulls="LAST"):
+        self.field = field
+        self.direction = dir
+        self.nulls = nulls
+
+
+class CalciteSortNode(CalciteBaseNode):
+    def __init__(self, collation):
+        super(CalciteSortNode, self).__init__("LogicalSort")
+        self.collation = collation
 
 
 def build_calcite_row_idx_filter_expr(row_idx, row_col):

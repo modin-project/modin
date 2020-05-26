@@ -32,7 +32,13 @@ class OmnisciServer:
             cls._server = server.OmnisciServer(
                 server_path, 6001, "modin_db", 6002, 6003,
             )
-            cls._server.launch()
+            # If port is busy then assume omnisci_server is started manually
+            # for debugging
+            out = os.popen("netstat -tln | grep 6001").readlines()
+            if len(out) == 0:
+                cls._server.launch()
+            else:
+                print("Server is already running")
             cls._worker = worker.OmnisciServerWorker(cls._server)
             cls._worker.connect_to_server()
             cls._worker.create_database("modin_db")

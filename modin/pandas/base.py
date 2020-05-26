@@ -3410,7 +3410,7 @@ class BasePandasDataset(object):
             "_create_or_update_from_compiler",
             "_update_inplace",
         ]
-        if item not in default_behaviors:
+        if item not in default_behaviors and self._query_compiler.default_for_empty:
             method = object.__getattribute__(self, item)
             is_callable = callable(method)
             # We default to pandas on empty DataFrames. This avoids a large amount of
