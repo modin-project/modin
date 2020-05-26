@@ -230,7 +230,7 @@ class BaseFrameManager(object):
 
         Args:
             dfs: list of DataFrames
-        
+
         Returns:
             A Pandas DataFrame
         """
@@ -270,7 +270,6 @@ class BaseFrameManager(object):
             for row in retrieved_objects
             if not all(part.empty for part in row)
         ]
-
         if len(df_rows) == 0:
             return pandas.DataFrame()
         else:

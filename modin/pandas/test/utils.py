@@ -361,9 +361,6 @@ json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
 def df_categories_equals(df1, df2):
     categories_columns = df1.select_dtypes(include="category").columns
 
-    # import pdb; pdb.set_trace()
-    # np.testing.assert_equal(categories_columns, df2.select_dtypes(include="category").columns)
-
     for column in categories_columns:
         is_category_ordered = df1[column].dtype.ordered
         assert_categorical_equal(
