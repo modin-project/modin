@@ -55,7 +55,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
   test-all:
-     needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,7 +95,7 @@ jobs:
         if: matrix.part == 3
       - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
-     needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -130,7 +130,7 @@ jobs:
       - run: choco install codecov
       - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
-     needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
