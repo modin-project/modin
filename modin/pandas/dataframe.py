@@ -1160,11 +1160,7 @@ class DataFrame(BasePandasDataset):
                 "{}".format(type(right))
             )
         """ Handling inner non-index merge in backend"""
-        if (
-            left_index is False
-            and right_index is False
-            and on is not None
-        ):
+        if left_index is False and right_index is False and on is not None:
             query_compiler = self._query_compiler.merge(
                 self,
                 right,

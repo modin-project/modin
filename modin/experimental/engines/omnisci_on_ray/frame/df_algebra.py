@@ -134,9 +134,7 @@ class MaskNode(DFAlgNode):
             # rowid is an additional virtual column which is always in
             # the end of the list
             rowid_col = InputRefExpr(len(frame._table_cols))
-            condition = build_row_idx_filter_expr(
-                self.row_numeric_idx, rowid_col
-            )
+            condition = build_row_idx_filter_expr(self.row_numeric_idx, rowid_col)
             filter_node = CalciteFilterNode(condition)
             out_nodes.append(filter_node)
 
@@ -161,9 +159,7 @@ class MaskNode(DFAlgNode):
         else:
             offs = len(exprs)
             fields += to_list(frame.columns)
-            exprs += [
-                InputRefExpr(i + offs) for i in range(0, len(frame.columns))
-            ]
+            exprs += [InputRefExpr(i + offs) for i in range(0, len(frame.columns))]
 
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
@@ -270,6 +266,7 @@ class TransformNode(DFAlgNode):
             print("{}  {}: {}".format(prefix, k, v))
         self._print_input(prefix + "  ")
 
+
 class JoinNode(DFAlgNode):
     def __init__(
         self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
@@ -301,13 +298,13 @@ class JoinNode(DFAlgNode):
         right_node_id = out_nodes[len(out_nodes) - 1].id
 
         """ Join, only equal-join supported """
-        res_type = CalciteOpExprType("BOOLEAN", True)
+        res_type = OpExprType(bool, True)
         """We should remember about rowid for left's projection, that's why +1"""
-        condition = CalciteOpExpr(
+        condition = OpExpr(
             "=",
             [
-                CalciteInputRefExpr(left_on_pos),
-                CalciteInputRefExpr(right_on_pos + len(left.columns) + 1),
+                InputRefExpr(left_on_pos),
+                InputRefExpr(right_on_pos + len(left.columns) + 1),
             ],
             res_type,
         )
@@ -332,20 +329,20 @@ class JoinNode(DFAlgNode):
         fields.append("rowid" + self.suffixes[0])
         for x in range(len(left.columns)):
             if x != left_on_pos:
-                exprs.append(CalciteInputRefExpr(x))
+                exprs.append(InputRefExpr(x))
             else:
-                exprs.insert(0, CalciteInputRefExpr(x))
+                exprs.insert(0, InputRefExpr(x))
         """for first rowid"""
-        exprs.append(CalciteInputRefExpr(len(left.columns)))
+        exprs.append(InputRefExpr(len(left.columns)))
         for c in right.columns:
             if c != self.on:
                 fields.append(c + self.suffixes[1])
         fields.append("rowid" + self.suffixes[1])
         for x in range(len(right.columns)):
             if x != right_on_pos:
-                exprs.append(CalciteInputRefExpr(x + len(left.columns) + 1))
+                exprs.append(InputRefExpr(x + len(left.columns) + 1))
         """for second rowid"""
-        exprs.append(CalciteInputRefExpr(len(left.columns) + len(right.columns) + 1))
+        exprs.append(InputRefExpr(len(left.columns) + len(right.columns) + 1))
 
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
