@@ -25,7 +25,7 @@ class ReductionFunction(Function):
                     else kwargs.get("axis"),
                     lambda x: reduction_function(x.squeeze(), *args, **kwargs)
                     if "squeeze" in call_kwds
-                    else lambda x: reduction_function(x, *args, **kwargs),
+                    else reduction_function(x, *args, **kwargs),
                 )
             )
 
