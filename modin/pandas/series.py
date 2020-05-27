@@ -1315,7 +1315,7 @@ class Series(BasePandasDataset):
     def is_monotonic_decreasing(self):
         # We cannot default to pandas without a named function to call.
         def is_monotonic_decreasing(df):
-            return df.is_monotonic
+            return df.is_monotonic_decreasing
 
         return self._default_to_pandas(is_monotonic_decreasing)
 
@@ -1323,7 +1323,7 @@ class Series(BasePandasDataset):
     def is_monotonic_increasing(self):
         # We cannot default to pandas without a named function to call.
         def is_monotonic_increasing(df):
-            return df.is_monotonic
+            return df.is_monotonic_increasing
 
         return self._default_to_pandas(is_monotonic_increasing)
 

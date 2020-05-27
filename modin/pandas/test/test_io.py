@@ -436,12 +436,31 @@ def test_from_parquet_pandas_index():
             "C": ["c"] * 2000,
         }
     )
-    pandas_df.set_index("idx").to_parquet("tmp.parquet")
+    filepath = "tmp.parquet"
+    pandas_df.set_index("idx").to_parquet(filepath)
     # read the same parquet using modin.pandas
-    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
 
-    pandas_df.set_index(["idx", "A"]).to_parquet("tmp.parquet")
-    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+    pandas_df.set_index(["idx", "A"]).to_parquet(filepath)
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
+    os.remove(filepath)
+
+
+def test_from_parquet_pandas_index_partitioned():
+    # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
+    pandas_df = pandas.DataFrame(
+        {
+            "idx": np.random.randint(0, 100_000, size=2000),
+            "A": np.random.randint(0, 10, size=2000),
+            "B": ["a", "b"] * 1000,
+            "C": ["c"] * 2000,
+        }
+    )
+    filepath = "tmp_folder.parquet"
+    pandas_df.set_index("idx").to_parquet(filepath, partition_cols=["A"])
+    # read the same parquet using modin.pandas
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
+    shutil.rmtree(filepath)
 
 
 def test_from_parquet_hdfs():
