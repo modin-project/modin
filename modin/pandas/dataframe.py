@@ -603,6 +603,65 @@ class DataFrame(BasePandasDataset):
     def cov(self, min_periods=None):
         return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
 
+    def dot(self, other):
+        """
+        Compute the matrix multiplication between the DataFrame and other.
+
+        This method computes the matrix product between the DataFrame and the
+        values of an other Series, DataFrame or a numpy array.
+
+        It can also be called using ``self @ other`` in Python >= 3.5.
+
+        Parameters
+        ----------
+        other : Series, DataFrame or array-like
+            The other object to compute the matrix product with.
+
+        Returns
+        -------
+        Series or DataFrame
+            If other is a Series, return the matrix product between self and
+            other as a Series. If other is a DataFrame or a numpy.array, return
+            the matrix product of self and other in a DataFrame of a np.array.
+
+        See Also
+        --------
+        Series.dot: Similar method for Series.
+
+        Notes
+        -----
+        The dimensions of DataFrame and other must be compatible in order to
+        compute the matrix multiplication. In addition, the column names of
+        DataFrame and the index of other must contain the same values, as they
+        will be aligned prior to the multiplication.
+
+        The dot method for Series computes the inner product, instead of the
+        matrix product here.
+        """
+        if isinstance(other, BasePandasDataset):
+            common = self.columns.union(other.index)
+            if len(common) > len(self.columns) or len(common) > len(other.index):
+                raise ValueError("Matrices are not aligned")
+
+            qc = other.reindex(index=common)._query_compiler
+            if isinstance(other, DataFrame):
+                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+            else:
+                return self._reduce_dimension(
+                    query_compiler=self._query_compiler.dot(qc)
+                )
+
+        other = np.asarray(other)
+        if self.shape[1] != other.shape[0]:
+            raise ValueError(
+                "Dot product shape mismatch, {} vs {}".format(self.shape, other.shape)
+            )
+
+        if len(other.shape) > 1:
+            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
             "eq", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -741,11 +800,6 @@ class DataFrame(BasePandasDataset):
         return self._binary_op(
             "gt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
-
-    def head(self, n=5):
-        if n == 0:
-            return DataFrame(columns=self.columns)
-        return super(DataFrame, self).head(n)
 
     def hist(
         self,
@@ -1215,11 +1269,55 @@ class DataFrame(BasePandasDataset):
         )
 
     def nlargest(self, n, columns, keep="first"):
-        return self._default_to_pandas(pandas.DataFrame.nlargest, n, columns, keep=keep)
+        """
+        Return the first `n` rows ordered by `columns` in descending order.
+        Return the first `n` rows with the largest values in `columns`, in
+        descending order. The columns that are not specified are returned as
+        well, but not used for ordering.
+        This method is equivalent to
+        ``df.sort_values(columns, ascending=False).head(n)``, but more
+        performant.
+        Parameters
+        ----------
+        n : int
+            Number of rows to return.
+        columns : label or list of labels
+            Column label(s) to order by.
+        keep : {'first', 'last', 'all'}, default 'first'
+            Where there are duplicate values:
+            - `first` : prioritize the first occurrence(s)
+            - `last` : prioritize the last occurrence(s)
+            - ``all`` : do not drop any duplicates, even it means
+                        selecting more than `n` items.
+            .. versionadded:: 0.24.0
+        """
+        return DataFrame(query_compiler=self._query_compiler.nlargest(n, columns, keep))
 
     def nsmallest(self, n, columns, keep="first"):
-        return self._default_to_pandas(
-            pandas.DataFrame.nsmallest, n, columns, keep=keep
+        """
+        Return the first `n` rows ordered by `columns` in ascending order.
+        Return the first `n` rows with the smallest values in `columns`, in
+        ascending order. The columns that are not specified are returned as
+        well, but not used for ordering.
+        This method is equivalent to
+        ``df.sort_values(columns, ascending=True).head(n)``, but more
+        performant.
+        Parameters
+        ----------
+        n : int
+            Number of items to retrieve.
+        columns : list or str
+            Column name or names to order by.
+        keep : {'first', 'last', 'all'}, default 'first'
+            Where there are duplicate values:
+            - ``first`` : take the first occurrence.
+            - ``last`` : take the last occurrence.
+            - ``all`` : do not drop any duplicates, even it means
+              selecting more than `n` items.
+            .. versionadded:: 0.24.0
+        """
+        return DataFrame(
+            query_compiler=self._query_compiler.nsmallest(n, columns, keep)
         )
 
     def pivot(self, index=None, columns=None, values=None):
@@ -1650,11 +1748,6 @@ class DataFrame(BasePandasDataset):
             **kwargs
         )
 
-    def tail(self, n=5):
-        if n == 0:
-            return DataFrame(columns=self.columns)
-        return super(DataFrame, self).tail(n)
-
     def to_feather(self, path):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_feather, path)
 
@@ -2014,7 +2107,7 @@ class DataFrame(BasePandasDataset):
         # _query_compiler before we check if the key is in self
         if key in ["_query_compiler"] or key in self.__dict__:
             pass
-        elif key in self:
+        elif key in self and key not in dir(self):
             self.__setitem__(key, value)
         elif isinstance(value, pandas.Series):
             warnings.warn(

@@ -111,7 +111,10 @@ class BaseFrameManager(object):
         Returns:
             A new `np.array` of partition objects.
         """
-        right_parts = np.squeeze(right)
+        if right.shape == (1, 1):
+            right_parts = right[0]
+        else:
+            right_parts = np.squeeze(right)
 
         [obj.drain_call_queue() for obj in right_parts]
         return np.array(
@@ -198,90 +201,6 @@ class BaseFrameManager(object):
         # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
         return result_blocks.T if not axis else result_blocks
-
-    @classmethod
-    def take(cls, axis, partitions, block_lengths, n):
-        """Take the first (or last) n rows or columns from the blocks
-
-        Note: Axis = 0 will be equivalent to `head` or `tail`
-              Axis = 1 will be equivalent to `front` or `back`
-
-        Args:
-            axis: The axis to extract (0 for extracting rows, 1 for extracting columns)
-            n: The number of rows or columns to extract, negative denotes to extract
-                from the bottom of the object
-
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
-        """
-        # These are the partitions that we will extract over
-        if not axis:
-            partitions = partitions
-            bin_lengths = block_lengths
-        else:
-            partitions = partitions.T
-            bin_lengths = block_lengths
-        if n < 0:
-            length_bins = np.cumsum(bin_lengths[::-1])
-            n *= -1
-            idx = int(np.digitize(n, length_bins))
-            if idx > 0:
-                remaining = int(n - length_bins[idx - 1])
-            else:
-                remaining = n
-            # In this case, we require no remote compute. This is much faster.
-            if remaining == 0:
-                result = partitions[-idx:]
-            else:
-                # Reverse for ease of iteration and then re-reverse at the end
-                partitions = partitions[::-1]
-                # We build this iloc to avoid creating a bunch of helper methods.
-                # This code creates slice objects to be passed to `iloc` to grab
-                # the last n rows or columns depending on axis.
-                slice_obj = (
-                    slice(-remaining, None)
-                    if axis == 0
-                    else (slice(None), slice(-remaining, None))
-                )
-                func = cls.preprocess_func(lambda df: df.iloc[slice_obj])
-                # We use idx + 1 here because the loop is not inclusive, and we
-                # need to iterate through idx.
-                result = np.array(
-                    [
-                        partitions[i]
-                        if i != idx
-                        else [obj.apply(func) for obj in partitions[i]]
-                        for i in range(idx + 1)
-                    ]
-                )[::-1]
-        else:
-            length_bins = np.cumsum(bin_lengths)
-            idx = int(np.digitize(n, length_bins))
-            if idx > 0:
-                remaining = int(n - length_bins[idx - 1])
-            else:
-                remaining = n
-            # In this case, we require no remote compute. This is much faster.
-            if remaining == 0:
-                result = partitions[:idx]
-            else:
-                # We build this iloc to avoid creating a bunch of helper methods.
-                # This code creates slice objects to be passed to `iloc` to grab
-                # the first n rows or columns depending on axis.
-                slice_obj = (
-                    slice(remaining) if axis == 0 else (slice(None), slice(remaining))
-                )
-                func = cls.preprocess_func(lambda df: df.iloc[slice_obj])
-                # See note above about idx + 1
-                result = np.array(
-                    [
-                        partitions[i]
-                        if i != idx
-                        else [obj.apply(func) for obj in partitions[i]]
-                        for i in range(idx + 1)
-                    ]
-                )
-        return result.T if axis else result
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):

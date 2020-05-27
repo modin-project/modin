@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r windows_test_requires.txt
+      - run: pip install -r requirements/windows_test_requires.txt
       - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest --cov-config=setup.cfg --cov=modin --cov-append modin/pandas/test/test_series.py

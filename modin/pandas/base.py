@@ -56,45 +56,48 @@ class BasePandasDataset(object):
             sib._siblings += [sibling]
 
     def _build_repr_df(self, num_rows, num_cols):
+        # Fast track for empty dataframe.
+        if len(self.index) == 0 or (
+            hasattr(self, "columns") and len(self.columns) == 0
+        ):
+            return pandas.DataFrame(
+                index=self.index,
+                columns=self.columns if hasattr(self, "columns") else None,
+            )
         # Add one here so that pandas automatically adds the dots
         # It turns out to be faster to extract 2 extra rows and columns than to
         # build the dots ourselves.
         num_rows_for_head = num_rows // 2 + 1
-        num_cols_for_front = num_cols // 2 + 1
-
-        if self.empty:
-            return self._query_compiler.to_pandas()
-        if len(self.index) <= num_rows:
-            head = self._query_compiler
-            tail = None
+        num_rows_for_tail = (
+            num_rows_for_head
+            if len(self.index) > num_rows
+            else len(self.index) - num_rows_for_head
+            if len(self.index) - num_rows_for_head >= 0
+            else None
+        )
+        row_indexer = list(range(len(self.index))[:num_rows_for_head]) + (
+            list(range(len(self.index))[-num_rows_for_tail:])
+            if num_rows_for_tail is not None
+            else []
+        )
+        if hasattr(self, "columns"):
+            num_cols_for_front = num_cols // 2 + 1
+            num_cols_for_back = (
+                num_cols_for_front
+                if len(self.columns) > num_cols
+                else len(self.columns) - num_cols_for_front
+                if len(self.columns) - num_cols_for_front >= 0
+                else None
+            )
+            col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
+                list(range(len(self.columns))[-num_cols_for_back:])
+                if num_cols_for_back is not None
+                else []
+            )
+            indexer = row_indexer, col_indexer
         else:
-            head = self._query_compiler.head(num_rows_for_head)
-            tail = self._query_compiler.tail(num_rows_for_head)
-
-        if not hasattr(self, "columns") or len(self.columns) <= num_cols:
-            head_front = head.to_pandas()
-            # Creating these empty to make the concat logic simpler
-            head_back = pandas.DataFrame()
-            tail_back = pandas.DataFrame()
-
-            if tail is not None:
-                tail_front = tail.to_pandas()
-            else:
-                tail_front = pandas.DataFrame()
-        else:
-            head_front = head.front(num_cols_for_front).to_pandas()
-            head_back = head.back(num_cols_for_front).to_pandas()
-
-            if tail is not None:
-                tail_front = tail.front(num_cols_for_front).to_pandas()
-                tail_back = tail.back(num_cols_for_front).to_pandas()
-            else:
-                tail_front = tail_back = pandas.DataFrame()
-
-        head_for_repr = pandas.concat([head_front, head_back], axis=1)
-        tail_for_repr = pandas.concat([tail_front, tail_back], axis=1)
-
-        return pandas.concat([head_for_repr, tail_for_repr])
+            indexer = row_indexer
+        return self.iloc[indexer]._query_compiler.to_pandas()
 
     def _update_inplace(self, new_query_compiler):
         """Updates the current DataFrame inplace.
@@ -905,32 +908,6 @@ class BasePandasDataset(object):
             query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
         )
 
-    def dot(self, other):
-        from .dataframe import DataFrame
-
-        self_labels = self.columns if isinstance(self, DataFrame) else self.index
-        if isinstance(other, BasePandasDataset):
-            common = self_labels.union(other.index)
-            if len(common) > len(self_labels) or len(common) > len(other.index):
-                raise ValueError("matrices are not aligned")
-            if isinstance(self, DataFrame) and isinstance(other, DataFrame):
-                return self._default_to_pandas("dot", other)
-        else:
-            other = np.asarray(other)
-            self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
-            if self_dim != other.shape[0]:
-                raise ValueError(
-                    "Dot product shape mismatch, {} vs {}".format(
-                        self.shape, other.shape
-                    )
-                )
-
-        if isinstance(other, BasePandasDataset):
-            other = other.reindex(index=self_labels)._query_compiler
-            # Change this to use the query compiler in #673.
-            other = other.to_pandas()
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
-
     def drop(
         self,
         labels=None,
@@ -1367,17 +1344,19 @@ class BasePandasDataset(object):
         return self._binary_op("gt", other, axis=axis, level=level)
 
     def head(self, n=5):
-        """Get the first n rows of the DataFrame.
+        """Get the first n rows of the DataFrame or Series.
 
-        Args:
-            n (int): The number of rows to return.
+        Parameters
+        ----------
+        n : int
+            The number of rows to return.
 
-        Returns:
-            A new DataFrame with the first n rows of the DataFrame.
+        Returns
+        -------
+        DataFrame or Series
+            A new DataFrame or Series with the first n rows of the DataFrame or Series.
         """
-        if n >= len(self.index):
-            return self.copy()
-        return self.__constructor__(query_compiler=self._query_compiler.head(n))
+        return self.iloc[:n]
 
     @property
     def iat(self, axis=None):
@@ -1558,7 +1537,31 @@ class BasePandasDataset(object):
         return _LocIndexer(self)
 
     def mad(self, axis=None, skipna=None, level=None):
-        return self._default_to_pandas("mad", axis=axis, skipna=skipna, level=level)
+        """
+        Return the mean absolute deviation of the values for the requested axis.
+
+        Parameters
+        ----------
+            axis : {index (0), columns (1)}
+            skipna : bool, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+
+        Returns
+        -------
+            Series or DataFrame (if level specified)
+
+        """
+        axis = self._get_axis_number(axis)
+
+        if level is not None:
+            return self._handle_level_agg(
+                axis=axis, level=level, skipna=skipna, op="mad"
+            )
+
+        return self._reduce_dimension(
+            self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
+        )
 
     def mask(
         self,
@@ -2781,24 +2784,28 @@ class BasePandasDataset(object):
         idx = self.index if axis == 0 else self.columns
         return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
 
+    def tail(self, n=5):
+        """Get the last n rows of the DataFrame or Series.
+
+        Parameters
+        ----------
+        n : int
+            The number of rows to return.
+
+        Returns
+        -------
+        DataFrame or Series
+            A new DataFrame or Series with the last n rows of this DataFrame or Series.
+        """
+        if n != 0:
+            return self.iloc[-n:]
+        return self.iloc[len(self.index) :]
+
     def take(self, indices, axis=0, is_copy=None, **kwargs):
         axis = self._get_axis_number(axis)
         slice_obj = indices if axis == 0 else (slice(None), indices)
         result = self.iloc[slice_obj]
         return result if not is_copy else result.copy()
-
-    def tail(self, n=5):
-        """Get the last n rows of the DataFrame.
-
-        Args:
-            n (int): The number of rows to return.
-
-        Returns:
-            A new DataFrame with the last n rows of this DataFrame.
-        """
-        if n >= len(self.index):
-            return self.copy()
-        return self.__constructor__(query_compiler=self._query_compiler.tail(n))
 
     def to_clipboard(self, excel=True, sep=None, **kwargs):  # pragma: no cover
         return self._default_to_pandas("to_clipboard", excel=excel, sep=sep, **kwargs)
@@ -3300,6 +3307,9 @@ class BasePandasDataset(object):
 
     def __lt__(self, right):
         return self.lt(right)
+
+    def __matmul__(self, other):
+        return self.dot(other)
 
     def __ne__(self, other):
         return self.ne(other)

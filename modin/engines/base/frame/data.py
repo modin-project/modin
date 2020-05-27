@@ -11,9 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from itertools import groupby
+from collections import OrderedDict
 import numpy as np
-from operator import itemgetter
 import pandas
 from pandas.core.indexes.api import ensure_index
 from pandas.core.dtypes.common import is_numeric_dtype
@@ -329,14 +328,21 @@ class BasePandasFrame(object):
         Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
             The same rule applied to col_indices and col_numeric_idx.
 
-        Args:
-            row_indices: The row labels to extract.
-            row_numeric_idx: The row indices to extract.
-            col_indices: The column labels to extract.
-            col_numeric_idx: The column indices to extract.
+        Parameters
+        ----------
+        row_indices : list of hashable
+            The row labels to extract.
+        row_numeric_idx : list of int
+            The row indices to extract.
+        col_indices : list of hashable
+            The column labels to extract.
+        col_numeric_idx : list of int
+            The column indices to extract.
 
-        Returns:
-             A new dataframe.
+        Returns
+        -------
+        BasePandasFrame
+             A new BasePandasFrame from the mask provided.
         """
         if (
             row_indices is None
@@ -348,34 +354,34 @@ class BasePandasFrame(object):
         if row_indices is not None:
             row_numeric_idx = self.index.get_indexer_for(row_indices)
         if row_numeric_idx is not None:
-            row_partitions_list = self._get_dict_of_block_index(
-                1, row_numeric_idx, ordered=True
-            )
-            new_row_lengths = [len(indices) for _, indices in row_partitions_list]
-            new_index = self.index[row_numeric_idx]
-        else:
-            row_partitions_list = [
-                (i, slice(None)) for i in range(len(self._row_lengths))
+            row_partitions_list = self._get_dict_of_block_index(1, row_numeric_idx)
+            new_row_lengths = [
+                len(indices) for _, indices in row_partitions_list.items()
             ]
+            new_index = self.index[sorted(row_numeric_idx)]
+        else:
+            row_partitions_list = {
+                i: slice(None) for i in range(len(self._row_lengths))
+            }
             new_row_lengths = self._row_lengths
             new_index = self.index
 
         if col_indices is not None:
             col_numeric_idx = self.columns.get_indexer_for(col_indices)
         if col_numeric_idx is not None:
-            col_partitions_list = self._get_dict_of_block_index(
-                0, col_numeric_idx, ordered=True
-            )
-            new_col_widths = [len(indices) for _, indices in col_partitions_list]
-            new_columns = self.columns[col_numeric_idx]
+            col_partitions_list = self._get_dict_of_block_index(0, col_numeric_idx)
+            new_col_widths = [
+                len(indices) for _, indices in col_partitions_list.items()
+            ]
+            new_columns = self.columns[sorted(col_numeric_idx)]
             if self._dtypes is not None:
-                new_dtypes = self.dtypes[col_numeric_idx]
+                new_dtypes = self.dtypes[sorted(col_numeric_idx)]
             else:
                 new_dtypes = None
         else:
-            col_partitions_list = [
-                (i, slice(None)) for i in range(len(self._column_widths))
-            ]
+            col_partitions_list = {
+                i: slice(None) for i in range(len(self._column_widths))
+            }
             new_col_widths = self._column_widths
             new_columns = self.columns
             if self._dtypes is not None:
@@ -388,16 +394,16 @@ class BasePandasFrame(object):
                     self._partitions[row_idx][col_idx].mask(
                         row_internal_indices, col_internal_indices
                     )
-                    for col_idx, col_internal_indices in col_partitions_list
+                    for col_idx, col_internal_indices in col_partitions_list.items()
                     if isinstance(col_internal_indices, slice)
                     or len(col_internal_indices) > 0
                 ]
-                for row_idx, row_internal_indices in row_partitions_list
+                for row_idx, row_internal_indices in row_partitions_list.items()
                 if isinstance(row_internal_indices, slice)
                 or len(row_internal_indices) > 0
             ]
         )
-        return self.__constructor__(
+        intermediate = self.__constructor__(
             new_partitions,
             new_index,
             new_columns,
@@ -405,6 +411,76 @@ class BasePandasFrame(object):
             new_col_widths,
             new_dtypes,
         )
+        # Check if monotonically increasing, return if it is. Fast track code path for
+        # common case to keep it fast.
+        if (
+            row_numeric_idx is None
+            or len(row_numeric_idx) == 1
+            or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
+        ) and (
+            col_numeric_idx is None
+            or len(col_numeric_idx) == 1
+            or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
+        ):
+            return intermediate
+        # The new labels are often smaller than the old labels, so we can't reuse the
+        # original order values because those were mapped to the original data. We have
+        # to reorder here based on the expected order from within the data.
+        # We create a dictionary mapping the position of the numeric index with respect
+        # to all others, then recreate that order by mapping the new order values from
+        # the old. This information is sent to `reorder_labels`.
+        if row_numeric_idx is not None:
+            row_order_mapping = dict(
+                zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
+            )
+            new_row_order = [row_order_mapping[idx] for idx in row_numeric_idx]
+        else:
+            new_row_order = None
+        if col_numeric_idx is not None:
+            col_order_mapping = dict(
+                zip(sorted(col_numeric_idx), range(len(col_numeric_idx)))
+            )
+            new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
+        else:
+            new_col_order = None
+        return intermediate.reorder_labels(
+            row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
+        )
+
+    def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+        """Reorder the column and or rows in this DataFrame.
+
+        Parameters
+        ----------
+        row_numeric_idx : list of int, optional
+            The ordered list of new row orders such that each position within the list
+            indicates the new position.
+        col_numeric_idx : list of int, optional
+            The ordered list of new column orders such that each position within the
+            list indicates the new position.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new BasePandasFrame with reordered columns and/or rows.
+        """
+        if row_numeric_idx is not None:
+            ordered_rows = self._frame_mgr_cls.map_axis_partitions(
+                0, self._partitions, lambda df: df.iloc[row_numeric_idx]
+            )
+            row_idx = self.index[row_numeric_idx]
+        else:
+            ordered_rows = self._partitions
+            row_idx = self.index
+        if col_numeric_idx is not None:
+            ordered_cols = self._frame_mgr_cls.map_axis_partitions(
+                1, ordered_rows, lambda df: df.iloc[:, col_numeric_idx]
+            )
+            col_idx = self.columns[col_numeric_idx]
+        else:
+            ordered_cols = ordered_rows
+            col_idx = self.columns
+        return self.__constructor__(ordered_cols, row_idx, col_idx)
 
     def copy(self):
         """Copy this object.
@@ -544,26 +620,23 @@ class BasePandasFrame(object):
                 columns.append(col)
         return columns
 
-    def _get_dict_of_block_index(self, axis, indices, ordered=False):
+    def _get_dict_of_block_index(self, axis, indices):
         """Convert indices to a dict of block index to internal index mapping.
 
-        Note: See `_get_blocks_containing_index` for primary usage. This method
-            accepts a list of indices rather than just a single value, and uses
-            `_get_blocks_containing_index`.
-
-        Args:
-            axis: The axis along which to get the indices
-                (0 - columns, 1 - rows)
-            indices: A list of global indices to convert.
+        Parameters
+        ----------
+        axis : (0 - columns, 1 - rows)
+               The axis along which to get the indices
+        indices : list of int
+                A list of global indices to convert.
 
         Returns
-            For unordered: a dictionary of {block index: list of local indices}.
-            For ordered: a list of tuples mapping block index: list of local indices.
+        -------
+        dictionary mapping int to list of int
+            A mapping from partition to list of internal indices to extract from that
+            partition.
         """
-        if not ordered:
-            indices = np.sort(indices)
-        else:
-            indices = np.array(indices)
+        indices = np.sort(indices)
         if not axis:
             bins = np.array(self._column_widths)
         else:
@@ -581,52 +654,36 @@ class BasePandasFrame(object):
             )
 
         partition_ids = np.digitize(indices, cumulative)
-        # If the output order doesn't matter or if the indices are monotonically
-        # increasing, the computation is significantly simpler and faster than doing
-        # the zip and groupby.
-        if not ordered or np.all(np.diff(indices) > 0):
-            count_for_each_partition = np.array(
-                [(partition_ids == i).sum() for i in range(len(cumulative))]
-            ).cumsum()
-            # Compute the internal indices and pair those with the partition index.
-            # If the first partition has any values we need to return, compute those
-            # first to make the list comprehension easier. Otherwise, just append the
-            # rest of the values to an empty list.
-            if count_for_each_partition[0] > 0:
-                first_partition_indices = [
-                    (0, internal(0, indices[slice(count_for_each_partition[0])]))
-                ]
-            else:
-                first_partition_indices = []
-            partition_ids_with_indices = first_partition_indices + [
-                (
-                    i,
-                    internal(
-                        i,
-                        indices[
-                            slice(
-                                count_for_each_partition[i - 1],
-                                count_for_each_partition[i],
-                            )
-                        ],
-                    ),
-                )
-                for i in range(1, len(count_for_each_partition))
-                if count_for_each_partition[i] > count_for_each_partition[i - 1]
+        count_for_each_partition = np.array(
+            [(partition_ids == i).sum() for i in range(len(cumulative))]
+        ).cumsum()
+        # Compute the internal indices and pair those with the partition index.
+        # If the first partition has any values we need to return, compute those
+        # first to make the list comprehension easier. Otherwise, just append the
+        # rest of the values to an empty list.
+        if count_for_each_partition[0] > 0:
+            first_partition_indices = [
+                (0, internal(0, indices[slice(count_for_each_partition[0])]))
             ]
-            return (
-                dict(partition_ids_with_indices)
-                if not ordered
-                else partition_ids_with_indices
+        else:
+            first_partition_indices = []
+        partition_ids_with_indices = first_partition_indices + [
+            (
+                i,
+                internal(
+                    i,
+                    indices[
+                        slice(
+                            count_for_each_partition[i - 1],
+                            count_for_each_partition[i],
+                        )
+                    ],
+                ),
             )
-
-        all_partitions_and_idx = zip(partition_ids, indices)
-        # In ordered, we have to maintain the order of the list of indices provided.
-        # This means that we need to return a list instead of a dictionary.
-        return [
-            (k, internal(k, [x for _, x in v]))
-            for k, v in groupby(all_partitions_and_idx, itemgetter(0))
+            for i in range(1, len(count_for_each_partition))
+            if count_for_each_partition[i] > count_for_each_partition[i - 1]
         ]
+        return OrderedDict(partition_ids_with_indices)
 
     def _join_index_objects(self, axis, other_index, how, sort):
         """Joins a pair of index objects (columns or rows) by a given strategy.
@@ -1271,134 +1328,3 @@ class BasePandasFrame(object):
             self._row_lengths,
             dtypes=new_dtypes,
         )
-
-    # Head/Tail/Front/Back
-    @staticmethod
-    def _compute_lengths(lengths_list, n, from_back=False):
-        """Computes the new lengths based on the lengths/widths of the previous and `n`.
-
-        Args:
-            lengths_list: The list of lengths or widths.
-            n: The number of rows or columns extracted.
-            from_back: Whether or not to compute from the back. Used in `tail`/`back`
-
-        Returns:
-             A list of lengths or widths of the resulting dataframe.
-        """
-        if not from_back:
-            idx = np.digitize(n, np.cumsum(lengths_list))
-            if idx == 0:
-                return [n]
-            return [
-                lengths_list[i] if i < idx else n - sum(lengths_list[:i])
-                for i in range(len(lengths_list))
-                if i <= idx
-            ]
-        else:
-            lengths_list = [i for i in lengths_list if i > 0]
-            idx = np.digitize(sum(lengths_list) - n, np.cumsum(lengths_list))
-            if idx == len(lengths_list) - 1:
-                return [n]
-            return [
-                lengths_list[i] if i > idx else n - sum(lengths_list[i + 1 :])
-                for i in range(len(lengths_list))
-                if i >= idx
-            ]
-
-    def head(self, n):
-        """Returns the first n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            A new dataframe.
-        """
-        # We grab the front if it is transposed and flag as transposed so that
-        # we are not physically updating the data from this manager. This
-        # allows the implementation to stay modular and reduces data copying.
-        if n < 0:
-            n = max(0, len(self.index) + n)
-        new_row_lengths = self._compute_lengths(self._row_lengths, n)
-        new_partitions = self._frame_mgr_cls.take(
-            0, self._partitions, self._row_lengths, n
-        )
-        return self.__constructor__(
-            new_partitions,
-            self.index[:n],
-            self.columns,
-            new_row_lengths,
-            self._column_widths,
-            self._dtypes,
-        )
-
-    def tail(self, n):
-        """Returns the last n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            A new dataframe.
-        """
-        # See head for an explanation of the transposed behavior
-        if n < 0:
-            n = max(0, len(self.index) + n)
-        new_row_lengths = self._compute_lengths(self._row_lengths, n, from_back=True)
-        new_partitions = self._frame_mgr_cls.take(
-            0, self._partitions, self._row_lengths, -n
-        )
-        return self.__constructor__(
-            new_partitions,
-            self.index[-n:],
-            self.columns,
-            new_row_lengths,
-            self._column_widths,
-            self._dtypes,
-        )
-
-    def front(self, n):
-        """Returns the first n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            A new dataframe.
-        """
-        new_col_lengths = self._compute_lengths(self._column_widths, n)
-        new_partitions = self._frame_mgr_cls.take(
-            1, self._partitions, self._column_widths, n
-        )
-        return self.__constructor__(
-            new_partitions,
-            self.index,
-            self.columns[:n],
-            self._row_lengths,
-            new_col_lengths,
-            self.dtypes[:n] if self._dtypes is not None else None,
-        )
-
-    def back(self, n):
-        """Returns the last n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            A new dataframe.
-        """
-        new_col_lengths = self._compute_lengths(self._column_widths, n, from_back=True)
-        new_partitions = self._frame_mgr_cls.take(
-            1, self._partitions, self._column_widths, -n
-        )
-        return self.__constructor__(
-            new_partitions,
-            self.index,
-            self.columns[-n:],
-            self._row_lengths,
-            new_col_lengths,
-            self.dtypes[n:] if self._dtypes is not None else None,
-        )
-
-    # End Head/Tail/Front/Back

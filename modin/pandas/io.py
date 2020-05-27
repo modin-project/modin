@@ -107,7 +107,7 @@ def _make_parser_func(sep):
         float_precision=None,
     ):
         _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-        if not kwargs.get("sep", sep):
+        if kwargs.get("sep", sep) is False:
             kwargs["sep"] = "\t"
         return _read(**kwargs)
 
@@ -394,7 +394,15 @@ def read_fwf(
 
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
-    return DataFrame(query_compiler=BaseFactory.read_fwf(**kwargs))
+    pd_obj = BaseFactory.read_fwf(**kwargs)
+    # When `read_fwf` returns a TextFileReader object for iterating through
+    if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+        reader = pd_obj.read
+        pd_obj.read = lambda *args, **kwargs: DataFrame(
+            query_compiler=reader(*args, **kwargs)
+        )
+        return pd_obj
+    return DataFrame(query_compiler=pd_obj)
 
 
 def read_sql_table(

@@ -1195,21 +1195,34 @@ def test_dot(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     ind_len = len(modin_series)
 
-    # Test list input
+    # Test 1D array input
     arr = np.arange(ind_len)
     modin_result = modin_series.dot(arr)
     pandas_result = pandas_series.dot(arr)
     df_equals(modin_result, pandas_result)
 
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series.dot(arr)
+    pandas_result = pandas_series.dot(arr)
+    assert_array_equal(modin_result, pandas_result)
+
     # Test bad dimensions
     with pytest.raises(ValueError):
         modin_result = modin_series.dot(np.arange(ind_len + 10))
 
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series.dot(modin_df)
+    pandas_result = pandas_series.dot(pandas_df)
+    df_equals(modin_result, pandas_result)
+
     # Test series input
-    modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
-    pandas_series = pandas.Series(np.arange(ind_len), index=modin_series.index)
-    modin_result = modin_series.dot(modin_series)
-    pandas_result = pandas_series.dot(pandas_series)
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
+    modin_result = modin_series.dot(modin_series_2)
+    pandas_result = pandas_series.dot(pandas_series_2)
     df_equals(modin_result, pandas_result)
 
     # Test when input series index doesn't line up with columns
@@ -1220,7 +1233,47 @@ def test_dot(data):
             )
         )
 
-    # modin_series.dot(modin_series.T)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_matmul(data):
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    ind_len = len(modin_series)
+
+    # Test 1D array input
+    arr = np.arange(ind_len)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    df_equals(modin_result, pandas_result)
+
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    assert_array_equal(modin_result, pandas_result)
+
+    # Test bad dimensions
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ np.arange(ind_len + 10)
+
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series @ modin_df
+    pandas_result = pandas_series @ pandas_df
+    df_equals(modin_result, pandas_result)
+
+    # Test series input
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
+    modin_result = modin_series @ modin_series_2
+    pandas_result = pandas_series @ pandas_series_2
+    df_equals(modin_result, pandas_result)
+
+    # Test when input series index doesn't line up with columns
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ pd.Series(
+            np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
+        )
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -1662,10 +1715,15 @@ def test_lt(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_mad(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.mad()
+@pytest.mark.parametrize("axis", [None, 0])
+@pytest.mark.parametrize("skipna", [None, True, False])
+@pytest.mark.parametrize("level", [0, -1, None])
+def test_mad(level, data, axis, skipna):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.mad(axis=axis, skipna=skipna, level=level),
+        pandas_series.mad(axis=axis, skipna=skipna, level=level),
+    )
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
@@ -1946,10 +2004,12 @@ def test_rank(data, na_option):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_ravel(data):
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel(data, order):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        np.testing.assert_equal(modin_series.ravel(), pandas_series.ravel())
+    np.testing.assert_equal(
+        modin_series.ravel(order=order), pandas_series.ravel(order=order)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2167,14 +2227,24 @@ def test_rtruediv(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sample(data):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.sample(frac=0.5, random_state=21019),
-        pandas_series.sample(frac=0.5, random_state=21019),
-    )
-    df_equals(
-        modin_series.sample(n=12, random_state=21019),
-        pandas_series.sample(n=12, random_state=21019),
-    )
+    try:
+        pandas_result = pandas_series.sample(frac=0.5, random_state=21019)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.sample(frac=0.5, random_state=21019)
+    else:
+        modin_result = modin_series.sample(frac=0.5, random_state=21019)
+        df_equals(pandas_result, modin_result)
+
+    try:
+        pandas_result = pandas_series.sample(n=12, random_state=21019)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.sample(n=12, random_state=21019)
+    else:
+        modin_result = modin_series.sample(n=12, random_state=21019)
+        df_equals(pandas_result, modin_result)
+
     with pytest.warns(UserWarning):
         df_equals(
             modin_series.sample(n=0, random_state=21019),

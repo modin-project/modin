@@ -352,6 +352,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
+    nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
+    nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
@@ -360,6 +362,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
     mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
+    mad = ReductionFunction.register(pandas.DataFrame.mad)
 
     # END Reduction operations
 
@@ -559,24 +562,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Returns the result of the matrix multiply.
         """
+        if isinstance(other, PandasQueryCompiler):
+            other = other.to_pandas().squeeze()
 
         def map_func(df, other=other):
-            if isinstance(other, pandas.DataFrame):
-                other = other.squeeze()
             result = df.squeeze().dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
             else:
                 return pandas.DataFrame([result])
 
+        num_cols = other.shape[1] if len(other.shape) > 1 else None
         if len(self.columns) == 1:
+            new_index = ["__reduced__"] if num_cols is None else None
+            new_columns = ["__reduced__"] if num_cols is not None else None
             axis = 0
-            new_index = ["__reduce__"]
         else:
+            new_index = None
+            new_columns = ["__reduced__"] if num_cols is None else None
             axis = 1
-            new_index = self.index
+
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+            axis, map_func, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -786,53 +793,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     # END Map across rows/columns
-
-    # Head/Tail/Front/Back
-    def head(self, n):
-        """Returns the first n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the first n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.head(n))
-
-    def tail(self, n):
-        """Returns the last n rows.
-
-        Args:
-            n: Integer containing the number of rows to return.
-
-        Returns:
-            QueryCompiler containing the last n rows of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.tail(n))
-
-    def front(self, n):
-        """Returns the first n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the first n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.front(n))
-
-    def back(self, n):
-        """Returns the last n columns.
-
-        Args:
-            n: Integer containing the number of columns to return.
-
-        Returns:
-            QueryCompiler containing the last n columns of the original QueryCompiler.
-        """
-        return self.__constructor__(self._modin_frame.back(n))
-
-    # End Head/Tail/Front/Back
 
     # __getitem__ methods
     def getitem_column_array(self, key, numeric=False):

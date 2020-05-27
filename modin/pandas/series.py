@@ -65,7 +65,7 @@ class Series(BasePandasDataset):
             if index is not None:
                 if any(i not in data.index for i in index):
                     raise NotImplementedError(
-                        "Passing non-existant columns or index values to constructor "
+                        "Passing non-existent columns or index values to constructor "
                         "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler
@@ -581,6 +581,63 @@ class Series(BasePandasDataset):
             pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
         )
 
+    def dot(self, other):
+        """
+        Compute the dot product between the Series and the columns of other.
+
+        This method computes the dot product between the Series and another
+        one, or the Series and each columns of a DataFrame, or the Series and
+        each columns of an array.
+
+        It can also be called using `self @ other` in Python >= 3.5.
+
+        Parameters
+        ----------
+        other : Series, DataFrame or array-like
+            The other object to compute the dot product with its columns.
+
+        Returns
+        -------
+        scalar, Series or numpy.ndarray
+            Return the dot product of the Series and other if other is a
+            Series, the Series of the dot product of Series and each rows of
+            other if other is a DataFrame or a numpy.ndarray between the Series
+            and each columns of the numpy array.
+
+        See Also
+        --------
+        DataFrame.dot: Compute the matrix product with the DataFrame.
+        Series.mul: Multiplication of series and other, element-wise.
+
+        Notes
+        -----
+        The Series and other has to share the same index if other is a Series
+        or a DataFrame.
+        """
+        if isinstance(other, BasePandasDataset):
+            common = self.index.union(other.index)
+            if len(common) > len(self.index) or len(common) > len(other.index):
+                raise ValueError("Matrices are not aligned")
+
+            qc = other.reindex(index=common)._query_compiler
+            if isinstance(other, Series):
+                return self._reduce_dimension(
+                    query_compiler=self._query_compiler.dot(qc)
+                )
+            else:
+                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+
+        other = np.asarray(other)
+        if self.shape[0] != other.shape[0]:
+            raise ValueError(
+                "Dot product shape mismatch, {} vs {}".format(self.shape, other.shape)
+            )
+
+        if len(other.shape) > 1:
+            return self._query_compiler.dot(other).to_numpy().squeeze()
+
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
 
@@ -658,11 +715,6 @@ class Series(BasePandasDataset):
     def gt(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).gt(new_other, level=level, axis=axis)
-
-    def head(self, n=5):
-        if n == 0:
-            return Series(dtype=self.dtype)
-        return super(Series, self).head(n)
 
     def hist(
         self,
@@ -867,7 +919,20 @@ class Series(BasePandasDataset):
     radd = add
 
     def ravel(self, order="C"):
-        return self._default_to_pandas(pandas.Series.ravel, order=order)
+        """
+        Returns the flattened containing data as ndarray.
+
+        Parameters
+        ----------
+        order : {'C', 'F', 'A', 'K'}, optional
+
+        Returns
+        ----------
+        numpy.ndarray or ndarray-like
+            Flattened data of the Series.
+
+        """
+        return self._query_compiler.to_numpy().flatten(order=order)
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)
@@ -1072,11 +1137,6 @@ class Series(BasePandasDataset):
     def swaplevel(self, i=-2, j=-1, copy=True):
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
 
-    def tail(self, n=5):
-        if n == 0:
-            return Series(dtype=self.dtype)
-        return super(Series, self).tail(n)
-
     def take(self, indices, axis=0, is_copy=None, **kwargs):
         return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
 
@@ -1255,7 +1315,7 @@ class Series(BasePandasDataset):
     def is_monotonic_decreasing(self):
         # We cannot default to pandas without a named function to call.
         def is_monotonic_decreasing(df):
-            return df.is_monotonic
+            return df.is_monotonic_decreasing
 
         return self._default_to_pandas(is_monotonic_decreasing)
 
@@ -1263,7 +1323,7 @@ class Series(BasePandasDataset):
     def is_monotonic_increasing(self):
         # We cannot default to pandas without a named function to call.
         def is_monotonic_increasing(df):
-            return df.is_monotonic
+            return df.is_monotonic_increasing
 
         return self._default_to_pandas(is_monotonic_increasing)
 

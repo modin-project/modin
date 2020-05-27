@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import copy
 import numpy as np
 import pandas
 from pandas.util.testing import assert_almost_equal, assert_frame_equal
@@ -110,6 +111,14 @@ test_data = {
     },
 }
 
+# Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
+# created in normal way and has to be copied from dataset that works.
+# TODO(gshimansky): when bug #1481 is fixed replace this dataframe initialization with ordinary one.
+test_data["with_index_column"] = copy.copy(test_data["int_data"])
+test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
+    "col{}".format(int(NCOLS / 2))
+)
+
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
 
@@ -155,6 +164,7 @@ numeric_dfs = [
     "float_data",
     "sparse_nan_data",
     "dense_nan_data",
+    "with_index_column",
     "100x100",
 ]
 

@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from io import BytesIO
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
+import warnings
+
 from modin.engines.base.io import FileReader
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
-from io import BytesIO
 
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
@@ -82,6 +84,7 @@ class PandasParser(object):
 class PandasCSVParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
@@ -100,6 +103,38 @@ class PandasCSVParser(PandasParser):
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_csv(fname, **kwargs)
+        if index_col is not None:
+            index = pandas_df.index
+        else:
+            # The lengths will become the RangeIndex
+            index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
+
+
+class PandasFWFParser(PandasParser):
+    @staticmethod
+    def parse(fname, **kwargs):
+        num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        index_col = kwargs.get("index_col", None)
+        if start is not None and end is not None:
+            # pop "compression" from kwargs because bio is uncompressed
+            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            if kwargs.get("encoding", None) is not None:
+                header = b"" + bio.readline()
+            else:
+                header = b""
+            bio.seek(start)
+            to_read = header + bio.read(end - start)
+            bio.close()
+            pandas_df = pandas.read_fwf(BytesIO(to_read), **kwargs)
+        else:
+            # This only happens when we are reading with only one worker (Default)
+            return pandas.read_fwf(fname, **kwargs)
         if index_col is not None:
             index = pandas_df.index
         else:

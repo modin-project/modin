@@ -2272,17 +2272,51 @@ class TestDataFrameDefault:
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
-        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
         modin_result = modin_df.dot(modin_series)
         pandas_result = pandas_df.dot(pandas_series)
+        df_equals(modin_result, pandas_result)
+
+        # Test dataframe input
+        modin_result = modin_df.dot(modin_df.T)
+        pandas_result = pandas_df.dot(pandas_df.T)
         df_equals(modin_result, pandas_result)
 
         # Test when input series index doesn't line up with columns
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
 
-        with pytest.warns(UserWarning):
-            modin_df.dot(modin_df.T)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_matmul(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        col_len = len(modin_df.columns)
+
+        # Test list input
+        arr = np.arange(col_len)
+        modin_result = modin_df @ arr
+        pandas_result = pandas_df @ arr
+        df_equals(modin_result, pandas_result)
+
+        # Test bad dimensions
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ np.arange(col_len + 10)
+
+        # Test series input
+        modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
+        modin_result = modin_df @ modin_series
+        pandas_result = pandas_df @ pandas_series
+        df_equals(modin_result, pandas_result)
+
+        # Test dataframe input
+        modin_result = modin_df @ modin_df.T
+        pandas_result = pandas_df @ pandas_df.T
+        df_equals(modin_result, pandas_result)
+
+        # Test when input series index doesn't line up with columns
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ pd.Series(np.arange(col_len))
 
     def test_ewm(self):
         df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
@@ -2402,10 +2436,16 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
 
-    def test_mad(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).mad()
+    @pytest.mark.parametrize("data", test_data_values)
+    @pytest.mark.parametrize("axis", [None, 0, 1])
+    @pytest.mark.parametrize("skipna", [None, True, False])
+    @pytest.mark.parametrize("level", [0, -1, None])
+    def test_mad(self, level, data, axis, skipna):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        df_equals(
+            modin_df.mad(axis=axis, skipna=skipna, level=level),
+            pandas_df.mad(axis=axis, skipna=skipna, level=level),
+        )
 
     def test_mask(self):
         df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])
@@ -2609,7 +2649,14 @@ class TestDataFrameDefault:
 
         # Skips nan because only difference is nan instead of NaN
         if not name_contains(request.node.name, ["nan"]):
-            assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
+            try:
+                pandas_result = pandas_df.to_records()
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.to_records()
+            else:
+                modin_result = modin_df.to_records()
+                assert np.array_equal(modin_result, pandas_result)
 
     def test_to_datetime(self):
         modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
@@ -3952,68 +3999,70 @@ class TestDataFrameWindow:
             df_equals(modin_result, pandas_result)
 
     def test_nlargest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nlargest(3, "population"), pandas_df.nlargest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nlargest(3, "population")
 
     def test_nsmallest(self):
-        df = pd.DataFrame(
-            {
-                "population": [
-                    59000000,
-                    65000000,
-                    434000,
-                    434000,
-                    434000,
-                    337000,
-                    11300,
-                    11300,
-                    11300,
-                ],
-                "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
-                "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
-            },
-            index=[
-                "Italy",
-                "France",
-                "Malta",
-                "Maldives",
-                "Brunei",
-                "Iceland",
-                "Nauru",
-                "Tuvalu",
-                "Anguilla",
+        data = {
+            "population": [
+                59000000,
+                65000000,
+                434000,
+                434000,
+                434000,
+                337000,
+                11300,
+                11300,
+                11300,
             ],
+            "GDP": [1937894, 2583560, 12011, 4520, 12128, 17036, 182, 38, 311],
+            "alpha-2": ["IT", "FR", "MT", "MV", "BN", "IS", "NR", "TV", "AI"],
+        }
+        index = [
+            "Italy",
+            "France",
+            "Malta",
+            "Maldives",
+            "Brunei",
+            "Iceland",
+            "Nauru",
+            "Tuvalu",
+            "Anguilla",
+        ]
+        modin_df = pd.DataFrame(data=data, index=index)
+        pandas_df = pandas.DataFrame(data=data, index=index)
+        df_equals(
+            modin_df.nsmallest(3, "population"), pandas_df.nsmallest(3, "population")
         )
-        with pytest.warns(UserWarning):
-            df.nsmallest(3, "population")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
