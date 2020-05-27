@@ -1166,7 +1166,7 @@ class DataFrame(BasePandasDataset):
             and on is not None
             and how == "inner"
         ):
-            return self._query_compiler.merge(
+            query_compiler = self._query_compiler.merge(
                 self,
                 right,
                 how=how,
@@ -1181,6 +1181,7 @@ class DataFrame(BasePandasDataset):
                 indicator=indicator,
                 validate=validate,
             )
+            return DataFrame(query_compiler=query_compiler)
         if left_index is False or right_index is False:
             if isinstance(right, DataFrame):
                 right = right._query_compiler.to_pandas()

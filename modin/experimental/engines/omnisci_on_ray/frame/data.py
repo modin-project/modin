@@ -196,8 +196,24 @@ class OmnisciOnRayFrame(BasePandasFrame):
         assert (
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
+
+        new_columns = []
+        new_columns.append(on)
+
+        for x in left.columns:
+            if x != on:
+                new_columns.append(x + suffixes[0])
+        """Probably we don't need rowid here"""
+        new_columns.append("rowid" + suffixes[0])
+        for x in right.columns:
+            if x != on:
+                new_columns.append(x + suffixes[1])
+        new_columns.append("rowid" + suffixes[1])
+
         op = JoinNode(left, right, how=how, on=on, sort=sort, suffixes=suffixes,)
-        return self.__constructor__(columns=self.columns, op=op)
+
+        new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
+        return self.__constructor__(columns=new_columns, op=op)
 
     def _execute(self):
         if isinstance(self._op, FrameNode):
