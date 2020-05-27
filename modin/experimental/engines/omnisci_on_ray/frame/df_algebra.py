@@ -239,6 +239,37 @@ class GroupbyAggNode(DFAlgNode):
         self._print_input(prefix + "  ")
 
 
+class TransformNode(DFAlgNode):
+    def __init__(self, base, exprs):
+        self.exprs = exprs
+        self.input = [base]
+
+    def copy(self):
+        return TransformNode(self.input[0], self.exprs)
+
+    def _to_calcite(self, out_nodes):
+        self._input_to_calcite(out_nodes)
+
+        frame = self.input[0]
+        fields = []
+        exprs = []
+        if frame._index_cols is not None:
+            fields += frame._index_cols
+            exprs += [CalciteInputRefExpr(i) for i in range(0, len(frame._index_cols))]
+
+        fields += self.exprs.keys()
+        exprs += self.exprs.values()
+
+        node = CalciteProjectionNode(fields, exprs)
+        out_nodes.append(node)
+
+    def _print(self, prefix):
+        print("{}TransformNode:".format(prefix))
+        for k, v in self.exprs.items():
+            print("{}  {}: {}".format(prefix, k, v))
+        self._print_input(prefix + "  ")
+
+
 def to_list(indices):
     if isinstance(indices, list):
         return indices
