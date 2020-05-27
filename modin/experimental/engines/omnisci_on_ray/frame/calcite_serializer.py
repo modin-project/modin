@@ -8,7 +8,14 @@ class CalciteSerializer:
     def serialize(self, plan):
         return json.dumps({"rels": [self.serialize_obj(node) for node in plan]})
 
+    def expect_one_of(self, val, *types):
+        for t in types:
+            if isinstance(val, t):
+                return
+        raise TypeError("Can not serialize {}".format(typ.__name__))
+
     def serialize_obj(self, obj):
+        self.expect_one_of(obj, CalciteCollation, BaseExpr, CalciteBaseNode)
         res = {}
         for k, v in obj.__dict__.items():
             res[k] = self.serialize_item(v)
@@ -21,6 +28,7 @@ class CalciteSerializer:
             return self.serialize_expr(item)
         if isinstance(item, CalciteCollation):
             return self.serialize_obj(item)
+        self.expect_one_of(item, str, int)
         return item
 
     def serialize_expr(self, expr):
@@ -31,7 +39,7 @@ class CalciteSerializer:
         return self.serialize_obj(expr)
 
     def serialize_literal(self, literal):
-        assert isinstance(literal.val, int)
+        self.expect_one_of(literal.val, int)
         return {
             "literal": literal.val,
             "type": "DECIMAL",
