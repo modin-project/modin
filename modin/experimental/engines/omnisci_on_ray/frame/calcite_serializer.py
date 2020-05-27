@@ -52,7 +52,7 @@ class CalciteSerializer:
 
     def serialize_type(self, typ):
         type_strings = {
-            "INTEGER": "INTEGER", # IDK why type is "INTEGER" here, really
+            int: "INTEGER",
             bool: "BOOLEAN",
         }
         assert typ.type in type_strings
