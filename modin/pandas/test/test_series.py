@@ -1611,8 +1611,7 @@ def test_is_monotonic_increasing(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_unique(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert modin_series.is_unique == pandas_series.is_unique
+    assert modin_series.is_unique == pandas_series.is_unique
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
