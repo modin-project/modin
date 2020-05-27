@@ -1180,6 +1180,10 @@ class DataFrame(BasePandasDataset):
                 indicator=indicator,
                 validate=validate,
             )
+            """Hack for pandas backend to properly switch on default behavior.
+               Hopefully this will be removed later after some refactoring."""
+            if isinstance(query_compiler, DataFrame):
+                return query_compiler
             return DataFrame(query_compiler=query_compiler)
         if left_index is False or right_index is False:
             if isinstance(right, DataFrame):
