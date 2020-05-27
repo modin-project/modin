@@ -71,4 +71,11 @@ class CalciteSortNode(CalciteBaseNode):
         super(CalciteSortNode, self).__init__("LogicalSort")
         self.collation = collation
 
+class CalciteJoinNode(CalciteBaseNode):
+    def __init__(self, left_id, right_id, how, condition):
+        super(CalciteJoinNode, self).__init__("LogicalJoin")
+        self.inputs = [left_id, right_id]
+        self.joinType = how
+        self.condition = condition
+
 

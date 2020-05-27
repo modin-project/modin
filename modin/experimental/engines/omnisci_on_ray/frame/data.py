@@ -17,7 +17,7 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index
 
-from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode
+from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode, JoinNode
 from .expr import (
     InputRefExpr,
     LiteralExpr,
@@ -189,6 +189,15 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
         return new_frame
+
+    def join(
+        self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
+    ):
+        assert (
+            on is not None
+        ), "Merge with unspecified 'on' parameter is not supported in the engine"
+        op = JoinNode(left, right, how=how, on=on, sort=sort, suffixes=suffixes,)
+        return self.__constructor__(columns=self.columns, op=op)
 
     def _execute(self):
         if isinstance(self._op, FrameNode):
