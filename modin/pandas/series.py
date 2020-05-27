@@ -1167,7 +1167,18 @@ class Series(BasePandasDataset):
         )
 
     def unique(self):
-        return self._default_to_pandas(pandas.Series.unique)
+        """
+        Return unique values of Series object.
+
+        Uniques are returned in order of appearance. Hash table-based unique,
+        therefore does NOT sort.
+
+        Returns
+        -------
+        ndarray
+            The unique values returned as a NumPy array.
+        """
+        return self._query_compiler.unique().to_numpy().squeeze()
 
     def update(self, other):
         return self._default_to_pandas(pandas.Series.update, other)

@@ -854,20 +854,28 @@ class BasePandasFrame(object):
             self._column_widths,
         )
 
-    def filter_full_axis(self, axis, func):
+    def filter_full_axis(self, axis, func, build_map_reduce=None):
         """Filter data based on the function provided along an entire axis.
 
         Args:
             axis: The axis to filter over.
             func: The function to use for the filter. This function should filter the
                 data itself.
+            build_map_reduce: The flag to wrap a func.
 
         Returns:
             A new dataframe.
         """
+        if build_map_reduce:
+            func = self._build_mapreduce_func(axis, func)
+
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
+
+        if build_map_reduce:
+            axis ^= 1
+
         if axis == 0:
             new_index = self.index
             new_lengths = self._row_lengths

@@ -2613,9 +2613,40 @@ def test_tz_localize():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unique(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.unique()
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.unique()
+    pandas_result = pandas_series.unique()
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
+    pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
+    pandas_result = pandas.Series(
+        [pd.Timestamp("2016-01-01") for _ in range(3)]
+    ).unique()
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.Series(
+        [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
+    ).unique()
+    pandas_result = pandas.Series(
+        [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
+    ).unique()
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
+    pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.Series(
+        pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
+    ).unique()
+    pandas_result = pandas.Series(
+        pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
+    ).unique()
+    assert_array_equal(modin_result, pandas_result)
 
 
 def test_unstack():

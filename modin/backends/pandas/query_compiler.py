@@ -429,6 +429,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
+    def unique(self):
+        """Return unique values of Series object.
+
+        Returns
+        -------
+        ndarray
+            The unique values returned as a NumPy array.
+        """
+        return self.__constructor__(
+            self._modin_frame.filter_full_axis(
+                0, lambda x: x.squeeze().unique(), build_map_reduce=True
+            )
+        )
+
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
 
