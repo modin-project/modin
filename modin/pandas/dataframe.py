@@ -2106,7 +2106,6 @@ class DataFrame(BasePandasDataset):
             return self._update_inplace(
                 self._default_to_pandas(setitem_without_string_columns)._query_compiler
             )
-
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
                 value = value[value.columns[0]].values
