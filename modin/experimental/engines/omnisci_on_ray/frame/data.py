@@ -18,11 +18,11 @@ from .partition_manager import OmnisciOnRayFrameManager
 from pandas.core.index import ensure_index, Index
 
 from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode
-from .calcite_algebra import (
-    CalciteInputRefExpr,
-    CalciteLiteralExpr,
-    CalciteOpExprType,
-    build_calcite_if_then_else,
+from .expr import (
+    InputRefExpr,
+    LiteralExpr,
+    OpExprType,
+    build_if_then_else,
 )
 
 import ray
@@ -163,20 +163,20 @@ class OmnisciOnRayFrame(BasePandasFrame):
         exprs = {}
         if isinstance(value, dict):
             for col in self.columns:
-                col_expr = CalciteInputRefExpr(self._table_cols.index(col))
+                col_expr = InputRefExpr(self._table_cols.index(col))
                 if col in value:
-                    value_expr = CalciteLiteralExpr(value[col])
-                    res_type = CalciteOpExprType.from_scalar(value[col], False)
-                    exprs[col] = build_calcite_if_then_else(
+                    value_expr = LiteralExpr(value[col])
+                    res_type = OpExprType(type(value[col]), False)
+                    exprs[col] = build_if_then_else(
                         col_expr.is_null(), value_expr, col_expr, res_type
                     )
                 else:
                     exprs[col] = col_expr
         elif np.isscalar(value):
-            value_expr = CalciteLiteralExpr(value)
-            res_type = CalciteOpExprType.from_scalar(value, False)
+            value_expr = LiteralExpr(value)
+            res_type = OpExprType(type(value), False)
             for col in self.columns:
-                col_expr = CalciteInputRefExpr(self._table_cols.index(col))
+                col_expr = InputRefExpr(self._table_cols.index(col))
                 exprs[col] = build_calcite_if_then_else(
                     col_expr.is_null(), value_expr, col_expr, res_type
                 )
