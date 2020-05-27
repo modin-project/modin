@@ -56,9 +56,12 @@ class DFAlgNode(abc.ABC):
         pass
 
     def _input_to_calcite(self, out_nodes):
+        res = []
         if hasattr(self, "input"):
             for i in self.input:
                 i._op._to_calcite(out_nodes)
+                res.append(out_nodes[-1].id)
+        return res
 
     def dump(self, prefix=""):
         self._print(prefix)
@@ -134,9 +137,7 @@ class MaskNode(DFAlgNode):
             # rowid is an additional virtual column which is always in
             # the end of the list
             rowid_col = InputRefExpr(len(frame._table_cols))
-            condition = build_row_idx_filter_expr(
-                self.row_numeric_idx, rowid_col
-            )
+            condition = build_row_idx_filter_expr(self.row_numeric_idx, rowid_col)
             filter_node = CalciteFilterNode(condition)
             out_nodes.append(filter_node)
 
@@ -161,9 +162,7 @@ class MaskNode(DFAlgNode):
         else:
             offs = len(exprs)
             fields += to_list(frame.columns)
-            exprs += [
-                InputRefExpr(i + offs) for i in range(0, len(frame.columns))
-            ]
+            exprs += [InputRefExpr(i + offs) for i in range(0, len(frame.columns))]
 
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
@@ -241,9 +240,19 @@ class GroupbyAggNode(DFAlgNode):
 
 
 class TransformNode(DFAlgNode):
-    def __init__(self, base, exprs):
+    """Make simple column transformations.
+
+    Args:
+        base - frame to transform
+        exprs - dictionary with new column names mapped to expressions
+        keep_index - if True then keep all index columns (if any),
+            otherwise drop them
+    """
+
+    def __init__(self, base, exprs, keep_index=True):
         self.exprs = exprs
         self.input = [base]
+        self.keep_index = keep_index
 
     def copy(self):
         return TransformNode(self.input[0], self.exprs)
@@ -254,7 +263,7 @@ class TransformNode(DFAlgNode):
         frame = self.input[0]
         fields = []
         exprs = []
-        if frame._index_cols is not None:
+        if self.keep_index and frame._index_cols is not None:
             fields += frame._index_cols
             exprs += [InputRefExpr(i) for i in range(0, len(frame._index_cols))]
 
@@ -268,6 +277,25 @@ class TransformNode(DFAlgNode):
         print("{}TransformNode:".format(prefix))
         for k, v in self.exprs.items():
             print("{}  {}: {}".format(prefix, k, v))
+        self._print_input(prefix + "  ")
+
+
+class UnionNode(DFAlgNode):
+    """Concat frames by axis=0, all frames should be aligned."""
+
+    def __init__(self, frames):
+        self.input = frames
+
+    def copy(self):
+        return UnionNode(self.input)
+
+    def _to_calcite(self, out_nodes):
+        inputs = self._input_to_calcite(out_nodes)
+        node = CalciteUnionNode(inputs, True)
+        out_nodes.append(node)
+
+    def _print(self, prefix):
+        print("{}UnionNode:".format(prefix))
         self._print_input(prefix + "  ")
 
 

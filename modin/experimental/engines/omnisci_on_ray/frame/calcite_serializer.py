@@ -39,6 +39,16 @@ class CalciteSerializer:
         return self.serialize_obj(expr)
 
     def serialize_literal(self, literal):
+        if literal.val is None:
+            return {
+              "literal": None,
+              "type": "NULL",
+              "target_type": "BIGINT",
+              "scale": 0,
+              "precision": 19,
+              "type_scale": 0,
+              "type_precision": 19
+            }
         self.expect_one_of(literal.val, int)
         return {
             "literal": literal.val,

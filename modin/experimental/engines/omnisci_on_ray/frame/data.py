@@ -17,13 +17,14 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index
 
-from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode
+from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode, UnionNode
 from .expr import (
     InputRefExpr,
     LiteralExpr,
     OpExprType,
     build_if_then_else,
 )
+from collections import OrderedDict
 
 import ray
 import numpy as np
@@ -189,6 +190,73 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
         return new_frame
+
+    def _index_width(self):
+        if self._index_cols is None:
+            return 1
+        return len(self._index_cols)
+
+    def _concat(
+        self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
+    ):
+        assert axis == 0, "unsupported concat on axis = 1"
+
+        # determine output columns
+        new_columns = OrderedDict()
+        for col in self.columns:
+            new_columns[col] = 1
+        for frame in other_modin_frames:
+            if join == "inner":
+                for col in list(new_columns):
+                    if col not in frame.columns:
+                        del new_columns[col]
+            else:
+                for col in frame.columns:
+                    if col not in new_columns:
+                        new_columns[col] = 1
+        new_columns = list(new_columns.keys())
+
+        if sort:
+            new_columns = sorted(new_columns)
+
+        # determine how many index components are going into
+        # the resulting table
+        if not ignore_index:
+            index_width = self._index_width()
+            for frame in other_modin_frames:
+                index_width = min(index_width, frame._index_width())
+
+        # build projections to align all frames
+        aligned_frames = []
+        for frame in [self] + other_modin_frames:
+            aligned_index = None
+            exprs = {}
+            if not ignore_index:
+                if frame._index_cols:
+                    aligned_index = frame._index_cols[0 : index_width + 1]
+                    for i in range(0, index_width):
+                        col = frame._index_cols[i]
+                        exprs[col] = InputRefExpr(frame._table_cols.index(col))
+                else:
+                    assert index_width == 1, "unexpected index width"
+                    aligned_index = ["__index__"]
+                    exprs["__index__"] = InputRefExpr(len(frame._table_cols))
+            for col in new_columns:
+                if col in frame._table_cols:
+                    exprs[col] = InputRefExpr(frame._table_cols.index(col))
+                else:
+                    exprs[col] = LiteralExpr(None)
+            aligned_frame_op = TransformNode(frame, exprs, False)
+            aligned_frames.append(
+                self.__constructor__(
+                    columns=new_columns, op=aligned_frame_op, index_cols=aligned_index
+                )
+            )
+
+        new_op = UnionNode(aligned_frames)
+        return self.__constructor__(
+            columns=new_columns, op=new_op, index_cols=aligned_frames[0]._index_cols,
+        )
 
     def _execute(self):
         if isinstance(self._op, FrameNode):
