@@ -350,6 +350,11 @@ class JoinNode(DFAlgNode):
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
 
+        if self.sort is True:
+            """Sort by key column"""
+            collation = [CalciteCollation(0)]
+            out_nodes.append(CalciteSortNode(collation))
+
     def _print(self, prefix):
         print("{}JoinNode:".format(prefix))
         print("{}  Left: {}".format(prefix, self.input[0]))
