@@ -5131,14 +5131,30 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
-    def test_setitem_on_empty_df(self):
-        columns = ["id", "max_speed", "health"]
-        modin_df = pd.DataFrame(columns=columns)
-        pandas_df = pandas.DataFrame(columns=columns)
-        a = np.array(["one", "two"])
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {},
+            pytest.param(
+                {"id": [], "max_speed": [], "health": []},
+                marks=pytest.mark.xfail(
+                    reason="Throws an exception because generally assigning Series or other objects of length different from DataFrame does not work right now"
+                ),
+            ),
+        ],
+        ids=["empty", "empty_columns"],
+    )
+    @pytest.mark.parametrize(
+        "value", [np.array(["one", "two"]), [11, 22]], ids=["ndarray", "list"],
+    )
+    @pytest.mark.parametrize("convert_to_series", [False, True])
+    @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
+    def test_setitem_on_empty_df(self, data, value, convert_to_series, new_col_id):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
 
-        modin_df["id"] = a
-        pandas_df["id"] = a
+        pandas_df[new_col_id] = pandas.Series(value) if convert_to_series else value
+        modin_df[new_col_id] = pd.Series(value) if convert_to_series else value
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
