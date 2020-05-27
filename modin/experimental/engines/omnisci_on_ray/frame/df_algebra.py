@@ -13,6 +13,7 @@
 
 import abc
 from .calcite_algebra import *
+from .expr import *
 
 
 class DFAlgNode(abc.ABC):
@@ -132,8 +133,8 @@ class MaskNode(DFAlgNode):
         if self.row_numeric_idx is not None:
             # rowid is an additional virtual column which is always in
             # the end of the list
-            rowid_col = CalciteInputRefExpr(len(frame._table_cols))
-            condition = build_calcite_row_idx_filter_expr(
+            rowid_col = InputRefExpr(len(frame._table_cols))
+            condition = build_row_idx_filter_expr(
                 self.row_numeric_idx, rowid_col
             )
             filter_node = CalciteFilterNode(condition)
@@ -144,24 +145,24 @@ class MaskNode(DFAlgNode):
         exprs = []
         if frame._index_cols is not None:
             fields += frame._index_cols
-            exprs += [CalciteInputRefExpr(i) for i in range(0, len(frame._index_cols))]
+            exprs += [InputRefExpr(i) for i in range(0, len(frame._index_cols))]
 
         if self.col_indices is not None or self.col_numeric_idx is not None:
             if self.col_indices is not None:
                 fields += to_list(self.col_indices)
                 exprs += [
-                    CalciteInputRefExpr(frame._table_cols.index(col))
+                    InputRefExpr(frame._table_cols.index(col))
                     for col in self.col_indices
                 ]
             elif self.col_numeric_idx is not None:
                 offs = len(exprs)
                 fields += frame.columns[self.col_numeric_idx].tolist()
-                exprs += [CalciteInputRefExpr(x + offs) for x in self.col_numeric_idx]
+                exprs += [InputRefExpr(x + offs) for x in self.col_numeric_idx]
         else:
             offs = len(exprs)
             fields += to_list(frame.columns)
             exprs += [
-                CalciteInputRefExpr(i + offs) for i in range(0, len(frame.columns))
+                InputRefExpr(i + offs) for i in range(0, len(frame.columns))
             ]
 
         node = CalciteProjectionNode(fields, exprs)
@@ -194,8 +195,8 @@ class GroupbyAggNode(DFAlgNode):
         # TODO: track column dtype and compute aggregate dtype,
         # actually INTEGER works for floats too with the correct result,
         # so not a big issue right now
-        res_type = CalciteOpExprType("INTEGER", True)
-        return CalciteAggregateExpr(agg, [col_idx], res_type, False)
+        res_type = OpExprType("INTEGER", True)
+        return AggregateExpr(agg, [col_idx], res_type, False)
 
     def _to_calcite(self, out_nodes):
         self._input_to_calcite(out_nodes)
@@ -206,7 +207,7 @@ class GroupbyAggNode(DFAlgNode):
         # Wee need a projection to be aggregation op
         if not isinstance(out_nodes[-1], CalciteProjectionNode):
             proj = CalciteProjectionNode(
-                table_cols, [CalciteInputRefExpr(i) for i in range(0, len(table_cols))]
+                table_cols, [InputRefExpr(i) for i in range(0, len(table_cols))]
             )
             out_nodes.append(proj)
 
@@ -255,7 +256,7 @@ class TransformNode(DFAlgNode):
         exprs = []
         if frame._index_cols is not None:
             fields += frame._index_cols
-            exprs += [CalciteInputRefExpr(i) for i in range(0, len(frame._index_cols))]
+            exprs += [InputRefExpr(i) for i in range(0, len(frame._index_cols))]
 
         fields += self.exprs.keys()
         exprs += self.exprs.values()
