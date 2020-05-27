@@ -177,7 +177,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             res_type = OpExprType(type(value), False)
             for col in self.columns:
                 col_expr = InputRefExpr(self._table_cols.index(col))
-                exprs[col] = build_calcite_if_then_else(
+                exprs[col] = build_if_then_else(
                     col_expr.is_null(), value_expr, col_expr, res_type
                 )
         else:
