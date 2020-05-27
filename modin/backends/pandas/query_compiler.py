@@ -571,21 +571,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return pandas.DataFrame([result])
 
+        num_cols = other.shape[1] if len(other.shape) > 1 else None
         if len(self.columns) == 1:
+            new_index = ["__reduced__"] if num_cols is None else None
+            new_columns = ["__reduced__"] if num_cols is not None else None
             axis = 0
-            new_index = ["__reduce__"]
         else:
+            new_index = None
+            new_columns = ["__reduced__"] if num_cols is None else None
             axis = 1
-            new_index = self.index
 
-        if isinstance(other, (pandas.DataFrame, pandas.Series)):
-            new_modin_frame = self._modin_frame._apply_full_axis(
-                axis, map_func, new_index=new_index, new_columns=["__reduced__"]
-            )
-        else:
-            new_modin_frame = self._modin_frame._apply_full_axis(
-                axis, map_func, new_columns=["__reduced__"]
-            )
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, map_func, new_index=new_index, new_columns=new_columns
+        )
         return self.__constructor__(new_modin_frame)
 
     def eval(self, expr, **kwargs):
