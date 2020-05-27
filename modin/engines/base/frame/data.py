@@ -726,7 +726,7 @@ class BasePandasFrame(object):
         """
 
         def _map_reduce_func(df):
-            series_result = func(df)
+            series_result = func(df.squeeze())
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
                 # consistent with what we have done. In the case of a reduction, the

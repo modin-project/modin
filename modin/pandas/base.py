@@ -2321,49 +2321,15 @@ class BasePandasDataset(object):
             query_compiler=self._query_compiler.round(decimals=decimals, **kwargs)
         )
 
-    def _to_datetime(
-        self,
-        errors="raise",
-        dayfirst=False,
-        yearfirst=False,
-        utc=None,
-        format=None,
-        exact=True,
-        unit=None,
-        infer_datetime_format=False,
-        origin="unix",
-        cache=True,
-    ):
+    def _to_datetime(self, **kwargs):
         from .dataframe import DataFrame
 
         if not isinstance(self, DataFrame):
             return self.__constructor__(
-                query_compiler=self._query_compiler.to_datetime(
-                    errors="raise",
-                    dayfirst=False,
-                    yearfirst=False,
-                    utc=None,
-                    format=None,
-                    exact=True,
-                    unit=None,
-                    infer_datetime_format=False,
-                    origin="unix",
-                    cache=True,
-                )
+                query_compiler=self._query_compiler.to_datetime(**kwargs)
             )
         return self._reduce_dimension(
-            self._query_compiler.to_datetime(
-                errors="raise",
-                dayfirst=False,
-                yearfirst=False,
-                utc=None,
-                format=None,
-                exact=True,
-                unit=None,
-                infer_datetime_format=False,
-                origin="unix",
-                cache=True,
-            )
+            query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
     def rpow(self, other, axis="columns", level=None, fill_value=None):

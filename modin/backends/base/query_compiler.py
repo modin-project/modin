@@ -350,6 +350,10 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def to_datetime(self, arg, **kwargs):
+        pass
+
     # END Abstract full Reduce operations
 
     # Abstract map partitions operations
@@ -380,23 +384,6 @@ class BaseQueryCompiler(abc.ABC):
 
     @abc.abstractmethod
     def round(self, **kwargs):
-        pass
-
-    @abc.abstractmethod
-    def to_datetime(
-        self,
-        arg,
-        errors="raise",
-        dayfirst=False,
-        yearfirst=False,
-        utc=None,
-        format=None,
-        exact=True,
-        unit=None,
-        infer_datetime_format=False,
-        origin="unix",
-        cache=True,
-    ):
         pass
 
     # END Abstract map partitions operations

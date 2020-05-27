@@ -362,6 +362,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
+    to_datetime = ReductionFunction.register(pandas.to_datetime, axis=1)
 
     # END Reduction operations
 
@@ -375,7 +376,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
-    to_datetime = MapFunction.register(pandas.to_datetime)
 
     # END Map partitions operations
 
