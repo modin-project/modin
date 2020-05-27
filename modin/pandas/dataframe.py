@@ -1164,7 +1164,6 @@ class DataFrame(BasePandasDataset):
             left_index is False
             and right_index is False
             and on is not None
-            and how == "inner"
         ):
             query_compiler = self._query_compiler.merge(
                 self,

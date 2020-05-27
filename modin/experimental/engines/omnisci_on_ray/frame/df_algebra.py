@@ -322,39 +322,35 @@ class JoinNode(DFAlgNode):
         """Projection for both frames"""
         fields = []
         exprs = []
-        if self.how == "inner":
-            """First goes 'on' column then all left columns+suffix but 'on' and rowid+suffix 
-            then all right columns+suffix but 'on' and rowid+suffix"""
-            for c in left.columns:
-                if c != self.on:
-                    fields.append(c + self.suffixes[0])
-                else:
-                    fields.insert(0, c)
-            fields.append("rowid" + self.suffixes[0])
-            for x in range(len(left.columns)):
-                if x != left_on_pos:
-                    exprs.append(CalciteInputRefExpr(x))
-                else:
-                    exprs.insert(0, CalciteInputRefExpr(x))
-            """for first rowid"""
-            exprs.append(CalciteInputRefExpr(len(left.columns)))
-            for c in right.columns:
-                if c != self.on:
-                    fields.append(c + self.suffixes[1])
-            fields.append("rowid" + self.suffixes[1])
-            for x in range(len(right.columns)):
-                if x != right_on_pos:
-                    exprs.append(CalciteInputRefExpr(x + len(left.columns) + 1))
-            """for second rowid"""
-            exprs.append(
-                CalciteInputRefExpr(len(left.columns) + len(right.columns) + 1)
-            )
-        else:
-            raise NotImplementedError("Not implemented in the engine yet!")
+        """First goes 'on' column then all left columns+suffix but 'on' and rowid+suffix 
+        then all right columns+suffix but 'on' and rowid+suffix"""
+        for c in left.columns:
+            if c != self.on:
+                fields.append(c + self.suffixes[0])
+            else:
+                fields.insert(0, c)
+        fields.append("rowid" + self.suffixes[0])
+        for x in range(len(left.columns)):
+            if x != left_on_pos:
+                exprs.append(CalciteInputRefExpr(x))
+            else:
+                exprs.insert(0, CalciteInputRefExpr(x))
+        """for first rowid"""
+        exprs.append(CalciteInputRefExpr(len(left.columns)))
+        for c in right.columns:
+            if c != self.on:
+                fields.append(c + self.suffixes[1])
+        fields.append("rowid" + self.suffixes[1])
+        for x in range(len(right.columns)):
+            if x != right_on_pos:
+                exprs.append(CalciteInputRefExpr(x + len(left.columns) + 1))
+        """for second rowid"""
+        exprs.append(CalciteInputRefExpr(len(left.columns) + len(right.columns) + 1))
+
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
 
-    def _print(self, prefix):            
+    def _print(self, prefix):
         print("{}JoinNode:".format(prefix))
         print("{}  Left: {}".format(prefix, self.input[0]))
         print("{}  Right: {}".format(prefix, self.input[1]))
