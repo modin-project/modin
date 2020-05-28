@@ -404,7 +404,11 @@ class DataFrame(BasePandasDataset):
 
         # Otherwise operations that falls to default_to_pandas may lose the original
         # type of by, see issue #1461
-        if not isinstance(by, (pandas.Series, Series)) and is_list_like(by) and len(by) == 1:
+        if (
+            not isinstance(by, (pandas.Series, Series))
+            and is_list_like(by)
+            and len(by) == 1
+        ):
             by = by[0]
 
         if callable(by):
