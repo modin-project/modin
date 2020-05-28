@@ -43,7 +43,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return cls(data_cls.from_pandas(df))
 
     def copy(self):
-        return self.__constructor__(self._expr.copy())
+        return self.__constructor__(self._modin_frame.copy())
 
     def getitem_column_array(self, key, numeric=False):
         if numeric:

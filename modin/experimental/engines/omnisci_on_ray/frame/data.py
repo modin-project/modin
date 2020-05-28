@@ -67,6 +67,27 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if partitions is not None:
             self._filter_empties()
 
+    def copy(self):
+        """Copy this object.
+
+        Returns:
+            A copied version of this object.
+        """
+        index_copy = None
+        if self._index_cache is not None:
+            index_copy = self._index_cache.copy()
+
+        return self.__constructor__(
+            self._partitions,
+            index_copy,
+            self.columns.copy(),
+            self._row_lengths,
+            self._column_widths,
+            self._dtypes,
+            op=self._op,
+            index_cols=self._index_cols,
+        )
+
     def mask(
         self,
         row_indices=None,
