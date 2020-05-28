@@ -49,6 +49,7 @@ from .utils import (
     bool_arg_values,
     int_arg_keys,
     int_arg_values,
+    encoding_types,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -3615,4 +3616,33 @@ def test_str_isdecimal(data):
             modin_series.str.isdecimal()
     else:
         modin_result = modin_series.str.isdecimal()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_casefold(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.casefold()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.casefold()
+    else:
+        modin_result = modin_series.str.casefold()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("encoding_type", encoding_types)
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_encode(data, encoding_type):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.encode(encoding=encoding_type)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.encode(encoding=encoding_type)
+    else:
+        modin_result = modin_series.str.encode(encoding=encoding_type)
         df_equals(modin_result, pandas_result)
