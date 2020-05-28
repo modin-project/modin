@@ -74,8 +74,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
         return self.__constructor__(
-            self._modin_frame.join(
-                left._query_compiler._modin_frame,
+            left._query_compiler._modin_frame.join(
                 right._query_compiler._modin_frame,
                 how=how,
                 on=on,

@@ -17,7 +17,14 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index
 
-from .df_algebra import MaskNode, FrameNode, GroupbyAggNode, TransformNode, UnionNode, JoinNode
+from .df_algebra import (
+    MaskNode,
+    FrameNode,
+    GroupbyAggNode,
+    TransformNode,
+    UnionNode,
+    JoinNode,
+)
 from .expr import (
     InputRefExpr,
     LiteralExpr,
@@ -191,30 +198,30 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
-    def join(
-        self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
-    ):
+    def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
         assert (
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
 
+        assert (
+            on in self.columns and on in other.columns
+        ), "Only cases when both frames contain key column are supported"
+
         new_columns = []
         new_columns.append(on)
 
-        for x in left.columns:
+        for x in self.columns:
             if x != on:
                 new_columns.append(x + suffixes[0])
-        """Probably we don't need rowid here"""
-        new_columns.append("rowid" + suffixes[0])
-        for x in right.columns:
+        for x in other.columns:
             if x != on:
                 new_columns.append(x + suffixes[1])
-        new_columns.append("rowid" + suffixes[1])
 
-        op = JoinNode(left, right, how=how, on=on, sort=sort, suffixes=suffixes,)
+        op = JoinNode(self, other, how=how, on=on, sort=sort, suffixes=suffixes,)
 
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
         return self.__constructor__(columns=new_columns, op=op)
+
     def _index_width(self):
         if self._index_cols is None:
             return 1

@@ -447,14 +447,12 @@ class BasePandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    def join(
-        self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
-    ):
+    def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
         """Performs join operation
 
         Parameters
         ----------
-        left, right: frames which are joined.
+        other: frame with which we join.
         how: Way of joining (iner, left, etc)
         on: The common column name(s) to join on
         sort: Sort the join keys lexicographically in the result.

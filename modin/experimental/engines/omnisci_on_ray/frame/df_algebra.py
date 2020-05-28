@@ -301,14 +301,19 @@ class JoinNode(DFAlgNode):
         assert (
             self.on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
-        left_on_pos = left.columns.get_loc(self.on)
-        right_on_pos = right.columns.get_loc(self.on)
+
+        assert (
+            self.on in left._table_cols and self.on in right._table_cols
+        ), "Only cases when both frames contain key column are supported"
+
+        left_on_pos = left._table_cols.index(self.on)
+        right_on_pos = right._table_cols.index(self.on)
 
         """Frames scan"""
-        self._input_to_calcite(out_nodes)
-        assert len(out_nodes) > 1, "Unexpected number of DFAlgNodes"
-        left_node_id = out_nodes[len(out_nodes) - 2].id
-        right_node_id = out_nodes[len(out_nodes) - 1].id
+        inputs = self._input_to_calcite(out_nodes)
+        assert len(inputs) > 1, "Unexpected number of DFAlgNodes"
+        left_node_id = inputs[0]
+        right_node_id = inputs[1]
 
         """ Join, only equal-join supported """
         res_type = OpExprType(bool, True)
@@ -317,7 +322,7 @@ class JoinNode(DFAlgNode):
             "=",
             [
                 InputRefExpr(left_on_pos),
-                InputRefExpr(right_on_pos + len(left.columns) + 1),
+                InputRefExpr(right_on_pos + len(left._table_cols) + 1),
             ],
             res_type,
         )
@@ -332,30 +337,23 @@ class JoinNode(DFAlgNode):
         """Projection for both frames"""
         fields = []
         exprs = []
-        """First goes 'on' column then all left columns+suffix but 'on' and rowid+suffix 
-        then all right columns+suffix but 'on' and rowid+suffix"""
-        for c in left.columns:
+        """First goes 'on' column then all left columns+suffix but 'on' 
+        then all right columns+suffix but 'on'"""
+        expr_index = 0
+        for c in left._table_cols:
             if c != self.on:
                 fields.append(c + self.suffixes[0])
+                exprs.append(InputRefExpr(expr_index))
             else:
                 fields.insert(0, c)
-        fields.append("rowid" + self.suffixes[0])
-        for x in range(len(left.columns)):
-            if x != left_on_pos:
-                exprs.append(InputRefExpr(x))
-            else:
-                exprs.insert(0, InputRefExpr(x))
-        """for first rowid"""
-        exprs.append(InputRefExpr(len(left.columns)))
-        for c in right.columns:
+                exprs.insert(0, InputRefExpr(expr_index))
+            expr_index += 1
+
+        for c in right._table_cols:
             if c != self.on:
                 fields.append(c + self.suffixes[1])
-        fields.append("rowid" + self.suffixes[1])
-        for x in range(len(right.columns)):
-            if x != right_on_pos:
-                exprs.append(InputRefExpr(x + len(left.columns) + 1))
-        """for second rowid"""
-        exprs.append(InputRefExpr(len(left.columns) + len(right.columns) + 1))
+                exprs.append(InputRefExpr(expr_index + 1))
+            expr_index += 1
 
         node = CalciteProjectionNode(fields, exprs)
         out_nodes.append(node)
@@ -372,7 +370,7 @@ class JoinNode(DFAlgNode):
         print("{}  How: {}".format(prefix, self.how))
         print("{}  On: {}".format(prefix, self.on))
         print("{}  Sorting: {}".format(prefix, self.sort))
-        self._print_input(prefix + "  ")
+
 
 class UnionNode(DFAlgNode):
     """Concat frames by axis=0, all frames should be aligned."""
