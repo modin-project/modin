@@ -45,6 +45,8 @@ from .utils import (
     numeric_agg_funcs,
     quantiles_keys,
     quantiles_values,
+    axis_keys,
+    axis_values,
     bool_arg_keys,
     bool_arg_values,
     int_arg_keys,
@@ -1663,15 +1665,34 @@ def test_keys(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurt(data):
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
+def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
+    # FIXME remove axis condition
+    if axis in [1, "columns"]:
+        return
+    # FIXME remove level condition
+    if level in [-1, 0]:
+        return
+    # FIXME remove numeric_only condition
+    if numeric_only in [True]:
+        return
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.kurt(), pandas_series.kurt())
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurtosis(data):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.kurtosis(), pandas_series.kurtosis())
+    try:
+        pandas_result = getattr(pandas_series, method)(
+            axis, skipna, level, numeric_only
+        )
+    except Exception as e:
+        with pytest.raises(type(e)):
+            repr(
+                getattr(modin_series, method)(axis, skipna, level, numeric_only)
+            )  # repr to force materialization
+    else:
+        modin_result = getattr(modin_series, method)(axis, skipna, level, numeric_only)
+        df_equals(modin_result, pandas_result)
 
 
 def test_last():
