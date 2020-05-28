@@ -1474,7 +1474,7 @@ class BasePandasDataset(object):
             kurtosis : Series or DataFrame (if level specified)
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
+        if numeric_only:
             self._validate_dtypes(numeric_only=True)
         return self._reduce_dimension(
             self._query_compiler.kurt(
