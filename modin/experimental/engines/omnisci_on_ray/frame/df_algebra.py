@@ -194,7 +194,7 @@ class GroupbyAggNode(DFAlgNode):
         # TODO: track column dtype and compute aggregate dtype,
         # actually INTEGER works for floats too with the correct result,
         # so not a big issue right now
-        res_type = OpExprType("INTEGER", True)
+        res_type = OpExprType(int, True)
         return AggregateExpr(agg, [col_idx], res_type, False)
 
     def _to_calcite(self, out_nodes):
