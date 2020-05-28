@@ -121,7 +121,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if groupby_args["as_index"]:
             index_cols = groupby_cols.tolist()
         else:
-            new_columns.append(groupby_cols.tolist())
+            new_columns = groupby_cols.tolist()
 
         if isinstance(agg, str):
             new_agg = {}
