@@ -20,6 +20,26 @@ class BaseQueryCompiler(abc.ABC):
         for a list of requirements for subclassing this object.
     """
 
+    @abc.abstractmethod
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        """Default to pandas behavior.
+
+        Parameters
+        ----------
+        pandas_op : callable
+            The operation to apply, must be compatible pandas DataFrame call
+        args
+            The arguments for the `pandas_op`
+        kwargs
+            The keyword arguments for the `pandas_op`
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The result of the `pandas_op`, converted back to BaseQueryCompiler
+        """
+        pass
+
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
@@ -85,16 +105,20 @@ class BaseQueryCompiler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_pandas(cls, df, block_partitions_cls):
+    def from_pandas(cls, df, data_cls):
         """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
 
-        Args:
-            cls: DataManager object to convert the DataFrame to.
-            df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The pandas DataFrame to convert from.
+        data_cls :
+            Modin DataFrame object to convert to.
 
-        Returns:
-            Returns QueryCompiler containing data from the Pandas DataFrame.
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Pandas DataFrame.
         """
         pass
 

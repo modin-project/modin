@@ -1219,22 +1219,21 @@ class DataFrame(BasePandasDataset):
                 "{}".format(type(right))
             )
         if left_index is False or right_index is False:
-            if isinstance(right, DataFrame):
-                right = right._query_compiler.to_pandas()
-            return self._default_to_pandas(
-                pandas.DataFrame.merge,
-                right,
-                how=how,
-                on=on,
-                left_on=left_on,
-                right_on=right_on,
-                left_index=left_index,
-                right_index=right_index,
-                sort=sort,
-                suffixes=suffixes,
-                copy=copy,
-                indicator=indicator,
-                validate=validate,
+            return self._create_or_update_from_compiler(
+                self._query_compiler.join(
+                    right._query_compiler,
+                    how=how,
+                    on=on,
+                    left_on=left_on,
+                    right_on=right_on,
+                    left_index=left_index,
+                    right_index=right_index,
+                    sort=sort,
+                    suffixes=suffixes,
+                    copy=copy,
+                    indicator=indicator,
+                    validate=validate,
+                )
             )
         if left_index and right_index:
             return self.join(
