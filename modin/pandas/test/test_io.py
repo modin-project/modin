@@ -359,15 +359,31 @@ def make_sql_connection():
             os.remove(filename)
 
 
-def setup_fwf_file():
-    if os.path.exists(TEST_FWF_FILENAME):
+def setup_fwf_file(overwrite=False, fwf_data=None):
+    if not overwrite and os.path.exists(TEST_FWF_FILENAME):
         return
 
-    fwf_data = """id8141    360.242940  149.910199  11950.7
-    id1594  444.953632  166.985655 11788.4
-    id1849  364.136849  183.628767 11806.2
-    id1230  413.836124  184.375703 11916.8
-    id1948  502.953953  173.237159 12468.3"""
+    if fwf_data is None:
+        fwf_data = """ACW000116041961TAVG -142  k  183  k  419  k  720  k 1075  k 1546  k 1517  k 1428  k 1360  k 1121  k  457  k  -92  k
+ACW000116041962TAVG   60  k   32  k -207  k  582  k  855  k 1328  k 1457  k 1340  k 1110  k  941  k  270  k -179  k
+ACW000116041963TAVG -766  k -606  k -152  k  488  k 1171  k 1574  k 1567  k 1543  k 1279  k  887  k  513  k -161  k
+ACW000116041964TAVG    9  k -138  k    2  k  685  k 1166  k 1389  k 1453  k 1504  k 1168  k  735  k  493  k   59  k
+ACW000116041965TAVG   -9  k -158  k  -15  k  537  k  934  k 1447  k 1434  k 1424  k 1324  k  921  k  -22  k -231  k
+ACW000116041966TAVG -490  k -614  k  108  k  246  k 1082  k 1642  k 1620  k 1471  k 1195  k  803  k  329  k    2  k
+ACW000116041967TAVG -270  k   36  k  397  k  481  k 1052  k 1373  k 1655  k 1598  k 1318  k  997  k  559  k  -96  k
+ACW000116041968TAVG -306  k -183  k  220  k  714  k  935  k 1635  k 1572  k 1718  k 1331  k  781  k  180  k  -56  k
+ACW000116041969TAVG -134  k -494  k -185  k  497  k  962  k 1634  k 1687  k 1773  k 1379  k  932  k  321  k -275  k
+ACW000116041970TAVG -483  k -704  k  -75  k  261  k 1093  k 1724  k 1470  k 1609  k 1163  k  836  k  300  k   73  k
+ACW000116041971TAVG   -6  k   83  k  -40  k  472  k 1180  k 1411  k 1700  k 1600  k 1165  k  908  k  361  k  383  k
+ACW000116041972TAVG -377  k   -4  k  250  k  556  k 1117  k 1444  k 1778  k 1545  k 1073  k  797  k  481  k  404  k
+ACW000116041973TAVG   61  k  169  k  453  k  472  k 1075  k 1545  k 1866  k 1579  k 1199  k  563  k  154  k   11  k
+ACW000116041974TAVG  191  k  209  k  339  k  748  k 1094  k 1463  k 1498  k 1541  k 1319  k  585  k  428  k  335  k
+ACW000116041975TAVG  346  k   88  k  198  k  488  k 1165  k 1483  k 1756  k 1906  k 1374  k  845  k  406  k  387  k
+ACW000116041976TAVG -163  k  -62  k -135  k  502  k 1128  k 1461  k 1822  k 1759  k 1136  k  715  k  458  k -205  k
+ACW000116041977TAVG -192  k -279  k  234  k  332  k 1128  k 1566  k 1565  k 1556  k 1126  k  949  k  421  k  162  k
+ACW000116041978TAVG   55  k -354  k   66  k  493  k 1155  k 1552  k 1564  k 1555  k 1061  k  932  k  688  k -464  k
+ACW000116041979TAVG -618  k -632  k   35  k  474  k  993  k 1566  k 1484  k 1483  k 1229  k  647  k  412  k  -40  k
+ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502  k 1269  k  660  k  138  k  125  k"""
 
     with open(TEST_FWF_FILENAME, "w") as f:
         f.write(fwf_data)
@@ -375,7 +391,10 @@ def setup_fwf_file():
 
 def teardown_fwf_file():
     if os.path.exists(TEST_FWF_FILENAME):
-        os.remove(TEST_FWF_FILENAME)
+        try:
+            os.remove(TEST_FWF_FILENAME)
+        except PermissionError:
+            pass
 
 
 def test_from_parquet(make_parquet_file):
@@ -436,12 +455,31 @@ def test_from_parquet_pandas_index():
             "C": ["c"] * 2000,
         }
     )
-    pandas_df.set_index("idx").to_parquet("tmp.parquet")
+    filepath = "tmp.parquet"
+    pandas_df.set_index("idx").to_parquet(filepath)
     # read the same parquet using modin.pandas
-    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
 
-    pandas_df.set_index(["idx", "A"]).to_parquet("tmp.parquet")
-    df_equals(pd.read_parquet("tmp.parquet"), pandas.read_parquet("tmp.parquet"))
+    pandas_df.set_index(["idx", "A"]).to_parquet(filepath)
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
+    os.remove(filepath)
+
+
+def test_from_parquet_pandas_index_partitioned():
+    # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
+    pandas_df = pandas.DataFrame(
+        {
+            "idx": np.random.randint(0, 100_000, size=2000),
+            "A": np.random.randint(0, 10, size=2000),
+            "B": ["a", "b"] * 1000,
+            "C": ["c"] * 2000,
+        }
+    )
+    filepath = "tmp_folder.parquet"
+    pandas_df.set_index("idx").to_parquet(filepath, partition_cols=["A"])
+    # read the same parquet using modin.pandas
+    df_equals(pd.read_parquet(filepath), pandas.read_parquet(filepath))
+    shutil.rmtree(filepath)
 
 
 def test_from_parquet_hdfs():
@@ -1311,74 +1349,168 @@ def test_ExcelFile():
 
 
 def test_fwf_file():
-    setup_fwf_file()
+    fwf_data = """id8141  360.242940  149.910199 11950.7
+id1594  444.953632  166.985655 11788.4
+id1849  364.136849  183.628767 11806.2
+id1230  413.836124  184.375703 11916.8
+id1948  502.953953  173.237159 12468.3"""
+
+    setup_fwf_file(True, fwf_data=fwf_data)
 
     colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
-    with pytest.warns(UserWarning):
-        df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
-        assert isinstance(df, pd.DataFrame)
+    df = pd.read_fwf(TEST_FWF_FILENAME, colspecs=colspecs, header=None, index_col=0)
+    assert isinstance(df, pd.DataFrame)
 
     teardown_fwf_file()
 
 
-def test_fwf_file_kwargs():
-    fwf_data = """ACW000116041961TAVG -142  k  183  k  419  k  720  k 1075  k 1546  k 1517  k 1428  k 1360  k 1121  k  457  k  -92  k
-ACW000116041962TAVG   60  k   32  k -207  k  582  k  855  k 1328  k 1457  k 1340  k 1110  k  941  k  270  k -179  k
-ACW000116041963TAVG -766  k -606  k -152  k  488  k 1171  k 1574  k 1567  k 1543  k 1279  k  887  k  513  k -161  k
-ACW000116041964TAVG    9  k -138  k    2  k  685  k 1166  k 1389  k 1453  k 1504  k 1168  k  735  k  493  k   59  k
-ACW000116041965TAVG   -9  k -158  k  -15  k  537  k  934  k 1447  k 1434  k 1424  k 1324  k  921  k  -22  k -231  k
-ACW000116041966TAVG -490  k -614  k  108  k  246  k 1082  k 1642  k 1620  k 1471  k 1195  k  803  k  329  k    2  k
-ACW000116041967TAVG -270  k   36  k  397  k  481  k 1052  k 1373  k 1655  k 1598  k 1318  k  997  k  559  k  -96  k
-ACW000116041968TAVG -306  k -183  k  220  k  714  k  935  k 1635  k 1572  k 1718  k 1331  k  781  k  180  k  -56  k
-ACW000116041969TAVG -134  k -494  k -185  k  497  k  962  k 1634  k 1687  k 1773  k 1379  k  932  k  321  k -275  k
-ACW000116041970TAVG -483  k -704  k  -75  k  261  k 1093  k 1724  k 1470  k 1609  k 1163  k  836  k  300  k   73  k
-ACW000116041971TAVG   -6  k   83  k  -40  k  472  k 1180  k 1411  k 1700  k 1600  k 1165  k  908  k  361  k  383  k
-ACW000116041972TAVG -377  k   -4  k  250  k  556  k 1117  k 1444  k 1778  k 1545  k 1073  k  797  k  481  k  404  k
-ACW000116041973TAVG   61  k  169  k  453  k  472  k 1075  k 1545  k 1866  k 1579  k 1199  k  563  k  154  k   11  k
-ACW000116041974TAVG  191  k  209  k  339  k  748  k 1094  k 1463  k 1498  k 1541  k 1319  k  585  k  428  k  335  k
-ACW000116041975TAVG  346  k   88  k  198  k  488  k 1165  k 1483  k 1756  k 1906  k 1374  k  845  k  406  k  387  k
-ACW000116041976TAVG -163  k  -62  k -135  k  502  k 1128  k 1461  k 1822  k 1759  k 1136  k  715  k  458  k -205  k
-ACW000116041977TAVG -192  k -279  k  234  k  332  k 1128  k 1566  k 1565  k 1556  k 1126  k  949  k  421  k  162  k
-ACW000116041978TAVG   55  k -354  k   66  k  493  k 1155  k 1552  k 1564  k 1555  k 1061  k  932  k  688  k -464  k
-ACW000116041979TAVG -618  k -632  k   35  k  474  k  993  k 1566  k 1484  k 1483  k 1229  k  647  k  412  k  -40  k
-ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502  k 1269  k  660  k  138  k  125  k"""
-    with open(TEST_FWF_FILENAME, "w") as f:
-        f.write(fwf_data)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {
+            "colspecs": [
+                (0, 11),
+                (11, 15),
+                (19, 24),
+                (27, 32),
+                (35, 40),
+                (43, 48),
+                (51, 56),
+                (59, 64),
+                (67, 72),
+                (75, 80),
+                (83, 88),
+                (91, 96),
+                (99, 104),
+                (107, 112),
+            ],
+            "names": ["stationID", "year", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            "na_values": ["-9999"],
+            "index_col": ["stationID", "year"],
+        },
+        {
+            "widths": [20, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            "names": ["id", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            "index_col": [0],
+        },
+    ],
+)
+def test_fwf_file_colspecs_widths(kwargs):
+    setup_fwf_file(overwrite=True)
 
-    column_specs = [
-        (0, 11),
-        (11, 15),
-        (19, 24),
-        (27, 32),
-        (35, 40),
-        (43, 48),
-        (51, 56),
-        (59, 64),
-        (67, 72),
-        (75, 80),
-        (83, 88),
-        (91, 96),
-        (99, 104),
-        (107, 112),
-    ]
-    column_names = ["stationID", "year", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    nan_values = ["-9999"]
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_fwf(
-            TEST_FWF_FILENAME,
-            colspecs=column_specs,
-            names=column_names,
-            na_values=nan_values,
-            index_col=["stationID", "year"],
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, **kwargs)
+    pandas_df = pd.read_fwf(TEST_FWF_FILENAME, **kwargs)
+
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize("usecols", [["a"], ["a", "b", "d"], [0, 1, 3]])
+def test_fwf_file_usecols(usecols):
+    fwf_data = """a       b           c          d
+id8141  360.242940  149.910199 11950.7
+id1594  444.953632  166.985655 11788.4
+id1849  364.136849  183.628767 11806.2
+id1230  413.836124  184.375703 11916.8
+id1948  502.953953  173.237159 12468.3"""
+
+    setup_fwf_file(overwrite=True, fwf_data=fwf_data)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, usecols=usecols)
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, usecols=usecols)
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_fwf_file()
+
+
+def test_fwf_file_chunksize():
+    setup_fwf_file(overwrite=True)
+
+    # Tests __next__ and correctness of reader as an iterator
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=5)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=5)
+
+    for modin_df, pd_df in zip(rdf_reader, pd_reader):
+        df_equals(modin_df, pd_df)
+
+    # Tests that get_chunk works correctly
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.get_chunk(1)
+    pd_df = pd_reader.get_chunk(1)
+
+    df_equals(modin_df, pd_df)
+
+    # Tests that read works correctly
+    rdf_reader = pd.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+    pd_reader = pandas.read_fwf(TEST_FWF_FILENAME, chunksize=1)
+
+    modin_df = rdf_reader.read()
+    pd_df = pd_reader.read()
+
+    df_equals(modin_df, pd_df)
+
+
+def test_fwf_file_skiprows():
+    setup_fwf_file(overwrite=True)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, skiprows=2)
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, skiprows=2)
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5])
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5])
+    df_equals(modin_df, pandas_df)
+
+
+def test_fwf_file_index_col():
+    fwf_data = """a       b           c          d
+id8141  360.242940  149.910199 11950.7
+id1594  444.953632  166.985655 11788.4
+id1849  364.136849  183.628767 11806.2
+id1230  413.836124  184.375703 11916.8
+id1948  502.953953  173.237159 12468.3"""
+
+    setup_fwf_file(overwrite=True, fwf_data=fwf_data)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, index_col="c")
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, index_col="c")
+    df_equals(modin_df, pandas_df)
+
+    teardown_fwf_file()
+
+
+def test_fwf_file_skipfooter():
+    setup_fwf_file(overwrite=True)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, skipfooter=2)
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, skipfooter=2)
+
+    df_equals(modin_df, pandas_df)
+
+
+def test_fwf_file_parse_dates():
+    dates = pandas.date_range("2000", freq="h", periods=10)
+    fwf_data = "col1 col2        col3 col4"
+    for i in range(10, 20):
+        fwf_data = fwf_data + "\n{col1}   {col2}  {col3}   {col4}".format(
+            col1=str(i),
+            col2=str(dates[i - 10].date()),
+            col3=str(i),
+            col4=str(dates[i - 10].time()),
         )
-    pandas_df = pd.read_fwf(
-        TEST_FWF_FILENAME,
-        colspecs=column_specs,
-        names=column_names,
-        na_values=nan_values,
-        index_col=["stationID", "year"],
-    )
 
+    setup_fwf_file(overwrite=True, fwf_data=fwf_data)
+
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, parse_dates=[["col2", "col4"]])
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, parse_dates=[["col2", "col4"]])
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_fwf(
+        TEST_FWF_FILENAME, parse_dates={"time": ["col2", "col4"]}
+    )
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, parse_dates={"time": ["col2", "col4"]})
     df_equals(modin_df, pandas_df)
 
     teardown_fwf_file()

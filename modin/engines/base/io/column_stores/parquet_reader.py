@@ -64,10 +64,12 @@ class ParquetReader(ColumnStoreReader):
             if directory:
                 # Path of the sample file that we will read to get the remaining columns
                 pd = ParquetDataset(path)
+                meta = pd.metadata
                 column_names = pd.schema.names
             else:
                 meta = ParquetFile(path).metadata
                 column_names = meta.schema.names
+            if meta is not None:
                 # This is how we convert the metadata from pyarrow to a python
                 # dictionary, from which we then get the index columns.
                 # We use these to filter out from the columns in the metadata since

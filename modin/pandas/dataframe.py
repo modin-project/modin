@@ -603,6 +603,65 @@ class DataFrame(BasePandasDataset):
     def cov(self, min_periods=None):
         return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
 
+    def dot(self, other):
+        """
+        Compute the matrix multiplication between the DataFrame and other.
+
+        This method computes the matrix product between the DataFrame and the
+        values of an other Series, DataFrame or a numpy array.
+
+        It can also be called using ``self @ other`` in Python >= 3.5.
+
+        Parameters
+        ----------
+        other : Series, DataFrame or array-like
+            The other object to compute the matrix product with.
+
+        Returns
+        -------
+        Series or DataFrame
+            If other is a Series, return the matrix product between self and
+            other as a Series. If other is a DataFrame or a numpy.array, return
+            the matrix product of self and other in a DataFrame of a np.array.
+
+        See Also
+        --------
+        Series.dot: Similar method for Series.
+
+        Notes
+        -----
+        The dimensions of DataFrame and other must be compatible in order to
+        compute the matrix multiplication. In addition, the column names of
+        DataFrame and the index of other must contain the same values, as they
+        will be aligned prior to the multiplication.
+
+        The dot method for Series computes the inner product, instead of the
+        matrix product here.
+        """
+        if isinstance(other, BasePandasDataset):
+            common = self.columns.union(other.index)
+            if len(common) > len(self.columns) or len(common) > len(other.index):
+                raise ValueError("Matrices are not aligned")
+
+            qc = other.reindex(index=common)._query_compiler
+            if isinstance(other, DataFrame):
+                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+            else:
+                return self._reduce_dimension(
+                    query_compiler=self._query_compiler.dot(qc)
+                )
+
+        other = np.asarray(other)
+        if self.shape[1] != other.shape[0]:
+            raise ValueError(
+                "Dot product shape mismatch, {} vs {}".format(self.shape, other.shape)
+            )
+
+        if len(other.shape) > 1:
+            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
             "eq", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -2048,7 +2107,7 @@ class DataFrame(BasePandasDataset):
         # _query_compiler before we check if the key is in self
         if key in ["_query_compiler"] or key in self.__dict__:
             pass
-        elif key in self:
+        elif key in self and key not in dir(self):
             self.__setitem__(key, value)
         elif isinstance(value, pandas.Series):
             warnings.warn(
