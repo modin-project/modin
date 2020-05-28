@@ -13,6 +13,7 @@
 
 import abc
 
+
 class CalciteBaseNode(abc.ABC):
     _next_id = [0]
 
@@ -79,3 +80,8 @@ class CalciteJoinNode(CalciteBaseNode):
         self.condition = condition
 
 
+class CalciteUnionNode(CalciteBaseNode):
+    def __init__(self, inputs, all):
+        super(CalciteUnionNode, self).__init__("LogicalUnion")
+        self.inputs = inputs
+        self.all = all

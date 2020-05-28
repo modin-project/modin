@@ -144,6 +144,36 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
+    def concat(self, axis, other, **kwargs):
+        """Concatenates two objects together.
+
+        Args:
+            axis: The axis index object to join (0 for columns, 1 for index).
+            other: The other_index to concat with.
+
+        Returns:
+            Concatenated objects.
+        """
+        if not isinstance(other, list):
+            other = [other]
+        assert all(
+            isinstance(o, type(self)) for o in other
+        ), "Different Manager objects are being used. This is not allowed"
+        sort = kwargs.get("sort", None)
+        if sort is None:
+            sort = False
+        join = kwargs.get("join", "outer")
+        ignore_index = kwargs.get("ignore_index", False)
+        other_modin_frames = [o._modin_frame for o in other]
+
+        if axis == 1:
+            raise NotImplementedError("concat for axis = 1 is not supported yet")
+
+        new_modin_frame = self._modin_frame._concat(
+            axis, other_modin_frames, join=join, sort=sort, ignore_index=ignore_index
+        )
+        return self.__constructor__(new_modin_frame)
+
     def free(self):
         return
 
@@ -169,7 +199,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     clip = DFAlgNotSupported("clip")
     combine = DFAlgNotSupported("combine")
     combine_first = DFAlgNotSupported("combine_first")
-    concat = DFAlgNotSupported("concat")
     count = DFAlgNotSupported("count")
     cummax = DFAlgNotSupported("cummax")
     cummin = DFAlgNotSupported("cummin")
