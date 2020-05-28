@@ -210,12 +210,15 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_columns = []
         new_columns.append(on)
 
-        for x in self.columns:
-            if x != on:
-                new_columns.append(x + suffixes[0])
-        for x in other.columns:
-            if x != on:
-                new_columns.append(x + suffixes[1])
+        conflicting_list = list(set(self.columns) & set(other.columns))
+        for c in self.columns:
+            if c != on:
+                suffix = suffixes[0] if c in conflicting_list else ""
+                new_columns.append(c + suffix)
+        for c in other.columns:
+            if c != on:
+                suffix = suffixes[1] if c in conflicting_list else ""
+                new_columns.append(c + suffix)
 
         op = JoinNode(self, other, how=how, on=on, sort=sort, suffixes=suffixes,)
 

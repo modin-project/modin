@@ -337,12 +337,14 @@ class JoinNode(DFAlgNode):
         """Projection for both frames"""
         fields = []
         exprs = []
-        """First goes 'on' column then all left columns+suffix but 'on' 
-        then all right columns+suffix but 'on'"""
+        conflicting_list = list(set(left._table_cols) & set(right._table_cols))
+        """First goes 'on' column then all left columns(+suffix for conflicting names) but 'on' 
+        then all right columns(+suffix for conflicting names) but 'on'"""
         expr_index = 0
         for c in left._table_cols:
             if c != self.on:
-                fields.append(c + self.suffixes[0])
+                suffix = self.suffixes[0] if c in conflicting_list else ""
+                fields.append(c + suffix)
                 exprs.append(InputRefExpr(expr_index))
             else:
                 fields.insert(0, c)
@@ -351,7 +353,8 @@ class JoinNode(DFAlgNode):
 
         for c in right._table_cols:
             if c != self.on:
-                fields.append(c + self.suffixes[1])
+                suffix = self.suffixes[1] if c in conflicting_list else ""
+                fields.append(c + suffix)
                 exprs.append(InputRefExpr(expr_index + 1))
             expr_index += 1
 
@@ -365,11 +368,10 @@ class JoinNode(DFAlgNode):
 
     def _print(self, prefix):
         print("{}JoinNode:".format(prefix))
-        print("{}  Left: {}".format(prefix, self.input[0]))
-        print("{}  Right: {}".format(prefix, self.input[1]))
         print("{}  How: {}".format(prefix, self.how))
         print("{}  On: {}".format(prefix, self.on))
         print("{}  Sorting: {}".format(prefix, self.sort))
+        self._print_input(prefix + "  ")
 
 
 class UnionNode(DFAlgNode):
