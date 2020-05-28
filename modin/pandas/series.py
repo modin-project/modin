@@ -1329,6 +1329,14 @@ class Series(BasePandasDataset):
 
     @property
     def is_unique(self):
+        """Check if Series has no duplicate values.
+
+        Returns
+        -------
+        bool
+            True if there is no duplicates in Series, False otherwise.
+
+        """
         return self.nunique(dropna=False) == len(self)
 
     @property
