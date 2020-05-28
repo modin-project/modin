@@ -13,6 +13,7 @@
 
 import abc
 
+
 class CalciteBaseNode(abc.ABC):
     _next_id = [0]
 
@@ -72,3 +73,8 @@ class CalciteSortNode(CalciteBaseNode):
         self.collation = collation
 
 
+class CalciteUnionNode(CalciteBaseNode):
+    def __init__(self, inputs, all):
+        super(CalciteUnionNode, self).__init__("LogicalUnion")
+        self.inputs = inputs
+        self.all = all

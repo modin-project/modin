@@ -68,8 +68,12 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             for p in frame._partitions.flatten():
                 if p.frame_id is None:
                     df = ray.get(p.oid)
+                    # Currently DataFrame loader uploads only columns
+                    # and ignores index. So, move index to columns and
+                    # set proper column names.
                     if frame._index_cols is not None:
-                        df = df.reset_index()
+                        df.reset_index(inplace=True)
+                        df.columns = frame._table_cols
                     p.frame_id = put_to_omnisci(df)
 
         calcite_plan = plan.to_calcite()
@@ -79,6 +83,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         df = OmnisciServer()._worker._conn._execute(sql).to_df()
         if index_cols is not None:
             df = df.set_index(index_cols)
+            df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
 
         # print("Execution result:")
         # print(df)
@@ -87,3 +92,21 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         res[0][0] = cls._partition_class.put(df)
 
         return res
+
+    @classmethod
+    def _names_from_index_cols(cls, cols):
+        if len(cols) == 1:
+            return cls._name_from_index_col(cols[0])
+        return [cls._name_from_index_col(n) for n in cols]
+
+    @classmethod
+    def _name_from_index_col(cls, col):
+        if col.startswith("__index__"):
+            return None
+        return col
+
+    @classmethod
+    def _maybe_scalar(cls, lst):
+        if len(lst) == 1:
+            return lst[0]
+        return lst
