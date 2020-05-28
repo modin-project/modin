@@ -16,7 +16,7 @@ from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreR
 
 class FeatherReader(ColumnStoreReader):
     @classmethod
-    def read(cls, path, columns=None, **kwargs):
+    def _read(cls, path, columns=None, **kwargs):
         """Read data from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.
 

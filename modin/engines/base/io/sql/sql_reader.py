@@ -21,7 +21,7 @@ from modin.engines.base.io.file_reader import FileReader
 
 class SQLReader(FileReader):
     @classmethod
-    def read(cls, sql, con, index_col=None, **kwargs):
+    def _read(cls, sql, con, index_col=None, **kwargs):
         """Reads a SQL query or database table into a DataFrame.
 
         Args:
