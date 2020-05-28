@@ -401,6 +401,12 @@ class DataFrame(BasePandasDataset):
         # strings is passed in, the data used for the groupby is dropped before the
         # groupby takes place.
         drop = False
+
+        # Otherwise operations that falls to default_to_pandas may lose the original
+        # type of by, see issue #1461
+        if is_list_like(by) and len(by) == 1:
+            by = by[0]
+
         if callable(by):
             by = self.index.map(by)
         elif isinstance(by, str):
