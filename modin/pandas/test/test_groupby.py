@@ -23,7 +23,9 @@ pd.DEFAULT_NPARTITIONS = 4
 
 def modin_df_almost_equals_pandas(modin_df, pandas_df):
     difference = to_pandas(modin_df) - pandas_df
-    diff_max = difference.max().max()
+    diff_max = difference.max()
+    if isinstance(diff_max, pandas.Series):
+        diff_max = diff_max.max()
     assert (
         to_pandas(modin_df).equals(pandas_df)
         or diff_max < 0.0001
@@ -452,20 +454,41 @@ def test_simple_col_groupby():
 @pytest.mark.parametrize(
     "by", [np.random.randint(0, 100, size=2 ** 8), lambda x: x % 3, None]
 )
-@pytest.mark.parametrize("as_index", [True, False])
-def test_series_groupby(by, as_index):
-    series_data = np.random.randint(97, 198, size=2 ** 8)
-    modin_series = pd.Series(series_data)
-    pandas_series = pandas.Series(series_data)
+@pytest.mark.parametrize("as_index_series_or_dataframe", [0, 1, 2])
+def test_series_groupby(by, as_index_series_or_dataframe):
+    if as_index_series_or_dataframe <= 1:
+        as_index = as_index_series_or_dataframe == 1
+        series_data = np.random.randint(97, 198, size=2 ** 8)
+        modin_series = pd.Series(series_data)
+        pandas_series = pandas.Series(series_data)
+    else:
+        as_index = True
+        pandas_series = pandas.DataFrame(
+            {
+                "col1": [0, 1, 2, 3],
+                "col2": [4, 5, 6, 7],
+                "col3": [3, 8, 12, 10],
+                "col4": [17, 13, 16, 15],
+                "col5": [-4, -5, -6, -7],
+            }
+        )
+        modin_series = from_pandas(pandas_series)
+        if isinstance(by, np.ndarray) or by is None:
+            by = np.random.randint(0, 100, size=len(pandas_series.index))
+
     n = 1
 
     try:
         pandas_groupby = pandas_series.groupby(by, as_index=as_index)
+        if as_index_series_or_dataframe == 2:
+            pandas_groupby = pandas_groupby["col1"]
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.groupby(by, as_index=as_index)
     else:
         modin_groupby = modin_series.groupby(by, as_index=as_index)
+        if as_index_series_or_dataframe == 2:
+            modin_groupby = modin_groupby["col1"]
 
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
@@ -771,12 +794,15 @@ def eval_take(modin_groupby, pandas_groupby):
 
 def eval___getattr__(modin_groupby, pandas_groupby, item):
     try:
-        pandas_result = pandas_groupby[item].count()
+        pandas_groupby = pandas_groupby[item]
+        pandas_result = pandas_groupby.count()
     except Exception as e:
         with pytest.raises(type(e)):
             modin_groupby[item].count()
     else:
-        df_equals(modin_groupby[item].count(), pandas_result)
+        modin_groupby = modin_groupby[item]
+        modin_result = modin_groupby.count()
+        df_equals(modin_result, pandas_result)
 
 
 def eval_groups(modin_groupby, pandas_groupby):
