@@ -2520,12 +2520,6 @@ def test_explode(data):
     df_equals(modin_result, pandas_result)
 
 
-def test_to_datetime():
-    modin_s = pd.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    pandas_s = pandas.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    df_equals(pd.to_datetime(modin_s), pandas.to_datetime(pandas_s))
-
-
 def test_to_period():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)

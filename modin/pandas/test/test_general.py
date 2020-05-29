@@ -261,6 +261,17 @@ def test_pivot_table():
 
 
 def test_to_datetime():
+    # DataFrame input for to_datetime
+    modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
+    pandas_df = pandas.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
+    df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
+
+    # Series input for to_datetime
+    modin_s = pd.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
+    pandas_s = pandas.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
+    df_equals(pd.to_datetime(modin_s), pandas.to_datetime(pandas_s))
+
+    # Other inputs for to_datetime
     value = 1490195805
     assert pd.to_datetime(value, unit="s") == pandas.to_datetime(value, unit="s")
     value = 1490195805433502912
