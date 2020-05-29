@@ -42,6 +42,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
     _query_compiler_cls = DFAlgQueryCompiler
     _frame_mgr_cls = OmnisciOnRayFrameManager
 
+    _next_id = [1]
+
     def __init__(
         self,
         partitions=None,
@@ -53,6 +55,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         op=None,
         index_cols=None,
     ):
+        self.id = str(type(self)._next_id[0])
+        type(self)._next_id[0] += 1
+
         if index is not None:
             index = ensure_index(index)
         columns = ensure_index(columns)
@@ -94,6 +99,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
             op=self._op,
             index_cols=self._index_cols,
         )
+
+    def id_str(self):
+        return f"frame${self.id}"
+
+    def ref(self, col):
+        return InputRefExpr(self, col)
 
     def mask(
         self,
@@ -192,7 +203,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         exprs = {}
         if isinstance(value, dict):
             for col in self.columns:
-                col_expr = InputRefExpr(self._table_cols.index(col))
+                col_expr = self.ref(col)
                 if col in value:
                     value_expr = LiteralExpr(value[col])
                     res_type = OpExprType(type(value[col]), False)
@@ -205,7 +216,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             value_expr = LiteralExpr(value)
             res_type = OpExprType(type(value), False)
             for col in self.columns:
-                col_expr = InputRefExpr(self._table_cols.index(col))
+                col_expr = self.ref(col)
                 exprs[col] = build_if_then_else(
                     col_expr.is_null(), value_expr, col_expr, res_type
                 )
@@ -291,14 +302,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     aligned_index = frame._index_cols[0 : index_width + 1]
                     for i in range(0, index_width):
                         col = frame._index_cols[i]
-                        exprs[col] = InputRefExpr(frame._table_cols.index(col))
+                        exprs[col] = frame.ref(col)
                 else:
                     assert index_width == 1, "unexpected index width"
                     aligned_index = ["__index__"]
-                    exprs["__index__"] = InputRefExpr(len(frame._table_cols))
+                    exprs["__index__"] = frame.ref("__rowid__")
             for col in new_columns:
                 if col in frame._table_cols:
-                    exprs[col] = InputRefExpr(frame._table_cols.index(col))
+                    exprs[col] = frame.ref(col)
                 else:
                     exprs[col] = LiteralExpr(None)
             aligned_frame_op = TransformNode(frame, exprs, False)

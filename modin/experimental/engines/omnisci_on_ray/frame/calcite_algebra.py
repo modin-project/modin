@@ -12,6 +12,40 @@
 # governing permissions and limitations under the License.
 
 import abc
+from .expr import BaseExpr
+
+
+class CalciteInputRefExpr(BaseExpr):
+    """Caclcite version of input column reference.
+
+    Calcite translation should replace all InputRefExpr with
+    CalciteInputRefExpr. Calcite references columns by their
+    indexes (positions in input table). If there are multiple
+    input tables for Caclcite node, then index in concatenated
+    list of all columns is used.
+    """
+
+    def __init__(self, idx):
+        self.input = idx
+
+    def copy(self):
+        return CalciteInputRefExpr(self.input)
+
+    def __repr__(self):
+        return f"(input {self.input})"
+
+
+class CalciteInputIdxExpr(BaseExpr):
+    """Same as CalciteInputRefExpr but with different serialization"""
+
+    def __init__(self, idx):
+        self.input = idx
+
+    def copy(self):
+        return CalciteInputIdxExpr(self.input)
+
+    def __repr__(self):
+        return f"(input_idx {self.input})"
 
 
 class CalciteBaseNode(abc.ABC):

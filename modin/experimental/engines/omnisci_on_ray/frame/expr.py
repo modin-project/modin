@@ -15,18 +15,29 @@ class BaseExpr(abc.ABC):
         new_expr = OpExpr("IS NULL", [self], res_type)
         return new_expr
 
+    @abc.abstractmethod
+    def copy(self):
+        pass
+
 
 class InputRefExpr(BaseExpr):
-    def __init__(self, input_idx):
-        self.input = input_idx
+    def __init__(self, frame, col):
+        self.modin_frame = frame
+        self.column = col
+
+    def copy(self):
+        return InputRefExpr(self.modin_frame, self.column)
 
     def __repr__(self):
-        return "(INPUT {})".format(self.input)
+        return f"{self.modin_frame.id_str()}.{self.column}"
 
 
 class LiteralExpr(BaseExpr):
     def __init__(self, val):
         self.val = val
+
+    def copy(self):
+        return LiteralExpr(self.val)
 
     def __repr__(self):
         return str(self.val)
@@ -37,6 +48,9 @@ class OpExprType(BaseExpr):
         self.type = expr_type
         self.nullable = nullable
 
+    def copy(self):
+        return OpExprType(self.type, self.nullable)
+
 
 class OpExpr(BaseExpr):
     def __init__(self, op, operands, res_type):
@@ -44,10 +58,13 @@ class OpExpr(BaseExpr):
         self.operands = operands
         self.type = res_type
 
+    def copy(self):
+        return OpExpr(self.op, self.operands.copy(), self.type)
+
     def __repr__(self):
         if len(self.operands) == 1:
-            return "({} {})".format(self.op.upper(), self.operands[0])
-        return "({} {})".format(self.op.upper(), self.operands)
+            return f"({self.op} {self.operands[0]})"
+        return f"({self.op} {self.operands})"
 
 
 class AggregateExpr(BaseExpr):
@@ -58,6 +75,14 @@ class AggregateExpr(BaseExpr):
             self.operands = [self.operands]
         self.type = res_type
         self.distinct = distinct
+
+    def copy(self):
+        return OpExpr(self.agg, self.operands.copy(), self.type, self.distinct)
+
+    def __repr__(self):
+        if len(self.operands) == 1:
+            return "{self.agg} {self.operands[0]}"
+        return "{self.agg} {self.operands}"
 
 
 def build_row_idx_filter_expr(row_idx, row_col):
