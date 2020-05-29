@@ -280,6 +280,100 @@ class TransformNode(DFAlgNode):
         self._print_input(prefix + "  ")
 
 
+class JoinNode(DFAlgNode):
+    def __init__(
+        self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
+    ):
+        self.input = [left, right]
+        self.how = how
+        self.on = on
+        self.sort = sort
+        self.suffixes = suffixes
+
+    def copy(self):
+        return JoinNode(self.input[0], self.input[1], self.how, self.on, self.sort,)
+
+    def _to_calcite(self, out_nodes):
+
+        left = self.input[0]
+        right = self.input[1]
+
+        assert (
+            self.on is not None
+        ), "Merge with unspecified 'on' parameter is not supported in the engine"
+
+        assert (
+            self.on in left._table_cols and self.on in right._table_cols
+        ), "Only cases when both frames contain key column are supported"
+
+        left_on_pos = left._table_cols.index(self.on)
+        right_on_pos = right._table_cols.index(self.on)
+
+        """Frames scan"""
+        inputs = self._input_to_calcite(out_nodes)
+        assert len(inputs) > 1, "Unexpected number of DFAlgNodes"
+        left_node_id = inputs[0]
+        right_node_id = inputs[1]
+
+        """ Join, only equal-join supported """
+        res_type = OpExprType(bool, True)
+        """We should remember about rowid for left's projection, that's why +1"""
+        condition = OpExpr(
+            "=",
+            [
+                InputRefExpr(left_on_pos),
+                InputRefExpr(right_on_pos + len(left._table_cols) + 1),
+            ],
+            res_type,
+        )
+        node = CalciteJoinNode(
+            left_id=left_node_id,
+            right_id=right_node_id,
+            how=self.how,
+            condition=condition,
+        )
+        out_nodes.append(node)
+
+        """Projection for both frames"""
+        fields = []
+        exprs = []
+        conflicting_list = list(set(left._table_cols) & set(right._table_cols))
+        """First goes 'on' column then all left columns(+suffix for conflicting names) but 'on' 
+        then all right columns(+suffix for conflicting names) but 'on'"""
+        expr_index = 0
+        for c in left._table_cols:
+            if c != self.on:
+                suffix = self.suffixes[0] if c in conflicting_list else ""
+                fields.append(c + suffix)
+                exprs.append(InputRefExpr(expr_index))
+            else:
+                fields.insert(0, c)
+                exprs.insert(0, InputRefExpr(expr_index))
+            expr_index += 1
+
+        for c in right._table_cols:
+            if c != self.on:
+                suffix = self.suffixes[1] if c in conflicting_list else ""
+                fields.append(c + suffix)
+                exprs.append(InputRefExpr(expr_index + 1))
+            expr_index += 1
+
+        node = CalciteProjectionNode(fields, exprs)
+        out_nodes.append(node)
+
+        if self.sort is True:
+            """Sort by key column"""
+            collation = [CalciteCollation(0)]
+            out_nodes.append(CalciteSortNode(collation))
+
+    def _print(self, prefix):
+        print("{}JoinNode:".format(prefix))
+        print("{}  How: {}".format(prefix, self.how))
+        print("{}  On: {}".format(prefix, self.on))
+        print("{}  Sorting: {}".format(prefix, self.sort))
+        self._print_input(prefix + "  ")
+
+
 class UnionNode(DFAlgNode):
     """Concat frames by axis=0, all frames should be aligned."""
 
