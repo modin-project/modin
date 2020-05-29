@@ -23,6 +23,8 @@ class ReductionFunction(Function):
                     call_kwds.get("axis")
                     if "axis" in call_kwds
                     else kwargs.get("axis"),
+                    # Since parts of Modin DataFrame are pandas DataFrame then
+                    # squeeze is needed to apply a reduction_function over Series objects
                     lambda x: reduction_function(x.squeeze(), *args, **kwargs)
                     if "squeeze" in call_kwds
                     else reduction_function(x, *args, **kwargs),
