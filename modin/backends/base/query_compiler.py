@@ -274,6 +274,22 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def join(self, *args, **kwargs):
+        """Database-style join with another object.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The joined PandasQueryCompiler
+
+        Note
+        ----
+        This is not to be confused with `pandas.DataFrame.join` which does an
+        index-level join.
+        """
+        pass
+
     # END Abstract inter-data operations
 
     # Abstract Transpose
