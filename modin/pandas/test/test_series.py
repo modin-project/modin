@@ -1667,19 +1667,34 @@ def test_keys(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
-@pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize(
+    "level",
+    [
+        None,
+        pytest.param(
+            -1, marks=pytest.mark.xfail(reason="AssertionError: Series are different"),
+        ),
+        pytest.param(
+            0, marks=pytest.mark.xfail(reason="AssertionError: Series are different"),
+        ),
+        1,
+    ],
+)
+@pytest.mark.parametrize(
+    "numeric_only",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="Modin - DID NOT RAISE <class 'NotImplementedError'>"
+            ),
+        ),
+        False,
+        None,
+    ],
+)
 @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
-    # FIXME remove axis condition
-    if axis in [1, "columns"]:
-        return
-    # FIXME remove level condition
-    if level in [-1, 0]:
-        return
-    # FIXME remove numeric_only condition
-    if numeric_only in [True]:
-        return
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = getattr(pandas_series, method)(
