@@ -297,8 +297,6 @@ axis = {
     "over_rows_str": "rows",
     "over_columns_int": 1,
     "over_columns_str": "columns",
-    # FIXME uncomment the value below
-    # "None": None,
 }
 axis_keys = list(axis.keys())
 axis_values = list(axis.values())
