@@ -1020,6 +1020,34 @@ class TestDataFrameMapMetadata:
         df_equals(modin_result, pandas_result)
         assert modin_result.dtypes.equals(pandas_result.dtypes)
 
+    @pytest.mark.xfail(
+        reason="Categorical dataframe created in memory don't work yet and categorical dtype is lost"
+    )
+    def test_astype_category_large(self):
+        series_length = 10_000
+        modin_df = pd.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+        pandas_df = pandas.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+
+        modin_result = modin_df.astype({"col1": "category"})
+        pandas_result = pandas_df.astype({"col1": "category"})
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+        modin_result = modin_df.astype("category")
+        pandas_result = pandas_df.astype("category")
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     def test_clip(self, request, data, axis):
@@ -5158,14 +5186,30 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
-    def test_setitem_on_empty_df(self):
-        columns = ["id", "max_speed", "health"]
-        modin_df = pd.DataFrame(columns=columns)
-        pandas_df = pandas.DataFrame(columns=columns)
-        a = np.array(["one", "two"])
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {},
+            pytest.param(
+                {"id": [], "max_speed": [], "health": []},
+                marks=pytest.mark.xfail(
+                    reason="Throws an exception because generally assigning Series or other objects of length different from DataFrame does not work right now"
+                ),
+            ),
+        ],
+        ids=["empty", "empty_columns"],
+    )
+    @pytest.mark.parametrize(
+        "value", [np.array(["one", "two"]), [11, 22]], ids=["ndarray", "list"],
+    )
+    @pytest.mark.parametrize("convert_to_series", [False, True])
+    @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
+    def test_setitem_on_empty_df(self, data, value, convert_to_series, new_col_id):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
 
-        modin_df["id"] = a
-        pandas_df["id"] = a
+        pandas_df[new_col_id] = pandas.Series(value) if convert_to_series else value
+        modin_df[new_col_id] = pd.Series(value) if convert_to_series else value
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

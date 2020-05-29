@@ -500,6 +500,18 @@ def test_from_json():
     teardown_json_file()
 
 
+def test_from_json_categories():
+    pandas_df = pandas.read_json(
+        "modin/pandas/test/data/test_categories.json",
+        dtype={"one": "int64", "two": "category"},
+    )
+    modin_df = pd.read_json(
+        "modin/pandas/test/data/test_categories.json",
+        dtype={"one": "int64", "two": "category"},
+    )
+    df_equals(modin_df, pandas_df)
+
+
 def test_from_json_lines():
     setup_json_lines_file(SMALL_ROW_SIZE)
 
@@ -707,6 +719,20 @@ def test_from_csv_sep_none(make_csv_file):
         pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None)
     with pytest.warns(ParserWarning):
         modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None)
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_categories():
+    pandas_df = pandas.read_csv(
+        "modin/pandas/test/data/test_categories.csv",
+        names=["one", "two"],
+        dtype={"one": "int64", "two": "category"},
+    )
+    modin_df = pd.read_csv(
+        "modin/pandas/test/data/test_categories.csv",
+        names=["one", "two"],
+        dtype={"one": "int64", "two": "category"},
+    )
     df_equals(modin_df, pandas_df)
 
 

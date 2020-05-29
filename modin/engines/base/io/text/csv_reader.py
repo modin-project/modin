@@ -20,7 +20,7 @@ import sys
 
 class CSVReader(TextFileReader):
     @classmethod
-    def read(cls, filepath_or_buffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
