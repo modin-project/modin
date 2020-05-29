@@ -439,7 +439,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(
             self._modin_frame.filter_full_axis(
-                0, lambda x: x.squeeze().unique(), build_map_reduce=True
+                0, lambda x: pandas.DataFrame(x.squeeze().unique())
             )
         )
 
