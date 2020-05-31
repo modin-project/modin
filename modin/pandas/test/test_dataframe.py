@@ -4756,15 +4756,13 @@ class TestDataFrameIndexing:
         modin_df = pd.DataFrame(frame_data)
         df = df.rename(columns={0: "a"})
         df = df.rename(columns={1: "b"})
-        # TODO: Uncomment when set_index is implemented
-        # df = df.set_index(['a', 'b'])
-        # df.columns = ['2001-01-01']
+        df = df.set_index(["a", "b"])
+        df.columns = ["2001-01-01"]
 
         modin_df = modin_df.rename(columns={0: "a"})
         modin_df = modin_df.rename(columns={1: "b"})
-        # TODO: Uncomment when set_index is implemented
-        # modin_df = modin_df.set_index(['a', 'b'])
-        # modin_df.columns = ['2001-01-01']
+        modin_df = modin_df.set_index(["a", "b"])
+        modin_df.columns = ["2001-01-01"]
 
         df_equals(modin_df, df)
 
