@@ -54,10 +54,6 @@ from .utils import (
     int_arg_values,
 )
 
-# TODO remove once modin-project/modin#469 is resolved
-agg_func_keys.remove("str")
-agg_func_values.remove(str)
-
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
