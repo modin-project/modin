@@ -1667,19 +1667,7 @@ def test_keys(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize(
-    "level",
-    [
-        None,
-        pytest.param(
-            -1, marks=pytest.mark.xfail(reason="AssertionError: Series are different"),
-        ),
-        pytest.param(
-            0, marks=pytest.mark.xfail(reason="AssertionError: Series are different"),
-        ),
-        1,
-    ],
-)
+@pytest.mark.parametrize("level", [None, -1, 0, 1])
 @pytest.mark.parametrize(
     "numeric_only",
     [

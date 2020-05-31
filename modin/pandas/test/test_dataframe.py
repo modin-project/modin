@@ -2392,25 +2392,7 @@ class TestDataFrameDefault:
 
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-    @pytest.mark.parametrize(
-        "level",
-        [
-            None,
-            pytest.param(
-                -1,
-                marks=pytest.mark.xfail(
-                    reason="ValueError: The truth value of a DataFrame is ambiguous."
-                ),
-            ),
-            pytest.param(
-                0,
-                marks=pytest.mark.xfail(
-                    reason="ValueError: The truth value of a DataFrame is ambiguous."
-                ),
-            ),
-            1,
-        ],
-    )
+    @pytest.mark.parametrize("level", [None, -1, 0, 1])
     @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
     @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
     def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
