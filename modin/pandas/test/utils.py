@@ -293,10 +293,10 @@ groupby_pipe_func_values = list(groupby_pipe_func.values())
 
 # Parametrizations of common kwargs
 axis = {
-    "over rows int": 0,
-    "over rows str": "rows",
-    "over columns int": 1,
-    "over columns str": "columns",
+    "over_rows_int": 0,
+    "over_rows_str": "rows",
+    "over_columns_int": 1,
+    "over_columns_str": "columns",
 }
 axis_keys = list(axis.keys())
 axis_values = list(axis.values())

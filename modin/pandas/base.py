@@ -1459,24 +1459,44 @@ class BasePandasDataset(object):
         return _iLocIndexer(self)
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas(
-            "kurt",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs
+        """Return unbiased kurtosis over requested axis. Normalized by N-1
+
+        Kurtosis obtained using Fisher’s definition of kurtosis (kurtosis of normal == 0.0).
+
+        Args:
+            axis : {index (0), columns (1)}
+            skipna : boolean, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+            numeric_only : boolean, default None
+
+        Returns:
+            kurtosis : Series or DataFrame (if level specified)
+        """
+        if level is not None:
+            return self._default_to_pandas(
+                "kurt",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs
+            )
+
+        axis = self._get_axis_number(axis)
+        if numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        return self._reduce_dimension(
+            self._query_compiler.kurt(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs
+            )
         )
 
-    def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas(
-            "kurtosis",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs
-        )
+    kurtosis = kurt
 
     def last(self, offset):
         return self.loc[pandas.Series(index=self.index).last(offset).index]

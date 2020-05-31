@@ -45,6 +45,8 @@ from .utils import (
     numeric_agg_funcs,
     quantiles_keys,
     quantiles_values,
+    axis_keys,
+    axis_values,
     bool_arg_keys,
     bool_arg_values,
     int_arg_keys,
@@ -1663,17 +1665,37 @@ def test_keys(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurt(data):
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize(
+    "numeric_only",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="Modin - DID NOT RAISE <class 'NotImplementedError'>"
+            ),
+        ),
+        False,
+        None,
+    ],
+)
+@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
+def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurt()
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurtosis(data):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurtosis()
+    try:
+        pandas_result = getattr(pandas_series, method)(
+            axis, skipna, level, numeric_only
+        )
+    except Exception as e:
+        with pytest.raises(type(e)):
+            repr(
+                getattr(modin_series, method)(axis, skipna, level, numeric_only)
+            )  # repr to force materialization
+    else:
+        modin_result = getattr(modin_series, method)(axis, skipna, level, numeric_only)
+        df_equals(modin_result, pandas_result)
 
 
 def test_last():
