@@ -297,10 +297,10 @@ groupby_pipe_func_values = list(groupby_pipe_func.values())
 
 # Parametrizations of common kwargs
 axis = {
-    "over rows int": 0,
-    "over rows str": "rows",
-    "over columns int": 1,
-    "over columns str": "columns",
+    "over_rows_int": 0,
+    "over_rows_str": "rows",
+    "over_columns_int": 1,
+    "over_columns_str": "columns",
 }
 axis_keys = list(axis.keys())
 axis_values = list(axis.values())
@@ -356,6 +356,21 @@ json_long_string = """{
     }"""
 json_long_bytes = BytesIO(json_long_string.encode(encoding="UTF-8"))
 json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
+
+
+# Text encoding types
+encoding_types = [
+    "ascii",
+    "utf_32",
+    "utf_32_be",
+    "utf_32_le",
+    "utf_16",
+    "utf_16_be",
+    "utf_16_le",
+    "utf_7",
+    "utf_8",
+    "utf_8_sig",
+]
 
 
 def df_categories_equals(df1, df2):
