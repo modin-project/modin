@@ -11,7 +11,7 @@ import modin.pandas as mpd
 import pandas as pd
 
 import pytest
-from modin.pandas.test.utils import df_equals, bool_arg_values
+from modin.pandas.test.utils import df_equals, bool_arg_values, join_type_keys
 
 
 def run_and_compare(fn, data, data2=None, *args, **kwargs):
@@ -124,10 +124,12 @@ class TestMerge:
         "d": [4000, 2000, 3000],
     }
     on_values = ["a"]
+    how_values = ["inner", "left"]
 
     @pytest.mark.parametrize("on", on_values)
-    def test_concat(self, on):
-        def concat(lib, df1, df2, on):
-            return df1.merge(df2, on=on)
+    @pytest.mark.parametrize("how", how_values)
+    def test_merge(self, on, how):
+        def merge(lib, df1, df2, on, how):
+            return df1.merge(df2, on=on, how=how)
 
-        run_and_compare(concat, data=self.data, data2=self.data2, on=on)
+        run_and_compare(merge, data=self.data, data2=self.data2, on=on, how=how)
