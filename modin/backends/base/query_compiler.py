@@ -422,6 +422,10 @@ class BaseQueryCompiler(abc.ABC):
     def round(self, **kwargs):
         pass
 
+    @abc.abstractmethod
+    def unique(self, **kwargs):
+        pass
+
     # END Abstract map partitions operations
 
     # Abstract map partitions across select indices
