@@ -40,7 +40,6 @@ class DataFrameGroupBy(object):
         squeeze,
         idx_name,
         drop,
-        by_type=None,
         **kwargs
     ):
         self._axis = axis
