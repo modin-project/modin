@@ -85,6 +85,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        """Default to pandas behavior.
+
+        Parameters
+        ----------
+        pandas_op : callable
+            The operation to apply, must be compatible pandas DataFrame call
+        args
+            The arguments for the `pandas_op`
+        kwargs
+            The keyword arguments for the `pandas_op`
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The result of the `pandas_op`, converted back to PandasQueryCompiler
+
+        Note
+        ----
+        This operation takes a distributed object and converts it directly to pandas.
+        """
+        ErrorMessage.default_to_pandas(str(pandas_op))
+        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
+        kwargs = {
+            k: v.to_pandas if isinstance(v, type(self)) else v
+            for k, v in kwargs.items()
+        }
+        return self.from_pandas(
+            pandas_op(self.to_pandas(), *args, **kwargs), type(self._modin_frame)
+        )
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 
@@ -262,6 +293,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 where_builder_series, cond._modin_frame, join_type="left"
             )
         return self.__constructor__(new_modin_frame)
+
+    def join(self, *args, **kwargs):
+        """Database-style join with another object.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The joined PandasQueryCompiler
+
+        Note
+        ----
+        This is not to be confused with `pandas.DataFrame.join` which does an
+        index-level join.
+        """
+        return self.default_to_pandas(pandas.DataFrame.merge, *args, **kwargs)
 
     # END Inter-Data operations
 
