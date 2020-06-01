@@ -355,6 +355,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
     nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
+    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)

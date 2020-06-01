@@ -1329,11 +1329,15 @@ class Series(BasePandasDataset):
 
     @property
     def is_unique(self):
-        # We cannot default to pandas without a named function to call.
-        def is_unique(df):
-            return df.is_unique
+        """Check if Series has no duplicate values.
 
-        return self._default_to_pandas(is_unique)
+        Returns
+        -------
+        bool
+            True if there is no duplicates in Series, False otherwise.
+
+        """
+        return self.nunique(dropna=False) == len(self)
 
     @property
     def nbytes(self):
