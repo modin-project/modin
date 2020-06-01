@@ -64,17 +64,17 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
-def eval_general(modin_df, pandas_df, operation, **kwargs):
-    md_kwargs, pd_kwargs = dict(), dict()
+def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
+    md_kwargs, pd_kwargs = {}, {}
 
-    def execute_callable(fn):
+    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
         try:
-            pd_result = fn(pandas_df)
+            pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as e:
             with pytest.raises(type(e)):
-                fn(modin_df)
+                fn(modin_df, **md_kwargs)
         else:
-            md_result = fn(modin_df)
+            md_result = fn(modin_df, **md_kwargs)
             return md_result, pd_result
 
     for key, value in kwargs.items():
@@ -91,18 +91,13 @@ def eval_general(modin_df, pandas_df, operation, **kwargs):
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
-    try:
-        pandas_result = operation(pandas_df, **pd_kwargs)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            operation(modin_df, **md_kwargs)
-    else:
-        modin_result = operation(modin_df, **md_kwargs)
-        df_equals(modin_result, pandas_result)
+    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
+    if values is not None:
+        comparator(*values)
 
 
 def eval_insert(modin_df, pandas_df, **kwargs):
-    _kwargs = dict({"loc": 0, "col": "New column"})
+    _kwargs = {"loc": 0, "col": "New column"}
     _kwargs.update(kwargs)
 
     eval_general(
