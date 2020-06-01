@@ -364,7 +364,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(
-        lambda df, *args, **kwargs: pandas.to_datetime(df.squeeze(), *args, **kwargs), 
+        lambda df, *args, **kwargs: pandas.to_datetime(df.squeeze(), *args, **kwargs),
         axis=1,
     )
 
