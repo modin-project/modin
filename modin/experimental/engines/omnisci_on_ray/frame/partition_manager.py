@@ -22,6 +22,7 @@ from .partition import OmnisciOnRayFramePartition
 from modin.error_message import ErrorMessage
 from modin import __execution_engine__
 from .omnisci_worker import put_to_omnisci, OmnisciServer
+from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
 
 import json
@@ -76,7 +77,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                         df.columns = frame._table_cols
                     p.frame_id = put_to_omnisci(df)
 
-        calcite_plan = plan.to_calcite()
+        calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
 
         sql = "execute relalg " + calcite_json
