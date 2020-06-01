@@ -64,6 +64,50 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
+def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
+    md_kwargs, pd_kwargs = {}, {}
+
+    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
+        try:
+            pd_result = fn(pandas_df, **pd_kwargs)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                fn(modin_df, **md_kwargs)
+        else:
+            md_result = fn(modin_df, **md_kwargs)
+            return md_result, pd_result
+
+    for key, value in kwargs.items():
+        if callable(value):
+            values = execute_callable(value)
+            # that means, that callable raised an exception
+            if values is None:
+                return
+            else:
+                md_value, pd_value = values
+        else:
+            md_value, pd_value = value, value
+
+        md_kwargs[key] = md_value
+        pd_kwargs[key] = pd_value
+
+    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
+    if values is not None:
+        comparator(*values)
+
+
+def eval_insert(modin_df, pandas_df, **kwargs):
+    _kwargs = {"loc": 0, "col": "New column"}
+    _kwargs.update(kwargs)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        operation=lambda df, **kwargs: df.insert(**kwargs),
+        **_kwargs,
+    )
+
+
 class TestDataFrameBinary:
     # Test inter df math functions
     def inter_df_math_helper(self, modin_df, pandas_df, op):
@@ -1443,83 +1487,89 @@ class TestDataFrameMapMetadata:
                 modin_df.dropna(axis=1, subset=[4, 5])
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
-    def test_insert(self, data, loc):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    @pytest.mark.parametrize(
+        "astype",
+        [
+            "category",
+            pytest.param(
+                "int32",
+                marks=pytest.mark.xfail(
+                    reason="Modin astype() does not raises ValueError at non-numeric argument when Pandas does."
+                ),
+            ),
+            "float",
+        ],
+    )
+    def test_insert_dtypes(self, data, astype):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-        modin_df = modin_df.copy()
-        pandas_df = pandas_df.copy()
-        column = "New Column"
+        # categories with NaN works incorrect for now
+        if astype == "category" and pandas_df.iloc[:, 0].isnull().any():
+            return
+
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="TypeSaver",
+            value=lambda df: df.iloc[:, 0].astype(astype),
+        )
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
+    def test_insert_loc(self, data, loc):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
         value = modin_df.iloc[:, 0]
 
-        try:
-            pandas_df.insert(loc, column, value)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.insert(loc, column, value)
-        else:
-            modin_df.insert(loc, column, value)
-            df_equals(modin_df, pandas_df)
+        eval_insert(modin_df, pandas_df, loc=loc, value=value)
 
-        with pytest.raises(ValueError):
-            modin_df.insert(0, "Bad Column", modin_df)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_insert(self, data):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_df.insert(0, "Duplicate", modin_df[modin_df.columns[0]])
-        pandas_df.insert(0, "Duplicate", pandas_df[pandas_df.columns[0]])
-        df_equals(modin_df, pandas_df)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_df.insert(0, "Scalar", 100)
-        pandas_df.insert(0, "Scalar", 100)
-        df_equals(modin_df, pandas_df)
-
-        with pytest.raises(ValueError):
-            modin_df.insert(0, "Too Short", list(modin_df[modin_df.columns[0]])[:-1])
-
-        with pytest.raises(ValueError):
-            modin_df.insert(0, modin_df.columns[0], modin_df[modin_df.columns[0]])
-
-        with pytest.raises(IndexError):
-            modin_df.insert(len(modin_df.columns) + 100, "Bad Loc", 100)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = pd.DataFrame(columns=list("ab")).insert(
-            0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+        eval_insert(
+            modin_df, pandas_df, col="Duplicate", value=lambda df: df[df.columns[0]]
         )
-        pandas_result = pandas.DataFrame(columns=list("ab")).insert(
-            0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+        eval_insert(modin_df, pandas_df, col="Scalar", value=100)
+        eval_insert(
+            pd.DataFrame(columns=list("ab")),
+            pandas.DataFrame(columns=list("ab")),
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
         )
-        df_equals(modin_result, pandas_result)
+        eval_insert(
+            pd.DataFrame(index=modin_df.index),
+            pandas.DataFrame(index=pandas_df.index),
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
+        )
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="DataFrame insert",
+            value=lambda df: df[[df.columns[0]]],
+        )
 
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = pd.DataFrame(index=modin_df.index).insert(
-            0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+        # Bad inserts
+        eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="Too Short",
+            value=lambda df: list(df[df.columns[0]])[:-1],
         )
-        pandas_result = pandas.DataFrame(index=pandas_df.index).insert(
-            0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
         )
-        df_equals(modin_result, pandas_result)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = modin_df.insert(
-            0, "DataFrame insert", modin_df[[modin_df.columns[0]]]
+        eval_insert(
+            modin_df,
+            pandas_df,
+            loc=lambda df: len(df.columns) + 100,
+            col="Bad Loc",
+            value=100,
         )
-        pandas_result = pandas_df.insert(
-            0, "DataFrame insert", pandas_df[[pandas_df.columns[0]]]
-        )
-        df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_ndim(self, data):

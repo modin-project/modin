@@ -988,7 +988,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # the data is partitioned identically.
             if isinstance(value, pandas.Series):
                 value = value.reindex(self.index)
-            value = list(value)
+            else:
+                value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
