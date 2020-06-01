@@ -438,11 +438,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ndarray
             The unique values returned as a NumPy array.
         """
-        return self.__constructor__(
-            self._modin_frame.filter_full_axis(
-                0, lambda x: pandas.DataFrame(x.squeeze().unique()), invert_axis=True
-            )
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda x: x.squeeze().unique(), new_columns=self.columns,
         )
+        return self.__constructor__(new_modin_frame)
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.

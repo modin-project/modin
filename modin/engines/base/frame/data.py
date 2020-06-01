@@ -854,14 +854,13 @@ class BasePandasFrame(object):
             self._column_widths,
         )
 
-    def filter_full_axis(self, axis, func, invert_axis=None):
+    def filter_full_axis(self, axis, func):
         """Filter data based on the function provided along an entire axis.
 
         Args:
             axis: The axis to filter over.
             func: The function to use for the filter. This function should filter the
                 data itself.
-            invert_axis: The flag to invert axis for computation of metadata.
 
         Returns:
             A new dataframe.
@@ -869,10 +868,6 @@ class BasePandasFrame(object):
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
-
-        if invert_axis:
-            axis ^= 1
-
         if axis == 0:
             new_index = self.index
             new_lengths = self._row_lengths
