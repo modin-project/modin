@@ -240,7 +240,6 @@ class CalciteBuilder:
 
         fields += op.exprs.keys()
         exprs += self._translate(op.exprs.values())
-        print(exprs)
 
         self._push(CalciteProjectionNode(fields, exprs))
 
