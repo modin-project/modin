@@ -26,7 +26,7 @@ class ReductionFunction(Function):
                     # Since parts of Modin DataFrame are pandas DataFrame then
                     # squeeze is needed to apply a reduction_function over Series objects
                     lambda x: reduction_function(x.squeeze(), *args, **kwargs)
-                    if "squeeze" in call_kwds
+                    if "squeeze" in call_kwds and call_kwds["squeeze"] is True
                     else reduction_function(x, *args, **kwargs),
                 )
             )
