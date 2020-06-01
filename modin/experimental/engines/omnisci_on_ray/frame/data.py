@@ -140,7 +140,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
             raise NotImplementedError("groupby is supported for axis = 0 only")
 
         mask = by._modin_frame._op
-        print(mask)
         if not isinstance(mask, MaskNode):
             raise NotImplementedError("unsupported groupby args")
 
