@@ -582,11 +582,7 @@ class DataFrameGroupBy(object):
             isinstance(self._by, type(self._query_compiler))
             and len(self._by.columns) == 1
         ):
-            by = (
-                self._by.columns[0]
-                if self._drop
-                else self._by.to_pandas().squeeze()
-            )
+            by = self._by.columns[0] if self._drop else self._by.to_pandas().squeeze()
         elif isinstance(self._by, type(self._query_compiler)):
             by = list(self._by.columns)
         else:
