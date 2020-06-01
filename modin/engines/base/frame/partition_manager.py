@@ -226,12 +226,15 @@ class BaseFrameManager(object):
 
     @classmethod
     def concatenate(cls, dfs):
-        """Concatenate pandas DataFrames with saving 'category' dtype
+        """
+        Concatenate Pandas DataFrames with saving 'category' dtype
 
-        Args:
+        Parameters
+        ----------
             dfs: list of DataFrames
 
-        Returns:
+        Returns
+        -------
             A Pandas DataFrame
         """
         categoricals_columns = set.intersection(
