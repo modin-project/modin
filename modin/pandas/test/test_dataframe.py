@@ -80,7 +80,7 @@ def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs)
     for key, value in kwargs.items():
         if callable(value):
             values = execute_callable(value)
-            # that means, that callable raises an exception
+            # that means, that callable raised an exception
             if values is None:
                 return
             else:
