@@ -45,10 +45,13 @@ from .utils import (
     numeric_agg_funcs,
     quantiles_keys,
     quantiles_values,
+    axis_keys,
+    axis_values,
     bool_arg_keys,
     bool_arg_values,
     int_arg_keys,
     int_arg_values,
+    encoding_types,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1195,21 +1198,34 @@ def test_dot(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     ind_len = len(modin_series)
 
-    # Test list input
+    # Test 1D array input
     arr = np.arange(ind_len)
     modin_result = modin_series.dot(arr)
     pandas_result = pandas_series.dot(arr)
     df_equals(modin_result, pandas_result)
 
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series.dot(arr)
+    pandas_result = pandas_series.dot(arr)
+    assert_array_equal(modin_result, pandas_result)
+
     # Test bad dimensions
     with pytest.raises(ValueError):
         modin_result = modin_series.dot(np.arange(ind_len + 10))
 
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series.dot(modin_df)
+    pandas_result = pandas_series.dot(pandas_df)
+    df_equals(modin_result, pandas_result)
+
     # Test series input
-    modin_series = pd.Series(np.arange(ind_len), index=modin_series.index)
-    pandas_series = pandas.Series(np.arange(ind_len), index=modin_series.index)
-    modin_result = modin_series.dot(modin_series)
-    pandas_result = pandas_series.dot(pandas_series)
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
+    modin_result = modin_series.dot(modin_series_2)
+    pandas_result = pandas_series.dot(pandas_series_2)
     df_equals(modin_result, pandas_result)
 
     # Test when input series index doesn't line up with columns
@@ -1220,7 +1236,47 @@ def test_dot(data):
             )
         )
 
-    # modin_series.dot(modin_series.T)
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_matmul(data):
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    ind_len = len(modin_series)
+
+    # Test 1D array input
+    arr = np.arange(ind_len)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    df_equals(modin_result, pandas_result)
+
+    # Test 2D array input
+    arr = np.arange(ind_len * 2).reshape(ind_len, 2)
+    modin_result = modin_series @ arr
+    pandas_result = pandas_series @ arr
+    assert_array_equal(modin_result, pandas_result)
+
+    # Test bad dimensions
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ np.arange(ind_len + 10)
+
+    # Test dataframe input
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_series @ modin_df
+    pandas_result = pandas_series @ pandas_df
+    df_equals(modin_result, pandas_result)
+
+    # Test series input
+    modin_series_2 = pd.Series(np.arange(ind_len), index=modin_series.index)
+    pandas_series_2 = pandas.Series(np.arange(ind_len), index=pandas_series.index)
+    modin_result = modin_series @ modin_series_2
+    pandas_result = pandas_series @ pandas_series_2
+    df_equals(modin_result, pandas_result)
+
+    # Test when input series index doesn't line up with columns
+    with pytest.raises(ValueError):
+        modin_result = modin_series @ pd.Series(
+            np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
+        )
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -1558,8 +1614,7 @@ def test_is_monotonic_increasing(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_unique(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert modin_series.is_unique == pandas_series.is_unique
+    assert modin_series.is_unique == pandas_series.is_unique
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1610,17 +1665,37 @@ def test_keys(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurt(data):
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize(
+    "numeric_only",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="Modin - DID NOT RAISE <class 'NotImplementedError'>"
+            ),
+        ),
+        False,
+        None,
+    ],
+)
+@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
+def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurt()
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_kurtosis(data):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.kurtosis()
+    try:
+        pandas_result = getattr(pandas_series, method)(
+            axis, skipna, level, numeric_only
+        )
+    except Exception as e:
+        with pytest.raises(type(e)):
+            repr(
+                getattr(modin_series, method)(axis, skipna, level, numeric_only)
+            )  # repr to force materialization
+    else:
+        modin_result = getattr(modin_series, method)(axis, skipna, level, numeric_only)
+        df_equals(modin_result, pandas_result)
 
 
 def test_last():
@@ -3594,4 +3669,33 @@ def test_str_isdecimal(data):
             modin_series.str.isdecimal()
     else:
         modin_result = modin_series.str.isdecimal()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_casefold(data):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.casefold()
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.casefold()
+    else:
+        modin_result = modin_series.str.casefold()
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("encoding_type", encoding_types)
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_encode(data, encoding_type):
+    modin_series, pandas_series = create_test_series(data)
+
+    try:
+        pandas_result = pandas_series.str.encode(encoding=encoding_type)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.str.encode(encoding=encoding_type)
+    else:
+        modin_result = modin_series.str.encode(encoding=encoding_type)
         df_equals(modin_result, pandas_result)

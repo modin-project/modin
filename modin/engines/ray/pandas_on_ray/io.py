@@ -15,6 +15,7 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.engines.base.io import (
     CSVReader,
+    FWFReader,
     JSONReader,
     ParquetReader,
     FeatherReader,
@@ -22,6 +23,7 @@ from modin.engines.base.io import (
 )
 from modin.backends.pandas.parsers import (
     PandasCSVParser,
+    PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
     PandasFeatherParser,
@@ -42,6 +44,7 @@ class PandasOnRayIO(RayIO):
         frame_cls=PandasOnRayFrame,
     )
     read_csv = type("", (RayTask, PandasCSVParser, CSVReader), build_args).read
+    read_fwf = type("", (RayTask, PandasFWFParser, FWFReader), build_args).read
     read_json = type("", (RayTask, PandasJSONParser, JSONReader), build_args).read
     read_parquet = type(
         "", (RayTask, PandasParquetParser, ParquetReader), build_args

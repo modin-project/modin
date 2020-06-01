@@ -13,6 +13,7 @@
 
 import os
 import re
+from modin import __partition_format__ as partition_format
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -22,6 +23,32 @@ class FileReader:
     frame_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
+
+    @classmethod
+    def read(cls, *args, **kwargs):
+        query_compiler = cls._read(*args, **kwargs)
+        # TODO (devin-petersohn): Make this section more general for non-pandas kernel
+        # implementations.
+        if partition_format.lower() != "pandas":
+            raise NotImplementedError("FIXME")
+        import pandas
+
+        if hasattr(query_compiler, "dtypes") and any(
+            isinstance(t, pandas.CategoricalDtype) for t in query_compiler.dtypes
+        ):
+            dtypes = query_compiler.dtypes
+            return query_compiler.astype(
+                {
+                    t: dtypes[t]
+                    for t in dtypes.index
+                    if isinstance(dtypes[t], pandas.CategoricalDtype)
+                }
+            )
+        return query_compiler
+
+    @classmethod
+    def _read(cls, *args, **kwargs):
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def get_path(cls, file_path):

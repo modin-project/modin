@@ -355,6 +355,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
     nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
+    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
@@ -575,24 +576,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Returns the result of the matrix multiply.
         """
+        if isinstance(other, PandasQueryCompiler):
+            other = other.to_pandas().squeeze()
 
         def map_func(df, other=other):
-            if isinstance(other, pandas.DataFrame):
-                other = other.squeeze()
             result = df.squeeze().dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
             else:
                 return pandas.DataFrame([result])
 
+        num_cols = other.shape[1] if len(other.shape) > 1 else None
         if len(self.columns) == 1:
+            new_index = ["__reduced__"] if num_cols is None else None
+            new_columns = ["__reduced__"] if num_cols is not None else None
             axis = 0
-            new_index = ["__reduce__"]
         else:
+            new_index = None
+            new_columns = ["__reduced__"] if num_cols is None else None
             axis = 1
-            new_index = self.index
+
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+            axis, map_func, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 
