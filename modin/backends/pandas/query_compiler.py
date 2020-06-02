@@ -2192,6 +2192,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, **kwargs: pandas.DataFrame(df.size()), lambda df, **kwargs: df.sum()
     )
 
+    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
+        """Apply aggregation functions to a grouped dataframe per-column.
+
+        Parameters
+        ----------
+        by : PandasQueryCompiler
+            The column to group by
+        func_dict : dict of str, callable/string
+            The dictionary mapping of column to function
+        groupby_args : dict
+            The dictionary of keyword arguments for the group by.
+        agg_args : dict
+            The dictionary of keyword arguments for the aggregation functions
+        drop : bool
+            Whether or not to drop the column from the data.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The result of the per-column aggregations on the grouped dataframe.
+        """
+        return self.default_to_pandas(
+            lambda df: df.groupby(by=by, **groupby_args).agg(func_dict, **agg_args)
+        )
+
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
         # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
