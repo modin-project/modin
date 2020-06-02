@@ -882,6 +882,7 @@ class DataFrame(BasePandasDataset):
         -------
             Prints the summary of a DataFrame and returns None.
         """
+
         def put_str(src, output_len=None, spaces=2):
             src = str(src)
             return src.ljust(output_len if output_len else len(src)) + " " * spaces
