@@ -126,7 +126,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.columns
 
     def _set_columns(self, columns):
-        self._modin_frame.columns = columns
+        self._modin_frame = self._modin_frame._set_columns(columns)
 
     def fillna(
         self,
@@ -165,13 +165,27 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frames = [o._modin_frame for o in other]
 
-        if axis == 1:
-            raise NotImplementedError("concat for axis = 1 is not supported yet")
-
         new_modin_frame = self._modin_frame._concat(
             axis, other_modin_frames, join=join, sort=sort, ignore_index=ignore_index
         )
         return self.__constructor__(new_modin_frame)
+
+    def drop(self, index=None, columns=None):
+        """Remove row data for target index and columns.
+
+        Args:
+            index: Target index to drop.
+            columns: Target columns to drop.
+
+        Returns:
+            A new QueryCompiler.
+        """
+        assert index == None, "Only column drop is supported"
+        return self.__constructor__(
+            self._modin_frame.mask(row_indices=index, col_indices=self.columns.drop(columns))
+        )
+
+
 
     def free(self):
         return
@@ -205,7 +219,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     cumsum = DFAlgNotSupported("cumsum")
     describe = DFAlgNotSupported("describe")
     diff = DFAlgNotSupported("diff")
-    drop = DFAlgNotSupported("drop")
     dropna = DFAlgNotSupported("dropna")
     eq = DFAlgNotSupported("eq")
     eval = DFAlgNotSupported("eval")
