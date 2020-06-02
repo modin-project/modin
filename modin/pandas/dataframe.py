@@ -903,6 +903,9 @@ class DataFrame(BasePandasDataset):
         dtypes = self.dtypes
         dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
 
+        if max_cols is None:
+            max_cols = 100
+
         exceeds_info_cols = columns_len > max_cols
 
         if buf is None:
