@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 
 import abc
@@ -42,6 +43,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def from_pandas(cls, df, data_cls):
         return cls(data_cls.from_pandas(df))
 
+    default_to_pandas = PandasQueryCompiler.default_to_pandas
+
     def copy(self):
         return self.__constructor__(self._modin_frame.copy())
 
@@ -54,34 +57,26 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     # Merge
 
-    def merge(
-        self,
-        left,
-        right,
-        how="inner",
-        on=None,
-        left_on=None,
-        right_on=None,
-        left_index=False,
-        right_index=False,
-        sort=False,
-        suffixes=("_x", "_y"),
-        copy=True,
-        indicator=False,
-        validate=None,
-    ):
-        assert (
-            on is not None
-        ), "Merge with unspecified 'on' parameter is not supported in the engine"
-        return self.__constructor__(
-            left._query_compiler._modin_frame.join(
-                right._query_compiler._modin_frame,
-                how=how,
-                on=on,
-                sort=sort,
-                suffixes=suffixes,
+    def join(self, *args, **kwargs):
+        right = args[0]
+        how = kwargs.get("how", "inner")
+        on = kwargs.get("on")
+        sort = kwargs.get("sort", False)
+        suffixes = kwargs.get("suffixes", None)
+        left_index = kwargs.get("left_index", False)
+        right_index = kwargs.get("right_index", False)
+        if left_index is False and right_index is False and on is not None:
+            return self.__constructor__(
+                self._modin_frame.join(
+                    right._modin_frame,
+                    how=how,
+                    on=on,
+                    sort=sort,
+                    suffixes=suffixes,
+                )
             )
-        )
+        else:
+            return self.default_to_pandas(pandas.DataFrame.merge, *args, **kwargs)
 
     def view(self, index=None, columns=None):
         return self.__constructor__(
@@ -262,6 +257,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     to_numpy = DFAlgNotSupported("to_numpy")
     transpose = DFAlgNotSupported("transpose")
     truediv = DFAlgNotSupported("truediv")
+    unique = DFAlgNotSupported("unique")
     update = DFAlgNotSupported("update")
     var = DFAlgNotSupported("var")
     where = DFAlgNotSupported("where")
