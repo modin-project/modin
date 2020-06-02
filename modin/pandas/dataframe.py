@@ -22,6 +22,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
+from pandas.io.formats.printing import pprint_thing
 
 import itertools
 import functools
@@ -913,6 +914,9 @@ class DataFrame(BasePandasDataset):
             verbose = not exceeds_info_cols
 
         if null_counts and verbose:
+            # We're gonna take items from `non_null_count` in a loop, which
+            # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
+            # that will be faster.
             non_null_count = self.count()._to_pandas()
 
         if memory_usage is None:
