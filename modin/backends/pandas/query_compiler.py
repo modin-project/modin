@@ -1286,10 +1286,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result
 
         if axis == 0:
-            if not as_index and drop:
-                new_columns = by.columns.append(qc.columns)
-            else:
-                new_columns = qc.columns
+            new_columns = qc.columns
             new_index = None
         else:
             new_index = self.index

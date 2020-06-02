@@ -20,6 +20,7 @@ from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
 from .series import Series
 
+
 @_inherit_docstrings(
     pandas.core.groupby.DataFrameGroupBy,
     excluded=[
@@ -373,6 +374,7 @@ class DataFrameGroupBy(object):
             lambda df: df.sum(),
             numeric_only=False,
         )
+
         series_result = Series(query_compiler=result._query_compiler)
         # Pandas does not name size() output
         series_result.name = None
@@ -523,8 +525,13 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        if drop and self._drop:
+            if self._as_index:
+                groupby_qc = self._query_compiler.drop(columns=self._by.columns)
+            else:
+                groupby_qc = self._query_compiler
+                cols_without_by = self._columns.drop(self._by.columns)
+                groupby_qc.columns = self._by.columns.append(cols_without_by)
         else:
             groupby_qc = self._query_compiler
 

@@ -198,7 +198,19 @@ def test_mixed_dtypes_groupby(as_index):
 
 
 @pytest.mark.parametrize(
-    "by", [[1, 2, 1, 2], lambda x: x % 3, "col1", ["col1"], ["col1", "col2"]]
+    "by",
+    [
+        [1, 2, 1, 2],
+        lambda x: x % 3,
+        "col1",
+        ["col1"],
+        "col2",
+        ["col2"],
+        ["col1", "col2"],
+        ["col2", "col4"],
+        ["col4", "col2"],
+        ["col3", "col4", "col2"],
+    ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
 def test_simple_row_groupby(by, as_index):
