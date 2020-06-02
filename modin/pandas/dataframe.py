@@ -847,10 +847,12 @@ class DataFrame(BasePandasDataset):
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
     ):
-        """Print a concise summary of a DataFrame, which includes the index
+        """
+        Print a concise summary of a DataFrame, which includes the index
         dtype and column dtypes, non-null values and memory usage.
 
-        Args:
+        Parameters
+        ----------
             verbose (bool, optional): Whether to print the full summary. Defaults
                 to true
 
@@ -875,7 +877,8 @@ class DataFrame(BasePandasDataset):
                 and 1690785 rows. A value of True always shows the counts and False
                 never shows the counts.
 
-        Returns:
+        Returns
+        -------
             Prints the summary of a DataFrame and returns None.
         """
         def put_str(src, output_len=None, spaces=2):
