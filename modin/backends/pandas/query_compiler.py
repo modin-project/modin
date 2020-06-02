@@ -1205,29 +1205,61 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    def groupby_sum(self, by, axis, groupby_args, **kwargs):
-        """Groupby with sum aggregation.
+    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
+        """Apply aggregation functions to a grouped dataframe per-column.
 
         Parameters
         ----------
-        by
-            The column value to group by. This can come in the form of a query compiler
-        axis : (0 or 1)
-            The axis the group by
-        groupby_args : dict of {"str": value}
-            The arguments for groupby. These can include 'level', 'sort', 'as_index',
-            'group_keys', and 'squeeze'.
-        kwargs
-            The keyword arguments for the sum operation
+        by : PandasQueryCompiler
+            The column to group by
+        func_dict : dict of str, callable/string
+            The dictionary mapping of column to function
+        groupby_args : dict
+            The dictionary of keyword arguments for the group by.
+        agg_args : dict
+            The dictionary of keyword arguments for the aggregation functions
+        drop : bool
+            Whether or not to drop the column from the data.
 
         Returns
         -------
         PandasQueryCompiler
-            A new PandasQueryCompiler
+            The result of the per-column aggregations on the grouped dataframe.
         """
-        return self.groupby_reduce(
-            by, axis, groupby_args, lambda df: df.sum(**kwargs), {}
+        as_index = groupby_args.get("as_index", True)
+        # TODO avoid broadcast of `by` column
+        by = by.to_pandas().squeeze(axis=1)
+
+        def groupby_agg_builder(df):
+            # Set `as_index` to True to track the metadata of the grouping object
+            # It is used to make sure that between phases we are constructing the
+            # right index and placing columns in the correct order.
+            groupby_args["as_index"] = True
+
+            def compute_groupby(df):
+                part_func_dict = {k:v for k, v in func_dict.items() if k in df.columns}
+                grouped_df = df.groupby(by=by, axis=0, **groupby_args)
+                return grouped_df.agg(part_func_dict, **agg_args)
+
+            try:
+                return compute_groupby(df)
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except (ValueError, KeyError):
+                return compute_groupby(df.copy())
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda df: groupby_agg_builder(df)
         )
+        result = self.__constructor__(new_modin_frame)
+        # Reset `as_index` because it was edited inplace.
+        groupby_args["as_index"] = as_index
+        if as_index:
+            return result
+        else:
+            if result.index.name is None or result.index.name in result.columns:
+                drop = False
+            return result.reset_index(drop=not drop)
 
     def groupby_reduce(
         self,
