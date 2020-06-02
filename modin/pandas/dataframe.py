@@ -974,7 +974,7 @@ class DataFrame(BasePandasDataset):
             header, lengths = get_header()
             output.extend([columns_line, *header])
             for i, col in enumerate(columns):
-                i, col, non_null, dtype = map(pprint_thing, [i, col, dtypes[col]])
+                i, col, dtype = map(pprint_thing, [i, col, dtypes[col]])
 
                 to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
                     col, lengths["column"]
