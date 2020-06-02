@@ -553,10 +553,32 @@ class Series(BasePandasDataset):
         )
 
     def corr(self, other, method="pearson", min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.corr, other, method=method, min_periods=min_periods
+        """
+        Compute correlation with `other` Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the correlation.
+        method : {'pearson', 'kendall', 'spearman'} or callable
+            Method used to compute correlation:
+
+            - pearson : Standard correlation coefficient
+            - kendall : Kendall Tau correlation coefficient
+            - spearman : Spearman rank correlation
+            - callable: Callable with input two 1d ndarrays and returning a float.
+
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Correlation with other.
+        """
+        other = other._query_compiler
+        return (
+            self._query_compiler.corr(other, method, min_periods).to_pandas().squeeze()
         )
 
     def count(self, level=None):

@@ -646,6 +646,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
+    def corr(self, other, method, min_periods):
+        """
+        Compute correlation with `other`, excluding missing values.
+
+        Parameters
+        ----------
+        other : PandasQueryCompiler
+            QueryCompiler of Series with which to compute the correlation.
+        method : {'pearson', 'kendall', 'spearman'} or callable
+            Method used to compute correlation:
+
+            - pearson : Standard correlation coefficient
+            - kendall : Kendall Tau correlation coefficient
+            - spearman : Spearman rank correlation
+            - callable: Callable with input two 1d ndarrays and returning a float.
+
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            Correlation with other.
+        """
+        other = other.to_pandas().squeeze()
+
+        def map_func(df, other=other, method=method, min_periods=min_periods):
+            result = df.squeeze().corr(other, method=method, min_periods=min_periods)
+            return pandas.DataFrame([result])
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, map_func, new_index=["__reduced__"], new_columns=["__reduced__"]
+        )
+        return self.__constructor__(new_modin_frame)
+
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
 

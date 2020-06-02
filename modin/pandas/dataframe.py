@@ -597,6 +597,32 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(self, method="pearson", min_periods=1):
+        """
+        Compute pairwise correlation of columns, excluding NA/null values.
+
+        Parameters
+        ----------
+        method : {'pearson', 'kendall', 'spearman'} or callable
+            Method of correlation:
+
+            * pearson : standard correlation coefficient
+            * kendall : Kendall Tau correlation coefficient
+            * spearman : Spearman rank correlation
+            * callable: callable with input two 1d ndarrays
+                and returning a float. Note that the returned matrix from corr
+                will have 1 along the diagonals and will be symmetric
+                regardless of the callable's behavior.
+
+        min_periods : int, optional
+            Minimum number of observations required per pair of columns
+            to have a valid result. Currently only available for Pearson
+            and Spearman correlation.
+
+        Returns
+        -------
+        DataFrame
+            Correlation matrix.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
