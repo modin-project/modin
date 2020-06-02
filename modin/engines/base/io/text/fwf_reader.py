@@ -18,9 +18,9 @@ import pandas
 import sys
 
 
-class CSVReader(TextFileReader):
+class FWFReader(TextFileReader):
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def read(cls, filepath_or_buffer, **kwargs):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
@@ -28,7 +28,7 @@ class CSVReader(TextFileReader):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         compression_type = cls.infer_compression(
-            filepath_or_buffer, kwargs.get("compression")
+            filepath_or_buffer, kwargs.get("compression", "infer")
         )
         if compression_type is not None:
             if (
@@ -51,6 +51,12 @@ class CSVReader(TextFileReader):
         if chunksize is not None:
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
+        # If infer_nrows is a significant portion of the number of rows, pandas may be
+        # faster.
+        infer_nrows = kwargs.get("infer_nrows", 100)
+        if infer_nrows > 100:
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
@@ -64,11 +70,11 @@ class CSVReader(TextFileReader):
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
-            names = pandas.read_csv(
+            names = pandas.read_fwf(
                 filepath_or_buffer,
                 **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None)
             ).columns
-        empty_pd_df = pandas.read_csv(
+        empty_pd_df = pandas.read_fwf(
             filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
         )
         column_names = empty_pd_df.columns
@@ -78,7 +84,7 @@ class CSVReader(TextFileReader):
         usecols_md = _validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
-            all_cols = pandas.read_csv(
+            all_cols = pandas.read_fwf(
                 cls.file_open(filepath_or_buffer, "rb"),
                 **dict(kwargs, nrows=0, skipfooter=0)
             ).columns

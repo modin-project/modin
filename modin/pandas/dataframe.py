@@ -400,6 +400,14 @@ class DataFrame(BasePandasDataset):
         # strings is passed in, the data used for the groupby is dropped before the
         # groupby takes place.
         drop = False
+
+        if (
+            not isinstance(by, (pandas.Series, Series))
+            and is_list_like(by)
+            and len(by) == 1
+        ):
+            by = by[0]
+
         if callable(by):
             by = self.index.map(by)
         elif isinstance(by, str):
@@ -602,6 +610,65 @@ class DataFrame(BasePandasDataset):
 
     def cov(self, min_periods=None):
         return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
+
+    def dot(self, other):
+        """
+        Compute the matrix multiplication between the DataFrame and other.
+
+        This method computes the matrix product between the DataFrame and the
+        values of an other Series, DataFrame or a numpy array.
+
+        It can also be called using ``self @ other`` in Python >= 3.5.
+
+        Parameters
+        ----------
+        other : Series, DataFrame or array-like
+            The other object to compute the matrix product with.
+
+        Returns
+        -------
+        Series or DataFrame
+            If other is a Series, return the matrix product between self and
+            other as a Series. If other is a DataFrame or a numpy.array, return
+            the matrix product of self and other in a DataFrame of a np.array.
+
+        See Also
+        --------
+        Series.dot: Similar method for Series.
+
+        Notes
+        -----
+        The dimensions of DataFrame and other must be compatible in order to
+        compute the matrix multiplication. In addition, the column names of
+        DataFrame and the index of other must contain the same values, as they
+        will be aligned prior to the multiplication.
+
+        The dot method for Series computes the inner product, instead of the
+        matrix product here.
+        """
+        if isinstance(other, BasePandasDataset):
+            common = self.columns.union(other.index)
+            if len(common) > len(self.columns) or len(common) > len(other.index):
+                raise ValueError("Matrices are not aligned")
+
+            qc = other.reindex(index=common)._query_compiler
+            if isinstance(other, DataFrame):
+                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+            else:
+                return self._reduce_dimension(
+                    query_compiler=self._query_compiler.dot(qc)
+                )
+
+        other = np.asarray(other)
+        if self.shape[1] != other.shape[0]:
+            raise ValueError(
+                "Dot product shape mismatch, {} vs {}".format(self.shape, other.shape)
+            )
+
+        if len(other.shape) > 1:
+            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+
+        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
 
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
@@ -844,10 +911,12 @@ class DataFrame(BasePandasDataset):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
             value = value.iloc[:, 0]
+
+        if isinstance(value, Series):
+            # TODO: Remove broadcast of Series
+            value = value._to_pandas()
+
         if len(self.index) == 0:
-            if isinstance(value, Series):
-                # TODO: Remove broadcast of Series
-                value = value._to_pandas()
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
@@ -1182,22 +1251,21 @@ class DataFrame(BasePandasDataset):
                 return query_compiler
             return DataFrame(query_compiler=query_compiler)
         if left_index is False or right_index is False:
-            if isinstance(right, DataFrame):
-                right = right._query_compiler.to_pandas()
-            return self._default_to_pandas(
-                pandas.DataFrame.merge,
-                right,
-                how=how,
-                on=on,
-                left_on=left_on,
-                right_on=right_on,
-                left_index=left_index,
-                right_index=right_index,
-                sort=sort,
-                suffixes=suffixes,
-                copy=copy,
-                indicator=indicator,
-                validate=validate,
+            return self._create_or_update_from_compiler(
+                self._query_compiler.join(
+                    right._query_compiler,
+                    how=how,
+                    on=on,
+                    left_on=left_on,
+                    right_on=right_on,
+                    left_index=left_index,
+                    right_index=right_index,
+                    sort=sort,
+                    suffixes=suffixes,
+                    copy=copy,
+                    indicator=indicator,
+                    validate=validate,
+                )
             )
         if left_index and right_index:
             return self.join(
@@ -2070,7 +2138,7 @@ class DataFrame(BasePandasDataset):
         # _query_compiler before we check if the key is in self
         if key in ["_query_compiler"] or key in self.__dict__:
             pass
-        elif key in self:
+        elif key in self and key not in dir(self):
             self.__setitem__(key, value)
         elif isinstance(value, pandas.Series):
             warnings.warn(
@@ -2081,6 +2149,41 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
+        if key not in self.columns:
+            # Handle new column case first
+            if isinstance(value, Series):
+                if len(self.columns) == 0:
+                    self._query_compiler = value._query_compiler.copy()
+                else:
+                    self._create_or_update_from_compiler(
+                        self._query_compiler.concat(1, value._query_compiler),
+                        inplace=True,
+                    )
+                # Now that the data is appended, we need to update the column name for
+                # that column to `key`, otherwise the name could be incorrect. Drop the
+                # last column name from the list (the appended value's name and append
+                # the new name.
+                self.columns = self.columns[:-1].append(pandas.Index([key]))
+            elif (
+                isinstance(value, np.ndarray)
+                and len(value.shape) > 1
+                and value.shape[1] != 1
+            ):
+                raise ValueError(
+                    "Wrong number of items passed %i, placement implies 1"
+                    % value.shape[1]
+                )
+            elif (
+                isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
+            ):
+                raise ValueError(
+                    "Wrong number of items passed %i, placement implies 1"
+                    % value.shape[1]
+                )
+            else:
+                self.insert(loc=len(self.columns), column=key, value=value)
+            return
+
         if not isinstance(key, str):
 
             def setitem_without_string_columns(df):
@@ -2095,22 +2198,8 @@ class DataFrame(BasePandasDataset):
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
-                if value.shape[1] != 1 and key not in self.columns:
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % value.shape[1]
-                    )
                 value = value[value.columns[0]].values
             elif isinstance(value, np.ndarray):
-                if (
-                    len(value.shape) > 1
-                    and value.shape[1] != 1
-                    and key not in self.columns
-                ):
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % value.shape[1]
-                    )
                 assert (
                     len(value.shape) < 3
                 ), "Shape of new values must be compatible with manager shape"
@@ -2119,23 +2208,8 @@ class DataFrame(BasePandasDataset):
                     value = value[: len(self)]
             if not isinstance(value, Series):
                 value = list(value)
-        if key not in self.columns:
-            if isinstance(value, Series):
-                if len(self.columns) == 0:
-                    self._query_compiler = value._query_compiler.copy()
-                else:
-                    self._create_or_update_from_compiler(
-                        self._query_compiler.concat(1, value._query_compiler),
-                        inplace=True,
-                    )
-                # Now that the data is appended, we need to update the column name for
-                # that column to `key`, otherwise the name could be incorrect. Drop the
-                # last column name from the list (the appended value's name and append
-                # the new name.
-                self.columns = self.columns[:-1].append(pandas.Index([key]))
-            else:
-                self.insert(loc=len(self.columns), column=key, value=value)
-        elif len(self.index) == 0:
+
+        if len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:

@@ -64,8 +64,51 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
+def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
+    md_kwargs, pd_kwargs = {}, {}
+
+    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
+        try:
+            pd_result = fn(pandas_df, **pd_kwargs)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                fn(modin_df, **md_kwargs)
+        else:
+            md_result = fn(modin_df, **md_kwargs)
+            return md_result, pd_result
+
+    for key, value in kwargs.items():
+        if callable(value):
+            values = execute_callable(value)
+            # that means, that callable raised an exception
+            if values is None:
+                return
+            else:
+                md_value, pd_value = values
+        else:
+            md_value, pd_value = value, value
+
+        md_kwargs[key] = md_value
+        pd_kwargs[key] = pd_value
+
+    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
+    if values is not None:
+        comparator(*values)
+
+
+def eval_insert(modin_df, pandas_df, **kwargs):
+    _kwargs = {"loc": 0, "col": "New column"}
+    _kwargs.update(kwargs)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        operation=lambda df, **kwargs: df.insert(**kwargs),
+        **_kwargs,
+    )
+
+
 class TestDataFrameBinary:
-    # Test inter df math functions
     def inter_df_math_helper(self, modin_df, pandas_df, op):
         # Test dataframe to datframe
         try:
@@ -227,172 +270,42 @@ class TestDataFrameBinary:
             # Operation against self for sanity check
             getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 
+    @pytest.mark.parametrize(
+        "function",
+        [
+            "add",
+            "div",
+            "divide",
+            "floordiv",
+            "mod",
+            "mul",
+            "multiply",
+            "pow",
+            "sub",
+            "subtract",
+            "truediv",
+            "__div__",
+            "__add__",
+            "__radd__",
+            "__mul__",
+            "__rmul__",
+            "__pow__",
+            "__rpow__",
+            "__sub__",
+            "__floordiv__",
+            "__rfloordiv__",
+            "__truediv__",
+            "__rtruediv__",
+            "__mod__",
+            "__rmod__",
+            "__rdiv__",
+        ],
+    )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_add(self, data):
+    def test_math_functions(self, data, function):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-
-        self.inter_df_math_helper(modin_df, pandas_df, "add")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_div(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "div")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_divide(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "divide")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_floordiv(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "floordiv")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_mod(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "mod")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_mul(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "mul")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_multiply(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "multiply")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_pow(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        # TODO: Revert to others once we have an efficient way of preprocessing for positive
-        # values
-        try:
-            pandas_df = pandas_df.abs()
-        except Exception:
-            pass
-        else:
-            modin_df = modin_df.abs()
-            self.inter_df_math_helper(modin_df, pandas_df, "pow")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_sub(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "sub")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_subtract(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "subtract")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_truediv(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "truediv")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___div__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__div__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___add__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__add__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___radd__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__radd__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___mul__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__mul__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rmul__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rmul__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___pow__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__pow__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rpow__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rpow__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___sub__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__sub__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___floordiv__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__floordiv__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rfloordiv__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rfloordiv__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___truediv__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__truediv__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rtruediv__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rtruediv__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___mod__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__mod__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rmod__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rmod__")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___rdiv__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.inter_df_math_helper(modin_df, pandas_df, "__rdiv__")
-
-    # END test inter df math functions
+        self.inter_df_math_helper(modin_df, pandas_df, function)
 
     # Test comparison of inter operation functions
     def comparison_inter_ops_helper(self, modin_df, pandas_df, op):
@@ -1020,6 +933,34 @@ class TestDataFrameMapMetadata:
         df_equals(modin_result, pandas_result)
         assert modin_result.dtypes.equals(pandas_result.dtypes)
 
+    @pytest.mark.xfail(
+        reason="Categorical dataframe created in memory don't work yet and categorical dtype is lost"
+    )
+    def test_astype_category_large(self):
+        series_length = 10_000
+        modin_df = pd.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+        pandas_df = pandas.DataFrame(
+            {
+                "col1": ["str{0}".format(i) for i in range(0, series_length)],
+                "col2": [i for i in range(0, series_length)],
+            }
+        )
+
+        modin_result = modin_df.astype({"col1": "category"})
+        pandas_result = pandas_df.astype({"col1": "category"})
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+        modin_result = modin_df.astype("category")
+        pandas_result = pandas_df.astype("category")
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     def test_clip(self, request, data, axis):
@@ -1415,83 +1356,89 @@ class TestDataFrameMapMetadata:
                 modin_df.dropna(axis=1, subset=[4, 5])
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
-    def test_insert(self, data, loc):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    @pytest.mark.parametrize(
+        "astype",
+        [
+            "category",
+            pytest.param(
+                "int32",
+                marks=pytest.mark.xfail(
+                    reason="Modin astype() does not raises ValueError at non-numeric argument when Pandas does."
+                ),
+            ),
+            "float",
+        ],
+    )
+    def test_insert_dtypes(self, data, astype):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-        modin_df = modin_df.copy()
-        pandas_df = pandas_df.copy()
-        column = "New Column"
+        # categories with NaN works incorrect for now
+        if astype == "category" and pandas_df.iloc[:, 0].isnull().any():
+            return
+
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="TypeSaver",
+            value=lambda df: df.iloc[:, 0].astype(astype),
+        )
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
+    def test_insert_loc(self, data, loc):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
         value = modin_df.iloc[:, 0]
 
-        try:
-            pandas_df.insert(loc, column, value)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.insert(loc, column, value)
-        else:
-            modin_df.insert(loc, column, value)
-            df_equals(modin_df, pandas_df)
+        eval_insert(modin_df, pandas_df, loc=loc, value=value)
 
-        with pytest.raises(ValueError):
-            modin_df.insert(0, "Bad Column", modin_df)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_insert(self, data):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_df.insert(0, "Duplicate", modin_df[modin_df.columns[0]])
-        pandas_df.insert(0, "Duplicate", pandas_df[pandas_df.columns[0]])
-        df_equals(modin_df, pandas_df)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_df.insert(0, "Scalar", 100)
-        pandas_df.insert(0, "Scalar", 100)
-        df_equals(modin_df, pandas_df)
-
-        with pytest.raises(ValueError):
-            modin_df.insert(0, "Too Short", list(modin_df[modin_df.columns[0]])[:-1])
-
-        with pytest.raises(ValueError):
-            modin_df.insert(0, modin_df.columns[0], modin_df[modin_df.columns[0]])
-
-        with pytest.raises(IndexError):
-            modin_df.insert(len(modin_df.columns) + 100, "Bad Loc", 100)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = pd.DataFrame(columns=list("ab")).insert(
-            0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+        eval_insert(
+            modin_df, pandas_df, col="Duplicate", value=lambda df: df[df.columns[0]]
         )
-        pandas_result = pandas.DataFrame(columns=list("ab")).insert(
-            0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+        eval_insert(modin_df, pandas_df, col="Scalar", value=100)
+        eval_insert(
+            pd.DataFrame(columns=list("ab")),
+            pandas.DataFrame(columns=list("ab")),
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
         )
-        df_equals(modin_result, pandas_result)
+        eval_insert(
+            pd.DataFrame(index=modin_df.index),
+            pandas.DataFrame(index=pandas_df.index),
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
+        )
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="DataFrame insert",
+            value=lambda df: df[[df.columns[0]]],
+        )
 
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = pd.DataFrame(index=modin_df.index).insert(
-            0, modin_df.columns[0], modin_df[modin_df.columns[0]]
+        # Bad inserts
+        eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col="Too Short",
+            value=lambda df: list(df[df.columns[0]])[:-1],
         )
-        pandas_result = pandas.DataFrame(index=pandas_df.index).insert(
-            0, pandas_df.columns[0], pandas_df[pandas_df.columns[0]]
+        eval_insert(
+            modin_df,
+            pandas_df,
+            col=lambda df: df.columns[0],
+            value=lambda df: df[df.columns[0]],
         )
-        df_equals(modin_result, pandas_result)
-
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = modin_df.insert(
-            0, "DataFrame insert", modin_df[[modin_df.columns[0]]]
+        eval_insert(
+            modin_df,
+            pandas_df,
+            loc=lambda df: len(df.columns) + 100,
+            col="Bad Loc",
+            value=100,
         )
-        pandas_result = pandas_df.insert(
-            0, "DataFrame insert", pandas_df[[pandas_df.columns[0]]]
-        )
-        df_equals(modin_result, pandas_result)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_ndim(self, data):
@@ -2272,17 +2219,51 @@ class TestDataFrameDefault:
 
         # Test series input
         modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
-        pandas_series = pandas.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
         modin_result = modin_df.dot(modin_series)
         pandas_result = pandas_df.dot(pandas_series)
+        df_equals(modin_result, pandas_result)
+
+        # Test dataframe input
+        modin_result = modin_df.dot(modin_df.T)
+        pandas_result = pandas_df.dot(pandas_df.T)
         df_equals(modin_result, pandas_result)
 
         # Test when input series index doesn't line up with columns
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
 
-        with pytest.warns(UserWarning):
-            modin_df.dot(modin_df.T)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_matmul(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        col_len = len(modin_df.columns)
+
+        # Test list input
+        arr = np.arange(col_len)
+        modin_result = modin_df @ arr
+        pandas_result = pandas_df @ arr
+        df_equals(modin_result, pandas_result)
+
+        # Test bad dimensions
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ np.arange(col_len + 10)
+
+        # Test series input
+        modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
+        pandas_series = pandas.Series(np.arange(col_len), index=pandas_df.columns)
+        modin_result = modin_df @ modin_series
+        pandas_result = pandas_df @ pandas_series
+        df_equals(modin_result, pandas_result)
+
+        # Test dataframe input
+        modin_result = modin_df @ modin_df.T
+        pandas_result = pandas_df @ pandas_df.T
+        df_equals(modin_result, pandas_result)
+
+        # Test when input series index doesn't line up with columns
+        with pytest.raises(ValueError):
+            modin_result = modin_df @ pd.Series(np.arange(col_len))
 
     def test_ewm(self):
         df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
@@ -2356,15 +2337,26 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).interpolate()
 
-    def test_kurt(self):
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+    @pytest.mark.parametrize("level", [None, -1, 0, 1])
+    @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
+    @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
+    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).kurt()
-
-    def test_kurtosis(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).kurtosis()
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        try:
+            pandas_result = getattr(pandas_df, method)(
+                axis, skipna, level, numeric_only
+            )
+        except Exception as e:
+            with pytest.raises(type(e)):
+                repr(
+                    getattr(modin_df, method)(axis, skipna, level, numeric_only)
+                )  # repr to force materialization
+        else:
+            modin_result = getattr(modin_df, method)(axis, skipna, level, numeric_only)
+            df_equals(modin_result, pandas_result)
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
@@ -2596,7 +2588,14 @@ class TestDataFrameDefault:
 
         # Skips nan because only difference is nan instead of NaN
         if not name_contains(request.node.name, ["nan"]):
-            assert np.array_equal(modin_df.to_records(), pandas_df.to_records())
+            try:
+                pandas_result = pandas_df.to_records()
+            except Exception as e:
+                with pytest.raises(type(e)):
+                    modin_df.to_records()
+            else:
+                modin_result = modin_df.to_records()
+                assert np.array_equal(modin_result, pandas_result)
 
     def test_to_datetime(self):
         modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
@@ -5124,14 +5123,30 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
-    def test_setitem_on_empty_df(self):
-        columns = ["id", "max_speed", "health"]
-        modin_df = pd.DataFrame(columns=columns)
-        pandas_df = pandas.DataFrame(columns=columns)
-        a = np.array(["one", "two"])
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {},
+            pytest.param(
+                {"id": [], "max_speed": [], "health": []},
+                marks=pytest.mark.xfail(
+                    reason="Throws an exception because generally assigning Series or other objects of length different from DataFrame does not work right now"
+                ),
+            ),
+        ],
+        ids=["empty", "empty_columns"],
+    )
+    @pytest.mark.parametrize(
+        "value", [np.array(["one", "two"]), [11, 22]], ids=["ndarray", "list"],
+    )
+    @pytest.mark.parametrize("convert_to_series", [False, True])
+    @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
+    def test_setitem_on_empty_df(self, data, value, convert_to_series, new_col_id):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
 
-        modin_df["id"] = a
-        pandas_df["id"] = a
+        pandas_df[new_col_id] = pandas.Series(value) if convert_to_series else value
+        modin_df[new_col_id] = pd.Series(value) if convert_to_series else value
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
