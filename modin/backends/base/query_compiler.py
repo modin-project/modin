@@ -390,6 +390,10 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def to_datetime(self, arg, **kwargs):
+        pass
+
     # END Abstract full Reduce operations
 
     # Abstract map partitions operations
