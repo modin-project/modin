@@ -41,6 +41,14 @@ class TestMasks:
 
         run_and_compare(projection, data=self.data, cols=cols)
 
+    def test_drop(self):
+        pandas_df = pd.DataFrame(self.data)
+        modin_df = pd.DataFrame(self.data)
+
+        pandas_df = pandas_df.drop(columns="a")
+        modin_df = modin_df.drop(columns="a")
+        df_equals(pandas_df, modin_df)
+
 
 class TestFillna:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
@@ -85,6 +93,13 @@ class TestConcat:
             sort=sort,
             ignore_index=ignore_index,
         )
+
+    def test_concat_with_same_df(self):
+        pandas_df = pd.DataFrame(self.data)
+        modin_df = pd.DataFrame(self.data)
+        pandas_df["d"] = pandas_df["a"]
+        modin_df["d"] = modin_df["a"]
+        df_equals(pandas_df, modin_df)
 
 
 class TestGroupby:
@@ -133,3 +148,10 @@ class TestMerge:
             return df1.merge(df2, on=on, how=how)
 
         run_and_compare(merge, data=self.data, data2=self.data2, on=on, how=how)
+
+    @pytest.mark.parametrize("how", how_values)
+    def test_default_merge(self, how):
+        def default_merge(lib, df1, df2, how):
+            return df1.merge(df2, how=how)
+
+        run_and_compare(default_merge, data=self.data, data2=self.data2, how=how)

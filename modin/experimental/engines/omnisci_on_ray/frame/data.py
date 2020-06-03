@@ -113,7 +113,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         col_indices=None,
         col_numeric_idx=None,
     ):
-        if col_indices:
+        if col_indices is not None:
             new_columns = col_indices
         elif col_numeric_idx is not None:
             new_columns = self.columns[col_numeric_idx]
@@ -261,11 +261,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return 1
         return len(self._index_cols)
 
-    def _concat(
+    def _union_all(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
-        assert axis == 0, "unsupported concat on axis = 1"
-
         # determine output columns
         new_columns = OrderedDict()
         for col in self.columns:
@@ -323,6 +321,37 @@ class OmnisciOnRayFrame(BasePandasFrame):
             columns=new_columns, op=new_op, index_cols=aligned_frames[0]._index_cols,
         )
 
+    def _concat(
+        self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
+    ):
+        if axis == 0:
+            self._union_all(axis, other_modin_frames, join, sort, ignore_index)
+        elif axis == 1:
+            assert (
+                join == "outer"
+                and not sort
+                and len(other_modin_frames) == 1
+                and len(other_modin_frames[0].columns) == 1
+                and isinstance(other_modin_frames[0]._op, MaskNode)
+                and other_modin_frames[0]._op.row_indices is None
+                and other_modin_frames[0]._op.row_numeric_idx is None
+                and other_modin_frames[0]._op.input[0] == self
+            ), "Only appending one column from the same dataframe is supported"
+
+            exprs = {c: self.ref(c) for c in self.columns}
+
+            # as we don't know column name here, we need to come up with some unique name here
+            # column name is set in dataframe.__setitem__
+            exprs["__appended_column__"] = self.ref(other_modin_frames[0].columns[0])
+
+            new_frame = self.__constructor__(
+                columns=self.columns.insert(len(self.columns), "__appended_column__"),
+                op=TransformNode(self, exprs),
+                index_cols=self._index_cols,
+            )
+
+            return new_frame
+
     def _execute(self):
         if isinstance(self._op, FrameNode):
             return
@@ -346,9 +375,17 @@ class OmnisciOnRayFrame(BasePandasFrame):
         raise NotImplementedError("OmnisciOnRayFrame._set_index is not yet suported")
 
     def _set_columns(self, new_columns):
-        raise NotImplementedError("OmnisciOnRayFrame._set_columns is not yet suported")
+        exprs = {new: self.ref(old) for old, new in zip(self.columns, new_columns)}
+        return self.__constructor__(
+            columns=new_columns,
+            op=TransformNode(self, exprs),
+            index_cols=self._index_cols,
+        )
 
-    # columns = property(_get_columns, _set_columns)
+    def _get_columns(self):
+        return super(OmnisciOnRayFrame, self)._get_columns()
+
+    columns = property(_get_columns)
     index = property(_get_index, _set_index)
 
     def to_pandas(self):

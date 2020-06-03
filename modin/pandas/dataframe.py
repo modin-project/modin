@@ -1228,28 +1228,6 @@ class DataFrame(BasePandasDataset):
                 "can not merge DataFrame with instance of type "
                 "{}".format(type(right))
             )
-        """ Handling inner non-index merge in backend"""
-        if left_index is False and right_index is False and on is not None:
-            query_compiler = self._query_compiler.merge(
-                self,
-                right,
-                how=how,
-                on=on,
-                left_on=left_on,
-                right_on=right_on,
-                left_index=left_index,
-                right_index=right_index,
-                sort=sort,
-                suffixes=suffixes,
-                copy=copy,
-                indicator=indicator,
-                validate=validate,
-            )
-            """Hack for pandas backend to properly switch on default behavior.
-               Hopefully this will be removed later after some refactoring."""
-            if isinstance(query_compiler, DataFrame):
-                return query_compiler
-            return DataFrame(query_compiler=query_compiler)
         if left_index is False or right_index is False:
             return self._create_or_update_from_compiler(
                 self._query_compiler.join(
