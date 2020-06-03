@@ -30,7 +30,7 @@ class HDFReader(ColumnStoreReader):  # pragma: no cover
         return format
 
     @classmethod
-    def read(cls, path_or_buf, **kwargs):
+    def _read(cls, path_or_buf, **kwargs):
         """Load a h5 file from the file path or buffer, returning a DataFrame.
 
         Args:

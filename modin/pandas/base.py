@@ -908,32 +908,6 @@ class BasePandasDataset(object):
             query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
         )
 
-    def dot(self, other):
-        from .dataframe import DataFrame
-
-        self_labels = self.columns if isinstance(self, DataFrame) else self.index
-        if isinstance(other, BasePandasDataset):
-            common = self_labels.union(other.index)
-            if len(common) > len(self_labels) or len(common) > len(other.index):
-                raise ValueError("matrices are not aligned")
-            if isinstance(self, DataFrame) and isinstance(other, DataFrame):
-                return self._default_to_pandas("dot", other)
-        else:
-            other = np.asarray(other)
-            self_dim = self.shape[1] if len(self.shape) > 1 else self.shape[0]
-            if self_dim != other.shape[0]:
-                raise ValueError(
-                    "Dot product shape mismatch, {} vs {}".format(
-                        self.shape, other.shape
-                    )
-                )
-
-        if isinstance(other, BasePandasDataset):
-            other = other.reindex(index=self_labels)._query_compiler
-            # Change this to use the query compiler in #673.
-            other = other.to_pandas()
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
-
     def drop(
         self,
         labels=None,
@@ -1485,24 +1459,44 @@ class BasePandasDataset(object):
         return _iLocIndexer(self)
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas(
-            "kurt",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs
+        """Return unbiased kurtosis over requested axis. Normalized by N-1
+
+        Kurtosis obtained using Fisher’s definition of kurtosis (kurtosis of normal == 0.0).
+
+        Args:
+            axis : {index (0), columns (1)}
+            skipna : boolean, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+            numeric_only : boolean, default None
+
+        Returns:
+            kurtosis : Series or DataFrame (if level specified)
+        """
+        if level is not None:
+            return self._default_to_pandas(
+                "kurt",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs
+            )
+
+        axis = self._get_axis_number(axis)
+        if numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        return self._reduce_dimension(
+            self._query_compiler.kurt(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs
+            )
         )
 
-    def kurtosis(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._default_to_pandas(
-            "kurtosis",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs
-        )
+    kurtosis = kurt
 
     def last(self, offset):
         return self.loc[pandas.Series(index=self.index).last(offset).index]
@@ -3323,6 +3317,9 @@ class BasePandasDataset(object):
 
     def __lt__(self, right):
         return self.lt(right)
+
+    def __matmul__(self, other):
+        return self.dot(other)
 
     def __ne__(self, other):
         return self.ne(other)

@@ -40,11 +40,18 @@ scheduling computation!
 
 <p align="center">
 
-| pandas Object   | Ray Engine Coverage                                                                  | Dask Engine Coverage |
-|-----------------|:------------------------------------------------------------------------------------:|:---------------:|
-| `pd.DataFrame`  | <img src=https://img.shields.io/badge/api%20coverage-83.03%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-83.03%25-orange.svg> |
-| `pd.Series`     | <img src=https://img.shields.io/badge/api%20coverage-77.71%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-77.71%25-orange.svg> |
-| `pd.read_*`     | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg>    | <img src=https://img.shields.io/badge/api%20coverage-42.86%25-red.svg> |
+| pandas Object     | Ray Engine Coverage                                                                  | Dask Engine Coverage |
+|-------------------|:------------------------------------------------------------------------------------:|:---------------:|
+| `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-83.03%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-83.03%25-orange.svg> |
+| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-77.71%25-orange.svg> | <img src=https://img.shields.io/badge/api%20coverage-77.71%25-orange.svg> |
+| `pd.read_csv`     | ✅                                               | ✅ |
+| `pd.read_table`   | ✅                                               | ✅ |
+| `pd.read_parquet` | ✅                                               | ✅ |
+| `pd.read_sql`     | ✅                                               | ✅ |
+| `pd.read_feather` | ✅                                               | ✅ |
+| `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) |
+| `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
+
 
 </p>
 Some pandas APIs are easier to implement than other, so if something is missing feel
