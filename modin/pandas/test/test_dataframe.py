@@ -2341,10 +2341,12 @@ class TestDataFrameDefault:
                 null_counts=null_counts,
                 buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
             )
-            assert (
-                first.getvalue().splitlines()[1:] == second.getvalue().splitlines()[1:]
-            )
-            assert first.getvalue().splitlines()[0] == str(pd.DataFrame)
+            modin_info = first.getvalue().splitlines()
+            pandas_info = second.getvalue().splitlines()
+           
+            assert modin_info[0] == str(pd.DataFrame)
+            assert pandas_info[0] == str(pandas.DataFrame)
+            assert modin_info[1:] == pandas_info[1:]
 
     def test_interpolate(self):
         data = test_data_values[0]
