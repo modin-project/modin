@@ -325,7 +325,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
         if axis == 0:
-            self._union_all(axis, other_modin_frames, join, sort, ignore_index)
+            return self._union_all(axis, other_modin_frames, join, sort, ignore_index)
         elif axis == 1:
             assert (
                 join == "outer"
