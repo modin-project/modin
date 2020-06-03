@@ -1311,7 +1311,7 @@ class Series(BasePandasDataset):
 
     @property
     def dt(self):
-        return self._default_to_pandas(pandas.Series.dt)
+        return DatetimeProperties(self)
 
     @property
     def dtype(self):
@@ -1397,6 +1397,163 @@ class Series(BasePandasDataset):
         if self._query_compiler.columns[0] == "__reduced__":
             series.name = None
         return series
+
+
+class DatetimeProperties(object):
+    def __init__(self, series):
+        self._series = series
+        self._query_compiler = series._query_compiler
+
+    @property
+    def date(self):
+        return Series(query_compiler=self._query_compiler.dt_date())
+
+    @property
+    def time(self):
+        return Series(query_compiler=self._query_compiler.dt_time())
+
+    @property
+    def timetz(self):
+        return Series(query_compiler=self._query_compiler.dt_timetz())
+
+    @property
+    def year(self):
+        return Series(query_compiler=self._query_compiler.dt_year())
+
+    @property
+    def month(self):
+        return Series(query_compiler=self._query_compiler.dt_month())
+
+    @property
+    def day(self):
+        return Series(query_compiler=self._query_compiler.dt_day())
+
+    @property
+    def hour(self):
+        return Series(query_compiler=self._query_compiler.dt_hour())
+
+    @property
+    def minute(self):
+        return Series(query_compiler=self._query_compiler.dt_minute())
+
+    @property
+    def second(self):
+        return Series(query_compiler=self._query_compiler.dt_second())
+
+    @property
+    def microsecond(self):
+        return Series(query_compiler=self._query_compiler.dt_microsecond())
+
+    @property
+    def nanosecond(self):
+        return Series(query_compiler=self._query_compiler.dt_nanosecond())
+
+    @property
+    def week(self):
+        return Series(query_compiler=self._query_compiler.dt_week())
+
+    @property
+    def weekofyear(self):
+        return Series(query_compiler=self._query_compiler.dt_weekofyear())
+
+    @property
+    def dayofweek(self):
+        return Series(query_compiler=self._query_compiler.dt_dayofweek())
+
+    @property
+    def weekday(self):
+        return Series(query_compiler=self._query_compiler.dt_weekday())
+
+    @property
+    def dayofyear(self):
+        return Series(query_compiler=self._query_compiler.dt_dayofyear())
+
+    @property
+    def quarter(self):
+        return Series(query_compiler=self._query_compiler.dt_quarter())
+
+    @property
+    def is_month_start(self):
+        return Series(query_compiler=self._query_compiler.dt_is_month_start())
+
+    @property
+    def is_month_end(self):
+        return Series(query_compiler=self._query_compiler.dt_is_month_end())
+
+    @property
+    def is_quarter_start(self):
+        return Series(query_compiler=self._query_compiler.dt_is_quarter_start())
+
+    @property
+    def is_quarter_end(self):
+        return Series(query_compiler=self._query_compiler.dt_is_quarter_end())
+
+    @property
+    def is_year_start(self):
+        return Series(query_compiler=self._query_compiler.dt_is_year_start())
+
+    @property
+    def is_year_end(self):
+        return Series(query_compiler=self._query_compiler.dt_is_year_end())
+
+    @property
+    def is_leap_year(self):
+        return Series(query_compiler=self._query_compiler.dt_is_leap_year())
+
+    @property
+    def daysinmonth(self):
+        return Series(query_compiler=self._query_compiler.dt_daysinmonth())
+
+    @property
+    def days_in_month(self):
+        return Series(query_compiler=self._query_compiler.dt_days_in_month())
+
+    @property
+    def tz(self):
+        return self._query_compiler.dt_tz().to_pandas().squeeze()
+
+    @property
+    def freq(self):
+        return self._query_compiler.dt_freq().to_pandas().squeeze()
+
+    def to_period(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_to_period(*args, **kwargs))
+
+    def to_pydatetime(self):
+        return Series(query_compiler=self._query_compiler.dt_to_pydatetime()).to_numpy()
+
+    def tz_localize(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_tz_localize(*args, **kwargs)
+        )
+
+    def tz_convert(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_tz_convert(*args, **kwargs)
+        )
+
+    def normalize(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_normalize(*args, **kwargs))
+
+    def strftime(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_strftime(*args, **kwargs))
+
+    def round(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_round(*args, **kwargs))
+
+    def floor(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_floor(*args, **kwargs))
+
+    def ceil(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_ceil(*args, **kwargs))
+
+    def month_name(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_month_name(*args, **kwargs)
+        )
+
+    def day_name(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_day_name(*args, **kwargs))
 
 
 class StringMethods(object):
