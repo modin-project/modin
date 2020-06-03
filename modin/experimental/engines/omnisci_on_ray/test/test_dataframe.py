@@ -133,3 +133,10 @@ class TestMerge:
             return df1.merge(df2, on=on, how=how)
 
         run_and_compare(merge, data=self.data, data2=self.data2, on=on, how=how)
+
+    @pytest.mark.parametrize("how", how_values)
+    def test_default_merge(self, how):
+        def default_merge(lib, df1, df2, how):
+            return df1.merge(df2, how=how)
+
+        run_and_compare(default_merge, data=self.data, data2=self.data2, how=how)
