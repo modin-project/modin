@@ -16,6 +16,7 @@ import pandas
 from modin.error_message import ErrorMessage
 from .base import BasePandasDataset
 from .dataframe import DataFrame
+from .series import Series
 from .utils import to_pandas
 
 
@@ -217,3 +218,33 @@ def pivot(data, index=None, columns=None, values=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
+
+
+def value_counts(
+    values, sort=True, ascending=False, normalize=False, bins=None, dropna=True,
+):
+    """
+    Compute a histogram of the counts of non-null values.
+
+    Parameters
+    ----------
+    values : ndarray (1-d)
+    sort : bool, default True
+        Sort by values
+    ascending : bool, default False
+        Sort in ascending order
+    normalize: bool, default False
+        If True then compute a relative histogram
+    bins : integer, optional
+        Rather than count values, group them into half-open bins,
+        convenience for pd.cut, only works with numeric data
+    dropna : bool, default True
+        Don't include counts of NaN
+
+    Returns
+    -------
+    Series
+    """
+    return Series(values).value_counts(
+        sort=sort, ascending=ascending, normalize=normalize, bins=bins, dropna=dropna,
+    )

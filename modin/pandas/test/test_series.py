@@ -2748,9 +2748,23 @@ def test_update(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_value_counts(data):
     modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.value_counts()
+    pandas_result = pandas_series.value_counts()
+    df_equals(modin_result, pandas_result)
 
-    with pytest.warns(UserWarning):
-        modin_series.value_counts()
+    modin_series = pd.Series([3, 1, 2, 3, 4, np.nan])
+    pandas_series = pandas.Series([3, 1, 2, 3, 4, np.nan])
+    modin_result = modin_series.value_counts(normalize=True)
+    pandas_result = pandas_series.value_counts(normalize=True)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(bins=3)
+    pandas_result = pandas_series.value_counts(bins=3)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(dropna=False)
+    pandas_result = pandas_series.value_counts(dropna=False)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

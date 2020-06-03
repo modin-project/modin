@@ -260,6 +260,21 @@ def test_pivot_table():
         )
 
 
+def test_value_counts():
+    values = np.array([3, 1, 2, 3, 4, np.nan])
+    modin_result = pd.value_counts(values, normalize=True)
+    pandas_result = pandas.value_counts(values, normalize=True)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, bins=3)
+    pandas_result = pandas.value_counts(values, bins=3)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, dropna=False)
+    pandas_result = pandas.value_counts(values, dropna=False)
+    df_equals(modin_result, pandas_result)
+
+
 def test_to_datetime():
     # DataFrame input for to_datetime
     modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})

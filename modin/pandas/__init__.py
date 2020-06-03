@@ -28,7 +28,6 @@ if pandas.__version__ != __pandas_version__:
 from pandas import (
     eval,
     unique,
-    value_counts,
     cut,
     to_numeric,
     factorize,
@@ -132,6 +131,7 @@ from .general import (
     notnull,
     notna,
     pivot,
+    value_counts,
 )
 from .plotting import Plotting as plotting
 from .. import __execution_engine__ as execution_engine
@@ -284,7 +284,6 @@ __all__ = [
     "concat",
     "eval",
     "unique",
-    "value_counts",
     "cut",
     "to_numeric",
     "factorize",
@@ -363,6 +362,7 @@ __all__ = [
     "notnull",
     "notna",
     "pivot",
+    "value_counts",
     "datetime",
     "NamedAgg",
     "DEFAULT_NPARTITIONS",

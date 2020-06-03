@@ -432,6 +432,9 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Abstract map partitions operations
 
+    def value_counts(self, **kwargs):
+        pass
+
     # Abstract map partitions across select indices
     @abc.abstractmethod
     def astype(self, col_dtypes, **kwargs):

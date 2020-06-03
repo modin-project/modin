@@ -480,6 +480,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
+    def value_counts(self, **kwargs):
+        """
+        Return a QueryCompiler of Series containing counts of unique values.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda x: x.squeeze().value_counts(**kwargs)
+        )
+        return self.__constructor__(new_modin_frame)
+
     def unique(self):
         """Return unique values of Series object.
 
