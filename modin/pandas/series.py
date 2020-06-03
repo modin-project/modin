@@ -1140,6 +1140,19 @@ class Series(BasePandasDataset):
     def take(self, indices, axis=0, is_copy=None, **kwargs):
         return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
 
+    def _to_datetime(self, **kwargs):
+        """
+        Convert `self` to datetime.
+
+        Returns
+        -------
+        datetime
+            Series: Series of datetime64 dtype
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.to_datetime(**kwargs)
+        )
+
     def to_dict(self, into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", into=into)
 

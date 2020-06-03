@@ -2315,17 +2315,6 @@ class BasePandasDataset(object):
             query_compiler=self._query_compiler.round(decimals=decimals, **kwargs)
         )
 
-    def _to_datetime(self, **kwargs):
-        from .dataframe import DataFrame
-
-        if not isinstance(self, DataFrame):
-            return self.__constructor__(
-                query_compiler=self._query_compiler.to_datetime(**kwargs)
-            )
-        return self._reduce_dimension(
-            query_compiler=self._query_compiler.to_datetime(**kwargs)
-        )
-
     def rpow(self, other, axis="columns", level=None, fill_value=None):
         """Pow this DataFrame against another DataFrame/Series/scalar.
 

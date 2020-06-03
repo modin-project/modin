@@ -1748,6 +1748,19 @@ class DataFrame(BasePandasDataset):
             **kwargs
         )
 
+    def _to_datetime(self, **kwargs):
+        """
+        Convert `self` to datetime.
+
+        Returns
+        -------
+        datetime
+            Series: Series of datetime64 dtype
+        """
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.to_datetime(**kwargs)
+        )
+
     def to_feather(self, path):  # pragma: no cover
         return self._default_to_pandas(pandas.DataFrame.to_feather, path)
 
