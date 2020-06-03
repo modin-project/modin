@@ -15,6 +15,7 @@ from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 
+import pandas
 import abc
 
 
