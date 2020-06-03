@@ -369,12 +369,11 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        result = self._groupby_reduce(
+        result = self[self._df.columns[0]]._groupby_reduce(
             lambda df: pandas.DataFrame(df.size()),
             lambda df: df.sum(),
             numeric_only=False,
         )
-
         series_result = Series(query_compiler=result._query_compiler)
         # Pandas does not name size() output
         series_result.name = None
@@ -645,3 +644,14 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def size(self):
+        result = self._groupby_reduce(
+            lambda df: pandas.DataFrame(df.size()),
+            lambda df: df.sum(),
+            numeric_only=False,
+        )
+        series_result = Series(query_compiler=result._query_compiler)
+        # Pandas does not name size() output
+        series_result.name = None
+        return series_result
