@@ -1007,6 +1007,7 @@ class DataFrame(BasePandasDataset):
 
             output.append(mem_line)
 
+        output.append("")
         buf.write("\n".join(output))
 
     def insert(self, loc, column, value, allow_duplicates=False):
