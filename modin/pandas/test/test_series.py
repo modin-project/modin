@@ -2778,13 +2778,12 @@ def test_var(data, skipna, ddof):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows memory issue #960")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_view(data):
-    modin_series, pandas_series = create_test_series(data)
-
-    with pytest.warns(UserWarning):
-        modin_series.view(None)
+def test_view():
+    modin_series = pd.Series([-2, -1, 0, 1, 2], dtype="int8")
+    pandas_series = pandas.Series([-2, -1, 0, 1, 2], dtype="int8")
+    modin_result = modin_series.view(dtype="uint8")
+    pandas_result = pandas_series.view(dtype="uint8")
+    df_equals(modin_result, pandas_result)
 
 
 def test_where():

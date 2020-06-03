@@ -426,6 +426,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    series_view = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(df.squeeze().view(*args, **kwargs))
+    )
 
     # END Map partitions operations
 
