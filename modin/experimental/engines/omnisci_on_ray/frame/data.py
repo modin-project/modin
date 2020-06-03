@@ -264,6 +264,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def _union_all(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
+        # determine output columns
         new_columns = OrderedDict()
         for col in self.columns:
             new_columns[col] = 1
@@ -349,8 +350,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 index_cols=self._index_cols,
             )
 
-            print("--------------", new_frame.columns)
-
             return new_frame
 
     def _execute(self):
@@ -377,7 +376,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _set_columns(self, new_columns):
         exprs = {new: self.ref(old) for old, new in zip(self.columns, new_columns)}
-        print(exprs)
         return self.__constructor__(
             columns=new_columns,
             op=TransformNode(self, exprs),

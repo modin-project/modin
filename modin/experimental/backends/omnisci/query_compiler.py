@@ -182,10 +182,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         """
         assert index == None, "Only column drop is supported"
         return self.__constructor__(
-            self._modin_frame.mask(row_indices=index, col_indices=self.columns.drop(columns))
+            self._modin_frame.mask(
+                row_indices=index, col_indices=self.columns.drop(columns)
+            )
         )
-
-
 
     def free(self):
         return
