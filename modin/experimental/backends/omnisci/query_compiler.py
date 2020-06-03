@@ -58,21 +58,18 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     # Merge
 
     def join(self, *args, **kwargs):
-        right = args[0]
-        how = kwargs.get("how", "inner")
-        on = kwargs.get("on")
-        sort = kwargs.get("sort", False)
-        suffixes = kwargs.get("suffixes", None)
+        on = kwargs.get("on", None)
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
+        """Only non-index joins with explicit 'on' are supported"""
         if left_index is False and right_index is False and on is not None:
+            right = args[0]
+            how = kwargs.get("how", "inner")
+            sort = kwargs.get("sort", False)
+            suffixes = kwargs.get("suffixes", None)
             return self.__constructor__(
                 self._modin_frame.join(
-                    right._modin_frame,
-                    how=how,
-                    on=on,
-                    sort=sort,
-                    suffixes=suffixes,
+                    right._modin_frame, how=how, on=on, sort=sort, suffixes=suffixes,
                 )
             )
         else:
