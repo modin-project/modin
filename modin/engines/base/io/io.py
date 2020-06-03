@@ -488,15 +488,23 @@ class BaseIO(object):
         cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
     ):
         ErrorMessage.default_to_pandas("`read_fwf`")
-        return cls.from_pandas(
-            pandas.read_fwf(
-                filepath_or_buffer,
-                colspecs=colspecs,
-                widths=widths,
-                infer_nrows=infer_nrows,
-                **kwds
-            )
+        pd_obj = pandas.read_fwf(
+            filepath_or_buffer,
+            colspecs=colspecs,
+            widths=widths,
+            infer_nrows=infer_nrows,
+            **kwds
         )
+        if isinstance(pd_obj, pandas.DataFrame):
+            return cls.from_pandas(pd_obj)
+        if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+            # Overwriting the read method should return a Modin DataFrame for calls
+            # to __next__ and get_chunk
+            pd_read = pd_obj.read
+            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
+                pd_read(*args, **kwargs)
+            )
+        return pd_obj
 
     @classmethod
     def read_sql_table(

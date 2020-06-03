@@ -13,6 +13,7 @@
 
 from modin.engines.base.io.io import BaseIO
 from modin.engines.base.io.text.csv_reader import CSVReader
+from modin.engines.base.io.text.fwf_reader import FWFReader
 from modin.engines.base.io.text.json_reader import JSONReader
 from modin.engines.base.io.file_reader import FileReader
 from modin.engines.base.io.text.text_file_reader import TextFileReader
@@ -24,6 +25,7 @@ from modin.engines.base.io.sql.sql_reader import SQLReader
 __all__ = [
     "BaseIO",
     "CSVReader",
+    "FWFReader",
     "JSONReader",
     "FileReader",
     "TextFileReader",

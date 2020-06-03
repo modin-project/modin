@@ -11,9 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import copy
 import numpy as np
 import pandas
-from pandas.util.testing import assert_almost_equal, assert_frame_equal
+from pandas.util.testing import (
+    assert_almost_equal,
+    assert_frame_equal,
+    assert_categorical_equal,
+)
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from io import BytesIO
@@ -110,6 +115,14 @@ test_data = {
     },
 }
 
+# Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
+# created in normal way and has to be copied from dataset that works.
+# TODO(gshimansky): when bug #1481 is fixed replace this dataframe initialization with ordinary one.
+test_data["with_index_column"] = copy.copy(test_data["int_data"])
+test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
+    "col{}".format(int(NCOLS / 2))
+)
+
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
 
@@ -155,6 +168,7 @@ numeric_dfs = [
     "float_data",
     "sparse_nan_data",
     "dense_nan_data",
+    "with_index_column",
     "100x100",
 ]
 
@@ -283,10 +297,10 @@ groupby_pipe_func_values = list(groupby_pipe_func.values())
 
 # Parametrizations of common kwargs
 axis = {
-    "over rows int": 0,
-    "over rows str": "rows",
-    "over columns int": 1,
-    "over columns str": "columns",
+    "over_rows_int": 0,
+    "over_rows_str": "rows",
+    "over_columns_int": 1,
+    "over_columns_str": "columns",
 }
 axis_keys = list(axis.keys())
 axis_values = list(axis.values())
@@ -342,6 +356,34 @@ json_long_string = """{
     }"""
 json_long_bytes = BytesIO(json_long_string.encode(encoding="UTF-8"))
 json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
+
+
+# Text encoding types
+encoding_types = [
+    "ascii",
+    "utf_32",
+    "utf_32_be",
+    "utf_32_le",
+    "utf_16",
+    "utf_16_be",
+    "utf_16_le",
+    "utf_7",
+    "utf_8",
+    "utf_8_sig",
+]
+
+
+def df_categories_equals(df1, df2):
+    categories_columns = df1.select_dtypes(include="category").columns
+
+    for column in categories_columns:
+        is_category_ordered = df1[column].dtype.ordered
+        assert_categorical_equal(
+            df1[column].values,
+            df2[column].values,
+            check_dtype=False,
+            check_category_order=is_category_ordered,
+        )
 
 
 def df_equals(df1, df2):
@@ -413,6 +455,7 @@ def df_equals(df1, df2):
                 check_datetimelike_compat=True,
                 check_index_type=False,
                 check_column_type=False,
+                check_categorical=False,
             )
         except Exception:
             assert_frame_equal(
@@ -422,7 +465,9 @@ def df_equals(df1, df2):
                 check_datetimelike_compat=True,
                 check_index_type=False,
                 check_column_type=False,
+                check_categorical=False,
             )
+        df_categories_equals(df1, df2)
     elif isinstance(df1, types_for_almost_equals) and isinstance(
         df2, types_for_almost_equals
     ):

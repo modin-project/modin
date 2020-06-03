@@ -85,6 +85,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        """Default to pandas behavior.
+
+        Parameters
+        ----------
+        pandas_op : callable
+            The operation to apply, must be compatible pandas DataFrame call
+        args
+            The arguments for the `pandas_op`
+        kwargs
+            The keyword arguments for the `pandas_op`
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The result of the `pandas_op`, converted back to PandasQueryCompiler
+
+        Note
+        ----
+        This operation takes a distributed object and converts it directly to pandas.
+        """
+        ErrorMessage.default_to_pandas(str(pandas_op))
+        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
+        kwargs = {
+            k: v.to_pandas if isinstance(v, type(self)) else v
+            for k, v in kwargs.items()
+        }
+        return self.from_pandas(
+            pandas_op(self.to_pandas(), *args, **kwargs), type(self._modin_frame)
+        )
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 
@@ -299,6 +330,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(new_modin_frame)
 
+    def join(self, *args, **kwargs):
+        """Database-style join with another object.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The joined PandasQueryCompiler
+
+        Note
+        ----
+        This is not to be confused with `pandas.DataFrame.join` which does an
+        index-level join.
+        """
+        return self.default_to_pandas(pandas.DataFrame.merge, *args, **kwargs)
+
     # END Inter-Data operations
 
     # Reindex/reset_index (may shuffle data)
@@ -391,6 +437,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
     nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
+    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
@@ -464,6 +511,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
 
     # END String map partitions operations
+
+    def unique(self):
+        """Return unique values of Series object.
+
+        Returns
+        -------
+        ndarray
+            The unique values returned as a NumPy array.
+        """
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda x: x.squeeze().unique(), new_columns=self.columns,
+        )
+        return self.__constructor__(new_modin_frame)
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
@@ -597,24 +657,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             Returns the result of the matrix multiply.
         """
+        if isinstance(other, PandasQueryCompiler):
+            other = other.to_pandas().squeeze()
 
         def map_func(df, other=other):
-            if isinstance(other, pandas.DataFrame):
-                other = other.squeeze()
             result = df.squeeze().dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
             else:
                 return pandas.DataFrame([result])
 
+        num_cols = other.shape[1] if len(other.shape) > 1 else None
         if len(self.columns) == 1:
+            new_index = ["__reduced__"] if num_cols is None else None
+            new_columns = ["__reduced__"] if num_cols is not None else None
             axis = 0
-            new_index = ["__reduce__"]
         else:
+            new_index = None
+            new_columns = ["__reduced__"] if num_cols is None else None
             axis = 1
-            new_index = self.index
+
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=["__reduced__"]
+            axis, map_func, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -1019,7 +1083,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # the data is partitioned identically.
             if isinstance(value, pandas.Series):
                 value = value.reindex(self.index)
-            value = list(value)
+            else:
+                value = list(value)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])

@@ -20,6 +20,26 @@ class BaseQueryCompiler(abc.ABC):
         for a list of requirements for subclassing this object.
     """
 
+    @abc.abstractmethod
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        """Default to pandas behavior.
+
+        Parameters
+        ----------
+        pandas_op : callable
+            The operation to apply, must be compatible pandas DataFrame call
+        args
+            The arguments for the `pandas_op`
+        kwargs
+            The keyword arguments for the `pandas_op`
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The result of the `pandas_op`, converted back to BaseQueryCompiler
+        """
+        pass
+
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
@@ -87,16 +107,20 @@ class BaseQueryCompiler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_pandas(cls, df, block_partitions_cls):
+    def from_pandas(cls, df, data_cls):
         """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
 
-        Args:
-            cls: DataManager object to convert the DataFrame to.
-            df: Pandas DataFrame object.
-            block_partitions_cls: BlockParitions object to store partitions
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The pandas DataFrame to convert from.
+        data_cls :
+            Modin DataFrame object to convert to.
 
-        Returns:
-            Returns QueryCompiler containing data from the Pandas DataFrame.
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Pandas DataFrame.
         """
         pass
 
@@ -252,6 +276,22 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def join(self, *args, **kwargs):
+        """Database-style join with another object.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The joined PandasQueryCompiler
+
+        Note
+        ----
+        This is not to be confused with `pandas.DataFrame.join` which does an
+        index-level join.
+        """
+        pass
+
     # END Abstract inter-data operations
 
     # Abstract Transpose
@@ -382,6 +422,10 @@ class BaseQueryCompiler(abc.ABC):
 
     @abc.abstractmethod
     def round(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def unique(self, **kwargs):
         pass
 
     # END Abstract map partitions operations
@@ -758,46 +802,6 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     # END Manual Partitioning methods
-
-    @abc.abstractmethod
-    def merge(
-        self,
-        right,
-        how="inner",
-        on=None,
-        left_on=None,
-        right_on=None,
-        left_index=False,
-        right_index=False,
-        sort=False,
-        suffixes=("_x", "_y"),
-        copy=True,
-        indicator=False,
-        validate=None,
-    ):
-        """Dataframes merge.
-
-        Args:
-            right: The DataFrame to merge against.
-            how: What type of join to use.
-            on: The common column name(s) to join on. If None, and left_on and
-                right_on  are also None, will default to all commonly named
-                columns.
-            left_on: The column(s) on the left to use for the join.
-            right_on: The column(s) on the right to use for the join.
-            left_index: Use the index from the left as the join keys.
-            right_index: Use the index from the right as the join keys.
-            sort: Sort the join keys lexicographically in the result.
-            suffixes: Add this suffix to the common names not in the "on".
-            copy: Does nothing in our implementation
-            indicator: Adds a column named _merge to the DataFrame with
-                metadata from the merge about each row.
-            validate: Checks if merge is a specific type.
-
-        Returns:
-            A new QueryCompiler.
-        """
-        pass
 
     @abc.abstractmethod
     def get_dummies(self, columns, **kwargs):
