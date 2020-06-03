@@ -2343,7 +2343,7 @@ class TestDataFrameDefault:
             )
             modin_info = first.getvalue().splitlines()
             pandas_info = second.getvalue().splitlines()
-           
+
             assert modin_info[0] == str(pd.DataFrame)
             assert pandas_info[0] == str(pandas.DataFrame)
             assert modin_info[1:] == pandas_info[1:]
