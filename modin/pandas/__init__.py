@@ -159,7 +159,7 @@ def initialize_ray():
                 num_cpus=int(num_cpus),
                 include_webui=False,
                 ignore_reinit_error=True,
-                redis_address=redis_address,
+                address=redis_address,
                 redis_password=redis_password,
                 logging_level=100,
             )
@@ -193,7 +193,7 @@ def initialize_ray():
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
-                redis_address=redis_address,
+                address=redis_address,
                 redis_password=redis_password,
                 logging_level=100,
                 memory=object_store_memory,
