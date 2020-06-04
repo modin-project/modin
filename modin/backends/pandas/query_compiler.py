@@ -82,6 +82,8 @@ def _dt_prop_map(property_name):
         prop_val = getattr(df.squeeze().dt, property_name)
         if isinstance(prop_val, pandas.Series):
             return prop_val.to_frame()
+        elif isinstance(prop_val, pandas.DataFrame):
+            return prop_val
         else:
             return pandas.DataFrame([prop_val])
 
@@ -167,9 +169,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             k: v.to_pandas if isinstance(v, type(self)) else v
             for k, v in kwargs.items()
         }
-        return self.from_pandas(
-            pandas_op(self.to_pandas(), *args, **kwargs), type(self._modin_frame)
-        )
+
+        result = pandas_op(self.to_pandas(), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -592,6 +599,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_ceil = MapFunction.register(_dt_func_map("ceil"))
     dt_month_name = MapFunction.register(_dt_func_map("month_name"))
     dt_day_name = MapFunction.register(_dt_func_map("day_name"))
+    dt_to_pytimedelta = MapFunction.register(_dt_func_map("to_pytimedelta"))
+    dt_total_seconds = MapFunction.register(_dt_func_map("total_seconds"))
+    dt_seconds = MapFunction.register(_dt_prop_map("seconds"))
+    dt_days = MapFunction.register(_dt_prop_map("days"))
+    dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
+    dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
+    dt_components = MapFunction.register(_dt_prop_map("components"))
+    dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
+    dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
+    dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
+    dt_to_timestamp = MapFunction.register(_dt_func_map("to_timestamp"))
 
     # END Dt map partitions operations
 
