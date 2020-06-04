@@ -528,7 +528,7 @@ class DataFrameGroupBy(object):
             if self._as_index:
                 groupby_qc = self._query_compiler.drop(columns=self._by.columns)
             else:
-                groupby_qc = self._query_compiler
+                groupby_qc = self._query_compiler.copy()
                 cols_without_by = self._columns.drop(self._by.columns)
                 groupby_qc.columns = self._by.columns.append(cols_without_by)
         else:

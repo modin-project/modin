@@ -1253,6 +1253,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result = map_func(
                 df.groupby(by=other, axis=axis, **groupby_args), **map_args
             )
+            # The _modin_groupby_ prefix indicates that this is the first partition,
+            # and since we may need to insert the grouping data in the reduce phase
             if (
                 not isinstance(result.index, pandas.MultiIndex)
                 and result.index.name is not None
@@ -1279,10 +1281,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 and "_modin_groupby_" in result.index.name
             ):
                 result.index.name = result.index.name[len("_modin_groupby_") :]
-            # Avoid inserting data after the first partition or if the data did not come
-            # from this query compiler.
-            if not as_index and (first_column not in df.columns or drop_by):
-                return result.drop(columns=by_part)
+            if by_part in df.columns:
+                if "_modin_groupby_" in by_part:
+                    col_name = by_part[len("_modin_groupby_") :]
+                    new_result = result.drop(columns=col_name)
+                    new_result.columns = [col_name if "_modin_groupby_" in c else c for c in new_result.columns]
+                    return new_result
+                else:
+                    return result.drop(columns=by_part)
             return result
 
         if axis == 0:
