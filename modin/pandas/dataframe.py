@@ -575,7 +575,7 @@ class DataFrame(BasePandasDataset):
         layout=None,
         return_type=None,
         backend=None,
-        **kwargs
+        **kwargs,
     ):
         return to_pandas(self).boxplot(
             column=column,
@@ -588,7 +588,7 @@ class DataFrame(BasePandasDataset):
             layout=layout,
             return_type=return_type,
             backend=backend,
-            **kwargs
+            **kwargs,
         )
 
     def combine(self, other, func, fill_value=None, overwrite=True):
@@ -824,7 +824,7 @@ class DataFrame(BasePandasDataset):
         figsize=None,
         layout=None,
         bins=10,
-        **kwds
+        **kwds,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.hist,
@@ -841,7 +841,7 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwds
+            **kwds,
         )
 
     def info(
@@ -962,7 +962,7 @@ class DataFrame(BasePandasDataset):
         limit_direction="forward",
         limit_area=None,
         downcast=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.interpolate,
@@ -973,7 +973,7 @@ class DataFrame(BasePandasDataset):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def iterrows(self):
@@ -1390,7 +1390,7 @@ class DataFrame(BasePandasDataset):
         xerr=None,
         secondary_y=False,
         sort_columns=False,
-        **kwargs
+        **kwargs,
     ):
         return self._to_pandas().plot
 
@@ -1415,7 +1415,7 @@ class DataFrame(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1431,7 +1431,7 @@ class DataFrame(BasePandasDataset):
                     level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
-                    **kwargs
+                    **kwargs,
                 )
             )
         return super(DataFrame, self).prod(
@@ -1440,7 +1440,7 @@ class DataFrame(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     product = prod
@@ -1740,7 +1740,7 @@ class DataFrame(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1754,7 +1754,7 @@ class DataFrame(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     def _to_datetime(self, **kwargs):
@@ -1860,7 +1860,7 @@ class DataFrame(BasePandasDataset):
         compression="snappy",
         index=None,
         partition_cols=None,
-        **kwargs
+        **kwargs,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
@@ -1869,7 +1869,7 @@ class DataFrame(BasePandasDataset):
             compression=compression,
             index=index,
             partition_cols=partition_cols,
-            **kwargs
+            **kwargs,
         )
 
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
