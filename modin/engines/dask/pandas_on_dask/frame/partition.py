@@ -15,17 +15,13 @@ import pandas
 
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import get_client
-    import cloudpickle as pkl
-
+from .helper import DaskImportHelper
 
 def apply_list_of_funcs(funcs, df):
     for func, kwargs in funcs:
         if isinstance(func, bytes):
-            func = pkl.loads(func)
+            func = DaskImportHelper.pickle.loads(func)
         df = func(df, **kwargs)
     return df
 
@@ -78,16 +74,16 @@ class PandasOnDaskFramePartition(BaseFramePartition):
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-        func = pkl.dumps(func)
+        func = DaskImportHelper.pickle.dumps(func)
         call_queue = self.call_queue + [[func, kwargs]]
-        future = get_client().submit(
+        future = DaskImportHelper.get_client().submit(
             apply_list_of_funcs, call_queue, self.future, pure=False
         )
         return PandasOnDaskFramePartition(future)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnDaskFramePartition(
-            self.future, call_queue=self.call_queue + [[pkl.dumps(func), kwargs]]
+            self.future, call_queue=self.call_queue + [[DaskImportHelper.pickle.dumps(func), kwargs]]
         )
 
     def drain_call_queue(self):
@@ -149,7 +145,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         Returns:
             A `RemotePartitions` object.
         """
-        client = get_client()
+        client = DaskImportHelper.get_client()
         return cls(client.scatter(obj, hash=False))
 
     @classmethod

@@ -13,15 +13,17 @@
 
 from modin.engines.base.frame.data import BasePandasFrame
 from .partition_manager import DaskFrameManager
-from modin import __execution_engine__
-
-if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
-
+from modin import execution_engine
 
 class PandasOnDaskFrame(BasePandasFrame):
-
+    __get_global_client = None
     _frame_mgr_cls = DaskFrameManager
+
+    @classmethod
+    def _update(cls, publisher):
+        if cls.__get_global_client is None and publisher.get() == "Dask":
+            from distributed.client import _get_global_client
+            cls.__get_global_client = _get_global_client
 
     @property
     def _row_lengths(self):
@@ -30,7 +32,7 @@ class PandasOnDaskFrame(BasePandasFrame):
         Returns:
             A list of row lengths.
         """
-        client = _get_global_client()
+        client = self.__get_global_client()
         if self._row_lengths_cache is None:
             self._row_lengths_cache = client.gather(
                 [obj.apply(lambda df: len(df)).future for obj in self._partitions.T[0]]
@@ -44,7 +46,7 @@ class PandasOnDaskFrame(BasePandasFrame):
         Returns:
             A list of column widths.
         """
-        client = _get_global_client()
+        client = self.__get_global_client()
         if self._column_widths_cache is None:
             self._column_widths_cache = client.gather(
                 [
@@ -53,3 +55,5 @@ class PandasOnDaskFrame(BasePandasFrame):
                 ]
             )
         return self._column_widths_cache
+
+execution_engine.subscribe(PandasOnDaskFrame._update)

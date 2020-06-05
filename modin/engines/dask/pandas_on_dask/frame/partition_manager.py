@@ -19,32 +19,27 @@ from .axis_partition import (
     PandasOnDaskFrameRowPartition,
 )
 from .partition import PandasOnDaskFramePartition
+from .helper import DaskImportHelper
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
-    import cloudpickle as pkl
-
-    def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
-        if call_queue_df is not None and len(call_queue_df) > 0:
-            for call, kwargs in call_queue_df:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                df = call(df, **kwargs)
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                other = call(other, **kwargs)
-        if isinstance(apply_func, bytes):
-            apply_func = pkl.loads(apply_func)
-        return apply_func(df, other)
-
+def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, bytes):
+                call = DaskImportHelper.pickle.loads(call)
+            if isinstance(kwargs, bytes):
+                kwargs = DaskImportHelper.pickle.loads(kwargs)
+            df = call(df, **kwargs)
+    if call_queue_other is not None and len(call_queue_other) > 0:
+        for call, kwargs in call_queue_other:
+            if isinstance(call, bytes):
+                call = DaskImportHelper.pickle.loads(call)
+            if isinstance(kwargs, bytes):
+                kwargs = DaskImportHelper.pickle.loads(kwargs)
+            other = call(other, **kwargs)
+    if isinstance(apply_func, bytes):
+        apply_func = DaskImportHelper.pickle.loads(apply_func)
+    return apply_func(df, other)
 
 class DaskFrameManager(BaseFrameManager):
     """This class implements the interface in `BaseFrameManager`."""
@@ -71,7 +66,7 @@ class DaskFrameManager(BaseFrameManager):
         Returns:
             A Pandas Index object.
         """
-        client = _get_global_client()
+        client = DaskImportHelper.get_global_client()
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
@@ -92,7 +87,7 @@ class DaskFrameManager(BaseFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right):
-        client = _get_global_client()
+        client = DaskImportHelper.get_global_client()
         right_parts = np.squeeze(right)
         if len(right_parts.shape) == 0:
             right_parts = np.array([right_parts.item()])

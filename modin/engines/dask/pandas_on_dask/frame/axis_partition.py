@@ -13,18 +13,14 @@
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
-from modin import execution_engine
+from .helper import DaskImportHelper
+from modin import execution_engine, Publisher
 
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
-    __get_client = None
-
     @classmethod
-    def _update(cls, publisher):
+    def _update(cls, publisher: Publisher):
         if publisher.get() == 'Dask':
-            from distributed.client import get_client
-            from distributed import Future
-            cls.__get_client = get_client
-            cls.instance_type = Future
+            cls.instance_type = DaskImportHelper.future
         else:
             cls.instance_type = super(cls).instance_type
 
@@ -40,7 +36,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
-        client = cls.__get_client()
+        client = DaskImportHelper.get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_axis_func,
             axis,
@@ -64,7 +60,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
-        client = cls.__get_client()
+        client = DaskImportHelper.get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
