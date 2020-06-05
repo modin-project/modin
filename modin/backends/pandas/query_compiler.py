@@ -1227,12 +1227,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             qc = self.getitem_column_array(self._modin_frame._numeric_columns(True))
         else:
             qc = self
-        first_column = qc.columns[0]
         as_index = groupby_args.get("as_index", True)
-        # When drop is False and as_index is False, we do not want to insert the `by`
-        # data as a new column in the dataframe. We will drop it.
-        drop_by = not drop
-
         # For simplicity we allow only one function to be passed in if both are the
         # same.
         if reduce_func is None:
@@ -1281,11 +1276,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 and "_modin_groupby_" in result.index.name
             ):
                 result.index.name = result.index.name[len("_modin_groupby_") :]
-            if by_part in df.columns:
-                if "_modin_groupby_" in by_part:
+            if isinstance(by_part, str) and by_part in result.columns:
+                if "_modin_groupby_" in by_part and drop:
                     col_name = by_part[len("_modin_groupby_") :]
                     new_result = result.drop(columns=col_name)
-                    new_result.columns = [col_name if "_modin_groupby_" in c else c for c in new_result.columns]
+                    new_result.columns = [
+                        col_name if "_modin_groupby_" in c else c
+                        for c in new_result.columns
+                    ]
                     return new_result
                 else:
                     return result.drop(columns=by_part)

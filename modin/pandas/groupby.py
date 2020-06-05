@@ -271,7 +271,7 @@ class DataFrameGroupBy(object):
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
         make_dataframe = True
-        if self._drop:
+        if self._drop and self._as_index:
             if not isinstance(key, list):
                 key = [key]
                 kwargs["squeeze"] = True
@@ -279,7 +279,15 @@ class DataFrameGroupBy(object):
         # When `as_index` is False, pandas will always convert to a `DataFrame`, we
         # convert to a list here so that the result will be a `DataFrame`.
         elif not self._as_index and not isinstance(key, list):
-            key = [key]
+            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
+            # column. This logic is here to ensure that we also get the `by` data so
+            # that it is there for `as_index=False`.
+            if isinstance(self._by, type(self._query_compiler)) and all(
+                c in self._columns for c in self._by.columns
+            ) and self._drop:
+                key = [key] + list(self._by.columns)
+            else:
+                key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):
             return DataFrameGroupBy(
                 self._df[key],
@@ -528,9 +536,7 @@ class DataFrameGroupBy(object):
             if self._as_index:
                 groupby_qc = self._query_compiler.drop(columns=self._by.columns)
             else:
-                groupby_qc = self._query_compiler.copy()
-                cols_without_by = self._columns.drop(self._by.columns)
-                groupby_qc.columns = self._by.columns.append(cols_without_by)
+                groupby_qc = self._query_compiler
         else:
             groupby_qc = self._query_compiler
 
