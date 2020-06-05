@@ -24,7 +24,7 @@ class PandasOnDaskFrame(BasePandasFrame):
     def _update(cls, publisher: Publisher):
         from distributed.client import _get_global_client
 
-        cls.__get_global_client = _get_global_client
+        cls.__get_global_client = staticmethod(_get_global_client)
 
     @property
     def _row_lengths(self):

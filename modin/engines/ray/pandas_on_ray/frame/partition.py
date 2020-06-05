@@ -40,7 +40,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             self.drain_call_queue()
         try:
             return RayImportHelper.ray.get(self.oid)
-        except RayTaskError as e:
+        except RayImportHelper.RayTaskError as e:
             handle_ray_task_error(e)
 
     def apply(self, func, **kwargs):
@@ -183,7 +183,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         if isinstance(self._width_cache, RayImportHelper.ray.ObjectID):
             try:
                 self._width_cache = RayImportHelper.ray.get(self._width_cache)
-            except RayTaskError as e:
+            except RayImportHelper.RayTaskError as e:
                 handle_ray_task_error(e)
         return self._width_cache
 

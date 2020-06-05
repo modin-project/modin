@@ -19,6 +19,7 @@ from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
 from modin import partition_format, Publisher
 
+
 class FakeSeries:
     def __init__(self, dtype):
         self.dtype = dtype
@@ -30,6 +31,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
     @classmethod
     def _update(cls, publisher: Publisher):
         import pyarrow
+
         cls.pa = pyarrow
 
     def query(self, expr, **kwargs):
@@ -204,5 +206,6 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             NumPy array of the QueryCompiler.
         """
         return self._modin_frame.to_numpy()
+
 
 partition_format.once("Pyarrow", PyarrowQueryCompiler._update)
