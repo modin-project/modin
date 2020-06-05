@@ -97,7 +97,10 @@ class Publisher(object):
         callback(self)
 
     def once(self, onvalue, callback):
-        self.__once[onvalue].add(callback)
+        if onvalue == self.__value:
+            callback(self)
+        else:
+            self.__once[onvalue].add(callback)
 
     def get(self):
         return self.__value
