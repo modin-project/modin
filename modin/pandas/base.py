@@ -3086,9 +3086,9 @@ class BasePandasDataset(object):
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
-        from modin.data_management.factories import BaseFactory
+        from modin.data_management.dispatcher import EngineDispatcher
 
-        BaseFactory.to_sql(
+        EngineDispatcher.to_sql(
             new_query_compiler,
             name=name,
             con=con,
