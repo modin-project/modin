@@ -204,12 +204,19 @@ def test_mixed_dtypes_groupby(as_index):
         lambda x: x % 3,
         "col1",
         ["col1"],
+        # col2 contains NaN, is it necessary to test functions like size()
         "col2",
         ["col2"],
         ["col1", "col2"],
         ["col2", "col4"],
         ["col4", "col2"],
         ["col3", "col4", "col2"],
+        # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
+        ["col5"],
+        ["col1", "col5"],
+        ["col5", "col4"],
+        ["col4", "col5"],
+        ["col5", "col4", "col1"],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -244,7 +251,19 @@ def test_simple_row_groupby(by, as_index):
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax(), is_default=True)
     eval_ndim(modin_groupby, pandas_groupby)
-    eval_cumsum(modin_groupby, pandas_groupby)
+    if (
+        pandas.api.types.is_list_like(by)
+        and not any(x in modin_df.columns and modin_df[x].hasnans for x in by)
+        or not pandas.api.types.is_list_like(by)
+        and by in modin_df.columns
+        and not modin_df[by].hasnans
+    ):
+        # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
+        eval_cumsum(modin_groupby, pandas_groupby)
+        eval_cummax(modin_groupby, pandas_groupby)
+        eval_cummin(modin_groupby, pandas_groupby)
+        eval_cumprod(modin_groupby, pandas_groupby)
+
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -252,7 +271,6 @@ def test_simple_row_groupby(by, as_index):
         modin_df_almost_equals_pandas,
         is_default=True,
     )
-    eval_cummax(modin_groupby, pandas_groupby)
 
     # pandas is inconsistent between test environment and here, more investigation is
     # required to understand why this is a mismatch because we default to pandas for
@@ -267,7 +285,6 @@ def test_simple_row_groupby(by, as_index):
     eval_general(
         modin_groupby, pandas_groupby, lambda df: df.backfill(), is_default=True
     )
-    eval_cummin(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill(), is_default=True)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin(), is_default=True)
     eval_prod(modin_groupby, pandas_groupby)
@@ -297,7 +314,6 @@ def test_simple_row_groupby(by, as_index):
     eval_nunique(modin_groupby, pandas_groupby)
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
-    eval_cumprod(modin_groupby, pandas_groupby)
     eval_general(
         modin_groupby,
         pandas_groupby,
