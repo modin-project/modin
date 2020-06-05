@@ -17,11 +17,7 @@ from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
-from modin import __partition_format__
-
-if __partition_format__ == "Pyarrow":
-    import pyarrow as pa
-
+from modin import partition_format, Publisher
 
 class FakeSeries:
     def __init__(self, dtype):
@@ -29,6 +25,13 @@ class FakeSeries:
 
 
 class PyarrowQueryCompiler(PandasQueryCompiler):
+    pa = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import pyarrow
+        cls.pa = pyarrow
+
     def query(self, expr, **kwargs):
         """Query columns of the QueryCompiler with a boolean expression.
 
@@ -72,7 +75,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         def build_node(table, terms, builder):
             if isinstance(terms, Constant):
                 return builder.make_literal(
-                    terms.value, (pa.from_numpy_dtype(terms.return_type))
+                    terms.value, (cls.pa.from_numpy_dtype(terms.return_type))
                 )
 
             if isinstance(terms, Term):
@@ -81,14 +84,14 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             if isinstance(terms, BinOp):
                 lnode = build_node(table, terms.lhs, builder)
                 rnode = build_node(table, terms.rhs, builder)
-                return_type = pa.from_numpy_dtype(terms.return_type)
+                return_type = cls.pa.from_numpy_dtype(terms.return_type)
 
                 if terms.op == "&":
                     return builder.make_and([lnode, rnode])
                 if terms.op == "|":
                     return builder.make_or([lnode, rnode])
                 if terms.op in cmp_ops:
-                    assert return_type == pa.bool_()
+                    assert return_type == cls.pa.bool_()
                     return builder.make_function(
                         cmp_ops[terms.op], [lnode, rnode], return_type
                     )
@@ -98,7 +101,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
                     )
 
             if isinstance(terms, UnaryOp):
-                return_type = pa.from_numpy_dtype(terms.return_type)
+                return_type = cls.pa.from_numpy_dtype(terms.return_type)
                 return builder.make_function(
                     unary_ops[terms.op],
                     [build_node(table, terms.operand, builder)],
@@ -106,7 +109,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
                 )
 
             if isinstance(terms, MathCall):
-                return_type = pa.from_numpy_dtype(terms.return_type)
+                return_type = cls.pa.from_numpy_dtype(terms.return_type)
                 childern = [
                     build_node(table, child, builder) for child in terms.operands
                 ]
@@ -129,9 +132,9 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             record_batch = table.to_batches()[0]
             indices = s.to_array()  # .to_numpy()
             new_columns = [
-                pa.array(c.to_numpy()[indices]) for c in record_batch.columns
+                cls.pa.array(c.to_numpy()[indices]) for c in record_batch.columns
             ]
-            return pa.Table.from_arrays(new_columns, record_batch.schema.names)
+            return cls.pa.Table.from_arrays(new_columns, record_batch.schema.names)
 
         def gandiva_query(table, query):
             expr = gen_table_expr(table, query)
@@ -141,7 +144,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             root = build_node(table, expr.terms, builder)
             cond = builder.make_condition(root)
             filt = gandiva.make_filter(table.schema, cond)
-            sel_vec = filt.evaluate(table.to_batches()[0], pa.default_memory_pool())
+            sel_vec = filt.evaluate(table.to_batches()[0], cls.pa.default_memory_pool())
             result = filter_with_selection_vector(table, sel_vec)
             return result
 
@@ -201,3 +204,5 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             NumPy array of the QueryCompiler.
         """
         return self._modin_frame.to_numpy()
+
+partition_format.once("Pyarrow", PyarrowQueryCompiler._update)
