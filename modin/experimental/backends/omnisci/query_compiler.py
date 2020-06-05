@@ -109,6 +109,36 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             new_qc = new_qc.squeeze()
         return new_qc
 
+    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
+        """Apply aggregation functions to a grouped dataframe per-column.
+
+        Parameters
+        ----------
+        by : PandasQueryCompiler
+            The column to group by
+        func_dict : dict of str, callable/string
+            The dictionary mapping of column to function
+        groupby_args : dict
+            The dictionary of keyword arguments for the group by.
+        agg_args : dict
+            The dictionary of keyword arguments for the aggregation functions
+        drop : bool
+            Whether or not to drop the column from the data.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The result of the per-column aggregations on the grouped dataframe.
+        """
+        # TODO: handle drop arg
+        new_frame = self._modin_frame.groupby_agg(
+            by, 0, func_dict, groupby_args, **agg_args
+        )
+        new_qc = self.__constructor__(new_frame)
+        if groupby_args["squeeze"]:
+            new_qc = new_qc.squeeze()
+        return new_qc
+
     def _get_index(self):
         return self._modin_frame.index
 

@@ -89,13 +89,20 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if self._index_cache is not None:
             index_copy = self._index_cache.copy()
 
+        row_lengths = (
+            self._row_lengths_cache.copy() if self._row_lengths_cache else None
+        )
+        column_widths = (
+            self._column_widths_cache.copy() if self._column_widths_cache else None
+        )
+        dtypes = self._dtypes.copy() if self._dtypes else None
         return self.__constructor__(
             self._partitions,
             index_copy,
             self.columns.copy(),
-            self._row_lengths,
-            self._column_widths,
-            self._dtypes,
+            row_lengths,
+            column_widths,
+            dtypes,
             op=self._op,
             index_cols=self._index_cols,
         )
@@ -139,27 +146,24 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if axis != 0:
             raise NotImplementedError("groupby is supported for axis = 0 only")
 
-        mask = by._modin_frame._op
-        if not isinstance(mask, MaskNode):
+        base = by._modin_frame._op.input[0]
+        if not by._modin_frame._is_projection_of(base):
             raise NotImplementedError("unsupported groupby args")
 
-        if mask.input[0] != self:
-            raise NotImplementedError("unsupported groupby args")
-
-        if mask.row_indices is not None or mask.row_numeric_idx is not None:
+        if self != base and not self._is_projection_of(base):
             raise NotImplementedError("unsupported groupby args")
 
         if groupby_args["level"] is not None:
             raise NotImplementedError("levels are not supported for groupby")
 
-        groupby_cols = by._modin_frame.columns
+        groupby_cols = by.columns.tolist()
         new_columns = []
         index_cols = None
 
         if groupby_args["as_index"]:
-            index_cols = groupby_cols.tolist()
+            index_cols = groupby_cols.copy()
         else:
-            new_columns = groupby_cols.tolist()
+            new_columns = groupby_cols.copy()
 
         if isinstance(agg, str):
             new_agg = {}
@@ -169,20 +173,30 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     new_columns.append(col)
             agg = new_agg
         else:
+            assert isinstance(agg, dict), "unsupported aggregate type"
             for k, v in agg.items():
                 if isinstance(v, list):
                     # TODO: support levels
-                    new_columns.append(k + " " + v)
+                    for item in v:
+                        new_columns.append(k + " " + item)
                 else:
                     new_columns.append(k)
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
 
-        new_op = GroupbyAggNode(self, groupby_cols, agg, groupby_args)
+        new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
         new_frame = self.__constructor__(
             columns=new_columns, op=new_op, index_cols=index_cols
         )
 
         return new_frame
+
+    def _is_projection_of(self, base):
+        return (
+            isinstance(self._op, MaskNode)
+            and self._op.input[0] == base
+            and self._op.row_indices is None
+            and self._op.row_numeric_idx is None
+        )
 
     def fillna(
         self, value=None, method=None, axis=None, limit=None, downcast=None,
@@ -332,10 +346,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 and not sort
                 and len(other_modin_frames) == 1
                 and len(other_modin_frames[0].columns) == 1
-                and isinstance(other_modin_frames[0]._op, MaskNode)
-                and other_modin_frames[0]._op.row_indices is None
-                and other_modin_frames[0]._op.row_numeric_idx is None
-                and other_modin_frames[0]._op.input[0] == self
+                and other_modin_frames[0]._is_projection_of(self)
             ), "Only appending one column from the same dataframe is supported"
 
             exprs = {c: self.ref(c) for c in self.columns}

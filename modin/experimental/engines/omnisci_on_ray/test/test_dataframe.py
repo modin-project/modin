@@ -11,7 +11,12 @@ import modin.pandas as mpd
 import pandas as pd
 
 import pytest
-from modin.pandas.test.utils import df_equals, bool_arg_values, join_type_keys
+from modin.pandas.test.utils import (
+    df_equals,
+    bool_arg_values,
+    join_type_keys,
+    to_pandas,
+)
 
 
 def run_and_compare(fn, data, data2=None, *args, **kwargs):
@@ -125,6 +130,108 @@ class TestGroupby:
             return df.groupby(cols, as_index=as_index).c.sum()
 
         run_and_compare(groupby_sum, data=self.data, cols=cols, as_index=as_index)
+
+    h2o_data = {
+        "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
+        "id2": ["id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2"],
+        "id3": ["id4", "id5", "id6", "id4", "id5", "id6", "id4", "id5", "id6", "id4"],
+        "id4": [4, 5, 4, 5, 4, 5, 4, 5, 4, 5],
+        "id5": [7, 8, 9, 7, 8, 9, 7, 8, 9, 7],
+        "id6": [7, 8, 7, 8, 7, 8, 7, 8, 7, 8],
+        "v1": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "v2": [1, 3, 5, 7, 9, 10, 8, 6, 4, 2],
+        "v3": [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.0],
+    }
+
+    def _get_h2o_df(self):
+        df = pd.DataFrame(self.h2o_data)
+        df["id1"] = df["id1"].astype("category")
+        df["id2"] = df["id2"].astype("category")
+        df["id3"] = df["id3"].astype("category")
+        return df
+
+    def test_h2o_q1(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id1"], observed=True).agg({"v1": "sum"})
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id1"], observed=True, as_index=False).agg(
+            {"v1": "sum"}
+        )
+
+        exp = to_pandas(modin_df)
+        exp["id1"] = exp["id1"].astype("category")
+
+        df_equals(ref, exp)
+
+    def test_h2o_q2(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id1", "id2"], observed=True).agg({"v1": "sum"})
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id1", "id2"], observed=True, as_index=False).agg(
+            {"v1": "sum"}
+        )
+
+        exp = to_pandas(modin_df)
+        exp["id1"] = exp["id1"].astype("category")
+        exp["id2"] = exp["id2"].astype("category")
+
+        df_equals(ref, exp)
+
+    def test_h2o_q3(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id3"], observed=True).agg({"v1": "sum", "v3": "mean"})
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id3"], observed=True, as_index=False).agg(
+            {"v1": "sum", "v3": "mean"}
+        )
+
+        exp = to_pandas(modin_df)
+        exp["id3"] = exp["id3"].astype("category")
+
+        df_equals(ref, exp)
+
+    def test_h2o_q4(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id4"], observed=True).agg(
+            {"v1": "mean", "v2": "mean", "v3": "mean"}
+        )
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id4"], observed=True, as_index=False).agg(
+            {"v1": "mean", "v2": "mean", "v3": "mean"}
+        )
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
+    def test_h2o_q5(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id6"], observed=True).agg(
+            {"v1": "sum", "v2": "sum", "v3": "sum"}
+        )
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id6"], observed=True, as_index=False).agg(
+            {"v1": "sum", "v2": "sum", "v3": "sum"}
+        )
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
 
 
 class TestMerge:

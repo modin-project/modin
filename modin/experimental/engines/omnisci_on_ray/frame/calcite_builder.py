@@ -6,11 +6,14 @@ from collections import abc
 
 
 class CalciteBuilder:
+    simple_aggregates = {"sum": "SUM", "mean": "AVG"}
+
     class InputContext:
         def __init__(self, input_frames, input_nodes):
             self.input_nodes = input_nodes
             self.frame_to_node = {x: y for x, y in zip(input_frames, input_nodes)}
             self.input_offsets = {}
+            self.replacements = {}
             offs = 0
             for frame in input_frames:
                 self.input_offsets[frame] = offs
@@ -19,12 +22,19 @@ class CalciteBuilder:
                 if isinstance(frame._op, FrameNode):
                     offs += 1
 
+        def replace_input_node(self, frame, node, new_cols):
+            self.replacements[frame] = new_cols
+
         def _idx(self, frame, col):
             assert (
                 frame in self.input_offsets
             ), f"unexpected reference to {frame.id_str()}"
 
             offs = self.input_offsets[frame]
+
+            if frame in self.replacements:
+                return self.replacements[frame].index(col) + offs
+
             if col == "__rowid__":
                 if not isinstance(self.frame_to_node[frame], CalciteScanNode):
                     raise NotImplementedError(
@@ -186,49 +196,45 @@ class CalciteBuilder:
     def _process_groupby(self, op):
         frame = op.input[0]
 
-        # We need a projection to be aggregation op
-        input_nodes = self._input_nodes()
-        if not isinstance(input_nodes[0], CalciteProjectionNode):
-            table_cols = frame._table_cols
-            self._push(
-                CalciteProjectionNode(
-                    table_cols, [self._ref(frame, col) for col in table_cols]
-                )
-            )
-            input_nodes = [self._last()]
+        # Aggregation's input should always be a projection and
+        # group key columns should always go first
+        base_node = self._input_node(0)
+        proj_cols = op.by.copy()
+        for col in frame._table_cols:
+            if col not in op.by:
+                proj_cols.append(col)
+        proj = CalciteProjectionNode(
+            proj_cols, [self._ref(frame, col) for col in proj_cols]
+        )
+        self._push(proj)
 
-        with self._set_tmp_ctx(op.input, input_nodes):
-            fields = []
-            group = []
-            aggs = []
-            for col in op.by:
+        self._input_ctx().replace_input_node(frame, proj, proj_cols)
+
+        fields = op.by.copy()
+        group = [self._ref_idx(frame, col) for col in op.by]
+        aggs = []
+        for col, agg in op.agg.items():
+            if isinstance(agg, list):
+                for agg_val in agg:
+                    fields.append(col + " " + agg_val)
+                    aggs.append(
+                        self._create_agg_expr(self._ref_idx(frame, col), agg_val)
+                    )
+            else:
                 fields.append(col)
-                group.append(self._ref_idx(frame, col))
-            for col, agg in op.agg.items():
-                if isinstance(agg, list):
-                    for agg_val in agg:
-                        fields.append(col + " " + agg_val)
-                        aggs.append(
-                            self._create_agg_expr(self._ref_idx(frame, col), agg_val)
-                        )
-                else:
-                    fields.append(col)
-                    aggs.append(self._create_agg_expr(self._ref_idx(frame, col), agg))
-
-            node = CalciteAggregateNode(fields, group, aggs)
-            self._push(node)
-
-            if op.groupby_opts["sort"]:
-                with self._set_tmp_ctx(op.input, [node]):
-                    collation = [CalciteCollation(col) for col in group]
-                    self._push(CalciteSortNode(collation))
+                aggs.append(self._create_agg_expr(self._ref_idx(frame, col), agg))
+        node = CalciteAggregateNode(fields, group, aggs)
+        self._push(node)
+        if op.groupby_opts["sort"]:
+            collation = [CalciteCollation(col) for col in group]
+            self._push(CalciteSortNode(collation))
 
     def _create_agg_expr(self, col_idx, agg):
         # TODO: track column dtype and compute aggregate dtype,
         # actually INTEGER works for floats too with the correct result,
         # so not a big issue right now
         res_type = OpExprType(int, True)
-        return AggregateExpr(agg, [col_idx], res_type, False)
+        return AggregateExpr(self.simple_aggregates[agg], [col_idx], res_type, False)
 
     def _process_transform(self, op):
         frame = op.input[0]
