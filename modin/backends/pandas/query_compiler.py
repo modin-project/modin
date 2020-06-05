@@ -60,6 +60,61 @@ def _str_map(func_name):
     return str_op_builder
 
 
+def _dt_prop_map(property_name):
+    """
+    Create a function that call property of property `dt` of the series.
+
+    Parameters
+    ----------
+    property_name
+        The property of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies non-callable properties of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        prop_val = getattr(df.squeeze().dt, property_name)
+        if isinstance(prop_val, pandas.Series):
+            return prop_val.to_frame()
+        else:
+            return pandas.DataFrame([prop_val])
+
+    return dt_op_builder
+
+
+def _dt_func_map(func_name):
+    """
+    Create a function that call method of property `dt` of the series.
+
+    Parameters
+    ----------
+    func_name
+        The method of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies callable methods of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        dt_s = df.squeeze().dt
+        return pandas.DataFrame(
+            getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        )
+
+    return dt_op_builder
+
+
 def copy_df_for_func(func):
     """Create a function that copies the dataframe, likely because `func` is inplace.
 
@@ -505,6 +560,50 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0, lambda x: x.squeeze().unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
+
+    # Dt map partitions operations
+
+    dt_date = MapFunction.register(_dt_prop_map("date"))
+    dt_time = MapFunction.register(_dt_prop_map("time"))
+    dt_timetz = MapFunction.register(_dt_prop_map("timetz"))
+    dt_year = MapFunction.register(_dt_prop_map("year"))
+    dt_month = MapFunction.register(_dt_prop_map("month"))
+    dt_day = MapFunction.register(_dt_prop_map("day"))
+    dt_hour = MapFunction.register(_dt_prop_map("hour"))
+    dt_minute = MapFunction.register(_dt_prop_map("minute"))
+    dt_second = MapFunction.register(_dt_prop_map("second"))
+    dt_microsecond = MapFunction.register(_dt_prop_map("microsecond"))
+    dt_nanosecond = MapFunction.register(_dt_prop_map("nanosecond"))
+    dt_week = MapFunction.register(_dt_prop_map("week"))
+    dt_weekofyear = MapFunction.register(_dt_prop_map("weekofyear"))
+    dt_dayofweek = MapFunction.register(_dt_prop_map("dayofweek"))
+    dt_weekday = MapFunction.register(_dt_prop_map("weekday"))
+    dt_dayofyear = MapFunction.register(_dt_prop_map("dayofyear"))
+    dt_quarter = MapFunction.register(_dt_prop_map("quarter"))
+    dt_is_month_start = MapFunction.register(_dt_prop_map("is_month_start"))
+    dt_is_month_end = MapFunction.register(_dt_prop_map("is_month_end"))
+    dt_is_quarter_start = MapFunction.register(_dt_prop_map("is_quarter_start"))
+    dt_is_quarter_end = MapFunction.register(_dt_prop_map("is_quarter_end"))
+    dt_is_year_start = MapFunction.register(_dt_prop_map("is_year_start"))
+    dt_is_year_end = MapFunction.register(_dt_prop_map("is_year_end"))
+    dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
+    dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
+    dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
+    dt_tz = MapFunction.register(_dt_prop_map("tz"))
+    dt_freq = MapFunction.register(_dt_prop_map("freq"))
+    dt_to_period = MapFunction.register(_dt_func_map("to_period"))
+    dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
+    dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
+    dt_tz_convert = MapFunction.register(_dt_func_map("tz_convert"))
+    dt_normalize = MapFunction.register(_dt_func_map("normalize"))
+    dt_strftime = MapFunction.register(_dt_func_map("strftime"))
+    dt_round = MapFunction.register(_dt_func_map("round"))
+    dt_floor = MapFunction.register(_dt_func_map("floor"))
+    dt_ceil = MapFunction.register(_dt_func_map("ceil"))
+    dt_month_name = MapFunction.register(_dt_func_map("month_name"))
+    dt_day_name = MapFunction.register(_dt_func_map("day_name"))
+
+    # END Dt map partitions operations
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.

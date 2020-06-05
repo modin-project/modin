@@ -15,6 +15,7 @@ import pandas
 import pytest
 import modin.pandas as pd
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from .utils import test_data_values, test_data_keys, df_equals
 
@@ -258,6 +259,64 @@ def test_pivot_table():
         pd.pivot_table(
             test_df["C"], values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
         )
+
+
+def test_unique():
+    modin_result = pd.unique([2, 1, 3, 3])
+    pandas_result = pandas.unique([2, 1, 3, 3])
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series([2] + [1] * 5))
+    pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series([pd.Timestamp("20160101"), pd.Timestamp("20160101")])
+    )
+    pandas_result = pandas.unique(
+        pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Series(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Index(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Index(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
+    pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
+    assert_array_equal(modin_result, pandas_result)
 
 
 def test_value_counts():

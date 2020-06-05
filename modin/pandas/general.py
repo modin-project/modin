@@ -220,6 +220,21 @@ def pivot(data, index=None, columns=None, values=None):
     return data.pivot(index=index, columns=columns, values=values)
 
 
+def unique(values):
+    """
+    Return unique values of input data.
+
+    Uniques are returned in order of appearance. Hash table-based unique,
+    therefore does NOT sort.
+
+    Returns
+    -------
+    ndarray
+        The unique values returned as a NumPy array.
+    """
+    return Series(values).unique()
+
+
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True,
 ):
