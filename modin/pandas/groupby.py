@@ -282,9 +282,11 @@ class DataFrameGroupBy(object):
             # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
             # column. This logic is here to ensure that we also get the `by` data so
             # that it is there for `as_index=False`.
-            if isinstance(self._by, type(self._query_compiler)) and all(
-                c in self._columns for c in self._by.columns
-            ) and self._drop:
+            if (
+                isinstance(self._by, type(self._query_compiler))
+                and all(c in self._columns for c in self._by.columns)
+                and self._drop
+            ):
                 key = [key] + list(self._by.columns)
             else:
                 key = [key]
