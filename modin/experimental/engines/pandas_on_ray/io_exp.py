@@ -20,8 +20,9 @@ from modin.backends.pandas.parsers import _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin import execution_engine, Publisher
 
+
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
-    read_parquet_remote_task = None # updated by RayImportHelper
+    read_parquet_remote_task = None  # updated by RayImportHelper
 
     @classmethod
     def read_sql(
@@ -138,7 +139,9 @@ class RayImportHelper(object):
         import ray
 
         @ray.remote
-        def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
+        def _read_parquet_columns(
+            path, columns, num_splits, kwargs
+        ):  # pragma: no cover
             """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
 
             Note: Ray functions are not detected by codecov (thus pragma: no cover)
@@ -202,7 +205,12 @@ class RayImportHelper(object):
             return _split_result_for_readers(1, num_splits, pandas_df) + [index]
 
         cls.ray = ray
-        ExperimentalPandasOnRayIO.read_parquet_remote_task = staticmethod(_read_parquet_columns)
-        cls.read_sql_with_offset_pandas_on_ray = staticmethod(_read_sql_with_offset_pandas_on_ray)
+        ExperimentalPandasOnRayIO.read_parquet_remote_task = staticmethod(
+            _read_parquet_columns
+        )
+        cls.read_sql_with_offset_pandas_on_ray = staticmethod(
+            _read_sql_with_offset_pandas_on_ray
+        )
+
 
 execution_engine.once("Ray", RayImportHelper._update)

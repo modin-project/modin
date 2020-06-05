@@ -18,12 +18,14 @@ from modin.engines.base.frame.data import BasePandasFrame
 from modin import execution_engine, Publisher
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
+
 class PandasOnRayFrame(BasePandasFrame):
     ray = None
 
     @classmethod
     def _update(cls, publisher: Publisher):
         import ray
+
         cls.ray = ray
 
     _frame_mgr_cls = PandasOnRayFrameManager
@@ -41,5 +43,6 @@ class PandasOnRayFrame(BasePandasFrame):
         )
         dtypes.index = column_names
         return dtypes
+
 
 execution_engine.once("Ray", PandasOnRayFrame._update)

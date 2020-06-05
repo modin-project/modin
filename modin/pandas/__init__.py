@@ -237,21 +237,27 @@ def initialize_ray():
 
         ray.worker.global_worker.run_function_on_all_workers(import_pandas)
 
+
 DEFAULT_NPARTITIONS = 4
 _is_first_update = True
+
+
 def _update_engine(publisher: Publisher):
     global DEFAULT_NPARTITIONS, _is_first_update
 
     num_cpus = DEFAULT_NPARTITIONS
     if publisher.get() == "Ray":
         import ray
+
         if _is_first_update:
             initialize_ray()
         num_cpus = ray.cluster_resources()["CPU"]
     elif publisher.get() == "Dask":  # pragma: no cover
         from distributed.client import get_client
+
         if threading.current_thread().name == "MainThread" and _is_first_update:
             import warnings
+
             warnings.warn("The Dask Engine for Modin is experimental.")
 
         try:
@@ -267,6 +273,7 @@ def _update_engine(publisher: Publisher):
 
     _is_first_update = False
     DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+
 
 execution_engine.subscribe(_update_engine)
 

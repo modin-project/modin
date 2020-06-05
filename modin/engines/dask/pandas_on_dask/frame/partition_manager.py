@@ -22,6 +22,7 @@ from .partition import PandasOnDaskFramePartition
 from .helper import DaskImportHelper
 from modin.error_message import ErrorMessage
 
+
 def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
@@ -40,6 +41,7 @@ def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None
     if isinstance(apply_func, bytes):
         apply_func = DaskImportHelper.pickle.loads(apply_func)
     return apply_func(df, other)
+
 
 class DaskFrameManager(BaseFrameManager):
     """This class implements the interface in `BaseFrameManager`."""

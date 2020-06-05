@@ -17,6 +17,7 @@ from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 from modin import execution_engine, Publisher
 
+
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     deploy_ray_func = None
 
@@ -112,5 +113,6 @@ class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
     """
 
     axis = 1
+
 
 execution_engine.once("Ray", PandasOnRayFrameAxisPartition._update)

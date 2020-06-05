@@ -16,6 +16,7 @@ from .partition import PandasOnDaskFramePartition
 from .helper import DaskImportHelper
 from modin import execution_engine, Publisher
 
+
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     @classmethod
     def _update(cls, publisher: Publisher):
@@ -94,5 +95,6 @@ class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     """
 
     axis = 1
+
 
 execution_engine.once("Dask", PandasOnDaskFrameAxisPartition._update)

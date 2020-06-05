@@ -15,6 +15,7 @@ import pandas
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin import execution_engine, Publisher
 
+
 class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     ray = None
     pyarrow = None
@@ -48,7 +49,9 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PyarrowOnRayFramePartition(cls.ray.put(cls.pyarrow.Table.from_pandas(obj)))
+        return PyarrowOnRayFramePartition(
+            cls.ray.put(cls.pyarrow.Table.from_pandas(obj))
+        )
 
     @classmethod
     def length_extraction_fn(cls):
@@ -61,5 +64,6 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     @classmethod
     def empty(cls):
         return cls.put(pandas.DataFrame())
+
 
 execution_engine.once("Ray", PyarrowOnRayFramePartition._update)

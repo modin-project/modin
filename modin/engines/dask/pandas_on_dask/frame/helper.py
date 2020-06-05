@@ -13,6 +13,7 @@
 
 from modin import execution_engine, Publisher
 
+
 class DaskImportHelper(object):
     pickle = None
     get_global_client = None
@@ -29,5 +30,6 @@ class DaskImportHelper(object):
         cls.get_global_client = _get_global_client
         cls.get_client = get_client
         cls.future = Future
+
 
 execution_engine.once("Dask", DaskImportHelper._update)

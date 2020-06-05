@@ -13,12 +13,14 @@
 
 from modin import execution_engine, Publisher
 
+
 class DaskTask:
     get_global_client = None
 
     @classmethod
     def _update(cls, publisher: Publisher):
         from distributed.client import _get_global_client
+
         cls.get_global_client = _get_global_client
 
     @classmethod
@@ -34,5 +36,6 @@ class DaskTask:
     def materialize(cls, future):
         client = cls.get_global_client()
         return client.gather(future)
+
 
 execution_engine.once("Dask", DaskTask._update)

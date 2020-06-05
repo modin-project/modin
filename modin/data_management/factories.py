@@ -26,7 +26,8 @@ class BaseFactory(object):
     """
     Abstract factory which allows to override the io module easily.
     """
-    io_cls = None # The module where the I/O functionality exists.
+
+    io_cls = None  # The module where the I/O functionality exists.
 
     @classmethod
     def _from_pandas(cls, df):

@@ -379,7 +379,9 @@ def read_sql(
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
-        return (DataFrame(query_compiler=EngineDispatcher.from_pandas(df)) for df in df_gen)
+        return (
+            DataFrame(query_compiler=EngineDispatcher.from_pandas(df)) for df in df_gen
+        )
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
 
 

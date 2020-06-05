@@ -18,12 +18,14 @@ from .partition_manager import PyarrowOnRayFrameManager
 from modin.engines.base.frame.data import BasePandasFrame
 from modin import execution_engine, Publisher
 
+
 class PyarrowOnRayFrame(BasePandasFrame):
     ray = None
 
     @classmethod
     def _update(cls, publisher: Publisher):
         import ray
+
         cls.ray = ray
 
     _frame_mgr_cls = PyarrowOnRayFrameManager
@@ -59,5 +61,6 @@ class PyarrowOnRayFrame(BasePandasFrame):
         df.index = self.index
         df.columns = self.columns
         return df
+
 
 execution_engine.once("Ray", PyarrowOnRayFrame._update)

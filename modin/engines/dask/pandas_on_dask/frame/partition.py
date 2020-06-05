@@ -18,6 +18,7 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 from .helper import DaskImportHelper
 
+
 def apply_list_of_funcs(funcs, df):
     for func, kwargs in funcs:
         if isinstance(func, bytes):
@@ -83,7 +84,9 @@ class PandasOnDaskFramePartition(BaseFramePartition):
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnDaskFramePartition(
-            self.future, call_queue=self.call_queue + [[DaskImportHelper.pickle.dumps(func), kwargs]]
+            self.future,
+            call_queue=self.call_queue
+            + [[DaskImportHelper.pickle.dumps(func), kwargs]],
         )
 
     def drain_call_queue(self):

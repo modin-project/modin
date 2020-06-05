@@ -22,6 +22,7 @@ from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
 from modin import execution_engine, Publisher
 
+
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
@@ -154,5 +155,6 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(left))
             ]
         )
+
 
 execution_engine.once("Ray", RayFrameManager._update)

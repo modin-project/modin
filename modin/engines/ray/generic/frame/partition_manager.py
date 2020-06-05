@@ -16,13 +16,16 @@ import numpy as np
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from modin import execution_engine, Publisher
 
+
 class RayFrameManager(BaseFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
     ray = None
+
     @classmethod
     def _update(cls, publisher: Publisher):
         import ray
+
         cls.ray = ray
 
     @classmethod
@@ -44,5 +47,6 @@ class RayFrameManager(BaseFrameManager):
 
         arr = np.block(parts)
         return arr
+
 
 execution_engine.once("Ray", RayFrameManager._update)

@@ -17,6 +17,7 @@ from modin import execution_engine, partition_format
 
 from modin.data_management import factories
 
+
 class EngineDispatcher(object):
     """
     This is the 'ingestion' point which knows where to route the work
@@ -30,10 +31,14 @@ class EngineDispatcher(object):
             factory_name = "Experimental{}On{}Factory"
         else:
             factory_name = "{}On{}Factory"
-        partition = (publisher if publisher.name == 'partition_format' else partition_format).get()
-        engine = (publisher if publisher.name == 'execution_engine' else execution_engine).get()
+        partition = (
+            publisher if publisher.name == "partition_format" else partition_format
+        ).get()
+        engine = (
+            publisher if publisher.name == "execution_engine" else execution_engine
+        ).get()
         cls.__engine = getattr(factories, factory_name.format(partition, engine))
-        
+
     @classmethod
     def from_pandas(cls, df):
         return cls.__engine._from_pandas(df)
@@ -117,6 +122,7 @@ class EngineDispatcher(object):
     @classmethod
     def to_pickle(cls, *args, **kwargs):
         return cls.__engine._to_pickle(*args, **kwargs)
+
 
 EngineDispatcher._update_engine(execution_engine)
 execution_engine.subscribe(EngineDispatcher._update_engine)

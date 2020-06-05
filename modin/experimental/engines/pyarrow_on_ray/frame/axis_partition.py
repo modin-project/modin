@@ -15,6 +15,7 @@ from modin.engines.base.frame.axis_partition import BaseFrameAxisPartition
 from .partition import PyarrowOnRayFramePartition
 from modin import execution_engine, Publisher
 
+
 class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
@@ -51,7 +52,9 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in RayImportHelper.deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+            for obj in RayImportHelper.deploy_ray_axis_func._remote(
+                args, num_return_vals=num_splits
+            )
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -71,7 +74,9 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in RayImportHelper.deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+            for obj in RayImportHelper.deploy_ray_axis_func._remote(
+                args, num_return_vals=num_splits
+            )
         ]
 
 
@@ -118,7 +123,8 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
     )
     if axis == 0:
         return [
-            RayImportHelper.pyarrow.Table.from_batches([part]) for part in result.to_batches(chunksize)
+            RayImportHelper.pyarrow.Table.from_batches([part])
+            for part in result.to_batches(chunksize)
         ]
     else:
         return [
@@ -230,7 +236,10 @@ class RayImportHelper(object):
             cls.ray = ray
             cls.pyarrow = pyarrow
             cls.deploy_ray_axis_func = staticmethod(deploy_ray_axis_func)
-            cls.deploy_ray_func_between_two_axis_partitions = staticmethod(deploy_ray_func_between_two_axis_partitions)
+            cls.deploy_ray_func_between_two_axis_partitions = staticmethod(
+                deploy_ray_func_between_two_axis_partitions
+            )
             cls.deploy_ray_shuffle_func = staticmethod(deploy_ray_shuffle_func)
+
 
 execution_engine.once("Ray", RayImportHelper._update)

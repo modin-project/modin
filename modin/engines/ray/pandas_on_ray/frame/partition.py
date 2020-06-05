@@ -18,6 +18,7 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
 from modin import execution_engine, Publisher
 
+
 class PandasOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id, length=None, width=None, call_queue=None):
         assert type(object_id) is RayImportHelper.ray.ObjectID
@@ -70,9 +71,11 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        self.oid, self._length_cache, self._width_cache = RayImportHelper.deploy_ray_func.remote(
-            call_queue, oid
-        )
+        (
+            self.oid,
+            self._length_cache,
+            self._width_cache,
+        ) = RayImportHelper.deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
 
     def __copy__(self):
@@ -136,7 +139,9 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PandasOnRayFramePartition(RayImportHelper.ray.put(obj), len(obj.index), len(obj.columns))
+        return PandasOnRayFramePartition(
+            RayImportHelper.ray.put(obj), len(obj.index), len(obj.columns)
+        )
 
     @classmethod
     def preprocess_func(cls, func):
@@ -155,9 +160,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = RayImportHelper.get_index_and_columns.remote(
-                    self.oid
-                )
+                (
+                    self._length_cache,
+                    self._width_cache,
+                ) = RayImportHelper.get_index_and_columns.remote(self.oid)
         if isinstance(self._length_cache, RayImportHelper.ray.ObjectID):
             try:
                 self._length_cache = RayImportHelper.ray.get(self._length_cache)
@@ -170,9 +176,10 @@ class PandasOnRayFramePartition(BaseFramePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = RayImportHelper.get_index_and_columns.remote(
-                    self.oid
-                )
+                (
+                    self._length_cache,
+                    self._width_cache,
+                ) = RayImportHelper.get_index_and_columns.remote(self.oid)
         if isinstance(self._width_cache, RayImportHelper.ray.ObjectID):
             try:
                 self._width_cache = RayImportHelper.ray.get(self._width_cache)
@@ -191,6 +198,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
     @classmethod
     def empty(cls):
         return cls.put(pandas.DataFrame())
+
 
 class RayImportHelper(object):
     ray = None
@@ -242,5 +250,6 @@ class RayImportHelper(object):
         cls.RayTaskError = RayTaskError
         cls.get_index_and_columns = staticmethod(get_index_and_columns)
         cls.deploy_ray_func = staticmethod(deploy_ray_func)
+
 
 execution_engine.once("Ray", RayImportHelper._update)

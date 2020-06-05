@@ -13,6 +13,7 @@
 
 from modin import execution_engine, Publisher
 
+
 class RayTask:
     ray = None
     deploy_ray_func = None
@@ -20,6 +21,7 @@ class RayTask:
     @classmethod
     def _update(cls, publisher: Publisher):
         import ray
+
         @ray.remote
         def deploy_ray_func(func, args):  # pragma: no cover
             return func(**args)
@@ -36,5 +38,6 @@ class RayTask:
     @classmethod
     def materialize(cls, obj_id):
         return cls.ray.get(obj_id)
+
 
 execution_engine.once("Ray", RayTask._update)
