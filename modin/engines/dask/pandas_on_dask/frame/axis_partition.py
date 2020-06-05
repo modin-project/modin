@@ -13,14 +13,21 @@
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
-from modin import __execution_engine__
-
-if __execution_engine__ == "Dask":
-    from distributed.client import get_client
-    from distributed import Future
-
+from modin import execution_engine
 
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
+    __get_client = None
+
+    @classmethod
+    def _update(cls, publisher):
+        if publisher.get() == 'Dask':
+            from distributed.client import get_client
+            from distributed import Future
+            cls.__get_client = get_client
+            cls.instance_type = Future
+        else:
+            cls.instance_type = super(cls).instance_type
+
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
@@ -28,14 +35,12 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
 
     partition_type = PandasOnDaskFramePartition
-    if __execution_engine__ == "Dask":
-        instance_type = Future
 
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
-        client = get_client()
+        client = cls.__get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_axis_func,
             axis,
@@ -59,7 +64,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
-        client = get_client()
+        client = cls.__get_client()
         axis_result = client.submit(
             PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
@@ -96,3 +101,5 @@ class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     """
 
     axis = 1
+
+execution_engine.subscribe(PandasOnDaskFrameAxisPartition._update)

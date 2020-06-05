@@ -15,6 +15,7 @@ import os
 import sys
 import warnings
 from packaging import version
+import weakref
 
 from ._version import get_versions
 
@@ -83,10 +84,30 @@ def get_partition_format():
     # See note above about engine + backing.
     return os.environ.get("MODIN_BACKEND", "Pandas").title()
 
+class Publisher(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.__value = value
+        self.__subs = weakref.WeakSet()
+
+    def subscribe(self, callback):
+        self.__subs.add(callback)
+        callback(self)
+
+    def get(self):
+        return self.__value
+
+    def put(self, value):
+        oldvalue, self.__value = self.__value, value
+        if oldvalue != value:
+            for weakCallback in list(self.__subs): # take a copy before iterating
+                callback = weakCallback()
+                if callback:
+                    callback(self)
 
 __version__ = "0.6.3"
-__execution_engine__ = get_execution_engine()
-__partition_format__ = get_partition_format()
+execution_engine = Publisher(name='execution_engine', value=get_execution_engine())
+partition_format = Publisher(name='partition_format', value=get_partition_format())
 
 # We don't want these used outside of this file.
 del get_execution_engine
