@@ -13,14 +13,20 @@
 
 import pandas
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-    import pyarrow
-
+from modin import execution_engine, Publisher
 
 class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
+    ray = None
+    pyarrow = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        import pyarrow
+
+        cls.ray = ray
+        cls.pyarrow = pyarrow
+
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
 
@@ -42,7 +48,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
+        return PyarrowOnRayFramePartition(cls.ray.put(cls.pyarrow.Table.from_pandas(obj)))
 
     @classmethod
     def length_extraction_fn(cls):
@@ -55,3 +61,5 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     @classmethod
     def empty(cls):
         return cls.put(pandas.DataFrame())
+
+execution_engine.once("Ray", PyarrowOnRayFramePartition._update)

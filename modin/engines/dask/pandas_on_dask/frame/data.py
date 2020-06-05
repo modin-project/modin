@@ -13,17 +13,16 @@
 
 from modin.engines.base.frame.data import BasePandasFrame
 from .partition_manager import DaskFrameManager
-from modin import execution_engine
+from modin import execution_engine, Publisher
 
 class PandasOnDaskFrame(BasePandasFrame):
     __get_global_client = None
     _frame_mgr_cls = DaskFrameManager
 
     @classmethod
-    def _update(cls, publisher):
-        if cls.__get_global_client is None and publisher.get() == "Dask":
-            from distributed.client import _get_global_client
-            cls.__get_global_client = _get_global_client
+    def _update(cls, publisher: Publisher):
+        from distributed.client import _get_global_client
+        cls.__get_global_client = _get_global_client
 
     @property
     def _row_lengths(self):
@@ -56,4 +55,4 @@ class PandasOnDaskFrame(BasePandasFrame):
             )
         return self._column_widths_cache
 
-execution_engine.subscribe(PandasOnDaskFrame._update)
+execution_engine.once("Dask", PandasOnDaskFrame._update)

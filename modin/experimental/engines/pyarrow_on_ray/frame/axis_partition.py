@@ -13,14 +13,7 @@
 
 from modin.engines.base.frame.axis_partition import BaseFrameAxisPartition
 from .partition import PyarrowOnRayFramePartition
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-    import pyarrow
-else:
-    pass
-
+from modin import execution_engine, Publisher
 
 class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
     def __init__(self, list_of_blocks):
@@ -47,7 +40,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         if other_axis_partition is not None:
             return [
                 PyarrowOnRayFramePartition(obj)
-                for obj in deploy_ray_func_between_two_axis_partitions._remote(
+                for obj in RayImportHelper.deploy_ray_func_between_two_axis_partitions._remote(
                     args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
                     + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
                     num_return_vals=num_splits,
@@ -58,7 +51,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+            for obj in RayImportHelper.deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -78,7 +71,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
+            for obj in RayImportHelper.deploy_ray_axis_func._remote(args, num_return_vals=num_splits)
         ]
 
 
@@ -102,7 +95,7 @@ class PyarrowOnRayFrameRowPartition(PyarrowOnRayFrameAxisPartition):
 
 def concat_arrow_table_partitions(axis, partitions):
     if axis == 0:
-        table = pyarrow.Table.from_batches(
+        table = RayImportHelper.pyarrow.Table.from_batches(
             [part.to_batches(part.num_rows)[0] for part in partitions]
         )
     else:
@@ -125,7 +118,7 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
     )
     if axis == 0:
         return [
-            pyarrow.Table.from_batches([part]) for part in result.to_batches(chunksize)
+            RayImportHelper.pyarrow.Table.from_batches([part]) for part in result.to_batches(chunksize)
         ]
     else:
         return [
@@ -150,76 +143,94 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
         ]
 
 
-if __execution_engine__ == "Ray":
+class RayImportHelper(object):
+    ray = None
+    pyarrow = None
+    deploy_ray_axis_func = None
+    deploy_ray_func_between_two_axis_partitions = None
+    deploy_ray_shuffle_func = None
 
-    @ray.remote
-    def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
-        """Deploy a function along a full axis in Ray.
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        import pyarrow
 
-        Args:
-            axis: The axis to perform the function along.
-            func: The function to perform.
-            num_splits: The number of splits to return
-                (see `split_result_of_axis_func_pandas`)
-            kwargs: A dictionary of keyword arguments.
-            partitions: All partitions that make up the full axis (row or column)
+        @ray.remote
+        def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+            """Deploy a function along a full axis in Ray.
 
-        Returns:
-            A list of Pandas DataFrames.
-        """
-        table = concat_arrow_table_partitions(axis, partitions)
-        try:
-            result = func(table, **kwargs)
-        except Exception:
-            result = pyarrow.Table.from_pandas(func(table.to_pandas(), **kwargs))
-        return split_arrow_table_result(
-            axis, result, len(partitions), num_splits, table.schema.metadata
-        )
+            Args:
+                axis: The axis to perform the function along.
+                func: The function to perform.
+                num_splits: The number of splits to return
+                    (see `split_result_of_axis_func_pandas`)
+                kwargs: A dictionary of keyword arguments.
+                partitions: All partitions that make up the full axis (row or column)
 
-    @ray.remote
-    def deploy_ray_func_between_two_axis_partitions(
-        axis, func, num_splits, len_of_left, kwargs, *partitions
-    ):
-        """Deploy a function along a full axis between two data sets in Ray.
+            Returns:
+                A list of Pandas DataFrames.
+            """
+            table = concat_arrow_table_partitions(axis, partitions)
+            try:
+                result = func(table, **kwargs)
+            except Exception:
+                result = pyarrow.Table.from_pandas(func(table.to_pandas(), **kwargs))
+            return split_arrow_table_result(
+                axis, result, len(partitions), num_splits, table.schema.metadata
+            )
 
-        Args:
-            axis: The axis to perform the function along.
-            func: The function to perform.
-            num_splits: The number of splits to return
-                (see `split_result_of_axis_func_pandas`).
-            len_of_left: The number of values in `partitions` that belong to the
-                left data set.
-            kwargs: A dictionary of keyword arguments.
-            partitions: All partitions that make up the full axis (row or column)
-                for both data sets.
+        @ray.remote
+        def deploy_ray_func_between_two_axis_partitions(
+            axis, func, num_splits, len_of_left, kwargs, *partitions
+        ):
+            """Deploy a function along a full axis between two data sets in Ray.
 
-        Returns:
-            A list of Pandas DataFrames.
-        """
-        lt_table = concat_arrow_table_partitions(axis, partitions[:len_of_left])
-        rt_table = concat_arrow_table_partitions(axis, partitions[len_of_left:])
-        try:
-            result = func(lt_table, rt_table, **kwargs)
-        except Exception:
-            lt_frame = lt_table.from_pandas()
-            rt_frame = rt_table.from_pandas()
-            result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, **kwargs))
-        return split_arrow_table_result(
-            axis, result, len(result.num_rows), num_splits, result.schema.metadata
-        )
+            Args:
+                axis: The axis to perform the function along.
+                func: The function to perform.
+                num_splits: The number of splits to return
+                    (see `split_result_of_axis_func_pandas`).
+                len_of_left: The number of values in `partitions` that belong to the
+                    left data set.
+                kwargs: A dictionary of keyword arguments.
+                partitions: All partitions that make up the full axis (row or column)
+                    for both data sets.
 
-    @ray.remote
-    def deploy_ray_shuffle_func(axis, func, numsplits, kwargs, *partitions):
-        """Deploy a function that defines the partitions along this axis.
+            Returns:
+                A list of Pandas DataFrames.
+            """
+            lt_table = concat_arrow_table_partitions(axis, partitions[:len_of_left])
+            rt_table = concat_arrow_table_partitions(axis, partitions[len_of_left:])
+            try:
+                result = func(lt_table, rt_table, **kwargs)
+            except Exception:
+                lt_frame = lt_table.from_pandas()
+                rt_frame = rt_table.from_pandas()
+                result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, **kwargs))
+            return split_arrow_table_result(
+                axis, result, len(result.num_rows), num_splits, result.schema.metadata
+            )
 
-        Args:
-            axis:
-            func:
-            numsplits:
-            kwargs:
-            partitions:
+        @ray.remote
+        def deploy_ray_shuffle_func(axis, func, numsplits, kwargs, *partitions):
+            """Deploy a function that defines the partitions along this axis.
 
-        Returns:
-            A list of Pandas DataFrames.
-        """
-        pass
+            Args:
+                axis:
+                func:
+                numsplits:
+                kwargs:
+                partitions:
+
+            Returns:
+                A list of Pandas DataFrames.
+            """
+            pass
+
+            cls.ray = ray
+            cls.pyarrow = pyarrow
+            cls.deploy_ray_axis_func = staticmethod(deploy_ray_axis_func)
+            cls.deploy_ray_func_between_two_axis_partitions = staticmethod(deploy_ray_func_between_two_axis_partitions)
+            cls.deploy_ray_shuffle_func = staticmethod(deploy_ray_shuffle_func)
+
+execution_engine.once("Ray", RayImportHelper._update)

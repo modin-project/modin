@@ -134,7 +134,7 @@ from .general import (
     unique,
 )
 from .plotting import Plotting as plotting
-from .. import __execution_engine__ as execution_engine
+from .. import execution_engine, Publisher
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -237,18 +237,23 @@ def initialize_ray():
 
         ray.worker.global_worker.run_function_on_all_workers(import_pandas)
 
+DEFAULT_NPARTITIONS = 4
+_is_first_update = True
+def _update_engine(publisher: Publisher):
+    global DEFAULT_NPARTITIONS, _is_first_update
 
-if execution_engine == "Ray":
-    import ray
+    num_cpus = DEFAULT_NPARTITIONS
+    if publisher.get() == "Ray":
+        import ray
+        if _is_first_update:
+            initialize_ray()
+        num_cpus = ray.cluster_resources()["CPU"]
+    elif publisher.get() == "Dask":  # pragma: no cover
+        from distributed.client import get_client
+        if threading.current_thread().name == "MainThread" and _is_first_update:
+            import warnings
+            warnings.warn("The Dask Engine for Modin is experimental.")
 
-    initialize_ray()
-    num_cpus = ray.cluster_resources()["CPU"]
-elif execution_engine == "Dask":  # pragma: no cover
-    from distributed.client import get_client
-    import warnings
-
-    if threading.current_thread().name == "MainThread":
-        warnings.warn("The Dask Engine for Modin is experimental.")
         try:
             client = get_client()
         except ValueError:
@@ -256,10 +261,14 @@ elif execution_engine == "Dask":  # pragma: no cover
 
             num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
             client = Client(n_workers=int(num_cpus))
-elif execution_engine != "Python":
-    raise ImportError("Unrecognized execution engine: {}.".format(execution_engine))
 
-DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+    elif publisher.get() != "Python":
+        raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
+
+    _is_first_update = False
+    DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+
+execution_engine.subscribe(_update_engine)
 
 __all__ = [
     "DataFrame",

@@ -16,13 +16,15 @@ from pandas.core.dtypes.cast import find_common_type
 
 from .partition_manager import PyarrowOnRayFrameManager
 from modin.engines.base.frame.data import BasePandasFrame
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
+from modin import execution_engine, Publisher
 
 class PyarrowOnRayFrame(BasePandasFrame):
+    ray = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        cls.ray = ray
 
     _frame_mgr_cls = PyarrowOnRayFrameManager
 
@@ -45,7 +47,7 @@ class PyarrowOnRayFrame(BasePandasFrame):
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column.
         dtypes = (
-            pandas.concat(ray.get(list_of_dtypes), axis=1)
+            pandas.concat(cls.ray.get(list_of_dtypes), axis=1)
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )
@@ -57,3 +59,5 @@ class PyarrowOnRayFrame(BasePandasFrame):
         df.index = self.index
         df.columns = self.columns
         return df
+
+execution_engine.once("Ray", PyarrowOnRayFrame._update)

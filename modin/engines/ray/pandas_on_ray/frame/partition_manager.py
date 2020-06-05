@@ -20,32 +20,38 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
-    @ray.remote
-    def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
-        if call_queue_df is not None and len(call_queue_df) > 0:
-            for call, kwargs in call_queue_df:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                df = call(df, **kwargs)
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                other = call(other, **kwargs)
-        return apply_func(df, other)
-
+from modin import execution_engine, Publisher
 
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
+
+    ray = None
+    remote_func = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+
+        @ray.remote
+        def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+            if call_queue_df is not None and len(call_queue_df) > 0:
+                for call, kwargs in call_queue_df:
+                    if isinstance(call, ray.ObjectID):
+                        call = ray.get(call)
+                    if isinstance(kwargs, ray.ObjectID):
+                        kwargs = ray.get(kwargs)
+                    df = call(df, **kwargs)
+            if call_queue_other is not None and len(call_queue_other) > 0:
+                for call, kwargs in call_queue_other:
+                    if isinstance(call, ray.ObjectID):
+                        call = ray.get(call)
+                    if isinstance(kwargs, ray.ObjectID):
+                        kwargs = ray.get(kwargs)
+                    other = call(other, **kwargs)
+            return apply_func(df, other)
+
+        cls.ray = ray
+        cls.remote_func = staticmethod(func)
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnRayFramePartition
@@ -84,14 +90,14 @@ class PandasOnRayFrameManager(RayFrameManager):
                 if len(partitions)
                 else []
             )
-        new_idx = ray.get(new_idx)
+        new_idx = cls.ray.get(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
     def groupby_reduce(
         cls, axis, partitions, by, map_func, reduce_func
     ):  # pragma: no cover
-        map_func = ray.put(map_func)
+        map_func = cls.ray.put(map_func)
         by_parts = np.squeeze(by)
         if len(by_parts.shape) == 0:
             by_parts = np.array([by_parts.item()])
@@ -99,7 +105,7 @@ class PandasOnRayFrameManager(RayFrameManager):
             [
                 [
                     PandasOnRayFramePartition(
-                        func.remote(
+                        cls.remote_func.remote(
                             part.oid,
                             by_parts[col_idx].oid if axis else by_parts[row_idx].oid,
                             map_func,
@@ -118,7 +124,7 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right):
-        map_func = ray.put(apply_func)
+        map_func = cls.ray.put(apply_func)
         right_parts = np.squeeze(right)
         if len(right_parts.shape) == 0:
             right_parts = np.array([right_parts.item()])
@@ -131,7 +137,7 @@ class PandasOnRayFrameManager(RayFrameManager):
             [
                 [
                     PandasOnRayFramePartition(
-                        func.remote(
+                        cls.remote_func.remote(
                             part.oid,
                             right_parts[col_idx].oid
                             if axis
@@ -148,3 +154,5 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(left))
             ]
         )
+
+execution_engine.once("Ray", RayFrameManager._update)

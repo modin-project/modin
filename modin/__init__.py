@@ -16,6 +16,7 @@ import sys
 import warnings
 from packaging import version
 import weakref
+import collections
 
 from ._version import get_versions
 
@@ -89,10 +90,14 @@ class Publisher(object):
         self.name = name
         self.__value = value
         self.__subs = weakref.WeakSet()
+        self.__once = collections.defaultdict(weakref.WeakSet)
 
     def subscribe(self, callback):
         self.__subs.add(callback)
         callback(self)
+
+    def once(self, onvalue, callback):
+        self.__once[onvalue].add(callback)
 
     def get(self):
         return self.__value
@@ -100,10 +105,20 @@ class Publisher(object):
     def put(self, value):
         oldvalue, self.__value = self.__value, value
         if oldvalue != value:
-            for weakCallback in list(self.__subs): # take a copy before iterating
+            for weakCallback in self.__subs:
                 callback = weakCallback()
                 if callback:
                     callback(self)
+            try:
+                once = self.__once[value]
+            except KeyError:
+                return
+            if once:
+                for weakCallback in once:
+                    callback = weakCallback()
+                    if callback:
+                        callback(self)
+            del self.__once[value]
 
 __version__ = "0.6.3"
 execution_engine = Publisher(name='execution_engine', value=get_execution_engine())

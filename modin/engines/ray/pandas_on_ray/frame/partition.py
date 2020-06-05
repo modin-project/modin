@@ -16,16 +16,11 @@ import pandas
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-    from ray.worker import RayTaskError
-
+from modin import execution_engine, Publisher
 
 class PandasOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id, length=None, width=None, call_queue=None):
-        assert type(object_id) is ray.ObjectID
+        assert type(object_id) is RayImportHelper.ray.ObjectID
 
         self.oid = object_id
         if call_queue is None:
@@ -43,7 +38,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         if len(self.call_queue):
             self.drain_call_queue()
         try:
-            return ray.get(self.oid)
+            return RayImportHelper.ray.get(self.oid)
         except RayTaskError as e:
             handle_ray_task_error(e)
 
@@ -62,7 +57,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        result, length, width = deploy_ray_func.remote(call_queue, oid)
+        result, length, width = RayImportHelper.deploy_ray_func.remote(call_queue, oid)
         return PandasOnRayFramePartition(result, length, width)
 
     def add_to_apply_calls(self, func, **kwargs):
@@ -75,7 +70,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        self.oid, self._length_cache, self._width_cache = deploy_ray_func.remote(
+        self.oid, self._length_cache, self._width_cache = RayImportHelper.deploy_ray_func.remote(
             call_queue, oid
         )
         self.call_queue = []
@@ -141,7 +136,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A `RayRemotePartition` object.
         """
-        return PandasOnRayFramePartition(ray.put(obj), len(obj.index), len(obj.columns))
+        return PandasOnRayFramePartition(RayImportHelper.ray.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -153,20 +148,20 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns:
             A ray.ObjectID.
         """
-        return ray.put(func)
+        return RayImportHelper.ray.put(func)
 
     def length(self):
         if self._length_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = RayImportHelper.get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._length_cache, ray.ObjectID):
+        if isinstance(self._length_cache, RayImportHelper.ray.ObjectID):
             try:
-                self._length_cache = ray.get(self._length_cache)
-            except RayTaskError as e:
+                self._length_cache = RayImportHelper.ray.get(self._length_cache)
+            except RayImportHelper.RayTaskError as e:
                 handle_ray_task_error(e)
         return self._length_cache
 
@@ -175,12 +170,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = RayImportHelper.get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._width_cache, ray.ObjectID):
+        if isinstance(self._width_cache, RayImportHelper.ray.ObjectID):
             try:
-                self._width_cache = ray.get(self._width_cache)
+                self._width_cache = RayImportHelper.ray.get(self._width_cache)
             except RayTaskError as e:
                 handle_ray_task_error(e)
         return self._width_cache
@@ -197,40 +192,55 @@ class PandasOnRayFramePartition(BaseFramePartition):
     def empty(cls):
         return cls.put(pandas.DataFrame())
 
+class RayImportHelper(object):
+    ray = None
+    RayTaskError = None
+    get_index_and_columns = None
+    deploy_ray_func = None
 
-if __execution_engine__ == "Ray":
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        from ray.worker import RayTaskError
 
-    @ray.remote(num_return_vals=2)
-    def get_index_and_columns(df):
-        return len(df.index), len(df.columns)
+        @ray.remote(num_return_vals=2)
+        def get_index_and_columns(df):
+            return len(df.index), len(df.columns)
 
-    @ray.remote(num_return_vals=3)
-    def deploy_ray_func(call_queue, partition):  # pragma: no cover
-        def deserialize(obj):
-            if isinstance(obj, ray.ObjectID):
-                return ray.get(obj)
-            return obj
+        @ray.remote(num_return_vals=3)
+        def deploy_ray_func(call_queue, partition):  # pragma: no cover
+            def deserialize(obj):
+                if isinstance(obj, ray.ObjectID):
+                    return ray.get(obj)
+                return obj
 
-        if len(call_queue) > 1:
-            for func, kwargs in call_queue[:-1]:
-                func = deserialize(func)
-                kwargs = deserialize(kwargs)
-                try:
-                    partition = func(partition, **kwargs)
-                except ValueError:
-                    partition = func(partition.copy(), **kwargs)
-        func, kwargs = call_queue[-1]
-        func = deserialize(func)
-        kwargs = deserialize(kwargs)
-        try:
-            result = func(partition, **kwargs)
-        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-        # don't want the error to propagate to the user, and we want to avoid copying unless
-        # we absolutely have to.
-        except ValueError:
-            result = func(partition.copy(), **kwargs)
-        return (
-            result,
-            len(result) if hasattr(result, "__len__") else 0,
-            len(result.columns) if hasattr(result, "columns") else 0,
-        )
+            if len(call_queue) > 1:
+                for func, kwargs in call_queue[:-1]:
+                    func = deserialize(func)
+                    kwargs = deserialize(kwargs)
+                    try:
+                        partition = func(partition, **kwargs)
+                    except ValueError:
+                        partition = func(partition.copy(), **kwargs)
+            func, kwargs = call_queue[-1]
+            func = deserialize(func)
+            kwargs = deserialize(kwargs)
+            try:
+                result = func(partition, **kwargs)
+            # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+            # don't want the error to propagate to the user, and we want to avoid copying unless
+            # we absolutely have to.
+            except ValueError:
+                result = func(partition.copy(), **kwargs)
+            return (
+                result,
+                len(result) if hasattr(result, "__len__") else 0,
+                len(result.columns) if hasattr(result, "columns") else 0,
+            )
+
+        cls.ray = ray
+        cls.RayTaskError = RayTaskError
+        cls.get_index_and_columns = staticmethod(get_index_and_columns)
+        cls.deploy_ray_func = staticmethod(deploy_ray_func)
+
+execution_engine.once("Ray", RayImportHelper._update)

@@ -15,13 +15,38 @@ import pandas
 
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
+from modin import execution_engine, Publisher
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
+    deploy_ray_func = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+
+        @ray.remote
+        def deploy_ray_func(func, *args):  # pragma: no cover
+            """Run a function on a remote partition.
+
+            Note: Ray functions are not detected by codecov (thus pragma: no cover)
+
+            Args:
+                func: The function to run.
+
+            Returns:
+                The result of the function `func`.
+            """
+            result = func(*args)
+            if isinstance(result, pandas.DataFrame):
+                return result, len(result), len(result.columns)
+            elif all(isinstance(r, pandas.DataFrame) for r in result):
+                return [i for r in result for i in [r, len(r), len(r.columns)]]
+            else:
+                return [i for r in result for i in [r, None, None]]
+
+        cls.deploy_ray_func = staticmethod(deploy_ray_func)
+        cls.instance_type = ray.ObjectID
+
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
@@ -29,14 +54,12 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
-    if __execution_engine__ == "Ray":
-        instance_type = ray.ObjectID
 
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
-        return deploy_ray_func._remote(
+        return cls.deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_axis_func,
                 axis,
@@ -53,7 +76,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, kwargs, *partitions
     ):
-        return deploy_ray_func._remote(
+        return cls.deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
                 axis,
@@ -90,25 +113,4 @@ class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
 
     axis = 1
 
-
-if __execution_engine__ == "Ray":
-
-    @ray.remote
-    def deploy_ray_func(func, *args):  # pragma: no cover
-        """Run a function on a remote partition.
-
-        Note: Ray functions are not detected by codecov (thus pragma: no cover)
-
-        Args:
-            func: The function to run.
-
-        Returns:
-            The result of the function `func`.
-        """
-        result = func(*args)
-        if isinstance(result, pandas.DataFrame):
-            return result, len(result), len(result.columns)
-        elif all(isinstance(r, pandas.DataFrame) for r in result):
-            return [i for r in result for i in [r, len(r), len(r.columns)]]
-        else:
-            return [i for r in result for i in [r, None, None]]
+execution_engine.once("Ray", PandasOnRayFrameAxisPartition._update)

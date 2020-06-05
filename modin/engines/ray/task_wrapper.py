@@ -11,23 +11,30 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
-    @ray.remote
-    def deploy_ray_func(func, args):  # pragma: no cover
-        return func(**args)
-
+from modin import execution_engine, Publisher
 
 class RayTask:
+    ray = None
+    deploy_ray_func = None
+
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        @ray.remote
+        def deploy_ray_func(func, args):  # pragma: no cover
+            return func(**args)
+
+        cls.ray = ray
+        cls.deploy_ray_func = staticmethod(deploy_ray_func)
+
     @classmethod
     def deploy(cls, func, num_return_vals, kwargs):
-        return deploy_ray_func._remote(
+        return cls.deploy_ray_func._remote(
             args=(func, kwargs), num_return_vals=num_return_vals
         )
 
     @classmethod
     def materialize(cls, obj_id):
-        return ray.get(obj_id)
+        return cls.ray.get(obj_id)
+
+execution_engine.once("Ray", RayTask._update)

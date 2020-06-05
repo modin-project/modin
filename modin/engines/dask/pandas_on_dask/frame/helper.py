@@ -21,14 +21,13 @@ class DaskImportHelper(object):
 
     @classmethod
     def _update(cls, publisher: Publisher):
-        if publisher.get() == "Dask":
-            from distributed.client import _get_global_client, get_client
-            from distributed import Future
-            import cloudpickle
+        from distributed.client import _get_global_client, get_client
+        from distributed import Future
+        import cloudpickle
 
-            cls.pickle = cloudpickle
-            cls.get_global_client = _get_global_client
-            cls.get_client = get_client
-            cls.future = Future
+        cls.pickle = cloudpickle
+        cls.get_global_client = _get_global_client
+        cls.get_client = get_client
+        cls.future = Future
 
-execution_engine.subscribe(DaskImportHelper._update)
+execution_engine.once("Dask", DaskImportHelper._update)

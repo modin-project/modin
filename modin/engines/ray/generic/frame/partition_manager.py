@@ -14,14 +14,16 @@
 import numpy as np
 
 from modin.engines.base.frame.partition_manager import BaseFrameManager
-from modin import __execution_engine__
-
-if __execution_engine__ == "Ray":
-    import ray
-
+from modin import execution_engine, Publisher
 
 class RayFrameManager(BaseFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
+
+    ray = None
+    @classmethod
+    def _update(cls, publisher: Publisher):
+        import ray
+        cls.ray = ray
 
     @classmethod
     def to_numpy(cls, partitions):
@@ -30,7 +32,7 @@ class RayFrameManager(BaseFrameManager):
         Returns:
             A NumPy array
         """
-        parts = ray.get(
+        parts = cls.ray.get(
             [
                 obj.apply(lambda df: df.to_numpy()).oid
                 for row in partitions
@@ -42,3 +44,5 @@ class RayFrameManager(BaseFrameManager):
 
         arr = np.block(parts)
         return arr
+
+execution_engine.once("Ray", RayFrameManager._update)

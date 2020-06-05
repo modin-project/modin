@@ -11,16 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin import execution_engine
+from modin import execution_engine, Publisher
 
 class DaskTask:
     get_global_client = None
 
     @classmethod
-    def _update(cls, publisher):
-        if cls.get_global_client is None and publisher.get() == 'Dask':
-            from distributed.client import _get_global_client
-            cls.get_global_client = _get_global_client
+    def _update(cls, publisher: Publisher):
+        from distributed.client import _get_global_client
+        cls.get_global_client = _get_global_client
 
     @classmethod
     def deploy(cls, func, num_return_vals, kwargs):
@@ -36,5 +35,4 @@ class DaskTask:
         client = cls.get_global_client()
         return client.gather(future)
 
-DaskTask._update(execution_engine)
-execution_engine.subscribe(DaskTask._update)
+execution_engine.once("Dask", DaskTask._update)

@@ -19,10 +19,7 @@ from modin import execution_engine, Publisher
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     @classmethod
     def _update(cls, publisher: Publisher):
-        if publisher.get() == 'Dask':
-            cls.instance_type = DaskImportHelper.future
-        else:
-            cls.instance_type = super(cls).instance_type
+        cls.instance_type = DaskImportHelper.future
 
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
@@ -98,4 +95,4 @@ class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
 
     axis = 1
 
-execution_engine.subscribe(PandasOnDaskFrameAxisPartition._update)
+execution_engine.once("Dask", PandasOnDaskFrameAxisPartition._update)
