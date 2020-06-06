@@ -157,4 +157,4 @@ class PandasOnRayFrameManager(RayFrameManager):
         )
 
 
-execution_engine.once("Ray", RayFrameManager._update)
+execution_engine.once("Ray", PandasOnRayFrameManager._update)
