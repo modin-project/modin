@@ -146,7 +146,9 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             root = build_node(table, expr.terms, builder)
             cond = builder.make_condition(root)
             filt = gandiva.make_filter(table.schema, cond)
-            sel_vec = filt.evaluate(table.to_batches()[0], self.pa.default_memory_pool())
+            sel_vec = filt.evaluate(
+                table.to_batches()[0], self.pa.default_memory_pool()
+            )
             result = filter_with_selection_vector(table, sel_vec)
             return result
 

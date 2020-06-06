@@ -51,7 +51,9 @@ for out in pytest_outputs:
         for i in content.split("+ python3 -m pytest ")
     )
     if len(full_comment) > 65_000:
-        full_comment = full_comment[-65_000:] + "\n\n<b>Remaining output truncated<b>\n\n"
+        full_comment = (
+            full_comment[-65_000:] + "\n\n<b>Remaining output truncated<b>\n\n"
+        )
     full_comment = "<details><summary>Tests Logs</summary>\n\n\n```\n" + full_comment
     full_comment += "\n```\n\n</details>\n"
 if "FAILURES" not in full_comment:
