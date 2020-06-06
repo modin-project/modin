@@ -16,6 +16,7 @@ import pandas
 from modin.error_message import ErrorMessage
 from .base import BasePandasDataset
 from .dataframe import DataFrame
+from .series import Series
 from .utils import to_pandas
 
 
@@ -217,3 +218,18 @@ def pivot(data, index=None, columns=None, values=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
+
+
+def unique(values):
+    """
+    Return unique values of input data.
+
+    Uniques are returned in order of appearance. Hash table-based unique,
+    therefore does NOT sort.
+
+    Returns
+    -------
+    ndarray
+        The unique values returned as a NumPy array.
+    """
+    return Series(values).unique()
