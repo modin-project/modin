@@ -612,7 +612,7 @@ class BaseFrameManager(object):
                     func,
                     row_internal_indices=row_internal_idx,
                     col_internal_indices=col_internal_idx,
-                    **item
+                    **item,
                 )
                 partition_copy[row_blk_idx, col_blk_idx] = block_result
                 col_position_counter += len(col_internal_idx)

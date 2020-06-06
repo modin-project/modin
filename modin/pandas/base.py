@@ -484,7 +484,7 @@ class BasePandasDataset(object):
                         bool_only=bool_only,
                         skipna=skipna,
                         level=level,
-                        **kwargs
+                        **kwargs,
                     )
                 )
             if isinstance(result, BasePandasDataset):
@@ -541,7 +541,7 @@ class BasePandasDataset(object):
                         bool_only=bool_only,
                         skipna=skipna,
                         level=level,
-                        **kwargs
+                        **kwargs,
                     )
                 )
             if isinstance(result, BasePandasDataset):
@@ -560,7 +560,7 @@ class BasePandasDataset(object):
         result_type=None,
         convert_dtype=True,
         args=(),
-        **kwds
+        **kwds,
     ):
         """Apply a function along input axis of DataFrame.
 
@@ -1480,7 +1480,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
 
         axis = self._get_axis_number(axis)
@@ -1492,7 +1492,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -1612,7 +1612,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -1636,7 +1636,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -1659,7 +1659,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -1699,7 +1699,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -1801,7 +1801,7 @@ class BasePandasDataset(object):
             fill_method=fill_method,
             limit=limit,
             freq=freq,
-            **kwargs
+            **kwargs,
         )
 
     def pipe(self, func, *args, **kwargs):
@@ -1854,7 +1854,7 @@ class BasePandasDataset(object):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         """Return the product of the values for the requested axis
 
@@ -1878,7 +1878,7 @@ class BasePandasDataset(object):
                     level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
-                    **kwargs
+                    **kwargs,
                 )
             )
         return data._reduce_dimension(
@@ -1888,7 +1888,7 @@ class BasePandasDataset(object):
                 level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -2519,7 +2519,7 @@ class BasePandasDataset(object):
             level=level,
             ddof=ddof,
             numeric_only=numeric_only,
-            **kwargs
+            **kwargs,
         )
 
     def set_axis(self, labels, axis=0, inplace=False):
@@ -2577,7 +2577,7 @@ class BasePandasDataset(object):
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -2714,7 +2714,7 @@ class BasePandasDataset(object):
                 level=level,
                 ddof=ddof,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -2743,7 +2743,7 @@ class BasePandasDataset(object):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         """Perform a sum across the DataFrame.
 
@@ -2766,7 +2766,7 @@ class BasePandasDataset(object):
                     level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
-                    **kwargs
+                    **kwargs,
                 )
             )
         return data._reduce_dimension(
@@ -2776,7 +2776,7 @@ class BasePandasDataset(object):
                 level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -3208,7 +3208,7 @@ class BasePandasDataset(object):
                 level=level,
                 ddof=ddof,
                 numeric_only=numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 

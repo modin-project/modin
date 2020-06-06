@@ -727,7 +727,7 @@ class Series(BasePandasDataset):
         yrot=None,
         figsize=None,
         bins=10,
-        **kwds
+        **kwds,
     ):
         return self._default_to_pandas(
             pandas.Series.hist,
@@ -740,7 +740,7 @@ class Series(BasePandasDataset):
             yrot=yrot,
             figsize=figsize,
             bins=bins,
-            **kwds
+            **kwds,
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):
@@ -762,7 +762,7 @@ class Series(BasePandasDataset):
         limit_direction="forward",
         limit_area=None,
         downcast=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             pandas.Series.interpolate,
@@ -773,7 +773,7 @@ class Series(BasePandasDataset):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def item(self):
@@ -883,7 +883,7 @@ class Series(BasePandasDataset):
         xerr=None,
         label=None,
         secondary_y=False,
-        **kwds
+        **kwds,
     ):
         return self._to_pandas().plot
 
@@ -900,7 +900,7 @@ class Series(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -912,7 +912,7 @@ class Series(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     product = prod
@@ -964,7 +964,7 @@ class Series(BasePandasDataset):
         copy=True,
         inplace=False,
         level=None,
-        errors="ignore"
+        errors="ignore",
     ):
         non_mapping = is_scalar(index) or (
             is_list_like(index) and not is_dict_like(index)
@@ -1119,7 +1119,7 @@ class Series(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1131,7 +1131,7 @@ class Series(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     def swaplevel(self, i=-2, j=-1, copy=True):

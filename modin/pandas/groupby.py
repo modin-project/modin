@@ -40,7 +40,7 @@ class DataFrameGroupBy(object):
         squeeze,
         idx_name,
         drop,
-        **kwargs
+        **kwargs,
     ):
         self._axis = axis
         self._idx_name = idx_name
@@ -286,7 +286,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 idx_name=self._idx_name,
                 drop=self._drop,
-                **kwargs
+                **kwargs,
             )
         return SeriesGroupBy(
             self._df[key],
@@ -294,7 +294,7 @@ class DataFrameGroupBy(object):
             self._axis,
             idx_name=self._idx_name,
             drop=False,
-            **kwargs
+            **kwargs,
         )
 
     def cummin(self, axis=0, **kwargs):
@@ -387,7 +387,7 @@ class DataFrameGroupBy(object):
         ax=None,
         figsize=None,
         layout=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             lambda df: df.boxplot(
@@ -400,7 +400,7 @@ class DataFrameGroupBy(object):
                 ax=ax,
                 figsize=figsize,
                 layout=layout,
-                **kwargs
+                **kwargs,
             )
         )
 
