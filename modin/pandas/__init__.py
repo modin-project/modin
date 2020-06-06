@@ -240,10 +240,10 @@ def initialize_ray():
 
 DEFAULT_NPARTITIONS = 4
 _is_first_update = True
-
+client = None
 
 def _update_engine(publisher: Publisher):
-    global DEFAULT_NPARTITIONS, _is_first_update
+    global DEFAULT_NPARTITIONS, _is_first_update, client
 
     num_cpus = DEFAULT_NPARTITIONS
     if publisher.get() == "Ray":
