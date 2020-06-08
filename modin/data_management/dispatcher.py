@@ -19,6 +19,23 @@ from modin import __partition_format__ as partition_format
 from modin.data_management import factories
 
 
+class StubIoEngine(object):
+    def __getattribute__(self, name):
+        def stub():
+            raise NotImplementedError("Method {} is not implemented".format(name))
+
+        return stub
+
+
+class StubFactory(factories.BaseFactory):
+    """
+    A factory that does nothing more than raise NotImplementedError when any method is called.
+    Used for testing purposes.
+    """
+
+    io_cls = StubIoEngine()
+
+
 class EngineDispatcher(object):
     """
     This is the 'ingestion' point which knows where to route the work
@@ -33,7 +50,9 @@ class EngineDispatcher(object):
         else:
             factory_name = "{}On{}Factory"
         cls.__engine = getattr(
-            factories, factory_name.format(partition_format, execution_engine)
+            factories,
+            factory_name.format(partition_format, execution_engine),
+            StubFactory,
         )
 
     @classmethod
