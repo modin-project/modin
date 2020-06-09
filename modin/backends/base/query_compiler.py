@@ -793,19 +793,19 @@ class BaseQueryCompiler(abc.ABC):
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
         pass
 
-    @abc.abstractmethod
-    def groupby_reduce(
-        self,
-        by,
-        axis,
-        groupby_args,
-        map_func,
-        map_args,
-        reduce_func=None,
-        reduce_args=None,
-        numeric_only=True,
-    ):
-        pass
+    # @abc.abstractmethod
+    # def groupby_reduce(
+    #     self,
+    #     by,
+    #     axis,
+    #     groupby_args,
+    #     map_func,
+    #     map_args,
+    #     reduce_func=None,
+    #     reduce_args=None,
+    #     numeric_only=True,
+    # ):
+    #     pass
 
     # END Manual Partitioning methods
 
