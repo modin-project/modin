@@ -2785,6 +2785,18 @@ def test_view():
     pandas_result = pandas_series.view(dtype="uint8")
     df_equals(modin_result, pandas_result)
 
+    modin_series = pd.Series([-20, -10, 0, 10, 20], dtype="int32")
+    pandas_series = pandas.Series([-20, -10, 0, 10, 20], dtype="int32")
+    modin_result = modin_series.view(dtype="float32")
+    pandas_result = pandas_series.view(dtype="float32")
+    df_equals(modin_result, pandas_result)
+
+    modin_series = pd.Series([-200, -100, 0, 100, 200], dtype="int64")
+    pandas_series = pandas.Series([-200, -100, 0, 100, 200], dtype="int64")
+    modin_result = modin_series.view(dtype="float64")
+    pandas_result = pandas_series.view(dtype="float64")
+    df_equals(modin_result, pandas_result)
+
 
 def test_where():
     frame_data = random_state.randn(100)
