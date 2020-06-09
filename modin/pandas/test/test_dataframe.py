@@ -2593,13 +2593,6 @@ class TestDataFrameDefault:
                 modin_result = modin_df.to_records()
                 assert np.array_equal(modin_result, pandas_result)
 
-    def test_to_datetime(self):
-        modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
-        pandas_df = pandas.DataFrame(
-            {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
-        )
-        df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_string(self, request, data):
         modin_df = pd.DataFrame(data)
