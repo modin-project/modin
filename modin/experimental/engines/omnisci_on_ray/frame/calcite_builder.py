@@ -3,6 +3,7 @@ from .calcite_algebra import *
 from .df_algebra import *
 
 from collections import abc
+from pandas.core.dtypes.common import _get_dtype
 
 
 class CalciteBuilder:
@@ -233,7 +234,7 @@ class CalciteBuilder:
         # TODO: track column dtype and compute aggregate dtype,
         # actually INTEGER works for floats too with the correct result,
         # so not a big issue right now
-        res_type = OpExprType(int, True)
+        res_type = _get_dtype(int)
         return AggregateExpr(self.simple_aggregates[agg], [col_idx], res_type, False)
 
     def _process_transform(self, op):
@@ -262,7 +263,7 @@ class CalciteBuilder:
         ), "Only cases when both frames contain key column are supported"
 
         """ Join, only equal-join supported """
-        res_type = OpExprType(bool, False)
+        res_type = _get_dtype(bool)
         condition = OpExpr(
             "=", [self._ref(left, op.on), self._ref(right, op.on)], res_type
         )

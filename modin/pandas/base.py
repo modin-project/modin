@@ -14,7 +14,7 @@
 import numpy as np
 from numpy import nan
 import pandas
-from pandas.api.types import is_scalar
+from pandas.api.types import is_scalar as pd_is_scalar
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
 from pandas.core.dtypes.common import (
@@ -36,6 +36,10 @@ from modin.error_message import ErrorMessage
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
+
+
+def is_scalar(obj):
+    return not isinstance(obj, BasePandasDataset) and pd_is_scalar(obj)
 
 
 class BasePandasDataset(object):
@@ -3272,7 +3276,7 @@ class BasePandasDataset(object):
         return self.ge(right)
 
     def __getitem__(self, key):
-        if len(self) == 0:
+        if self._query_compiler.default_for_empty and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check

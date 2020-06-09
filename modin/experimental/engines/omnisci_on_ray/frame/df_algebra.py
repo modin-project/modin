@@ -159,12 +159,12 @@ class TransformNode(DFAlgNode):
         self.keep_index = keep_index
 
     def copy(self):
-        return TransformNode(self.input[0], self.exprs)
+        return TransformNode(self.input[0], self.exprs, self.keep_index)
 
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
         for k, v in self.exprs.items():
-            res += f"{prefix}  {k}: {v}"
+            res += f"{prefix}  {k}: {v}\n"
         res += self._prints_input(prefix + "  ")
         return res
 

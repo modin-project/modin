@@ -262,3 +262,59 @@ class TestMerge:
             return df1.merge(df2, how=how)
 
         run_and_compare(default_merge, data=self.data, data2=self.data2, how=how)
+
+
+class TestBinaryOp:
+    data = {
+        "a": [1, 1, 1, 1, 1],
+        "b": [10, 10, 10, 10, 10],
+        "c": [100, 100, 100, 100, 100],
+        "d": [1000, 1000, 1000, 1000, 1000],
+    }
+    data2 = {
+        "a": [1, 1, 1, 1, 1],
+        "f": [2, 2, 2, 2, 2],
+        "b": [3, 3, 3, 3, 3],
+        "d": [4, 4, 4, 4, 4],
+    }
+    fill_values = [None, 0, 1]
+
+    def test_add_cst(self):
+        def add(lib, df):
+            return df + 1
+
+        run_and_compare(add, data=self.data)
+
+    def test_add_list(self):
+        def add(lib, df):
+            return df + [1, 2, 3, 4]
+
+        run_and_compare(add, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_add_method_columns(self, fill_value):
+        def add1(lib, df, fill_value):
+            return df["a"].add(df["b"], fill_value=fill_value)
+
+        def add2(lib, df, fill_value):
+            return df[["a", "c"]].add(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(add1, data=self.data, fill_value=fill_value)
+        run_and_compare(add2, data=self.data, fill_value=fill_value)
+
+    def test_add_columns(self):
+        def add1(lib, df):
+            return df["a"] + df["b"]
+
+        def add2(lib, df):
+            return df[["a", "c"]] + df[["b", "a"]]
+
+        run_and_compare(add1, data=self.data)
+        run_and_compare(add2, data=self.data)
+
+    def test_add_columns_and_assign(self):
+        def add(lib, df):
+            df["sum"] = df["a"] + df["b"]
+            return df
+
+        run_and_compare(add, data=self.data)

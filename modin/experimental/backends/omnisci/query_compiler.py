@@ -35,6 +35,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     default_for_empty = False
 
     def __init__(self, frame):
+        assert frame is not None
         self._modin_frame = frame
 
     def to_pandas(self):
@@ -210,11 +211,29 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    def _bin_op(self, other, op_name, **kwargs):
+        level = kwargs.get("level", None)
+        if level is not None:
+            raise NotImplementedError(f"{op_name} doesn't support levels")
+
+        if isinstance(other, DFAlgQueryCompiler):
+            other = other._modin_frame
+
+        new_modin_frame = self._modin_frame.bin_op(other, op_name, **kwargs)
+        return self.__constructor__(new_modin_frame)
+
+    def add(self, other, **kwargs):
+        return self._bin_op(other, "add", **kwargs)
+
     def free(self):
         return
 
     index = property(_get_index, _set_index)
     columns = property(_get_columns, _set_columns)
+
+    @property
+    def dtypes(self):
+        return self._modin_frame.dtypes
 
     __and__ = DFAlgNotSupported("__and__")
     __or__ = DFAlgNotSupported("__or__")
@@ -223,7 +242,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     __rxor__ = DFAlgNotSupported("__rxor__")
     __xor__ = DFAlgNotSupported("__xor__")
     abs = DFAlgNotSupported("abs")
-    add = DFAlgNotSupported("add")
     add_prefix = DFAlgNotSupported("add_prefix")
     add_suffix = DFAlgNotSupported("add_suffix")
     all = DFAlgNotSupported("all")

@@ -105,6 +105,20 @@ class Series(BasePandasDataset):
             self._query_compiler = self._query_compiler
             self.name = name
 
+    def copy(self, deep=True):
+        # We always store series as a column, so copy is also a column.
+        # Provide ctor with a hint to avoid index computation for lazy
+        # frame.
+        if deep:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.copy(), shape_hint="column"
+            )
+        new_obj = self.__constructor__(
+            query_compiler=self._query_compiler, shape_hint="column"
+        )
+        self._add_sibling(new_obj)
+        return new_obj
+
     def _get_name(self):
         name = self._query_compiler.columns[0]
         if name == "__reduced__":
@@ -137,15 +151,17 @@ class Series(BasePandasDataset):
             isinstance(new_query_compiler, type(self._query_compiler))
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
-        if not inplace and (
-            len(new_query_compiler.columns) == 1 or len(new_query_compiler.index) == 1
-        ):
-            return Series(query_compiler=new_query_compiler)
-        elif not inplace:
-            # This can happen with things like `reset_index` where we can add columns.
-            from .dataframe import DataFrame
+        if not inplace:
+            if len(new_query_compiler.columns) == 1:
+                # That's probably can produce incorrect result for squeezed series
+                return Series(query_compiler=new_query_compiler, shape_hint="column")
+            elif len(new_query_compiler.index) == 1:
+                return Series(query_compiler=new_query_compiler)
+            else:
+                # This can happen with things like `reset_index` where we can add columns.
+                from .dataframe import DataFrame
 
-            return DataFrame(query_compiler=new_query_compiler)
+                return DataFrame(query_compiler=new_query_compiler)
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
 
