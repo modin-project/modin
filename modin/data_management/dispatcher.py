@@ -19,6 +19,15 @@ from modin import __partition_format__ as partition_format
 from modin.data_management import factories
 
 
+class FactoryNotFoundError(AttributeError):
+    def __init__(self, partition_format, execution_engine):
+        super().__init__(
+            "Cannot find a factory for partition '{}' and execution engine '{}'. Potential reason might be incorrect environment variable value for MODIN_BACKEND or MODIN_ENGINE".format(
+                partition_format, execution_engine
+            )
+        )
+
+
 class StubIoEngine(object):
     def __init__(self, factory_name=""):
         self.factory_name = factory_name or "Unknown"
@@ -66,8 +75,8 @@ class EngineDispatcher(object):
             cls.__engine = getattr(factories, factory_name)
         except AttributeError:
             if not experimental:
-                # only allow missing factories in experimenal mode
-                raise
+                # allow missing factories in experimenal mode only
+                raise FactoryNotFoundError(partition_format, execution_engine)
             cls.__engine = StubFactory.set_failing_name(factory_name)
 
     @classmethod
