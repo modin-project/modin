@@ -2485,10 +2485,21 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).sem()
 
-    def test_shift(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).shift()
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_shift(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+
+        df_equals(modin_df.shift(), pandas_df.shift())
+        df_equals(modin_df.shift(fill_value=777), pandas_df.shift(fill_value=777))
+        df_equals(modin_df.shift(periods=7), pandas_df.shift(periods=7))
+        df_equals(
+            modin_df.shift(periods=-3, axis=0), pandas_df.shift(periods=-3, axis=0)
+        )
+        df_equals(modin_df.shift(periods=5, axis=1), pandas_df.shift(periods=5, axis=1))
+        df_equals(
+            modin_df.shift(periods=-5, axis=1), pandas_df.shift(periods=-5, axis=1)
+        )
 
     def test_slice_shift(self):
         data = test_data_values[0]
