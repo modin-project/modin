@@ -272,13 +272,11 @@ def test_simple_row_groupby(by, as_index):
         is_default=True,
     )
 
-    # pandas is inconsistent between test environment and here, more investigation is
-    # required to understand why this is a mismatch because we default to pandas for
-    # this particular case.
-    if by != ["col1", "col2"]:
-        apply_functions = [lambda df: df.sum(), min]
-        for func in apply_functions:
-            eval_apply(modin_groupby, pandas_groupby, func)
+    # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
+    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+    apply_functions = [lambda df: df.sum(), min]
+    for func in apply_functions:
+        eval_apply(modin_groupby, pandas_groupby, func)
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first(), is_default=True)
