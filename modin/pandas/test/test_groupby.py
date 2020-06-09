@@ -16,7 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
-from .utils import df_equals
+from .utils import df_equals, check_df_columns_have_nans
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -251,13 +251,7 @@ def test_simple_row_groupby(by, as_index):
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax(), is_default=True)
     eval_ndim(modin_groupby, pandas_groupby)
-    if (
-        pandas.api.types.is_list_like(by)
-        and not any(x in modin_df.columns and modin_df[x].hasnans for x in by)
-        or not pandas.api.types.is_list_like(by)
-        and by in modin_df.columns
-        and not modin_df[by].hasnans
-    ):
+    if not check_df_columns_have_nans(modin_df, by):
         # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
         eval_cumsum(modin_groupby, pandas_groupby)
         eval_cummax(modin_groupby, pandas_groupby)
@@ -320,9 +314,11 @@ def test_simple_row_groupby(by, as_index):
         is_default=True,
     )
 
-    transform_functions = [lambda df: df + 4, lambda df: -df - 10]
-    for func in transform_functions:
-        eval_transform(modin_groupby, pandas_groupby, func)
+    if not check_df_columns_have_nans(modin_df, by):
+        # Pandas groupby.transform does not work correctly with NaN values in grouping columns. See Pandas bug 17093.
+        transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+        for func in transform_functions:
+            eval_transform(modin_groupby, pandas_groupby, func)
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
     for func in pipe_functions:
