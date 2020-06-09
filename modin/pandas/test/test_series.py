@@ -1338,6 +1338,63 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
+def test_dt():
+    data = pd.date_range("2016-12-31", "2017-01-08", freq="D", tz="Europe/Berlin")
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+
+    df_equals(modin_series.dt.date, pandas_series.dt.date)
+    df_equals(modin_series.dt.time, pandas_series.dt.time)
+    df_equals(modin_series.dt.timetz, pandas_series.dt.timetz)
+    df_equals(modin_series.dt.year, pandas_series.dt.year)
+    df_equals(modin_series.dt.month, pandas_series.dt.month)
+    df_equals(modin_series.dt.day, pandas_series.dt.day)
+    df_equals(modin_series.dt.hour, pandas_series.dt.hour)
+    df_equals(modin_series.dt.minute, pandas_series.dt.minute)
+    df_equals(modin_series.dt.second, pandas_series.dt.second)
+    df_equals(modin_series.dt.microsecond, pandas_series.dt.microsecond)
+    df_equals(modin_series.dt.nanosecond, pandas_series.dt.nanosecond)
+    df_equals(modin_series.dt.week, pandas_series.dt.week)
+    df_equals(modin_series.dt.weekofyear, pandas_series.dt.weekofyear)
+    df_equals(modin_series.dt.dayofweek, pandas_series.dt.dayofweek)
+    df_equals(modin_series.dt.weekday, pandas_series.dt.weekday)
+    df_equals(modin_series.dt.dayofyear, pandas_series.dt.dayofyear)
+    df_equals(modin_series.dt.quarter, pandas_series.dt.quarter)
+    df_equals(modin_series.dt.is_month_start, pandas_series.dt.is_month_start)
+    df_equals(modin_series.dt.is_month_end, pandas_series.dt.is_month_end)
+    df_equals(modin_series.dt.is_quarter_start, pandas_series.dt.is_quarter_start)
+    df_equals(modin_series.dt.is_quarter_end, pandas_series.dt.is_quarter_end)
+    df_equals(modin_series.dt.is_year_start, pandas_series.dt.is_year_start)
+    df_equals(modin_series.dt.is_year_end, pandas_series.dt.is_year_end)
+    df_equals(modin_series.dt.is_leap_year, pandas_series.dt.is_leap_year)
+    df_equals(modin_series.dt.daysinmonth, pandas_series.dt.daysinmonth)
+    df_equals(modin_series.dt.days_in_month, pandas_series.dt.days_in_month)
+    assert modin_series.dt.tz == pandas_series.dt.tz
+    assert modin_series.dt.freq == pandas_series.dt.freq
+    df_equals(modin_series.dt.to_period("W"), pandas_series.dt.to_period("W"))
+    assert_array_equal(
+        modin_series.dt.to_pydatetime(), pandas_series.dt.to_pydatetime()
+    )
+    df_equals(
+        modin_series.dt.tz_localize(None), pandas_series.dt.tz_localize(None),
+    )
+    df_equals(
+        modin_series.dt.tz_convert(tz="Europe/Berlin"),
+        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+    )
+
+    df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
+    df_equals(
+        modin_series.dt.strftime("%B %d, %Y, %r"),
+        pandas_series.dt.strftime("%B %d, %Y, %r"),
+    )
+    df_equals(modin_series.dt.round("H"), pandas_series.dt.round("H"))
+    df_equals(modin_series.dt.floor("H"), pandas_series.dt.floor("H"))
+    df_equals(modin_series.dt.ceil("H"), pandas_series.dt.ceil("H"))
+    df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
+    df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "keep", ["last", "first", False], ids=["last", "first", "False"]
@@ -2540,12 +2597,6 @@ def test_explode(data):
         modin_result = modin_series.explode()
     pandas_result = pandas_series.explode()
     df_equals(modin_result, pandas_result)
-
-
-def test_to_datetime():
-    modin_s = pd.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    pandas_s = pandas.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    df_equals(pd.to_datetime(modin_s), pandas.to_datetime(pandas_s))
 
 
 def test_to_period():

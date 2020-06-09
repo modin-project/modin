@@ -7,7 +7,13 @@ from pandas.core.dtypes.common import _get_dtype
 
 
 class CalciteBuilder:
-    simple_aggregates = {"sum": "SUM", "mean": "AVG", "max": "MAX", "min": "MIN"}
+    simple_aggregates = {
+        "sum": "SUM",
+        "mean": "AVG",
+        "max": "MAX",
+        "min": "MIN",
+        "size": "COUNT",
+    }
 
     class InputContext:
         def __init__(self, input_frames, input_nodes):
