@@ -163,6 +163,9 @@ class TransformNode(DFAlgNode):
 
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
+        if self.keep_index and self.input[0]._index_cols:
+            for c in self.input[0]._index_cols:
+                res += f"{prefix}  {c}: keep index\n"
         for k, v in self.exprs.items():
             res += f"{prefix}  {k}: {v}\n"
         res += self._prints_input(prefix + "  ")
