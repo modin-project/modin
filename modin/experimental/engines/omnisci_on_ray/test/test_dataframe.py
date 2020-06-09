@@ -131,6 +131,17 @@ class TestGroupby:
 
         run_and_compare(groupby_sum, data=self.data, cols=cols, as_index=as_index)
 
+    def test_groupby_agg_count(self):
+        df = pd.DataFrame(self.data)
+        ref = df.groupby("a").agg({"b": "count"})
+
+        modin_df = mpd.DataFrame(self.data)
+        modin_df = modin_df.groupby("a").agg({"b": "count"})
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
     # TODO: emulate taxi queries with group by category types when we have loading
     #       using arrow
     #       Another way of doing taxi q1 is
