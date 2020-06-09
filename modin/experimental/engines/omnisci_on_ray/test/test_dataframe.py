@@ -131,6 +131,32 @@ class TestGroupby:
 
         run_and_compare(groupby_sum, data=self.data, cols=cols, as_index=as_index)
 
+    # TODO: emulate taxi queries with group by category types when we have loading
+    #       using arrow
+    #       Another way of doing taxi q1 is
+    #       res = df.groupby("cab_type").size() - this should be tested later as well
+    def test_taxi_q1(self):
+        df = pd.DataFrame(self.data)
+        ref = df.groupby("a").agg({"b": "size"})
+
+        modin_df = mpd.DataFrame(self.data)
+        modin_df = modin_df.groupby("a").agg({"b": "size"})
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
+    def test_taxi_q2(self):
+        df = pd.DataFrame(self.data)
+        ref = df.groupby("a").agg({"b": "mean"})
+
+        modin_df = mpd.DataFrame(self.data)
+        modin_df = modin_df.groupby("a").agg({"b": "mean"})
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
     h2o_data = {
         "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
         "id2": ["id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2"],
