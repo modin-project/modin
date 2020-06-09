@@ -1237,7 +1237,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             groupby_args["as_index"] = True
 
             def compute_groupby(df):
-                part_func_dict = {k:v for k, v in func_dict.items() if k in df.columns}
+                part_func_dict = {k: v for k, v in func_dict.items() if k in df.columns}
                 grouped_df = df.groupby(by=by, axis=0, **groupby_args)
                 return grouped_df.agg(part_func_dict, **agg_args)
 
@@ -1508,3 +1508,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             item_to_distribute=broadcasted_items,
         )
         return self.__constructor__(new_modin_frame)
+
+    def has_multiindex(self):
+        return isinstance(self.index, pandas.MultiIndex)

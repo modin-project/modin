@@ -61,7 +61,7 @@ class InputMapper:
 
 
 class BaseExpr(abc.ABC):
-    binary_operations = {"add": "+"}
+    binary_operations = {"add": "+", "sub": "-"}
 
     preserve_dtype_math_ops = {"add", "sub", "mul"}
     promote_to_float_math_ops = {"div"}

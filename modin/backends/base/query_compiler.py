@@ -837,3 +837,7 @@ class BaseQueryCompiler(abc.ABC):
         return self.drop(columns=[key])
 
     # END __delitem__
+
+    @abc.abstractmethod
+    def has_multiindex(self):
+        pass

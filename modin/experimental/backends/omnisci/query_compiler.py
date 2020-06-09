@@ -48,7 +48,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):
-        return self.__constructor__(self._modin_frame.copy())
+        return self.__constructor__(self._modin_frame)
 
     def getitem_column_array(self, key, numeric=False):
         if numeric:
@@ -225,6 +225,21 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def add(self, other, **kwargs):
         return self._bin_op(other, "add", **kwargs)
 
+    def sub(self, other, **kwargs):
+        return self._bin_op(other, "sub", **kwargs)
+
+    def reset_index(self, **kwargs):
+        level = kwargs.get("level", None)
+        if level is not None:
+            raise NotImplementedError("reset_index doesn't support level arg yet")
+
+        drop = kwargs.get("drop", False)
+
+        return self.__constructor__(self._modin_frame.reset_index(drop))
+
+    def has_multiindex(self):
+        return self._modin_frame.has_multiindex()
+
     def free(self):
         return
 
@@ -300,7 +315,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     query = DFAlgNotSupported("query")
     rank = DFAlgNotSupported("rank")
     reindex = DFAlgNotSupported("reindex")
-    reset_index = DFAlgNotSupported("reset_index")
     rfloordiv = DFAlgNotSupported("rfloordiv")
     rmod = DFAlgNotSupported("rmod")
     round = DFAlgNotSupported("round")
@@ -310,7 +324,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     skew = DFAlgNotSupported("skew")
     sort_index = DFAlgNotSupported("sort_index")
     std = DFAlgNotSupported("std")
-    sub = DFAlgNotSupported("sub")
     sum = DFAlgNotSupported("sum")
     tail = DFAlgNotSupported("tail")
     to_numpy = DFAlgNotSupported("to_numpy")

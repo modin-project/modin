@@ -2238,7 +2238,7 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # TODO Implement level
-        if level is not None or isinstance(self.index, pandas.MultiIndex):
+        if level is not None or self._query_compiler.has_multiindex():
             new_query_compiler = self._default_to_pandas(
                 "reset_index",
                 level=level,
@@ -2252,7 +2252,7 @@ class BasePandasDataset(object):
         # exist.
         elif (
             not drop
-            and not isinstance(self.index, pandas.MultiIndex)
+            and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
@@ -3280,9 +3280,11 @@ class BasePandasDataset(object):
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
-        indexer = convert_to_index_sliceable(
-            getattr(pandas, self.__name__)(index=self.index), key
-        )
+        indexer = None
+        if isinstance(key, slice) or (isinstance(key, str) and key not in self.columns):
+            indexer = convert_to_index_sliceable(
+                getattr(pandas, self.__name__)(index=self.index), key
+            )
         if indexer is not None:
             return self._getitem_slice(indexer)
         else:

@@ -233,6 +233,29 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    def test_h2o_q7(self):
+        df = self._get_h2o_df()
+
+        ref = (
+            df.groupby(["id3"], observed=True)
+            .agg({"v1": "max", "v2": "min"})
+            .assign(range_v1_v2=lambda x: x["v1"] - x["v2"])[["range_v1_v2"]]
+        )
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(["id3"], observed=True).agg(
+            {"v1": "max", "v2": "min"}
+        )
+        modin_df["range_v1_v2"] = modin_df["v1"] - modin_df["v2"]
+        modin_df = modin_df[["range_v1_v2"]]
+        modin_df.reset_index(inplace=True)
+
+        exp = to_pandas(modin_df)
+        exp["id3"] = exp["id3"].astype("category")
+
+        df_equals(ref, exp)
+
 
 class TestMerge:
     data = {
