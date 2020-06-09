@@ -88,6 +88,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         # print("Execution result:")
         # print(df)
+        # print(df.dtypes)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class.put(df)

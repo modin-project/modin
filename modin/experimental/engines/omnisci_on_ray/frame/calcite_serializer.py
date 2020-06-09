@@ -6,10 +6,7 @@ import json
 
 
 class CalciteSerializer:
-    type_strings = {
-        int: "INTEGER",
-        bool: "BOOLEAN",
-    }
+    dtype_strings = {"int64": "INTEGER", "bool": "BOOLEAN", "float64": "DOUBLE"}
 
     def serialize(self, plan):
         return json.dumps({"rels": [self.serialize_item(node) for node in plan]})
@@ -61,19 +58,22 @@ class CalciteSerializer:
                 res[k] = self.serialize_item(v)
         return res
 
+    def serialize_typed_obj(self, obj):
+        res = self.serialize_obj(obj)
+        res["type"] = self.serialize_dtype(obj._dtype)
+        return res
+
     def serialize_expr(self, expr):
         if isinstance(expr, LiteralExpr):
             return self.serialize_literal(expr)
-        elif isinstance(expr, OpExprType):
-            return self.serialize_type(expr)
         elif isinstance(expr, CalciteInputRefExpr):
             return self.serialize_obj(expr)
         elif isinstance(expr, CalciteInputIdxExpr):
             return self.serialize_input_idx(expr)
         elif isinstance(expr, OpExpr):
-            return self.serialize_obj(expr)
+            return self.serialize_typed_obj(expr)
         elif isinstance(expr, AggregateExpr):
-            return self.serialize_obj(expr)
+            return self.serialize_typed_obj(expr)
         else:
             raise NotImplementedError(
                 "Can not serialize {}".format(type(expr).__name__)
@@ -101,9 +101,8 @@ class CalciteSerializer:
             "type_precision": 19,
         }
 
-    def serialize_type(self, typ):
-        assert typ.type in type(self).type_strings
-        return {"type": type(self).type_strings[typ.type], "nullable": typ.nullable}
+    def serialize_dtype(self, dtype):
+        return {"type": type(self).dtype_strings[str(dtype)], "nullable": True}
 
     def serialize_input_idx(self, expr):
         return expr.input
