@@ -250,7 +250,8 @@ class DataFrameGroupBy(object):
 
     def apply(self, func, *args, **kwargs):
         return self._apply_agg_function(
-            lambda df: df.apply(func, *args, **kwargs), drop=self._as_index
+            # Grouping column in never dropped in groupby.apply, so drop=False
+            lambda df: df.apply(func, *args, **kwargs), drop=False
         )
 
     @property
