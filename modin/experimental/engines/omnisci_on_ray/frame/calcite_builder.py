@@ -7,7 +7,15 @@ from pandas.core.dtypes.common import _get_dtype
 
 
 class CalciteBuilder:
-    simple_aggregates = {"sum": "SUM", "mean": "AVG", "count": "COUNT", "size": "COUNT"}
+
+    simple_aggregates = {
+        "sum": "SUM",
+        "mean": "AVG",
+        "max": "MAX",
+        "min": "MIN",
+        "size": "COUNT",
+        "count": "COUNT",
+    }
     no_arg_aggregates = {"size"}
 
     class InputContext:

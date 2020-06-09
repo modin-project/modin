@@ -92,31 +92,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if partitions is not None:
             self._filter_empties()
 
-    def copy(self):
-        """Copy this object.
-
-        Returns:
-            A copied version of this object.
-        """
-        index_copy = self._index_cache.copy() if self._index_cache else None
-        row_lengths = (
-            self._row_lengths_cache.copy() if self._row_lengths_cache else None
-        )
-        column_widths = (
-            self._column_widths_cache.copy() if self._column_widths_cache else None
-        )
-        dtypes = self._dtypes.copy()
-        return self.__constructor__(
-            self._partitions,
-            index_copy,
-            self.columns.copy(),
-            row_lengths,
-            column_widths,
-            dtypes,
-            op=self._op.copy(),
-            index_cols=index_copy,
-        )
-
     def id_str(self):
         return f"frame${self.id}"
 
@@ -153,8 +128,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
-            res = self._dtypes[new_index]
-            res.append(self._dtypes[new_columns])
+            res = self._dtypes[new_index + new_columns]
         else:
             res = self._dtypes[new_columns]
         return res
@@ -566,6 +540,32 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def _set_index(self, new_index):
         raise NotImplementedError("OmnisciOnRayFrame._set_index is not yet suported")
 
+    def reset_index(self, drop):
+        if drop:
+            exprs = OrderedDict()
+            for c in self.columns:
+                exprs[c] = self.ref(c)
+            return self.__constructor__(
+                columns=self.columns,
+                dtypes=self._dtypes_for_exprs(None, exprs),
+                op=TransformNode(self, exprs, False),
+                index_cols=None,
+            )
+        else:
+            if self._index_cols is None:
+                raise NotImplementedError(
+                    "default index reset with no drop is not supported"
+                )
+            new_columns = Index.__new__(
+                Index, data=self._table_cols, dtype=self.columns.dtype
+            )
+            return self.__constructor__(
+                columns=new_columns,
+                dtypes=self._dtypes_for_cols(None, new_columns),
+                op=self._op,
+                index_cols=None,
+            )
+
     def _set_columns(self, new_columns):
         exprs = {new: self.ref(old) for old, new in zip(self.columns, new_columns)}
         return self.__constructor__(
@@ -580,6 +580,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     columns = property(_get_columns)
     index = property(_get_index, _set_index)
+
+    def has_multiindex(self):
+        if self._index_cache is not None:
+            return isinstance(self._index_cache, pandas.MultiIndex)
+        return self._index_cols is not None and len(self._index_cols) > 1
 
     def to_pandas(self):
         self._execute()
