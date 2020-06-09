@@ -6,7 +6,7 @@ from collections import abc
 
 
 class CalciteBuilder:
-    simple_aggregates = {"sum": "SUM", "mean": "AVG"}
+    simple_aggregates = {"sum": "SUM", "mean": "AVG", "size": "COUNT"}
 
     class InputContext:
         def __init__(self, input_frames, input_nodes):
