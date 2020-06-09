@@ -247,15 +247,11 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update(self, other, **kwargs):
-        """Uses other manager to update corresponding values in this manager.
+    def df_update(self, other, **kwargs):
+        pass
 
-        Args:
-            other: The other manager.
-
-        Returns:
-            New QueryCompiler with updated data and index.
-        """
+    @abc.abstractmethod
+    def series_update(self, other, **kwargs):
         pass
 
     @abc.abstractmethod

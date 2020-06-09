@@ -116,12 +116,17 @@ def _dt_func_map(func_name):
 
 
 def copy_df_for_func(func):
-    """Create a function that copies the dataframe, likely because `func` is inplace.
+    """
+    Create a function that copies the dataframe, likely because `func` is inplace.
 
-    Args:
-        func: The function, usually updates a dataframe inplace.
+    Parameters
+    ----------
+    func : callable
+        The function, usually updates a dataframe inplace.
 
-    Returns:
+    Returns
+    -------
+    callable
         A callable function to be applied in the partitions
     """
 
@@ -303,7 +308,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
     __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
     __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
-    update = BinaryFunction.register(copy_df_for_func(pandas.DataFrame.update))
+    df_update = BinaryFunction.register(
+        copy_df_for_func(pandas.DataFrame.update), join_type="left"
+    )
+    series_update = BinaryFunction.register(
+        copy_df_for_func(lambda x, y: pandas.Series.update(x.squeeze(), y.squeeze())),
+        join_type="left",
+    )
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.

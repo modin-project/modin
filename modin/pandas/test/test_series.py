@@ -2792,14 +2792,30 @@ def test_unstack():
         s.unstack()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_update(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        try:
-            modin_series.update(pd.Series([4.1 for _ in modin_series]))
-        except Exception:
-            pass
+def test_update():
+    modin_series = pd.Series([1, 2, 3])
+    modin_series.update(pd.Series([4, 5, 6]))
+    pandas_series = pandas.Series([1, 2, 3])
+    pandas_series.update(pandas.Series([4, 5, 6]))
+    df_equals(modin_series, pandas_series)
+
+    modin_series = pd.Series(["a", "b", "c"])
+    modin_series.update(pd.Series(["d", "e"], index=[0, 2]))
+    pandas_series = pandas.Series(["a", "b", "c"])
+    pandas_series.update(pandas.Series(["d", "e"], index=[0, 2]))
+    df_equals(modin_series, pandas_series)
+
+    modin_series = pd.Series([1, 2, 3])
+    modin_series.update(pd.Series([4, 5, 6, 7, 8]))
+    pandas_series = pandas.Series([1, 2, 3])
+    pandas_series.update(pandas.Series([4, 5, 6, 7, 8]))
+    df_equals(modin_series, pandas_series)
+
+    modin_series = pd.Series([1, 2, 3])
+    modin_series.update(pd.Series([4, np.nan, 6]))
+    pandas_series = pandas.Series([1, 2, 3])
+    pandas_series.update(pandas.Series([4, np.nan, 6]))
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

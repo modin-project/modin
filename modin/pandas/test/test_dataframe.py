@@ -1612,16 +1612,40 @@ class TestDataFrameMapMetadata:
         df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
     def test_update(self):
-        df = pd.DataFrame(
-            [[1.5, np.nan, 3.0], [1.5, np.nan, 3.0], [1.5, np.nan, 3], [1.5, np.nan, 3]]
-        )
-        other = pd.DataFrame([[3.6, 2.0, np.nan], [np.nan, np.nan, 7]], index=[1, 3])
+        modin_df = pd.DataFrame({"A": [1, 2, 3], "B": [400, 500, 600]})
+        other_modin_df = pd.DataFrame({"B": [4, 5, 6], "C": [7, 8, 9]})
+        modin_df.update(other_modin_df)
+        pandas_df = pandas.DataFrame({"A": [1, 2, 3], "B": [400, 500, 600]})
+        other_pandas_df = pandas.DataFrame({"B": [4, 5, 6], "C": [7, 8, 9]})
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
 
-        df.update(other)
-        expected = pd.DataFrame(
-            [[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3], [1.5, np.nan, 7.0]]
-        )
-        df_equals(df, expected)
+        modin_df = pd.DataFrame({"A": ["a", "b", "c"], "B": ["x", "y", "z"]})
+        other_modin_df = pd.DataFrame({"B": ["d", "e", "f", "g", "h", "i"]})
+        modin_df.update(other_modin_df)
+        pandas_df = pandas.DataFrame({"A": ["a", "b", "c"], "B": ["x", "y", "z"]})
+        other_pandas_df = pandas.DataFrame({"B": ["d", "e", "f", "g", "h", "i"]})
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
+
+        modin_df = pd.DataFrame({"A": ["a", "b", "c"], "B": ["x", "y", "z"]})
+        other_modin_df = pd.DataFrame({"B": ["d", "e"]}, index=[1, 2])
+        modin_df.update(other_modin_df)
+        pandas_df = pandas.DataFrame({"A": ["a", "b", "c"], "B": ["x", "y", "z"]})
+        other_pandas_df = pandas.DataFrame({"B": ["d", "e"]}, index=[1, 2])
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
+
+        modin_df = pd.DataFrame({"A": [1, 2, 3], "B": [400, 500, 600]})
+        other_modin_df = pd.DataFrame({"B": [4, np.nan, 6]})
+        modin_df.update(other_modin_df)
+        pandas_df = pandas.DataFrame({"A": [1, 2, 3], "B": [400, 500, 600]})
+        other_pandas_df = pandas.DataFrame({"B": [4, np.nan, 6]})
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
+
+        with pytest.raises(ValueError):
+            pandas_df.update(other_pandas_df, errors="raise")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___neg__(self, request, data):
