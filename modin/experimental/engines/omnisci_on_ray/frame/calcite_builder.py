@@ -7,7 +7,7 @@ from pandas.core.dtypes.common import _get_dtype
 
 
 class CalciteBuilder:
-    simple_aggregates = {"sum": "SUM", "mean": "AVG", "size": "COUNT"}
+    simple_aggregates = {"sum": "SUM", "mean": "AVG", "count": "COUNT", "size": "COUNT"}
 
     class InputContext:
         def __init__(self, input_frames, input_nodes):
@@ -235,7 +235,12 @@ class CalciteBuilder:
         # actually INTEGER works for floats too with the correct result,
         # so not a big issue right now
         res_type = _get_dtype(int)
-        return AggregateExpr(self.simple_aggregates[agg], [col_idx], res_type, False)
+        # when we deal with 'size' aggregator no argument should be specified
+        if agg == "size":
+            arg = []
+        else:
+            arg = [col_idx]
+        return AggregateExpr(self.simple_aggregates[agg], arg, res_type, False)
 
     def _process_transform(self, op):
         frame = op.input[0]
