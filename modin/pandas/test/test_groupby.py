@@ -114,6 +114,8 @@ def test_mixed_dtypes_groupby(as_index):
 
         # TODO Add more apply functions
         apply_functions = [lambda df: df.sum(), min]
+        # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
+        pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
         for func in apply_functions:
             eval_apply(modin_groupby, pandas_groupby, func)
 
