@@ -20,9 +20,16 @@ from modin.data_management import factories
 
 
 class StubIoEngine(object):
+    def __init__(self, factory_name=""):
+        self.factory_name = factory_name or "Unknown"
+
     def __getattribute__(self, name):
-        def stub():
-            raise NotImplementedError("Method {} is not implemented".format(name))
+        factory_name = self.factory_name  # for closure to bind the value
+
+        def stub(*args, **kw):
+            raise NotImplementedError(
+                "Method {}.{} is not implemented".format(factory_name, name)
+            )
 
         return stub
 
@@ -35,6 +42,11 @@ class StubFactory(factories.BaseFactory):
 
     io_cls = StubIoEngine()
 
+    @classmethod
+    def set_failing_name(cls, factory_name):
+        cls.io_cls = StubIoEngine(factory_name)
+        return cls
+
 
 class EngineDispatcher(object):
     """
@@ -46,14 +58,17 @@ class EngineDispatcher(object):
     @classmethod
     def _update_engine(cls):
         if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
-            factory_name = "Experimental{}On{}Factory"
+            factory_fmt, experimental = "Experimental{}On{}Factory", True
         else:
-            factory_name = "{}On{}Factory"
-        cls.__engine = getattr(
-            factories,
-            factory_name.format(partition_format, execution_engine),
-            StubFactory,
-        )
+            factory_fmt, experimental = "{}On{}Factory", False
+        factory_name = factory_fmt.format(partition_format, execution_engine)
+        try:
+            cls.__engine = getattr(factories, factory_name)
+        except AttributeError:
+            if not experimental:
+                # only allow missing factories in experimenal mode
+                raise
+            cls.__engine = StubFactory.set_failing_name(factory_name)
 
     @classmethod
     def from_pandas(cls, df):
