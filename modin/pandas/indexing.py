@@ -358,12 +358,26 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc):
-        row_lookup = (
-            pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
-        )
-        col_lookup = (
-            pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
-        )
+        if (
+            not isinstance(row_loc, slice)
+            or isinstance(row_loc, slice)
+            and row_loc.step is not None
+        ):
+            row_lookup = (
+                pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
+            )
+        else:
+            row_lookup = row_loc
+        if (
+            not isinstance(col_loc, slice)
+            or isinstance(col_loc, slice)
+            and col_loc.step is not None
+        ):
+            col_lookup = (
+                pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
+            )
+        else:
+            col_lookup = col_loc
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):

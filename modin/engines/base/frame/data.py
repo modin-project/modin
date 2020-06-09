@@ -344,6 +344,10 @@ class BasePandasFrame(object):
         BasePandasFrame
              A new BasePandasFrame from the mask provided.
         """
+        if isinstance(row_numeric_idx, slice) and row_numeric_idx == slice(None):
+            row_numeric_idx = None
+        if isinstance(col_numeric_idx, slice) and col_numeric_idx == slice(None):
+            col_numeric_idx = None
         if (
             row_indices is None
             and row_numeric_idx is None
@@ -355,10 +359,17 @@ class BasePandasFrame(object):
             row_numeric_idx = self.index.get_indexer_for(row_indices)
         if row_numeric_idx is not None:
             row_partitions_list = self._get_dict_of_block_index(1, row_numeric_idx)
-            new_row_lengths = [
-                len(indices) for _, indices in row_partitions_list.items()
-            ]
-            new_index = self.index[sorted(row_numeric_idx)]
+            if isinstance(row_numeric_idx, slice):
+                new_row_lengths = [
+                    len(range(*idx.indices(self._row_lengths[p])))
+                    for p, idx in row_partitions_list.items()
+                ]
+                new_index = self.index[row_numeric_idx]
+            else:
+                new_row_lengths = [
+                    len(indices) for _, indices in row_partitions_list.items()
+                ]
+                new_index = self.index[sorted(row_numeric_idx)]
         else:
             row_partitions_list = {
                 i: slice(None) for i in range(len(self._row_lengths))
@@ -415,10 +426,12 @@ class BasePandasFrame(object):
         # common case to keep it fast.
         if (
             row_numeric_idx is None
+            or isinstance(row_numeric_idx, slice)
             or len(row_numeric_idx) == 1
             or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
         ) and (
             col_numeric_idx is None
+            or isinstance(col_numeric_idx, slice)
             or len(col_numeric_idx) == 1
             or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
         ):
@@ -638,6 +651,62 @@ class BasePandasFrame(object):
             A mapping from partition to list of internal indices to extract from that
             partition.
         """
+        # Fasttrack slices
+        if isinstance(indices, slice):
+            if indices == slice(None):
+                return OrderedDict(
+                    zip(
+                        range(len(self.axes[axis])),
+                        [slice(None)] * len(self.axes[axis]),
+                    )
+                )
+            if indices.start is None or indices.start == 0:
+                last_part, last_idx = list(
+                    self._get_dict_of_block_index(axis, [indices.stop]).items()
+                )[0]
+                dict_of_slices = OrderedDict(
+                    zip(range(last_part), [slice(None)] * last_part)
+                )
+                dict_of_slices.update({last_part: slice(last_idx[0])})
+                return dict_of_slices
+            elif indices.stop is None or indices.stop >= len(self.axes[axis]):
+                first_part, first_idx = list(
+                    self._get_dict_of_block_index(axis, [indices.start]).items()
+                )[0]
+                dict_of_slices = OrderedDict({first_part: slice(first_idx[0], None)})
+                num_partitions = np.size(self._partitions, axis=axis)
+                part_list = range(first_part + 1, num_partitions)
+                dict_of_slices.update(
+                    OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                )
+                return dict_of_slices
+            else:
+                first_part, first_idx = list(
+                    self._get_dict_of_block_index(axis, [indices.start]).items()
+                )[0]
+                last_part, last_idx = list(
+                    self._get_dict_of_block_index(axis, [indices.stop]).items()
+                )[0]
+                if first_part == last_part:
+                    return OrderedDict({first_part: slice(first_idx[0], last_idx[0])})
+                else:
+                    if last_part - first_part == 1:
+                        return OrderedDict(
+                            {
+                                first_part: slice(first_idx[0], None),
+                                last_part: slice(None, last_idx[0]),
+                            }
+                        )
+                    else:
+                        dict_of_slices = OrderedDict(
+                            {first_part: slice(first_idx[0], None)}
+                        )
+                        part_list = range(first_part + 1, last_part)
+                        dict_of_slices.update(
+                            OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                        )
+                        dict_of_slices.update({last_part: slice(None, last_idx[0])})
+                        return dict_of_slices
         indices = np.sort(indices)
         if not axis:
             bins = np.array(self._column_widths)

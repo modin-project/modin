@@ -10,3 +10,10 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
+
+
+def train_test_split(df, **options):
+    train_size = options.get("train_size", 0.75)
+    train = df.iloc[: int(len(df) * train_size)]
+    test = df.iloc[len(train) :]
+    return train, test
