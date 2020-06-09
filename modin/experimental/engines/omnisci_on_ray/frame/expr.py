@@ -16,7 +16,7 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
 
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
-_aggs_with_int_result = {"count"}
+_aggs_with_int_result = {"count", "size"}
 _aggs_with_float_result = {"mean"}
 
 

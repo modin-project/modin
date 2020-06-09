@@ -313,6 +313,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     sub = DFAlgNotSupported("sub")
     sum = DFAlgNotSupported("sum")
     tail = DFAlgNotSupported("tail")
+    to_datetime = DFAlgNotSupported("to_datetime")
     to_numpy = DFAlgNotSupported("to_numpy")
     transpose = DFAlgNotSupported("transpose")
     truediv = DFAlgNotSupported("truediv")
