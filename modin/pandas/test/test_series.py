@@ -3785,3 +3785,16 @@ def test_encode(data, encoding_type):
     else:
         modin_result = modin_series.str.encode(encoding=encoding_type)
         df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_hasattr_sparse(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = hasattr(pandas_series, "sparse")
+    except Exception as e:
+        with pytest.raises(type(e)):
+            hasattr(modin_series, "sparse")
+    else:
+        modin_result = hasattr(modin_series, "sparse")
+        assert modin_result == pandas_result
