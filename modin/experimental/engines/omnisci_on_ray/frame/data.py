@@ -15,7 +15,7 @@ from modin.engines.base.frame.data import BasePandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from .partition_manager import OmnisciOnRayFrameManager
 
-from pandas.core.index import ensure_index, Index
+from pandas.core.index import ensure_index, Index, MultiIndex
 from pandas.core.dtypes.common import _get_dtype
 import pandas as pd
 
@@ -583,7 +583,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def has_multiindex(self):
         if self._index_cache is not None:
-            return isinstance(self._index_cache, pandas.MultiIndex)
+            return isinstance(self._index_cache, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
 
     def to_pandas(self):
