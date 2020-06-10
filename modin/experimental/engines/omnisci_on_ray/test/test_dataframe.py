@@ -293,6 +293,27 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    def test_h2o_q10(self):
+        df = self._get_h2o_df()
+
+        ref = df.groupby(["id1", "id2", "id3", "id4", "id5", "id6"], observed=True).agg(
+            {"v3": "sum", "v1": "count"}
+        )
+        ref.reset_index(inplace=True)
+
+        modin_df = mpd.DataFrame(df)
+        modin_df = modin_df.groupby(
+            ["id1", "id2", "id3", "id4", "id5", "id6"], observed=True
+        ).agg({"v3": "sum", "v1": "count"})
+        modin_df.reset_index(inplace=True)
+
+        exp = to_pandas(modin_df)
+        exp["id1"] = exp["id1"].astype("category")
+        exp["id2"] = exp["id2"].astype("category")
+        exp["id3"] = exp["id3"].astype("category")
+
+        df_equals(ref, exp)
+
 
 class TestMerge:
     data = {
