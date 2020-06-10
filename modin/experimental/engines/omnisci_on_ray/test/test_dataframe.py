@@ -168,6 +168,23 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    datetime_data = {
+        "a": [1, 1, 2],
+        "b": [11, 21, 12],
+        "c": pd.date_range(start="1/1/2018", end="1/1/2021", freq="Y"),
+    }
+
+    def test_dt_year(self):
+        df = pd.DataFrame(self.datetime_data)
+        ref = df["c"].dt.year
+
+        modin_df = mpd.DataFrame(self.datetime_data)
+        modin_df = modin_df["c"].dt.year
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
     h2o_data = {
         "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
         "id2": ["id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2"],

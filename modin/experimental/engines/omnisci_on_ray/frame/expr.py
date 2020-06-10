@@ -215,11 +215,10 @@ def build_row_idx_filter_expr(row_idx, row_col):
 def build_if_then_else(cond, then_val, else_val, res_type):
     return OpExpr("CASE", [cond, then_val, else_val], res_type)
 
+
 def build_dt_expr(dt_operation, col_expr):
-    
     operation = LiteralExpr(dt_operation)
 
     res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype(int))
-    
-    return res
 
+    return res

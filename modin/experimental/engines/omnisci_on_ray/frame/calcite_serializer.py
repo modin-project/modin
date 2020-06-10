@@ -96,7 +96,7 @@ class CalciteSerializer:
                 "type": "CHAR",
                 "target_type": "CHAR",
                 "scale": -2147483648,
-                "precision": 4,
+                "precision": len(literal.val),
                 "type_scale": -2147483648,
                 "type_precision": 4,
             }

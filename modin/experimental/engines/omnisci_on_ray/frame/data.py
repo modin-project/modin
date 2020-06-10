@@ -247,11 +247,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
         exprs = OrderedDict()
         for col in self.columns:
             col_expr = self.ref(col)
-            exprs[col] = build_dt_expr("year", col_expr)            
+            exprs[col] = build_dt_expr("year", col_expr)
         new_op = TransformNode(self, exprs)
-
+        dtypes = self._dtypes_for_exprs(self._index_cols, exprs)
         return self.__constructor__(
-            columns=self.columns, dtypes=self.dtypes, op=new_op, index_cols=self._index_cols
+            columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
         )
 
     def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
