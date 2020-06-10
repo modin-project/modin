@@ -2792,29 +2792,14 @@ def test_unstack():
         s.unstack()
 
 
-def test_update():
-    modin_series = pd.Series([1, 2, 3])
-    modin_series.update(pd.Series([4, 5, 6]))
-    pandas_series = pandas.Series([1, 2, 3])
-    pandas_series.update(pandas.Series([4, 5, 6]))
-    df_equals(modin_series, pandas_series)
-
-    modin_series = pd.Series(["a", "b", "c"])
-    modin_series.update(pd.Series(["d", "e"], index=[0, 2]))
-    pandas_series = pandas.Series(["a", "b", "c"])
-    pandas_series.update(pandas.Series(["d", "e"], index=[0, 2]))
-    df_equals(modin_series, pandas_series)
-
-    modin_series = pd.Series([1, 2, 3])
-    modin_series.update(pd.Series([4, 5, 6, 7, 8]))
-    pandas_series = pandas.Series([1, 2, 3])
-    pandas_series.update(pandas.Series([4, 5, 6, 7, 8]))
-    df_equals(modin_series, pandas_series)
-
-    modin_series = pd.Series([1, 2, 3])
-    modin_series.update(pd.Series([4, np.nan, 6]))
-    pandas_series = pandas.Series([1, 2, 3])
-    pandas_series.update(pandas.Series([4, np.nan, 6]))
+@pytest.mark.parametrize(
+    "data, other_data",
+    [([1, 2, 3], [4, 5, 6]), ([1, 2, 3], [4, 5, 6, 7, 8]), ([1, 2, 3], [4, np.nan, 6])],
+)
+def test_update(data, other_data):
+    modin_series, pandas_series = pd.Series(data), pandas.Series(data)
+    modin_series.update(pd.Series(other_data))
+    pandas_series.update(pandas.Series(other_data))
     df_equals(modin_series, pandas_series)
 
 
