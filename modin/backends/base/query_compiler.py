@@ -427,6 +427,10 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def series_view(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def unique(self, **kwargs):
         pass
 

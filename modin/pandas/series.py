@@ -1266,7 +1266,9 @@ class Series(BasePandasDataset):
         )
 
     def view(self, dtype=None):
-        return self._default_to_pandas(pandas.Series.view, dtype=dtype)
+        return self.__constructor__(
+            query_compiler=self._query_compiler.series_view(dtype=dtype)
+        )
 
     def where(
         self,
