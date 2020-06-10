@@ -1394,6 +1394,28 @@ def test_dt():
     df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
     df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
 
+    modin_series = pd.Series(pd.to_timedelta(np.arange(5), unit="d"))
+    pandas_series = pandas.Series(pandas.to_timedelta(np.arange(5), unit="d"))
+
+    assert_array_equal(
+        modin_series.dt.to_pytimedelta(), pandas_series.dt.to_pytimedelta()
+    )
+    df_equals(modin_series.dt.total_seconds(), pandas_series.dt.total_seconds())
+    df_equals(modin_series.dt.days, pandas_series.dt.days)
+    df_equals(modin_series.dt.seconds, pandas_series.dt.seconds)
+    df_equals(modin_series.dt.microseconds, pandas_series.dt.microseconds)
+    df_equals(modin_series.dt.nanoseconds, pandas_series.dt.nanoseconds)
+    df_equals(modin_series.dt.components, pandas_series.dt.components)
+
+    data_per = pd.date_range("1/1/2012", periods=5, freq="M")
+    pandas_series = pandas.Series(data_per, index=data_per).dt.to_period()
+    modin_series = pd.Series(data_per, index=data_per).dt.to_period()
+
+    df_equals(modin_series.dt.qyear, pandas_series.dt.qyear)
+    df_equals(modin_series.dt.start_time, pandas_series.dt.start_time)
+    df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
+    df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(

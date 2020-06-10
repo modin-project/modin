@@ -1557,6 +1557,55 @@ class DatetimeProperties(object):
     def day_name(self, *args, **kwargs):
         return Series(query_compiler=self._query_compiler.dt_day_name(*args, **kwargs))
 
+    def total_seconds(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
+        )
+
+    def to_pytimedelta(self):
+        return self._query_compiler.default_to_pandas(
+            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze().dt)
+        )
+
+    @property
+    def seconds(self):
+        return Series(query_compiler=self._query_compiler.dt_seconds())
+
+    @property
+    def days(self):
+        return Series(query_compiler=self._query_compiler.dt_days())
+
+    @property
+    def microseconds(self):
+        return Series(query_compiler=self._query_compiler.dt_microseconds())
+
+    @property
+    def nanoseconds(self):
+        return Series(query_compiler=self._query_compiler.dt_nanoseconds())
+
+    @property
+    def components(self):
+        from .dataframe import DataFrame
+
+        return DataFrame(query_compiler=self._query_compiler.dt_components())
+
+    @property
+    def qyear(self):
+        return Series(query_compiler=self._query_compiler.dt_qyear())
+
+    @property
+    def start_time(self):
+        return Series(query_compiler=self._query_compiler.dt_start_time())
+
+    @property
+    def end_time(self):
+        return Series(query_compiler=self._query_compiler.dt_end_time())
+
+    def to_timestamp(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_to_timestamp(*args, **kwargs)
+        )
+
 
 class StringMethods(object):
     def __init__(self, series):
