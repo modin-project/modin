@@ -20,6 +20,7 @@ import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
+import io
 
 from .utils import (
     random_state,
@@ -2323,10 +2324,29 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).infer_objects()
 
-    def test_info(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).info(memory_usage="deep")
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("verbose", [None, True, False])
+    @pytest.mark.parametrize("max_cols", [None, 10, 99999999])
+    @pytest.mark.parametrize("memory_usage", [None, True, False, "deep"])
+    @pytest.mark.parametrize("null_counts", [None, True, False])
+    def test_info(self, data, verbose, max_cols, memory_usage, null_counts):
+        with io.StringIO() as first, io.StringIO() as second:
+            eval_general(
+                pd.DataFrame(data),
+                pandas.DataFrame(data),
+                operation=lambda df, **kwargs: df.info(**kwargs),
+                verbose=verbose,
+                max_cols=max_cols,
+                memory_usage=memory_usage,
+                null_counts=null_counts,
+                buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
+            )
+            modin_info = first.getvalue().splitlines()
+            pandas_info = second.getvalue().splitlines()
+
+            assert modin_info[0] == str(pd.DataFrame)
+            assert pandas_info[0] == str(pandas.DataFrame)
+            assert modin_info[1:] == pandas_info[1:]
 
     def test_interpolate(self):
         data = test_data_values[0]

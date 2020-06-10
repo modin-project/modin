@@ -22,6 +22,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
+from pandas.io.formats.printing import pprint_thing
 
 import itertools
 import functools
@@ -847,10 +848,12 @@ class DataFrame(BasePandasDataset):
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
     ):
-        """Print a concise summary of a DataFrame, which includes the index
+        """
+        Print a concise summary of a DataFrame, which includes the index
         dtype and column dtypes, non-null values and memory usage.
 
-        Args:
+        Parameters
+        ----------
             verbose (bool, optional): Whether to print the full summary. Defaults
                 to true
 
@@ -875,29 +878,137 @@ class DataFrame(BasePandasDataset):
                 and 1690785 rows. A value of True always shows the counts and False
                 never shows the counts.
 
-        Returns:
+        Returns
+        -------
             Prints the summary of a DataFrame and returns None.
         """
-        # We will default to pandas because it will be faster than doing two passes
-        # over the data
-        buf = sys.stdout if not buf else buf
-        import io
 
-        with io.StringIO() as tmp_buf:
-            self._default_to_pandas(
-                pandas.DataFrame.info,
-                verbose=verbose,
-                buf=tmp_buf,
-                max_cols=max_cols,
-                memory_usage=memory_usage,
-                null_counts=null_counts,
+        def put_str(src, output_len=None, spaces=2):
+            src = str(src)
+            return src.ljust(output_len if output_len else len(src)) + " " * spaces
+
+        def format_size(num):
+            for x in ["bytes", "KB", "MB", "GB", "TB"]:
+                if num < 1024.0:
+                    return f"{num:3.1f} {x}"
+                num /= 1024.0
+            return f"{num:3.1f} PB"
+
+        output = []
+
+        type_line = str(type(self))
+        index_line = self.index._summary()
+        columns = self.columns
+        columns_len = len(columns)
+        dtypes = self.dtypes
+        dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
+
+        if max_cols is None:
+            max_cols = 100
+
+        exceeds_info_cols = columns_len > max_cols
+
+        if buf is None:
+            buf = sys.stdout
+
+        if null_counts is None:
+            null_counts = not exceeds_info_cols
+
+        if verbose is None:
+            verbose = not exceeds_info_cols
+
+        if null_counts and verbose:
+            # We're gonna take items from `non_null_count` in a loop, which
+            # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
+            # that will be faster.
+            non_null_count = self.count()._to_pandas()
+
+        if memory_usage is None:
+            memory_usage = True
+
+        def get_header(spaces=2):
+            output = []
+            head_label = " # "
+            column_label = "Column"
+            null_label = "Non-Null Count"
+            dtype_label = "Dtype"
+            non_null_label = " non-null"
+            delimiter = "-"
+
+            lengths = {}
+            lengths["head"] = max(len(head_label), len(pprint_thing(len(columns))))
+            lengths["column"] = max(
+                len(column_label), max(len(pprint_thing(col)) for col in columns)
             )
-            result = tmp_buf.getvalue()
-            result = result.replace(
-                "pandas.core.frame.DataFrame", "modin.pandas.dataframe.DataFrame"
+            lengths["dtype"] = len(dtype_label)
+            dtype_spaces = (
+                max(lengths["dtype"], max(len(pprint_thing(dtype)) for dtype in dtypes))
+                - lengths["dtype"]
             )
-            buf.write(result)
-        return None
+
+            header = put_str(head_label, lengths["head"]) + put_str(
+                column_label, lengths["column"]
+            )
+            if null_counts:
+                lengths["null"] = max(
+                    len(null_label),
+                    max(len(pprint_thing(x)) for x in non_null_count)
+                    + len(non_null_label),
+                )
+                header += put_str(null_label, lengths["null"])
+            header += put_str(dtype_label, lengths["dtype"], spaces=dtype_spaces)
+
+            output.append(header)
+
+            delimiters = put_str(delimiter * lengths["head"]) + put_str(
+                delimiter * lengths["column"]
+            )
+            if null_counts:
+                delimiters += put_str(delimiter * lengths["null"])
+            delimiters += put_str(delimiter * lengths["dtype"], spaces=dtype_spaces)
+            output.append(delimiters)
+
+            return output, lengths
+
+        output.extend([type_line, index_line])
+
+        def verbose_repr(output):
+            columns_line = f"Data columns (total {len(columns)} columns):"
+            header, lengths = get_header()
+            output.extend([columns_line, *header])
+            for i, col in enumerate(columns):
+                i, col, dtype = map(pprint_thing, [i, col, dtypes[col]])
+
+                to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
+                    col, lengths["column"]
+                )
+                if null_counts:
+                    non_null = pprint_thing(non_null_count[col])
+                    to_append += put_str(
+                        "{} non-null".format(non_null), lengths["null"]
+                    )
+                to_append += put_str(dtype, lengths["dtype"], spaces=0)
+                output.append(to_append)
+
+        def non_verbose_repr(output):
+            output.append(columns._summary(name="Columns"))
+
+        if verbose:
+            verbose_repr(output)
+        else:
+            non_verbose_repr(output)
+
+        output.append(dtypes_line)
+
+        if memory_usage:
+            deep = memory_usage == "deep"
+            mem_usage_bytes = self.memory_usage(index=True, deep=deep).sum()
+            mem_line = f"memory usage: {format_size(mem_usage_bytes)}"
+
+            output.append(mem_line)
+
+        output.append("")
+        buf.write("\n".join(output))
 
     def insert(self, loc, column, value, allow_duplicates=False):
         """Insert column into DataFrame at specified location.
