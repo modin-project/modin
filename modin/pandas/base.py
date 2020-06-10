@@ -1472,20 +1472,23 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis)
         if level is not None:
-            levels_names=self.index.names
+            levels_names = self.index.names
             levels_numbers = self.index.nlevels
             if isinstance(level, str) and level not in levels_names:
-                raise ValueError(f"wrong value of level parameter is specified: actually set {level}, acceptable options are {levels_names}")
-            elif isinstance(level, int) and ((levels_numbers - level < 1 and level >= 0) or (levels_numbers - level > 2 and level < 0)):
+                raise ValueError(
+                    f"wrong value of level parameter is specified: actually set {level}, acceptable options are {levels_names}"
+                )
+            elif isinstance(level, int) and (
+                (levels_numbers - level < 1 and level >= 0)
+                or (levels_numbers - level > 2 and level < 0)
+            ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
 
             unique_index_values = self.index.get_level_values(level).unique()
             results_series_data = {"indexes": [], "results": []}
             for index_value in unique_index_values:
                 results_series_data["indexes"].append(index_value)
-                indexed_data = self[
-                    self.index.get_level_values(level) == index_value
-                ]
+                indexed_data = self[self.index.get_level_values(level) == index_value]
                 results_series_data["results"].append(
                     indexed_data.kurt(
                         axis=0,
