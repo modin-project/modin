@@ -18,6 +18,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 from .utils import _inherit_docstrings
+from .series import Series
 
 
 @_inherit_docstrings(
@@ -249,7 +250,9 @@ class DataFrameGroupBy(object):
 
     def apply(self, func, *args, **kwargs):
         return self._apply_agg_function(
-            lambda df: df.apply(func, *args, **kwargs), drop=self._as_index
+            # Grouping column in never dropped in groupby.apply, so drop=False
+            lambda df: df.apply(func, *args, **kwargs),
+            drop=False,
         )
 
     @property
@@ -270,7 +273,7 @@ class DataFrameGroupBy(object):
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
         make_dataframe = True
-        if self._drop:
+        if self._drop and self._as_index:
             if not isinstance(key, list):
                 key = [key]
                 kwargs["squeeze"] = True
@@ -278,7 +281,17 @@ class DataFrameGroupBy(object):
         # When `as_index` is False, pandas will always convert to a `DataFrame`, we
         # convert to a list here so that the result will be a `DataFrame`.
         elif not self._as_index and not isinstance(key, list):
-            key = [key]
+            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
+            # column. This logic is here to ensure that we also get the `by` data so
+            # that it is there for `as_index=False`.
+            if (
+                isinstance(self._by, type(self._query_compiler))
+                and all(c in self._columns for c in self._by.columns)
+                and self._drop
+            ):
+                key = [key] + list(self._by.columns)
+            else:
+                key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):
             return DataFrameGroupBy(
                 self._df[key],
@@ -368,7 +381,42 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
+        if self._axis == 0:
+            if self._as_index:
+                work_object = self[self._df.columns[0]]
+            else:
+                # Size always works in as_index=True mode so it is necessary to make a copy
+                # of _kwargs and change as_index in it
+                kwargs = self._kwargs.copy()
+                kwargs["as_index"] = True
+                kwargs["squeeze"] = True
+                work_object = SeriesGroupBy(
+                    self._df[self._df.columns[0]],
+                    self._by,
+                    self._axis,
+                    idx_name=self._idx_name,
+                    drop=False,
+                    **kwargs,
+                )
+
+            result = work_object._groupby_reduce(
+                lambda df: pandas.DataFrame(df.size()),
+                lambda df: df.sum(),
+                numeric_only=False,
+            )
+            series_result = Series(query_compiler=result._query_compiler)
+            # Pandas does not name size() output
+            series_result.name = None
+            return series_result
+        else:
+            return DataFrameGroupBy(
+                self._df.T,
+                self._by,
+                0,
+                drop=self._drop,
+                idx_name=self._idx_name,
+                **self._kwargs,
+            ).size()
 
     def sum(self, **kwargs):
         return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
@@ -515,8 +563,11 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        if drop and self._drop:
+            if self._as_index:
+                groupby_qc = self._query_compiler.drop(columns=self._by.columns)
+            else:
+                groupby_qc = self._query_compiler
         else:
             groupby_qc = self._query_compiler
 
@@ -605,8 +656,6 @@ class SeriesGroupBy(DataFrameGroupBy):
 
     @property
     def _iter(self):
-        from .dataframe import Series
-
         group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (
@@ -632,3 +681,14 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def size(self):
+        result = self._groupby_reduce(
+            lambda df: pandas.DataFrame(df.size()),
+            lambda df: df.sum(),
+            numeric_only=False,
+        )
+        series_result = Series(query_compiler=result._query_compiler)
+        # Pandas does not name size() output
+        series_result.name = None
+        return series_result

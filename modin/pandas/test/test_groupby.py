@@ -16,7 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
-from .utils import df_equals
+from .utils import df_equals, check_df_columns_have_nans
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -114,6 +114,8 @@ def test_mixed_dtypes_groupby(as_index):
 
         # TODO Add more apply functions
         apply_functions = [lambda df: df.sum(), min]
+        # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
+        pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
         for func in apply_functions:
             eval_apply(modin_groupby, pandas_groupby, func)
 
@@ -198,15 +200,46 @@ def test_mixed_dtypes_groupby(as_index):
 
 
 @pytest.mark.parametrize(
-    "by", [[1, 2, 1, 2], lambda x: x % 3, "col1", ["col1"], ["col1", "col2"]]
+    "by",
+    [
+        [1, 2, 1, 2],
+        lambda x: x % 3,
+        "col1",
+        ["col1"],
+        # col2 contains NaN, is it necessary to test functions like size()
+        "col2",
+        ["col2"],
+        pytest.param(
+            ["col1", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col2", "col4"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col3", "col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
+        ["col5"],
+        ["col1", "col5"],
+        ["col5", "col4"],
+        ["col4", "col5"],
+        ["col5", "col4", "col1"],
+    ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
 def test_simple_row_groupby(by, as_index):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [3, 8, 12, 10],
+            "col2": [4, 5, np.NaN, 7],
+            "col3": [np.NaN, np.NaN, 12, 10],
             "col4": [17, 13, 16, 15],
             "col5": [-4, -5, -6, -7],
         }
@@ -232,7 +265,13 @@ def test_simple_row_groupby(by, as_index):
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax(), is_default=True)
     eval_ndim(modin_groupby, pandas_groupby)
-    eval_cumsum(modin_groupby, pandas_groupby)
+    if not check_df_columns_have_nans(modin_df, by):
+        # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
+        eval_cumsum(modin_groupby, pandas_groupby)
+        eval_cummax(modin_groupby, pandas_groupby)
+        eval_cummin(modin_groupby, pandas_groupby)
+        eval_cumprod(modin_groupby, pandas_groupby)
+
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -240,22 +279,18 @@ def test_simple_row_groupby(by, as_index):
         modin_df_almost_equals_pandas,
         is_default=True,
     )
-    eval_cummax(modin_groupby, pandas_groupby)
 
-    # pandas is inconsistent between test environment and here, more investigation is
-    # required to understand why this is a mismatch because we default to pandas for
-    # this particular case.
-    if by != ["col1", "col2"]:
-        apply_functions = [lambda df: df.sum(), min]
-        for func in apply_functions:
-            eval_apply(modin_groupby, pandas_groupby, func)
+    # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
+    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+    apply_functions = [lambda df: df.sum(), min]
+    for func in apply_functions:
+        eval_apply(modin_groupby, pandas_groupby, func)
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first(), is_default=True)
     eval_general(
         modin_groupby, pandas_groupby, lambda df: df.backfill(), is_default=True
     )
-    eval_cummin(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill(), is_default=True)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin(), is_default=True)
     eval_prod(modin_groupby, pandas_groupby)
@@ -285,7 +320,6 @@ def test_simple_row_groupby(by, as_index):
     eval_nunique(modin_groupby, pandas_groupby)
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
-    eval_cumprod(modin_groupby, pandas_groupby)
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -294,9 +328,11 @@ def test_simple_row_groupby(by, as_index):
         is_default=True,
     )
 
-    transform_functions = [lambda df: df + 4, lambda df: -df - 10]
-    for func in transform_functions:
-        eval_transform(modin_groupby, pandas_groupby, func)
+    if not check_df_columns_have_nans(modin_df, by):
+        # Pandas groupby.transform does not work correctly with NaN values in grouping columns. See Pandas bug 17093.
+        transform_functions = [lambda df: df + 4, lambda df: -df - 10]
+        for func in transform_functions:
+            eval_transform(modin_groupby, pandas_groupby, func)
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
     for func in pipe_functions:
@@ -311,6 +347,7 @@ def test_simple_row_groupby(by, as_index):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -426,6 +463,7 @@ def test_single_group_row_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -535,6 +573,7 @@ def test_large_row_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -645,6 +684,7 @@ def test_simple_col_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
     eval_groups(modin_groupby, pandas_groupby)
 
@@ -922,6 +962,10 @@ def eval_fillna(modin_groupby, pandas_groupby):
 
 def eval_count(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.count(), pandas_groupby.count())
+
+
+def eval_size(modin_groupby, pandas_groupby):
+    df_equals(modin_groupby.size(), pandas_groupby.size())
 
 
 def eval_pipe(modin_groupby, pandas_groupby, func):
