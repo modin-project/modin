@@ -396,7 +396,7 @@ class DataFrameGroupBy(object):
                     self._axis,
                     idx_name=self._idx_name,
                     drop=False,
-                    **kwargs
+                    **kwargs,
                 )
 
             result = work_object._groupby_reduce(
@@ -415,7 +415,7 @@ class DataFrameGroupBy(object):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
-                **self._kwargs
+                **self._kwargs,
             ).size()
 
     def sum(self, **kwargs):
