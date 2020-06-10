@@ -22,9 +22,9 @@ from modin.data_management import factories
 class FactoryNotFoundError(AttributeError):
     def __init__(self, partition_format, execution_engine):
         super().__init__(
-            "Cannot find a factory for partition '{}' and execution engine '{}'. Potential reason might be incorrect environment variable value for MODIN_BACKEND or MODIN_ENGINE".format(
-                partition_format, execution_engine
-            )
+            "Cannot find a factory for partition '{}' and execution engine '{}'. "
+            "Potential reason might be incorrect environment variable value for "
+            "MODIN_BACKEND or MODIN_ENGINE".format(partition_format, execution_engine)
         )
 
 
