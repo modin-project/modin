@@ -304,7 +304,6 @@ class TestDataFrameBinary:
         pandas_df = pandas.DataFrame(data)
         self.inter_df_math_helper(modin_df, pandas_df, function)
 
-    # Test comparison of inter operation functions
     def comparison_inter_ops_helper(self, modin_df, pandas_df, op):
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df)
@@ -370,43 +369,12 @@ class TestDataFrameBinary:
             # Operation against self for sanity check
             getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 
+    @pytest.mark.parametrize("comp_op", ["eq", "ge", "gt", "le", "lt", "ne"])
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_eq(self, data):
+    def test_comparison(self, data, comp_op):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "eq")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_ge(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "ge")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_gt(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "gt")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_le(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "le")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_lt(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "lt")
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_ne(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-        self.comparison_inter_ops_helper(modin_df, pandas_df, "ne")
-
-    # END test comparison of inter operation functions
+        self.comparison_inter_ops_helper(modin_df, pandas_df, comp_op)
 
     # Test dataframe right operations
     def inter_df_math_right_ops_helper(self, modin_df, pandas_df, op):
