@@ -209,10 +209,22 @@ def test_mixed_dtypes_groupby(as_index):
         # col2 contains NaN, is it necessary to test functions like size()
         "col2",
         ["col2"],
-        pytest.param(["col1", "col2"], marks=pytest.mark.xfail(reason="Excluded because of bug #1554")),
-        pytest.param(["col2", "col4"], marks=pytest.mark.xfail(reason="Excluded because of bug #1554")),
-        pytest.param(["col4", "col2"], marks=pytest.mark.xfail(reason="Excluded because of bug #1554")),
-        pytest.param(["col3", "col4", "col2"], marks=pytest.mark.xfail(reason="Excluded because of bug #1554")),
+        pytest.param(
+            ["col1", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col2", "col4"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col3", "col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
         ["col5"],
         ["col1", "col5"],
