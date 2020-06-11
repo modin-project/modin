@@ -63,7 +63,7 @@ class EngineDispatcher(object):
     __engine = None
 
     @classmethod
-    def get_engine(cls):
+    def get_engine(cls) -> factories.BaseFactory:
         # mostly for testing
         return cls.__engine
 

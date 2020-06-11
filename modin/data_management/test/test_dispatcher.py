@@ -37,7 +37,8 @@ factories.TestOnPythonFactory = TestOnPythonFactory
 
 
 def test_default_engine():
-    assert EngineDispatcher.get_engine() == factories.PandasOnDaskFactory
+    assert issubclass(EngineDispatcher.get_engine(), factories.BaseFactory)
+    assert EngineDispatcher.get_engine().io_cls
 
 
 def test_engine_switch():
