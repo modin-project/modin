@@ -333,6 +333,26 @@ class BaseQueryCompiler(abc.ABC):
     # instead.
 
     @abc.abstractmethod
+    def is_monotonic(self):
+        """Return boolean if values in the object are monotonic_increasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_monotonic_decreasing(self):
+        """Return boolean if values in the object are monotonic_decreasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
+
+    @abc.abstractmethod
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
