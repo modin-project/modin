@@ -109,8 +109,7 @@ class Publisher(object):
     def put(self, value):
         oldvalue, self.__value = self.__value, value
         if oldvalue != value:
-            for weakCallback in self.__subs:
-                callback = weakCallback()
+            for callback in tuple(self.__subs):
                 if callback:
                     callback(self)
             try:
@@ -118,8 +117,7 @@ class Publisher(object):
             except KeyError:
                 return
             if once:
-                for weakCallback in once:
-                    callback = weakCallback()
+                for callback in tuple(once):
                     if callback:
                         callback(self)
             del self.__once[value]
