@@ -26,7 +26,7 @@ class TextFileReader(FileReader):
         line = f.readline()  # Ensure we read up to a newline
         # We need to ensure that one row isn't being split across different partitions
 
-        if not args['quoting'] == csv.QUOTE_NONE:
+        if not args["quoting"] == csv.QUOTE_NONE:
             quote_count = (
                 re.subn(quotechar, b"", chunk)[1] + re.subn(quotechar, b"", line)[1]
             )
@@ -37,7 +37,7 @@ class TextFileReader(FileReader):
                     break
 
             if quote_count % 2 != 0:
-                warnings.warn('File has mismatched quotes')
+                warnings.warn("File has mismatched quotes")
 
         else:
             f.seek(0, 2)
