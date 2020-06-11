@@ -468,8 +468,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
 
+    def is_monotonic_decreasing(self):
+        self._is_monotonic(type="decreasing")
+
     is_monotonic = _is_monotonic
-    is_monotonic_decreasing = lambda self: self._is_monotonic(type="decreasing")
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
