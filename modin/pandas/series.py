@@ -1261,7 +1261,7 @@ class Series(BasePandasDataset):
         """
         if not isinstance(other, Series):
             other = Series(other)
-        query_compiler = self._query_compiler.series_update(other._query_compiler,)
+        query_compiler = self._query_compiler.series_update(other._query_compiler)
         self._update_inplace(new_query_compiler=query_compiler)
 
     def value_counts(
