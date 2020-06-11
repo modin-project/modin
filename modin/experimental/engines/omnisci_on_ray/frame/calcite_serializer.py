@@ -98,7 +98,7 @@ class CalciteSerializer:
                 "scale": -2147483648,
                 "precision": len(literal.val),
                 "type_scale": -2147483648,
-                "type_precision": 4,
+                "type_precision": len(literal.val),
             }
 
         self.expect_one_of(literal.val, int)
