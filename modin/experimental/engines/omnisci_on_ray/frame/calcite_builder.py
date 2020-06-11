@@ -277,10 +277,7 @@ class CalciteBuilder:
         ), "Only cases when both frames contain key column are supported"
 
         """ Join, only equal-join supported """
-        res_type = _get_dtype(bool)
-        condition = OpExpr(
-            "=", [self._ref(left, op.on), self._ref(right, op.on)], res_type
-        )
+        condition = self._ref(left, op.on).eq(self._ref(right, op.on))
         node = CalciteJoinNode(
             left_id=self._input_node(0).id,
             right_id=self._input_node(1).id,
@@ -292,21 +289,20 @@ class CalciteBuilder:
         """Projection for both frames"""
         fields = []
         exprs = []
-        conflicting_list = list(set(left.columns) & set(right.columns))
+        conflicting_cols = set(left.columns) & set(right.columns)
+        conflicting_cols.discard(op.on)
         """First goes 'on' column then all left columns(+suffix for conflicting names)
         but 'on' then all right columns(+suffix for conflicting names) but 'on'"""
         for c in left.columns:
-            if c != op.on:
-                suffix = op.suffixes[0] if c in conflicting_list else ""
-                fields.append(c + suffix)
-                exprs.append(self._ref(left, c))
-            else:
-                fields.insert(0, c)
-                exprs.insert(0, self._ref(left, c))
+            if c == op.on:
+                on_idx = len(fields)
+            suffix = op.suffixes[0] if c in conflicting_cols else ""
+            fields.append(c + suffix)
+            exprs.append(self._ref(left, c))
 
         for c in right.columns:
             if c != op.on:
-                suffix = op.suffixes[1] if c in conflicting_list else ""
+                suffix = op.suffixes[1] if c in conflicting_cols else ""
                 fields.append(c + suffix)
                 exprs.append(self._ref(right, c))
 
@@ -316,10 +312,10 @@ class CalciteBuilder:
         # because there is no frame to reference for index computation.
         # We should build calcite tree to keep references to input
         # nodes and keep scheme in calcite nodes. For now just use
-        # known index 0.
+        # known index on_idx.
         if op.sort is True:
             """Sort by key column"""
-            collation = [CalciteCollation(CalciteInputIdxExpr(0))]
+            collation = [CalciteCollation(CalciteInputIdxExpr(on_idx))]
             self._push(CalciteSortNode(collation))
 
     def _process_union(self, op):
