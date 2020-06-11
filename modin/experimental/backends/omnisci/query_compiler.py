@@ -211,6 +211,16 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    def dt_year(self):
+        """Extract year from Datetime info
+
+        Returns:
+            A new QueryCompiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_year()
+        )        
+
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:

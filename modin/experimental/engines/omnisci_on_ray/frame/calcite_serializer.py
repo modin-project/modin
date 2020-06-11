@@ -90,6 +90,17 @@ class CalciteSerializer:
                 "type_scale": 0,
                 "type_precision": 19,
             }
+        if type(literal.val) is str:
+            return {
+                "literal": literal.val,
+                "type": "CHAR",
+                "target_type": "CHAR",
+                "scale": -2147483648,
+                "precision": len(literal.val),
+                "type_scale": -2147483648,
+                "type_precision": len(literal.val),
+            }
+
         self.expect_one_of(literal.val, int)
         return {
             "literal": literal.val,
