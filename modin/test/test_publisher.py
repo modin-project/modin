@@ -15,36 +15,40 @@ from collections import defaultdict
 
 from modin import Publisher
 
-def test_equals():
-    pub = Publisher('name', 'value1')
-    assert pub.get() == 'value1'
 
-    pub.put('value2')
-    assert pub.get() == 'value2'
+def test_equals():
+    pub = Publisher("name", "value1")
+    assert pub.get() == "value1"
+
+    pub.put("value2")
+    assert pub.get() == "value2"
+
 
 def test_triggers():
     results = defaultdict(int)
     callbacks = []
+
     def make_callback(name, res=results):
         def callback(p: Publisher):
             res[name] += 1
+
         # keep reference to callbacks so they won't be removed by GC
         callbacks.append(callback)
         return callback
 
-    pub = Publisher('name', 'init')
-    pub.once('init', make_callback('init'))
-    assert results['init'] == 1
+    pub = Publisher("name", "init")
+    pub.once("init", make_callback("init"))
+    assert results["init"] == 1
 
-    pub.once('never', make_callback('never'))
-    pub.once('once', make_callback('once'))
-    pub.subscribe(make_callback('subscribe'))
+    pub.once("never", make_callback("never"))
+    pub.once("once", make_callback("once"))
+    pub.subscribe(make_callback("subscribe"))
 
-    pub.put('multi')
-    pub.put('once')
-    pub.put('multi')
-    pub.put('once')
+    pub.put("multi")
+    pub.put("once")
+    pub.put("multi")
+    pub.put("once")
 
-    expected = [('init', 1), ('never', 0), ('once', 1), ('subscribe', 5)]
+    expected = [("init", 1), ("never", 0), ("once", 1), ("subscribe", 5)]
     for name, val in expected:
         assert results[name] == val, "{} has wrong count".format(name)
