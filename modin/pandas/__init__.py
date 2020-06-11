@@ -29,7 +29,6 @@ from pandas import (
     eval,
     value_counts,
     cut,
-    to_numeric,
     factorize,
     test,
     qcut,
@@ -131,6 +130,7 @@ from .general import (
     notnull,
     notna,
     pivot,
+    to_numeric,
     unique,
 )
 from .plotting import Plotting as plotting
@@ -285,7 +285,6 @@ __all__ = [
     "eval",
     "value_counts",
     "cut",
-    "to_numeric",
     "factorize",
     "test",
     "qcut",
@@ -362,6 +361,7 @@ __all__ = [
     "notnull",
     "notna",
     "pivot",
+    "to_numeric",
     "unique",
     "datetime",
     "NamedAgg",

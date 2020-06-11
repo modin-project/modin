@@ -491,6 +491,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     series_view = MapFunction.register(
         lambda df, *args, **kwargs: pandas.DataFrame(df.squeeze().view(*args, **kwargs))
     )
+    to_numeric = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(
+            pandas.to_numeric(df.squeeze(), *args, **kwargs)
+        )
+    )
 
     # END Map partitions operations
 

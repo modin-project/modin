@@ -431,6 +431,10 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def to_numeric(self, arg, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def unique(self, **kwargs):
         pass
 
