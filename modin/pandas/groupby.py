@@ -184,7 +184,7 @@ class DataFrameGroupBy(object):
     def any(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_any,
-            lambda df: df.any(**kwargs),
+            lambda df, **kwargs: df.any(**kwargs),
             numeric_only=False,
             **kwargs,
         )
@@ -210,7 +210,7 @@ class DataFrameGroupBy(object):
     def min(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_min,
-            lambda df: df.min(**kwargs),
+            lambda df, **kwargs: df.min(**kwargs),
             numeric_only=False,
             **kwargs,
         )
@@ -331,7 +331,7 @@ class DataFrameGroupBy(object):
     def prod(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_prod,
-            lambda df: df.prod(**kwargs),
+            lambda df, **kwargs: df.prod(**kwargs),
             **kwargs,
         )
 
@@ -374,7 +374,7 @@ class DataFrameGroupBy(object):
     def max(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_max,
-            lambda df: df.max(**kwargs),
+            lambda df, **kwargs: df.max(**kwargs),
             numeric_only=False,
             **kwargs,
         )
@@ -391,7 +391,7 @@ class DataFrameGroupBy(object):
     def all(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_all,
-            lambda df: df.all(**kwargs),
+            lambda df, **kwargs: df.all(**kwargs),
             numeric_only=False,
             **kwargs,
         )
@@ -432,7 +432,7 @@ class DataFrameGroupBy(object):
     def sum(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sum,
-            lambda df: df.sum(**kwargs),
+            lambda df, **kwargs: df.sum(**kwargs),
             **kwargs,
         )
 
@@ -519,7 +519,7 @@ class DataFrameGroupBy(object):
     def count(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_count,
-            lambda df: df.count(**kwargs),
+            lambda df, **kwargs: df.count(**kwargs),
             numeric_only=False,
             **kwargs,
         )
