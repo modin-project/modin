@@ -15,6 +15,8 @@ import os
 import sys
 import warnings
 from packaging import version
+import weakref
+import collections
 
 from ._version import get_versions
 
@@ -84,9 +86,52 @@ def get_partition_format():
     return os.environ.get("MODIN_BACKEND", "Pandas").title()
 
 
+class Publisher(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.__value = value
+        self.__subs = weakref.WeakSet()
+        self.__once = collections.defaultdict(weakref.WeakSet)
+
+    def subscribe(self, callback):
+        self.__subs.add(callback)
+        callback(self)
+
+    def once(self, onvalue, callback):
+        if onvalue == self.__value:
+            callback(self)
+        else:
+            self.__once[onvalue].add(callback)
+
+    def get(self):
+        return self.__value
+
+    def put(self, value):
+        oldvalue, self.__value = self.__value, value
+        if oldvalue != value:
+            for weakCallback in self.__subs:
+                callback = weakCallback()
+                if callback:
+                    callback(self)
+            try:
+                once = self.__once[value]
+            except KeyError:
+                return
+            if once:
+                for weakCallback in once:
+                    callback = weakCallback()
+                    if callback:
+                        callback(self)
+            del self.__once[value]
+
+
 __version__ = "0.6.3"
-__execution_engine__ = get_execution_engine()
-__partition_format__ = get_partition_format()
+execution_engine = Publisher(name="execution_engine", value=get_execution_engine())
+partition_format = Publisher(name="partition_format", value=get_partition_format())
+
+# for backwards compatibility, remove when all items are migrated to new PubSub model
+__execution_engine__ = execution_engine.get()
+__partition_format__ = partition_format.get()
 
 # We don't want these used outside of this file.
 del get_execution_engine

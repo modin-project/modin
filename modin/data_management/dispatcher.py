@@ -13,9 +13,7 @@
 
 import os
 
-from modin import __execution_engine__ as execution_engine
-from modin import __partition_format__ as partition_format
-
+from modin import execution_engine, partition_format
 from modin.data_management import factories
 
 
@@ -65,18 +63,22 @@ class EngineDispatcher(object):
     __engine = None
 
     @classmethod
-    def _update_engine(cls):
+    def _update_engine(cls, _):
         if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
             factory_fmt, experimental = "Experimental{}On{}Factory", True
         else:
             factory_fmt, experimental = "{}On{}Factory", False
-        factory_name = factory_fmt.format(partition_format, execution_engine)
+        factory_name = factory_fmt.format(
+            partition_format.get(), execution_engine.get()
+        )
         try:
             cls.__engine = getattr(factories, factory_name)
         except AttributeError:
             if not experimental:
                 # allow missing factories in experimenal mode only
-                raise FactoryNotFoundError(partition_format, execution_engine)
+                raise FactoryNotFoundError(
+                    partition_format.get(), execution_engine.get()
+                )
             cls.__engine = StubFactory.set_failing_name(factory_name)
 
     @classmethod
@@ -164,4 +166,5 @@ class EngineDispatcher(object):
         return cls.__engine._to_pickle(*args, **kwargs)
 
 
-EngineDispatcher._update_engine()
+execution_engine.subscribe(EngineDispatcher._update_engine)
+partition_format.subscribe(EngineDispatcher._update_engine)
