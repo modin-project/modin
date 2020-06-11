@@ -344,6 +344,161 @@ class TestMerge:
 
         run_and_compare(default_merge, data=self.data, data2=self.data2, how=how)
 
+    h2o_data = {
+        "id1": ["id1", "id10", "id100", "id1000"],
+        "id2": ["id2", "id20", "id200", "id2000"],
+        "id3": ["id3", "id30", "id300", "id3000"],
+        "id4": [4, 40, 400, 4000],
+        "id5": [5, 50, 500, 5000],
+        "id6": [6, 60, 600, 6000],
+        "v1": [3.3, 4.4, 7.7, 8.8],
+    }
+
+    h2o_data_small = {
+        "id1": ["id10", "id100", "id1000", "id100"],
+        "id4": [40, 400, 4000, 40000],
+        "v2": [30.3, 40.4, 70.7, 80.8],
+    }
+
+    h2o_data_medium = {
+        "id1": ["id10", "id100", "id1000", "id100"],
+        "id2": ["id20", "id200", "id2000", "id20000"],
+        "id4": [40, 400, 4000, 40000],
+        "id5": [50, 500, 5000, 50000],
+        "v2": [30.3, 40.4, 70.7, 80.8],
+    }
+
+    h2o_data_big = {
+        "id1": ["id10", "id100", "id1000", "id100"],
+        "id2": ["id20", "id200", "id2000", "id20000"],
+        "id3": ["id30", "id300", "id3000", "id30000"],
+        "id4": [40, 400, 4000, 40000],
+        "id5": [50, 500, 5000, 50000],
+        "id6": [60, 600, 6000, 60000],
+        "v2": [30.3, 40.4, 70.7, 80.8],
+    }
+
+    def _get_h2o_df(self, data):
+        df = pd.DataFrame(data)
+        if "id1" in data:
+            df["id1"] = df["id1"].astype("category")
+        if "id2" in data:
+            df["id2"] = df["id2"].astype("category")
+        if "id3" in data:
+            df["id3"] = df["id3"].astype("category")
+        return df
+
+    # Currently OmniSci returns category as string columns
+    # and therefore casted to category it would only have
+    # values from actual data. In Pandas category would
+    # have old values as well. Simply casting category
+    # to string for somparison doesn't work because None
+    # casted to category and back to strting becomes
+    # "nan". So we cast everything to category and then
+    # to string.
+    def _fix_category_cols(self, df):
+        if "id1" in df.columns:
+            df["id1"] = df["id1"].astype("category")
+            df["id1"] = df["id1"].astype(str)
+        if "id1_x" in df.columns:
+            df["id1_x"] = df["id1_x"].astype("category")
+            df["id1_x"] = df["id1_x"].astype(str)
+        if "id1_y" in df.columns:
+            df["id1_y"] = df["id1_y"].astype("category")
+            df["id1_y"] = df["id1_y"].astype(str)
+        if "id2" in df.columns:
+            df["id2"] = df["id2"].astype("category")
+            df["id2"] = df["id2"].astype(str)
+        if "id2_x" in df.columns:
+            df["id2_x"] = df["id2_x"].astype("category")
+            df["id2_x"] = df["id2_x"].astype(str)
+        if "id2_y" in df.columns:
+            df["id2_y"] = df["id2_y"].astype("category")
+            df["id2_y"] = df["id2_y"].astype(str)
+        if "id3" in df.columns:
+            df["id3"] = df["id3"].astype("category")
+            df["id3"] = df["id3"].astype(str)
+
+    def test_h2o_q1(self):
+        lhs = self._get_h2o_df(self.h2o_data)
+        rhs = self._get_h2o_df(self.h2o_data_small)
+
+        ref = lhs.merge(rhs, on="id1")
+        self._fix_category_cols(ref)
+
+        modin_lhs = mpd.DataFrame(lhs)
+        modin_rhs = mpd.DataFrame(rhs)
+        modin_res = modin_lhs.merge(modin_rhs, on="id1")
+
+        exp = to_pandas(modin_res)
+        self._fix_category_cols(exp)
+
+        df_equals(ref, exp)
+
+    def test_h2o_q2(self):
+        lhs = self._get_h2o_df(self.h2o_data)
+        rhs = self._get_h2o_df(self.h2o_data_medium)
+
+        ref = lhs.merge(rhs, on="id2")
+        self._fix_category_cols(ref)
+
+        modin_lhs = mpd.DataFrame(lhs)
+        modin_rhs = mpd.DataFrame(rhs)
+        modin_res = modin_lhs.merge(modin_rhs, on="id2")
+
+        exp = to_pandas(modin_res)
+        self._fix_category_cols(exp)
+
+        df_equals(ref, exp)
+
+    def test_h2o_q3(self):
+        lhs = self._get_h2o_df(self.h2o_data)
+        rhs = self._get_h2o_df(self.h2o_data_medium)
+
+        ref = lhs.merge(rhs, how="left", on="id2")
+        self._fix_category_cols(ref)
+
+        modin_lhs = mpd.DataFrame(lhs)
+        modin_rhs = mpd.DataFrame(rhs)
+        modin_res = modin_lhs.merge(modin_rhs, how="left", on="id2")
+
+        exp = to_pandas(modin_res)
+        self._fix_category_cols(exp)
+
+        df_equals(ref, exp)
+
+    def test_h2o_q4(self):
+        lhs = self._get_h2o_df(self.h2o_data)
+        rhs = self._get_h2o_df(self.h2o_data_medium)
+
+        ref = lhs.merge(rhs, on="id5")
+        self._fix_category_cols(ref)
+
+        modin_lhs = mpd.DataFrame(lhs)
+        modin_rhs = mpd.DataFrame(rhs)
+        modin_res = modin_lhs.merge(modin_rhs, on="id5")
+
+        exp = to_pandas(modin_res)
+        self._fix_category_cols(exp)
+
+        df_equals(ref, exp)
+
+    def test_h2o_q5(self):
+        lhs = self._get_h2o_df(self.h2o_data)
+        rhs = self._get_h2o_df(self.h2o_data_big)
+
+        ref = lhs.merge(rhs, on="id3")
+        self._fix_category_cols(ref)
+
+        modin_lhs = mpd.DataFrame(lhs)
+        modin_rhs = mpd.DataFrame(rhs)
+        modin_res = modin_lhs.merge(modin_rhs, on="id3")
+
+        exp = to_pandas(modin_res)
+        self._fix_category_cols(exp)
+
+        df_equals(ref, exp)
+
 
 class TestBinaryOp:
     data = {
