@@ -469,7 +469,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
 
     def is_monotonic_decreasing(self):
-        self._is_monotonic(type="decreasing")
+        return self._is_monotonic(type="decreasing")
 
     is_monotonic = _is_monotonic
 
