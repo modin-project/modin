@@ -1331,27 +1331,37 @@ class Series(BasePandasDataset):
 
     @property
     def is_monotonic(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic(df):
-            return df.is_monotonic
+        """Return boolean if values in the object are monotonic_increasing.
 
-        return self._default_to_pandas(is_monotonic)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(self._query_compiler.is_monotonic())
 
     @property
     def is_monotonic_decreasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_decreasing(df):
-            return df.is_monotonic_decreasing
+        """Return boolean if values in the object are monotonic_decreasing.
 
-        return self._default_to_pandas(is_monotonic_decreasing)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(
+            self._query_compiler.is_monotonic(type="decreasing")
+        )
 
     @property
     def is_monotonic_increasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_increasing(df):
-            return df.is_monotonic_increasing
+        """Return boolean if values in the object are monotonic_increasing.
 
-        return self._default_to_pandas(is_monotonic_increasing)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(
+            self._query_compiler.is_monotonic(type="increasing")
+        )
 
     @property
     def is_unique(self):
