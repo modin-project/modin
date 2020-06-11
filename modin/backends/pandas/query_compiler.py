@@ -440,13 +440,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
-    def is_monotonic(self, type=None):
+    def _is_monotonic(self, type=None):
         funcs = {
             "increasing": lambda df: df.is_monotonic_increasing,
             "decreasing": lambda df: df.is_monotonic_decreasing,
         }
 
         monotonic_fn = funcs.get(type, funcs["increasing"])
+
+        def is_monotonic_map(df):
+            df = df.squeeze()
+            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
 
         def is_monotonic_reduce(df):
             df = df.squeeze()
@@ -462,11 +466,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             edge_case = monotonic_fn(pandas.Series(edges_list))
             return [common_case and edge_case]
 
-        def is_monotonic_map(df):
-            df = df.squeeze()
-            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
-
         return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
+
+    is_monotonic = _is_monotonic
+    is_monotonic_decreasing = lambda self: self._is_monotonic(type="decreasing")
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)

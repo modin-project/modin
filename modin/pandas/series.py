@@ -1339,6 +1339,8 @@ class Series(BasePandasDataset):
         """
         return self._reduce_dimension(self._query_compiler.is_monotonic())
 
+    is_monotonic_increasing = is_monotonic
+
     @property
     def is_monotonic_decreasing(self):
         """Return boolean if values in the object are monotonic_decreasing.
@@ -1347,21 +1349,7 @@ class Series(BasePandasDataset):
         -------
             bool
         """
-        return self._reduce_dimension(
-            self._query_compiler.is_monotonic(type="decreasing")
-        )
-
-    @property
-    def is_monotonic_increasing(self):
-        """Return boolean if values in the object are monotonic_increasing.
-
-        Returns
-        -------
-            bool
-        """
-        return self._reduce_dimension(
-            self._query_compiler.is_monotonic(type="increasing")
-        )
+        return self._reduce_dimension(self._query_compiler.is_monotonic_decreasing())
 
     @property
     def is_unique(self):
