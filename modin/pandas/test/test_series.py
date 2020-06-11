@@ -2816,14 +2816,15 @@ def test_unstack():
         s.unstack()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_update(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        try:
-            modin_series.update(pd.Series([4.1 for _ in modin_series]))
-        except Exception:
-            pass
+@pytest.mark.parametrize(
+    "data, other_data",
+    [([1, 2, 3], [4, 5, 6]), ([1, 2, 3], [4, 5, 6, 7, 8]), ([1, 2, 3], [4, np.nan, 6])],
+)
+def test_update(data, other_data):
+    modin_series, pandas_series = pd.Series(data), pandas.Series(data)
+    modin_series.update(pd.Series(other_data))
+    pandas_series.update(pandas.Series(other_data))
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

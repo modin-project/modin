@@ -1612,17 +1612,29 @@ class TestDataFrameMapMetadata:
         # Test for map across blocks
         df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
-    def test_update(self):
-        df = pd.DataFrame(
-            [[1.5, np.nan, 3.0], [1.5, np.nan, 3.0], [1.5, np.nan, 3], [1.5, np.nan, 3]]
+    @pytest.mark.parametrize(
+        "data, other_data",
+        [
+            ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, 5, 6], "C": [7, 8, 9]}),
+            (
+                {"A": ["a", "b", "c"], "B": ["x", "y", "z"]},
+                {"B": ["d", "e", "f", "g", "h", "i"]},
+            ),
+            ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
+        ],
+    )
+    def test_update(self, data, other_data):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        other_modin_df, other_pandas_df = (
+            pd.DataFrame(other_data),
+            pandas.DataFrame(other_data),
         )
-        other = pd.DataFrame([[3.6, 2.0, np.nan], [np.nan, np.nan, 7]], index=[1, 3])
+        modin_df.update(other_modin_df)
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
 
-        df.update(other)
-        expected = pd.DataFrame(
-            [[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3], [1.5, np.nan, 7.0]]
-        )
-        df_equals(df, expected)
+        with pytest.raises(ValueError):
+            modin_df.update(other_modin_df, errors="raise")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___neg__(self, request, data):

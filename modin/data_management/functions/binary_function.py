@@ -42,10 +42,12 @@ class BinaryFunction(Function):
                         )
                     )
                 else:
+                    join_type = call_kwds.get("join_type", "outer")
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame._binary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             other._modin_frame,
+                            join_type=join_type,
                         )
                     )
             else:
