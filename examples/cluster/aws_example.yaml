@@ -118,7 +118,7 @@ setup_commands:
     - cd ray/python && pip install -e .
 
     - echo 'installing modin from source'
-    - test -e modin || git clone https://github.com/anmyachev/modin.git && cd modin && git checkout "test_autoscaler"
+    - test -e modin || git clone https://github.com/anmyachev/modin.git && cd modin && git checkout "test-autoscaler"
     - cd modin && pip install -r requirements.txt
     - cd modin && pip install -e .
     - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
