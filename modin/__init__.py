@@ -15,7 +15,6 @@ import os
 import sys
 import warnings
 from packaging import version
-import weakref
 import collections
 
 from ._version import get_versions
@@ -90,8 +89,8 @@ class Publisher(object):
     def __init__(self, name, value):
         self.name = name
         self.__value = value
-        self.__subs = weakref.WeakSet()
-        self.__once = collections.defaultdict(weakref.WeakSet)
+        self.__subs = set()
+        self.__once = collections.defaultdict(set)
 
     def subscribe(self, callback):
         self.__subs.add(callback)
@@ -109,17 +108,15 @@ class Publisher(object):
     def put(self, value):
         oldvalue, self.__value = self.__value, value
         if oldvalue != value:
-            for callback in tuple(self.__subs):
-                if callback:
-                    callback(self)
+            for callback in self.__subs:
+                callback(self)
             try:
                 once = self.__once[value]
             except KeyError:
                 return
             if once:
-                for callback in tuple(once):
-                    if callback:
-                        callback(self)
+                for callback in once:
+                    callback(self)
             del self.__once[value]
 
 

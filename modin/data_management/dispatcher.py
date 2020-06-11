@@ -61,6 +61,10 @@ class EngineDispatcher(object):
     """
 
     __engine = None
+    @classmethod
+    def get_engine(cls):
+        # mostly for testing
+        return cls.__engine
 
     @classmethod
     def _update_engine(cls, _):
