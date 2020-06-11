@@ -2579,20 +2579,31 @@ class BasePandasDataset(object):
             Copy of input object, shifted.
         """
 
-        fill_index = (
-            pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-            if axis == "index" or axis == 0
-            else self.index
-        )
+        if periods == 0:
+            # Check obvious case first
+            return self.copy()
+
+        empty_frame = False
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                fill_index = self.index
+                empty_frame = True
+            else:
+                fill_index = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+        else:
+            fill_index = self.index
         from .dataframe import DataFrame
 
         fill_columns = None
         if isinstance(self, DataFrame):
-            fill_columns = (
-                pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-                if axis == "columns" or axis == 1
-                else self.columns
-            )
+            if axis == "columns" or axis == 1:
+                if abs(periods) >= len(self.columns):
+                    fill_columns = self.columns
+                    empty_frame = True
+                else:
+                    fill_columns = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+            else:
+                fill_columns = self.columns
 
         filled_df = (
             self.__constructor__(index=fill_index, columns=fill_columns)
@@ -2602,15 +2613,24 @@ class BasePandasDataset(object):
         if fill_value is not None:
             filled_df.fillna(fill_value, inplace=True)
 
+        if empty_frame:
+            return filled_df
+
         if freq is None:
             if axis == "index" or axis == 0:
                 if periods > 0:
                     dropped_df = self.drop(self.index[-periods:])
                     new_frame = filled_df.append(dropped_df, ignore_index=True)
+                    new_frame.index = self.index.copy()
+                    if isinstance(self, DataFrame):
+                        new_frame.columns = self.columns.copy()
                     return new_frame
                 else:
                     dropped_df = self.drop(self.index[:-periods])
                     new_frame = dropped_df.append(filled_df, ignore_index=True)
+                    new_frame.index = self.index.copy()
+                    if isinstance(self, DataFrame):
+                        new_frame.columns = self.columns.copy()
                     return new_frame
             else:
                 res_columns = self.columns
