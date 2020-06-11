@@ -1092,8 +1092,8 @@ class Series(BasePandasDataset):
         )
 
     @property
-    def sparse(self, data=None):
-        return self._default_to_pandas(pandas.Series.sparse, data=data)
+    def sparse(self):
+        return self._default_to_pandas(pandas.Series.sparse)
 
     def squeeze(self, axis=None):
         if axis is not None:

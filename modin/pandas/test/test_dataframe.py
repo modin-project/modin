@@ -2776,6 +2776,19 @@ class TestDataFrameDefault:
             except TypeError:
                 pass
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_hasattr_sparse(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        try:
+            pandas_result = hasattr(pandas_df, "sparse")
+        except Exception as e:
+            with pytest.raises(type(e)):
+                hasattr(modin_df, "sparse")
+        else:
+            modin_result = hasattr(modin_df, "sparse")
+            assert modin_result == pandas_result
+
 
 class TestDataFrameReduction_A:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

@@ -1813,8 +1813,8 @@ class DataFrame(BasePandasDataset):
             return frame
 
     @property
-    def sparse(self, data=None):
-        return self._default_to_pandas(pandas.DataFrame.sparse, data=data)
+    def sparse(self):
+        return self._default_to_pandas(pandas.DataFrame.sparse)
 
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None
