@@ -2518,19 +2518,26 @@ class TestDataFrameDefault:
             pd.DataFrame(data).sem()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_shift(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    @pytest.mark.parametrize("index", ["default", "ndarray"])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
+    def test_shift(self, data, index, axis, periods):
+        if index == "default":
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+        elif index == "ndarray":
+            data_column_length = len(data[next(iter(data))])
+            index_data = np.arange(2, data_column_length + 2)
+            modin_df = pd.DataFrame(data, index=index_data)
+            pandas_df = pandas.DataFrame(data, index=index_data)
 
-        df_equals(modin_df.shift(), pandas_df.shift())
-        df_equals(modin_df.shift(fill_value=777), pandas_df.shift(fill_value=777))
-        df_equals(modin_df.shift(periods=7), pandas_df.shift(periods=7))
         df_equals(
-            modin_df.shift(periods=-3, axis=0), pandas_df.shift(periods=-3, axis=0)
+            modin_df.shift(periods=periods, axis=axis),
+            pandas_df.shift(periods=periods, axis=axis),
         )
-        df_equals(modin_df.shift(periods=5, axis=1), pandas_df.shift(periods=5, axis=1))
         df_equals(
-            modin_df.shift(periods=-5, axis=1), pandas_df.shift(periods=-5, axis=1)
+            modin_df.shift(periods=periods, axis=axis, fill_value=777),
+            pandas_df.shift(periods=periods, axis=axis, fill_value=777),
         )
 
     def test_slice_shift(self):
