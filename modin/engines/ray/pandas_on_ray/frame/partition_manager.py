@@ -123,7 +123,6 @@ class PandasOnRayFrameManager(RayFrameManager):
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
-<<<<<<< HEAD
     def broadcast_apply(cls, axis, apply_func, left, right):
         map_func = ray.put(apply_func)
         right_parts = np.squeeze(right)
@@ -154,7 +153,8 @@ class PandasOnRayFrameManager(RayFrameManager):
                 ]
                 for row_idx in range(len(left))
             ]
-=======
+
+    @classmethod
     def progress_bar_wrapper(cls, function, *args, **kwargs):
         """Wraps computation function inside a progress bar. Spawns another thread 
             which displays a progress bar showing estimated completion time.
@@ -254,5 +254,4 @@ class PandasOnRayFrameManager(RayFrameManager):
     def binary_operation(cls, axis, left, func, right):
         return cls.progress_bar_wrapper(
             "apply_func_to_select_indices", axis, left, func, right
->>>>>>> updates
         )
