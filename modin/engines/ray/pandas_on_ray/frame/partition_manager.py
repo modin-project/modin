@@ -153,6 +153,7 @@ class PandasOnRayFrameManager(RayFrameManager):
                 ]
                 for row_idx in range(len(left))
             ]
+        )
 
     @classmethod
     def progress_bar_wrapper(cls, function, *args, **kwargs):
