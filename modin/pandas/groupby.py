@@ -591,11 +591,7 @@ class DataFrameGroupBy(object):
         DataFrame or Series
             Returns the same type as `self._df`.
         """
-        if (
-            self._is_multi_by
-            and not isinstance(self._by, type(self._query_compiler))
-            or not isinstance(self._by, type(self._query_compiler))
-        ):
+        if not isinstance(self._by, type(self._query_compiler)) or self._axis != 0:
             return self._default_to_pandas(default_func, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
