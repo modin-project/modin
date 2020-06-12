@@ -118,12 +118,17 @@ def _dt_func_map(func_name):
 
 
 def copy_df_for_func(func):
-    """Create a function that copies the dataframe, likely because `func` is inplace.
+    """
+    Create a function that copies the dataframe, likely because `func` is inplace.
 
-    Args:
-        func: The function, usually updates a dataframe inplace.
+    Parameters
+    ----------
+    func : callable
+        The function, usually updates a dataframe inplace.
 
-    Returns:
+    Returns
+    -------
+    callable
         A callable function to be applied in the partitions
     """
 
@@ -310,7 +315,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
     __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
     __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
-    update = BinaryFunction.register(copy_df_for_func(pandas.DataFrame.update))
+    df_update = BinaryFunction.register(
+        copy_df_for_func(pandas.DataFrame.update), join_type="left"
+    )
+    series_update = BinaryFunction.register(
+        copy_df_for_func(lambda x, y: pandas.Series.update(x.squeeze(), y.squeeze())),
+        join_type="left",
+    )
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -439,6 +450,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Transpose
 
     # MapReduce operations
+
+    def _is_monotonic(self, type=None):
+        funcs = {
+            "increasing": lambda df: df.is_monotonic_increasing,
+            "decreasing": lambda df: df.is_monotonic_decreasing,
+        }
+
+        monotonic_fn = funcs.get(type, funcs["increasing"])
+
+        def is_monotonic_map(df):
+            df = df.squeeze()
+            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
+
+        def is_monotonic_reduce(df):
+            df = df.squeeze()
+
+            common_case = df[0].all()
+            left_edges = df[1]
+            right_edges = df[2]
+
+            edges_list = []
+            for i in range(len(left_edges)):
+                edges_list.extend([left_edges.iloc[i], right_edges.iloc[i]])
+
+            edge_case = monotonic_fn(pandas.Series(edges_list))
+            return [common_case and edge_case]
+
+        return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
+
+    def is_monotonic_decreasing(self):
+        return self._is_monotonic(type="decreasing")
+
+    is_monotonic = _is_monotonic
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)

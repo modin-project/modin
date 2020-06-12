@@ -247,15 +247,11 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update(self, other, **kwargs):
-        """Uses other manager to update corresponding values in this manager.
+    def df_update(self, other, **kwargs):
+        pass
 
-        Args:
-            other: The other manager.
-
-        Returns:
-            New QueryCompiler with updated data and index.
-        """
+    @abc.abstractmethod
+    def series_update(self, other, **kwargs):
         pass
 
     @abc.abstractmethod
@@ -335,6 +331,26 @@ class BaseQueryCompiler(abc.ABC):
     # Currently, this means a Pandas Series will be returned, but in the future
     # we will implement a Distributed Series, and this will be returned
     # instead.
+
+    @abc.abstractmethod
+    def is_monotonic(self):
+        """Return boolean if values in the object are monotonic_increasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_monotonic_decreasing(self):
+        """Return boolean if values in the object are monotonic_decreasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
 
     @abc.abstractmethod
     def count(self, **kwargs):
