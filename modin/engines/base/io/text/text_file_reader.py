@@ -34,13 +34,11 @@ class TextFileReader(FileReader):
                 line = f.readline()
                 quote_count += re.subn(quotechar, b"", line)[1]
                 if not line:
+                    warnings.warn("Reached EOF but have not found matching quote.")
                     break
 
             if quote_count % 2 != 0:
                 warnings.warn("File has mismatched quotes")
-
-        else:
-            f.seek(0, 2)
 
         # The workers return multiple objects for each part of the file read:
         # - The first n - 2 objects are partitions of data
