@@ -5145,6 +5145,14 @@ class TestDataFrameIndexing:
         pandas_df[pandas_df.columns[-1]] = pandas_df[pandas_df.columns[0]]
         df_equals(modin_df, pandas_df)
 
+        # Test 2d ndarray assignment to column
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        modin_df["new_col"] = modin_df[[modin_df.columns[0]]].values
+        pandas_df["new_col"] = pandas_df[[pandas_df.columns[0]]].values
+        df_equals(modin_df, pandas_df)
+        assert isinstance(modin_df["new_col"][0], type(pandas_df["new_col"][0]))
+
         # Transpose test
         modin_df = pd.DataFrame(data).T
         pandas_df = pandas.DataFrame(data).T
