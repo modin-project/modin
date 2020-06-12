@@ -109,9 +109,6 @@ initialization_commands: []
 
 # List of shell commands to run to set up nodes.
 setup_commands:
-    - pip uninstall boto3 sagemaker docker-compose
-    - pip install s3fs
-
     - echo 'installing modin from source'
     - test -e modin || git clone --single-branch --branch test-autoscaler https://github.com/anmyachev/modin.git
     - cd modin && pip install -r requirements.txt
@@ -123,8 +120,6 @@ setup_commands:
     - test -e ray || git clone --single-branch --branch add-ssh-proxy https://github.com/vnlitvinov/ray.git
     - cd ray && ci/travis/install-bazel.sh
     - cd ray/python && pip install -e .
-
-    - pip install boto==1.4.8
 
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
