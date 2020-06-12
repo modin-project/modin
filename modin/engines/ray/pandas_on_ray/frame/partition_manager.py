@@ -43,6 +43,7 @@ if __execution_engine__ == "Ray":
                 other = call(other, **kwargs)
         return apply_func(df, other)
 
+
 from tqdm import tqdm_notebook
 import threading
 import modin
@@ -183,12 +184,16 @@ class PandasOnRayFrameManager(RayFrameManager):
             if cls.bar_count == 0:
                 cls.progress_bar = None
 
-        if (hasattr(modin, "show-progress-bar")) and getattr(modin, "show-progress-bar") == True:
+        if (hasattr(modin, "show-progress-bar")) and getattr(
+            modin, "show-progress-bar"
+        ) == True:
             if cls.progress_bar:
-                cls.progress_bar.total += len(futures) - 1
-                threading.Thread(target=update_progress_bar, args=(futures, cls.progress_bar)).start()
+                # cls.progress_bar.total += len(futures) - 1
+                threading.Thread(
+                    target=update_progress_bar, args=(futures, cls.progress_bar)
+                ).start()
             else:
-                threading.Thread(target=display_progress_bar, args=(futures, )).start()
+                threading.Thread(target=display_progress_bar, args=(futures,)).start()
         return result_parts
 
     @classmethod

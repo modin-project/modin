@@ -295,17 +295,17 @@ class BaseFrameManager(object):
             if show_bar == True:
                 pbar.update(1)
             return f
-        
+
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
         update_count = df.size / (col_chunksize * row_chunksize)
 
-        show_bar = (hasattr(modin, "show-progress-bar")) and getattr(modin, "show-progress-bar")
+        show_bar = (hasattr(modin, "show-progress-bar")) and getattr(
+            modin, "show-progress-bar"
+        )
         if show_bar:
-            pbar = tqdm_notebook(
-                total=update_count, desc="Building DataFrame"
-            )
+            pbar = tqdm_notebook(total=update_count, desc="Building DataFrame")
         else:
             pbar = None
         parts = [
