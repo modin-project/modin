@@ -428,7 +428,7 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if not isinstance(by, Series) and axis == 0 and all(o in self for o in by):
+            if not isinstance(by, Series) and axis == 0 and all(not isinstance(o, Series) and o in self for o in by):
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."
@@ -437,16 +437,28 @@ class DataFrame(BasePandasDataset):
                 drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
-                if mismatch and all(
-                    obj in self
-                    or (hasattr(self.index, "names") and obj in self.index.names)
+                if mismatch and all(not isinstance(obj, Series) and 
+                    (obj in self
+                    or (hasattr(self.index, "names") and obj in self.index.names))
                     for obj in by
                 ):
                     # In the future, we will need to add logic to handle this, but for now
                     # we default to pandas in this case.
                     pass
                 elif mismatch:
-                    raise KeyError(next(x for x in by if x not in self))
+                    """Check that we group only by column name(s) or Series object(s)"""
+                    series = []
+                    cols = []
+                    for obj in by:
+                        if isinstance(obj, Series):
+                            series.append(obj)
+                        elif obj in self:
+                            cols.append(obj)
+                        else:
+                            raise KeyError(next(x for x in by if x not in self))
+                    cols = self.__getitem__(cols)._query_compiler
+                    by = self._query_compiler._construct_groupby_frame(cols, series)
+
 
         from .groupby import DataFrameGroupBy
 

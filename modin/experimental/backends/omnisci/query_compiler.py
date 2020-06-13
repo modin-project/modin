@@ -140,6 +140,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             new_qc = new_qc.squeeze()
         return new_qc
 
+    def _construct_groupby_frame(self, cols, series):
+        new_frame = self._modin_frame._construct_groupby_frame(cols._modin_frame, series)
+
+        return self.__constructor__(new_frame)
+
     def _get_index(self):
         return self._modin_frame.index
 
