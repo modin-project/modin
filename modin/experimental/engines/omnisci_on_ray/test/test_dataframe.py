@@ -171,7 +171,9 @@ class TestGroupby:
     datetime_data = {
         "a": [1, 1, 2, 2],
         "b": [11, 21, 12, 11],
-        "c": pd.to_datetime(["20190902","20180913","20190921","20180903"], format="%Y%m%d")
+        "c": pd.to_datetime(
+            ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
+        ),
     }
 
     def test_dt_year(self):
@@ -188,10 +190,12 @@ class TestGroupby:
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         df = pd.DataFrame(self.datetime_data)
-        ref = df.groupby(["b", df["c"].dt.year], as_index=as_index).agg({"a" : "size"})
+        ref = df.groupby(["b", df["c"].dt.year], as_index=as_index).agg({"a": "size"})
 
         modin_df = mpd.DataFrame(self.datetime_data)
-        modin_df = modin_df.groupby(["b", modin_df["c"].dt.year], as_index=as_index).agg({"a" : "size"})
+        modin_df = modin_df.groupby(
+            ["b", modin_df["c"].dt.year], as_index=as_index
+        ).agg({"a": "size"})
 
         exp = to_pandas(modin_df)
 

@@ -129,11 +129,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
-            res = self._dtypes[
-                new_index + new_columns.tolist()
-                if isinstance(new_columns, Index)
-                else new_columns
-            ]
+            res = self._dtypes[new_index + new_columns]
         else:
             res = self._dtypes[new_columns]
         return res
@@ -253,7 +249,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         for col in other.columns:
             new_exprs[col] = other._op.exprs[col]
         dtypes = [expr._dtype for expr in new_exprs.values()]
- 
+
         return self.__constructor__(
             columns=new_columns,
             dtypes=dtypes,
