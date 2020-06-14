@@ -173,8 +173,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_dtypes = base._dtypes[groupby_cols].tolist()
 
         exprs = OrderedDict()
-        for col in groupby_cols:
-            exprs[col] = by_frame._op.exprs[col]
+        if isinstance(by_frame._op, TransformNode):
+            for col in groupby_cols:
+                exprs[col] = by_frame._op.exprs[col]
 
         if isinstance(agg, str):
             new_agg = {}
@@ -251,12 +252,13 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         for col in other.columns:
             new_exprs[col] = other._op.exprs[col]
-
+        dtypes = [expr._dtype for expr in new_exprs.values()]
+ 
         return self.__constructor__(
             columns=new_columns,
-            dtypes=self._dtypes_for_exprs(self._index_cols, new_exprs),
+            dtypes=dtypes,
             op=TransformNode(base, new_exprs),
-            index_cols=self._index_cols,
+            index_cols=None,
         )
 
     def fillna(
