@@ -338,19 +338,21 @@ class DataFrameGroupBy(object):
     def std(self, ddof=1, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.std(ddof, *args, **kwargs))
 
-    def aggregate(self, arg, *args, **kwargs):
+    def aggregate(self, func=None, *args, **kwargs):
         if self._axis != 0:
             # This is not implemented in pandas,
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
 
-        if is_list_like(arg):
+        if func is None or is_list_like(func):
             return self._default_to_pandas(
-                lambda df: df.aggregate(arg, *args, **kwargs)
+                lambda df: df.aggregate(func, *args, **kwargs)
             )
         return self._apply_agg_function(
-            lambda df: df.aggregate(arg, *args, **kwargs), drop=self._as_index
+            lambda df: df.aggregate(func, *args, **kwargs), drop=self._as_index
         )
+
+    agg = aggregate
 
     def last(self, **kwargs):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
@@ -490,9 +492,6 @@ class DataFrameGroupBy(object):
 
     def __iter__(self):
         return self._iter.__iter__()
-
-    def agg(self, arg, *args, **kwargs):
-        return self.aggregate(arg, *args, **kwargs)
 
     def cov(self):
         return self._default_to_pandas(lambda df: df.cov())
