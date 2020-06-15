@@ -5374,8 +5374,10 @@ class TestDataFrameIter:
             df_equals(pandas_series, modin_series)
             assert pandas_index == modin_index
 
+    @pytest.mark.parametrize("name", [None, "NotPandas", "Pandas"])
+    @pytest.mark.parametrize("index", [True, False])
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_itertuples(self, data):
+    def test_itertuples(self, name, index, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
@@ -5385,16 +5387,28 @@ class TestDataFrameIter:
         for modin_row, pandas_row in zip(modin_it_default, pandas_it_default):
             np.testing.assert_equal(modin_row, pandas_row)
 
-        # test all combinations of custom params
-        indices = [True, False]
-        names = [None, "NotPandas", "Pandas"]
+        modin_it_custom = modin_df.itertuples(index=index, name=name)
+        pandas_it_custom = pandas_df.itertuples(index=index, name=name)
+        for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
+            np.testing.assert_equal(modin_row, pandas_row)
 
-        for index in indices:
-            for name in names:
-                modin_it_custom = modin_df.itertuples(index=index, name=name)
-                pandas_it_custom = pandas_df.itertuples(index=index, name=name)
-                for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
-                    np.testing.assert_equal(modin_row, pandas_row)
+        mi_index_modin = pd.MultiIndex.from_tuples(
+            [(i // 4, i // 2, i) for i in range(len(modin_df.columns))]
+        )
+        mi_index_pandas = pandas.MultiIndex.from_tuples(
+            [(i // 4, i // 2, i) for i in range(len(pandas_df.columns))]
+        )
+        modin_df.columns = mi_index_modin
+        pandas_df.columns = mi_index_pandas
+        modin_it_default = modin_df.itertuples()
+        pandas_it_default = pandas_df.itertuples()
+        for modin_row, pandas_row in zip(modin_it_default, pandas_it_default):
+            np.testing.assert_equal(modin_row, pandas_row)
+
+        modin_it_custom = modin_df.itertuples(index=index, name=name)
+        pandas_it_custom = pandas_df.itertuples(index=index, name=name)
+        for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
+            np.testing.assert_equal(modin_row, pandas_row)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___iter__(self, data):
