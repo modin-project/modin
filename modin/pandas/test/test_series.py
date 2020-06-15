@@ -2228,12 +2228,11 @@ def test_reorder_levels():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "repeats", [2, 3, 4], ids=["repeats_{}".format(i) for i in [2, 3, 4]]
+    "repeats", [0, 2, 3, 4], ids=["repeats_{}".format(i) for i in [0, 2, 3, 4]]
 )
 def test_repeat(data, repeats):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        df_equals(modin_series.repeat(repeats), pandas_series.repeat(repeats))
+    df_equals(modin_series.repeat(repeats), pandas_series.repeat(repeats))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
