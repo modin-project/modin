@@ -1153,6 +1153,19 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
+    def _to_numeric(self, **kwargs):
+        """
+        Convert `self` to numeric.
+
+        Returns
+        -------
+        numeric
+            Series: Series of numeric dtype
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.to_numeric(**kwargs)
+        )
+
     def to_dict(self, into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", into=into)
 
