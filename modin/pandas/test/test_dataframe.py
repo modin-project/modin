@@ -3705,22 +3705,15 @@ class TestDataFrameWindow:
         modin_df = pd.DataFrame(frame_data).fillna(value={"Date": df["Date2"]})
         df_equals(modin_df, result)
 
-        # TODO: Use this when Arrow issue resolves:
-        # (https://issues.apache.org/jira/browse/ARROW-2122)
-        # with timezone
-        """
-        frame_data = {'A': [pandas.Timestamp('2012-11-11 00:00:00+01:00'),
-                            pandas.NaT]}
+        frame_data = {"A": [pandas.Timestamp("2012-11-11 00:00:00+01:00"), pandas.NaT]}
         df = pandas.DataFrame(frame_data)
         modin_df = pd.DataFrame(frame_data)
-        df_equals(modin_df.fillna(method='pad'), df.fillna(method='pad'))
+        df_equals(modin_df.fillna(method="pad"), df.fillna(method="pad"))
 
-        frame_data = {'A': [pandas.NaT,
-                            pandas.Timestamp('2012-11-11 00:00:00+01:00')]}
+        frame_data = {"A": [pandas.NaT, pandas.Timestamp("2012-11-11 00:00:00+01:00")]}
         df = pandas.DataFrame(frame_data)
-        modin_df = pd.DataFrame(frame_data).fillna(method='bfill')
-        df_equals(modin_df, df.fillna(method='bfill'))
-        """
+        modin_df = pd.DataFrame(frame_data).fillna(method="bfill")
+        df_equals(modin_df, df.fillna(method="bfill"))
 
     def test_fillna_downcast(self):
         # infer int64 from float64
@@ -3911,27 +3904,30 @@ class TestDataFrameWindow:
 
         df_equals(modin_df.fillna(method="ffill"), pandas_df.fillna(method="ffill"))
 
-    """
-    TODO: Use this when Arrow issue resolves:
-    (https://issues.apache.org/jira/browse/ARROW-2122)
     def test_fillna_datetime_columns(self):
-        frame_data = {'A': [-1, -2, np.nan],
-                      'B': date_range('20130101', periods=3),
-                      'C': ['foo', 'bar', None],
-                      'D': ['foo2', 'bar2', None]}
-        df = pandas.DataFrame(frame_data, index=date_range('20130110', periods=3))
-        modin_df = pd.DataFrame(frame_data, index=date_range('20130110', periods=3))
-        df_equals(modin_df.fillna('?'), df.fillna('?'))
+        frame_data = {
+            "A": [-1, -2, np.nan],
+            "B": pd.date_range("20130101", periods=3),
+            "C": ["foo", "bar", None],
+            "D": ["foo2", "bar2", None],
+        }
+        df = pandas.DataFrame(frame_data, index=pd.date_range("20130110", periods=3))
+        modin_df = pd.DataFrame(frame_data, index=pd.date_range("20130110", periods=3))
+        df_equals(modin_df.fillna("?"), df.fillna("?"))
 
-        frame_data = {'A': [-1, -2, np.nan],
-                      'B': [pandas.Timestamp('2013-01-01'),
-                            pandas.Timestamp('2013-01-02'), pandas.NaT],
-                      'C': ['foo', 'bar', None],
-                      'D': ['foo2', 'bar2', None]}
-        df = pandas.DataFrame(frame_data, index=date_range('20130110', periods=3))
-        modin_df = pd.DataFrame(frame_data, index=date_range('20130110', periods=3))
-        df_equals(modin_df.fillna('?'), df.fillna('?'))
-    """
+        frame_data = {
+            "A": [-1, -2, np.nan],
+            "B": [
+                pandas.Timestamp("2013-01-01"),
+                pandas.Timestamp("2013-01-02"),
+                pandas.NaT,
+            ],
+            "C": ["foo", "bar", None],
+            "D": ["foo2", "bar2", None],
+        }
+        df = pandas.DataFrame(frame_data, index=pd.date_range("20130110", periods=3))
+        modin_df = pd.DataFrame(frame_data, index=pd.date_range("20130110", periods=3))
+        df_equals(modin_df.fillna("?"), df.fillna("?"))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
