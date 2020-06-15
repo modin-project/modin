@@ -28,6 +28,15 @@ class BaseFactory(object):
     io_cls = None  # The module where the I/O functionality exists.
 
     @classmethod
+    def fill_io_cls(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        raise NotImplementedError(
+            "Subclasses of BaseFactory must implement fill_io_cls"
+        )
+
+    @classmethod
     def _from_pandas(cls, df):
         return cls.io_cls.from_pandas(df)
 
@@ -113,24 +122,27 @@ class BaseFactory(object):
 
 
 class PandasOnRayFactory(BaseFactory):
+    @classmethod
+    def fill_io_cls(cls):
+        from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
-    from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-
-    io_cls = PandasOnRayIO
+        cls.io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
+    @classmethod
+    def fill_io_cls(cls):
+        from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
-    from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
-
-    io_cls = PandasOnPythonIO
+        cls.io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
+    @classmethod
+    def fill_io_cls(cls):
+        from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
-    from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
-
-    io_cls = PandasOnDaskIO
+        cls.io_cls = PandasOnDaskIO
 
 
 class ExperimentalBaseFactory(BaseFactory):
@@ -165,21 +177,22 @@ class ExperimentalBaseFactory(BaseFactory):
 
 
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+    @classmethod
+    def fill_io_cls(cls):
+        from modin.experimental.engines.pandas_on_ray.io_exp import (
+            ExperimentalPandasOnRayIO,
+        )
 
-    from modin.experimental.engines.pandas_on_ray.io_exp import (
-        ExperimentalPandasOnRayIO,
-    )
-
-    io_cls = ExperimentalPandasOnRayIO
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
-
     pass
 
 
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
+    @classmethod
+    def fill_io_cls(cls):
+        from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
-    from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
-
-    io_cls = PyarrowOnRayIO
+        cls.io_cls = PyarrowOnRayIO

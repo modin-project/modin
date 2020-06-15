@@ -91,6 +91,8 @@ class EngineDispatcher(object):
                     msg.format(partition_format.get(), execution_engine.get())
                 )
             cls.__engine = StubFactory.set_failing_name(factory_name)
+        else:
+            cls.__engine.fill_io_cls()
 
     @classmethod
     def from_pandas(cls, df):

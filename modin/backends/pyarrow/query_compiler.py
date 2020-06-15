@@ -17,19 +17,8 @@ from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
-from modin import partition_format
-
-
-def _update(_):
-    import pyarrow
-    import pyarrow.gandiva as gandiva
-
-    globals()["pa"] = pyarrow
-    globals()["gandiva"] = gandiva
-
-
-pa, gandiva = None, None  # filled later by _update()
-partition_format.once("Pyarrow", _update)
+import pyarrow as pa
+import pyarrow.gandiva as gandiva
 
 
 class FakeSeries:
