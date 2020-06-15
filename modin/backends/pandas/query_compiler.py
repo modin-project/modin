@@ -480,7 +480,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = MapFunction.register(pandas.DataFrame.applymap)
     invert = MapFunction.register(pandas.DataFrame.__invert__)

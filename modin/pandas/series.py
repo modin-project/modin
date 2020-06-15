@@ -1008,9 +1008,7 @@ class Series(BasePandasDataset):
         if repeats == 0:
             return self.__constructor__()
 
-        return self.__constructor__(
-            query_compiler=self._query_compiler.repeat(repeats)
-        )
+        return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
         if drop and level is None:
