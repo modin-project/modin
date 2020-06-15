@@ -480,6 +480,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
+
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = MapFunction.register(pandas.DataFrame.applymap)
     invert = MapFunction.register(pandas.DataFrame.__invert__)
@@ -544,6 +545,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
 
     # END String map partitions operations
+
+    def repeat(self, repeats):
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda df: df.squeeze().repeat(repeats, axis=None)
+        )
+        return self.__constructor__(new_modin_frame)
 
     def unique(self):
         """Return unique values of Series object.
