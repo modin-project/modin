@@ -1484,25 +1484,10 @@ class BasePandasDataset(object):
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
 
-            unique_index_values = self.index.get_level_values(level).unique()
-            results_series_data = {"indexes": [], "results": []}
-            for index_value in unique_index_values:
-                results_series_data["indexes"].append(index_value)
-                indexed_data = self[self.index.get_level_values(level) == index_value]
-                results_series_data["results"].append(
-                    indexed_data.kurt(
-                        axis=0,
-                        skipna=skipna,
-                        level=None,
-                        numeric_only=numeric_only,
-                        **kwargs,
-                    )
-                )
+            grouped = self.groupby(level=level)
+            applyf = lambda x: x.kurt(axis=0, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs)
 
-            return self.__constructor__(
-                data=results_series_data["results"],
-                index=results_series_data["indexes"],
-            ).squeeze()
+            return grouped.aggregate(applyf)
 
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
