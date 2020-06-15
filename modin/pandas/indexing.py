@@ -247,6 +247,7 @@ class _LocIndexer(_LocationIndexerBase):
                 result.index = result.index.droplevel(list(range(len(row_loc))))
         if (
             hasattr(result, "columns")
+            and not isinstance(col_loc, slice)
             and isinstance(result.columns, pandas.MultiIndex)
             and all(col_loc[i] in result.columns.levels[i] for i in range(len(col_loc)))
         ):
