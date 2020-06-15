@@ -231,7 +231,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             columns=new_columns, dtypes=new_dtypes, op=new_op, index_cols=index_cols
         )
         if len(output_columns) > 0:
-           return new_frame.mask(col_indices=output_columns)
+            return new_frame.mask(col_indices=output_columns)
 
         return new_frame
 
@@ -466,7 +466,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                         "duplicated column names are not supported"
                     )
                 if isinstance(frame._op, TransformNode):
-                    exprs[col] = frame._op.exprs[col] 
+                    exprs[col] = frame._op.exprs[col]
                 else:
                     new_col = col if col != "" else f"__col{len(exprs)}__"
                     exprs[new_col] = frame.ref(col)
@@ -476,7 +476,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_frame = self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
-            op=TransformNode(self._op.input[0] if isinstance(self._op, MaskNode) else self, exprs),
+            op=TransformNode(
+                self._op.input[0] if isinstance(self._op, MaskNode) else self, exprs
+            ),
             index_cols=self._index_cols,
         )
         return new_frame

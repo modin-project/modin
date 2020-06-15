@@ -428,7 +428,11 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if not isinstance(by, Series) and axis == 0 and all(not isinstance(o, Series) and o in self for o in by):
+            if (
+                not isinstance(by, Series)
+                and axis == 0
+                and all(not isinstance(o, Series) and o in self for o in by)
+            ):
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."
@@ -437,9 +441,12 @@ class DataFrame(BasePandasDataset):
                 drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
-                if mismatch and all(not isinstance(obj, Series) and 
-                    (obj in self
-                    or (hasattr(self.index, "names") and obj in self.index.names))
+                if mismatch and all(
+                    not isinstance(obj, Series)
+                    and (
+                        obj in self
+                        or (hasattr(self.index, "names") and obj in self.index.names)
+                    )
                     for obj in by
                 ):
                     # In the future, we will need to add logic to handle this, but for now
@@ -460,7 +467,6 @@ class DataFrame(BasePandasDataset):
                     if cols is None:
                         raise NotImplementedError("Unsupported groupby arguments")
                     by = cols.concat(1, series, ignore_index=True)
-
 
         from .groupby import DataFrameGroupBy
 
