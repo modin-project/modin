@@ -1485,7 +1485,15 @@ class BasePandasDataset(object):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
 
             grouped = self.groupby(level=level)
-            applyf = lambda x: x.kurt(axis=0, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs)
+
+            def applyf(x):
+                return x.kurt(
+                    axis=0,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
 
             return grouped.aggregate(applyf)
 
