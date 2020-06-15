@@ -141,7 +141,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return new_qc
 
     def _construct_groupby_frame(self, cols, series):
-        new_frame = self._modin_frame._construct_groupby_frame(cols._modin_frame, series)
+        new_frame = self._modin_frame._construct_groupby_frame(cols, series)
 
         return self.__constructor__(new_frame)
 

@@ -451,7 +451,7 @@ class DataFrame(BasePandasDataset):
                     cols = []
                     for obj in by:
                         if isinstance(obj, Series):
-                            series.append(obj)
+                            series.append(obj._query_compiler)
                         elif obj in self:
                             cols.append(obj)
                         else:

@@ -203,6 +203,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     new_dtypes.append(_agg_dtype(v, self._dtypes[k]))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
 
+        output_columns = []
         if isinstance(by_frame._op, TransformNode):
             """group by modified frame's columns requires special hadling"""
             exprs = self._translate_exprs_to_base(exprs, base)
@@ -219,11 +220,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 index_cols=by_frame._index_cols,
             )
             new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
+            if not groupby_args["as_index"]:
+                for col in new_frame.columns:
+                    """in case of as_index=False we output only InputRefExprs to align with pandas behavior"""
+                    if isinstance(new_frame._op.exprs[col], InputRefExpr):
+                        output_columns.append(col)
         else:
             new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
         new_frame = self.__constructor__(
             columns=new_columns, dtypes=new_dtypes, op=new_op, index_cols=index_cols
         )
+        if len(output_columns) > 0:
+           return new_frame.mask(col_indices=output_columns)
 
         return new_frame
 
@@ -232,7 +240,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
             raise NotImplementedError(
                 "Only one modified column argument is supported now!"
             )
-        other = series[0]._query_compiler._modin_frame
+        other = series[0]._modin_frame
+        cols = cols._modin_frame
 
         if not isinstance(cols._op, MaskNode) or not isinstance(
             other._op, TransformNode
