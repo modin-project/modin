@@ -52,9 +52,9 @@ class SQLReader(FileReader):
         # In the case that we are given a SQLAlchemy Connection or Engine, the objects
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
-        if isinstance(con, (sa.engine.Engine, sa.engine.Connection)):
+        if not isinstance(con, str):
             warnings.warn(
-                "To use parallel implementation of `read_sql`, pass the "
+                "To use parallel implementation of `read_sql`, pass the sqlalchemy"
                 "connection string instead of {}.".format(type(con))
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
