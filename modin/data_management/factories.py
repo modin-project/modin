@@ -11,11 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import warnings
 
 from modin import __execution_engine__ as execution_engine
-from modin import __partition_format__ as partition_format
 
 import pandas
 
@@ -133,17 +131,6 @@ class PandasOnDaskFactory(BaseFactory):
     from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
     io_cls = PandasOnDaskIO
-
-
-class PyarrowOnRayFactory(BaseFactory):
-
-    if partition_format == "Pyarrow" and not os.environ.get(
-        "MODIN_EXPERIMENTAL", False
-    ):
-        raise ImportError(
-            "Pyarrow on Ray is only accessible through the experimental API.\nRun "
-            "`import modin.experimental.pandas as pd` to use Pyarrow on Ray."
-        )
 
 
 class ExperimentalBaseFactory(BaseFactory):

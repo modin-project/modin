@@ -126,7 +126,6 @@ partition_format = Publisher(name="partition_format", value=get_partition_format
 
 # for backwards compatibility, remove when all items are migrated to new PubSub model
 __execution_engine__ = execution_engine.get()
-__partition_format__ = partition_format.get()
 
 # We don't want these used outside of this file.
 del get_execution_engine
