@@ -129,7 +129,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
-            res = self._dtypes[new_index + new_columns]
+            res = self._dtypes[
+                new_index
+                + (
+                    new_columns
+                    if isinstance(new_columns, list)
+                    else new_columns.to_list()
+                )
+            ]
         else:
             res = self._dtypes[new_columns]
         return res
@@ -151,7 +158,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         by_frame = by._modin_frame
         base = by_frame._op.input[0]
-        base = base._find_common_projections_base(by_frame)
+        base = by_frame._find_common_projections_base(base)
         if base is None:
             raise NotImplementedError("unsupported groupby args")
 
