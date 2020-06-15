@@ -15,11 +15,9 @@ import pandas
 
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import get_client
-    import cloudpickle as pkl
+from distributed.client import get_client
+import cloudpickle as pkl
 
 
 def apply_list_of_funcs(funcs, df):

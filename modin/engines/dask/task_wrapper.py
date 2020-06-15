@@ -11,10 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin import __execution_engine__
-
-if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
+from distributed.client import _get_global_client
 
 
 class DaskTask:
