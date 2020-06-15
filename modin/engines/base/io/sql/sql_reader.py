@@ -32,8 +32,6 @@ class SQLReader(FileReader):
             index_col: Column(s) to set as index(MultiIndex).
             kwargs: Pass into pandas.read_sql function.
         """
-        import sqlalchemy as sa
-
         try:
             import psycopg2 as pg
 
