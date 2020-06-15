@@ -28,6 +28,7 @@ from modin.data_management.functions import (
     MapReduceFunction,
     ReductionFunction,
     BinaryFunction,
+    GroupbyReduceFunction,
 )
 
 
@@ -60,13 +61,75 @@ def _str_map(func_name):
     return str_op_builder
 
 
+def _dt_prop_map(property_name):
+    """
+    Create a function that call property of property `dt` of the series.
+
+    Parameters
+    ----------
+    property_name
+        The property of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies non-callable properties of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        prop_val = getattr(df.squeeze().dt, property_name)
+        if isinstance(prop_val, pandas.Series):
+            return prop_val.to_frame()
+        elif isinstance(prop_val, pandas.DataFrame):
+            return prop_val
+        else:
+            return pandas.DataFrame([prop_val])
+
+    return dt_op_builder
+
+
+def _dt_func_map(func_name):
+    """
+    Create a function that call method of property `dt` of the series.
+
+    Parameters
+    ----------
+    func_name
+        The method of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies callable methods of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        dt_s = df.squeeze().dt
+        return pandas.DataFrame(
+            getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        )
+
+    return dt_op_builder
+
+
 def copy_df_for_func(func):
-    """Create a function that copies the dataframe, likely because `func` is inplace.
+    """
+    Create a function that copies the dataframe, likely because `func` is inplace.
 
-    Args:
-        func: The function, usually updates a dataframe inplace.
+    Parameters
+    ----------
+    func : callable
+        The function, usually updates a dataframe inplace.
 
-    Returns:
+    Returns
+    -------
+    callable
         A callable function to be applied in the partitions
     """
 
@@ -112,9 +175,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             k: v.to_pandas if isinstance(v, type(self)) else v
             for k, v in kwargs.items()
         }
-        return self.from_pandas(
-            pandas_op(self.to_pandas(), *args, **kwargs), type(self._modin_frame)
-        )
+
+        result = pandas_op(self.to_pandas(), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -248,7 +316,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
     __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
     __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
-    update = BinaryFunction.register(copy_df_for_func(pandas.DataFrame.update))
+    df_update = BinaryFunction.register(
+        copy_df_for_func(pandas.DataFrame.update), join_type="left"
+    )
+    series_update = BinaryFunction.register(
+        copy_df_for_func(lambda x, y: pandas.Series.update(x.squeeze(), y.squeeze())),
+        join_type="left",
+    )
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -378,6 +452,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
+    def _is_monotonic(self, type=None):
+        funcs = {
+            "increasing": lambda df: df.is_monotonic_increasing,
+            "decreasing": lambda df: df.is_monotonic_decreasing,
+        }
+
+        monotonic_fn = funcs.get(type, funcs["increasing"])
+
+        def is_monotonic_map(df):
+            df = df.squeeze()
+            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
+
+        def is_monotonic_reduce(df):
+            df = df.squeeze()
+
+            common_case = df[0].all()
+            left_edges = df[1]
+            right_edges = df[2]
+
+            edges_list = []
+            for i in range(len(left_edges)):
+                edges_list.extend([left_edges.iloc[i], right_edges.iloc[i]])
+
+            edge_case = monotonic_fn(pandas.Series(edges_list))
+            return [common_case and edge_case]
+
+        return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
+
+    def is_monotonic_decreasing(self):
+        return self._is_monotonic(type="decreasing")
+
+    is_monotonic = _is_monotonic
+
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
     min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
@@ -409,6 +516,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
+    to_datetime = ReductionFunction.register(
+        lambda df, *args, **kwargs: pandas.to_datetime(df.squeeze(), *args, **kwargs),
+        axis=1,
+    )
 
     # END Reduction operations
 
@@ -422,6 +533,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    series_view = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(df.squeeze().view(*args, **kwargs))
+    )
 
     # END Map partitions operations
 
@@ -488,6 +602,61 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0, lambda x: x.squeeze().unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
+
+    # Dt map partitions operations
+
+    dt_date = MapFunction.register(_dt_prop_map("date"))
+    dt_time = MapFunction.register(_dt_prop_map("time"))
+    dt_timetz = MapFunction.register(_dt_prop_map("timetz"))
+    dt_year = MapFunction.register(_dt_prop_map("year"))
+    dt_month = MapFunction.register(_dt_prop_map("month"))
+    dt_day = MapFunction.register(_dt_prop_map("day"))
+    dt_hour = MapFunction.register(_dt_prop_map("hour"))
+    dt_minute = MapFunction.register(_dt_prop_map("minute"))
+    dt_second = MapFunction.register(_dt_prop_map("second"))
+    dt_microsecond = MapFunction.register(_dt_prop_map("microsecond"))
+    dt_nanosecond = MapFunction.register(_dt_prop_map("nanosecond"))
+    dt_week = MapFunction.register(_dt_prop_map("week"))
+    dt_weekofyear = MapFunction.register(_dt_prop_map("weekofyear"))
+    dt_dayofweek = MapFunction.register(_dt_prop_map("dayofweek"))
+    dt_weekday = MapFunction.register(_dt_prop_map("weekday"))
+    dt_dayofyear = MapFunction.register(_dt_prop_map("dayofyear"))
+    dt_quarter = MapFunction.register(_dt_prop_map("quarter"))
+    dt_is_month_start = MapFunction.register(_dt_prop_map("is_month_start"))
+    dt_is_month_end = MapFunction.register(_dt_prop_map("is_month_end"))
+    dt_is_quarter_start = MapFunction.register(_dt_prop_map("is_quarter_start"))
+    dt_is_quarter_end = MapFunction.register(_dt_prop_map("is_quarter_end"))
+    dt_is_year_start = MapFunction.register(_dt_prop_map("is_year_start"))
+    dt_is_year_end = MapFunction.register(_dt_prop_map("is_year_end"))
+    dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
+    dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
+    dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
+    dt_tz = MapFunction.register(_dt_prop_map("tz"))
+    dt_freq = MapFunction.register(_dt_prop_map("freq"))
+    dt_to_period = MapFunction.register(_dt_func_map("to_period"))
+    dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
+    dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
+    dt_tz_convert = MapFunction.register(_dt_func_map("tz_convert"))
+    dt_normalize = MapFunction.register(_dt_func_map("normalize"))
+    dt_strftime = MapFunction.register(_dt_func_map("strftime"))
+    dt_round = MapFunction.register(_dt_func_map("round"))
+    dt_floor = MapFunction.register(_dt_func_map("floor"))
+    dt_ceil = MapFunction.register(_dt_func_map("ceil"))
+    dt_month_name = MapFunction.register(_dt_func_map("month_name"))
+    dt_day_name = MapFunction.register(_dt_func_map("day_name"))
+    dt_to_pytimedelta = MapFunction.register(_dt_func_map("to_pytimedelta"))
+    dt_total_seconds = MapFunction.register(_dt_func_map("total_seconds"))
+    dt_seconds = MapFunction.register(_dt_prop_map("seconds"))
+    dt_days = MapFunction.register(_dt_prop_map("days"))
+    dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
+    dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
+    dt_components = MapFunction.register(_dt_prop_map("components"))
+    dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
+    dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
+    dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
+    dt_to_timestamp = MapFunction.register(_dt_func_map("to_timestamp"))
+
+    # END Dt map partitions operations
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
@@ -1197,140 +1366,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    def groupby_reduce(
-        self,
-        by,
-        axis,
-        groupby_args,
-        map_func,
-        map_args,
-        reduce_func=None,
-        reduce_args=None,
-        numeric_only=True,
-        drop=False,
-    ):
-        """Apply a Groupby via MapReduce pattern.
-
-        Note: Result length will be the number of unique values in `by`.
-
-        Currently, here is how this is implemented:
-        - map phase:
-            During the map phase we set `as_index` to True to force the `by` into the
-            index for the next phase. We always do this so that the reduce phase has
-            complete access of the `by` data without having to shuffle it twice. The map
-            function is applied with the arguments provided. The `index` of the
-            partitions will become the new `by` column. Sometimes, the name of `by` is
-            the same as a data column. In these cases we add "_modin_groupby_" to the
-            name of the index. This does not happen when grouping by multiple columns
-            because those columns have already been dropped as a requirement.
-        - reduce phase:
-            During the reduce phase, the `by` data is moved from the `index` into the
-            data. The names of those inserted become the `by` for the reduce phase of
-            the groupby. Once applied, we drop the columns in all partitions after the
-            first so we do not insert the data multiple times. We also avoid inserting
-            data when the data from the `by` parameter did not come from this object.
-            The columns can be derived externally but the new index must be computed
-            post hoc.
-
-        Args:
-            by: The query compiler object to groupby.
-            axis: The axis to groupby. Must be 0 currently.
-            groupby_args: The arguments for the groupby component.
-            map_func: The function to perform during the map phase.
-            map_args: The arguments for the `map_func`.
-            reduce_func: The function to perform during the reduce phase.
-            reduce_args: The arguments for `reduce_func`.
-            numeric_only: Whether to drop non-numeric columns.
-            drop: Whether the data in `by` was dropped.
-
-        Returns:
-            A new Query Compiler
-        """
-        assert isinstance(
-            by, type(self)
-        ), "Can only use groupby reduce with another Query Compiler"
-        assert axis == 0, "Can only groupby reduce with axis=0"
-
-        if numeric_only:
-            qc = self.getitem_column_array(self._modin_frame._numeric_columns(True))
-        else:
-            qc = self
-        first_column = qc.columns[0]
-        as_index = groupby_args.get("as_index", True)
-        # When drop is False and as_index is False, we do not want to insert the `by`
-        # data as a new column in the dataframe. We will drop it.
-        drop_by = not drop
-
-        # For simplicity we allow only one function to be passed in if both are the
-        # same.
-        if reduce_func is None:
-            reduce_func = map_func
-            reduce_args = map_args
-
-        def _map(df, other):
-            # Set `as_index` to True to track the metadata of the grouping object
-            # It is used to make sure that between phases we are constructing the
-            # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
-            other = other.squeeze(axis=axis ^ 1)
-            if isinstance(other, pandas.DataFrame):
-                df = pandas.concat(
-                    [df] + [other[[o for o in other if o not in df]]], axis=1
-                )
-                other = list(other.columns)
-            result = map_func(
-                df.groupby(by=other, axis=axis, **groupby_args), **map_args
-            )
-            if (
-                not isinstance(result.index, pandas.MultiIndex)
-                and result.index.name is not None
-                and result.index.name in result.columns
-            ):
-                result.index.name = "{}{}".format("_modin_groupby_", result.index.name)
-            return result
-
-        def _reduce(df):
-            other_len = len(df.index.names)
-            df = df.reset_index(drop=False)
-            # See note above about setting `as_index`
-            groupby_args["as_index"] = as_index
-            if other_len > 1:
-                by_part = list(df.columns[0:other_len])
-            else:
-                by_part = df.columns[0]
-            result = reduce_func(
-                df.groupby(by=by_part, axis=axis, **groupby_args), **reduce_args
-            )
-            if (
-                not isinstance(result.index, pandas.MultiIndex)
-                and result.index.name is not None
-                and "_modin_groupby_" in result.index.name
-            ):
-                result.index.name = result.index.name[len("_modin_groupby_") :]
-            # Avoid inserting data after the first partition or if the data did not come
-            # from this query compiler.
-            if not as_index and (first_column not in df.columns or drop_by):
-                return result.drop(columns=by_part)
-            return result
-
-        if axis == 0:
-            if not as_index and drop:
-                new_columns = by.columns.append(qc.columns)
-            else:
-                new_columns = qc.columns
-            new_index = None
-        else:
-            new_index = self.index
-            new_columns = None
-        new_modin_frame = qc._modin_frame.groupby_reduce(
-            axis,
-            by._modin_frame,
-            _map,
-            _reduce,
-            new_columns=new_columns,
-            new_index=new_index,
-        )
-        return self.__constructor__(new_modin_frame)
+    groupby_count = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.count(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
+    )
+    groupby_any = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.any(**kwargs), lambda df, **kwargs: df.any(**kwargs)
+    )
+    groupby_min = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.min(**kwargs), lambda df, **kwargs: df.min(**kwargs)
+    )
+    groupby_prod = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.prod(**kwargs), lambda df, **kwargs: df.prod(**kwargs)
+    )
+    groupby_max = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.max(**kwargs), lambda df, **kwargs: df.max(**kwargs)
+    )
+    groupby_all = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.all(**kwargs), lambda df, **kwargs: df.all(**kwargs)
+    )
+    groupby_sum = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
+    )
+    groupby_size = GroupbyReduceFunction.register(
+        lambda df, **kwargs: pandas.DataFrame(df.size()), lambda df, **kwargs: df.sum()
+    )
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
         as_index = groupby_args.get("as_index", True)

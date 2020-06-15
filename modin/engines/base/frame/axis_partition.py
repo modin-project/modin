@@ -44,7 +44,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        **kwargs
+        **kwargs,
     ):
         """Applies a function to a full axis.
 
@@ -116,7 +116,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        **kwargs
+        **kwargs,
     ):
         """Applies func to the object in the plasma store.
 
@@ -148,7 +148,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
-                    *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks)
+                    *tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
                 )
             )
         args = [self.axis, func, num_splits, kwargs, maintain_partitioning]

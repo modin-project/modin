@@ -20,6 +20,7 @@ import matplotlib
 import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
+import io
 
 from .utils import (
     random_state,
@@ -53,10 +54,6 @@ from .utils import (
     int_arg_keys,
     int_arg_values,
 )
-
-# TODO remove once modin-project/modin#469 is resolved
-agg_func_keys.remove("str")
-agg_func_values.remove(str)
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -1615,17 +1612,29 @@ class TestDataFrameMapMetadata:
         # Test for map across blocks
         df_equals(modin_df.T.notna(), pandas_df.T.notna())
 
-    def test_update(self):
-        df = pd.DataFrame(
-            [[1.5, np.nan, 3.0], [1.5, np.nan, 3.0], [1.5, np.nan, 3], [1.5, np.nan, 3]]
+    @pytest.mark.parametrize(
+        "data, other_data",
+        [
+            ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, 5, 6], "C": [7, 8, 9]}),
+            (
+                {"A": ["a", "b", "c"], "B": ["x", "y", "z"]},
+                {"B": ["d", "e", "f", "g", "h", "i"]},
+            ),
+            ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
+        ],
+    )
+    def test_update(self, data, other_data):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        other_modin_df, other_pandas_df = (
+            pd.DataFrame(other_data),
+            pandas.DataFrame(other_data),
         )
-        other = pd.DataFrame([[3.6, 2.0, np.nan], [np.nan, np.nan, 7]], index=[1, 3])
+        modin_df.update(other_modin_df)
+        pandas_df.update(other_pandas_df)
+        df_equals(modin_df, pandas_df)
 
-        df.update(other)
-        expected = pd.DataFrame(
-            [[1.5, np.nan, 3], [3.6, 2, 3], [1.5, np.nan, 3], [1.5, np.nan, 7.0]]
-        )
-        df_equals(df, expected)
+        with pytest.raises(ValueError):
+            modin_df.update(other_modin_df, errors="raise")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___neg__(self, request, data):
@@ -2329,10 +2338,29 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).infer_objects()
 
-    def test_info(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).info(memory_usage="deep")
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("verbose", [None, True, False])
+    @pytest.mark.parametrize("max_cols", [None, 10, 99999999])
+    @pytest.mark.parametrize("memory_usage", [None, True, False, "deep"])
+    @pytest.mark.parametrize("null_counts", [None, True, False])
+    def test_info(self, data, verbose, max_cols, memory_usage, null_counts):
+        with io.StringIO() as first, io.StringIO() as second:
+            eval_general(
+                pd.DataFrame(data),
+                pandas.DataFrame(data),
+                operation=lambda df, **kwargs: df.info(**kwargs),
+                verbose=verbose,
+                max_cols=max_cols,
+                memory_usage=memory_usage,
+                null_counts=null_counts,
+                buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
+            )
+            modin_info = first.getvalue().splitlines()
+            pandas_info = second.getvalue().splitlines()
+
+            assert modin_info[0] == str(pd.DataFrame)
+            assert pandas_info[0] == str(pandas.DataFrame)
+            assert modin_info[1:] == pandas_info[1:]
 
     def test_interpolate(self):
         data = test_data_values[0]
@@ -2491,10 +2519,28 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).sem()
 
-    def test_shift(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).shift()
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("index", ["default", "ndarray"])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
+    def test_shift(self, data, index, axis, periods):
+        if index == "default":
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+        elif index == "ndarray":
+            data_column_length = len(data[next(iter(data))])
+            index_data = np.arange(2, data_column_length + 2)
+            modin_df = pd.DataFrame(data, index=index_data)
+            pandas_df = pandas.DataFrame(data, index=index_data)
+
+        df_equals(
+            modin_df.shift(periods=periods, axis=axis),
+            pandas_df.shift(periods=periods, axis=axis),
+        )
+        df_equals(
+            modin_df.shift(periods=periods, axis=axis, fill_value=777),
+            pandas_df.shift(periods=periods, axis=axis, fill_value=777),
+        )
 
     def test_slice_shift(self):
         data = test_data_values[0]
@@ -2598,13 +2644,6 @@ class TestDataFrameDefault:
             else:
                 modin_result = modin_df.to_records()
                 assert np.array_equal(modin_result, pandas_result)
-
-    def test_to_datetime(self):
-        modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
-        pandas_df = pandas.DataFrame(
-            {"year": [2015, 2016], "month": [2, 3], "day": [4, 5]}
-        )
-        df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_string(self, request, data):
@@ -2757,6 +2796,19 @@ class TestDataFrameDefault:
                 pd.DataFrame(data).__setstate__(None)
             except TypeError:
                 pass
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_hasattr_sparse(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        try:
+            pandas_result = hasattr(pandas_df, "sparse")
+        except Exception as e:
+            with pytest.raises(type(e)):
+                hasattr(modin_df, "sparse")
+        else:
+            modin_result = hasattr(modin_df, "sparse")
+            assert modin_result == pandas_result
 
 
 class TestDataFrameReduction_A:
@@ -4692,15 +4744,13 @@ class TestDataFrameIndexing:
         modin_df = pd.DataFrame(frame_data)
         df = df.rename(columns={0: "a"})
         df = df.rename(columns={1: "b"})
-        # TODO: Uncomment when set_index is implemented
-        # df = df.set_index(['a', 'b'])
-        # df.columns = ['2001-01-01']
+        df = df.set_index(["a", "b"])
+        df.columns = ["2001-01-01"]
 
         modin_df = modin_df.rename(columns={0: "a"})
         modin_df = modin_df.rename(columns={1: "b"})
-        # TODO: Uncomment when set_index is implemented
-        # modin_df = modin_df.set_index(['a', 'b'])
-        # modin_df.columns = ['2001-01-01']
+        modin_df = modin_df.set_index(["a", "b"])
+        modin_df.columns = ["2001-01-01"]
 
         df_equals(modin_df, df)
 

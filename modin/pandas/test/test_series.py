@@ -1339,6 +1339,85 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
+def test_dt():
+    data = pd.date_range("2016-12-31", "2017-01-08", freq="D", tz="Europe/Berlin")
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+
+    df_equals(modin_series.dt.date, pandas_series.dt.date)
+    df_equals(modin_series.dt.time, pandas_series.dt.time)
+    df_equals(modin_series.dt.timetz, pandas_series.dt.timetz)
+    df_equals(modin_series.dt.year, pandas_series.dt.year)
+    df_equals(modin_series.dt.month, pandas_series.dt.month)
+    df_equals(modin_series.dt.day, pandas_series.dt.day)
+    df_equals(modin_series.dt.hour, pandas_series.dt.hour)
+    df_equals(modin_series.dt.minute, pandas_series.dt.minute)
+    df_equals(modin_series.dt.second, pandas_series.dt.second)
+    df_equals(modin_series.dt.microsecond, pandas_series.dt.microsecond)
+    df_equals(modin_series.dt.nanosecond, pandas_series.dt.nanosecond)
+    df_equals(modin_series.dt.week, pandas_series.dt.week)
+    df_equals(modin_series.dt.weekofyear, pandas_series.dt.weekofyear)
+    df_equals(modin_series.dt.dayofweek, pandas_series.dt.dayofweek)
+    df_equals(modin_series.dt.weekday, pandas_series.dt.weekday)
+    df_equals(modin_series.dt.dayofyear, pandas_series.dt.dayofyear)
+    df_equals(modin_series.dt.quarter, pandas_series.dt.quarter)
+    df_equals(modin_series.dt.is_month_start, pandas_series.dt.is_month_start)
+    df_equals(modin_series.dt.is_month_end, pandas_series.dt.is_month_end)
+    df_equals(modin_series.dt.is_quarter_start, pandas_series.dt.is_quarter_start)
+    df_equals(modin_series.dt.is_quarter_end, pandas_series.dt.is_quarter_end)
+    df_equals(modin_series.dt.is_year_start, pandas_series.dt.is_year_start)
+    df_equals(modin_series.dt.is_year_end, pandas_series.dt.is_year_end)
+    df_equals(modin_series.dt.is_leap_year, pandas_series.dt.is_leap_year)
+    df_equals(modin_series.dt.daysinmonth, pandas_series.dt.daysinmonth)
+    df_equals(modin_series.dt.days_in_month, pandas_series.dt.days_in_month)
+    assert modin_series.dt.tz == pandas_series.dt.tz
+    assert modin_series.dt.freq == pandas_series.dt.freq
+    df_equals(modin_series.dt.to_period("W"), pandas_series.dt.to_period("W"))
+    assert_array_equal(
+        modin_series.dt.to_pydatetime(), pandas_series.dt.to_pydatetime()
+    )
+    df_equals(
+        modin_series.dt.tz_localize(None), pandas_series.dt.tz_localize(None),
+    )
+    df_equals(
+        modin_series.dt.tz_convert(tz="Europe/Berlin"),
+        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+    )
+
+    df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
+    df_equals(
+        modin_series.dt.strftime("%B %d, %Y, %r"),
+        pandas_series.dt.strftime("%B %d, %Y, %r"),
+    )
+    df_equals(modin_series.dt.round("H"), pandas_series.dt.round("H"))
+    df_equals(modin_series.dt.floor("H"), pandas_series.dt.floor("H"))
+    df_equals(modin_series.dt.ceil("H"), pandas_series.dt.ceil("H"))
+    df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
+    df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
+
+    modin_series = pd.Series(pd.to_timedelta(np.arange(5), unit="d"))
+    pandas_series = pandas.Series(pandas.to_timedelta(np.arange(5), unit="d"))
+
+    assert_array_equal(
+        modin_series.dt.to_pytimedelta(), pandas_series.dt.to_pytimedelta()
+    )
+    df_equals(modin_series.dt.total_seconds(), pandas_series.dt.total_seconds())
+    df_equals(modin_series.dt.days, pandas_series.dt.days)
+    df_equals(modin_series.dt.seconds, pandas_series.dt.seconds)
+    df_equals(modin_series.dt.microseconds, pandas_series.dt.microseconds)
+    df_equals(modin_series.dt.nanoseconds, pandas_series.dt.nanoseconds)
+    df_equals(modin_series.dt.components, pandas_series.dt.components)
+
+    data_per = pd.date_range("1/1/2012", periods=5, freq="M")
+    pandas_series = pandas.Series(data_per, index=data_per).dt.to_period()
+    modin_series = pd.Series(data_per, index=data_per).dt.to_period()
+
+    df_equals(modin_series.dt.qyear, pandas_series.dt.qyear)
+    df_equals(modin_series.dt.start_time, pandas_series.dt.start_time)
+    df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
+    df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "keep", ["last", "first", False], ids=["last", "first", "False"]
@@ -1588,28 +1667,19 @@ def test_interpolate(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert modin_series.is_monotonic == pandas_series.is_monotonic
+    assert modin_series.is_monotonic == pandas_series.is_monotonic
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic_decreasing(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert (
-            modin_series.is_monotonic_decreasing
-            == pandas_series.is_monotonic_decreasing
-        )
+    assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic_increasing(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert (
-            modin_series.is_monotonic_increasing
-            == pandas_series.is_monotonic_increasing
-        )
+    assert modin_series.is_monotonic_increasing == pandas_series.is_monotonic_increasing
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2307,9 +2377,11 @@ def test_shape(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_shift(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.shift()
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(modin_series.shift(), pandas_series.shift())
+    df_equals(modin_series.shift(fill_value=777), pandas_series.shift(fill_value=777))
+    df_equals(modin_series.shift(periods=7), pandas_series.shift(periods=7))
+    df_equals(modin_series.shift(periods=-3), pandas_series.shift(periods=-3))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2543,12 +2615,6 @@ def test_explode(data):
     df_equals(modin_result, pandas_result)
 
 
-def test_to_datetime():
-    modin_s = pd.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    pandas_s = pandas.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
-    df_equals(pd.to_datetime(modin_s), pandas.to_datetime(pandas_s))
-
-
 def test_to_period():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
@@ -2742,14 +2808,15 @@ def test_unstack():
         s.unstack()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_update(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        try:
-            modin_series.update(pd.Series([4.1 for _ in modin_series]))
-        except Exception:
-            pass
+@pytest.mark.parametrize(
+    "data, other_data",
+    [([1, 2, 3], [4, 5, 6]), ([1, 2, 3], [4, 5, 6, 7, 8]), ([1, 2, 3], [4, np.nan, 6])],
+)
+def test_update(data, other_data):
+    modin_series, pandas_series = pd.Series(data), pandas.Series(data)
+    modin_series.update(pd.Series(other_data))
+    pandas_series.update(pandas.Series(other_data))
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2785,13 +2852,24 @@ def test_var(data, skipna, ddof):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows memory issue #960")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_view(data):
-    modin_series, pandas_series = create_test_series(data)
+def test_view():
+    modin_series = pd.Series([-2, -1, 0, 1, 2], dtype="int8")
+    pandas_series = pandas.Series([-2, -1, 0, 1, 2], dtype="int8")
+    modin_result = modin_series.view(dtype="uint8")
+    pandas_result = pandas_series.view(dtype="uint8")
+    df_equals(modin_result, pandas_result)
 
-    with pytest.warns(UserWarning):
-        modin_series.view(None)
+    modin_series = pd.Series([-20, -10, 0, 10, 20], dtype="int32")
+    pandas_series = pandas.Series([-20, -10, 0, 10, 20], dtype="int32")
+    modin_result = modin_series.view(dtype="float32")
+    pandas_result = pandas_series.view(dtype="float32")
+    df_equals(modin_result, pandas_result)
+
+    modin_series = pd.Series([-200, -100, 0, 100, 200], dtype="int64")
+    pandas_series = pandas.Series([-200, -100, 0, 100, 200], dtype="int64")
+    modin_result = modin_series.view(dtype="float64")
+    pandas_result = pandas_series.view(dtype="float64")
+    df_equals(modin_result, pandas_result)
 
 
 def test_where():
@@ -3700,3 +3778,16 @@ def test_encode(data, encoding_type):
     else:
         modin_result = modin_series.str.encode(encoding=encoding_type)
         df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_hasattr_sparse(data):
+    modin_series, pandas_series = create_test_series(data)
+    try:
+        pandas_result = hasattr(pandas_series, "sparse")
+    except Exception as e:
+        with pytest.raises(type(e)):
+            hasattr(modin_series, "sparse")
+    else:
+        modin_result = hasattr(modin_series, "sparse")
+        assert modin_result == pandas_result
