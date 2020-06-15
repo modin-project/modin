@@ -456,8 +456,10 @@ class DataFrame(BasePandasDataset):
                             cols.append(obj)
                         else:
                             raise KeyError(next(x for x in by if x not in self))
-                    cols = self.__getitem__(cols)._query_compiler
-                    by = self._query_compiler._construct_groupby_frame(cols, series)
+                    cols = self._query_compiler.getitem_column_array(cols)
+                    if cols is None:
+                        raise NotImplementedError("Unsupported groupby arguments")
+                    by = cols.concat(1, series, ignore_index=True)
 
 
         from .groupby import DataFrameGroupBy

@@ -465,15 +465,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     raise NotImplementedError(
                         "duplicated column names are not supported"
                     )
-                new_col = col if col != "" else f"__col{len(exprs)}__"
-                exprs[new_col] = frame.ref(col)
+                if isinstance(frame._op, TransformNode):
+                    exprs[col] = frame._op.exprs[col] 
+                else:
+                    new_col = col if col != "" else f"__col{len(exprs)}__"
+                    exprs[new_col] = frame.ref(col)
 
         exprs = self._translate_exprs_to_base(exprs, base)
         new_columns = Index.__new__(Index, data=exprs.keys(), dtype=self.columns.dtype)
         new_frame = self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
-            op=TransformNode(self, exprs),
+            op=TransformNode(self._op.input[0] if isinstance(self._op, MaskNode) else self, exprs),
             index_cols=self._index_cols,
         )
         return new_frame
