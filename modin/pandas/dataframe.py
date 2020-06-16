@@ -428,7 +428,11 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if not isinstance(by, Series) and axis == 0 and all(o in self for o in by):
+            if (
+                not isinstance(by, Series)
+                and axis == 0
+                and all(not isinstance(o, Series) and o in self for o in by)
+            ):
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."
@@ -438,15 +442,31 @@ class DataFrame(BasePandasDataset):
             else:
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(
-                    obj in self
-                    or (hasattr(self.index, "names") and obj in self.index.names)
+                    not isinstance(obj, Series)
+                    and (
+                        obj in self
+                        or (hasattr(self.index, "names") and obj in self.index.names)
+                    )
                     for obj in by
                 ):
                     # In the future, we will need to add logic to handle this, but for now
                     # we default to pandas in this case.
                     pass
                 elif mismatch:
-                    raise KeyError(next(x for x in by if x not in self))
+                    """Check that we group only by column name(s) or Series object(s)"""
+                    series = []
+                    cols = []
+                    for obj in by:
+                        if isinstance(obj, Series):
+                            series.append(obj._query_compiler)
+                        elif obj in self:
+                            cols.append(obj)
+                        else:
+                            raise KeyError(obj)
+                    cols = self._query_compiler.getitem_column_array(cols)
+                    if cols is None:
+                        raise NotImplementedError("Unsupported groupby arguments")
+                    by = cols.concat(1, series, ignore_index=True)
 
         from .groupby import DataFrameGroupBy
 

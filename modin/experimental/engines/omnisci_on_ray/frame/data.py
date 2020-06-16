@@ -129,7 +129,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
-            res = self._dtypes[new_index + new_columns]
+            res = self._dtypes[
+                new_index
+                + (
+                    new_columns
+                    if isinstance(new_columns, list)
+                    else new_columns.to_list()
+                )
+            ]
         else:
             res = self._dtypes[new_columns]
         return res
@@ -149,11 +156,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if axis != 0:
             raise NotImplementedError("groupby is supported for axis = 0 only")
 
-        base = by._modin_frame._op.input[0]
-        if not by._modin_frame._is_projection_of(base):
-            raise NotImplementedError("unsupported groupby args")
-
-        if self != base and not self._is_projection_of(base):
+        by_frame = by._modin_frame
+        base = by_frame._find_common_projections_base(self)
+        if base is None:
             raise NotImplementedError("unsupported groupby args")
 
         if groupby_args["level"] is not None:
@@ -169,10 +174,16 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_columns = groupby_cols.copy()
         new_dtypes = base._dtypes[groupby_cols].tolist()
 
+        exprs = OrderedDict()
+        if isinstance(by_frame._op, TransformNode):
+            for col in groupby_cols:
+                exprs[col] = by_frame._op.exprs[col]
+
         if isinstance(agg, str):
             new_agg = {}
             for col in self.columns:
                 if col not in groupby_cols:
+                    exprs[col] = self.ref(col)
                     new_agg[col] = agg
                     new_columns.append(col)
                     new_dtypes.append(_agg_dtype(agg, self._dtypes[col]))
@@ -180,6 +191,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
             for k, v in agg.items():
+                exprs[k] = self.ref(k)
                 if isinstance(v, list):
                     # TODO: support levels
                     for item in v:
@@ -190,10 +202,35 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     new_dtypes.append(_agg_dtype(v, self._dtypes[k]))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
 
-        new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
+        output_columns = []
+        if isinstance(by_frame._op, TransformNode):
+            """group by modified frame's columns requires special hadling"""
+            exprs = self._translate_exprs_to_base(exprs, base)
+            dtypes = [expr._dtype for expr in exprs.values()]
+            transform_columns = []
+            if groupby_args["as_index"]:
+                transform_columns = by_frame.columns.append(new_columns)
+            else:
+                transform_columns = new_columns
+            new_frame = self.__constructor__(
+                columns=transform_columns,
+                dtypes=dtypes,
+                op=TransformNode(base, exprs),
+                index_cols=by_frame._index_cols,
+            )
+            new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
+            if not groupby_args["as_index"]:
+                for col in new_frame.columns:
+                    """in case of as_index=False we output only InputRefExprs to align with pandas behavior"""
+                    if isinstance(new_frame._op.exprs[col], InputRefExpr):
+                        output_columns.append(col)
+        else:
+            new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
         new_frame = self.__constructor__(
             columns=new_columns, dtypes=new_dtypes, op=new_op, index_cols=index_cols
         )
+        if len(output_columns) > 0:
+            return new_frame.mask(col_indices=output_columns)
 
         return new_frame
 
@@ -437,7 +474,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_frame = self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
-            op=TransformNode(self, exprs),
+            op=TransformNode(base, exprs),
             index_cols=self._index_cols,
         )
         return new_frame

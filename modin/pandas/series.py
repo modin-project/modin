@@ -1439,7 +1439,9 @@ class DatetimeProperties(object):
 
     @property
     def year(self):
-        return Series(query_compiler=self._query_compiler.dt_year())
+        return Series(
+            query_compiler=self._query_compiler.dt_year(), shape_hint="column"
+        )
 
     @property
     def month(self):
