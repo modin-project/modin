@@ -235,44 +235,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
-    def _construct_groupby_frame(self, cols, series):
-        if len(series) > 1:
-            raise NotImplementedError(
-                "Only one modified column argument is supported now!"
-            )
-        other = series[0]._modin_frame
-        cols = cols._modin_frame
-
-        if not isinstance(cols._op, MaskNode) or not isinstance(
-            other._op, TransformNode
-        ):
-            raise NotImplementedError("unsupported groupby args")
-
-        base = cols._find_common_projections_base(other)
-        if base is None:
-            raise NotImplementedError("unsupported groupby args")
-
-        new_columns = cols.columns.tolist()
-        for col in other.columns:
-            if col not in cols.columns:
-                new_columns.append(col)
-        new_columns = sorted(new_columns)
-
-        new_exprs = OrderedDict()
-        for col in cols.columns:
-            new_exprs[col] = self.ref(col)
-
-        for col in other.columns:
-            new_exprs[col] = other._op.exprs[col]
-        dtypes = [expr._dtype for expr in new_exprs.values()]
-
-        return self.__constructor__(
-            columns=new_columns,
-            dtypes=dtypes,
-            op=TransformNode(base, new_exprs),
-            index_cols=None,
-        )
-
     def fillna(
         self, value=None, method=None, axis=None, limit=None, downcast=None,
     ):
