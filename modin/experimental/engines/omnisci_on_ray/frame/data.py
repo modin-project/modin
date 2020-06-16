@@ -157,8 +157,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             raise NotImplementedError("groupby is supported for axis = 0 only")
 
         by_frame = by._modin_frame
-        base = by_frame._op.input[0]
-        base = by_frame._find_common_projections_base(base)
+        base = by_frame._find_common_projections_base(self)
         if base is None:
             raise NotImplementedError("unsupported groupby args")
 
