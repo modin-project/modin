@@ -343,7 +343,7 @@ class TestMerge:
         "b": [40, 20, 30],
         "d": [4000, 2000, 3000],
     }
-    on_values = ["a"]
+    on_values = ["a", ["a"], ["a", "b"], ["b", "a"]]
     how_values = ["inner", "left"]
 
     @pytest.mark.parametrize("on", on_values)
@@ -372,13 +372,13 @@ class TestMerge:
     }
 
     h2o_data_small = {
-        "id1": ["id10", "id100", "id1000", "id100"],
+        "id1": ["id10", "id100", "id1000", "id10000"],
         "id4": [40, 400, 4000, 40000],
         "v2": [30.3, 40.4, 70.7, 80.8],
     }
 
     h2o_data_medium = {
-        "id1": ["id10", "id100", "id1000", "id100"],
+        "id1": ["id10", "id100", "id1000", "id10000"],
         "id2": ["id20", "id200", "id2000", "id20000"],
         "id4": [40, 400, 4000, 40000],
         "id5": [50, 500, 5000, 50000],
@@ -386,7 +386,7 @@ class TestMerge:
     }
 
     h2o_data_big = {
-        "id1": ["id10", "id100", "id1000", "id100"],
+        "id1": ["id10", "id100", "id1000", "id10000"],
         "id2": ["id20", "id200", "id2000", "id20000"],
         "id3": ["id30", "id300", "id3000", "id30000"],
         "id4": [40, 400, 4000, 40000],

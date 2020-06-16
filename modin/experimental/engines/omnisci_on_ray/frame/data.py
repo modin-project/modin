@@ -259,21 +259,22 @@ class OmnisciOnRayFrame(BasePandasFrame):
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
 
-        assert (
-            on in self.columns and on in other.columns
-        ), "Only cases when both frames contain key column are supported"
+        for col in on:
+            assert (
+                col in self.columns and col in other.columns
+            ), "Only cases when both frames contain key column are supported"
 
-        new_columns = [on]
-        new_dtypes = [self._dtypes[on]]
+        new_columns = on.copy()
+        new_dtypes = self._dtypes[on].tolist()
 
         conflicting_list = list(set(self.columns) & set(other.columns))
         for c in self.columns:
-            if c != on:
+            if c not in on:
                 suffix = suffixes[0] if c in conflicting_list else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(self._dtypes[c])
         for c in other.columns:
-            if c != on:
+            if c not in on:
                 suffix = suffixes[1] if c in conflicting_list else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(other._dtypes[c])
