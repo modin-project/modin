@@ -254,6 +254,46 @@ class OmnisciOnRayFrame(BasePandasFrame):
             columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
         )
 
+    def astype(self, col_dtypes, **kwargs):
+        columns = col_dtypes.keys()
+        new_dtypes = self.dtypes.copy()
+        for column in columns:
+            dtype = col_dtypes[column]
+            if (
+                not isinstance(dtype, type(self.dtypes[column]))
+                or dtype != self.dtypes[column]
+            ):
+                # Update the new dtype series to the proper pandas dtype
+                try:
+                    new_dtype = np.dtype(dtype)
+                except TypeError:
+                    new_dtype = dtype
+
+                if dtype != np.int32 and new_dtype == np.int32:
+                    new_dtypes[column] = np.dtype("int64")
+                elif dtype != np.float32 and new_dtype == np.float32:
+                    new_dtypes[column] = np.dtype("float64")
+                # We cannot infer without computing the dtype if
+                elif isinstance(new_dtype, str) and new_dtype == "category":
+                    raise NotImplementedError("unsupported type conversion")
+                else:
+                    new_dtypes[column] = new_dtype
+        exprs = OrderedDict()
+        for col in self.columns:
+            col_expr = self.ref(col)
+            if col in columns:
+                exprs[col] = col_expr.cast(new_dtypes[col])
+            else:
+                exprs[col] = col_expr
+
+        new_op = TransformNode(self, exprs)
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=new_dtypes,
+            op=new_op,
+            index_cols=self._index_cols,
+        )
+
     def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
         assert (
             on is not None

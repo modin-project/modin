@@ -73,6 +73,10 @@ class BaseExpr(abc.ABC):
         new_expr = OpExpr("=", [self, other], _get_dtype(bool))
         return new_expr
 
+    def cast(self, res_type):
+        new_expr = OpExpr("CAST", [self], res_type)
+        return new_expr
+
     def is_null(self):
         new_expr = OpExpr("IS NULL", [self], _get_dtype(bool))
         return new_expr
