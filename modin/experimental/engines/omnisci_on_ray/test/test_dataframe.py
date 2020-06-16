@@ -101,9 +101,9 @@ class TestConcat:
 
     def test_concat_with_same_df(self):
         pandas_df = pd.DataFrame(self.data)
-        modin_df = pd.DataFrame(self.data)
-        pandas_df["d"] = pandas_df["a"]
-        modin_df["d"] = modin_df["a"]
+        modin_df = mpd.DataFrame(self.data)
+        pandas_df["f"] = pandas_df["a"]
+        modin_df["f"] = modin_df["a"]
         df_equals(pandas_df, modin_df)
 
 

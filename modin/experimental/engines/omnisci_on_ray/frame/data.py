@@ -386,11 +386,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
             exprs[col] = self.ref(col)
         for frame in other_modin_frames:
             for col in frame.columns:
-                if col in exprs:
-                    raise NotImplementedError(
-                        "duplicated column names are not supported"
-                    )
-                new_col = col if col != "" else f"__col{len(exprs)}__"
+                if col == "" or col in exprs:
+                    new_col = f"__col{len(exprs)}__"
+                else:
+                    new_col = col
                 exprs[new_col] = frame.ref(col)
 
         exprs = self._translate_exprs_to_base(exprs, base)
