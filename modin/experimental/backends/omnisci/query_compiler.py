@@ -220,7 +220,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(self._modin_frame.dt_year())
+        return self.__constructor__(self._modin_frame.dt_extract("year"))
+
+    def dt_month(self):
+        """Extract month from Datetime info
+
+        Returns:
+            A new QueryCompiler.
+        """
+        return self.__constructor__(self._modin_frame.dt_extract("month"))
 
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
