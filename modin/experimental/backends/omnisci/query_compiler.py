@@ -140,11 +140,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             new_qc = new_qc.squeeze()
         return new_qc
 
-    def _construct_groupby_frame(self, cols, series):
-        new_frame = self._modin_frame._construct_groupby_frame(cols, series)
-
-        return self.__constructor__(new_frame)
-
     def _get_index(self):
         return self._modin_frame.index
 
@@ -222,9 +217,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(
-            self._modin_frame.dt_year()
-        )        
+        return self.__constructor__(self._modin_frame.dt_year())
 
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
