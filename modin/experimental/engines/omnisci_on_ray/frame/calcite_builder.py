@@ -252,16 +252,8 @@ class CalciteBuilder:
         return AggregateExpr(self.simple_aggregates[agg], arg, res_type, False)
 
     def _process_transform(self, op):
-        frame = op.input[0]
-        fields = []
-        exprs = []
-        if op.keep_index and frame._index_cols is not None:
-            fields += frame._index_cols
-            exprs += [self._ref(frame, col) for col in frame._index_cols]
-
-        fields += op.exprs.keys()
-        exprs += self._translate(op.exprs.values())
-
+        fields = list(op.exprs.keys())
+        exprs = self._translate(op.exprs.values())
         self._push(CalciteProjectionNode(fields, exprs))
 
     def _process_join(self, op):

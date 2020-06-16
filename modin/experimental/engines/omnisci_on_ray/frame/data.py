@@ -26,6 +26,9 @@ from .df_algebra import (
     TransformNode,
     UnionNode,
     JoinNode,
+    DirectMapper,
+    TransformMapper,
+    InputMapper,
 )
 from .expr import (
     InputRefExpr,
@@ -34,9 +37,6 @@ from .expr import (
     build_dt_expr,
     _get_common_dtype,
     _agg_dtype,
-    DirectMapper,
-    TransformMapper,
-    InputMapper,
 )
 from collections import OrderedDict
 
@@ -141,12 +141,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
             res = self._dtypes[new_columns]
         return res
 
-    def _dtypes_for_exprs(self, new_index, exprs):
-        dtypes = []
-        if new_index is not None:
-            dtypes += self._dtypes[new_index].tolist()
-        dtypes += [expr._dtype for expr in exprs.values()]
-        return dtypes
+    def _dtypes_for_exprs(self, exprs):
+        return [expr._dtype for expr in exprs.values()]
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         # Currently we only expect by to be a projection of the same frame
@@ -216,7 +212,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 columns=transform_columns,
                 dtypes=dtypes,
                 op=TransformNode(base, exprs),
-                index_cols=by_frame._index_cols,
+                index_cols=None,
             )
             new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
             if not groupby_args["as_index"]:
@@ -249,7 +245,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if method is not None:
             raise NotImplementedError("fillna doesn't support method yet")
 
-        exprs = OrderedDict()
+        exprs = self._index_exprs()
         if isinstance(value, dict):
             for col in self.columns:
                 col_expr = self.ref(col)
@@ -273,7 +269,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             raise NotImplementedError("unsupported value for fillna")
 
         new_op = TransformNode(self, exprs)
-        dtypes = self._dtypes_for_exprs(self._index_cols, exprs)
+        dtypes = self._dtypes_for_exprs(exprs)
         new_frame = self.__constructor__(
             columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
         )
@@ -281,12 +277,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return new_frame
 
     def dt_extract(self, obj):
-        exprs = OrderedDict()
+        exprs = self._index_exprs()
         for col in self.columns:
             col_expr = self.ref(col)
             exprs[col] = build_dt_expr(obj, self.ref(col))
         new_op = TransformNode(self, exprs)
-        dtypes = self._dtypes_for_exprs(self._index_cols, exprs)
+        dtypes = self._dtypes_for_exprs(exprs)
         return self.__constructor__(
             columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
         )
@@ -315,7 +311,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     raise NotImplementedError("unsupported type conversion")
                 else:
                     new_dtypes[column] = new_dtype
-        exprs = OrderedDict()
+        exprs = self._index_exprs()
         for col in self.columns:
             col_expr = self.ref(col)
             if col in columns:
@@ -428,7 +424,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 else:
                     exprs[col] = LiteralExpr(None)
 
-            aligned_frame_op = TransformNode(frame, exprs, False)
+            aligned_frame_op = TransformNode(frame, exprs)
             aligned_frames.append(
                 self.__constructor__(
                     columns=new_columns,
@@ -458,10 +454,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
             if base is None:
                 raise NotImplementedError("concat requiring join is not supported yet")
 
-        exprs = OrderedDict()
+        exprs = self._index_exprs()
+        new_columns = self.columns.tolist()
         for col in self.columns:
             exprs[col] = self.ref(col)
         for frame in other_modin_frames:
+            new_columns.extend(frame.columns.tolist())
             for col in frame.columns:
                 if col == "" or col in exprs:
                     new_col = f"__col{len(exprs)}__"
@@ -470,10 +468,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 exprs[new_col] = frame.ref(col)
 
         exprs = self._translate_exprs_to_base(exprs, base)
-        new_columns = Index.__new__(Index, data=exprs.keys(), dtype=self.columns.dtype)
+        new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
         new_frame = self.__constructor__(
             columns=new_columns,
-            dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
+            dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(base, exprs),
             index_cols=self._index_cols,
         )
@@ -482,12 +480,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def bin_op(self, other, op_name, **kwargs):
         if isinstance(other, (int, float)):
             value_expr = LiteralExpr(other)
-            exprs = {
-                col: self.ref(col).bin_op(value_expr, op_name) for col in self.columns
-            }
+            exprs = self._index_exprs()
+            for col in self.columns:
+                exprs[col] = self.ref(col).bin_op(value_expr, op_name)
             return self.__constructor__(
                 columns=self.columns,
-                dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
+                dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(self, exprs),
                 index_cols=self._index_cols,
             )
@@ -496,17 +494,20 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 raise ValueError(
                     f"length must be {len(self.columns)}: given {len(other)}"
                 )
-            exprs = {
-                col: self.ref(col).bin_op(LiteralExpr(val), op_name)
-                for col, val in zip(self.columns, other)
-            }
+            exprs = self._index_exprs()
+            for col, val in zip(self.columns, other):
+                exprs[col] = self.ref(col).bin_op(LiteralExpr(val), op_name)
             return self.__constructor__(
                 columns=self.columns,
-                dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
+                dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(self, exprs),
                 index_cols=self._index_cols,
             )
         elif isinstance(other, type(self)):
+            print(self)
+            print(self._dtypes)
+            print(other)
+            print(other._dtypes)
             # For now we only support binary operations on
             # projections of the same frame, because we have
             # no support for outer join.
@@ -526,7 +527,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             if fill_value is not None:
                 fill_value = LiteralExpr(fill_value)
 
-            exprs = OrderedDict()
+            exprs = self._index_exprs()
             for col in new_columns:
                 lhs = self.ref(col) if col in self.columns else fill_value
                 rhs = other.ref(col) if col in other.columns else fill_value
@@ -538,10 +539,17 @@ class OmnisciOnRayFrame(BasePandasFrame):
             exprs = self._translate_exprs_to_base(exprs, base)
             return self.__constructor__(
                 columns=new_columns,
-                dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
+                dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(base, exprs),
                 index_cols=self._index_cols,
             )
+
+    def _index_exprs(self):
+        exprs = OrderedDict()
+        if self._index_cols:
+            for col in self._index_cols:
+                exprs[col] = self.ref(col)
+        return exprs
 
     def _find_common_projections_base(self, rhs):
         bases = {self}
@@ -577,7 +585,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     mapper.add_mapper(frame, DirectMapper(frame_base))
                 else:
                     assert isinstance(frame._op, TransformNode)
-                    mapper.add_mapper(frame, TransformMapper(frame._op.exprs))
+                    mapper.add_mapper(frame, TransformMapper(frame._op))
 
             for k, v in new_exprs.items():
                 new_expr = new_exprs[k].translate_input(mapper)
@@ -636,8 +644,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 exprs[c] = self.ref(c)
             return self.__constructor__(
                 columns=self.columns,
-                dtypes=self._dtypes_for_exprs(None, exprs),
-                op=TransformNode(self, exprs, False),
+                dtypes=self._dtypes_for_exprs(exprs),
+                op=TransformNode(self, exprs),
                 index_cols=None,
             )
         else:
@@ -656,7 +664,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
             )
 
     def _set_columns(self, new_columns):
-        exprs = {new: self.ref(old) for old, new in zip(self.columns, new_columns)}
+        exprs = self._index_exprs()
+        for old, new in zip(self.columns, new_columns):
+            exprs[new] = self.ref(old)
         return self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes.tolist(),

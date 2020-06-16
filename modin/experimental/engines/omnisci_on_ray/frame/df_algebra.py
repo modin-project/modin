@@ -16,6 +16,35 @@ from .calcite_algebra import *
 from .expr import *
 
 
+class DirectMapper:
+    def __init__(self, frame):
+        self._modin_frame = frame
+
+    def translate(self, col):
+        return self._modin_frame.ref(col)
+
+
+class TransformMapper:
+    def __init__(self, op):
+        self._op = op
+
+    def translate(self, col):
+        return self._op.exprs[col]
+
+
+class InputMapper:
+    def __init__(self):
+        self._mappers = {}
+
+    def add_mapper(self, frame, mapper):
+        self._mappers[frame] = mapper
+
+    def translate(self, ref):
+        if ref.modin_frame in self._mappers:
+            return self._mappers[ref.modin_frame].translate(ref.column)
+        return ref
+
+
 class DFAlgNode(abc.ABC):
     """Base class for all DataFrame Algebra nodes"""
 
@@ -153,19 +182,15 @@ class TransformNode(DFAlgNode):
             otherwise drop them
     """
 
-    def __init__(self, base, exprs, keep_index=True):
+    def __init__(self, base, exprs):
         self.exprs = exprs
         self.input = [base]
-        self.keep_index = keep_index
 
     def copy(self):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
-        if self.keep_index and self.input[0]._index_cols:
-            for c in self.input[0]._index_cols:
-                res += f"{prefix}  {c}: keep index\n"
         for k, v in self.exprs.items():
             res += f"{prefix}  {k}: {v}\n"
         res += self._prints_input(prefix + "  ")
