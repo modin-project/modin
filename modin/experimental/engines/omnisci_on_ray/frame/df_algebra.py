@@ -190,7 +190,8 @@ class JoinNode(DFAlgNode):
             f"{prefix}JoinNode:\n"
             f"{prefix}  How: {self.how}\n"
             f"{prefix}  On: {self.on}\n"
-            f"{prefix}  Sorting: {self.sort}\n" + self._prints_input(prefix + "  ")
+            f"{prefix}  Sorting: {self.sort}\n"
+            f"{prefix}  Suffixes: {self.suffixes}\n" + self._prints_input(prefix + "  ")
         )
 
 

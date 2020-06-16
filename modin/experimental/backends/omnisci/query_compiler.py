@@ -69,6 +69,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
+            if not isinstance(on, list):
+                assert isinstance(on, str), f"unsupported 'on' value {on}"
+                on = [on]
             return self.__constructor__(
                 self._modin_frame.join(
                     right._modin_frame, how=how, on=on, sort=sort, suffixes=suffixes,
@@ -217,9 +220,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(
-            self._modin_frame.dt_year()
-        )        
+        return self.__constructor__(self._modin_frame.dt_year())
 
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
