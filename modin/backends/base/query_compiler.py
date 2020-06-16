@@ -423,6 +423,16 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def conj(self, **kwargs):
+        """
+        Return the complex conjugate, element-wise.
+
+        The complex conjugate of a complex number is obtained
+        by changing the sign of its imaginary part.
+        """
+        pass
+
+    @abc.abstractmethod
     def isin(self, **kwargs):
         pass
 

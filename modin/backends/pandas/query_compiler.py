@@ -527,6 +527,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = MapFunction.register(pandas.DataFrame.applymap)
+    conj = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
+    )
     invert = MapFunction.register(pandas.DataFrame.__invert__)
     isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
     isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)

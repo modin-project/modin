@@ -639,7 +639,36 @@ class DataFrame(BasePandasDataset):
         DataFrame
             The covariance matrix of the series of the DataFrame.
         """
-        return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
+        numeric_df = self.drop(
+            columns=[
+                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+            ]
+        )
+
+        cols = numeric_df.columns
+        idx = cols.copy()
+        denom = None
+
+        if all(numeric_df.notna().all()):
+            if min_periods is not None and min_periods > len(numeric_df):
+                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
+                result.fill(np.nan)
+                return numeric_df.__constructor__(result)
+            else:
+                numeric_df = numeric_df.astype(dtype="float64")
+                denom = 1.0 / (len(numeric_df) - 1.0)
+                means = numeric_df.mean(axis=0)
+                result = numeric_df - means
+                result = result.T._query_compiler.conj().dot(result._query_compiler)
+        else:
+            result = numeric_df._query_compiler.default_to_pandas(
+                pandas.DataFrame.cov, min_periods=min_periods
+            )
+
+        result = numeric_df.__constructor__(
+            query_compiler=result, index=idx, columns=cols
+        )
+        return result if denom is None else result * denom
 
     def dot(self, other):
         """
