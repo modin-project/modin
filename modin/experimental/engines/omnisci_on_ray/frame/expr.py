@@ -222,3 +222,10 @@ def build_dt_expr(dt_operation, col_expr):
     res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype(int))
 
     return res
+
+
+def build_cast_expr(col_expr, res_type):
+
+    res = OpExpr("CAST", [col_expr], res_type)
+
+    return res

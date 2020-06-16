@@ -185,6 +185,33 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    astype_data = {
+        "a": [1, 1, 2],
+        "b": [11.5, 21.2, 12.8],
+    }
+
+    def test_series_astype(self):
+        df = pd.DataFrame(self.astype_data)
+        ref = df["b"].astype("int")
+
+        modin_df = mpd.DataFrame(self.astype_data)
+        modin_df = modin_df["b"].astype("int")
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
+    def test_df_astype(self):
+        df = pd.DataFrame(self.astype_data)
+        ref = df.astype({"a": "float", "b": "int"})
+
+        modin_df = mpd.DataFrame(self.astype_data)
+        modin_df = modin_df.astype({"a": "float", "b": "int"})
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
+
     h2o_data = {
         "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
         "id2": ["id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2"],
