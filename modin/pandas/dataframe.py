@@ -462,7 +462,7 @@ class DataFrame(BasePandasDataset):
                         elif obj in self:
                             cols.append(obj)
                         else:
-                            raise KeyError(next(x for x in by if x not in self))
+                            raise KeyError(obj)
                     cols = self._query_compiler.getitem_column_array(cols)
                     if cols is None:
                         raise NotImplementedError("Unsupported groupby arguments")

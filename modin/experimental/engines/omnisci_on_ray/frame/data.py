@@ -183,7 +183,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_agg = {}
             for col in self.columns:
                 if col not in groupby_cols:
-                    exprs[col] = base.ref(col)
+                    exprs[col] = self.ref(col)
                     new_agg[col] = agg
                     new_columns.append(col)
                     new_dtypes.append(_agg_dtype(agg, self._dtypes[col]))
@@ -191,7 +191,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
             for k, v in agg.items():
-                exprs[k] = base.ref(k)
+                exprs[k] = self.ref(k)
                 if isinstance(v, list):
                     # TODO: support levels
                     for item in v:
@@ -215,7 +215,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_frame = self.__constructor__(
                 columns=transform_columns,
                 dtypes=dtypes,
-                op=TransformNode(base, exprs, keep_index=groupby_args["as_index"]),
+                op=TransformNode(base, exprs),
                 index_cols=by_frame._index_cols,
             )
             new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
@@ -426,20 +426,15 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     raise NotImplementedError(
                         "duplicated column names are not supported"
                     )
-                if isinstance(frame._op, TransformNode):
-                    exprs[col] = frame._op.exprs[col]
-                else:
-                    new_col = col if col != "" else f"__col{len(exprs)}__"
-                    exprs[new_col] = frame.ref(col)
+                new_col = col if col != "" else f"__col{len(exprs)}__"
+                exprs[new_col] = frame.ref(col)
 
         exprs = self._translate_exprs_to_base(exprs, base)
         new_columns = Index.__new__(Index, data=exprs.keys(), dtype=self.columns.dtype)
         new_frame = self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes_for_exprs(self._index_cols, exprs),
-            op=TransformNode(
-                self._op.input[0] if isinstance(self._op, MaskNode) else self, exprs
-            ),
+            op=TransformNode(base, exprs),
             index_cols=self._index_cols,
         )
         return new_frame
