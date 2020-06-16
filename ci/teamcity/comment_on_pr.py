@@ -39,6 +39,7 @@ split_by_first = (
 )
 split_by_second = "--------------------------------------------------------------------------------------"
 
+tests_failed = False
 for out in pytest_outputs:
     content = open(out, "r").read()
     full_comment += "".join(
@@ -50,11 +51,15 @@ for out in pytest_outputs:
         )
         for i in content.split("+ python3 -m pytest ")
     )
+    tests_failed = tests_failed or ("FAILURES" in full_comment)
     if len(full_comment) > 65_000:
-        full_comment = full_comment[-65_000:] + "\n\n<b>Remaining output truncated<b>\n\n"
+        full_comment = (
+            full_comment[-65_000:] + "\n\n<b>Remaining output truncated<b>\n\n"
+        )
     full_comment = "<details><summary>Tests Logs</summary>\n\n\n```\n" + full_comment
     full_comment += "\n```\n\n</details>\n"
-if "FAILURES" not in full_comment:
+
+if not tests_failed:
     header += '<h3 align="center">Tests PASSed</h3>\n\n'
 else:
     header += '<h3 align="center">Tests FAILed</h3>\n\n'

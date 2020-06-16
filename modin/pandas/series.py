@@ -868,7 +868,27 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
 
     def nsmallest(self, n=5, keep="first"):
-        return self._default_to_pandas(pandas.Series.nsmallest, n=n, keep=keep)
+        """
+        Return the smallest `n` elements.
+        Parameters
+        ----------
+        n : int, default 5
+            Return this many ascending sorted values.
+        keep : {'first', 'last', 'all'}, default 'first'
+            When there are duplicate values that cannot all fit in a
+            Series of `n` elements:
+            - ``first`` : return the first `n` occurrences in order
+                of appearance.
+            - ``last`` : return the last `n` occurrences in reverse
+                order of appearance.
+            - ``all`` : keep all occurrences. This can result in a Series of
+                size larger than `n`.
+        Returns
+        -------
+        Series
+            The `n` smallest values in the Series, sorted in increasing order.
+        """
+        return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
     @property
     def plot(
@@ -1164,6 +1184,19 @@ class Series(BasePandasDataset):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.to_datetime(**kwargs)
+        )
+
+    def _to_numeric(self, **kwargs):
+        """
+        Convert `self` to numeric.
+
+        Returns
+        -------
+        numeric
+            Series: Series of numeric dtype
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
 
     def to_dict(self, into=dict):  # pragma: no cover

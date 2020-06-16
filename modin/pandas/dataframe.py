@@ -1492,10 +1492,14 @@ class DataFrame(BasePandasDataset):
             - ``last`` : take the last occurrence.
             - ``all`` : do not drop any duplicates, even it means
               selecting more than `n` items.
-            .. versionadded:: 0.24.0
+        Returns
+        -------
+        DataFrame
         """
         return DataFrame(
-            query_compiler=self._query_compiler.nsmallest(n, columns, keep)
+            query_compiler=self._query_compiler.nsmallest(
+                n=n, columns=columns, keep=keep
+            )
         )
 
     def pivot(self, index=None, columns=None, values=None):
