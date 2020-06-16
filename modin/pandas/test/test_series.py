@@ -1965,12 +1965,22 @@ def test_notnull(data):
     df_equals(modin_series.notnull(), pandas_series.notnull())
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_nsmallest():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.nsmallest(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nsmallest(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.nsmallest(n=5, keep="first"),
+        pandas_series.nsmallest(n=5, keep="first"),
+    )
+    df_equals(
+        modin_series.nsmallest(n=10, keep="first"),
+        pandas_series.nsmallest(n=10, keep="first"),
+    )
+    df_equals(
+        modin_series.nsmallest(n=10, keep="last"),
+        pandas_series.nsmallest(n=10, keep="last"),
+    )
+    df_equals(modin_series.nsmallest(keep="all"), pandas_series.nsmallest(keep="all"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

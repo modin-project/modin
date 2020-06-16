@@ -505,7 +505,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
     nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     kurt = ReductionFunction.register(pandas.DataFrame.kurt)
@@ -817,6 +816,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, map_func, new_index=new_index, new_columns=new_columns
+        )
+        return self.__constructor__(new_modin_frame)
+
+    def nsmallest(self, n, columns=0, keep="first"):
+        def map_func(df, n=n, keep=keep, columns=columns):
+            if isinstance(df.squeeze(), pandas.DataFrame):
+                return pandas.DataFrame.nsmallest(df, n=n, columns=columns, keep=keep)
+            else:
+                return pandas.Series.nsmallest(df.squeeze(), n=n, keep=keep)
+
+        if len(self.columns) != 1:
+            new_columns = self.columns
+        else:
+            new_columns = None
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis=0, func=map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 

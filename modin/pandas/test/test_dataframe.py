@@ -3975,7 +3975,12 @@ class TestDataFrameWindow:
         modin_df = pd.DataFrame(data=data, index=index)
         pandas_df = pandas.DataFrame(data=data, index=index)
         df_equals(
-            modin_df.nsmallest(3, "population"), pandas_df.nsmallest(3, "population")
+            modin_df.nsmallest(n=3, columns="population"),
+            pandas_df.nsmallest(n=3, columns="population"),
+        )
+        df_equals(
+            modin_df.nsmallest(n=2, columns=["population", "GDP"], keep="all"),
+            pandas_df.nsmallest(n=2, columns=["population", "GDP"], keep="all"),
         )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
