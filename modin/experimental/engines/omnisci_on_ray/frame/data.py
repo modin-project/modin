@@ -26,9 +26,7 @@ from .df_algebra import (
     TransformNode,
     UnionNode,
     JoinNode,
-    DirectMapper,
-    TransformMapper,
-    InputMapper,
+    translate_exprs_to_base,
 )
 from .expr import (
     InputRefExpr,
@@ -108,24 +106,36 @@ class OmnisciOnRayFrame(BasePandasFrame):
         col_indices=None,
         col_numeric_idx=None,
     ):
-        if col_indices is not None:
-            new_columns = col_indices
-        elif col_numeric_idx is not None:
-            new_columns = self.columns[col_numeric_idx]
-        else:
-            new_columns = self.columns
+        base = self
 
-        op = MaskNode(
-            self,
-            row_indices=row_indices,
-            row_numeric_idx=row_numeric_idx,
-            col_indices=new_columns,
-        )
-        dtypes = self._dtypes_for_cols(self._index_cols, new_columns)
+        if col_indices is not None or col_numeric_idx is not None:
+            if col_indices is not None:
+                new_columns = col_indices
+            elif col_numeric_idx is not None:
+                new_columns = base.columns[col_numeric_idx]
+            exprs = self._index_exprs()
+            for col in new_columns:
+                exprs[col] = base.ref(col)
+            dtypes = self._dtypes_for_exprs(exprs)
+            base = self.__constructor__(
+                columns=new_columns,
+                dtypes=dtypes,
+                op=TransformNode(base, exprs),
+                index_cols=self._index_cols,
+            )
 
-        return self.__constructor__(
-            columns=new_columns, dtypes=dtypes, op=op, index_cols=self._index_cols
-        )
+        if row_indices is not None or row_numeric_idx is not None:
+            op = MaskNode(
+                base, row_indices=row_indices, row_numeric_idx=row_numeric_idx,
+            )
+            return self.__constructor__(
+                columns=base.columns,
+                dtypes=base._dtypes,
+                op=op,
+                index_cols=self._index_cols,
+            )
+
+        return base
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
@@ -201,7 +211,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         output_columns = []
         if isinstance(by_frame._op, TransformNode):
             """group by modified frame's columns requires special hadling"""
-            exprs = self._translate_exprs_to_base(exprs, base)
+            exprs = translate_exprs_to_base(exprs, base)
             dtypes = [expr._dtype for expr in exprs.values()]
             transform_columns = []
             if groupby_args["as_index"]:
@@ -467,7 +477,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     new_col = col
                 exprs[new_col] = frame.ref(col)
 
-        exprs = self._translate_exprs_to_base(exprs, base)
+        exprs = translate_exprs_to_base(exprs, base)
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
         new_frame = self.__constructor__(
             columns=new_columns,
@@ -536,7 +546,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 else:
                     exprs[col] = lhs.bin_op(rhs, op_name)
 
-            exprs = self._translate_exprs_to_base(exprs, base)
+            exprs = translate_exprs_to_base(exprs, base)
             return self.__constructor__(
                 columns=new_columns,
                 dtypes=self._dtypes_for_exprs(exprs),
@@ -565,55 +575,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return None
 
-    @staticmethod
-    def _translate_exprs_to_base(exprs, base):
-        new_exprs = dict(exprs)
-
-        frames = set()
-        for k, v in new_exprs.items():
-            v.collect_frames(frames)
-        frames.discard(base)
-
-        while len(frames) > 0:
-            mapper = InputMapper()
-            new_frames = set()
-            for frame in frames:
-                frame_base = frame._op.input[0]
-                if frame_base != base:
-                    new_frames.add(frame_base)
-                if isinstance(frame._op, MaskNode):
-                    mapper.add_mapper(frame, DirectMapper(frame_base))
-                else:
-                    assert isinstance(frame._op, TransformNode)
-                    mapper.add_mapper(frame, TransformMapper(frame._op))
-
-            for k, v in new_exprs.items():
-                new_expr = new_exprs[k].translate_input(mapper)
-                new_expr.collect_frames(new_frames)
-                new_exprs[k] = new_expr
-
-            new_frames.discard(base)
-            frames = new_frames
-
-        res = OrderedDict()
-        for col in exprs.keys():
-            res[col] = new_exprs[col]
-        return res
-
-    def _is_projection_of(self, base):
-        return (
-            isinstance(self._op, MaskNode)
-            and self._op.input[0] == base
-            and self._op.row_indices is None
-            and self._op.row_numeric_idx is None
-        )
-
     def _is_projection(self):
-        if isinstance(self._op, MaskNode):
-            return self._op.row_indices is None and self._op.row_numeric_idx is None
-        elif isinstance(self._op, TransformNode):
-            return True
-        return False
+        return isinstance(self._op, TransformNode)
 
     def _execute(self):
         if isinstance(self._op, FrameNode):

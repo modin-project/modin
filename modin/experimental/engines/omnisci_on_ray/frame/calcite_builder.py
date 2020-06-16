@@ -182,26 +182,9 @@ class CalciteBuilder:
         frame = op.input[0]
 
         # select rows by rowid
-        if op.row_numeric_idx is not None:
-            rowid_col = self._ref(frame, "__rowid__")
-            condition = build_row_idx_filter_expr(op.row_numeric_idx, rowid_col)
-            self._push(CalciteFilterNode(condition))
-
-        # make projection
-        fields = []
-        if frame._index_cols is not None:
-            fields += frame._index_cols
-
-        if op.col_indices is not None or op.col_numeric_idx is not None:
-            if op.col_indices is not None:
-                fields += list(op.col_indices)
-            elif op.col_numeric_idx is not None:
-                fields += frame.columns[op.col_numeric_idx].tolist()
-        else:
-            fields += list(frame.columns)
-        exprs = [self._ref(frame, col) for col in fields]
-
-        self._push(CalciteProjectionNode(fields, exprs))
+        rowid_col = self._ref(frame, "__rowid__")
+        condition = build_row_idx_filter_expr(op.row_numeric_idx, rowid_col)
+        self._push(CalciteFilterNode(condition))
 
     def _process_groupby(self, op):
         frame = op.input[0]
