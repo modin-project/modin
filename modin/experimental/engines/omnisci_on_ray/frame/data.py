@@ -32,7 +32,6 @@ from .expr import (
     LiteralExpr,
     build_if_then_else,
     build_dt_expr,
-    build_cast_expr,
     _get_common_dtype,
     _agg_dtype,
     DirectMapper,
@@ -258,7 +257,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def astype(self, col_dtypes, **kwargs):
         columns = col_dtypes.keys()
         new_dtypes = self.dtypes.copy()
-        for i, column in enumerate(columns):
+        for column in columns:
             dtype = col_dtypes[column]
             if (
                 not isinstance(dtype, type(self.dtypes[column]))
@@ -276,15 +275,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
                 elif isinstance(new_dtype, str) and new_dtype == "category":
-                    new_dtypes = None
-                    break
+                    raise NotImplementedError("unsupported type conversion")
                 else:
                     new_dtypes[column] = new_dtype
         exprs = OrderedDict()
         for col in self.columns:
             col_expr = self.ref(col)
             if col in columns:
-                exprs[col] = build_cast_expr(col_expr, new_dtypes[col])
+                exprs[col] = col_expr.cast(new_dtypes[col])
             else:
                 exprs[col] = col_expr
 
