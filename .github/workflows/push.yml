@@ -40,57 +40,57 @@ jobs:
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
       - run: bash <(curl -s https://codecov.io/bash)
-    test-windows:
-      runs-on: windows-latest
-      strategy:
-        matrix:
-          python-version: ["3.6.x", "3.7.x"]
-          part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
-      env:
-        MODIN_ENGINE: dask
-      name: test-windows
-      steps:
-        - uses: actions/checkout@v1
-          with:
-            fetch-depth: 1
-        - uses: actions/setup-python@v1
-          with:
-            python-version: ${{matrix.python-version}}
-            architecture: "x64"
-        - run: pip install -r requirements/windows_test_requires.txt
-        - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
-          if: matrix.part != 3
-        - run: python -m pytest modin/pandas/test/test_series.py
-          if: matrix.part == 3
-        - run: python -m pytest modin/pandas/test/test_concat.py
-          if: matrix.part == 3
-        - run: python -m pytest modin/pandas/test/test_groupby.py
-          if: matrix.part == 3
-        - run: python -m pytest modin/pandas/test/test_reshape.py
-          if: matrix.part == 3
-        - run: python -m pytest modin/pandas/test/test_general.py
-          if: matrix.part == 3
-        - run: python -m pytest modin/pandas/test/test_io.py
-          if: matrix.part == 3
-        - run: choco install codecov
-        - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
-    test-pyarrow:
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          python-version: ["3.6.x", "3.7.x"]
-      env:
-        MODIN_BACKEND: pyarrow
-        MODIN_EXPERIMENTAL: "True"
-      name: test (pyarrow, python ${{matrix.python-version}})
-      steps:
-        - uses: actions/checkout@v1
-          with:
-            fetch-depth: 1
-        - uses: actions/setup-python@v1
-          with:
-            python-version: ${{matrix.python-version}}
-            architecture: "x64"
-        - run: sudo apt update && sudo apt install -y libhdf5-dev
-        - run: pip install -r requirements.txt
-        - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
+  test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.6.x", "3.7.x"]
+        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+    env:
+      MODIN_ENGINE: dask
+    name: test-windows
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{matrix.python-version}}
+          architecture: "x64"
+      - run: pip install -r requirements/windows_test_requires.txt
+      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+        if: matrix.part != 3
+      - run: python -m pytest modin/pandas/test/test_series.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_concat.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_groupby.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_reshape.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_general.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_io.py
+        if: matrix.part == 3
+      - run: choco install codecov
+      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
+  test-pyarrow:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.6.x", "3.7.x"]
+    env:
+      MODIN_BACKEND: pyarrow
+      MODIN_EXPERIMENTAL: "True"
+    name: test (pyarrow, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{matrix.python-version}}
+          architecture: "x64"
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
