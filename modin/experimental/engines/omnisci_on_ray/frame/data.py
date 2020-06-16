@@ -469,13 +469,13 @@ class OmnisciOnRayFrame(BasePandasFrame):
         for col in self.columns:
             exprs[col] = self.ref(col)
         for frame in other_modin_frames:
-            new_columns.extend(frame.columns.tolist())
             for col in frame.columns:
                 if col == "" or col in exprs:
                     new_col = f"__col{len(exprs)}__"
                 else:
                     new_col = col
                 exprs[new_col] = frame.ref(col)
+                new_columns.append(new_col)
 
         exprs = translate_exprs_to_base(exprs, base)
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
@@ -514,10 +514,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 index_cols=self._index_cols,
             )
         elif isinstance(other, type(self)):
-            print(self)
-            print(self._dtypes)
-            print(other)
-            print(other._dtypes)
             # For now we only support binary operations on
             # projections of the same frame, because we have
             # no support for outer join.

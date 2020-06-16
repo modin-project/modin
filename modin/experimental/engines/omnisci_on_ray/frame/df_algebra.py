@@ -163,6 +163,12 @@ class TransformNode(DFAlgNode):
     def __init__(self, base, exprs):
         self.exprs = exprs
         self.input = [base]
+        self._fold()
+
+    def _fold(self):
+        if isinstance(self.input[0]._op, TransformNode):
+            self.input[0] = self.input[0]._op.input[0]
+            self.exprs = translate_exprs_to_base(self.exprs, self.input[0])
 
     def copy(self):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
