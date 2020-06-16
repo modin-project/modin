@@ -2290,15 +2290,7 @@ class DataFrame(BasePandasDataset):
                 # last column name from the list (the appended value's name and append
                 # the new name.
                 self.columns = self.columns[:-1].append(pandas.Index([key]))
-            elif (
-                isinstance(value, np.ndarray)
-                and len(value.shape) > 1
-                and value.shape[1] != 1
-            ):
-                raise ValueError(
-                    "Wrong number of items passed %i, placement implies 1"
-                    % value.shape[1]
-                )
+                return
             elif (
                 isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
             ):
@@ -2306,8 +2298,18 @@ class DataFrame(BasePandasDataset):
                     "Wrong number of items passed %i, placement implies 1"
                     % value.shape[1]
                 )
-            else:
-                self.insert(loc=len(self.columns), column=key, value=value)
+            elif isinstance(value, np.ndarray) and len(value.shape) > 1:
+                if value.shape[1] == 1:
+                    # Transform into columnar table and take first column
+                    value = value.copy().T[0]
+                else:
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
+
+            # Do new column assignment after error checks and possible value modifications
+            self.insert(loc=len(self.columns), column=key, value=value)
             return
 
         if not isinstance(key, str):

@@ -21,6 +21,7 @@ import modin.pandas as pd
 from modin.pandas.utils import to_pandas
 from numpy.testing import assert_array_equal
 import io
+import sys
 
 from .utils import (
     random_state,
@@ -5072,6 +5073,16 @@ class TestDataFrameIndexing:
         modin_df[modin_df.columns[-1]] = modin_df[modin_df.columns[0]]
         pandas_df[pandas_df.columns[-1]] = pandas_df[pandas_df.columns[0]]
         df_equals(modin_df, pandas_df)
+
+        if not sys.version_info.major == 3 and sys.version_info.minor > 6:
+            # This test doesn't work correctly on Python 3.6
+            # Test 2d ndarray assignment to column
+            modin_df = pd.DataFrame(data)
+            pandas_df = pandas.DataFrame(data)
+            modin_df["new_col"] = modin_df[[modin_df.columns[0]]].values
+            pandas_df["new_col"] = pandas_df[[pandas_df.columns[0]]].values
+            df_equals(modin_df, pandas_df)
+            assert isinstance(modin_df["new_col"][0], type(pandas_df["new_col"][0]))
 
         # Transpose test
         modin_df = pd.DataFrame(data).T
