@@ -1445,7 +1445,9 @@ class DatetimeProperties(object):
 
     @property
     def month(self):
-        return Series(query_compiler=self._query_compiler.dt_month())
+        return Series(
+            query_compiler=self._query_compiler.dt_month(), shape_hint="column"
+        )
 
     @property
     def day(self):

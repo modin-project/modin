@@ -280,11 +280,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
-    def dt_year(self):
+    def dt_extract(self, obj):
         exprs = OrderedDict()
         for col in self.columns:
             col_expr = self.ref(col)
-            exprs[col] = build_dt_expr("year", col_expr)
+            exprs[col] = build_dt_expr(obj, self.ref(col))
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(self._index_cols, exprs)
         return self.__constructor__(
