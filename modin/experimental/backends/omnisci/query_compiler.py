@@ -69,6 +69,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
+            if not isinstance(on, list):
+                assert isinstance(on, str), f"unsupported 'on' value {on}"
+                on = [on]
             return self.__constructor__(
                 self._modin_frame.join(
                     right._modin_frame, how=how, on=on, sort=sort, suffixes=suffixes,
@@ -245,6 +248,18 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(self._modin_frame.reset_index(drop))
 
+    def astype(self, col_dtypes, **kwargs):
+        """Converts columns dtypes to given dtypes.
+
+        Args:
+            col_dtypes: Dictionary of {col: dtype,...} where col is the column
+                name and dtype is a numpy dtype.
+
+        Returns:
+            DataFrame with updated dtypes.
+        """
+        return self.__constructor__(self._modin_frame.astype(col_dtypes))
+
     def has_multiindex(self):
         return self._modin_frame.has_multiindex()
 
@@ -271,7 +286,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     any = DFAlgNotSupported("any")
     apply = DFAlgNotSupported("apply")
     applymap = DFAlgNotSupported("applymap")
-    astype = DFAlgNotSupported("astype")
     back = DFAlgNotSupported("back")
     clip = DFAlgNotSupported("clip")
     combine = DFAlgNotSupported("combine")

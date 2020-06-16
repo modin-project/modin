@@ -291,26 +291,67 @@ class OmnisciOnRayFrame(BasePandasFrame):
             columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
         )
 
+    def astype(self, col_dtypes, **kwargs):
+        columns = col_dtypes.keys()
+        new_dtypes = self.dtypes.copy()
+        for column in columns:
+            dtype = col_dtypes[column]
+            if (
+                not isinstance(dtype, type(self.dtypes[column]))
+                or dtype != self.dtypes[column]
+            ):
+                # Update the new dtype series to the proper pandas dtype
+                try:
+                    new_dtype = np.dtype(dtype)
+                except TypeError:
+                    new_dtype = dtype
+
+                if dtype != np.int32 and new_dtype == np.int32:
+                    new_dtypes[column] = np.dtype("int64")
+                elif dtype != np.float32 and new_dtype == np.float32:
+                    new_dtypes[column] = np.dtype("float64")
+                # We cannot infer without computing the dtype if
+                elif isinstance(new_dtype, str) and new_dtype == "category":
+                    raise NotImplementedError("unsupported type conversion")
+                else:
+                    new_dtypes[column] = new_dtype
+        exprs = OrderedDict()
+        for col in self.columns:
+            col_expr = self.ref(col)
+            if col in columns:
+                exprs[col] = col_expr.cast(new_dtypes[col])
+            else:
+                exprs[col] = col_expr
+
+        new_op = TransformNode(self, exprs)
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=new_dtypes,
+            op=new_op,
+            index_cols=self._index_cols,
+        )
+
     def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
         assert (
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
 
-        assert (
-            on in self.columns and on in other.columns
-        ), "Only cases when both frames contain key column are supported"
+        for col in on:
+            assert (
+                col in self.columns and col in other.columns
+            ), "Only cases when both frames contain key column are supported"
 
-        new_columns = [on]
-        new_dtypes = [self._dtypes[on]]
+        new_columns = on.copy()
+        new_dtypes = self._dtypes[on].tolist()
 
         conflicting_list = list(set(self.columns) & set(other.columns))
         for c in self.columns:
-            if c != on:
+            if c not in on:
                 suffix = suffixes[0] if c in conflicting_list else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(self._dtypes[c])
         for c in other.columns:
-            if c != on:
+            if c not in on:
                 suffix = suffixes[1] if c in conflicting_list else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(other._dtypes[c])
@@ -422,11 +463,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
             exprs[col] = self.ref(col)
         for frame in other_modin_frames:
             for col in frame.columns:
-                if col in exprs:
-                    raise NotImplementedError(
-                        "duplicated column names are not supported"
-                    )
-                new_col = col if col != "" else f"__col{len(exprs)}__"
+                if col == "" or col in exprs:
+                    new_col = f"__col{len(exprs)}__"
+                else:
+                    new_col = col
                 exprs[new_col] = frame.ref(col)
 
         exprs = self._translate_exprs_to_base(exprs, base)
