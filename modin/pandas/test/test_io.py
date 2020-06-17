@@ -23,7 +23,6 @@ import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
-import io
 import csv
 
 from .utils import (
