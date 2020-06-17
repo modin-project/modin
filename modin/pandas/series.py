@@ -953,7 +953,7 @@ class Series(BasePandasDataset):
 
         """
         data = self._query_compiler.to_numpy().flatten(order=order)
-        if self.dtype == "category":
+        if isinstance(self.dtype, pandas.CategoricalDtype):
             data = pandas.Categorical(data, dtype=self.dtype)
 
         return data
