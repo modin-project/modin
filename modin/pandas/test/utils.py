@@ -373,6 +373,12 @@ encoding_types = [
 ]
 
 
+def categories_equals(left, right):
+    assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
+    is_category_ordered = left.ordered
+    assert_categorical_equal(left, right, check_category_order=is_category_ordered)
+
+
 def df_categories_equals(df1, df2):
     categories_columns = df1.select_dtypes(include="category").columns
 
