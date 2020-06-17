@@ -31,35 +31,6 @@ def _agg_dtype(agg, dtype):
         raise NotImplementedError(f"unsupported aggreagte {agg}")
 
 
-class DirectMapper:
-    def __init__(self, frame):
-        self._modin_frame = frame
-
-    def translate(self, col):
-        return self._modin_frame.ref(col)
-
-
-class TransformMapper:
-    def __init__(self, exprs):
-        self._exprs = exprs
-
-    def translate(self, col):
-        return self._exprs[col]
-
-
-class InputMapper:
-    def __init__(self):
-        self._mappers = {}
-
-    def add_mapper(self, frame, mapper):
-        self._mappers[frame] = mapper
-
-    def translate(self, ref):
-        if ref.modin_frame in self._mappers:
-            return self._mappers[ref.modin_frame].translate(ref.column)
-        return ref
-
-
 class BaseExpr(abc.ABC):
     binary_operations = {"add": "+", "sub": "-"}
 

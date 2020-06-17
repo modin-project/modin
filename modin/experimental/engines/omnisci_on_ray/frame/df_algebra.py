@@ -14,6 +14,28 @@
 import abc
 from .calcite_algebra import *
 from .expr import *
+from collections import OrderedDict
+
+
+class TransformMapper:
+    def __init__(self, op):
+        self._op = op
+
+    def translate(self, col):
+        return self._op.exprs[col]
+
+
+class InputMapper:
+    def __init__(self):
+        self._mappers = {}
+
+    def add_mapper(self, frame, mapper):
+        self._mappers[frame] = mapper
+
+    def translate(self, ref):
+        if ref.modin_frame in self._mappers:
+            return self._mappers[ref.modin_frame].translate(ref.column)
+        return ref
 
 
 class DFAlgNode(abc.ABC):
@@ -90,35 +112,20 @@ class FrameNode(DFAlgNode):
 
 class MaskNode(DFAlgNode):
     def __init__(
-        self,
-        base,
-        row_indices=None,
-        row_numeric_idx=None,
-        col_indices=None,
-        col_numeric_idx=None,
+        self, base, row_indices=None, row_numeric_idx=None,
     ):
         self.input = [base]
         self.row_indices = row_indices
         self.row_numeric_idx = row_numeric_idx
-        self.col_indices = col_indices
-        self.col_numeric_idx = col_numeric_idx
 
     def copy(self):
-        return MaskNode(
-            self.input[0],
-            self.row_indices,
-            self.row_numeric_idx,
-            self.col_indices,
-            self.col_numeric_idx,
-        )
+        return MaskNode(self.input[0], self.row_indices, self.row_numeric_idx,)
 
     def _prints(self, prefix):
         return (
             f"{prefix}MaskNode:\n"
             f"{prefix}  row_indices: {self.row_indices}\n"
             f"{prefix}  row_numeric_idx: {self.row_numeric_idx}\n"
-            f"{prefix}  col_indices: {self.col_indices}\n"
-            f"{prefix}  col_numeric_idx: {self.col_numeric_idx}\n"
             + self._prints_input(prefix + "  ")
         )
 
@@ -153,19 +160,21 @@ class TransformNode(DFAlgNode):
             otherwise drop them
     """
 
-    def __init__(self, base, exprs, keep_index=True):
+    def __init__(self, base, exprs):
         self.exprs = exprs
         self.input = [base]
-        self.keep_index = keep_index
+        self._fold()
+
+    def _fold(self):
+        if isinstance(self.input[0]._op, TransformNode):
+            self.input[0] = self.input[0]._op.input[0]
+            self.exprs = translate_exprs_to_base(self.exprs, self.input[0])
 
     def copy(self):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
-        if self.keep_index and self.input[0]._index_cols:
-            for c in self.input[0]._index_cols:
-                res += f"{prefix}  {c}: keep index\n"
         for k, v in self.exprs.items():
             res += f"{prefix}  {k}: {v}\n"
         res += self._prints_input(prefix + "  ")
@@ -206,3 +215,35 @@ class UnionNode(DFAlgNode):
 
     def _prints(self, prefix):
         return f"{prefix}UnionNode:\n" + self._prints_input(prefix + "  ")
+
+
+def translate_exprs_to_base(exprs, base):
+    new_exprs = dict(exprs)
+
+    frames = set()
+    for k, v in new_exprs.items():
+        v.collect_frames(frames)
+    frames.discard(base)
+
+    while len(frames) > 0:
+        mapper = InputMapper()
+        new_frames = set()
+        for frame in frames:
+            frame_base = frame._op.input[0]
+            if frame_base != base:
+                new_frames.add(frame_base)
+            assert isinstance(frame._op, TransformNode)
+            mapper.add_mapper(frame, TransformMapper(frame._op))
+
+        for k, v in new_exprs.items():
+            new_expr = new_exprs[k].translate_input(mapper)
+            new_expr.collect_frames(new_frames)
+            new_exprs[k] = new_expr
+
+        new_frames.discard(base)
+        frames = new_frames
+
+    res = OrderedDict()
+    for col in exprs.keys():
+        res[col] = new_exprs[col]
+    return res
