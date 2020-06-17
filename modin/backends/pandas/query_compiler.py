@@ -787,34 +787,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def cov(self, other, min_periods):
-        """
-        Compute covariance with `other`, excluding missing values.
-
-        Parameters
-        ----------
-        other : PandasQueryCompiler
-            QueryCompiler of Series with which to compute the covariance.
-        min_periods : int, optional
-            Minimum number of observations needed to have a valid result.
-
-        Returns
-        -------
-        PandasQueryCompiler
-            Covariance between Series and other normalized by N-1
-            (unbiased estimator).
-        """
-        other = other.to_pandas().squeeze()
-
-        def map_func(df, other=other, min_periods=min_periods):
-            result = df.squeeze().cov(other, min_periods=min_periods)
-            return pandas.DataFrame([result])
-
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            0, map_func, new_index=["__reduced__"], new_columns=["__reduced__"]
-        )
-        return self.__constructor__(new_modin_frame)
-
     def dot(self, other):
         """Computes the matrix multiplication of self and other.
 

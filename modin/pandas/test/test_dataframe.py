@@ -2134,8 +2134,7 @@ class TestDataFrameDefault:
 
     def test_cov(self):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            modin_result = pd.DataFrame(data).cov()
+        modin_result = pd.DataFrame(data).cov()
         pandas_result = pandas.DataFrame(data).cov()
         df_equals(modin_result, pandas_result)
 

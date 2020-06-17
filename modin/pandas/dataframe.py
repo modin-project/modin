@@ -638,6 +638,12 @@ class DataFrame(BasePandasDataset):
         -------
         DataFrame
             The covariance matrix of the series of the DataFrame.
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+
+        If DataFrame contains at least one NA/null value, then defaults to pandas.
         """
         numeric_df = self.drop(
             columns=[
