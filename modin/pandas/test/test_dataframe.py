@@ -107,6 +107,9 @@ def eval_insert(modin_df, pandas_df, **kwargs):
     )
 
 
+def create_test_dfs(*args, **kwargs):
+    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
+
 class TestDataFrameBinary:
     def inter_df_math_helper(self, modin_df, pandas_df, op):
         # Test dataframe to datframe
@@ -5417,6 +5420,14 @@ class TestDataFrameIter:
         pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
         modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
         df_equals(pandas_df, modin_df)
+
+    @pytest.mark.parametrize("data", [
+        np.arange(1, 10000, dtype=np.float32),
+        [pd.Series([1,2,3], dtype="int32"), pd.Series([4,5,6], dtype="int64"), np.array([7,8,9], dtype=np.float32)],
+    ], dtype=[None])
+    def test_constructor_dtypes(self, data, dtype):
+        md_df, pd_df = create_test_dfs(data)
+        df_equals(md_df, pd_df)
 
     def test_constructor_columns_and_index(self):
         modin_df = pd.DataFrame(
