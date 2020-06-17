@@ -1052,3 +1052,24 @@ def test_groupby_multiindex():
 
     by = ["one", "two"]
     df_equals(modin_df.groupby(by=by).count(), pandas_df.groupby(by=by).count())
+
+
+def test_agg_func_None_rename():
+    pandas_df = pandas.DataFrame(
+        {
+            "col1": np.random.randint(0, 100, size=1000),
+            "col2": np.random.randint(0, 100, size=1000),
+            "col3": np.random.randint(0, 100, size=1000),
+            "col4": np.random.randint(0, 100, size=1000),
+        },
+        index=["row{}".format(i) for i in range(1000)],
+    )
+    modin_df = from_pandas(pandas_df)
+
+    modin_result = modin_df.groupby(["col1", "col2"]).agg(
+        max=("col3", np.max), min=("col3", np.min)
+    )
+    pandas_result = pandas_df.groupby(["col1", "col2"]).agg(
+        max=("col3", np.max), min=("col3", np.min)
+    )
+    df_equals(modin_result, pandas_result)
