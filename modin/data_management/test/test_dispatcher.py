@@ -25,7 +25,10 @@ class PandasOnTestFactory(factories.BaseFactory):
     """
 
     @classmethod
-    def fill_io_cls(cls):
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
         cls.io_cls = "Foo"
 
 
@@ -35,7 +38,10 @@ class TestOnPythonFactory(factories.BaseFactory):
     """
 
     @classmethod
-    def fill_io_cls(cls):
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
         cls.io_cls = "Bar"
 
 
