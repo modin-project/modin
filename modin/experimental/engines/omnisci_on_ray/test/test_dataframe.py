@@ -558,7 +558,7 @@ class TestBinaryOp:
         "b": [3, 3, 3, 3, 3],
         "d": [4, 4, 4, 4, 4],
     }
-    fill_values = [None, 0, 1]
+    fill_values = [None, 1]
 
     def test_add_cst(self):
         def add(lib, df):
@@ -639,6 +639,73 @@ class TestBinaryOp:
 
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
+
+    def test_truediv_cst(self):
+        def truediv(lib, df):
+            return df / 2
+
+        run_and_compare(truediv, data=self.data)
+
+    def test_truediv_list(self):
+        def truediv(lib, df):
+            return df / [1, 0.5, 0.2, 2.0]
+
+        run_and_compare(truediv, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_truediv_method_columns(self, fill_value):
+        def truediv1(lib, df, fill_value):
+            return df["a"].truediv(df["b"], fill_value=fill_value)
+
+        def truediv2(lib, df, fill_value):
+            return df[["a", "c"]].truediv(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(truediv1, data=self.data, fill_value=fill_value)
+        run_and_compare(truediv2, data=self.data, fill_value=fill_value)
+
+    def test_truediv_columns(self):
+        def truediv1(lib, df):
+            return df["a"] / df["b"]
+
+        def truediv2(lib, df):
+            return df[["a", "c"]] / df[["b", "a"]]
+
+        run_and_compare(truediv1, data=self.data)
+        run_and_compare(truediv2, data=self.data)
+
+    def test_floordiv_cst(self):
+        def floordiv(lib, df):
+            return df // 2
+
+        run_and_compare(floordiv, data=self.data)
+
+    def test_floordiv_list(self):
+        def floordiv(lib, df):
+            return df // [1, 0.54, 0.24, 2.01]
+
+        run_and_compare(floordiv, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_floordiv_method_columns(self, fill_value):
+        def floordiv1(lib, df, fill_value):
+            return df["a"].floordiv(df["b"], fill_value=fill_value)
+
+        def floordiv2(lib, df, fill_value):
+            return df[["a", "c"]].floordiv(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(floordiv1, data=self.data, fill_value=fill_value)
+        run_and_compare(floordiv2, data=self.data, fill_value=fill_value)
+
+    def test_floordiv_columns(self):
+        def floordiv1(lib, df):
+            return df["a"] // df["b"]
+
+        def floordiv2(lib, df):
+            return df[["a", "c"]] // df[["b", "a"]]
+
+        run_and_compare(floordiv1, data=self.data)
+        run_and_compare(floordiv2, data=self.data)
+
 
 class TestDateTime:
     datetime_data = {

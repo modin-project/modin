@@ -1,7 +1,7 @@
 from .expr import *
 from .calcite_algebra import *
 from .df_algebra import FrameNode
-
+from pandas.core.dtypes.common import is_integer_dtype
 import json
 
 
@@ -60,7 +60,8 @@ class CalciteSerializer:
 
     def serialize_typed_obj(self, obj):
         res = self.serialize_obj(obj)
-        res["type"] = self.serialize_dtype(obj._dtype)
+        force_decimal = self.force_decimal_type(obj)
+        res["type"] = self.serialize_dtype(obj._dtype, force_decimal)
         return res
 
     def serialize_expr(self, expr):
@@ -100,19 +101,41 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": len(literal.val),
             }
+        if type(literal.val) is int:
+            return {
+                "literal": literal.val,
+                "type": "DECIMAL",
+                "target_type": "BIGINT",
+                "scale": 0,
+                "precision": len(str(literal.val)),
+                "type_scale": 0,
+                "type_precision": 19,
+            }
+        if type(literal.val) is float:
+            str_val = f"{literal.val:f}"
+            precision = len(str_val) - 1
+            scale = precision - str_val.index(".")
+            print("SERIALIZE", literal.val, "AS", int(str_val.replace(".", "")))
+            return {
+                "literal": int(str_val.replace(".", "")),
+                "type": "DECIMAL",
+                "target_type": "DECIMAL",
+                "scale": scale,
+                "precision": precision,
+                "type_scale": scale,
+                "type_precision": precision,
+            }
+        raise NotImplemented(f"Can not serialize {type(literal.val).__name__}")
 
-        self.expect_one_of(literal.val, int)
-        return {
-            "literal": literal.val,
-            "type": "DECIMAL",
-            "target_type": "BIGINT",
-            "scale": 0,
-            "precision": len(str(literal.val)),
-            "type_scale": 0,
-            "type_precision": 19,
-        }
+    def force_decimal_type(self, obj):
+        """In some cases calcite representation requieres DECIMAL type
+           with 0 scale instead of an INTEGER type. Dectect such cases
+           here."""
+        return isinstance(obj, OpExpr) and obj.op == "FLOOR"
 
-    def serialize_dtype(self, dtype):
+    def serialize_dtype(self, dtype, force_decimal):
+        if is_integer_dtype(dtype) and force_decimal:
+            return {"type": "DECIMAL", "nullable": True, "scale": 0}
         return {"type": type(self).dtype_strings[str(dtype)], "nullable": True}
 
     def serialize_input_idx(self, expr):
