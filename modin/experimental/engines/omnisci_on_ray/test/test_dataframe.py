@@ -607,6 +607,38 @@ class TestBinaryOp:
 
         run_and_compare(add, data=self.data)
 
+    def test_mul_cst(self):
+        def mul(lib, df):
+            return df * 2
+
+        run_and_compare(mul, data=self.data)
+
+    def test_mul_list(self):
+        def mul(lib, df):
+            return df * [2, 3, 4, 5]
+
+        run_and_compare(mul, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_mul_method_columns(self, fill_value):
+        def mul1(lib, df, fill_value):
+            return df["a"].mul(df["b"], fill_value=fill_value)
+
+        def mul2(lib, df, fill_value):
+            return df[["a", "c"]].mul(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(mul1, data=self.data, fill_value=fill_value)
+        run_and_compare(mul2, data=self.data, fill_value=fill_value)
+
+    def test_mul_columns(self):
+        def mul1(lib, df):
+            return df["a"] * df["b"]
+
+        def mul2(lib, df):
+            return df[["a", "c"]] * df[["b", "a"]]
+
+        run_and_compare(mul1, data=self.data)
+        run_and_compare(mul2, data=self.data)
 
 class TestDateTime:
     datetime_data = {

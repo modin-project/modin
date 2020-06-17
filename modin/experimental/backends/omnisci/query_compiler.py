@@ -247,6 +247,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def sub(self, other, **kwargs):
         return self._bin_op(other, "sub", **kwargs)
 
+    def mul(self, other, **kwargs):
+        return self._bin_op(other, "mul", **kwargs)
+
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
@@ -353,7 +356,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     min = DFAlgNotSupported("min")
     mod = DFAlgNotSupported("mod")
     mode = DFAlgNotSupported("mode")
-    mul = DFAlgNotSupported("mul")
     ne = DFAlgNotSupported("ne")
     negative = DFAlgNotSupported("negative")
     notna = DFAlgNotSupported("notna")
