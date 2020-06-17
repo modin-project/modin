@@ -1472,6 +1472,7 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis)
         if level is not None:
+            from .series import Series
             levels_names = self.index.names
             levels_numbers = self.index.nlevels
             if isinstance(level, str) and level not in levels_names:
@@ -1484,8 +1485,6 @@ class BasePandasDataset(object):
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
 
-            grouped = self.groupby(level=level)
-
             def applyf(x):
                 return x.kurt(
                     axis=0,
@@ -1495,7 +1494,10 @@ class BasePandasDataset(object):
                     **kwargs,
                 )
 
-            return grouped.aggregate(applyf)
+            if isinstance(self, Series):
+                return self.groupby(level=level).aggregate(applyf)
+            
+            return self.aggregate(applyf)
 
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
