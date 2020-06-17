@@ -2170,6 +2170,20 @@ class TestDataFrameDefault:
         with pytest.raises(ValueError):
             modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
 
+        # Test case when left dataframe has size (n x 1)
+        # and right dataframe has size (1 x n)
+        modin_df = pd.DataFrame(modin_series)
+        pandas_df = pandas.DataFrame(pandas_series)
+        modin_result = modin_df.dot(modin_df.T)
+        pandas_result = pandas_df.dot(pandas_df.T)
+        df_equals(modin_result, pandas_result)
+
+        # Test case when left dataframe has size (1 x 1)
+        # and right dataframe has size (1 x n)
+        modin_result = pd.DataFrame([1]).dot(modin_df.T)
+        pandas_result = pandas.DataFrame([1]).dot(pandas_df.T)
+        df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_matmul(self, data):
         modin_df = pd.DataFrame(data)

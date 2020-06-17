@@ -784,34 +784,50 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def dot(self, other):
-        """Computes the matrix multiplication of self and other.
+    def dot(self, other, squeeze_self=None, squeeze_other=None):
+        """
+        Computes the matrix multiplication of self and other.
 
-        Args:
-            other: The other query compiler or other array-like to matrix
-            multiply with self.
+        Parameters
+        ----------
+            other : PandasQueryCompiler or NumPy array
+                The other query compiler or NumPy array to matrix multiply with self.
+            squeeze_self : boolean
+                The flag to squeeze self.
+            squeeze_other : boolean
+                The flag to squeeze other (this flag is applied if other is query compiler).
 
-        Returns:
-            Returns the result of the matrix multiply.
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the matrix multiply.
         """
         if isinstance(other, PandasQueryCompiler):
-            other = other.to_pandas().squeeze()
+            other = (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
 
-        def map_func(df, other=other):
-            result = df.squeeze().dot(other)
+        def map_func(df, other=other, squeeze_self=squeeze_self):
+            result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
             else:
                 return pandas.DataFrame([result])
 
-        num_cols = other.shape[1] if len(other.shape) > 1 else None
+        num_cols = other.shape[1] if len(other.shape) > 1 else 1
         if len(self.columns) == 1:
-            new_index = ["__reduced__"] if num_cols is None else None
-            new_columns = ["__reduced__"] if num_cols is not None else None
+            new_index = (
+                ["__reduced__"]
+                if (len(self.index) == 1 or squeeze_self) and num_cols == 1
+                else None
+            )
+            new_columns = ["__reduced__"] if squeeze_self and num_cols == 1 else None
             axis = 0
         else:
-            new_index = None
-            new_columns = ["__reduced__"] if num_cols is None else None
+            new_index = self.index
+            new_columns = ["__reduced__"] if num_cols == 1 else None
             axis = 1
 
         new_modin_frame = self._modin_frame._apply_full_axis(
