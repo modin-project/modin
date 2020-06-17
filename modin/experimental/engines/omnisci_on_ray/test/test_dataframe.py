@@ -600,6 +600,13 @@ class TestBinaryOp:
 
         run_and_compare(add, data=self.data)
 
+    def test_add_columns_and_assign_to_existing(self):
+        def add(lib, df):
+            df["a"] = df["a"] + df["b"]
+            return df
+
+        run_and_compare(add, data=self.data)
+
 
 class TestDateTime:
     datetime_data = {
