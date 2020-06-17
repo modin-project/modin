@@ -169,7 +169,7 @@ def create_test_series(vals):
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))])
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
-    elif isinstance(vals, list):
+    else:
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
     return modin_series, pandas_series
