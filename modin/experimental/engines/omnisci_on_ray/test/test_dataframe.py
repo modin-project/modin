@@ -186,6 +186,18 @@ class TestGroupby:
             ["b", modin_df["c"].dt.year], as_index=as_index
         ).agg({"a": "size"})
 
+    def test_groupby_expr_col(self):
+        def groupby(df, **kwargs):
+            df = df.loc[:, ["b", "c"]]
+            df["year"] = df["c"].dt.year
+            df["month"] = df["c"].dt.month
+            df["id1"] = df["year"] * 12 + df["month"]
+            df["id2"] = (df["id1"] - 24000) // 12
+            df = df.groupby(["id1", "id2"], as_index=False).agg({"b": "max"})
+            return df
+
+        run_and_compare(groupby, data=self.datetime_data)
+
     astype_data = {
         "a": [1, 1, 2],
         "b": [11.5, 21.2, 12.8],

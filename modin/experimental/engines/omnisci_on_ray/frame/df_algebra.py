@@ -160,10 +160,11 @@ class TransformNode(DFAlgNode):
             otherwise drop them
     """
 
-    def __init__(self, base, exprs):
+    def __init__(self, base, exprs, fold=False):
         self.exprs = exprs
         self.input = [base]
-        self._fold()
+        if fold:
+            self._fold()
 
     def _fold(self):
         if isinstance(self.input[0]._op, TransformNode):
