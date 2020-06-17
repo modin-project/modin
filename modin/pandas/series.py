@@ -952,7 +952,11 @@ class Series(BasePandasDataset):
             Flattened data of the Series.
 
         """
-        return self._query_compiler.to_numpy().flatten(order=order)
+        data = self._query_compiler.to_numpy().flatten(order=order)
+        if self.dtype == "category":
+            data = pandas.Categorical(data, dtype=self.dtype)
+
+        return data
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)
