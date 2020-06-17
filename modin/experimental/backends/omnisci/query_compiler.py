@@ -268,6 +268,26 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
 
+    def setitem(self, axis, key, value):
+        """Set the column defined by `key` to the `value` provided.
+
+        Args:
+            key: The column name to set.
+            value: The value to set the column to.
+
+        Returns:
+             A new QueryCompiler
+        """
+        if axis == 1:
+            raise NotImplementedError("setitem doesn't support axis 1")
+
+        if not isinstance(value, type(self)):
+            raise NotImplementedError("unsupported value for setitem")
+
+        return self._setitem(axis, key, value)
+
+    _setitem = PandasQueryCompiler.setitem
+
     def has_multiindex(self):
         return self._modin_frame.has_multiindex()
 

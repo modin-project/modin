@@ -2220,7 +2220,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, Series):
                 value = list(value)
 
-        if len(self.index) == 0:
+        if self._query_compiler.default_for_empty and len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
