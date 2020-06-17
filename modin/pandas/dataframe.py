@@ -120,7 +120,7 @@ class DataFrame(BasePandasDataset):
                 else:
                     try:
                         data = type(data)(values, dtype=old_dtype)
-                    except:
+                    except Exception:
                         data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
