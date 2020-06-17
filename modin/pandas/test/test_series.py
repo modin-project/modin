@@ -2116,6 +2116,24 @@ def test_ravel(data, order):
     )
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        [],
+        pandas.Categorical(np.arange(1000), ordered=True),
+        pandas.Categorical(np.arange(1000), ordered=False),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=True),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=False),
+    ],
+)
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel_category(data, order):
+    modin_series, pandas_series = create_test_series(data)
+    np.testing.assert_equal(
+        modin_series.ravel(order=order), pandas_series.ravel(order=order)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rdiv(data):
     modin_series, pandas_series = create_test_series(data)
