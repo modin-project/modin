@@ -5434,7 +5434,7 @@ class TestDataFrameIter:
             pandas.Categorical([1, 2, 3, 4, 5]),
         ],
     )
-    def test_constructor_dtypes(self, data, dtype):
+    def test_constructor_dtypes(self, data):
         md_df, pd_df = create_test_dfs(data)
         df_equals(md_df, pd_df)
 
