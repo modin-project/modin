@@ -1474,18 +1474,6 @@ class BasePandasDataset(object):
         if level is not None:
             from .series import Series
 
-            levels_names = self.index.names
-            levels_numbers = self.index.nlevels
-            if isinstance(level, str) and level not in levels_names:
-                raise ValueError(
-                    f"wrong value of level parameter is specified: actually set {level}, acceptable options are {levels_names}"
-                )
-            elif isinstance(level, int) and (
-                (levels_numbers - level < 1 and level >= 0)
-                or (levels_numbers - level > 2 and level < 0)
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-
             def applyf(x):
                 return x.kurt(
                     axis=0,
@@ -1496,7 +1484,7 @@ class BasePandasDataset(object):
                 )
 
             if isinstance(self, Series):
-                return self.groupby(level=level).aggregate(applyf)
+                return self.groupby(level=level, axis=axis).aggregate(applyf)
 
             return self.aggregate(applyf)
 
