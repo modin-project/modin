@@ -256,6 +256,24 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def truediv(self, other, **kwargs):
         return self._bin_op(other, "truediv", **kwargs)
 
+    def eq(self, other, **kwargs):
+        return self._bin_op(other, "eq", **kwargs)
+
+    def ge(self, other, **kwargs):
+        return self._bin_op(other, "ge", **kwargs)
+
+    def gt(self, other, **kwargs):
+        return self._bin_op(other, "gt", **kwargs)
+
+    def le(self, other, **kwargs):
+        return self._bin_op(other, "le", **kwargs)
+
+    def lt(self, other, **kwargs):
+        return self._bin_op(other, "lt", **kwargs)
+
+    def ne(self, other, **kwargs):
+        return self._bin_op(other, "ne", **kwargs)
+
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
@@ -335,16 +353,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     describe = DFAlgNotSupported("describe")
     diff = DFAlgNotSupported("diff")
     dropna = DFAlgNotSupported("dropna")
-    eq = DFAlgNotSupported("eq")
     eval = DFAlgNotSupported("eval")
     first_valid_index = DFAlgNotSupported("first_valid_index")
     front = DFAlgNotSupported("front")
-    ge = DFAlgNotSupported("ge")
     get_dummies = DFAlgNotSupported("get_dummies")
     getitem_row_array = DFAlgNotSupported("getitem_row_array")
     groupby_agg = DFAlgNotSupported("groupby_agg")
     groupby_reduce = DFAlgNotSupported("groupby_reduce")
-    gt = DFAlgNotSupported("gt")
     head = DFAlgNotSupported("head")
     idxmax = DFAlgNotSupported("idxmax")
     idxmin = DFAlgNotSupported("idxmin")
@@ -352,8 +367,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     isin = DFAlgNotSupported("isin")
     isna = DFAlgNotSupported("isna")
     last_valid_index = DFAlgNotSupported("last_valid_index")
-    le = DFAlgNotSupported("le")
-    lt = DFAlgNotSupported("lt")
     max = DFAlgNotSupported("max")
     mean = DFAlgNotSupported("mean")
     median = DFAlgNotSupported("median")
@@ -361,7 +374,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     min = DFAlgNotSupported("min")
     mod = DFAlgNotSupported("mod")
     mode = DFAlgNotSupported("mode")
-    ne = DFAlgNotSupported("ne")
     negative = DFAlgNotSupported("negative")
     notna = DFAlgNotSupported("notna")
     nunique = DFAlgNotSupported("nunique")
