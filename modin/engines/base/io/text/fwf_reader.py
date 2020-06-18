@@ -72,7 +72,7 @@ class FWFReader(TextFileReader):
             # be assigned correctly
             names = pandas.read_fwf(
                 filepath_or_buffer,
-                **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None)
+                **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
             ).columns
         empty_pd_df = pandas.read_fwf(
             filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
@@ -86,7 +86,7 @@ class FWFReader(TextFileReader):
             del kwargs["usecols"]
             all_cols = pandas.read_fwf(
                 cls.file_open(filepath_or_buffer, "rb"),
-                **dict(kwargs, nrows=0, skipfooter=0)
+                **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
