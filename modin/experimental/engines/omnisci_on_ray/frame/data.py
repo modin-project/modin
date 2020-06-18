@@ -555,6 +555,28 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 index_cols=self._index_cols,
             )
 
+    def insert(self, loc, column, value):
+        assert column not in self._table_cols
+        assert 0 <= loc <= len(self.columns)
+
+        exprs = self._index_exprs()
+        for i in range(0, loc):
+            col = self.columns[i]
+            exprs[col] = self.ref(col)
+        exprs[column] = LiteralExpr(value)
+        for i in range(loc, len(self.columns)):
+            col = self.columns[i]
+            exprs[col] = self.ref(col)
+
+        new_columns = self.columns.insert(loc, column)
+
+        return self.__constructor__(
+            columns=new_columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=self._index_cols,
+        )
+
     def _index_exprs(self):
         exprs = OrderedDict()
         if self._index_cols:
