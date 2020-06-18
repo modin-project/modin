@@ -32,10 +32,16 @@ def _agg_dtype(agg, dtype):
 
 
 class BaseExpr(abc.ABC):
-    binary_operations = {"add": "+", "sub": "-", "mul": "*"}
+    binary_operations = {
+        "add": "+",
+        "sub": "-",
+        "mul": "*",
+        "floordiv": "/",
+        "truediv": "/",
+    }
 
-    preserve_dtype_math_ops = {"add", "sub", "mul"}
-    promote_to_float_math_ops = {"div"}
+    preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv"}
+    promote_to_float_math_ops = {"truediv"}
     cmp_ops = {}
 
     def eq(self, other):
@@ -55,9 +61,19 @@ class BaseExpr(abc.ABC):
     def bin_op(self, other, op_name):
         if op_name not in self.binary_operations:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
+        # True division may require prior cast to float to avoid integer division
+        if op_name == "truediv":
+            if is_integer_dtype(self._dtype) and is_integer_dtype(other._dtype):
+                other = other.cast(_get_dtype(float))
         res_type = self._get_bin_op_res_type(op_name, self._dtype, other._dtype)
         new_expr = OpExpr(self.binary_operations[op_name], [self, other], res_type)
+        # Floor division may require additional FLOOR expr.
+        if op_name == "floordiv" and not is_integer_dtype(res_type):
+            return new_expr.floor()
         return new_expr
+
+    def floor(self):
+        return OpExpr("FLOOR", [self], _get_dtype(int))
 
     def _get_bin_op_res_type(self, op_name, lhs_dtype, rhs_dtype):
         if op_name in self.preserve_dtype_math_ops:
@@ -139,7 +155,7 @@ class OpExpr(BaseExpr):
 
     def __repr__(self):
         if len(self.operands) == 1:
-            return f"({self.op} {self.operands[0]})"
+            return f"({self.op} {self.operands[0]} [{self._dtype}])"
         return f"({self.op} {self.operands} [{self._dtype}])"
 
 

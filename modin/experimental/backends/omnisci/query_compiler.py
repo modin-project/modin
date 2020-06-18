@@ -250,6 +250,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
 
+    def floordiv(self, other, **kwargs):
+        return self._bin_op(other, "floordiv", **kwargs)
+
+    def truediv(self, other, **kwargs):
+        return self._bin_op(other, "truediv", **kwargs)
+
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
@@ -332,7 +338,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     eq = DFAlgNotSupported("eq")
     eval = DFAlgNotSupported("eval")
     first_valid_index = DFAlgNotSupported("first_valid_index")
-    floordiv = DFAlgNotSupported("floordiv")
     front = DFAlgNotSupported("front")
     ge = DFAlgNotSupported("ge")
     get_dummies = DFAlgNotSupported("get_dummies")
@@ -381,7 +386,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     to_datetime = DFAlgNotSupported("to_datetime")
     to_numpy = DFAlgNotSupported("to_numpy")
     transpose = DFAlgNotSupported("transpose")
-    truediv = DFAlgNotSupported("truediv")
     unique = DFAlgNotSupported("unique")
     update = DFAlgNotSupported("update")
     var = DFAlgNotSupported("var")
