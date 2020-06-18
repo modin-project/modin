@@ -163,11 +163,7 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
-    # TODO: emulate taxi queries with group by category types when we have loading
-    #       using arrow
-    #       Another way of doing taxi q1 is
-    #       res = df.groupby("cab_type").size() - this should be tested later as well
-    def test_taxi_q1(self):
+    def test_groupby_agg_size(self):
         df = pd.DataFrame(self.data)
         ref = df.groupby("a").agg({"b": "size"})
 
@@ -176,36 +172,66 @@ class TestGroupby:
 
         exp = to_pandas(modin_df)
 
+        df_equals(ref, exp)        
+
+    taxi_data = {
+        "a": [1, 1, 2, 2],
+        "b": [11, 21, 12, 11],
+        "c": pd.to_datetime(
+            ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
+        ),
+        "d": [11.5, 21.2, 12.8, 13.4],
+    }
+
+    # TODO: emulate taxi queries with group by category types when we have loading
+    #       using arrow
+    #       Another way of doing taxi q1 is
+    #       res = df.groupby("cab_type").size() - this should be tested later as well
+    def test_taxi_q1(self):
+        df = pd.DataFrame(self.taxi_data)
+        ref = df.groupby("a").size()
+
+        modin_df = mpd.DataFrame(self.taxi_data)
+        modin_df = modin_df.groupby("a").size()
+
+        exp = to_pandas(modin_df)
+
         df_equals(ref, exp)
 
     def test_taxi_q2(self):
-        df = pd.DataFrame(self.data)
+        df = pd.DataFrame(self.taxi_data)
         ref = df.groupby("a").agg({"b": "mean"})
 
-        modin_df = mpd.DataFrame(self.data)
+        modin_df = mpd.DataFrame(self.taxi_data)
         modin_df = modin_df.groupby("a").agg({"b": "mean"})
 
         exp = to_pandas(modin_df)
 
         df_equals(ref, exp)
 
-    datetime_data = {
-        "a": [1, 1, 2, 2],
-        "b": [11, 21, 12, 11],
-        "c": pd.to_datetime(
-            ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
-        ),
-    }
+    def test_dt_year(self):
+        df = pd.DataFrame(self.taxi_data)
+        ref = df["c"].dt.year
+
+        modin_df = mpd.DataFrame(self.taxi_data)
+        modin_df = modin_df["c"].dt.year
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)
 
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
-        df = pd.DataFrame(self.datetime_data)
-        ref = df.groupby(["b", df["c"].dt.year], as_index=as_index).agg({"a": "size"})
+        df = pd.DataFrame(self.taxi_data)
+        ref = df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
 
-        modin_df = mpd.DataFrame(self.datetime_data)
+        modin_df = mpd.DataFrame(self.taxi_data)
         modin_df = modin_df.groupby(
-            ["b", modin_df["c"].dt.year], as_index=as_index
-        ).agg({"a": "size"})
+            ["b", modin_df["c"].dt.year], as_index=as_index).size()
+
+        exp = to_pandas(modin_df)
+
+        df_equals(ref, exp)            
 
     def test_groupby_expr_col(self):
         def groupby(df, **kwargs):
@@ -217,30 +243,25 @@ class TestGroupby:
             df = df.groupby(["id1", "id2"], as_index=False).agg({"b": "max"})
             return df
 
-        run_and_compare(groupby, data=self.datetime_data)
-
-    astype_data = {
-        "a": [1, 1, 2],
-        "b": [11.5, 21.2, 12.8],
-    }
+        run_and_compare(groupby, data=self.taxi_data)
 
     def test_series_astype(self):
-        df = pd.DataFrame(self.astype_data)
-        ref = df["b"].astype("int")
+        df = pd.DataFrame(self.taxi_data)
+        ref = df["d"].astype("int")
 
-        modin_df = mpd.DataFrame(self.astype_data)
-        modin_df = modin_df["b"].astype("int")
+        modin_df = mpd.DataFrame(self.taxi_data)
+        modin_df = modin_df["d"].astype("int")
 
         exp = to_pandas(modin_df)
 
         df_equals(ref, exp)
 
     def test_df_astype(self):
-        df = pd.DataFrame(self.astype_data)
-        ref = df.astype({"a": "float", "b": "int"})
+        df = pd.DataFrame(self.taxi_data)
+        ref = df.astype({"b": "float", "d": "int"})
 
-        modin_df = mpd.DataFrame(self.astype_data)
-        modin_df = modin_df.astype({"a": "float", "b": "int"})
+        modin_df = mpd.DataFrame(self.taxi_data)
+        modin_df = modin_df.astype({"b": "float", "d": "int"})
 
         exp = to_pandas(modin_df)
 

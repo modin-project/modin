@@ -87,6 +87,45 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
         )
 
+    def groupby_size(
+        query_compiler,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        **kwargs,
+    ):
+        """Perform a groupby size.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        new_frame = query_compiler._modin_frame.groupby_agg(
+            by, axis, "size", groupby_args, **kwargs
+        )
+        new_qc = query_compiler.__constructor__(new_frame)
+        if groupby_args["squeeze"]:
+            new_qc = new_qc.squeeze()
+        return new_qc
+
     def groupby_sum(query_compiler, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
 
@@ -104,8 +143,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        PandasQueryCompiler
-            A new PandasQueryCompiler
+        QueryCompiler
+            A new QueryCompiler
         """
         new_frame = query_compiler._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
