@@ -9,6 +9,7 @@ if os.environ["OMNISCI_SERVER"] is None:
 
 import modin.pandas as mpd
 import pandas as pd
+import numpy as np
 
 import pytest
 from modin.pandas.test.utils import (
@@ -105,6 +106,18 @@ class TestConcat:
         pandas_df["f"] = pandas_df["a"]
         modin_df["f"] = modin_df["a"]
         df_equals(pandas_df, modin_df)
+
+    def test_insert(self):
+        def insert(df, **kwargs):
+            df["new_int8"] = np.int8(10)
+            df["new_int16"] = np.int16(10)
+            df["new_int32"] = np.int32(10)
+            df["new_int64"] = np.int64(10)
+            df["new_int"] = 10
+            df["new_float"] = 5.5
+            return df
+
+        run_and_compare(insert, data=self.data)
 
 
 class TestGroupby:

@@ -141,8 +141,8 @@ class InputRefExpr(BaseExpr):
 class LiteralExpr(BaseExpr):
     def __init__(self, val):
         assert val is None or isinstance(
-            val, (int, float, bool, str)
-        ), f"unsupported literal value {val}"
+            val, (int, float, bool, str, np.int8, np.int16, np.int32, np.int64)
+        ), f"unsupported literal value {val} of type {type(val)}"
         self.val = val
         if val is None:
             self._dtype = _get_dtype(float)

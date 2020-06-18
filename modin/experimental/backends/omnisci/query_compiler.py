@@ -18,6 +18,8 @@ from modin.error_message import ErrorMessage
 import pandas
 import abc
 
+from pandas.core.dtypes.common import is_list_like
+
 
 def DFAlgNotSupported(fn_name):
     def fn(*args, **kwargs):
@@ -32,7 +34,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
         with a lazy DataFrame Algebra based backend."""
 
-    default_for_empty = False
+    lazy_execution = True
 
     def __init__(self, frame):
         assert frame is not None
@@ -315,6 +317,24 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     _setitem = PandasQueryCompiler.setitem
 
+    def insert(self, loc, column, value):
+        """Insert new column data.
+
+        Args:
+            loc: Insertion index.
+            column: Column labels to insert.
+            value: Dtype object values to insert.
+
+        Returns:
+            A new PandasQueryCompiler with new data inserted.
+        """
+        if is_list_like(value):
+            raise NotImplementedError(
+                "non-scalar values are not supported by insert yet"
+            )
+
+        return self.__constructor__(self._modin_frame.insert(loc, column, value))
+
     def has_multiindex(self):
         return self._modin_frame.has_multiindex()
 
@@ -363,7 +383,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     head = DFAlgNotSupported("head")
     idxmax = DFAlgNotSupported("idxmax")
     idxmin = DFAlgNotSupported("idxmin")
-    insert = DFAlgNotSupported("insert")
     isin = DFAlgNotSupported("isin")
     isna = DFAlgNotSupported("isna")
     last_valid_index = DFAlgNotSupported("last_valid_index")

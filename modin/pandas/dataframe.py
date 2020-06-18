@@ -955,9 +955,16 @@ class DataFrame(BasePandasDataset):
                 data=value, columns=[column], index=self.index
             )._query_compiler
         else:
-            if not is_list_like(value):
+            # As a temporary hack we skip array build for omnisci engine.
+            # This code will be moved to backend to properly handle
+            # index access issue for lazy engine.
+            if not self._query_compiler.lazy_execution and not is_list_like(value):
                 value = np.full(len(self.index), value)
-            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
+            if (
+                not isinstance(value, pandas.Series)
+                and is_list_like(value)
+                and len(value) != len(self.index)
+            ):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
@@ -2220,7 +2227,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, Series):
                 value = list(value)
 
-        if self._query_compiler.default_for_empty and len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
