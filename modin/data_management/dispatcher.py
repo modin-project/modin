@@ -18,12 +18,7 @@ from modin.data_management import factories
 
 
 class FactoryNotFoundError(AttributeError):
-    def __init__(self, partition_format, execution_engine):
-        super().__init__(
-            "Cannot find a factory for partition '{}' and execution engine '{}'. "
-            "Potential reason might be incorrect environment variable value for "
-            "MODIN_BACKEND or MODIN_ENGINE".format(partition_format, execution_engine)
-        )
+    pass
 
 
 class StubIoEngine(object):
@@ -81,10 +76,23 @@ class EngineDispatcher(object):
         except AttributeError:
             if not experimental:
                 # allow missing factories in experimenal mode only
+                if hasattr(factories, "Experimental" + factory_name):
+                    msg = (
+                        "{0} on {1} is only accessible through the experimental API.\nRun "
+                        "`import modin.experimental.pandas as pd` to use {0} on {1}."
+                    )
+                else:
+                    msg = (
+                        "Cannot find a factory for partition '{}' and execution engine '{}'. "
+                        "Potential reason might be incorrect environment variable value for "
+                        "MODIN_BACKEND or MODIN_ENGINE"
+                    )
                 raise FactoryNotFoundError(
-                    partition_format.get(), execution_engine.get()
+                    msg.format(partition_format.get(), execution_engine.get())
                 )
             cls.__engine = StubFactory.set_failing_name(factory_name)
+        else:
+            cls.__engine.prepare()
 
     @classmethod
     def from_pandas(cls, df):

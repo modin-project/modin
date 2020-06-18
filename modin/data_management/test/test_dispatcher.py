@@ -24,11 +24,25 @@ class PandasOnTestFactory(factories.BaseFactory):
     Stub factory to ensure we can switch execution engine to 'Test'
     """
 
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        cls.io_cls = "Foo"
+
 
 class TestOnPythonFactory(factories.BaseFactory):
     """
     Stub factory to ensure we can switch partition format to 'Test'
     """
+
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        cls.io_cls = "Bar"
 
 
 # inject the stubs
@@ -44,10 +58,12 @@ def test_default_engine():
 def test_engine_switch():
     execution_engine.put("Test")
     assert EngineDispatcher.get_engine() == PandasOnTestFactory
+    assert EngineDispatcher.get_engine().io_cls == "Foo"
     execution_engine.put("Python")  # revert engine to default
 
     partition_format.put("Test")
     assert EngineDispatcher.get_engine() == TestOnPythonFactory
+    assert EngineDispatcher.get_engine().io_cls == "Bar"
     partition_format.put("Pandas")  # revert engine to default
 
 
