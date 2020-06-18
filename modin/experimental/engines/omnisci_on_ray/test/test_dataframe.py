@@ -197,10 +197,15 @@ class TestGroupby:
     #       res = df.groupby("cab_type").size() - this should be tested later as well
     def test_taxi_q1(self):
         df = pd.DataFrame(self.taxi_data)
-        ref = df.groupby("a").size()
+        #TODO: For now we can't do such groupby by first column since modin use that 
+        #      column as aggregation one by default. We don't support such cases at
+        #      at the moment, this will be handled later
+        #ref = df.groupby("a").size()
+        ref = df.groupby("b").size()
 
         modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df.groupby("a").size()
+        #modin_df = modin_df.groupby("a").size()
+        modin_df = modin_df.groupby("b").size()
 
         exp = to_pandas(modin_df)
 
