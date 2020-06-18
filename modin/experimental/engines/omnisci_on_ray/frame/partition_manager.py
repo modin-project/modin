@@ -92,6 +92,8 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         for col in dtypes.index:
             if dtypes[col] == "bool":
                 df[col] = df[col].astype("bool")
+            elif dtypes[col].name == "category":
+                df[col] = df[col].astype("category")
 
         # print("Execution result:")
         # print(df)

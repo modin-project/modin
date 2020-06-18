@@ -798,3 +798,22 @@ class TestDateTime:
         exp = to_pandas(modin_df)
 
         df_equals(ref, exp)
+
+
+class TestCategory:
+    data = {
+        "a": ["str1", "str2", "str1", "str3", "str2"],
+    }
+
+    def test_cat_codes(self):
+        pandas_df = pd.DataFrame(self.data)
+        pandas_df["a"] = pandas_df["a"].astype("category")
+
+        modin_df = mpd.DataFrame(pandas_df)
+
+        modin_df["a"] = modin_df["a"].cat.codes
+        exp = to_pandas(modin_df)
+
+        pandas_df["a"] = pandas_df["a"].cat.codes
+
+        df_equals(pandas_df, exp)
