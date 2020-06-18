@@ -178,12 +178,13 @@ class OmnisciOnRayFrame(BasePandasFrame):
             index_cols = groupby_cols.copy()
         else:
             new_columns = groupby_cols.copy()
-        new_dtypes = base._dtypes[groupby_cols].tolist()
+
+        new_dtypes = by_frame._dtypes[groupby_cols].tolist()
 
         exprs = OrderedDict()
         if isinstance(by_frame._op, TransformNode):
             for col in groupby_cols:
-                exprs[col] = by_frame._op.exprs[col]
+                exprs[col] = by_frame.ref(col)
 
         if isinstance(agg, str):
             new_agg = {}
@@ -212,7 +213,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if isinstance(by_frame._op, TransformNode):
             """group by modified frame's columns requires special hadling"""
             exprs = translate_exprs_to_base(exprs, base)
-            dtypes = [expr._dtype for expr in exprs.values()]
             transform_columns = []
             if groupby_args["as_index"]:
                 transform_columns = by_frame.columns.append(new_columns)
@@ -220,8 +220,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 transform_columns = new_columns
             new_frame = self.__constructor__(
                 columns=transform_columns,
-                dtypes=dtypes,
-                op=TransformNode(base, exprs),
+                dtypes=self._dtypes_for_exprs(exprs),
+                op=TransformNode(base, exprs, fold=True),
                 index_cols=None,
             )
             new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
