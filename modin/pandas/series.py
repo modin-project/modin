@@ -578,6 +578,10 @@ class Series(BasePandasDataset):
         float
             Covariance between Series and other normalized by N-1
             (unbiased estimator).
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
         """
         this, other = self.align(other, join="inner", copy=False)
         this = self.__constructor__(this)
