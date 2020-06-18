@@ -4429,6 +4429,14 @@ class TestDataFrameIndexing:
             pandas_df.loc["bar", ("col1", "col2")],
         )
 
+        # From issue #1456
+        transposed_modin = modin_df.T
+        transposed_pandas = pandas_df.T
+        df_equals(
+            transposed_modin.loc[transposed_modin.index[:-2], :],
+            transposed_pandas.loc[transposed_pandas.index[:-2], :],
+        )
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_pop(self, request, data):
         modin_df = pd.DataFrame(data)
