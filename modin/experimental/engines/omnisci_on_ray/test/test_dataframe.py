@@ -146,6 +146,14 @@ class TestGroupby:
 
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_count(self, cols, as_index):
+        def groupby_count(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).count()
+
+        run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
+
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_proj_sum(self, cols, as_index):
         def groupby_sum(df, cols, as_index, **kwargs):
             return df.groupby(cols, as_index=as_index).c.sum()
@@ -172,7 +180,7 @@ class TestGroupby:
 
         exp = to_pandas(modin_df)
 
-        df_equals(ref, exp)        
+        df_equals(ref, exp)
 
     taxi_data = {
         "a": [1, 1, 2, 2],
