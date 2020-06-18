@@ -50,7 +50,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         return 1
 
     @classmethod
-    def run_exec_plan(cls, plan, index_cols):
+    def run_exec_plan(cls, plan, index_cols, dtypes):
         # TODO: this plan is supposed to be executed remotely using Ray.
         # For now OmniSci engine support only a single node cluster.
         # Therefore remote execution is not necessary and will be added
@@ -85,6 +85,13 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         if index_cols is not None:
             df = df.set_index(index_cols)
             df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
+
+        # Currently boolean columns are loaded as integer
+        # series for some reason. Fix it here for now.
+        # Using Arrow should solve the problem later.
+        for col in dtypes.index:
+            if dtypes[col] == "bool":
+                df[col] = df[col].astype("bool")
 
         # print("Execution result:")
         # print(df)

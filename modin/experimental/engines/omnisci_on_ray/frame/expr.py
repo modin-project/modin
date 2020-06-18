@@ -31,6 +31,13 @@ def _agg_dtype(agg, dtype):
         raise NotImplementedError(f"unsupported aggreagte {agg}")
 
 
+_cmp_ops = {"eq", "ge", "gt", "le", "lt", "ne"}
+
+
+def is_cmp_op(op):
+    return op in _cmp_ops
+
+
 class BaseExpr(abc.ABC):
     binary_operations = {
         "add": "+",
@@ -38,11 +45,16 @@ class BaseExpr(abc.ABC):
         "mul": "*",
         "floordiv": "/",
         "truediv": "/",
+        "eq": "=",
+        "ge": ">=",
+        "gt": ">",
+        "le": "<=",
+        "lt": "<",
+        "ne": "<>",
     }
 
     preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv"}
     promote_to_float_math_ops = {"truediv"}
-    cmp_ops = {}
 
     def eq(self, other):
         if not isinstance(other, BaseExpr):
@@ -80,7 +92,7 @@ class BaseExpr(abc.ABC):
             return _get_common_dtype(lhs_dtype, rhs_dtype)
         elif op_name in self.promote_to_float_math_ops:
             return _get_dtype(float)
-        elif op_name in self.cmp_ops:
+        elif is_cmp_op(op_name):
             return _get_dtype(bool)
         else:
             raise NotImplementedError(f"unsupported binary operation {op_name}")

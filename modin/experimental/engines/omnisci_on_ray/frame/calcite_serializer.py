@@ -125,6 +125,16 @@ class CalciteSerializer:
                 "type_scale": scale,
                 "type_precision": precision,
             }
+        if type(literal.val) is bool:
+            return {
+                "literal": literal.val,
+                "type": "BOOLEAN",
+                "target_type": "BOOLEAN",
+                "scale": -2147483648,
+                "precision": 1,
+                "type_scale": -2147483648,
+                "type_precision": 1,
+            }
         raise NotImplemented(f"Can not serialize {type(literal.val).__name__}")
 
     def force_decimal_type(self, obj):

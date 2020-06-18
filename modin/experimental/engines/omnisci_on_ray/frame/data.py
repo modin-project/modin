@@ -35,6 +35,7 @@ from .expr import (
     build_dt_expr,
     _get_common_dtype,
     _agg_dtype,
+    is_cmp_op,
 )
 from collections import OrderedDict
 
@@ -532,13 +533,17 @@ class OmnisciOnRayFrame(BasePandasFrame):
             fill_value = kwargs.get("fill_value", None)
             if fill_value is not None:
                 fill_value = LiteralExpr(fill_value)
+            if is_cmp_op(op_name):
+                null_value = LiteralExpr(op_name == "ne")
+            else:
+                null_value = LiteralExpr(None)
 
             exprs = self._index_exprs()
             for col in new_columns:
                 lhs = self.ref(col) if col in self.columns else fill_value
                 rhs = other.ref(col) if col in other.columns else fill_value
                 if lhs is None or rhs is None:
-                    exprs[col] = LiteralExpr(None)
+                    exprs[col] = null_value
                 else:
                     exprs[col] = lhs.bin_op(rhs, op_name)
 
@@ -578,7 +583,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if isinstance(self._op, FrameNode):
             return
 
-        new_partitions = self._frame_mgr_cls.run_exec_plan(self._op, self._index_cols)
+        new_partitions = self._frame_mgr_cls.run_exec_plan(
+            self._op, self._index_cols, self._dtypes
+        )
         self._partitions = new_partitions
         self._op = FrameNode(self)
 

@@ -718,6 +718,42 @@ class TestBinaryOp:
         run_and_compare(floordiv1, data=self.data)
         run_and_compare(floordiv2, data=self.data)
 
+    cmp_data = {
+        "a": [1, 2, 3, 4, 5],
+        "b": [10, 20, 30, 40, 50],
+        "c": [50.0, 40.0, 30.0, 20.0, 10.0],
+    }
+    cmp_fn_values = ["eq", "ne", "le", "lt", "ge", "gt"]
+
+    @pytest.mark.parametrize("cmp_fn", cmp_fn_values)
+    def test_cmp_cst(self, cmp_fn):
+        def cmp1(df, cmp_fn, **kwargs):
+            return getattr(df["a"], cmp_fn)(3)
+
+        def cmp2(df, cmp_fn, **kwargs):
+            return getattr(df, cmp_fn)(30)
+
+        run_and_compare(cmp1, data=self.cmp_data, cmp_fn=cmp_fn)
+        run_and_compare(cmp2, data=self.cmp_data, cmp_fn=cmp_fn)
+
+    @pytest.mark.parametrize("cmp_fn", cmp_fn_values)
+    def test_cmp_list(self, cmp_fn):
+        def cmp(df, cmp_fn, **kwargs):
+            return getattr(df, cmp_fn)([3, 30, 30.0])
+
+        run_and_compare(cmp, data=self.cmp_data, cmp_fn=cmp_fn)
+
+    @pytest.mark.parametrize("cmp_fn", cmp_fn_values)
+    def test_cmp_cols(self, cmp_fn):
+        def cmp1(df, cmp_fn, **kwargs):
+            return getattr(df["b"], cmp_fn)(df["c"])
+
+        def cmp2(df, cmp_fn, **kwargs):
+            return getattr(df[["b", "c"]], cmp_fn)(df[["a", "b"]])
+
+        run_and_compare(cmp1, data=self.cmp_data, cmp_fn=cmp_fn)
+        run_and_compare(cmp2, data=self.cmp_data, cmp_fn=cmp_fn)
+
 
 class TestDateTime:
     datetime_data = {
