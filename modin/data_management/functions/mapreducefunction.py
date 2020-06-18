@@ -25,6 +25,7 @@ class MapReduceFunction(Function):
                     else kwargs.get("axis"),
                     lambda x: map_function(x, *args, **kwargs),
                     lambda y: reduce_function(y, *args, **kwargs),
+                    **call_kwds
                 )
             )
 

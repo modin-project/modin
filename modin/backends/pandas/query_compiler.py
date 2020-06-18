@@ -61,6 +61,25 @@ def _str_map(func_name):
     return str_op_builder
 
 
+def map_func(df, *args, **kwargs):
+    return df.squeeze().value_counts(**kwargs)
+
+
+def reduce_func(df, *args, **kwargs):
+    sort = kwargs.get("sort", False)
+    by = df.index
+    dropna = kwargs.get("dropna", True)
+    normalize = kwargs.get("normalize", False)
+    result = df.squeeze().groupby(by, sort=False).sum()
+    if not dropna and np.nan in df.index:
+        result = df.loc[[np.nan]].sum().append(result)
+        if normalize:
+            result / df.squeeze(axis=1).sum()
+    return (
+        result.sort_values(ascending=kwargs.get("ascending", False)) if sort else result
+    )
+
+
 def _dt_prop_map(property_name):
     """
     Create a function that call property of property `dt` of the series.
@@ -506,7 +525,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
             / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
             axis=kwargs.get("axis", 0),
-        ),
+        )
+    )
+    value_counts = MapReduceFunction.register(
+        map_func, reduce_func, preserve_index=False
     )
 
     # END MapReduce operations

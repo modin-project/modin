@@ -780,7 +780,7 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None):
+    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
         """Apply function that will reduce the data to a Pandas Series.
 
         Args:
@@ -802,7 +802,20 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(axis, reduce_parts)
+        if preserve_index:
+            return self._compute_map_reduce_metadata(axis, reduce_parts)
+        else:
+            if axis == 0:
+                new_index = ["__reduced__"]
+                new_columns = self._frame_mgr_cls.get_indices(
+                    0, reduce_parts, lambda df: df.index
+                )
+            else:
+                new_index = self._frame_mgr_cls.get_indices(
+                    0, reduce_parts, lambda df: df.index
+                )
+                new_columns = ["__reduced__"]
+            return self.__constructor__(reduce_parts, new_index, new_columns)
 
     def _map(self, func, dtypes=None):
         """Perform a function that maps across the entire dataset.
