@@ -32,7 +32,7 @@ from .utils import (
     json_long_bytes,
 )
 
-from modin import __execution_engine__
+from modin import execution_engine
 
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
     import modin.pandas as pd
@@ -938,7 +938,7 @@ def test_from_csv_with_usecols(usecols):
 
 
 @pytest.mark.skipif(
-    __execution_engine__.lower() == "python", reason="Using pandas implementation"
+    execution_engine.get().lower() == "python", reason="Using pandas implementation"
 )
 def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
