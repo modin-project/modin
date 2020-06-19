@@ -335,6 +335,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
+    def cat_codes(self):
+        return self.__constructor__(self._modin_frame.cat_codes())
+
     def has_multiindex(self):
         return self._modin_frame.has_multiindex()
 

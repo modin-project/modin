@@ -7,8 +7,10 @@ import json
 
 class CalciteSerializer:
     dtype_strings = {
+        "int8": "TINYINT",
         "int16": "SMALLINT",
-        "int64": "INTEGER",
+        "int32": "INTEGER",
+        "int64": "BIGINT",
         "bool": "BOOLEAN",
         "float64": "DOUBLE",
     }
@@ -163,7 +165,7 @@ class CalciteSerializer:
     def serialize_dtype(self, dtype, force_decimal):
         if is_integer_dtype(dtype) and force_decimal:
             return {"type": "DECIMAL", "nullable": True, "scale": 0}
-        return {"type": type(self).dtype_strings[str(dtype)], "nullable": True}
+        return {"type": type(self).dtype_strings[dtype.name], "nullable": True}
 
     def serialize_input_idx(self, expr):
         return expr.input
