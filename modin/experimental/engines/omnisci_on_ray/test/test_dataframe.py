@@ -67,6 +67,14 @@ class TestFillna:
 
         run_and_compare(fillna, data=self.data, value=value)
 
+    def test_fillna_bool(self):
+        def fillna(df, **kwargs):
+            df["a"] = df["a"] == 1
+            df["a"] = df["a"].fillna(False)
+            return df
+
+        run_and_compare(fillna, data=self.data)
+
 
 class TestConcat:
     data = {
