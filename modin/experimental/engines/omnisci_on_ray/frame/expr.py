@@ -9,6 +9,8 @@ import numpy as np
 
 
 def _get_common_dtype(lhs_dtype, rhs_dtype):
+    if lhs_dtype == rhs_dtype:
+        return lhs_dtype
     if is_float_dtype(lhs_dtype) or is_float_dtype(rhs_dtype):
         return _get_dtype(float)
     assert is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype)
