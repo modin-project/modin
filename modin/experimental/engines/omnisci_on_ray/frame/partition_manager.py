@@ -82,9 +82,6 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         sql = "execute relalg " + calcite_json
         df = OmnisciServer()._worker._conn._execute(sql).to_df()
-        if index_cols is not None:
-            df = df.set_index(index_cols)
-            df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.
@@ -94,6 +91,10 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 df[col] = df[col].astype("bool")
             elif dtypes[col].name == "category":
                 df[col] = df[col].astype("category")
+
+        if index_cols is not None:
+            df = df.set_index(index_cols)
+            df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
 
         # print("Execution result:")
         # print(df)
