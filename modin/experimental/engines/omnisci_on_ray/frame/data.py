@@ -446,13 +446,16 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 )
             )
 
-        new_op = UnionNode(aligned_frames)
-        return self.__constructor__(
-            columns=new_columns,
-            dtypes=aligned_frames[0]._dtypes,
-            op=new_op,
-            index_cols=aligned_frames[0]._index_cols,
-        )
+        new_frame = aligned_frames[0]
+        for frame in aligned_frames[1:]:
+            new_frame = self.__constructor__(
+                columns=new_columns,
+                dtypes=new_frame._dtypes,
+                op=UnionNode([new_frame, frame]),
+                index_cols=new_frame._index_cols,
+            )
+
+        return new_frame
 
     def _concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False

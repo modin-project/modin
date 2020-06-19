@@ -127,6 +127,21 @@ class TestConcat:
 
         run_and_compare(insert, data=self.data)
 
+    def test_concat_many(self):
+        df1 = pd.DataFrame(self.data)
+        df2 = pd.DataFrame(self.data2)
+        df3 = pd.DataFrame(self.data)
+        df4 = pd.DataFrame(self.data2)
+        ref = pd.concat([df1, df2, df3, df4])
+
+        df1 = mpd.DataFrame(self.data)
+        df2 = mpd.DataFrame(self.data2)
+        df3 = mpd.DataFrame(self.data)
+        df4 = mpd.DataFrame(self.data2)
+        exp = mpd.concat([df1, df2, df3, df4])
+
+        df_equals(ref, exp)
+
 
 class TestGroupby:
     data = {
