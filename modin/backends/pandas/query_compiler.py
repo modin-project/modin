@@ -497,6 +497,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
+    mean = MapReduceFunction.register(
+        lambda df, **kwargs: df.apply(
+            lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
+            axis=kwargs.get("axis", 0),
+        ),
+        lambda df, **kwargs: df.apply(
+            lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
+            / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
+            axis=kwargs.get("axis", 0),
+        ),
+    )
 
     # END MapReduce operations
 
@@ -512,7 +523,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
-    mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(
@@ -1179,6 +1189,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             a new QueryCompiler
         """
+
         return self.__constructor__(
             self._modin_frame.filter_full_axis(
                 kwargs.get("axis", 0) ^ 1,
