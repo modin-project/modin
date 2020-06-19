@@ -52,6 +52,7 @@ from .utils import (
     int_arg_keys,
     int_arg_values,
     encoding_types,
+    categories_equals,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -169,7 +170,7 @@ def create_test_series(vals):
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))])
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
-    elif isinstance(vals, list):
+    else:
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
     return modin_series, pandas_series
@@ -2114,6 +2115,40 @@ def test_ravel(data, order):
     np.testing.assert_equal(
         modin_series.ravel(order=order), pandas_series.ravel(order=order)
     )
+
+
+# TODO: remove xfail mark then #1628 will be fixed
+@pytest.mark.xfail(
+    reason="Modin Series with category dtype is buggy for now. See #1628 for more details."
+)
+@pytest.mark.parametrize(
+    "data",
+    [
+        pandas.Categorical(np.arange(1000), ordered=True),
+        pandas.Categorical(np.arange(1000), ordered=False),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=True),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=False),
+    ],
+)
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel_category(data, order):
+    modin_series, pandas_series = create_test_series(data)
+    categories_equals(modin_series.ravel(order=order), pandas_series.ravel(order=order))
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pandas.Categorical(np.arange(10), ordered=True),
+        pandas.Categorical(np.arange(10), ordered=False),
+        pandas.Categorical(np.arange(10), categories=np.arange(5), ordered=True),
+        pandas.Categorical(np.arange(10), categories=np.arange(5), ordered=False),
+    ],
+)
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel_simple_category(data, order):
+    modin_series, pandas_series = create_test_series(data)
+    categories_equals(modin_series.ravel(order=order), pandas_series.ravel(order=order))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
