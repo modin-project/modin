@@ -31,6 +31,7 @@ from .df_algebra import (
 from .expr import (
     InputRefExpr,
     LiteralExpr,
+    OpExpr,
     build_if_then_else,
     build_dt_expr,
     _get_common_dtype,
@@ -573,6 +574,21 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=self._index_cols,
+        )
+
+    def cat_codes(self):
+        assert len(self.columns) == 1
+        assert self._dtypes[-1] == "category"
+
+        col = self.columns[-1]
+        exprs = self._index_exprs()
+        exprs[col] = OpExpr("KEY_FOR_STRING", [self.ref(col)], _get_dtype("int32"))
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes,
             op=TransformNode(self, exprs),
             index_cols=self._index_cols,
         )
