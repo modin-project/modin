@@ -222,17 +222,6 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
-    def test_dt_year(self):
-        df = pd.DataFrame(self.taxi_data)
-        ref = df["c"].dt.year
-
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df["c"].dt.year
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
-
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         df = pd.DataFrame(self.taxi_data)
@@ -240,11 +229,12 @@ class TestGroupby:
 
         modin_df = mpd.DataFrame(self.taxi_data)
         modin_df = modin_df.groupby(
-            ["b", modin_df["c"].dt.year], as_index=as_index).size()
+            ["b", modin_df["c"].dt.year], as_index=as_index
+        ).size()
 
         exp = to_pandas(modin_df)
 
-        df_equals(ref, exp)            
+        df_equals(ref, exp)
 
     def test_groupby_expr_col(self):
         def groupby(df, **kwargs):
