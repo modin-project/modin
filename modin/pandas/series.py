@@ -622,10 +622,16 @@ class Series(BasePandasDataset):
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, Series):
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=True
+                    )
                 )
             else:
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=False
+                    )
+                )
 
         other = np.asarray(other)
         if self.shape[0] != other.shape[0]:
@@ -634,9 +640,13 @@ class Series(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self._query_compiler.dot(other).to_numpy().squeeze()
+            return (
+                self._query_compiler.dot(other, squeeze_self=True).to_numpy().squeeze()
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=True)
+        )
 
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)

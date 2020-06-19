@@ -654,10 +654,16 @@ class DataFrame(BasePandasDataset):
 
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, DataFrame):
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=False
+                    )
+                )
             else:
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=True
+                    )
                 )
 
         other = np.asarray(other)
@@ -667,9 +673,13 @@ class DataFrame(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+            return self.__constructor__(
+                query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+        )
 
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(

@@ -1196,7 +1196,7 @@ def test_divide(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
-    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    modin_series, pandas_series = create_test_series(data)
     ind_len = len(modin_series)
 
     # Test 1D array input
@@ -1236,6 +1236,12 @@ def test_dot(data):
                 np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
             )
         )
+
+    # Test case when left series has size (1 x 1)
+    # and right dataframe has size (1 x n)
+    modin_result = pd.Series([1]).dot(pd.DataFrame(modin_series).T)
+    pandas_result = pandas.Series([1]).dot(pandas.DataFrame(pandas_series).T)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
