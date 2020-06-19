@@ -339,3 +339,21 @@ def test_to_datetime():
     assert pd.to_datetime(value, unit="D", origin=pd.Timestamp("2000-01-01")).equals(
         pandas.to_datetime(value, unit="D", origin=pandas.Timestamp("2000-01-01"))
     )
+
+
+@pytest.mark.parametrize(
+    "data, errors, downcast",
+    [
+        (["1.0", "2", -3], "raise", None),
+        (["1.0", "2", -3], "raise", "float"),
+        (["1.0", "2", -3], "raise", "signed"),
+        (["apple", "1.0", "2", -3], "ignore", None),
+        (["apple", "1.0", "2", -3], "coerce", None),
+    ],
+)
+def test_to_numeric(data, errors, downcast):
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+    modin_result = pd.to_numeric(modin_series, errors=errors, downcast=downcast)
+    pandas_result = pandas.to_numeric(pandas_series, errors=errors, downcast=downcast)
+    df_equals(modin_result, pandas_result)

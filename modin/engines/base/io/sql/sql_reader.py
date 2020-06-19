@@ -84,7 +84,7 @@ class SQLReader(FileReader):
                     sql=query,
                     con=con,
                     index_col=index_col,
-                    **kwargs
+                    **kwargs,
                 ),
             )
             partition_ids.append(

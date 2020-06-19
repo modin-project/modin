@@ -748,7 +748,7 @@ class Series(BasePandasDataset):
         yrot=None,
         figsize=None,
         bins=10,
-        **kwds
+        **kwds,
     ):
         return self._default_to_pandas(
             pandas.Series.hist,
@@ -761,7 +761,7 @@ class Series(BasePandasDataset):
             yrot=yrot,
             figsize=figsize,
             bins=bins,
-            **kwds
+            **kwds,
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):
@@ -783,7 +783,7 @@ class Series(BasePandasDataset):
         limit_direction="forward",
         limit_area=None,
         downcast=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             pandas.Series.interpolate,
@@ -794,7 +794,7 @@ class Series(BasePandasDataset):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def item(self):
@@ -876,7 +876,27 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
 
     def nsmallest(self, n=5, keep="first"):
-        return self._default_to_pandas(pandas.Series.nsmallest, n=n, keep=keep)
+        """
+        Return the smallest `n` elements.
+        Parameters
+        ----------
+        n : int, default 5
+            Return this many ascending sorted values.
+        keep : {'first', 'last', 'all'}, default 'first'
+            When there are duplicate values that cannot all fit in a
+            Series of `n` elements:
+            - ``first`` : return the first `n` occurrences in order
+                of appearance.
+            - ``last`` : return the last `n` occurrences in reverse
+                order of appearance.
+            - ``all`` : keep all occurrences. This can result in a Series of
+                size larger than `n`.
+        Returns
+        -------
+        Series
+            The `n` smallest values in the Series, sorted in increasing order.
+        """
+        return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
     @property
     def plot(
@@ -904,7 +924,7 @@ class Series(BasePandasDataset):
         xerr=None,
         label=None,
         secondary_y=False,
-        **kwds
+        **kwds,
     ):
         return self._to_pandas().plot
 
@@ -921,7 +941,7 @@ class Series(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -933,7 +953,7 @@ class Series(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     product = prod
@@ -985,7 +1005,7 @@ class Series(BasePandasDataset):
         copy=True,
         inplace=False,
         level=None,
-        errors="ignore"
+        errors="ignore",
     ):
         non_mapping = is_scalar(index) or (
             is_list_like(index) and not is_dict_like(index)
@@ -1113,8 +1133,8 @@ class Series(BasePandasDataset):
         )
 
     @property
-    def sparse(self, data=None):
-        return self._default_to_pandas(pandas.Series.sparse, data=data)
+    def sparse(self):
+        return self._default_to_pandas(pandas.Series.sparse)
 
     def squeeze(self, axis=None):
         if axis is not None:
@@ -1140,7 +1160,7 @@ class Series(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1152,7 +1172,7 @@ class Series(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     def swaplevel(self, i=-2, j=-1, copy=True):
@@ -1172,6 +1192,19 @@ class Series(BasePandasDataset):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.to_datetime(**kwargs)
+        )
+
+    def _to_numeric(self, **kwargs):
+        """
+        Convert `self` to numeric.
+
+        Returns
+        -------
+        numeric
+            Series: Series of numeric dtype
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
 
     def to_dict(self, into=dict):  # pragma: no cover
@@ -1272,7 +1305,18 @@ class Series(BasePandasDataset):
         return self._query_compiler.unique().to_numpy().squeeze()
 
     def update(self, other):
-        return self._default_to_pandas(pandas.Series.update, other)
+        """
+        Modify Series in place using non-NA values from passed
+        Series. Aligns on index.
+
+        Parameters
+        ----------
+        other : Series, or object coercible into Series
+        """
+        if not isinstance(other, Series):
+            other = Series(other)
+        query_compiler = self._query_compiler.series_update(other._query_compiler)
+        self._update_inplace(new_query_compiler=query_compiler)
 
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
@@ -1287,7 +1331,9 @@ class Series(BasePandasDataset):
         )
 
     def view(self, dtype=None):
-        return self._default_to_pandas(pandas.Series.view, dtype=dtype)
+        return self.__constructor__(
+            query_compiler=self._query_compiler.series_view(dtype=dtype)
+        )
 
     def where(
         self,
@@ -1350,27 +1396,25 @@ class Series(BasePandasDataset):
 
     @property
     def is_monotonic(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic(df):
-            return df.is_monotonic
+        """Return boolean if values in the object are monotonic_increasing.
 
-        return self._default_to_pandas(is_monotonic)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(self._query_compiler.is_monotonic())
+
+    is_monotonic_increasing = is_monotonic
 
     @property
     def is_monotonic_decreasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_decreasing(df):
-            return df.is_monotonic_decreasing
+        """Return boolean if values in the object are monotonic_decreasing.
 
-        return self._default_to_pandas(is_monotonic_decreasing)
-
-    @property
-    def is_monotonic_increasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_increasing(df):
-            return df.is_monotonic_increasing
-
-        return self._default_to_pandas(is_monotonic_increasing)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(self._query_compiler.is_monotonic_decreasing())
 
     @property
     def is_unique(self):
@@ -1579,6 +1623,55 @@ class DatetimeProperties(object):
 
     def day_name(self, *args, **kwargs):
         return Series(query_compiler=self._query_compiler.dt_day_name(*args, **kwargs))
+
+    def total_seconds(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
+        )
+
+    def to_pytimedelta(self):
+        return self._query_compiler.default_to_pandas(
+            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze().dt)
+        )
+
+    @property
+    def seconds(self):
+        return Series(query_compiler=self._query_compiler.dt_seconds())
+
+    @property
+    def days(self):
+        return Series(query_compiler=self._query_compiler.dt_days())
+
+    @property
+    def microseconds(self):
+        return Series(query_compiler=self._query_compiler.dt_microseconds())
+
+    @property
+    def nanoseconds(self):
+        return Series(query_compiler=self._query_compiler.dt_nanoseconds())
+
+    @property
+    def components(self):
+        from .dataframe import DataFrame
+
+        return DataFrame(query_compiler=self._query_compiler.dt_components())
+
+    @property
+    def qyear(self):
+        return Series(query_compiler=self._query_compiler.dt_qyear())
+
+    @property
+    def start_time(self):
+        return Series(query_compiler=self._query_compiler.dt_start_time())
+
+    @property
+    def end_time(self):
+        return Series(query_compiler=self._query_compiler.dt_end_time())
+
+    def to_timestamp(self, *args, **kwargs):
+        return Series(
+            query_compiler=self._query_compiler.dt_to_timestamp(*args, **kwargs)
+        )
 
 
 class StringMethods(object):

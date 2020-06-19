@@ -1120,30 +1120,39 @@ class BasePandasFrame(object):
         )
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
-        """Copartition two dataframes.
+        """
+        Copartition two dataframes.
 
-        Args:
-            axis: The axis to copartition along.
-            other: The other dataframes(s) to copartition against.
-            how: How to manage joining the index object ("left", "right", etc.)
-            sort: Whether or not to sort the joined index.
-            force_repartition: Whether or not to force the repartitioning. By default,
+        Parameters
+        ----------
+            axis : int
+                The axis to copartition along.
+            other : BasePandasFrame
+                The other dataframes(s) to copartition against.
+            how : str
+                How to manage joining the index object ("left", "right", etc.)
+            sort : boolean
+                Whether or not to sort the joined index.
+            force_repartition : boolean
+                Whether or not to force the repartitioning. By default,
                 this method will skip repartitioning if it is possible. This is because
                 reindexing is extremely inefficient. Because this method is used to
                 `join` or `append`, it is vital that the internal indices match.
 
-        Returns:
+        Returns
+        -------
+        Tuple
             A tuple (left data, right data list, joined index).
         """
         if isinstance(other, type(self)):
             other = [other]
 
-        index_obj = [o.axes[axis] for o in other]
-        joined_index = self._join_index_objects(axis ^ 1, index_obj, how, sort)
+        index_other_obj = [o.axes[axis] for o in other]
+        joined_index = self._join_index_objects(axis ^ 1, index_other_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.axes[axis]
-        right_old_idxes = index_obj
+        right_old_idxes = index_other_obj
 
         # Start with this and we'll repartition the first time, and then not again.
         if not left_old_idx.equals(joined_index) or force_repartition:
@@ -1167,15 +1176,22 @@ class BasePandasFrame(object):
         return reindexed_self, reindexed_other_list, joined_index
 
     def _binary_op(self, op, right_frame, join_type="outer"):
-        """Perform an operation that requires joining with another dataframe.
+        """
+        Perform an operation that requires joining with another dataframe.
 
-        Args:
-            op: The function to apply after the join.
-            right_frame: The dataframe to join with.
-            join_type: (optional) The type of join to apply.
+        Parameters
+        ----------
+            op : callable
+                The function to apply after the join.
+            right_frame : BasePandasFrame
+                The dataframe to join with.
+            join_type : str (optional)
+                The type of join to apply.
 
-        Returns:
-             A new dataframe.
+        Returns
+        -------
+        BasePandasFrame
+            A new dataframe.
         """
         left_parts, right_parts, joined_index = self._copartition(
             0, right_frame, join_type, sort=True
