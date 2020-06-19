@@ -1470,7 +1470,7 @@ class BasePandasDataset(object):
         Returns:
             kurtosis : Series or DataFrame (if level specified)
         """
-        axis = self._get_axis_number(axis)
+        axis = self._get_axis_number(axis) if axis is not None else 0
         if level is not None:
             from .series import Series
 
