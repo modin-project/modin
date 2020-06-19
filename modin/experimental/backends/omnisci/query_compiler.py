@@ -87,6 +87,40 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
         )
 
+    def groupby_size(
+        query_compiler, by, axis, groupby_args, map_args, **kwargs,
+    ):
+        """Perform a groupby size.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        new_frame = query_compiler._modin_frame.groupby_agg(
+            by, axis, "size", groupby_args, **kwargs
+        )
+        new_qc = query_compiler.__constructor__(new_frame)
+        if groupby_args["squeeze"]:
+            new_qc = new_qc.squeeze()
+        return new_qc
+
     def groupby_sum(query_compiler, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
 
@@ -104,11 +138,43 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        PandasQueryCompiler
-            A new PandasQueryCompiler
+        QueryCompiler
+            A new QueryCompiler
         """
         new_frame = query_compiler._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
+        )
+        new_qc = query_compiler.__constructor__(new_frame)
+        if groupby_args["squeeze"]:
+            new_qc = new_qc.squeeze()
+        return new_qc
+
+    def groupby_count(query_compiler, by, axis, groupby_args, map_args, **kwargs):
+        """Perform a groupby count.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        QueryCompiler
+        """
+        new_frame = query_compiler._modin_frame.groupby_agg(
+            by, axis, "count", groupby_args, **kwargs
         )
         new_qc = query_compiler.__constructor__(new_frame)
         if groupby_args["squeeze"]:
@@ -385,12 +451,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     groupby_agg = DFAlgNotSupported("groupby_agg")
     groupby_all = DFAlgNotSupported("groupby_all")
     groupby_any = DFAlgNotSupported("groupby_any")
-    groupby_count = DFAlgNotSupported("groupby_count")
     groupby_max = DFAlgNotSupported("groupby_max")
     groupby_min = DFAlgNotSupported("groupby_min")
     groupby_prod = DFAlgNotSupported("groupby_prod")
     groupby_reduce = DFAlgNotSupported("groupby_reduce")
-    groupby_size = DFAlgNotSupported("groupby_size")
     head = DFAlgNotSupported("head")
     idxmax = DFAlgNotSupported("idxmax")
     idxmin = DFAlgNotSupported("idxmin")
@@ -424,7 +488,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     rtruediv = DFAlgNotSupported("rtruediv")
     skew = DFAlgNotSupported("skew")
     series_update = DFAlgNotSupported("series_update")
-    series_view = DFAlgNotSupported("series_view")    
+    series_view = DFAlgNotSupported("series_view")
     sort_index = DFAlgNotSupported("sort_index")
     std = DFAlgNotSupported("std")
     sum = DFAlgNotSupported("sum")
