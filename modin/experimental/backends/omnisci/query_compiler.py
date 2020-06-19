@@ -455,7 +455,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     groupby_min = DFAlgNotSupported("groupby_min")
     groupby_prod = DFAlgNotSupported("groupby_prod")
     groupby_reduce = DFAlgNotSupported("groupby_reduce")
-    groupby_size = DFAlgNotSupported("groupby_size")
     head = DFAlgNotSupported("head")
     idxmax = DFAlgNotSupported("idxmax")
     idxmin = DFAlgNotSupported("idxmin")
