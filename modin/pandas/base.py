@@ -2756,17 +2756,38 @@ class BasePandasDataset(object):
             by = [by]
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
+        ErrorMessage.default_to_pandas("sort_values")
         if axis == 0:
             broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
-            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
-            new_index = broadcast_values.sort_values(
+            # Index may contain duplicates
+            broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+            # Index without duplicates
+            broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
+            broadcast_values2 = broadcast_values2.reset_index(drop=True)
+            # Index may contain duplicates
+            new_index1 = broadcast_values1.sort_values(
                 by=by,
                 axis=axis,
                 ascending=ascending,
                 kind=kind,
                 na_position=na_position,
             ).index
-            return self.reindex(index=new_index, copy=not inplace)
+            # Index without duplicates
+            new_index2 = broadcast_values2.sort_values(
+                by=by,
+                axis=axis,
+                ascending=ascending,
+                kind=kind,
+                na_position=na_position,
+            ).index
+            if inplace:
+                self.reindex(index=new_index2, copy=False)
+                self.index = new_index1
+            else:
+                result = self.reset_index(drop=True)
+                result = result.reindex(index=new_index2, copy=True)
+                result.index = new_index1
+                return result
         else:
             broadcast_value_list = [
                 self[row :: len(self.index)]._to_pandas() for row in by
