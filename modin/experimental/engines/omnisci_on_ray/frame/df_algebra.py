@@ -22,6 +22,8 @@ class TransformMapper:
         self._op = op
 
     def translate(self, col):
+        if col == "__rowid__":
+            return self._op.input[0].ref(col)
         return self._op.exprs[col]
 
 
@@ -160,22 +162,33 @@ class TransformNode(DFAlgNode):
             otherwise drop them
     """
 
-    def __init__(self, base, exprs, fold=False):
+    def __init__(self, base, exprs, fold=True):
         self.exprs = exprs
         self.input = [base]
+        self._original_refs = None
         if fold:
             self._fold()
 
     def _fold(self):
         if isinstance(self.input[0]._op, TransformNode):
+            self._original_refs = {
+                col for col in self.exprs if isinstance(self.exprs[col], InputRefExpr)
+            }
             self.input[0] = self.input[0]._op.input[0]
             self.exprs = translate_exprs_to_base(self.exprs, self.input[0])
+
+    def is_original_ref(self, col):
+        if self._original_refs is not None:
+            return col in self._original_refs
+        return isinstance(self.exprs[col], InputRefExpr)
 
     def copy(self):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
+        if self._original_refs is not None:
+            res += f"{prefix}  Original refs: {self._original_refs}\n"
         for k, v in self.exprs.items():
             res += f"{prefix}  {k}: {v}\n"
         res += self._prints_input(prefix + "  ")
