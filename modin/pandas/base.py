@@ -2756,6 +2756,7 @@ class BasePandasDataset(object):
             by = [by]
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
+        ErrorMessage.default_to_pandas("sort_values")
         if axis == 0:
             broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
             # Index may contain duplicates
