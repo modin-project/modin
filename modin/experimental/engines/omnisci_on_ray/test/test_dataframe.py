@@ -123,6 +123,7 @@ class TestConcat:
             df["new_int64"] = np.int64(10)
             df["new_int"] = 10
             df["new_float"] = 5.5
+            df["new_float64"] = np.float64(10.1)
             return df
 
         run_and_compare(insert, data=self.data)
