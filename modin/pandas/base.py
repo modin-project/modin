@@ -2779,10 +2779,14 @@ class BasePandasDataset(object):
                 kind=kind,
                 na_position=na_position,
             ).index
-            result = self.reset_index(drop=True)
-            result = result.reindex(index=new_index2, copy=not inplace)
-            result.index = new_index1
-            return result
+            if inplace:
+                self.reindex(index=new_index2, copy=False)
+                self.index = new_index1
+            else:
+                result = self.reset_index(drop=True)
+                result = result.reindex(index=new_index2, copy=True)
+                result.index = new_index1
+                return result
         else:
             broadcast_value_list = [
                 self[row :: len(self.index)]._to_pandas() for row in by

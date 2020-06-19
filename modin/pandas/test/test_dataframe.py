@@ -5737,8 +5737,8 @@ class TestDataFrameJoinSort:
             df_equals(modin_df_cp, pandas_df_cp)
 
     def test_sort_values_with_duplicates(self):
-        modin_df = pd.DataFrame({"col": [2, 1, 1], }, index=[1, 1, 0], )
-        pandas_df = pandas.DataFrame({"col": [2, 1, 1], }, index=[1, 1, 0], )
+        modin_df = pd.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
+        pandas_df = pandas.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
 
         key = modin_df.columns[0]
         modin_result = modin_df.sort_values(key, inplace=False,)
