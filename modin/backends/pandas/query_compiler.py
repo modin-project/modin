@@ -61,25 +61,6 @@ def _str_map(func_name):
     return str_op_builder
 
 
-def map_func(df, *args, **kwargs):
-    return df.squeeze().value_counts(**kwargs)
-
-
-def reduce_func(df, *args, **kwargs):
-    sort = kwargs.get("sort", False)
-    by = df.index
-    dropna = kwargs.get("dropna", True)
-    normalize = kwargs.get("normalize", False)
-    result = df.squeeze().groupby(by, sort=False).sum()
-    if not dropna and np.nan in df.index:
-        result = df.loc[[np.nan]].sum().append(result)
-        if normalize:
-            result / df.squeeze(axis=1).sum()
-    return (
-        result.sort_values(ascending=kwargs.get("ascending", False)) if sort else result
-    )
-
-
 def _dt_prop_map(property_name):
     """
     Create a function that call property of property `dt` of the series.
@@ -525,11 +506,85 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
             / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
             axis=kwargs.get("axis", 0),
+        ),
+    )
+
+    def value_counts(self, **kwargs):
+        """
+        Return a QueryCompiler of Series containing counts of unique values.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+        if kwargs.get("bins", None) is not None:
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                0, lambda df: df.squeeze(axis=1).value_counts(**kwargs)
+            )
+            return self.__constructor__(new_modin_frame)
+
+        def map_func(df, *args, **kwargs):
+            return df.squeeze(axis=1).value_counts(**kwargs)
+
+        def reduce_func(df, *args, **kwargs):
+            normalize = kwargs.get("normalize", False)
+            sort = kwargs.get("sort", True)
+            ascending = kwargs.get("ascending", False)
+            dropna = kwargs.get("dropna", True)
+
+            try:
+                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
+            except (ValueError):
+                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
+
+            if not dropna and np.nan in df.index:
+                result = result.append(
+                    pandas.Series(
+                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
+                    )
+                )
+            if normalize:
+                result = result / df.squeeze(axis=1).sum()
+
+            result = result.sort_values(ascending=ascending) if sort else result
+
+            def sort_index_for_identical_values(result, ascending):
+                is_range = False
+                is_end = False
+                i = 0
+                new_index = np.array([], dtype=type(result.index))
+                while i < len(result):
+                    j = i
+                    if i < len(result) - 1:
+                        while result[result.index[i]] == result[result.index[i + 1]]:
+                            i += 1
+                            if is_range is False:
+                                is_range = True
+                            if i == len(result) - 1:
+                                is_end = True
+                                break
+                    if is_range:
+                        new_index = np.concatenate(
+                            (
+                                new_index,
+                                sorted(result.index[j : i + 1], reverse=not ascending),
+                            )
+                        )
+                        if is_end:
+                            break
+                        is_range = False
+                    else:
+                        new_index = np.concatenate(
+                            (new_index, np.array([result.index[j]]))
+                        )
+                    i += 1
+                return pandas.DataFrame(result, index=new_index)
+
+            return sort_index_for_identical_values(result, ascending)
+
+        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
+            self, **kwargs
         )
-    )
-    value_counts = MapReduceFunction.register(
-        map_func, reduce_func, preserve_index=False
-    )
 
     # END MapReduce operations
 
@@ -628,19 +683,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
 
     # END String map partitions operations
-
-    def value_counts(self, **kwargs):
-        """
-        Return a QueryCompiler of Series containing counts of unique values.
-
-        Returns
-        -------
-        PandasQueryCompiler
-        """
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze().value_counts(**kwargs)
-        )
-        return self.__constructor__(new_modin_frame)
 
     def unique(self):
         """Return unique values of Series object.

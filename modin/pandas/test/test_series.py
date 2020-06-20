@@ -2870,25 +2870,53 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_value_counts(data):
-    modin_series, pandas_series = create_test_series(data)
-    modin_result = modin_series.value_counts()
-    pandas_result = pandas_series.value_counts()
+@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+def test_value_counts(normalize, bins, dropna):
+    def sort_index_for_identical_values(result, ascending):
+        is_range = False
+        is_end = False
+        i = 0
+        new_index = np.array([], dtype=type(result.index))
+        while i < len(result):
+            j = i
+            if i < len(result) - 1:
+                while result[result.index[i]] == result[result.index[i + 1]]:
+                    i += 1
+                    if is_range is False:
+                        is_range = True
+                    if i == len(result) - 1:
+                        is_end = True
+                        break
+            if is_range:
+                new_index = np.concatenate(
+                    (new_index, sorted(result.index[j : i + 1], reverse=not ascending))
+                )
+                if is_end:
+                    break
+                is_range = False
+            else:
+                new_index = np.concatenate((new_index, np.array([result.index[j]])))
+            i += 1
+        return pandas.Series(result, index=new_index)
+
+    # We sort indices for pandas result because of issue #1650
+    modin_series, pandas_series = create_test_series(test_data_values[0])
+    modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
+    pandas_result = sort_index_for_identical_values(
+        pandas_series.value_counts(normalize=normalize, ascending=False), False
+    )
     df_equals(modin_result, pandas_result)
 
-    modin_series = pd.Series([3, 1, 2, 3, 4, np.nan])
-    pandas_series = pandas.Series([3, 1, 2, 3, 4, np.nan])
-    modin_result = modin_series.value_counts(normalize=True)
-    pandas_result = pandas_series.value_counts(normalize=True)
+    modin_result = modin_series.value_counts(bins=bins, ascending=False)
+    pandas_result = sort_index_for_identical_values(
+        pandas_series.value_counts(bins=bins, ascending=False), False
+    )
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(bins=3)
-    pandas_result = pandas_series.value_counts(bins=3)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = modin_series.value_counts(dropna=False)
-    pandas_result = pandas_series.value_counts(dropna=False)
+    modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
+    pandas_result = sort_index_for_identical_values(
+        pandas_series.value_counts(dropna=dropna, ascending=True), True
+    )
     df_equals(modin_result, pandas_result)
 
 

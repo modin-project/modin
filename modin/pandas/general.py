@@ -291,7 +291,7 @@ def unique(values):
 
 
 def value_counts(
-    values, sort=True, ascending=False, normalize=False, bins=None, dropna=True,
+    values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
     """
     Compute a histogram of the counts of non-null values.
@@ -314,6 +314,12 @@ def value_counts(
     Returns
     -------
     Series
+
+    Notes
+    -----
+    The indices of resulting object will be in descending
+    (ascending, if ascending=True) order for equal values.
+    It slightly differ from pandas where indices are located in random order.
     """
     return Series(values).value_counts(
         sort=sort, ascending=ascending, normalize=normalize, bins=bins, dropna=dropna,

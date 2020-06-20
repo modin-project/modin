@@ -1384,6 +1384,12 @@ class Series(BasePandasDataset):
         Returns
         -------
         Series
+
+        Notes
+        -----
+        The indices of resulting object will be in descending
+        (ascending, if ascending=True) order for equal values.
+        It slightly differ from pandas where indices are located in random order.
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.value_counts(
