@@ -610,7 +610,71 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(self, min_periods=None):
-        return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
+        """
+        Compute pairwise covariance of columns, excluding NA/null values.
+
+        Compute the pairwise covariance among the series of a DataFrame.
+        The returned data frame is the `covariance matrix
+        <https://en.wikipedia.org/wiki/Covariance_matrix>`__ of the columns
+        of the DataFrame.
+
+        Both NA and null values are automatically excluded from the
+        calculation. (See the note below about bias from missing values.)
+        A threshold can be set for the minimum number of
+        observations for each value created. Comparisons with observations
+        below this threshold will be returned as ``NaN``.
+
+        This method is generally used for the analysis of time series data to
+        understand the relationship between different measures
+        across time.
+
+        Parameters
+        ----------
+        min_periods : int, optional
+            Minimum number of observations required per pair of columns
+            to have a valid result.
+
+        Returns
+        -------
+        DataFrame
+            The covariance matrix of the series of the DataFrame.
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+
+        If DataFrame contains at least one NA/null value, then defaults to pandas.
+        """
+        numeric_df = self.drop(
+            columns=[
+                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+            ]
+        )
+
+        cols = numeric_df.columns
+        idx = cols.copy()
+        denom = None
+
+        if all(numeric_df.notna().all()):
+            if min_periods is not None and min_periods > len(numeric_df):
+                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
+                result.fill(np.nan)
+                return numeric_df.__constructor__(result)
+            else:
+                numeric_df = numeric_df.astype(dtype="float64")
+                denom = 1.0 / (len(numeric_df) - 1.0)
+                means = numeric_df.mean(axis=0)
+                result = numeric_df - means
+                result = result.T._query_compiler.conj().dot(result._query_compiler)
+        else:
+            result = numeric_df._query_compiler.default_to_pandas(
+                pandas.DataFrame.cov, min_periods=min_periods
+            )
+
+        result = numeric_df.__constructor__(
+            query_compiler=result, index=idx, columns=cols
+        )
+        return result if denom is None else result * denom
 
     def dot(self, other):
         """

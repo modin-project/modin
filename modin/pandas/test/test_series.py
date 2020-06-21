@@ -1035,9 +1035,10 @@ def test_count(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_cov(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.cov(modin_series)
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.cov(modin_series)
+    pandas_result = pandas_series.cov(pandas_series)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

@@ -563,11 +563,56 @@ class Series(BasePandasDataset):
         return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.cov, other, min_periods=min_periods
-        )
+        """
+        Compute covariance with Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the covariance.
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Covariance between Series and other normalized by N-1
+            (unbiased estimator).
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+        """
+        this, other = self.align(other, join="inner", copy=False)
+        this = self.__constructor__(this)
+        other = self.__constructor__(other)
+        if len(this) == 0:
+            return np.nan
+
+        if len(this) != len(other):
+            raise ValueError("Operands must have same size")
+
+        if min_periods is None:
+            min_periods = 1
+
+        valid = this.notna() & other.notna()
+        if not valid.all():
+            this = this[valid]
+            other = other[valid]
+
+        if len(this) < min_periods:
+            return np.nan
+
+        this = this.astype(dtype="float64")
+        other = other.astype(dtype="float64")
+
+        this -= this.mean()
+        other -= other.mean()
+
+        other = other.__constructor__(query_compiler=other._query_compiler.conj())
+        result = this * other / (len(this) - 1)
+        result = result.sum()
+        return result
 
     def describe(self, percentiles=None, include=None, exclude=None):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
