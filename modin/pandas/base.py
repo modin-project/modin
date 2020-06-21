@@ -2579,20 +2579,31 @@ class BasePandasDataset(object):
             Copy of input object, shifted.
         """
 
-        fill_index = (
-            pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-            if axis == "index" or axis == 0
-            else self.index
-        )
+        if periods == 0:
+            # Check obvious case first
+            return self.copy()
+
+        empty_frame = False
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                fill_index = self.index
+                empty_frame = True
+            else:
+                fill_index = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+        else:
+            fill_index = self.index
         from .dataframe import DataFrame
 
         fill_columns = None
         if isinstance(self, DataFrame):
-            fill_columns = (
-                pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-                if axis == "columns" or axis == 1
-                else self.columns
-            )
+            if axis == "columns" or axis == 1:
+                if abs(periods) >= len(self.columns):
+                    fill_columns = self.columns
+                    empty_frame = True
+                else:
+                    fill_columns = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
+            else:
+                fill_columns = self.columns
 
         filled_df = (
             self.__constructor__(index=fill_index, columns=fill_columns)
@@ -2602,15 +2613,24 @@ class BasePandasDataset(object):
         if fill_value is not None:
             filled_df.fillna(fill_value, inplace=True)
 
+        if empty_frame:
+            return filled_df
+
         if freq is None:
             if axis == "index" or axis == 0:
                 if periods > 0:
                     dropped_df = self.drop(self.index[-periods:])
                     new_frame = filled_df.append(dropped_df, ignore_index=True)
+                    new_frame.index = self.index.copy()
+                    if isinstance(self, DataFrame):
+                        new_frame.columns = self.columns.copy()
                     return new_frame
                 else:
                     dropped_df = self.drop(self.index[:-periods])
                     new_frame = dropped_df.append(filled_df, ignore_index=True)
+                    new_frame.index = self.index.copy()
+                    if isinstance(self, DataFrame):
+                        new_frame.columns = self.columns.copy()
                     return new_frame
             else:
                 res_columns = self.columns
@@ -2736,17 +2756,38 @@ class BasePandasDataset(object):
             by = [by]
         # Currently, sort_values will just reindex based on the sorted values.
         # TODO create a more efficient way to sort
+        ErrorMessage.default_to_pandas("sort_values")
         if axis == 0:
             broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
-            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
-            new_index = broadcast_values.sort_values(
+            # Index may contain duplicates
+            broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+            # Index without duplicates
+            broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
+            broadcast_values2 = broadcast_values2.reset_index(drop=True)
+            # Index may contain duplicates
+            new_index1 = broadcast_values1.sort_values(
                 by=by,
                 axis=axis,
                 ascending=ascending,
                 kind=kind,
                 na_position=na_position,
             ).index
-            return self.reindex(index=new_index, copy=not inplace)
+            # Index without duplicates
+            new_index2 = broadcast_values2.sort_values(
+                by=by,
+                axis=axis,
+                ascending=ascending,
+                kind=kind,
+                na_position=na_position,
+            ).index
+            if inplace:
+                self.reindex(index=new_index2, copy=False)
+                self.index = new_index1
+            else:
+                result = self.reset_index(drop=True)
+                result = result.reindex(index=new_index2, copy=True)
+                result.index = new_index1
+                return result
         else:
             broadcast_value_list = [
                 self[row :: len(self.index)]._to_pandas() for row in by

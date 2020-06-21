@@ -621,15 +621,24 @@ class BaseFrameManager(object):
 
     @classmethod
     def binary_operation(cls, axis, left, func, right):
-        """Apply a function that requires two BaseFrameManager objects.
+        """
+        Apply a function that requires two BasePandasFrame objects.
 
-        Args:
-            axis: The axis to apply the function over (0 - rows, 1 - columns)
-            func: The function to apply
-            other: The other BaseFrameManager object to apply func to.
+        Parameters
+        ----------
+            axis : int
+                The axis to apply the function over (0 - rows, 1 - columns)
+            left : NumPy array
+                The partitions of left Modin Frame
+            func : callable
+                The function to apply
+            right : NumPy array
+                The partitions of right Modin Frame.
 
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
+        Returns
+        -------
+        NumPy array
+            A new BasePandasFrame object, the type of object that called this.
         """
         if axis:
             left_partitions = cls.row_partitions(left)

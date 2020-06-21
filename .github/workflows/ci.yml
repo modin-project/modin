@@ -54,6 +54,19 @@ jobs:
           architecture: "x64"
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
+  test-internals:
+    runs-on: ubuntu-latest
+    name: test-internals
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6.x"
+          architecture: "x64"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest

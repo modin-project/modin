@@ -52,6 +52,7 @@ from .utils import (
     int_arg_keys,
     int_arg_values,
     encoding_types,
+    categories_equals,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -169,7 +170,7 @@ def create_test_series(vals):
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))])
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
-    elif isinstance(vals, list):
+    else:
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
     return modin_series, pandas_series
@@ -1034,9 +1035,10 @@ def test_count(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_cov(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.cov(modin_series)
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.cov(modin_series)
+    pandas_result = pandas_series.cov(pandas_series)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1195,7 +1197,7 @@ def test_divide(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
-    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    modin_series, pandas_series = create_test_series(data)
     ind_len = len(modin_series)
 
     # Test 1D array input
@@ -1235,6 +1237,12 @@ def test_dot(data):
                 np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
             )
         )
+
+    # Test case when left series has size (1 x 1)
+    # and right dataframe has size (1 x n)
+    modin_result = pd.Series([1]).dot(pd.DataFrame(modin_series).T)
+    pandas_result = pandas.Series([1]).dot(pandas.DataFrame(pandas_series).T)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1666,28 +1674,19 @@ def test_interpolate(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert modin_series.is_monotonic == pandas_series.is_monotonic
+    assert modin_series.is_monotonic == pandas_series.is_monotonic
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic_decreasing(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert (
-            modin_series.is_monotonic_decreasing
-            == pandas_series.is_monotonic_decreasing
-        )
+    assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic_increasing(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        assert (
-            modin_series.is_monotonic_increasing
-            == pandas_series.is_monotonic_increasing
-        )
+    assert modin_series.is_monotonic_increasing == pandas_series.is_monotonic_increasing
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1974,12 +1973,22 @@ def test_notnull(data):
     df_equals(modin_series.notnull(), pandas_series.notnull())
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
-def test_nsmallest():
-    modin_series = create_test_series()
-
-    with pytest.raises(NotImplementedError):
-        modin_series.nsmallest(None)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nsmallest(data):
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.nsmallest(n=5, keep="first"),
+        pandas_series.nsmallest(n=5, keep="first"),
+    )
+    df_equals(
+        modin_series.nsmallest(n=10, keep="first"),
+        pandas_series.nsmallest(n=10, keep="first"),
+    )
+    df_equals(
+        modin_series.nsmallest(n=10, keep="last"),
+        pandas_series.nsmallest(n=10, keep="last"),
+    )
+    df_equals(modin_series.nsmallest(keep="all"), pandas_series.nsmallest(keep="all"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2113,6 +2122,40 @@ def test_ravel(data, order):
     np.testing.assert_equal(
         modin_series.ravel(order=order), pandas_series.ravel(order=order)
     )
+
+
+# TODO: remove xfail mark then #1628 will be fixed
+@pytest.mark.xfail(
+    reason="Modin Series with category dtype is buggy for now. See #1628 for more details."
+)
+@pytest.mark.parametrize(
+    "data",
+    [
+        pandas.Categorical(np.arange(1000), ordered=True),
+        pandas.Categorical(np.arange(1000), ordered=False),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=True),
+        pandas.Categorical(np.arange(1000), categories=np.arange(500), ordered=False),
+    ],
+)
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel_category(data, order):
+    modin_series, pandas_series = create_test_series(data)
+    categories_equals(modin_series.ravel(order=order), pandas_series.ravel(order=order))
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pandas.Categorical(np.arange(10), ordered=True),
+        pandas.Categorical(np.arange(10), ordered=False),
+        pandas.Categorical(np.arange(10), categories=np.arange(5), ordered=True),
+        pandas.Categorical(np.arange(10), categories=np.arange(5), ordered=False),
+    ],
+)
+@pytest.mark.parametrize("order", [None, "C", "F", "A", "K"])
+def test_ravel_simple_category(data, order):
+    modin_series, pandas_series = create_test_series(data)
+    categories_equals(modin_series.ravel(order=order), pandas_series.ravel(order=order))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2815,14 +2858,15 @@ def test_unstack():
         s.unstack()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_update(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        try:
-            modin_series.update(pd.Series([4.1 for _ in modin_series]))
-        except Exception:
-            pass
+@pytest.mark.parametrize(
+    "data, other_data",
+    [([1, 2, 3], [4, 5, 6]), ([1, 2, 3], [4, 5, 6, 7, 8]), ([1, 2, 3], [4, np.nan, 6])],
+)
+def test_update(data, other_data):
+    modin_series, pandas_series = pd.Series(data), pandas.Series(data)
+    modin_series.update(pd.Series(other_data))
+    pandas_series.update(pandas.Series(other_data))
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

@@ -563,11 +563,56 @@ class Series(BasePandasDataset):
         return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.cov, other, min_periods=min_periods
-        )
+        """
+        Compute covariance with Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the covariance.
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Covariance between Series and other normalized by N-1
+            (unbiased estimator).
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+        """
+        this, other = self.align(other, join="inner", copy=False)
+        this = self.__constructor__(this)
+        other = self.__constructor__(other)
+        if len(this) == 0:
+            return np.nan
+
+        if len(this) != len(other):
+            raise ValueError("Operands must have same size")
+
+        if min_periods is None:
+            min_periods = 1
+
+        valid = this.notna() & other.notna()
+        if not valid.all():
+            this = this[valid]
+            other = other[valid]
+
+        if len(this) < min_periods:
+            return np.nan
+
+        this = this.astype(dtype="float64")
+        other = other.astype(dtype="float64")
+
+        this -= this.mean()
+        other -= other.mean()
+
+        other = other.__constructor__(query_compiler=other._query_compiler.conj())
+        result = this * other / (len(this) - 1)
+        result = result.sum()
+        return result
 
     def describe(self, percentiles=None, include=None, exclude=None):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
@@ -622,10 +667,16 @@ class Series(BasePandasDataset):
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, Series):
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=True
+                    )
                 )
             else:
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=False
+                    )
+                )
 
         other = np.asarray(other)
         if self.shape[0] != other.shape[0]:
@@ -634,9 +685,13 @@ class Series(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self._query_compiler.dot(other).to_numpy().squeeze()
+            return (
+                self._query_compiler.dot(other, squeeze_self=True).to_numpy().squeeze()
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=True)
+        )
 
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
@@ -855,7 +910,27 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
 
     def nsmallest(self, n=5, keep="first"):
-        return self._default_to_pandas(pandas.Series.nsmallest, n=n, keep=keep)
+        """
+        Return the smallest `n` elements.
+        Parameters
+        ----------
+        n : int, default 5
+            Return this many ascending sorted values.
+        keep : {'first', 'last', 'all'}, default 'first'
+            When there are duplicate values that cannot all fit in a
+            Series of `n` elements:
+            - ``first`` : return the first `n` occurrences in order
+                of appearance.
+            - ``last`` : return the last `n` occurrences in reverse
+                order of appearance.
+            - ``all`` : keep all occurrences. This can result in a Series of
+                size larger than `n`.
+        Returns
+        -------
+        Series
+            The `n` smallest values in the Series, sorted in increasing order.
+        """
+        return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
     @property
     def plot(
@@ -932,7 +1007,11 @@ class Series(BasePandasDataset):
             Flattened data of the Series.
 
         """
-        return self._query_compiler.to_numpy().flatten(order=order)
+        data = self._query_compiler.to_numpy().flatten(order=order)
+        if isinstance(self.dtype, pandas.CategoricalDtype):
+            data = pandas.Categorical(data, dtype=self.dtype)
+
+        return data
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)
@@ -1177,6 +1256,19 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
+    def _to_numeric(self, **kwargs):
+        """
+        Convert `self` to numeric.
+
+        Returns
+        -------
+        numeric
+            Series: Series of numeric dtype
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.to_numeric(**kwargs)
+        )
+
     def to_dict(self, into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", into=into)
 
@@ -1275,7 +1367,18 @@ class Series(BasePandasDataset):
         return self._query_compiler.unique().to_numpy().squeeze()
 
     def update(self, other):
-        return self._default_to_pandas(pandas.Series.update, other)
+        """
+        Modify Series in place using non-NA values from passed
+        Series. Aligns on index.
+
+        Parameters
+        ----------
+        other : Series, or object coercible into Series
+        """
+        if not isinstance(other, Series):
+            other = Series(other)
+        query_compiler = self._query_compiler.series_update(other._query_compiler)
+        self._update_inplace(new_query_compiler=query_compiler)
 
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
@@ -1355,27 +1458,25 @@ class Series(BasePandasDataset):
 
     @property
     def is_monotonic(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic(df):
-            return df.is_monotonic
+        """Return boolean if values in the object are monotonic_increasing.
 
-        return self._default_to_pandas(is_monotonic)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(self._query_compiler.is_monotonic())
+
+    is_monotonic_increasing = is_monotonic
 
     @property
     def is_monotonic_decreasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_decreasing(df):
-            return df.is_monotonic_decreasing
+        """Return boolean if values in the object are monotonic_decreasing.
 
-        return self._default_to_pandas(is_monotonic_decreasing)
-
-    @property
-    def is_monotonic_increasing(self):
-        # We cannot default to pandas without a named function to call.
-        def is_monotonic_increasing(df):
-            return df.is_monotonic_increasing
-
-        return self._default_to_pandas(is_monotonic_increasing)
+        Returns
+        -------
+            bool
+        """
+        return self._reduce_dimension(self._query_compiler.is_monotonic_decreasing())
 
     @property
     def is_unique(self):
