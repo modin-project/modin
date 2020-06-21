@@ -566,6 +566,30 @@ def test_from_excel():
     teardown_excel_file()
 
 
+def test_from_excel_engine():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
+def test_from_excel_index_col():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, index_col=0)
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, index_col=0)
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
 def test_from_excel_all_sheets():
     setup_excel_file(SMALL_ROW_SIZE)
 
