@@ -491,6 +491,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     series_view = MapFunction.register(
         lambda df, *args, **kwargs: pandas.DataFrame(df.squeeze().view(*args, **kwargs))
     )
+    repeat = MapFunction.register(
+        lambda df, repeats: pandas.DataFrame(df.squeeze().repeat(repeats))
+    )
 
     # END Map partitions operations
 
@@ -544,12 +547,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
 
     # END String map partitions operations
-
-    def repeat(self, repeats):
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda df: df.squeeze().repeat(repeats, axis=None)
-        )
-        return self.__constructor__(new_modin_frame)
 
     def unique(self):
         """Return unique values of Series object.

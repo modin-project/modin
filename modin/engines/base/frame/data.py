@@ -822,11 +822,22 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
+        
+        index_validation_required = self._partitions[0][0].length() != new_partitions[0][0].length()
+        if index_validation_required:
+            new_index = self._frame_mgr_cls.get_indices(
+                0, new_partitions, lambda df: df.index
+            )
+
+        new_row_lengths = self._row_lengths
+        if len(new_index) != len(self.index):
+            new_row_lengths = None
+
         return self.__constructor__(
             new_partitions,
-            self.index,
+            new_index,
             self.columns,
-            self._row_lengths,
+            new_row_lengths,
             self._column_widths,
             dtypes=dtypes,
         )
