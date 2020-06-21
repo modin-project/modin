@@ -826,6 +826,7 @@ class BasePandasFrame(object):
         index_validation_required = (
             self._partitions[0][0].length() != new_partitions[0][0].length()
         )
+        new_index = self.index
         if index_validation_required:
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
