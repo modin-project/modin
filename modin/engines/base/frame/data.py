@@ -822,8 +822,10 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
-        
-        index_validation_required = self._partitions[0][0].length() != new_partitions[0][0].length()
+
+        index_validation_required = (
+            self._partitions[0][0].length() != new_partitions[0][0].length()
+        )
         if index_validation_required:
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
