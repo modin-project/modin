@@ -376,7 +376,9 @@ class BasePandasDataset(object):
 
         if isinstance(arg, str):
             kwargs.pop("is_transform", None)
+            # arg_from_str = self._string_function(arg)
             return self._string_function(arg, *args, **kwargs)
+            # return self.apply(arg_from_str, axis=_axis, args=args, **kwargs)
 
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
@@ -1470,23 +1472,29 @@ class BasePandasDataset(object):
         Returns:
             kurtosis : Series or DataFrame (if level specified)
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if level is not None:
             from .series import Series
 
-            def applyf(x):
-                return x.kurt(
-                    axis=0,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
+            func_kwargs = {
+                "axis": 0,
+                "skipna": skipna,
+                "level": level,
+                "numeric_only": numeric_only,
+            }
+            if isinstance(self, Series):
+                return (
+                    self.groupby(level=level, axis=axis, sort=False)
+                    .apply(func="kurt", **func_kwargs)
+                    .rename(None)
                 )
 
-            if isinstance(self, Series):
-                return self.groupby(level=level, axis=axis).aggregate(applyf)
-
-            return self.aggregate(applyf)
+            new_modin_frame = self._query_compiler._modin_frame._apply_full_axis(
+                axis=0, func=lambda df: df.kurt(**func_kwargs)
+            )
+            return self.__constructor__(
+                query_compiler=self._query_compiler.__constructor__(new_modin_frame)
+            )
 
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
