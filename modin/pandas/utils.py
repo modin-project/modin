@@ -13,9 +13,9 @@
 
 
 def from_non_pandas(df, index, columns, dtype):
-    from modin.data_management.factories import BaseFactory
+    from modin.data_management.dispatcher import EngineDispatcher
 
-    new_qc = BaseFactory.from_non_pandas(df, index, columns, dtype)
+    new_qc = EngineDispatcher.from_non_pandas(df, index, columns, dtype)
     if new_qc is not None:
         from .dataframe import DataFrame
 
@@ -31,10 +31,10 @@ def from_pandas(df):
     Returns:
         A new Modin DataFrame object.
     """
-    from modin.data_management.factories import BaseFactory
+    from modin.data_management.dispatcher import EngineDispatcher
     from .dataframe import DataFrame
 
-    return DataFrame(query_compiler=BaseFactory.from_pandas(df))
+    return DataFrame(query_compiler=EngineDispatcher.from_pandas(df))
 
 
 def to_pandas(modin_obj):

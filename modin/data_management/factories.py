@@ -11,12 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
-import sys
 import warnings
 
 from modin import __execution_engine__ as execution_engine
-from modin import __partition_format__ as partition_format
 
 import pandas
 
@@ -24,185 +21,98 @@ types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
 
 class BaseFactory(object):
-    @property
-    def io_cls(self):
-        """The module where the I/O functionality exists."""
-        raise NotImplementedError("Implement in children classes!")
+    """
+    Abstract factory which allows to override the io module easily.
+    """
+
+    io_cls = None  # The module where the I/O functionality exists.
 
     @classmethod
-    def _determine_engine(cls):
-        if os.environ.get("MODIN_EXPERIMENTAL", "") == "True":
-            return ExperimentalBaseFactory._determine_engine()
-        factory_name = partition_format + "On" + execution_engine + "Factory"
-        return getattr(sys.modules[__name__], factory_name)
-
-    @classmethod
-    def build_manager(cls):
-        return cls._determine_engine().build_manager()
-
-    @classmethod
-    def from_pandas(cls, df):
-        return cls._determine_engine()._from_pandas(df)
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
     @classmethod
     def _from_pandas(cls, df):
         return cls.io_cls.from_pandas(df)
 
     @classmethod
-    def from_non_pandas(cls, *args, **kwargs):
-        return cls._determine_engine()._from_non_pandas(*args, **kwargs)
-
-    @classmethod
     def _from_non_pandas(cls, *args, **kwargs):
         return cls.io_cls.from_non_pandas(*args, **kwargs)
-
-    @classmethod
-    def read_parquet(cls, **kwargs):
-        return cls._determine_engine()._read_parquet(**kwargs)
 
     @classmethod
     def _read_parquet(cls, **kwargs):
         return cls.io_cls.read_parquet(**kwargs)
 
     @classmethod
-    def read_csv(cls, **kwargs):
-        return cls._determine_engine()._read_csv(**kwargs)
-
-    @classmethod
     def _read_csv(cls, **kwargs):
         return cls.io_cls.read_csv(**kwargs)
-
-    @classmethod
-    def read_json(cls, **kwargs):
-        return cls._determine_engine()._read_json(**kwargs)
 
     @classmethod
     def _read_json(cls, **kwargs):
         return cls.io_cls.read_json(**kwargs)
 
     @classmethod
-    def read_gbq(cls, **kwargs):
-        return cls._determine_engine()._read_gbq(**kwargs)
-
-    @classmethod
     def _read_gbq(cls, **kwargs):
         return cls.io_cls.read_gbq(**kwargs)
-
-    @classmethod
-    def read_html(cls, **kwargs):
-        return cls._determine_engine()._read_html(**kwargs)
 
     @classmethod
     def _read_html(cls, **kwargs):
         return cls.io_cls.read_html(**kwargs)
 
     @classmethod
-    def read_clipboard(cls, **kwargs):  # pragma: no cover
-        return cls._determine_engine()._read_clipboard(**kwargs)
-
-    @classmethod
     def _read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_clipboard(**kwargs)
-
-    @classmethod
-    def read_excel(cls, **kwargs):
-        return cls._determine_engine()._read_excel(**kwargs)
 
     @classmethod
     def _read_excel(cls, **kwargs):
         return cls.io_cls.read_excel(**kwargs)
 
     @classmethod
-    def read_hdf(cls, **kwargs):
-        return cls._determine_engine()._read_hdf(**kwargs)
-
-    @classmethod
     def _read_hdf(cls, **kwargs):
         return cls.io_cls.read_hdf(**kwargs)
-
-    @classmethod
-    def read_feather(cls, **kwargs):
-        return cls._determine_engine()._read_feather(**kwargs)
 
     @classmethod
     def _read_feather(cls, **kwargs):
         return cls.io_cls.read_feather(**kwargs)
 
     @classmethod
-    def read_stata(cls, **kwargs):
-        return cls._determine_engine()._read_stata(**kwargs)
-
-    @classmethod
     def _read_stata(cls, **kwargs):
         return cls.io_cls.read_stata(**kwargs)
-
-    @classmethod
-    def read_sas(cls, **kwargs):  # pragma: no cover
-        return cls._determine_engine()._read_sas(**kwargs)
 
     @classmethod
     def _read_sas(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_sas(**kwargs)
 
     @classmethod
-    def read_pickle(cls, **kwargs):
-        return cls._determine_engine()._read_pickle(**kwargs)
-
-    @classmethod
     def _read_pickle(cls, **kwargs):
         return cls.io_cls.read_pickle(**kwargs)
-
-    @classmethod
-    def read_sql(cls, **kwargs):
-        return cls._determine_engine()._read_sql(**kwargs)
 
     @classmethod
     def _read_sql(cls, **kwargs):
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod
-    def read_fwf(cls, **kwargs):
-        return cls._determine_engine()._read_fwf(**kwargs)
-
-    @classmethod
     def _read_fwf(cls, **kwargs):
         return cls.io_cls.read_fwf(**kwargs)
-
-    @classmethod
-    def read_sql_table(cls, **kwargs):
-        return cls._determine_engine()._read_sql_table(**kwargs)
 
     @classmethod
     def _read_sql_table(cls, **kwargs):
         return cls.io_cls.read_sql_table(**kwargs)
 
     @classmethod
-    def read_sql_query(cls, **kwargs):
-        return cls._determine_engine()._read_sql_query(**kwargs)
-
-    @classmethod
     def _read_sql_query(cls, **kwargs):
         return cls.io_cls.read_sql_query(**kwargs)
-
-    @classmethod
-    def read_spss(cls, **kwargs):
-        return cls._determine_engine()._read_spss(**kwargs)
 
     @classmethod
     def _read_spss(cls, **kwargs):
         return cls.io_cls.read_spss(**kwargs)
 
     @classmethod
-    def to_sql(cls, *args, **kwargs):
-        return cls._determine_engine()._to_sql(*args, **kwargs)
-
-    @classmethod
     def _to_sql(cls, *args, **kwargs):
         return cls.io_cls.to_sql(*args, **kwargs)
-
-    @classmethod
-    def to_pickle(cls, *args, **kwargs):
-        return cls._determine_engine()._to_pickle(*args, **kwargs)
 
     @classmethod
     def _to_pickle(cls, *args, **kwargs):
@@ -210,45 +120,39 @@ class BaseFactory(object):
 
 
 class PandasOnRayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
-    from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-
-    io_cls = PandasOnRayIO
+        cls.io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
-    from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
-
-    io_cls = PandasOnPythonIO
+        cls.io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
-    from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
-
-    io_cls = PandasOnDaskIO
-
-
-class PyarrowOnRayFactory(BaseFactory):
-
-    if partition_format == "Pyarrow" and not os.environ.get(
-        "MODIN_EXPERIMENTAL", False
-    ):
-        raise ImportError(
-            "Pyarrow on Ray is only accessible through the experimental API.\nRun "
-            "`import modin.experimental.pandas as pd` to use Pyarrow on Ray."
-        )
+        cls.io_cls = PandasOnDaskIO
 
 
 class ExperimentalBaseFactory(BaseFactory):
-    @classmethod
-    def _determine_engine(cls):
-        factory_name = "Experimental{}On{}Factory".format(
-            partition_format, execution_engine
-        )
-        return getattr(sys.modules[__name__], factory_name)
-
     @classmethod
     def _read_sql(cls, **kwargs):
         if execution_engine != "Ray":
@@ -280,21 +184,28 @@ class ExperimentalBaseFactory(BaseFactory):
 
 
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.pandas_on_ray.io_exp import (
+            ExperimentalPandasOnRayIO,
+        )
 
-    from modin.experimental.engines.pandas_on_ray.io_exp import (
-        ExperimentalPandasOnRayIO,
-    )
-
-    io_cls = ExperimentalPandasOnRayIO
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
-
     pass
 
 
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
-    from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
-
-    io_cls = PyarrowOnRayIO
+        cls.io_cls = PyarrowOnRayIO
