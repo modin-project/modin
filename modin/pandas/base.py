@@ -376,9 +376,7 @@ class BasePandasDataset(object):
 
         if isinstance(arg, str):
             kwargs.pop("is_transform", None)
-            # arg_from_str = self._string_function(arg)
             return self._string_function(arg, *args, **kwargs)
-            # return self.apply(arg_from_str, axis=_axis, args=args, **kwargs)
 
         # Dictionaries have complex behavior because they can be renamed here.
         elif isinstance(arg, dict):
