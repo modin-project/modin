@@ -542,6 +542,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     invert = MapFunction.register(pandas.DataFrame.__invert__)
     isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
     isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)
+    isfinite = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
+    )
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)

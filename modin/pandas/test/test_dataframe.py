@@ -2125,8 +2125,7 @@ class TestDataFrameDefault:
 
     def test_corr(self):
         data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            modin_result = pd.DataFrame(data).corr()
+        modin_result = pd.DataFrame(data).corr()
         pandas_result = pandas.DataFrame(data).corr()
         df_equals(modin_result, pandas_result)
 
