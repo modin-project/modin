@@ -352,14 +352,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_columns = []
         new_dtypes = []
 
-        conflicting_list = set(self.columns) & set(other.columns) - set(on)
+        conflicting_cols = set(self.columns) & set(other.columns) - set(on)
         for c in self.columns:
-            suffix = suffixes[0] if c in conflicting_list else ""
+            suffix = suffixes[0] if c in conflicting_cols else ""
             new_columns.append(c + suffix)
             new_dtypes.append(self._dtypes[c])
         for c in other.columns:
             if c not in on:
-                suffix = suffixes[1] if c in conflicting_list else ""
+                suffix = suffixes[1] if c in conflicting_cols else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(other._dtypes[c])
 
