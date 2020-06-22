@@ -349,15 +349,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 col in self.columns and col in other.columns
             ), "Only cases when both frames contain key column are supported"
 
-        new_columns = on.copy()
-        new_dtypes = self._dtypes[on].tolist()
+        new_columns = []
+        new_dtypes = []
 
-        conflicting_list = list(set(self.columns) & set(other.columns))
+        conflicting_list = set(self.columns) & set(other.columns) - set(on)
         for c in self.columns:
-            if c not in on:
-                suffix = suffixes[0] if c in conflicting_list else ""
-                new_columns.append(c + suffix)
-                new_dtypes.append(self._dtypes[c])
+            suffix = suffixes[0] if c in conflicting_list else ""
+            new_columns.append(c + suffix)
+            new_dtypes.append(self._dtypes[c])
         for c in other.columns:
             if c not in on:
                 suffix = suffixes[1] if c in conflicting_list else ""

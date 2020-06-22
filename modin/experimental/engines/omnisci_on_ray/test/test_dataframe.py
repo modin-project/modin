@@ -617,6 +617,21 @@ class TestMerge:
 
         df_equals(ref, exp)
 
+    dt_data1 = {
+        "id": [1, 2],
+        "timestamp": pd.to_datetime(["20000101", "20000201"], format="%Y%m%d"),
+    }
+    dt_data2 = {"id": [1, 2], "timestamp_year": [2000, 2000]}
+
+    def test_merge_dt(self):
+        def merge(df1, df2, **kwargs):
+            df1["timestamp_year"] = df1["timestamp"].dt.year
+            res = df1.merge(df2, how="left", on=["id", "timestamp_year"])
+            res["timestamp_year"] = res["timestamp_year"].fillna(np.int64(-1))
+            return res
+
+        run_and_compare(merge, data=self.dt_data1, data2=self.dt_data2)
+
 
 class TestBinaryOp:
     data = {
