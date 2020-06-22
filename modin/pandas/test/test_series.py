@@ -172,13 +172,16 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(vals):
+def create_test_series(vals, sort=False):
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))])
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
     else:
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
+    if sort:
+        modin_series = modin_series.sort_values()
+        pandas_series = pandas_series.sort_values()
     return modin_series, pandas_series
 
 
@@ -2611,11 +2614,51 @@ def test_sample(data):
         modin_series.sample(n=-3)
 
 
+@pytest.mark.parametrize("sorter", [True, None])
+@pytest.mark.parametrize("values_number", [1, 2, 5])
+@pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_searchsorted(data):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.searchsorted(3)
+def test_searchsorted(data, side, values_number, sorter):
+    if not sorter:
+        modin_series, pandas_series = create_test_series(vals=data, sort=True)
+    else:
+        modin_series, pandas_series = create_test_series(vals=data)
+        sorter = np.argsort(list(modin_series))
+
+    min_sammple = modin_series.min(skipna=True)
+    max_sammple = modin_series.max(skipna=True)
+
+    exact_values = modin_series.sample(n=values_number)
+    mean_values = np.random.uniform(
+        low=min_sammple, high=max_sammple, size=values_number
+    )
+    out_of_range_values_1 = np.random.uniform(
+        low=max_sammple, high=2 * max_sammple, size=values_number
+    )
+    out_of_range_values_2 = np.random.uniform(
+        low=min_sammple - max_sammple, high=min_sammple, size=values_number
+    )
+
+    assert list(
+        modin_series.searchsorted(value=exact_values, side=side, sorter=sorter)
+    ) == list(pandas_series.searchsorted(value=exact_values, side=side, sorter=sorter))
+    assert list(
+        modin_series.searchsorted(value=mean_values, side=side, sorter=sorter)
+    ) == list(pandas_series.searchsorted(value=mean_values, side=side, sorter=sorter))
+    assert list(
+        modin_series.searchsorted(value=out_of_range_values_1, side=side, sorter=sorter)
+    ) == list(
+        pandas_series.searchsorted(
+            value=out_of_range_values_1, side=side, sorter=sorter
+        )
+    )
+    assert list(
+        modin_series.searchsorted(value=out_of_range_values_2, side=side, sorter=sorter)
+    ) == list(
+        pandas_series.searchsorted(
+            value=out_of_range_values_2, side=side, sorter=sorter
+        )
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
