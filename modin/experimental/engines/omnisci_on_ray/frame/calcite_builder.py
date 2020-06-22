@@ -187,7 +187,7 @@ class CalciteBuilder:
         self._push(CalciteFilterNode(condition))
 
         # mask is currently always applied over scan, it means
-        # we need additional projection to remove rowif column
+        # we need additional projection to remove rowid column
         fields = frame._table_cols
         exprs = [self._ref(frame, col) for col in frame._table_cols]
         self._push(CalciteProjectionNode(fields, exprs))
