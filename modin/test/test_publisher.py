@@ -18,10 +18,10 @@ from modin import Publisher
 
 def test_equals():
     pub = Publisher("name", "value1")
-    assert pub.get() == "value1"
+    assert pub.get() == "Value1"
 
     pub.put("value2")
-    assert pub.get() == "value2"
+    assert pub.get() == "Value2"
 
 
 def test_triggers():
