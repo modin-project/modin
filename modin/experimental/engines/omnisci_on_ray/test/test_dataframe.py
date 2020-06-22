@@ -55,6 +55,12 @@ class TestMasks:
         modin_df = modin_df.drop(columns="a")
         df_equals(pandas_df, modin_df)
 
+    def test_iloc(self):
+        def mask(df, **kwargs):
+            return df.iloc[[0, 1]]
+
+        run_and_compare(mask, data=self.data)
+
 
 class TestFillna:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
