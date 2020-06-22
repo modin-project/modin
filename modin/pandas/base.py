@@ -1487,11 +1487,10 @@ class BasePandasDataset(object):
                     .rename(None)
                 )
 
-            new_modin_frame = self._query_compiler._modin_frame._apply_full_axis(
-                axis=0, func=lambda df: df.kurt(**func_kwargs)
-            )
             return self.__constructor__(
-                query_compiler=self._query_compiler.__constructor__(new_modin_frame)
+                query_compiler=self._query_compiler.apply(
+                    func=lambda df: df.kurt(**func_kwargs), axis=0
+                )
             )
 
         if numeric_only:
