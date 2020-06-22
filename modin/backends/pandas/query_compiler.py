@@ -553,9 +553,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             pandas.to_numeric(df.squeeze(), *args, **kwargs)
         )
     )
-    repeat = MapFunction.register(
-        lambda df, repeats: pandas.DataFrame(df.squeeze().repeat(repeats))
-    )
+
+    def repeat(self, repeats):
+        def map_fn(df):
+            return pandas.DataFrame(df.squeeze().repeat(repeats))
+
+        if isinstance(repeats, int) or (is_list_like(repeats) and len(repeats) == 1):
+            return MapFunction.register(map_fn, validate_index=True)(self)
+        else:
+            return self.__constructor__(self._modin_frame._apply_full_axis(0, map_fn))
 
     # END Map partitions operations
 

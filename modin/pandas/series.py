@@ -1084,7 +1084,9 @@ class Series(BasePandasDataset):
         Series
             Newly created Series with repeated elements.
         """
-        if repeats == 0:
+        if (isinstance(repeats, int) and repeats == 0) or (
+            is_list_like(repeats) and len(repeats) == 1 and repeats[0] == 0
+        ):
             return self.__constructor__()
 
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
