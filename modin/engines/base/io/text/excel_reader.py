@@ -140,8 +140,6 @@ class ExcelReader(TextFileReader):
             kwargs["num_splits"] = num_splits
 
             while f.tell() < total_bytes:
-                print(f.tell())
-                print(total_bytes)
                 args = kwargs
                 args["skiprows"] = row_count + args["skiprows"]
                 args["start"] = f.tell()
