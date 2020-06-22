@@ -88,7 +88,7 @@ def get_partition_format():
 class Publisher(object):
     def __init__(self, name, value):
         self.name = name
-        self.__value = value
+        self.__value = value.title()
         self.__subs = set()
         self.__once = collections.defaultdict(set)
 
@@ -97,6 +97,7 @@ class Publisher(object):
         callback(self)
 
     def once(self, onvalue, callback):
+        onvalue = onvalue.title()
         if onvalue == self.__value:
             callback(self)
         else:
