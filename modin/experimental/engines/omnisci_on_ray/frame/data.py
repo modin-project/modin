@@ -623,11 +623,27 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if isinstance(self._op, FrameNode):
             return
 
+        # MaskNode requires rowid which is available for executed frames only.
+        # Also there is a common pattern when MaskNode is executed to print
+        # frame. If we run the whole tree then any following frame usage will
+        # require re-compute. So we just execute MaskNode's operands.
+        self._run_sub_queries()
+
         new_partitions = self._frame_mgr_cls.run_exec_plan(
             self._op, self._index_cols, self._dtypes
         )
         self._partitions = new_partitions
         self._op = FrameNode(self)
+
+    def _run_sub_queries(self):
+        if isinstance(self._op, FrameNode):
+            return
+
+        if isinstance(self._op, MaskNode):
+            self._op.input[0]._execute()
+        else:
+            for frame in self._op.input:
+                frame._run_sub_queries()
 
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)

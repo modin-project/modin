@@ -186,6 +186,12 @@ class CalciteBuilder:
         condition = build_row_idx_filter_expr(op.row_numeric_idx, rowid_col)
         self._push(CalciteFilterNode(condition))
 
+        # mask is currently always applied over scan, it means
+        # we need additional projection to remove rowid column
+        fields = frame._table_cols
+        exprs = [self._ref(frame, col) for col in frame._table_cols]
+        self._push(CalciteProjectionNode(fields, exprs))
+
     def _process_groupby(self, op):
         frame = op.input[0]
 
