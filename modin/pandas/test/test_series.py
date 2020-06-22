@@ -2293,7 +2293,9 @@ def test_repeat(data, repeats):
     ],
 )
 def test_repeat_lists(data, repeats):
-    eval_general(pd.Series(data), pandas.Series(data), lambda df, repeats: df.repeat(repeats), repeats=repeats)
+    eval_general(
+        pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

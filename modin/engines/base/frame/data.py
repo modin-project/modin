@@ -811,7 +811,7 @@ class BasePandasFrame(object):
         ----------
             func : callable
                 The function to apply.
-            dtypes : 
+            dtypes :
                 (optional) The data types for the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
