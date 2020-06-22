@@ -66,7 +66,7 @@ auth:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
     InstanceType: m5.large
-    ImageId: ami-09c2435df1137686f # Deep Learning AMI
+    ImageId: ami-0f56279347d2fa43e
 
     # You can provision additional disk space with a conf as follows
     BlockDeviceMappings:
@@ -84,7 +84,7 @@ head_node:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
     InstanceType: m5.large
-    ImageId: ami-09c2435df1137686f # Deep Learning AMI
+    ImageId: ami-0f56279347d2fa43e
 
     # Run workers on spot by default. Comment this out to use on-demand.
     # InstanceMarketOptions:
@@ -109,6 +109,8 @@ initialization_commands: []
 
 # List of shell commands to run to set up nodes.
 setup_commands:
+    # need to install python 3.7.6
+
     - echo 'installing modin from source'
     - test -e modin || git clone --single-branch --branch test-autoscaler https://github.com/anmyachev/modin.git
     - cd modin && pip install -r requirements.txt
