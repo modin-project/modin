@@ -119,11 +119,10 @@ class CalciteSerializer:
                 "type_scale": 0,
                 "type_precision": precision,
             }
-        if type(literal.val) is float:
+        if type(literal.val) in (float, np.float64):
             str_val = f"{literal.val:f}"
             precision = len(str_val) - 1
             scale = precision - str_val.index(".")
-            print("SERIALIZE", literal.val, "AS", int(str_val.replace(".", "")))
             return {
                 "literal": int(str_val.replace(".", "")),
                 "type": "DECIMAL",
