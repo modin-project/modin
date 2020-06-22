@@ -115,12 +115,11 @@ setup_commands:
     - cd modin && pip install -e .
     - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
 
-    # uncomment when proxy is needed
-    # - echo 'installing ray from source'
-    # - pip install cython==0.29.0 pytest
-    # - test -e ray || git clone --single-branch --branch add-ssh-proxy https://github.com/vnlitvinov/ray.git
-    # - cd ray && ci/travis/install-bazel.sh
-    # - cd ray/python && pip install -e .
+    - echo 'installing ray from source'
+    - pip install cython==0.29.0 pytest
+    - test -e ray || git clone --single-branch --branch add-ssh-proxy https://github.com/vnlitvinov/ray.git
+    - cd ray && ci/travis/install-bazel.sh
+    - cd ray/python && pip install -e .
 
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
