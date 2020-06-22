@@ -57,7 +57,7 @@ class ExcelReader(TextFileReader):
             return cls.single_worker_read(io, **kwargs)
 
         warnings.warn(
-            "Parallel `read_excel` is a new feature! Please email"
+            "Parallel `read_excel` is a new feature! Please email "
             "bug_reports@modin.org if you run into any problems."
         )
         wb = load_workbook(filename=io, read_only=True)

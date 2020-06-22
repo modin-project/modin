@@ -259,7 +259,10 @@ def setup_excel_file(row_size, force=False):
 
 def teardown_excel_file():
     if os.path.exists(TEST_EXCEL_FILENAME):
-        os.remove(TEST_EXCEL_FILENAME)
+        try:
+            os.remove(TEST_EXCEL_FILENAME)
+        except PermissionError:
+            pass
 
 
 def setup_feather_file(row_size, force=False):
