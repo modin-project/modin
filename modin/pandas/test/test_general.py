@@ -15,6 +15,7 @@ import pandas
 import pytest
 import modin.pandas as pd
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from .utils import test_data_values, test_data_keys, df_equals
 
@@ -260,6 +261,64 @@ def test_pivot_table():
         )
 
 
+def test_unique():
+    modin_result = pd.unique([2, 1, 3, 3])
+    pandas_result = pandas.unique([2, 1, 3, 3])
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series([2] + [1] * 5))
+    pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series([pd.Timestamp("20160101"), pd.Timestamp("20160101")])
+    )
+    pandas_result = pandas.unique(
+        pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Series(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Index(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Index(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
+    pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
+    assert_array_equal(modin_result, pandas_result)
+
+
 def test_to_datetime():
     # DataFrame input for to_datetime
     modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
@@ -280,3 +339,21 @@ def test_to_datetime():
     assert pd.to_datetime(value, unit="D", origin=pd.Timestamp("2000-01-01")).equals(
         pandas.to_datetime(value, unit="D", origin=pandas.Timestamp("2000-01-01"))
     )
+
+
+@pytest.mark.parametrize(
+    "data, errors, downcast",
+    [
+        (["1.0", "2", -3], "raise", None),
+        (["1.0", "2", -3], "raise", "float"),
+        (["1.0", "2", -3], "raise", "signed"),
+        (["apple", "1.0", "2", -3], "ignore", None),
+        (["apple", "1.0", "2", -3], "coerce", None),
+    ],
+)
+def test_to_numeric(data, errors, downcast):
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+    modin_result = pd.to_numeric(modin_series, errors=errors, downcast=downcast)
+    pandas_result = pandas.to_numeric(pandas_series, errors=errors, downcast=downcast)
+    df_equals(modin_result, pandas_result)

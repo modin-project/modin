@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 # import ray
-# ray.init(redis_address="localhost:6379")
+# ray.init(address="localhost:6379")
 
 import modin.pandas as pd
 

@@ -247,15 +247,11 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update(self, other, **kwargs):
-        """Uses other manager to update corresponding values in this manager.
+    def df_update(self, other, **kwargs):
+        pass
 
-        Args:
-            other: The other manager.
-
-        Returns:
-            New QueryCompiler with updated data and index.
-        """
+    @abc.abstractmethod
+    def series_update(self, other, **kwargs):
         pass
 
     @abc.abstractmethod
@@ -337,6 +333,26 @@ class BaseQueryCompiler(abc.ABC):
     # instead.
 
     @abc.abstractmethod
+    def is_monotonic(self):
+        """Return boolean if values in the object are monotonic_increasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_monotonic_decreasing(self):
+        """Return boolean if values in the object are monotonic_decreasing.
+
+        Returns
+        -------
+            bool
+        """
+        pass
+
+    @abc.abstractmethod
     def count(self, **kwargs):
         """Counts the number of non-NaN objects for each column or row.
 
@@ -407,6 +423,16 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def conj(self, **kwargs):
+        """
+        Return the complex conjugate, element-wise.
+
+        The complex conjugate of a complex number is obtained
+        by changing the sign of its imaginary part.
+        """
+        pass
+
+    @abc.abstractmethod
     def isin(self, **kwargs):
         pass
 
@@ -424,6 +450,14 @@ class BaseQueryCompiler(abc.ABC):
 
     @abc.abstractmethod
     def round(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def series_view(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def to_numeric(self, arg, **kwargs):
         pass
 
     @abc.abstractmethod
@@ -785,22 +819,297 @@ class BaseQueryCompiler(abc.ABC):
     # These methods require some sort of manual partitioning due to their
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
-    @abc.abstractmethod
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
-        pass
 
     @abc.abstractmethod
-    def groupby_reduce(
+    def groupby_count(
         self,
         by,
         axis,
         groupby_args,
-        map_func,
         map_args,
-        reduce_func=None,
         reduce_args=None,
         numeric_only=True,
+        drop=False,
     ):
+        """Perform a groupby count.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_any(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby any.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_min(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby min.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_prod(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby prod.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_max(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby max.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_all(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby all.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_sum(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby sum.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_size(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        """Perform a groupby size.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler
+            The query compiler object to groupby.
+        axis : 0 or 1
+            The axis to groupby. Must be 0 currently.
+        groupby_args : dict
+            The arguments for the groupby component.
+        map_args : dict
+            The arguments for the `map_func`.
+        reduce_args : dict
+            The arguments for `reduce_func`.
+        numeric_only : bool
+            Whether to drop non-numeric columns.
+        drop : bool
+            Whether the data in `by` was dropped.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        pass
+
+    @abc.abstractmethod
+    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args):
         pass
 
     # END Manual Partitioning methods

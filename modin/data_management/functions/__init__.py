@@ -16,6 +16,7 @@ from .mapreducefunction import MapReduceFunction
 from .reductionfunction import ReductionFunction
 from .foldfunction import FoldFunction
 from .binary_function import BinaryFunction
+from .groupby_function import GroupbyReduceFunction
 
 __all__ = [
     "MapFunction",
@@ -23,4 +24,5 @@ __all__ = [
     "ReductionFunction",
     "FoldFunction",
     "BinaryFunction",
+    "GroupbyReduceFunction",
 ]

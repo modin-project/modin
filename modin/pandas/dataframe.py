@@ -22,6 +22,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
+from pandas.io.formats.printing import pprint_thing
 
 import itertools
 import functools
@@ -575,7 +576,7 @@ class DataFrame(BasePandasDataset):
         layout=None,
         return_type=None,
         backend=None,
-        **kwargs
+        **kwargs,
     ):
         return to_pandas(self).boxplot(
             column=column,
@@ -588,7 +589,7 @@ class DataFrame(BasePandasDataset):
             layout=layout,
             return_type=return_type,
             backend=backend,
-            **kwargs
+            **kwargs,
         )
 
     def combine(self, other, func, fill_value=None, overwrite=True):
@@ -609,7 +610,71 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(self, min_periods=None):
-        return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
+        """
+        Compute pairwise covariance of columns, excluding NA/null values.
+
+        Compute the pairwise covariance among the series of a DataFrame.
+        The returned data frame is the `covariance matrix
+        <https://en.wikipedia.org/wiki/Covariance_matrix>`__ of the columns
+        of the DataFrame.
+
+        Both NA and null values are automatically excluded from the
+        calculation. (See the note below about bias from missing values.)
+        A threshold can be set for the minimum number of
+        observations for each value created. Comparisons with observations
+        below this threshold will be returned as ``NaN``.
+
+        This method is generally used for the analysis of time series data to
+        understand the relationship between different measures
+        across time.
+
+        Parameters
+        ----------
+        min_periods : int, optional
+            Minimum number of observations required per pair of columns
+            to have a valid result.
+
+        Returns
+        -------
+        DataFrame
+            The covariance matrix of the series of the DataFrame.
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+
+        If DataFrame contains at least one NA/null value, then defaults to pandas.
+        """
+        numeric_df = self.drop(
+            columns=[
+                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+            ]
+        )
+
+        cols = numeric_df.columns
+        idx = cols.copy()
+        denom = None
+
+        if all(numeric_df.notna().all()):
+            if min_periods is not None and min_periods > len(numeric_df):
+                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
+                result.fill(np.nan)
+                return numeric_df.__constructor__(result)
+            else:
+                numeric_df = numeric_df.astype(dtype="float64")
+                denom = 1.0 / (len(numeric_df) - 1.0)
+                means = numeric_df.mean(axis=0)
+                result = numeric_df - means
+                result = result.T._query_compiler.conj().dot(result._query_compiler)
+        else:
+            result = numeric_df._query_compiler.default_to_pandas(
+                pandas.DataFrame.cov, min_periods=min_periods
+            )
+
+        result = numeric_df.__constructor__(
+            query_compiler=result, index=idx, columns=cols
+        )
+        return result if denom is None else result * denom
 
     def dot(self, other):
         """
@@ -653,10 +718,16 @@ class DataFrame(BasePandasDataset):
 
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, DataFrame):
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=False
+                    )
+                )
             else:
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=True
+                    )
                 )
 
         other = np.asarray(other)
@@ -666,9 +737,13 @@ class DataFrame(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+            return self.__constructor__(
+                query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+        )
 
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
@@ -824,7 +899,7 @@ class DataFrame(BasePandasDataset):
         figsize=None,
         layout=None,
         bins=10,
-        **kwds
+        **kwds,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.hist,
@@ -841,16 +916,18 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwds
+            **kwds,
         )
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
     ):
-        """Print a concise summary of a DataFrame, which includes the index
+        """
+        Print a concise summary of a DataFrame, which includes the index
         dtype and column dtypes, non-null values and memory usage.
 
-        Args:
+        Parameters
+        ----------
             verbose (bool, optional): Whether to print the full summary. Defaults
                 to true
 
@@ -875,29 +952,137 @@ class DataFrame(BasePandasDataset):
                 and 1690785 rows. A value of True always shows the counts and False
                 never shows the counts.
 
-        Returns:
+        Returns
+        -------
             Prints the summary of a DataFrame and returns None.
         """
-        # We will default to pandas because it will be faster than doing two passes
-        # over the data
-        buf = sys.stdout if not buf else buf
-        import io
 
-        with io.StringIO() as tmp_buf:
-            self._default_to_pandas(
-                pandas.DataFrame.info,
-                verbose=verbose,
-                buf=tmp_buf,
-                max_cols=max_cols,
-                memory_usage=memory_usage,
-                null_counts=null_counts,
+        def put_str(src, output_len=None, spaces=2):
+            src = str(src)
+            return src.ljust(output_len if output_len else len(src)) + " " * spaces
+
+        def format_size(num):
+            for x in ["bytes", "KB", "MB", "GB", "TB"]:
+                if num < 1024.0:
+                    return f"{num:3.1f} {x}"
+                num /= 1024.0
+            return f"{num:3.1f} PB"
+
+        output = []
+
+        type_line = str(type(self))
+        index_line = self.index._summary()
+        columns = self.columns
+        columns_len = len(columns)
+        dtypes = self.dtypes
+        dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
+
+        if max_cols is None:
+            max_cols = 100
+
+        exceeds_info_cols = columns_len > max_cols
+
+        if buf is None:
+            buf = sys.stdout
+
+        if null_counts is None:
+            null_counts = not exceeds_info_cols
+
+        if verbose is None:
+            verbose = not exceeds_info_cols
+
+        if null_counts and verbose:
+            # We're gonna take items from `non_null_count` in a loop, which
+            # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
+            # that will be faster.
+            non_null_count = self.count()._to_pandas()
+
+        if memory_usage is None:
+            memory_usage = True
+
+        def get_header(spaces=2):
+            output = []
+            head_label = " # "
+            column_label = "Column"
+            null_label = "Non-Null Count"
+            dtype_label = "Dtype"
+            non_null_label = " non-null"
+            delimiter = "-"
+
+            lengths = {}
+            lengths["head"] = max(len(head_label), len(pprint_thing(len(columns))))
+            lengths["column"] = max(
+                len(column_label), max(len(pprint_thing(col)) for col in columns)
             )
-            result = tmp_buf.getvalue()
-            result = result.replace(
-                "pandas.core.frame.DataFrame", "modin.pandas.dataframe.DataFrame"
+            lengths["dtype"] = len(dtype_label)
+            dtype_spaces = (
+                max(lengths["dtype"], max(len(pprint_thing(dtype)) for dtype in dtypes))
+                - lengths["dtype"]
             )
-            buf.write(result)
-        return None
+
+            header = put_str(head_label, lengths["head"]) + put_str(
+                column_label, lengths["column"]
+            )
+            if null_counts:
+                lengths["null"] = max(
+                    len(null_label),
+                    max(len(pprint_thing(x)) for x in non_null_count)
+                    + len(non_null_label),
+                )
+                header += put_str(null_label, lengths["null"])
+            header += put_str(dtype_label, lengths["dtype"], spaces=dtype_spaces)
+
+            output.append(header)
+
+            delimiters = put_str(delimiter * lengths["head"]) + put_str(
+                delimiter * lengths["column"]
+            )
+            if null_counts:
+                delimiters += put_str(delimiter * lengths["null"])
+            delimiters += put_str(delimiter * lengths["dtype"], spaces=dtype_spaces)
+            output.append(delimiters)
+
+            return output, lengths
+
+        output.extend([type_line, index_line])
+
+        def verbose_repr(output):
+            columns_line = f"Data columns (total {len(columns)} columns):"
+            header, lengths = get_header()
+            output.extend([columns_line, *header])
+            for i, col in enumerate(columns):
+                i, col, dtype = map(pprint_thing, [i, col, dtypes[col]])
+
+                to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
+                    col, lengths["column"]
+                )
+                if null_counts:
+                    non_null = pprint_thing(non_null_count[col])
+                    to_append += put_str(
+                        "{} non-null".format(non_null), lengths["null"]
+                    )
+                to_append += put_str(dtype, lengths["dtype"], spaces=0)
+                output.append(to_append)
+
+        def non_verbose_repr(output):
+            output.append(columns._summary(name="Columns"))
+
+        if verbose:
+            verbose_repr(output)
+        else:
+            non_verbose_repr(output)
+
+        output.append(dtypes_line)
+
+        if memory_usage:
+            deep = memory_usage == "deep"
+            mem_usage_bytes = self.memory_usage(index=True, deep=deep).sum()
+            mem_line = f"memory usage: {format_size(mem_usage_bytes)}"
+
+            output.append(mem_line)
+
+        output.append("")
+        buf.write("\n".join(output))
 
     def insert(self, loc, column, value, allow_duplicates=False):
         """Insert column into DataFrame at specified location.
@@ -962,7 +1147,7 @@ class DataFrame(BasePandasDataset):
         limit_direction="forward",
         limit_area=None,
         downcast=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             pandas.DataFrame.interpolate,
@@ -973,7 +1158,7 @@ class DataFrame(BasePandasDataset):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def iterrows(self):
@@ -1323,10 +1508,14 @@ class DataFrame(BasePandasDataset):
             - ``last`` : take the last occurrence.
             - ``all`` : do not drop any duplicates, even it means
               selecting more than `n` items.
-            .. versionadded:: 0.24.0
+        Returns
+        -------
+        DataFrame
         """
         return DataFrame(
-            query_compiler=self._query_compiler.nsmallest(n, columns, keep)
+            query_compiler=self._query_compiler.nsmallest(
+                n=n, columns=columns, keep=keep
+            )
         )
 
     def pivot(self, index=None, columns=None, values=None):
@@ -1390,7 +1579,7 @@ class DataFrame(BasePandasDataset):
         xerr=None,
         secondary_y=False,
         sort_columns=False,
-        **kwargs
+        **kwargs,
     ):
         return self._to_pandas().plot
 
@@ -1415,7 +1604,7 @@ class DataFrame(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1431,7 +1620,7 @@ class DataFrame(BasePandasDataset):
                     level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
-                    **kwargs
+                    **kwargs,
                 )
             )
         return super(DataFrame, self).prod(
@@ -1440,7 +1629,7 @@ class DataFrame(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     product = prod
@@ -1702,8 +1891,8 @@ class DataFrame(BasePandasDataset):
             return frame
 
     @property
-    def sparse(self, data=None):
-        return self._default_to_pandas(pandas.DataFrame.sparse, data=data)
+    def sparse(self):
+        return self._default_to_pandas(pandas.DataFrame.sparse)
 
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None
@@ -1740,7 +1929,7 @@ class DataFrame(BasePandasDataset):
         level=None,
         numeric_only=None,
         min_count=0,
-        **kwargs
+        **kwargs,
     ):
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1754,7 +1943,7 @@ class DataFrame(BasePandasDataset):
             level=level,
             numeric_only=numeric_only,
             min_count=min_count,
-            **kwargs
+            **kwargs,
         )
 
     def _to_datetime(self, **kwargs):
@@ -1860,7 +2049,7 @@ class DataFrame(BasePandasDataset):
         compression="snappy",
         index=None,
         partition_cols=None,
-        **kwargs
+        **kwargs,
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
@@ -1869,7 +2058,7 @@ class DataFrame(BasePandasDataset):
             compression=compression,
             index=index,
             partition_cols=partition_cols,
-            **kwargs
+            **kwargs,
         )
 
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -1928,31 +2117,51 @@ class DataFrame(BasePandasDataset):
     def update(
         self, other, join="left", overwrite=True, filter_func=None, errors="ignore"
     ):
-        """Modify DataFrame in place using non-NA values from other.
-
-        Args:
-            other: DataFrame, or object coercible into a DataFrame
-            join: {'left'}, default 'left'
-            overwrite: If True then overwrite values for common keys in frame
-            filter_func: Can choose to replace values other than NA.
-            raise_conflict: If True, will raise an error if the DataFrame and
-                other both contain data in the same place.
-
-        Returns:
-            None
         """
-        if errors == "raise":
-            return self._default_to_pandas(
-                pandas.DataFrame.update,
-                other,
-                join=join,
-                overwrite=overwrite,
-                filter_func=filter_func,
-                errors=errors,
-            )
+        Modify in place using non-NA values from another DataFrame.
+
+        Aligns on indices. There is no return value.
+
+        Parameters
+        ----------
+        other : DataFrame, or object coercible into a DataFrame
+            Should have at least one matching index/column label
+            with the original DataFrame. If a Series is passed,
+            its name attribute must be set, and that will be
+            used as the column name to align with the original DataFrame.
+        join : {'left'}, default 'left'
+            Only left join is implemented, keeping the index and columns of the
+            original object.
+        overwrite : bool, default True
+            How to handle non-NA values for overlapping keys:
+
+            * True: overwrite original DataFrame's values
+              with values from `other`.
+            * False: only update values that are NA in
+              the original DataFrame.
+
+        filter_func : callable(1d-array) -> bool 1d-array, optional
+            Can choose to replace values other than NA. Return True for values
+            that should be updated.
+        errors : {'raise', 'ignore'}, default 'ignore'
+            If 'raise', will raise a ValueError if the DataFrame and `other`
+            both contain non-NA data in the same place.
+
+        Returns
+        -------
+        None : method directly changes calling object
+
+        Raises
+        ------
+        ValueError
+            * When `errors='raise'` and there's overlapping non-NA data.
+            * When `errors` is not either `'ignore'` or `'raise'`
+        NotImplementedError
+            * If `join != 'left'`
+        """
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
-        query_compiler = self._query_compiler.update(
+        query_compiler = self._query_compiler.df_update(
             other._query_compiler,
             join=join,
             overwrite=overwrite,
@@ -2155,15 +2364,7 @@ class DataFrame(BasePandasDataset):
                 # last column name from the list (the appended value's name and append
                 # the new name.
                 self.columns = self.columns[:-1].append(pandas.Index([key]))
-            elif (
-                isinstance(value, np.ndarray)
-                and len(value.shape) > 1
-                and value.shape[1] != 1
-            ):
-                raise ValueError(
-                    "Wrong number of items passed %i, placement implies 1"
-                    % value.shape[1]
-                )
+                return
             elif (
                 isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
             ):
@@ -2171,8 +2372,18 @@ class DataFrame(BasePandasDataset):
                     "Wrong number of items passed %i, placement implies 1"
                     % value.shape[1]
                 )
-            else:
-                self.insert(loc=len(self.columns), column=key, value=value)
+            elif isinstance(value, np.ndarray) and len(value.shape) > 1:
+                if value.shape[1] == 1:
+                    # Transform into columnar table and take first column
+                    value = value.copy().T[0]
+                else:
+                    raise ValueError(
+                        "Wrong number of items passed %i, placement implies 1"
+                        % value.shape[1]
+                    )
+
+            # Do new column assignment after error checks and possible value modifications
+            self.insert(loc=len(self.columns), column=key, value=value)
             return
 
         if not isinstance(key, str):
