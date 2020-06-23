@@ -150,7 +150,6 @@ class ExcelReader(TextFileReader):
                     break
                 row_close_tag = b"</row>"
                 row_count = re.subn(row_close_tag, b"", chunk)[1]
-                break_condition = b"</sheetData>" in chunk
 
                 # Make sure we are reading at least one row.
                 while row_count == 0:
@@ -160,12 +159,18 @@ class ExcelReader(TextFileReader):
                 last_index = chunk.rindex(row_close_tag)
                 f.seek(-(len(chunk) - last_index) + len(row_close_tag), 1)
                 args["end"] = f.tell()
-                if break_condition:
+
+                # If there is no data, exit before triggering computation.
+                if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
                 remote_results_list = cls.deploy(cls.parse, num_splits + 2, args)
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])
                 dtypes_ids.append(remote_results_list[-1])
+
+                # The end of the spreadsheet
+                if b"</sheetData>" in chunk:
+                    break
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.
