@@ -828,17 +828,15 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
-
         new_index = self.index
         if validate_index:
             new_index = self._frame_mgr_cls.get_indices(
                 0, new_partitions, lambda df: df.index
             )
-
-        new_row_lengths = self._row_lengths
         if len(new_index) != len(self.index):
             new_row_lengths = None
-
+        else:
+            new_row_lengths = self._row_lengths
         return self.__constructor__(
             new_partitions,
             new_index,
