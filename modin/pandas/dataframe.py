@@ -1047,7 +1047,7 @@ class DataFrame(BasePandasDataset):
             # TODO: Remove broadcast of Series
             value = value._to_pandas()
 
-        if len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
