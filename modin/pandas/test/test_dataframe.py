@@ -54,45 +54,13 @@ from .utils import (
     bool_arg_values,
     int_arg_keys,
     int_arg_values,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
-
-
-def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
-    md_kwargs, pd_kwargs = {}, {}
-
-    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
-        try:
-            pd_result = fn(pandas_df, **pd_kwargs)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
-        else:
-            md_result = fn(modin_df, **md_kwargs)
-            return md_result, pd_result
-
-    for key, value in kwargs.items():
-        if callable(value):
-            values = execute_callable(value)
-            # that means, that callable raised an exception
-            if values is None:
-                return
-            else:
-                md_value, pd_value = values
-        else:
-            md_value, pd_value = value, value
-
-        md_kwargs[key] = md_value
-        pd_kwargs[key] = pd_value
-
-    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
-    if values is not None:
-        comparator(*values)
 
 
 def eval_insert(modin_df, pandas_df, **kwargs):

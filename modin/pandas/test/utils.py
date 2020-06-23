@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pytest
 import copy
 import numpy as np
 import pandas
@@ -551,3 +552,36 @@ def check_df_columns_have_nans(df, cols):
         and cols in df.columns
         and df[cols].hasnans
     )
+
+
+def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
+    md_kwargs, pd_kwargs = {}, {}
+
+    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
+        try:
+            pd_result = fn(pandas_df, **pd_kwargs)
+        except Exception as e:
+            with pytest.raises(type(e)):
+                # repr to force materialization
+                repr(fn(modin_df, **md_kwargs))
+        else:
+            md_result = fn(modin_df, **md_kwargs)
+            return md_result, pd_result
+
+    for key, value in kwargs.items():
+        if callable(value):
+            values = execute_callable(value)
+            # that means, that callable raised an exception
+            if values is None:
+                return
+            else:
+                md_value, pd_value = values
+        else:
+            md_value, pd_value = value, value
+
+        md_kwargs[key] = md_value
+        pd_kwargs[key] = pd_value
+
+    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
+    if values is not None:
+        comparator(*values)

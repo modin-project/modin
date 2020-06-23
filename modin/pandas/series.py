@@ -1063,7 +1063,33 @@ class Series(BasePandasDataset):
             return result
 
     def repeat(self, repeats, axis=None):
-        return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
+        """
+        Repeat elements of a Series.
+
+        Returns a new Series where each element of the current Series
+        is repeated consecutively a given number of times.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element. This should be a
+            non-negative integer. Repeating 0 times will return an empty
+            Series.
+        axis : None
+            Must be ``None``. Has no effect but is accepted for compatibility
+            with numpy.
+
+        Returns
+        -------
+        Series
+            Newly created Series with repeated elements.
+        """
+        if (isinstance(repeats, int) and repeats == 0) or (
+            is_list_like(repeats) and len(repeats) == 1 and repeats[0] == 0
+        ):
+            return self.__constructor__()
+
+        return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
         if drop and level is None:

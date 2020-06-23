@@ -53,6 +53,7 @@ from .utils import (
     int_arg_values,
     encoding_types,
     categories_equals,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -2271,12 +2272,30 @@ def test_reorder_levels():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "repeats", [2, 3, 4], ids=["repeats_{}".format(i) for i in [2, 3, 4]]
+    "repeats", [0, 2, 3, 4], ids=["repeats_{}".format(i) for i in [0, 2, 3, 4]]
 )
 def test_repeat(data, repeats):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        df_equals(modin_series.repeat(repeats), pandas_series.repeat(repeats))
+    eval_general(pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats))
+
+
+@pytest.mark.parametrize("data", [np.arange(256)])
+@pytest.mark.parametrize(
+    "repeats",
+    [
+        [0],
+        [2],
+        [3],
+        [4],
+        np.arange(256),
+        [0] * 64 + [2] * 64 + [3] * 32 + [4] * 32 + [5] * 64,
+        [2] * 257,
+        [2] * 128,
+    ],
+)
+def test_repeat_lists(data, repeats):
+    eval_general(
+        pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
