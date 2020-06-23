@@ -61,6 +61,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         dtypes=None,
         op=None,
         index_cols=None,
+        uses_rowid=False,
     ):
         assert dtypes is not None
 
@@ -92,6 +93,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         if partitions is not None:
             self._filter_empties()
+
+        self._uses_rowid = uses_rowid
 
     def id_str(self):
         return f"frame${self.id}"
@@ -412,6 +415,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         for frame in [self] + other_modin_frames:
             aligned_index = None
             exprs = OrderedDict()
+            uses_rowid = False
 
             if not ignore_index:
                 if frame._index_cols:
@@ -425,6 +429,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     aligned_index = ["__index__"]
                     exprs["__index__"] = frame.ref("__rowid__")
                     aligned_index_dtypes = [_get_dtype(int)]
+                    uses_rowid = True
                 aligned_dtypes = aligned_index_dtypes + new_dtypes
             else:
                 aligned_dtypes = new_dtypes
@@ -442,6 +447,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     dtypes=aligned_dtypes,
                     op=aligned_frame_op,
                     index_cols=aligned_index,
+                    uses_rowid=uses_rowid,
                 )
             )
 
@@ -628,7 +634,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if isinstance(self._op, FrameNode):
             return
 
-        # MaskNode requires rowid which is available for executed frames only.
+        # Some frames require rowid which is available for executed frames only.
         # Also there is a common pattern when MaskNode is executed to print
         # frame. If we run the whole tree then any following frame usage will
         # require re-compute. So we just execute MaskNode's operands.
@@ -640,12 +646,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
         self._partitions = new_partitions
         self._op = FrameNode(self)
 
+    def _require_executed_base(self):
+        if isinstance(self._op, MaskNode):
+            return True
+        return self._uses_rowid
+
     def _run_sub_queries(self):
         if isinstance(self._op, FrameNode):
             return
 
-        if isinstance(self._op, MaskNode):
-            self._op.input[0]._execute()
+        if self._require_executed_base():
+            for op in self._op.input:
+                op._execute()
         else:
             for frame in self._op.input:
                 frame._run_sub_queries()
