@@ -871,7 +871,7 @@ class TestDateTime:
 
 class TestCategory:
     data = {
-        "a": ["str1", "str2", "str1", "str3", "str2"],
+        "a": ["str1", "str2", "str1", "str3", "str2", None],
     }
 
     def test_cat_codes(self):

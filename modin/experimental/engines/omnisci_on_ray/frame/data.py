@@ -586,7 +586,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         col = self.columns[-1]
         exprs = self._index_exprs()
-        exprs[col] = OpExpr("KEY_FOR_STRING", [self.ref(col)], _get_dtype("int32"))
+        col_expr = self.ref(col)
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
+        null_val = LiteralExpr(np.int32(-1))
+        exprs[col] = build_if_then_else(
+            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
+        )
 
         return self.__constructor__(
             columns=self.columns,
