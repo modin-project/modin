@@ -232,8 +232,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
             if not groupby_args["as_index"]:
                 for col in new_frame.columns:
-                    """in case of as_index=False we output only InputRefExprs to align with pandas behavior"""
-                    if isinstance(new_frame._op.exprs[col], InputRefExpr):
+                    """in case of as_index=False we output only InputRefExprs
+                       for 'by' columns to align with pandas behavior"""
+                    if col not in groupby_cols or by_frame._op.is_original_ref(col):
                         output_columns.append(col)
         else:
             new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
