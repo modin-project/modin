@@ -11,14 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin import __execution_engine__
+import ray
 
-if __execution_engine__ == "Ray":
-    import ray
 
-    @ray.remote
-    def deploy_ray_func(func, args):  # pragma: no cover
-        return func(**args)
+@ray.remote
+def deploy_ray_func(func, args):  # pragma: no cover
+    return func(**args)
 
 
 class RayTask:

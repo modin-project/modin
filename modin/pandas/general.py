@@ -220,6 +220,61 @@ def pivot(data, index=None, columns=None, values=None):
     return data.pivot(index=index, columns=columns, values=values)
 
 
+def to_numeric(arg, errors="raise", downcast=None):
+    """
+    Convert argument to a numeric type.
+
+    The default return dtype is `float64` or `int64`
+    depending on the data supplied. Use the `downcast` parameter
+    to obtain other dtypes.
+
+    Please note that precision loss may occur if really large numbers
+    are passed in. Due to the internal limitations of `ndarray`, if
+    numbers smaller than `-9223372036854775808` (np.iinfo(np.int64).min)
+    or larger than `18446744073709551615` (np.iinfo(np.uint64).max) are
+    passed in, it is very likely they will be converted to float so that
+    they can stored in an `ndarray`. These warnings apply similarly to
+    `Series` since it internally leverages `ndarray`.
+
+    Parameters
+    ----------
+    arg : scalar, list, tuple, 1-d array, or Series
+        Argument to be converted.
+    errors : {'ignore', 'raise', 'coerce'}, default 'raise'
+        - If 'raise', then invalid parsing will raise an exception.
+        - If 'coerce', then invalid parsing will be set as NaN.
+        - If 'ignore', then invalid parsing will return the input.
+    downcast : {'int', 'signed', 'unsigned', 'float'}, default None
+        If not None, and if the data has been successfully cast to a
+        numerical dtype (or if the data was numeric to begin with),
+        downcast that resulting data to the smallest numerical dtype
+        possible according to the following rules:
+
+        - 'int' or 'signed': smallest signed int dtype (min.: np.int8)
+        - 'unsigned': smallest unsigned int dtype (min.: np.uint8)
+        - 'float': smallest float dtype (min.: np.float32)
+
+        As this behaviour is separate from the core conversion to
+        numeric values, any errors raised during the downcasting
+        will be surfaced regardless of the value of the 'errors' input.
+
+        In addition, downcasting will only occur if the size
+        of the resulting data's dtype is strictly larger than
+        the dtype it is to be cast to, so if none of the dtypes
+        checked satisfy that specification, no downcasting will be
+        performed on the data.
+
+    Returns
+    -------
+    ret
+        Numeric if parsing succeeded.
+        Return type depends on input.  Series if Series, otherwise ndarray.
+    """
+    if not isinstance(arg, Series):
+        return pandas.to_numeric(arg, errors=errors, downcast=downcast)
+    return arg._to_numeric(errors=errors, downcast=downcast)
+
+
 def unique(values):
     """
     Return unique values of input data.

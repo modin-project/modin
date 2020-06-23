@@ -373,6 +373,12 @@ encoding_types = [
 ]
 
 
+def categories_equals(left, right):
+    assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
+    is_category_ordered = left.ordered
+    assert_categorical_equal(left, right, check_category_order=is_category_ordered)
+
+
 def df_categories_equals(df1, df2):
     categories_columns = df1.select_dtypes(include="category").columns
 
@@ -528,3 +534,20 @@ def name_contains(test_name, vals):
         True if a substring in vals is in test_name, else False.
     """
     return any(val in test_name for val in vals)
+
+
+def check_df_columns_have_nans(df, cols):
+    """Checks if there are NaN values in specified columns of a dataframe.
+
+    :param df: Dataframe to check.
+    :param cols: One column name or list of column names.
+    :return:
+        True if specified columns of dataframe contains NaNs.
+    """
+    return (
+        pandas.api.types.is_list_like(cols)
+        and any(x in df.columns and df[x].hasnans for x in cols)
+        or not pandas.api.types.is_list_like(cols)
+        and cols in df.columns
+        and df[cols].hasnans
+    )

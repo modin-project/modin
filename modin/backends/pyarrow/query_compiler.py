@@ -17,10 +17,8 @@ from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
-from modin import __partition_format__
-
-if __partition_format__ == "Pyarrow":
-    import pyarrow as pa
+import pyarrow as pa
+import pyarrow.gandiva as gandiva
 
 
 class FakeSeries:
@@ -46,8 +44,6 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             }
             scope = Scope(level=0, resolvers=(resolver,))
             return Expr(expr=expr, env=scope)
-
-        import pyarrow.gandiva as gandiva
 
         unary_ops = {"~": "not"}
         math_calls = {"log": "log", "exp": "exp", "log10": "log10", "cbrt": "cbrt"}
