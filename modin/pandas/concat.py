@@ -99,7 +99,12 @@ def concat(
         else DataFrame(obj)
         for obj in objs
     ]
-    objs = [obj._query_compiler for obj in objs if len(obj.index) or len(obj.columns)]
+    objs = [
+        obj._query_compiler
+        for obj in objs
+        if (not obj._query_compiler.lazy_execution and len(obj.index))
+        or len(obj.columns)
+    ]
     if keys is not None:
         if all_series:
             new_idx = keys
