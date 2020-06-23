@@ -58,7 +58,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.0.3", "packaging"],
+    install_requires=["pandas==1.0.5", "packaging"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
