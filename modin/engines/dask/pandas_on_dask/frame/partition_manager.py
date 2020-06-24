@@ -20,30 +20,29 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
-    import cloudpickle as pkl
+from distributed.client import _get_global_client
+import cloudpickle as pkl
 
-    def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
-        if call_queue_df is not None and len(call_queue_df) > 0:
-            for call, kwargs in call_queue_df:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                df = call(df, **kwargs)
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                other = call(other, **kwargs)
-        if isinstance(apply_func, bytes):
-            apply_func = pkl.loads(apply_func)
-        return apply_func(df, other)
+
+def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, bytes):
+                call = pkl.loads(call)
+            if isinstance(kwargs, bytes):
+                kwargs = pkl.loads(kwargs)
+            df = call(df, **kwargs)
+    if call_queue_other is not None and len(call_queue_other) > 0:
+        for call, kwargs in call_queue_other:
+            if isinstance(call, bytes):
+                call = pkl.loads(call)
+            if isinstance(kwargs, bytes):
+                kwargs = pkl.loads(kwargs)
+            other = call(other, **kwargs)
+    if isinstance(apply_func, bytes):
+        apply_func = pkl.loads(apply_func)
+    return apply_func(df, other)
 
 
 class DaskFrameManager(BaseFrameManager):

@@ -804,15 +804,21 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
-    def _map(self, func, dtypes=None):
+    def _map(self, func, dtypes=None, validate_index=False):
         """Perform a function that maps across the entire dataset.
 
-        Args:
-            func: The function to apply.
-            dtypes: (optional) The data types for the result. This is an optimization
+        Pamareters
+        ----------
+            func : callable
+                The function to apply.
+            dtypes :
+                (optional) The data types for the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
-        Returns:
+            validate_index : bool, (default False)
+                Is index validation required after performing `func` on partitions.
+        Returns
+        -------
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
@@ -822,11 +828,21 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
+        if validate_index:
+            new_index = self._frame_mgr_cls.get_indices(
+                0, new_partitions, lambda df: df.index
+            )
+        else:
+            new_index = self.index
+        if len(new_index) != len(self.index):
+            new_row_lengths = None
+        else:
+            new_row_lengths = self._row_lengths
         return self.__constructor__(
             new_partitions,
-            self.index,
+            new_index,
             self.columns,
-            self._row_lengths,
+            new_row_lengths,
             self._column_widths,
             dtypes=dtypes,
         )

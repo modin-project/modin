@@ -13,10 +13,8 @@
 
 from modin.engines.base.frame.data import BasePandasFrame
 from .partition_manager import DaskFrameManager
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import _get_global_client
+from distributed.client import _get_global_client
 
 
 class PandasOnDaskFrame(BasePandasFrame):

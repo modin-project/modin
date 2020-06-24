@@ -1,4 +1,4 @@
-pandas==1.0.3
+pandas==1.0.5
 numpy
 pyarrow<0.17
 dask[complete]>=2.1.0

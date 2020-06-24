@@ -1126,6 +1126,28 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def repeat(self, repeats):
+        """
+        Repeat elements of a Series.
+
+        Returns a new Series where each element of the current Series
+        is repeated consecutively a given number of times.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element. This should be a
+            non-negative integer. Repeating 0 times will return an empty
+            Series.
+
+        Returns
+        -------
+        Series
+            Newly created Series with repeated elements.
+        """
+        pass
+
     # Indexing
     @abc.abstractmethod
     def view(self, index=None, columns=None):
