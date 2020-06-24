@@ -1419,6 +1419,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             pass
 
+    def apply_elementwise(self, func, axis, *args, **kwargs):
+        """Apply func across given axis elementwise.
+
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasQueryCompiler.
+        """
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, lambda df: getattr(df, func)(**kwargs)
+        )
+        return self.__constructor__(new_modin_frame)
+
     def _dict_func(self, func, axis, *args, **kwargs):
         """Apply function to certain indices across given axis.
 

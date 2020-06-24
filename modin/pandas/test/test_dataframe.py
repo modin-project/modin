@@ -1727,6 +1727,29 @@ class TestDataFrameUDF:
             modin_result = modin_df.apply(func, axis)
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.parametrize("level", [None, -1, 0, 1])
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize("func", ["count", "sum", "mean", "all", "kurt"])
+    def test_apply_text_func_with_level(self, level, data, func):
+        func_kwargs = {"level": level}
+        rows_number = len(next(iter(data.values())))  # length of the first data column
+        level_0 = np.random.choice([0, 1, 2], rows_number)
+        level_1 = np.random.choice([3, 4, 5], rows_number)
+        index = pd.MultiIndex.from_arrays([level_0, level_1])
+
+        modin_df = pd.DataFrame(data, index=index)
+        pandas_df = pandas.DataFrame(data, index=index)
+
+        try:
+            pandas_result = pandas_df.apply(func, **func_kwargs)
+
+        except Exception as e:
+            with pytest.raises(type(e)):
+                modin_df.apply(func, **func_kwargs)
+        else:
+            modin_result = modin_df.apply(func, **func_kwargs)
+            df_equals(modin_result, pandas_result)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     def test_apply_args(self, data, axis):
