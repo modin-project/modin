@@ -2889,12 +2889,55 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_value_counts(data):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+def test_value_counts(normalize, bins, dropna):
+    def sort_index_for_equal_values(result, ascending):
+        is_range = False
+        is_end = False
+        i = 0
+        new_index = np.empty(len(result), dtype=type(result.index))
+        while i < len(result):
+            j = i
+            if i < len(result) - 1:
+                while result[result.index[i]] == result[result.index[i + 1]]:
+                    i += 1
+                    if is_range is False:
+                        is_range = True
+                    if i == len(result) - 1:
+                        is_end = True
+                        break
+            if is_range:
+                k = j
+                for val in sorted(result.index[j : i + 1], reverse=not ascending):
+                    new_index[k] = val
+                    k += 1
+                if is_end:
+                    break
+                is_range = False
+            else:
+                new_index[j] = result.index[j]
+            i += 1
+        return pandas.Series(result, index=new_index)
 
-    with pytest.warns(UserWarning):
-        modin_series.value_counts()
+    # We sort indices for pandas result because of issue #1650
+    modin_series, pandas_series = create_test_series(test_data_values[0])
+    modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(normalize=normalize, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(bins=bins, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(bins=bins, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=dropna, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
