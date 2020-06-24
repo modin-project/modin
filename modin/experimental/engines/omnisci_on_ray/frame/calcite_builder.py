@@ -7,18 +7,89 @@ from pandas.core.dtypes.common import _get_dtype
 
 
 class CalciteBuilder:
+    class CompoundAggregate:
+        def __init__(self, builder, arg):
+            self._builder = builder
+            self._arg = arg
 
-    simple_aggregates = {
-        "sum": "SUM",
-        "mean": "AVG",
-        "max": "MAX",
-        "min": "MIN",
-        "size": "COUNT",
-        "count": "COUNT",
-    }
-    no_arg_aggregates = {"size"}
+        def gen_proj_exprs(self):
+            return []
+
+        def gen_agg_exprs(self):
+            pass
+
+        def gen_reduce_expr(self):
+            pass
+
+    class StdAggregate(CompoundAggregate):
+        def __init__(self, builder, arg):
+            assert isinstance(arg, InputRefExpr)
+            super().__init__(builder, arg)
+
+            self._quad_name = self._arg.column + "__quad__"
+            self._sum_name = self._arg.column + "__sum__"
+            self._quad_sum_name = self._arg.column + "__quad_sum__"
+            self._count_name = self._arg.column + "__count__"
+
+        def gen_proj_exprs(self):
+            expr = self._builder._translate(self._arg.mul(self._arg))
+            return {self._quad_name: expr}
+
+        def gen_agg_exprs(self):
+            count_expr = self._builder._translate(AggregateExpr("count", self._arg))
+            sum_expr = self._builder._translate(AggregateExpr("sum", self._arg))
+            self._sum_dtype = sum_expr._dtype
+            qsum_expr = AggregateExpr(
+                "SUM",
+                self._builder._ref_idx(self._arg.modin_frame, self._quad_name),
+                dtype=sum_expr._dtype,
+            )
+
+            return {
+                self._sum_name: sum_expr,
+                self._quad_sum_name: qsum_expr,
+                self._count_name: count_expr,
+            }
+
+        def gen_reduce_expr(self):
+            count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
+            count_expr._dtype = _get_dtype(int)
+            sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
+            sum_expr._dtype = self._sum_dtype
+            qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
+            qsum_expr._dtype = self._sum_dtype
+
+            null_expr = LiteralExpr(None)
+            count_or_null = build_if_then_else(
+                count_expr.eq(LiteralExpr(0)), null_expr, count_expr, count_expr._dtype
+            )
+            count_m_1_or_null = build_if_then_else(
+                count_expr.eq(LiteralExpr(1)),
+                null_expr,
+                count_expr.sub(LiteralExpr(1)),
+                count_expr._dtype,
+            )
+
+            # sqrt((sum(x * x) - sum(x) * sum(x) / n) / (n - 1))
+            return (
+                qsum_expr.sub(sum_expr.mul(sum_expr).truediv(count_or_null))
+                .truediv(count_m_1_or_null)
+                .pow(LiteralExpr(0.5))
+            )
+
+    _compound_aggregates = {"std": StdAggregate}
 
     class InputContext:
+        _simple_aggregates = {
+            "sum": "SUM",
+            "mean": "AVG",
+            "max": "MAX",
+            "min": "MIN",
+            "size": "COUNT",
+            "count": "COUNT",
+        }
+        _no_arg_aggregates = {"size"}
+
         def __init__(self, input_frames, input_nodes):
             self.input_nodes = input_nodes
             self.frame_to_node = {x: y for x, y in zip(input_frames, input_nodes)}
@@ -71,9 +142,24 @@ class CalciteBuilder:
             and translate all references into CalciteInputRefExr"""
             return self._maybe_copy_and_translate_expr(expr)
 
-        def _maybe_copy_and_translate_expr(self, expr):
+        def _maybe_copy_and_translate_expr(self, expr, ref_idx=False):
             if isinstance(expr, InputRefExpr):
-                return self.ref(expr.modin_frame, expr.column)
+                if ref_idx:
+                    return self.ref_idx(expr.modin_frame, expr.column)
+                else:
+                    return self.ref(expr.modin_frame, expr.column)
+
+            if isinstance(expr, AggregateExpr):
+                expr = expr.copy()
+                if expr.agg in self._no_arg_aggregates:
+                    expr.operands = []
+                else:
+                    expr.operands[0] = self._maybe_copy_and_translate_expr(
+                        expr.operands[0], True
+                    )
+                expr.agg = self._simple_aggregates[expr.agg]
+                return expr
+
             copied = False
             for i, op in enumerate(getattr(expr, "operands", [])):
                 new_op = self._maybe_copy_and_translate_expr(op)
@@ -202,43 +288,52 @@ class CalciteBuilder:
         for col in frame._table_cols:
             if col not in op.by:
                 proj_cols.append(col)
-        proj = CalciteProjectionNode(
-            proj_cols, [self._ref(frame, col) for col in proj_cols]
-        )
+        proj_exprs = [self._ref(frame, col) for col in proj_cols]
+        # Add expressions required for compound aggregates
+        compound_aggs = {}
+        for agg, expr in op.agg_exprs.items():
+            if expr.agg in self._compound_aggregates:
+                compound_aggs[agg] = self._compound_aggregates[expr.agg](
+                    self, expr.operands[0]
+                )
+                extra_exprs = compound_aggs[agg].gen_proj_exprs()
+                proj_cols.extend(extra_exprs.keys())
+                proj_exprs.extend(extra_exprs.values())
+        proj = CalciteProjectionNode(proj_cols, proj_exprs)
         self._push(proj)
 
         self._input_ctx().replace_input_node(frame, proj, proj_cols)
 
-        fields = op.by.copy()
         group = [self._ref_idx(frame, col) for col in op.by]
+        fields = op.by.copy()
         aggs = []
-        for col, agg in op.agg.items():
-            if isinstance(agg, list):
-                for agg_val in agg:
-                    fields.append(col + " " + agg_val)
-                    aggs.append(
-                        self._create_agg_expr(self._ref_idx(frame, col), agg_val)
-                    )
+        for agg, expr in op.agg_exprs.items():
+            if agg in compound_aggs:
+                extra_aggs = compound_aggs[agg].gen_agg_exprs()
+                fields.extend(extra_aggs.keys())
+                aggs.extend(extra_aggs.values())
             else:
-                fields.append(col)
-                aggs.append(self._create_agg_expr(self._ref_idx(frame, col), agg))
+                fields.append(agg)
+                aggs.append(self._translate(expr))
         node = CalciteAggregateNode(fields, group, aggs)
         self._push(node)
+
+        if compound_aggs:
+            self._input_ctx().replace_input_node(frame, node, fields)
+            proj_cols = op.by.copy()
+            proj_exprs = [self._ref(frame, col) for col in proj_cols]
+            proj_cols.extend(op.agg_exprs.keys())
+            for agg in op.agg_exprs:
+                if agg in compound_aggs:
+                    proj_exprs.append(compound_aggs[agg].gen_reduce_expr())
+                else:
+                    proj_exprs.append(self._ref(frame, agg))
+            proj = CalciteProjectionNode(proj_cols, proj_exprs)
+            self._push(proj)
+
         if op.groupby_opts["sort"]:
             collation = [CalciteCollation(col) for col in group]
             self._push(CalciteSortNode(collation))
-
-    def _create_agg_expr(self, col_idx, agg):
-        # TODO: track column dtype and compute aggregate dtype,
-        # actually INTEGER works for floats too with the correct result,
-        # so not a big issue right now
-        res_type = _get_dtype(int)
-        # when we deal with 'size' or similar aggregator no argument should be specified
-        if agg in self.no_arg_aggregates:
-            arg = []
-        else:
-            arg = [col_idx]
-        return AggregateExpr(self.simple_aggregates[agg], arg, res_type, False)
 
     def _process_transform(self, op):
         fields = list(op.exprs.keys())

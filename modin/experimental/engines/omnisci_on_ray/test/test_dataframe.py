@@ -452,6 +452,23 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    std_data = {
+        "a": [1, 2, 1, 1, 1, 2, 2, 2, 1, 2],
+        "b": [4, 3, 1, 6, 9, 8, 0, 9, 5, 13],
+        "c": [12.8, 45.6, 23.5, 12.4, 11.2, None, 56.4, 12.5, 1, 55],
+    }
+
+    def test_agg_std(self):
+        def std(df, **kwargs):
+            df = df.groupby("a").agg({"b": "std", "c": "std"})
+            if not isinstance(df, pd.DataFrame):
+                df = to_pandas(df)
+            df["b"] = df["b"].apply(lambda x: round(x, 10))
+            df["c"] = df["c"].apply(lambda x: round(x, 10))
+            return df
+
+        run_and_compare(std, data=self.std_data)
+
 
 class TestMerge:
     data = {

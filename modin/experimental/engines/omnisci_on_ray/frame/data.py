@@ -29,13 +29,13 @@ from .df_algebra import (
     translate_exprs_to_base,
 )
 from .expr import (
+    AggregateExpr,
     InputRefExpr,
     LiteralExpr,
     OpExpr,
     build_if_then_else,
     build_dt_expr,
     _get_common_dtype,
-    _agg_dtype,
     is_cmp_op,
 )
 from collections import OrderedDict
@@ -176,6 +176,24 @@ class OmnisciOnRayFrame(BasePandasFrame):
             raise NotImplementedError("levels are not supported for groupby")
 
         groupby_cols = by.columns.tolist()
+        agg_cols = [col for col in self.columns if col not in by.columns]
+
+        # Create new base where all required columns are computed. We don't allow
+        # complex expressions to be a group key or an aggeregate operand.
+        assert isinstance(by_frame._op, TransformNode), "unexpected by_frame"
+        exprs = OrderedDict(((col, by_frame.ref(col)) for col in groupby_cols))
+        exprs.update(((col, self.ref(col)) for col in agg_cols))
+        exprs = translate_exprs_to_base(exprs, base)
+        base_cols = Index.__new__(
+            Index, data=list(exprs.keys()), dtype=self.columns.dtype
+        )
+        base = self.__constructor__(
+            columns=base_cols,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(base, exprs, fold=True),
+            index_cols=None,
+        )
+
         new_columns = []
         index_cols = None
 
@@ -186,62 +204,38 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         new_dtypes = by_frame._dtypes[groupby_cols].tolist()
 
-        exprs = OrderedDict()
-        if isinstance(by_frame._op, TransformNode):
-            for col in groupby_cols:
-                exprs[col] = by_frame.ref(col)
-
+        agg_exprs = OrderedDict()
         if isinstance(agg, str):
-            new_agg = {}
-            for col in self.columns:
-                if col not in groupby_cols:
-                    exprs[col] = self.ref(col)
-                    new_agg[col] = agg
-                    new_columns.append(col)
-                    new_dtypes.append(_agg_dtype(agg, self._dtypes[col]))
-            agg = new_agg
+            for col in agg_cols:
+                agg_exprs[col] = AggregateExpr(agg, base.ref(col))
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
             for k, v in agg.items():
-                exprs[k] = self.ref(k)
                 if isinstance(v, list):
                     # TODO: support levels
                     for item in v:
-                        new_columns.append(k + " " + item)
-                        new_dtypes.append(_agg_dtype(item, self._dtypes[k]))
+                        agg_exprs[k + " " + item] = AggregateExpr(item, base.ref(k))
                 else:
-                    new_columns.append(k)
-                    new_dtypes.append(_agg_dtype(v, self._dtypes[k]))
+                    agg_exprs[k] = AggregateExpr(v, base.ref(k))
+        new_columns.extend(agg_exprs.keys())
+        new_dtypes.extend((x._dtype for x in agg_exprs.values()))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
 
-        output_columns = []
-        if isinstance(by_frame._op, TransformNode):
-            """group by modified frame's columns requires special hadling"""
-            exprs = translate_exprs_to_base(exprs, base)
-            transform_columns = []
-            if groupby_args["as_index"]:
-                transform_columns = by_frame.columns.append(new_columns)
-            else:
-                transform_columns = new_columns
-            new_frame = self.__constructor__(
-                columns=transform_columns,
-                dtypes=self._dtypes_for_exprs(exprs),
-                op=TransformNode(base, exprs, fold=True),
-                index_cols=None,
-            )
-            new_op = GroupbyAggNode(new_frame, groupby_cols, agg, groupby_args)
-            if not groupby_args["as_index"]:
-                for col in new_frame.columns:
-                    """in case of as_index=False we output only InputRefExprs
-                       for 'by' columns to align with pandas behavior"""
-                    if col not in groupby_cols or by_frame._op.is_original_ref(col):
-                        output_columns.append(col)
-        else:
-            new_op = GroupbyAggNode(base, groupby_cols, agg, groupby_args)
+        new_op = GroupbyAggNode(base, groupby_cols, agg_exprs, groupby_args)
         new_frame = self.__constructor__(
             columns=new_columns, dtypes=new_dtypes, op=new_op, index_cols=index_cols
         )
-        if len(output_columns) > 0:
+
+        # When 'by' columns do not become a new index, we need to filter out those
+        # columns, which are not simple input refs.
+        if not groupby_args["as_index"] and any(
+            (not by_frame._op.is_original_ref(col) for col in groupby_cols)
+        ):
+            output_columns = [
+                col
+                for col in new_columns
+                if col not in by_frame.columns or by_frame._op.is_original_ref(col)
+            ]
             return new_frame.mask(col_indices=output_columns)
 
         return new_frame

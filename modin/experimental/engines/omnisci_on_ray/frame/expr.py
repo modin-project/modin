@@ -19,7 +19,7 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
 _aggs_with_int_result = {"count", "size"}
-_aggs_with_float_result = {"mean"}
+_aggs_with_float_result = {"mean", "std"}
 
 
 def _agg_dtype(agg, dtype):
@@ -47,6 +47,7 @@ class BaseExpr(abc.ABC):
         "mul": "*",
         "floordiv": "/",
         "truediv": "/",
+        "pow": "POWER",
         "eq": "=",
         "ge": ">=",
         "gt": ">",
@@ -55,7 +56,7 @@ class BaseExpr(abc.ABC):
         "ne": "<>",
     }
 
-    preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv"}
+    preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv", "pow"}
     promote_to_float_math_ops = {"truediv"}
 
     def eq(self, other):
@@ -85,6 +86,24 @@ class BaseExpr(abc.ABC):
         if op_name == "floordiv" and not is_integer_dtype(res_type):
             return new_expr.floor()
         return new_expr
+
+    def add(self, other):
+        return self.bin_op(other, "add")
+
+    def sub(self, other):
+        return self.bin_op(other, "sub")
+
+    def mul(self, other):
+        return self.bin_op(other, "mul")
+
+    def truediv(self, other):
+        return self.bin_op(other, "truediv")
+
+    def floordiv(self, other):
+        return self.bin_op(other, "floordiv")
+
+    def pow(self, other):
+        return self.bin_op(other, "pow")
 
     def floor(self):
         return OpExpr("FLOOR", [self], _get_dtype(int))
@@ -174,21 +193,19 @@ class OpExpr(BaseExpr):
 
 
 class AggregateExpr(BaseExpr):
-    def __init__(self, agg, operands, dtype, distinct):
-        self.agg = agg.upper()
-        self.operands = operands
-        if not isinstance(self.operands, list):
-            self.operands = [self.operands]
-        self._dtype = dtype
+    def __init__(self, agg, op, distinct=False, dtype=None):
+        self.agg = agg
+        self.operands = [op]
+        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype)
         self.distinct = distinct
 
     def copy(self):
-        return OpExpr(self.agg, self.operands.copy(), self._dtype, self.distinct)
+        return AggregateExpr(self.agg, self.operands[0], self.distinct, self._dtype)
 
     def __repr__(self):
         if len(self.operands) == 1:
-            return f"{self.agg} {self.operands[0]} [{self._dtype}]"
-        return f"{self.agg} {self.operands} [{self._dtype}]"
+            return f"{self.agg}({self.operands[0]})[{self._dtype}]"
+        return f"{self.agg}({self.operands})[{self._dtype}]"
 
 
 def build_row_idx_filter_expr(row_idx, row_col):
