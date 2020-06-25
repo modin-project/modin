@@ -20,6 +20,9 @@ from modin.data_management.utils import compute_chunksize
 from modin.engines.base.io.text.text_file_reader import TextFileReader
 
 
+EXCEL_READ_BLOCK_SIZE = 4096
+
+
 class ExcelReader(TextFileReader):
     @classmethod
     def _read(cls, io, **kwargs):
@@ -79,10 +82,10 @@ class ExcelReader(TextFileReader):
             # line. We need to make sure we get the first line of the data as well
             # because that is where the column names are. The header information will
             # be extracted and sent to all of the nodes.
-            sheet_block = f.read(4096)
+            sheet_block = f.read(EXCEL_READ_BLOCK_SIZE)
             end_of_row_tag = b"</row>"
             while end_of_row_tag not in sheet_block:
-                sheet_block += f.read(4096)
+                sheet_block += f.read(EXCEL_READ_BLOCK_SIZE)
             idx_of_header_end = sheet_block.index(end_of_row_tag) + len(end_of_row_tag)
             sheet_header = sheet_block[:idx_of_header_end]
             # Reset the file pointer to begin at the end of the header information.
