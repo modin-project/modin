@@ -13,7 +13,7 @@
 
 import warnings
 
-from modin import execution_engine
+from modin import execution_engine, create_cloud_conn
 
 import pandas
 
@@ -128,6 +128,37 @@ class PandasOnRayFactory(BaseFactory):
         from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
         cls.io_cls = PandasOnRayIO
+
+
+# If IO methods(read_csv for example) will be proxied directly, we only need a dummy factory
+class PandasOnCloudrayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        cls.io_cls = None
+
+
+# If I / O methods are proxied through cls.io cls we are faced with the problem
+# of implicit interaction between the remote object and the local object
+# For example:
+#   ...
+#   File "/localdisk1/amyachev/modin/modin/pandas/io.py", line 130, in _read
+#     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+#   ...
+#   TypeError: issubclass() arg 1 must be a class
+'''
+class PandasOnCloudrayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        conn = create_cloud_conn()
+        cloud_io = conn.modules["modin.engines.ray.pandas_on_ray.io"]
+        cls.io_cls = cloud_io.PandasOnRayIO
+'''
 
 
 class PandasOnPythonFactory(BaseFactory):
