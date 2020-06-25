@@ -387,7 +387,6 @@ class BasePandasDataset(object):
         else:
             raise TypeError("type {} is not callable".format(type(arg)))
 
-    # def _string_function(self, func, axis, *args, **kwargs):
     def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, str)
         f = getattr(self, func, None)
