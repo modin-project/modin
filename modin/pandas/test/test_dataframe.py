@@ -1737,18 +1737,12 @@ class TestDataFrameUDF:
         level_1 = np.random.choice([3, 4, 5], rows_number)
         index = pd.MultiIndex.from_arrays([level_0, level_1])
 
-        modin_df = pd.DataFrame(data, index=index)
-        pandas_df = pandas.DataFrame(data, index=index)
-
-        try:
-            pandas_result = pandas_df.apply(func, **func_kwargs)
-
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.apply(func, **func_kwargs)
-        else:
-            modin_result = modin_df.apply(func, **func_kwargs)
-            df_equals(modin_result, pandas_result)
+        eval_general(
+            pd.DataFrame(data, index=index)
+            pandas.DataFrame(data, index=index)
+            lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
+            **func_kwargs,
+        ) 
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
