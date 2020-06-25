@@ -82,8 +82,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
 
-        sql = "execute relalg " + calcite_json
-        df = omniSession.executeDMLwithRA(sql)
+        df = omniSession.executeRA(calcite_json)
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.

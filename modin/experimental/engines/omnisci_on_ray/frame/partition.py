@@ -48,4 +48,3 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
             length=len(obj.index),
             width=len(obj.columns),
         )
-        

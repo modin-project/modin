@@ -44,8 +44,8 @@ class OmnisciServer:
         return cls._server.executeDML(query)
 
     @classmethod
-    def executeDMLwithRA(cls, query):
-        return cls._server.select_df(query)
+    def executeRA(cls, query):
+        return cls._server.executeRA(query)
 
     @classmethod
     def _genName(cls, name):
