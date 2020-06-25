@@ -134,15 +134,47 @@ from .general import (
     unique,
 )
 from .plotting import Plotting as plotting
-from .. import execution_engine, Publisher
+from .. import execution_engine, Publisher, create_cloud_conn
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
 
+# Register a fix import function to run on all_workers including the driver.
+# This is a hack solution to fix #647, #746
+def move_stdlib_ahead_of_site_packages(*args):
+    site_packages_path = None
+    site_packages_path_index = -1
+    for i, path in enumerate(sys.path):
+        if sys.exec_prefix in path and path.endswith("site-packages"):
+            site_packages_path = path
+            site_packages_path_index = i
+            # break on first found
+            break
 
-def initialize_ray():
-    import ray
+    if site_packages_path is not None:
+        # stdlib packages layout as follows:
+        # - python3.x
+        #   - typing.py
+        #   - site-packages/
+        #     - pandas
+        # So extracting the dirname of the site_packages can point us
+        # to the directory containing standard libraries.
+        sys.path.insert(
+            site_packages_path_index, os.path.dirname(site_packages_path)
+        )
+
+# Register a fix to import pandas on all workers before running tasks.
+# This prevents a race condition between two threads deserializing functions
+# and trying to import pandas at the same time.
+def import_pandas(*args):
+    import pandas  # noqa F401
+
+def initialize_ray(cluster=None, redis_address=None, redis_password=None):
+    if cluster == "True":
+        ray = create_cloud_conn().modules.ray
+    else:
+        import ray
 
     """Initializes ray based on environment variables and internal defaults."""
     if threading.current_thread().name == "MainThread":
@@ -150,13 +182,15 @@ def initialize_ray():
 
         plasma_directory = None
         num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
-        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
-        redis_password = secrets.token_hex(16)
+        cluster = os.environ.get("MODIN_RAY_CLUSTER", None) or cluster
+        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None) or redis_address
+        redis_password = redis_password or secrets.token_hex(16)
+
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
-                num_cpus=int(num_cpus),
+                # TODO: create issue in Modin for running cluster; num_cpus shouldn't be defined
+                # num_cpus=int(num_cpus),
                 include_webui=False,
                 ignore_reinit_error=True,
                 address=redis_address,
@@ -200,40 +234,10 @@ def initialize_ray():
                 lru_evict=True,
             )
 
-        # Register a fix import function to run on all_workers including the driver.
-        # This is a hack solution to fix #647, #746
-        def move_stdlib_ahead_of_site_packages(*args):
-            site_packages_path = None
-            site_packages_path_index = -1
-            for i, path in enumerate(sys.path):
-                if sys.exec_prefix in path and path.endswith("site-packages"):
-                    site_packages_path = path
-                    site_packages_path_index = i
-                    # break on first found
-                    break
-
-            if site_packages_path is not None:
-                # stdlib packages layout as follows:
-                # - python3.x
-                #   - typing.py
-                #   - site-packages/
-                #     - pandas
-                # So extracting the dirname of the site_packages can point us
-                # to the directory containing standard libraries.
-                sys.path.insert(
-                    site_packages_path_index, os.path.dirname(site_packages_path)
-                )
-
         move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
             move_stdlib_ahead_of_site_packages
         )
-
-        # Register a fix to import pandas on all workers before running tasks.
-        # This prevents a race condition between two threads deserializing functions
-        # and trying to import pandas at the same time.
-        def import_pandas(*args):
-            import pandas  # noqa F401
 
         ray.worker.global_worker.run_function_on_all_workers(import_pandas)
 
@@ -252,6 +256,13 @@ def _update_engine(publisher: Publisher):
 
         if _is_first_update.get("Ray", True):
             initialize_ray()
+        num_cpus = ray.cluster_resources()["CPU"]
+    elif publisher.get() == "Cloudray":
+        import pdb;pdb.set_trace()
+        ray = create_cloud_conn().modules.ray
+
+        if _is_first_update.get("Cloudray", True):
+            initialize_ray(cluster="True", redis_address="localhost:6379", redis_password="5241590000000000")
         num_cpus = ray.cluster_resources()["CPU"]
     elif publisher.get() == "Dask":  # pragma: no cover
         from distributed.client import get_client
@@ -279,6 +290,18 @@ def _update_engine(publisher: Publisher):
 
 
 execution_engine.subscribe(_update_engine)
+
+
+class CloudContext():
+    def __init__(self):
+        pass
+    
+    def __enter__(self):
+        execution_engine.put("Cloudray")
+
+    def __exit__(self, *args, **kwargs):
+        execution_engine.put("Ray")
+
 
 __all__ = [
     "DataFrame",
