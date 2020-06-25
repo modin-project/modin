@@ -387,9 +387,22 @@ class BasePandasDataset(object):
         else:
             raise TypeError("type {} is not callable".format(type(arg)))
 
-    def _string_function(self, func, axis, *args, **kwargs):
+    # def _string_function(self, func, axis, *args, **kwargs):
+    def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, str)
-        return self._query_compiler.apply_elementwise(func, axis, *args, **kwargs)
+        f = getattr(self, func, None)
+        if f is not None:
+            if callable(f):
+                return f(*args, **kwargs)
+            assert len(args) == 0
+            assert (
+                len([kwarg for kwarg in kwargs if kwarg not in ["axis", "_level"]]) == 0
+            )
+            return f
+        f = getattr(np, func, None)
+        if f is not None:
+            return self._default_to_pandas("agg", func, *args, **kwargs)
+        raise ValueError("{} is an unknown string function".format(func))
 
     def _get_dtypes(self):
         if hasattr(self, "dtype"):
@@ -567,8 +580,9 @@ class BasePandasDataset(object):
         if isinstance(func, str):
             if axis == 1:
                 kwds["axis"] = axis
-            result = self._string_function(func, axis, *args, **kwds)
-            # Sometimes we can return a scalar here
+            result = self._query_compiler.apply_text_func_elementwise(
+                func, *args, **kwds
+            )
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result

@@ -1419,8 +1419,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             pass
 
-    def apply_elementwise(self, func, axis, *args, **kwargs):
-        """Apply func across given axis elementwise.
+    def apply_text_func_elementwise(self, func, *args, **kwargs):
+        """Apply func passed as str across given axis in elementwise manner.
 
         Args:
             func: The function to apply.
@@ -1429,6 +1429,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
+        assert isinstance(func, str)
+        axis = kwargs.get("axis", 0)
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, lambda df: getattr(df, func)(**kwargs)
         )

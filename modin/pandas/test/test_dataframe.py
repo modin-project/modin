@@ -1738,11 +1738,11 @@ class TestDataFrameUDF:
         index = pd.MultiIndex.from_arrays([level_0, level_1])
 
         eval_general(
-            pd.DataFrame(data, index=index)
-            pandas.DataFrame(data, index=index)
+            pd.DataFrame(data, index=index),
+            pandas.DataFrame(data, index=index),
             lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
             **func_kwargs,
-        ) 
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
