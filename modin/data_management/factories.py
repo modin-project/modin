@@ -155,7 +155,7 @@ class PandasOnCloudrayFactory(BaseFactory):
         """
         Fills in .io_cls class attribute lazily
         """
-        conn = create_cloud_conn()
+        conn = _create_cloud_conn()
         cloud_io = conn.modules["modin.engines.ray.pandas_on_ray.io"]
         cls.io_cls = cloud_io.PandasOnRayIO
 '''

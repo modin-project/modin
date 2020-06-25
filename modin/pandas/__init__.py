@@ -134,7 +134,7 @@ from .general import (
     unique,
 )
 from .plotting import Plotting as plotting
-from .. import execution_engine, Publisher, create_cloud_conn
+from .. import execution_engine, Publisher, _create_cloud_conn
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -173,7 +173,7 @@ def _import_pandas(*args):
 
 def initialize_ray(cluster=None, redis_address=None, redis_password=None):
     if cluster == "True":
-        ray = create_cloud_conn().modules.ray
+        ray = _create_cloud_conn().modules.ray
     else:
         import ray
 
@@ -262,7 +262,7 @@ def _update_engine(publisher: Publisher):
         import pdb
 
         pdb.set_trace()
-        ray = create_cloud_conn().modules.ray
+        ray = _create_cloud_conn().modules.ray
 
         if _is_first_update.get("Cloudray", True):
             initialize_ray(
@@ -299,7 +299,7 @@ def _update_engine(publisher: Publisher):
 execution_engine.subscribe(_update_engine)
 
 
-class CloudContext:
+class _CloudContext:
     def __init__(self):
         pass
 

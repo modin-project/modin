@@ -137,7 +137,7 @@ cloud_server = None
 cloud_conn = None
 
 
-def create_cloud_conn(
+def _create_cloud_conn(
     address="54.215.186.244",
     user="ubuntu",
     keyfile="~/.ssh/ray-autoscaler_us-west-1.pem",

@@ -42,7 +42,7 @@ print(" type of local_df: \n{}\n local_df: \n{}\n memory_usage of local_df: \n{}
     type(local_df), local_df, local_df.memory_usage()
 ))
 
-with pd.CloudContext():
+with pd._CloudContext():
     remote_df = pd.read_csv(f"{remote_modin_path}/modin/modin/pandas/test/data/issue_621.csv")
     print(" type of remote_df: \n{}\n remote_df: \n{}\n memory_usage of remote_df: \n{}\n".format(
         type(remote_df), remote_df, remote_df.memory_usage()
