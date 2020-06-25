@@ -13,7 +13,7 @@
 
 import warnings
 
-from modin import execution_engine, create_cloud_conn
+from modin import execution_engine
 
 import pandas
 
