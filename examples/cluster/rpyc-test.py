@@ -43,6 +43,10 @@ print(" type of local_df: \n{}\n local_df: \n{}\n memory_usage of local_df: \n{}
 ))
 
 with pd._CloudContext():
+    test_df = pd.DataFrame([1,2,3,4])
+    print(test_df.sum())
+    print(type(test_df))
+
     remote_df = pd.read_csv(f"{remote_modin_path}/modin/modin/pandas/test/data/issue_621.csv")
     print(" type of remote_df: \n{}\n remote_df: \n{}\n memory_usage of remote_df: \n{}\n".format(
         type(remote_df), remote_df, remote_df.memory_usage()
@@ -52,3 +56,7 @@ local_df = pd.read_csv(f"{local_modin_path}/modin/modin/pandas/test/data/test_ca
 print(" type of local_df: \n{}\n local_df: \n{}\n memory_usage of local_df: \n{}\n".format(
     type(local_df), local_df, local_df.memory_usage()
 ))
+
+test_df = pd.DataFrame([4,3,2,1])
+print(test_df.sum())
+print(type(test_df))

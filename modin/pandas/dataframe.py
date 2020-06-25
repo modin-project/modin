@@ -42,6 +42,13 @@ from .base import BasePandasDataset
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
 class DataFrame(BasePandasDataset):
+    def __new__(cls, *args, **kwargs):
+        from .. import execution_engine, _create_cloud_conn
+
+        if execution_engine.get() == "Cloudray":
+            return _create_cloud_conn().modules["modin.pandas"].DataFrame(*args, **kwargs)
+        return super(DataFrame, cls).__new__(cls)
+
     def __init__(
         self,
         data=None,
