@@ -46,7 +46,9 @@ class DataFrame(BasePandasDataset):
         from .. import execution_engine, _create_cloud_conn
 
         if execution_engine.get() == "Cloudray":
-            return _create_cloud_conn().modules["modin.pandas"].DataFrame(*args, **kwargs)
+            return (
+                _create_cloud_conn().modules["modin.pandas"].DataFrame(*args, **kwargs)
+            )
         return super(DataFrame, cls).__new__(cls)
 
     def __init__(
