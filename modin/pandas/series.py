@@ -1058,7 +1058,7 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            result = DataFrame(self.copy()).rename(index=index).squeeze()
+            result = DataFrame(self.copy()).rename(index=index).squeeze(axis=1)
             result.name = self.name
             return result
 
@@ -1724,7 +1724,7 @@ class DatetimeProperties(object):
 
     def to_pytimedelta(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze().dt)
+            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
         )
 
     @property
