@@ -21,7 +21,7 @@ from .axis_partition import (
 from .partition import OmnisciOnRayFramePartition
 from modin.error_message import ErrorMessage
 from modin import __execution_engine__
-from .omnisci_worker import put_to_omnisci, OmnisciServer
+from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
 
@@ -59,6 +59,8 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         print("Executing DF plan:")
         plan.dump(">")
 
+        omniSession = OmnisciServer()
+
         # First step is to make sure all partitions are in OmniSci.
         frames = plan.collect_frames()
         for frame in frames:
@@ -75,13 +77,13 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                     if frame._index_cols is not None:
                         df.reset_index(inplace=True)
                         df.columns = frame._table_cols
-                    p.frame_id = put_to_omnisci(df)
+                    p.frame_id = omniSession.put_pandas_to_omnisci(df)
 
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
 
         sql = "execute relalg " + calcite_json
-        df = OmnisciServer()._worker._conn._execute(sql).to_df()
+        df = omniSession.executeDMLwithRA(sql)
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.

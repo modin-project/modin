@@ -11,54 +11,57 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import server.server as server
-import server_worker.server_worker as worker
 import uuid
 import os
 
+from dbe import PyDbEngine
+import pyarrow
 
 class OmnisciServer:
     _server = None
-    _worker = None
 
     @classmethod
-    def start_server(cls):
+    def start_server(cls, db_path='data', calc_port=6001):
         if cls._server is None:
-            server_path = os.environ.get("OMNISCI_SERVER")
-            if server_path is None:
-                raise KeyError(
-                    "you should set OMNISCI_SERVER variable to provide path to OmniSci server executable"
-                )
-            cls._server = server.OmnisciServer(
-                server_path, 6001, "modin_db", 6002, 6003,
-            )
-            # If port is busy then assume omnisci_server is started manually
-            # for debugging
-            out = os.popen("netstat -tln | grep 6001").readlines()
-            if len(out) == 0:
-                cls._server.launch()
-            else:
-                print("Server is already running")
-            cls._worker = worker.OmnisciServerWorker(cls._server)
-            cls._worker.connect_to_server()
-            cls._worker.create_database("modin_db")
+            cls._server = PyDbEngine(db_path, calc_port)
+            #executeDDL("modin_db")
 
     @classmethod
     def stop_server(cls):
         if cls._server is not None:
-            cls._server.terminate()
+            cls._server.reset()
             cls._server = None
-            cls._worker = None
 
     def __init__(self):
         self.start_server()
 
     @classmethod
-    def put(cls, df):
-        frame_id = "frame_" + str(uuid.uuid4()).replace("-", "")
-        cls._worker.import_data_from_pd_df(frame_id, df, df.columns, df.dtypes)
-        return frame_id
+    def executeDDL(cls, query):
+        cls._server.executeDDL(query)
 
+    @classmethod
+    def executeDML(cls, query):
+        return cls._server.executeDML(query)
 
-def put_to_omnisci(df):
-    return OmnisciServer().put(df)
+    @classmethod
+    def executeDMLwithRA(cls, query):
+        return cls._server.select_df(query)
+
+    @classmethod
+    def _genName(cls, name):
+        if not name:
+            name = "frame_" + str(uuid.uuid4()).replace("-", "")
+        # TODO: reword name in case of caller's mistake
+        return name
+
+    @classmethod
+    def put_arrow_to_omnisci(cls, table, name=None):
+        name = cls._genName(name)
+        cls._server.consumeArrowTable(name, table)
+        return name
+
+    @classmethod
+    def put_pandas_to_omnisci(cls, df, name=None):
+        name = cls._genName(name)
+        cls._server.consumeArrowTable(name, pyarrow.Table.from_pandas(df) )
+        return name
