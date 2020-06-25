@@ -143,7 +143,7 @@ num_cpus = 1
 
 # Register a fix import function to run on all_workers including the driver.
 # This is a hack solution to fix #647, #746
-def move_stdlib_ahead_of_site_packages(*args):
+def _move_stdlib_ahead_of_site_packages(*args):
     site_packages_path = None
     site_packages_path_index = -1
     for i, path in enumerate(sys.path):
@@ -167,7 +167,7 @@ def move_stdlib_ahead_of_site_packages(*args):
 # Register a fix to import pandas on all workers before running tasks.
 # This prevents a race condition between two threads deserializing functions
 # and trying to import pandas at the same time.
-def import_pandas(*args):
+def _import_pandas(*args):
     import pandas  # noqa F401
 
 
@@ -235,12 +235,12 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
                 lru_evict=True,
             )
 
-        move_stdlib_ahead_of_site_packages()
+        _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
-            move_stdlib_ahead_of_site_packages
+            _move_stdlib_ahead_of_site_packages
         )
 
-        ray.worker.global_worker.run_function_on_all_workers(import_pandas)
+        ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
 
 DEFAULT_NPARTITIONS = 4
