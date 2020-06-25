@@ -132,3 +132,25 @@ del get_partition_format
 
 __version__ = get_versions()["version"]
 del get_versions
+
+cloud_server = None
+cloud_conn = None
+
+def create_cloud_conn(
+    address="54.215.186.244",
+    user="ubuntu",
+    keyfile="~/.ssh/ray-autoscaler_us-west-1.pem",
+    python_executable="~/miniconda/envs/modin/bin/python",
+):
+    global cloud_conn, cloud_server
+    if cloud_conn is None:
+        from rpyc.utils.zerodeploy import DeployedServer
+        from plumbum import SshMachine
+
+        # create the deployment
+        mach = SshMachine(address, user=user, keyfile=keyfile)
+        cloud_server = DeployedServer(mach, python_executable=python_executable)
+        cloud_conn = cloud_server.classic_connect()
+        # and now you can connect to it the usual way
+        return cloud_conn
+    return cloud_conn
