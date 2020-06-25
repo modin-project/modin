@@ -22,17 +22,13 @@ from modin.engines.base.io.text.text_file_reader import TextFileReader
 
 class ExcelReader(TextFileReader):
     @classmethod
-    def call_deploy(cls, f, chunk_size, num_return_vals, args, quotechar=b'"'):
-        return
-
-    @classmethod
     def _read(cls, io, **kwargs):
         if (
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"
         ):
             warnings.warn(
-                "Modin only implements `read_excel` with `openpyxl` engine, "
+                "Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 'please specify `engine=None` or `engine="openpyxl"` to '
                 "use Modin's parallel implementation."
             )
@@ -100,7 +96,7 @@ class ExcelReader(TextFileReader):
             # Attach cells to the worksheet
             reader.bind_cells()
             data = PandasExcelParser.get_sheet_data(
-                ws, kwargs.pop("convert_float", True)
+                ws, kwargs.get("convert_float", True)
             )
             # Extract column names from parsed data.
             column_names = pandas.Index(data[0])

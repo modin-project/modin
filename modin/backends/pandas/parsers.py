@@ -185,10 +185,10 @@ class PandasExcelParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        header = kwargs.get("_header")
+        _skiprows = kwargs.pop("skiprows")
+        excel_header = kwargs.get("_header")
         sheet_name = kwargs.get("sheet_name", 0)
         footer = b"</sheetData></worksheet>"
-        _skiprows = kwargs.get("skiprows")
 
         # Default to pandas case, where we are not splitting or partitioning
         if start is None or end is None:
@@ -199,11 +199,10 @@ class PandasExcelParser(PandasParser):
         from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
         from openpyxl.worksheet.worksheet import Worksheet
-        from pandas.core.dtypes.common import is_integer, is_list_like
+        from pandas.core.dtypes.common import is_list_like
         from pandas.io.excel._util import (
             _fill_mi_header,
             _maybe_convert_usecols,
-            _pop_header_name,
         )
         from pandas.io.parsers import TextParser
         import re
@@ -224,7 +223,23 @@ class PandasExcelParser(PandasParser):
                 file.seek(start)
                 bytes_data = file.read(end - start)
 
-        def parse1(match):
+        def update_row_nums(match):
+            """Update the row numbers to start at 1.
+
+            Note: This is needed because the parser we are using does not scale well if
+            the row numbers remain because empty rows are inserted for all "missing"
+            rows.
+
+            Parameters
+            ----------
+            match
+                The match from the origin `re.sub` looking for row number tags.
+
+            Returns
+            -------
+            string
+                The updated string with new row numbers.
+            """
             b = match.group(0)
             return re.sub(
                 b"\d+",  # noqa: W605
@@ -234,35 +249,28 @@ class PandasExcelParser(PandasParser):
                 b,
             )
 
-        bytes_data = re.sub(b'r="[A-Z]*\d+"', parse1, bytes_data)  # noqa: W605
-        bytesio = BytesIO(header + bytes_data + footer)
+        bytes_data = re.sub(b'r="[A-Z]*\d+"', update_row_nums, bytes_data)  # noqa: W605
+        bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
-        kwargs["skiprows"] = None
         usecols = _maybe_convert_usecols(kwargs.pop("usecols", None))
         header = kwargs.pop("header", 0)
         index_col = kwargs.pop("index_col", None)
-        skiprows = kwargs.pop("skiprows", None)
+        # skiprows is handled externally
+        skiprows = None
 
+        # Handle header and create MultiIndex for columns if necessary
         if is_list_like(header) and len(header) == 1:
             header = header[0]
         if header is not None and is_list_like(header):
-            header_names = []
             control_row = [True] * len(data[0])
 
             for row in header:
-                if is_integer(skiprows):
-                    row += skiprows
-
                 data[row], control_row = _fill_mi_header(data[row], control_row)
-
-                if index_col is not None:
-                    header_name, _ = _pop_header_name(data[row], index_col)
-                    header_names.append(header_name)
-
+        # Handle MultiIndex for row Index if necessary
         if is_list_like(index_col):
             # Forward fill values for MultiIndex index.
             if not is_list_like(header):
@@ -270,25 +278,21 @@ class PandasExcelParser(PandasParser):
             else:
                 offset = 1 + max(header)
 
-            # Check if we have an empty dataset
-            # before trying to collect data.
+            # Check if dataset is empty
             if offset < len(data):
                 for col in index_col:
                     last = data[offset][col]
-
                     for row in range(offset + 1, len(data)):
                         if data[row][col] == "" or data[row][col] is None:
                             data[row][col] = last
                         else:
                             last = data[row][col]
 
-        has_index_names = is_list_like(header) and len(header) > 1
-
         parser = TextParser(
             data,
             header=header,
             index_col=index_col,
-            has_index_names=has_index_names,
+            has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
             **kwargs
