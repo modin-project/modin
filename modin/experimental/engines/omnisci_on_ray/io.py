@@ -22,6 +22,9 @@ class OmnisciOnRayIO(RayIO):
     frame_cls = OmnisciOnRayFrame
     query_compiler_cls = DFAlgQueryCompiler
 
+    def from_arrow(cls, df):
+        return cls.query_compiler_cls.from_arrow(df, cls.frame_cls)
+
     @classmethod
     def read_csv(
         cls,
@@ -85,7 +88,8 @@ class OmnisciOnRayIO(RayIO):
             # ...or leave it as is, in Arrow,
             # or convert to pandas
             print("hello from arrow read_csv:", at)
-            return cls.from_pandas(at.to_pandas())
+            # todo like p.frame_id = omniSession.put_pandas_to_omnisci(df)
+            return cls.from_arrow(at)
         except:
             ErrorMessage.default_to_pandas("`read_csv`")
             mykwargs = {

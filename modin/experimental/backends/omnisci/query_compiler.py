@@ -47,6 +47,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def from_pandas(cls, df, data_cls):
         return cls(data_cls.from_pandas(df))
 
+    @classmethod
+    def from_arrow(cls, at, data_cls):
+        return cls(data_cls.from_arrow(at))
+
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):

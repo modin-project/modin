@@ -27,6 +27,10 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
     @classmethod
+    def from_arrow(cls, at):
+        return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
+
+    @classmethod
     def read_parquet(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.

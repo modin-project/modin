@@ -288,7 +288,7 @@ class BaseFrameManager(object):
         return np.block([[block.to_numpy() for block in row] for row in partitions])
 
     @classmethod
-    def from_pandas(cls, df, return_dims=False):
+    def from_pandas(cls, df, return_dims=False):  # from_arrow here?
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)

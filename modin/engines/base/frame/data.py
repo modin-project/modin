@@ -1318,6 +1318,29 @@ class BasePandasFrame(object):
             dtypes=new_dtypes,
         )
 
+    @classmethod
+    def from_arrow(cls, at):       # main TODO?
+        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+
+        Args:
+            df: Pandas DataFrame object.
+
+        Returns:
+            A new dataframe.
+        """
+        new_index = at.index
+        new_columns = at.num_columns()
+        new_dtypes = at.dtypes
+        new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(at, True)
+        return cls(
+            new_frame,
+            new_index,
+            new_columns,
+            new_lengths,
+            new_widths,
+            dtypes=new_dtypes,
+        )
+
     def to_pandas(self):
         """Converts Modin DataFrame to Pandas DataFrame.
 

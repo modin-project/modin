@@ -91,6 +91,10 @@ class EngineDispatcher(object):
         return cls.__engine._from_pandas(df)
 
     @classmethod
+    def from_arrow(cls, at):
+        return cls.__engine._from_arrow(at)
+
+    @classmethod
     def from_non_pandas(cls, *args, **kwargs):
         return cls.__engine._from_non_pandas(*args, **kwargs)
 

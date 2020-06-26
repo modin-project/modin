@@ -95,7 +95,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Data Management Methods
 
-    # To/From Pandas
+    # To/From Pandas, Arrow
     @abc.abstractmethod
     def to_pandas(self):
         """Converts Modin DataFrame to Pandas DataFrame.
@@ -114,6 +114,25 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         df: pandas.DataFrame
             The pandas DataFrame to convert from.
+        data_cls :
+            Modin DataFrame object to convert to.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Pandas DataFrame.
+        """
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def from_arrow(cls, at, data_cls):
+        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+        df: Arrow Table
+            The Arrow Table to convert from.
         data_cls :
             Modin DataFrame object to convert to.
 
