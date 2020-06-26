@@ -27,7 +27,6 @@ if pandas.__version__ != __pandas_version__:
 
 from pandas import (
     eval,
-    value_counts,
     cut,
     factorize,
     test,
@@ -132,6 +131,7 @@ from .general import (
     pivot,
     to_numeric,
     unique,
+    value_counts,
 )
 from .plotting import Plotting as plotting
 from .. import execution_engine, Publisher, _create_cloud_conn
@@ -332,7 +332,6 @@ __all__ = [
     "json_normalize",
     "concat",
     "eval",
-    "value_counts",
     "cut",
     "factorize",
     "test",
@@ -412,6 +411,7 @@ __all__ = [
     "pivot",
     "to_numeric",
     "unique",
+    "value_counts",
     "datetime",
     "NamedAgg",
     "DEFAULT_NPARTITIONS",
