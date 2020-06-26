@@ -141,7 +141,37 @@ os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
 
 
-def initialize_ray():
+# Register a fix import function to run on all_workers including the driver.
+# This is a hack solution to fix #647, #746
+def _move_stdlib_ahead_of_site_packages(*args):
+    site_packages_path = None
+    site_packages_path_index = -1
+    for i, path in enumerate(sys.path):
+        if sys.exec_prefix in path and path.endswith("site-packages"):
+            site_packages_path = path
+            site_packages_path_index = i
+            # break on first found
+            break
+
+    if site_packages_path is not None:
+        # stdlib packages layout as follows:
+        # - python3.x
+        #   - typing.py
+        #   - site-packages/
+        #     - pandas
+        # So extracting the dirname of the site_packages can point us
+        # to the directory containing standard libraries.
+        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
+
+
+# Register a fix to import pandas on all workers before running tasks.
+# This prevents a race condition between two threads deserializing functions
+# and trying to import pandas at the same time.
+def _import_pandas(*args):
+    import pandas  # noqa F401
+
+
+def initialize_ray(cluster=None, redis_address=None, redis_password=None):
     import ray
 
     """Initializes ray based on environment variables and internal defaults."""
@@ -150,9 +180,10 @@ def initialize_ray():
 
         plasma_directory = None
         num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
-        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
-        redis_password = secrets.token_hex(16)
+        cluster = os.environ.get("MODIN_RAY_CLUSTER", None) or cluster
+        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None) or redis_address
+        redis_password = redis_password or secrets.token_hex(16)
+
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
@@ -199,42 +230,12 @@ def initialize_ray():
                 lru_evict=True,
             )
 
-        # Register a fix import function to run on all_workers including the driver.
-        # This is a hack solution to fix #647, #746
-        def move_stdlib_ahead_of_site_packages(*args):
-            site_packages_path = None
-            site_packages_path_index = -1
-            for i, path in enumerate(sys.path):
-                if sys.exec_prefix in path and path.endswith("site-packages"):
-                    site_packages_path = path
-                    site_packages_path_index = i
-                    # break on first found
-                    break
-
-            if site_packages_path is not None:
-                # stdlib packages layout as follows:
-                # - python3.x
-                #   - typing.py
-                #   - site-packages/
-                #     - pandas
-                # So extracting the dirname of the site_packages can point us
-                # to the directory containing standard libraries.
-                sys.path.insert(
-                    site_packages_path_index, os.path.dirname(site_packages_path)
-                )
-
-        move_stdlib_ahead_of_site_packages()
+        _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
-            move_stdlib_ahead_of_site_packages
+            _move_stdlib_ahead_of_site_packages
         )
 
-        # Register a fix to import pandas on all workers before running tasks.
-        # This prevents a race condition between two threads deserializing functions
-        # and trying to import pandas at the same time.
-        def import_pandas(*args):
-            import pandas  # noqa F401
-
-        ray.worker.global_worker.run_function_on_all_workers(import_pandas)
+        ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
 
 DEFAULT_NPARTITIONS = 4
