@@ -13,9 +13,14 @@
 
 import uuid
 import os
+import sys
 
-from dbe import PyDbEngine
 import pyarrow
+
+prev = sys.getdlopenflags()
+sys.setdlopenflags( 1|256 )    # RTLD_LAZY+RTLD_GLOBAL
+from dbe import PyDbEngine
+sys.setdlopenflags(prev)
 
 class OmnisciServer:
     _server = None
@@ -41,11 +46,15 @@ class OmnisciServer:
 
     @classmethod
     def executeDML(cls, query):
-        return cls._server.executeDML(query)
+        r = cls._server.executeDML(query)
+        # todo: assert r
+        return r
 
     @classmethod
     def executeRA(cls, query):
-        return cls._server.executeRA(query)
+        r = cls._server.executeRA(query)
+        # todo: assert r
+        return r
 
     @classmethod
     def _genName(cls, name):

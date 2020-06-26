@@ -109,6 +109,7 @@ def _make_parser_func(sep):
         _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
         if kwargs.get("sep", sep) is False:
             kwargs["sep"] = "\t"
+        kwargs.pop("_", None)
         return _read(**kwargs)
 
     return parser_func
