@@ -745,53 +745,56 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ser_index_stop = ser.index.stop
 
             result = ser.searchsorted(*args, **kwargs)
+            if not is_list_like(result):
+                result = [result]
 
-            return [ser_index_start, ser_index_stop, result + ser_index_start]
+            processed_results = {}
+            value_number = 0
+            for value_result in result:
+                value_result += ser_index_start
+
+                if value_result > ser_index_start and value_result < ser_index_stop:
+                    processed_results[f"value{value_number}"] = {
+                        "allocation": 0,
+                        "index": value_result,
+                    }
+                elif value_result <= ser_index_start:
+                    processed_results[f"value{value_number}"] = {
+                        "allocation": -1,
+                        "index": ser_index_start,
+                    }
+                else:
+                    processed_results[f"value{value_number}"] = {
+                        "allocation": 1,
+                        "index": ser_index_stop,
+                    }
+
+                value_number += 1
+
+            return pandas.DataFrame(processed_results)
 
         def reduce_func(map_results, *args, **kwargs):
-            split_size = 3
-            map_results = map_results.squeeze().to_list()
-            map_results_list = [
-                map_results[i : i + split_size]
-                for i in range(0, len(map_results), split_size)
-            ]
+            split_size = 2
+            reduce_result = []
 
-            def allocate_result(result):
-                ind_start = result[0]
-                ind_stop = result[1]
-                result = result[2]
-                if result > ind_start and result < ind_stop:
-                    return 0
-                elif result <= ind_start:
-                    return -1
+            def get_value_index(value_result):
+                alloc = value_result.groupby(level=0).get_group("allocation")
+                ind = value_result.groupby(level=0).get_group("index")
+                # print("alloc\n", alloc)
+                if 0 in alloc.values:
+                    return ind[alloc.values == 0]
+                assert alloc.nunique(dropna=False) == 1
+                if 1 in alloc.values:
+                    return ind[-1]
                 else:
-                    return 1
+                    return ind[0]
 
-            map_results_arrangements = [
-                allocate_result(result) for result in map_results_list
-            ]
-            match = [
-                index
-                for index, value in enumerate(map_results_arrangements)
-                if value == 0
-            ]
-
-            if match:
-                assert len(match) == 1
-                match = match[0]
-                return pandas.Series(map_results_list[match][2])
-
-            elif len(map_results_arrangements):
-                assert all(
-                    [x == map_results_arrangements[0] for x in map_results_arrangements]
-                )
-
-                if map_results_arrangements[0] == -1:
-                    return pandas.Series(np.array(map_results_list[0][0]))
-                else:
-                    return pandas.Series(map_results_list[-1][1])
-            else:
-                return pandas.Series([])
+            map_results_parsed = map_results.apply(
+                lambda ser: get_value_index(ser)
+            ).squeeze()
+            if isinstance(map_results_parsed, pandas.Series):
+                map_results_parsed = map_results_parsed.to_list()
+            return pandas.Series(map_results_parsed)
 
         return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
             self, **kwargs

@@ -1394,11 +1394,18 @@ class Series(BasePandasDataset):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def searchsorted(self, value, side="left", sorter=None):
-        return self.__constructor__(
+        result = self.__constructor__(
             query_compiler=self._query_compiler.searchsorted(
                 value=value, side=side, sorter=sorter
             )
         ).squeeze()
+        if isinstance(result, type(self)):
+            result = result.to_list()
+        elif isinstance(result, np.int64):
+            result = np.int16(result).item()
+            if isinstance(value, list):
+                result = [result]
+        return result
 
     def sort_values(
         self,
