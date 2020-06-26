@@ -1394,9 +1394,11 @@ class Series(BasePandasDataset):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def searchsorted(self, value, side="left", sorter=None):
-        return self._default_to_pandas(
-            pandas.Series.searchsorted, value, side=side, sorter=sorter
-        )
+        return self.__constructor__(
+            query_compiler=self._query_compiler.searchsorted(
+                value=value, side=side, sorter=sorter
+            )
+        ).squeeze()
 
     def sort_values(
         self,

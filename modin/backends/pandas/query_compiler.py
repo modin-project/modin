@@ -730,6 +730,73 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self, **kwargs
         )
 
+    def searchsorted(self, **kwargs):
+        """
+        Return a QueryCompiler of scalar or array containing values indicies.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+
+        def map_func(ser, *args, **kwargs):
+            ser = ser.squeeze()
+            ser_index_start = ser.index.start
+            ser_index_stop = ser.index.stop
+
+            result = ser.searchsorted(*args, **kwargs)
+
+            return [ser_index_start, ser_index_stop, result + ser_index_start]
+
+        def reduce_func(map_results, *args, **kwargs):
+            split_size = 3
+            map_results = map_results.squeeze().to_list()
+            map_results_list = [
+                map_results[i : i + split_size]
+                for i in range(0, len(map_results), split_size)
+            ]
+
+            def allocate_result(result):
+                ind_start = result[0]
+                ind_stop = result[1]
+                result = result[2]
+                if result > ind_start and result < ind_stop:
+                    return 0
+                elif result <= ind_start:
+                    return -1
+                else:
+                    return 1
+
+            map_results_arrangements = [
+                allocate_result(result) for result in map_results_list
+            ]
+            match = [
+                index
+                for index, value in enumerate(map_results_arrangements)
+                if value == 0
+            ]
+
+            if match:
+                assert len(match) == 1
+                match = match[0]
+                return pandas.Series(map_results_list[match][2])
+
+            elif len(map_results_arrangements):
+                assert all(
+                    [x == map_results_arrangements[0] for x in map_results_arrangements]
+                )
+
+                if map_results_arrangements[0] == -1:
+                    return pandas.Series(np.array(map_results_list[0][0]))
+                else:
+                    return pandas.Series(map_results_list[-1][1])
+            else:
+                return pandas.Series([])
+
+        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
+            self, **kwargs
+        )
+
     # END MapReduce operations
 
     # Reduction operations
