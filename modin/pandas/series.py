@@ -1394,6 +1394,10 @@ class Series(BasePandasDataset):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def searchsorted(self, value, side="left", sorter=None):
+        if sorter is not None:
+            self.index = sorter
+            self.sort_index(inplace=True)
+            sorter = None
         result = self.__constructor__(
             query_compiler=self._query_compiler.searchsorted(
                 value=value, side=side, sorter=sorter

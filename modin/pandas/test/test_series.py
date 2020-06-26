@@ -180,8 +180,8 @@ def create_test_series(vals, sort=False):
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
     if sort:
-        modin_series = modin_series.sort_values()
-        pandas_series = pandas_series.sort_values()
+        modin_series = modin_series.sort_values().reset_index(drop=True)
+        pandas_series = pandas_series.sort_values().reset_index(drop=True)
     return modin_series, pandas_series
 
 
@@ -2628,7 +2628,7 @@ def test_searchsorted(data, side, values_number, sorter):
     min_sammple = modin_series.min(skipna=True)
     max_sammple = modin_series.max(skipna=True)
 
-    exact_values = modin_series.sample(n=values_number)
+    exact_values = list(modin_series.sample(n=values_number))
     mean_values = np.random.uniform(
         low=min_sammple, high=max_sammple, size=values_number
     )

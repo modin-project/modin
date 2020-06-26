@@ -780,7 +780,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def get_value_index(value_result):
                 alloc = value_result.groupby(level=0).get_group("allocation")
                 ind = value_result.groupby(level=0).get_group("index")
-                # print("alloc\n", alloc)
                 if 0 in alloc.values:
                     return ind[alloc.values == 0]
                 assert alloc.nunique(dropna=False) == 1
