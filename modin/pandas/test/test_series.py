@@ -2628,37 +2628,32 @@ def test_searchsorted(data, side, values_number, sorter):
     min_sammple = modin_series.min(skipna=True)
     max_sammple = modin_series.max(skipna=True)
 
-    exact_values = list(modin_series.sample(n=values_number))
-    mean_values = np.random.uniform(
-        low=min_sammple, high=max_sammple, size=values_number
+    values = []
+    values.append(modin_series.sample(n=values_number))
+    values.append(
+        np.random.uniform(low=min_sammple, high=max_sammple, size=values_number)
     )
-    out_of_range_values_1 = np.random.uniform(
-        low=max_sammple, high=2 * max_sammple, size=values_number
+    values.append(
+        np.random.uniform(low=max_sammple, high=2 * max_sammple, size=values_number)
     )
-    out_of_range_values_2 = np.random.uniform(
-        low=min_sammple - max_sammple, high=min_sammple, size=values_number
+    values.append(
+        np.random.uniform(
+            low=min_sammple - max_sammple, high=min_sammple, size=values_number
+        )
     )
+    values = [list(value) for value in values]
 
-    assert list(
-        modin_series.searchsorted(value=exact_values, side=side, sorter=sorter)
-    ) == list(pandas_series.searchsorted(value=exact_values, side=side, sorter=sorter))
-    assert list(
-        modin_series.searchsorted(value=mean_values, side=side, sorter=sorter)
-    ) == list(pandas_series.searchsorted(value=mean_values, side=side, sorter=sorter))
-    assert list(
-        modin_series.searchsorted(value=out_of_range_values_1, side=side, sorter=sorter)
-    ) == list(
-        pandas_series.searchsorted(
-            value=out_of_range_values_1, side=side, sorter=sorter
-        )
-    )
-    assert list(
-        modin_series.searchsorted(value=out_of_range_values_2, side=side, sorter=sorter)
-    ) == list(
-        pandas_series.searchsorted(
-            value=out_of_range_values_2, side=side, sorter=sorter
-        )
-    )
+    test_cases = [
+        modin_series.searchsorted(value=value, side=side, sorter=sorter)
+        == pandas_series.searchsorted(value=value, side=side, sorter=sorter)
+        for value in values
+    ]
+    test_cases = [
+        case.all() if not isinstance(case, bool) else case for case in test_cases
+    ]
+
+    for case in test_cases:
+        assert case
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
