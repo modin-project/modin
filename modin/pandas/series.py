@@ -493,9 +493,6 @@ class Series(BasePandasDataset):
             or return_type not in ["DataFrame", "Series"]
         ):
             query_compiler = super(Series, self).apply(func, *args, **kwds)
-            # Sometimes we can return a scalar here
-            if not isinstance(query_compiler, type(self._query_compiler)):
-                return query_compiler
         else:
             # handle ufuncs and lambdas
             if kwds or args and not isinstance(func, np.ufunc):
