@@ -3270,8 +3270,9 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
+    # just check
     @pytest.mark.skipif(
-        os.name == "nt",
+        os.name == "nt" and execution_engine.get().lower() != "dask",
         reason="Windows has a memory issue for large numbers on this test",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3325,8 +3326,9 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
+    # just check
     @pytest.mark.skipif(
-        os.name == "nt",
+        os.name == "nt" and execution_engine.get().lower() != "dask",
         reason="Windows has a memory issue for large numbers on this test",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
