@@ -636,11 +636,9 @@ class DataFrame(BasePandasDataset):
                     i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
                 ]
             )
-
             cols = numeric_df.columns
             idx = cols.copy()
             numeric_df = numeric_df.astype(dtype="float64")
-
             return numeric_df._nancorr(idx, cols, min_periods=min_periods)
 
         return self._query_compiler.default_to_pandas(
@@ -2737,16 +2735,13 @@ class DataFrame(BasePandasDataset):
                 else:
                     vx = vx - meanx
                     vy = vy - meany
-
                     sumxy = (vx * vy).sum()
                     sumxx = (vx * vx).sum()
                     sumyy = (vy * vy).sum()
 
                     denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
-
                     if denom != 0:
                         result[xi, yi] = result[yi, xi] = sumxy / denom
                     else:
                         result[xi, yi] = result[yi, xi] = np.nan
-
         return self.__constructor__(result, index=index, columns=columns)

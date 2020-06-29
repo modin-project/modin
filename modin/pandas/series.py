@@ -589,7 +589,6 @@ class Series(BasePandasDataset):
 
             if len(this) == 0:
                 return np.nan
-
             if len(this) != len(other):
                 raise ValueError("Operands must have same size")
 
@@ -600,13 +599,11 @@ class Series(BasePandasDataset):
             if not valid.all():
                 this = this[valid]
                 other = other[valid]
-
             if len(this) < min_periods:
                 return np.nan
 
             this = this.astype(dtype="float64")
             other = other.astype(dtype="float64")
-
             this -= this.mean()
             other -= other.mean()
 
@@ -623,10 +620,8 @@ class Series(BasePandasDataset):
             result /= stddev_this * stddev_other
 
             np.clip(result.real, -1, 1, out=result.real)
-
             if np.iscomplexobj(result):
                 np.clip(result.imag, -1, 1, out=result.imag)
-
             return result[0]
 
         return self.__constructor__(
