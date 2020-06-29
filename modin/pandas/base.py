@@ -577,11 +577,7 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
-            if axis == 1:
-                kwds["axis"] = axis
-            result = self._query_compiler.apply_text_func_elementwise(
-                func, *args, **kwds
-            )
+            result = self._query_compiler.apply(func, axis=axis, *args, **kwds)
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result

@@ -1410,7 +1410,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        if callable(func):
+        if isinstance(func, str):
+            return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
+        elif callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
         elif isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
@@ -1419,7 +1421,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             pass
 
-    def apply_text_func_elementwise(self, func, *args, **kwargs):
+    def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
         """Apply func passed as str across given axis in elementwise manner.
 
         Args:
@@ -1430,7 +1432,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new PandasQueryCompiler.
         """
         assert isinstance(func, str)
-        axis = kwargs.get("axis", 0)
+        kwargs["axis"] = axis
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, lambda df: getattr(df, func)(**kwargs)
         )
