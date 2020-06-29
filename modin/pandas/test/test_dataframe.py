@@ -57,6 +57,8 @@ from .utils import (
     eval_general,
 )
 
+from modin import execution_engine
+
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
