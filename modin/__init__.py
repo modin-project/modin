@@ -88,7 +88,7 @@ def get_partition_format():
 class Publisher(object):
     def __init__(self, name, value):
         self.name = name
-        self.__value = value
+        self.__value = value.title()
         self.__subs = set()
         self.__once = collections.defaultdict(set)
 
@@ -97,6 +97,7 @@ class Publisher(object):
         callback(self)
 
     def once(self, onvalue, callback):
+        onvalue = onvalue.title()
         if onvalue == self.__value:
             callback(self)
         else:
@@ -106,6 +107,7 @@ class Publisher(object):
         return self.__value
 
     def put(self, value):
+        value = value.title()  # normalize the value
         oldvalue, self.__value = self.__value, value
         if oldvalue != value:
             for callback in self.__subs:
@@ -123,9 +125,6 @@ class Publisher(object):
 __version__ = "0.6.3"
 execution_engine = Publisher(name="execution_engine", value=get_execution_engine())
 partition_format = Publisher(name="partition_format", value=get_partition_format())
-
-# for backwards compatibility, remove when all items are migrated to new PubSub model
-__execution_engine__ = execution_engine.get()
 
 # We don't want these used outside of this file.
 del get_execution_engine

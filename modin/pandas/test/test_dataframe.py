@@ -54,45 +54,13 @@ from .utils import (
     bool_arg_values,
     int_arg_keys,
     int_arg_values,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
-
-
-def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
-    md_kwargs, pd_kwargs = {}, {}
-
-    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
-        try:
-            pd_result = fn(pandas_df, **pd_kwargs)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
-        else:
-            md_result = fn(modin_df, **md_kwargs)
-            return md_result, pd_result
-
-    for key, value in kwargs.items():
-        if callable(value):
-            values = execute_callable(value)
-            # that means, that callable raised an exception
-            if values is None:
-                return
-            else:
-                md_value, pd_value = values
-        else:
-            md_value, pd_value = value, value
-
-        md_kwargs[key] = md_value
-        pd_kwargs[key] = pd_value
-
-    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
-    if values is not None:
-        comparator(*values)
 
 
 def eval_insert(modin_df, pandas_df, **kwargs):
@@ -105,6 +73,10 @@ def eval_insert(modin_df, pandas_df, **kwargs):
         operation=lambda df, **kwargs: df.insert(**kwargs),
         **_kwargs,
     )
+
+
+def create_test_dfs(*args, **kwargs):
+    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
 
 
 class TestDataFrameBinary:
@@ -5441,6 +5413,22 @@ class TestDataFrameIter:
         pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
         modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
         df_equals(pandas_df, modin_df)
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            np.arange(1, 10000, dtype=np.float32),
+            [
+                pd.Series([1, 2, 3], dtype="int32"),
+                pandas.Series([4, 5, 6], dtype="int64"),
+                np.array([7, 8, 9], dtype=np.float32),
+            ],
+            pandas.Categorical([1, 2, 3, 4, 5]),
+        ],
+    )
+    def test_constructor_dtypes(self, data):
+        md_df, pd_df = create_test_dfs(data)
+        df_equals(md_df, pd_df)
 
     def test_constructor_columns_and_index(self):
         modin_df = pd.DataFrame(

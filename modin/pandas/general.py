@@ -288,3 +288,39 @@ def unique(values):
         The unique values returned as a NumPy array.
     """
     return Series(values).unique()
+
+
+def value_counts(
+    values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
+):
+    """
+    Compute a histogram of the counts of non-null values.
+
+    Parameters
+    ----------
+    values : ndarray (1-d)
+    sort : bool, default True
+        Sort by values
+    ascending : bool, default False
+        Sort in ascending order
+    normalize: bool, default False
+        If True then compute a relative histogram
+    bins : integer, optional
+        Rather than count values, group them into half-open bins,
+        convenience for pd.cut, only works with numeric data
+    dropna : bool, default True
+        Don't include counts of NaN
+
+    Returns
+    -------
+    Series
+
+    Notes
+    -----
+    The indices of resulting object will be in descending
+    (ascending, if ascending=True) order for equal values.
+    It slightly differ from pandas where indices are located in random order.
+    """
+    return Series(values).value_counts(
+        sort=sort, ascending=ascending, normalize=normalize, bins=bins, dropna=dropna,
+    )

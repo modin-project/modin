@@ -319,6 +319,57 @@ def test_unique():
     assert_array_equal(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+def test_value_counts(normalize, bins, dropna):
+    def sort_index_for_equal_values(result, ascending):
+        is_range = False
+        is_end = False
+        i = 0
+        new_index = np.empty(len(result), dtype=type(result.index))
+        while i < len(result):
+            j = i
+            if i < len(result) - 1:
+                while result[result.index[i]] == result[result.index[i + 1]]:
+                    i += 1
+                    if is_range is False:
+                        is_range = True
+                    if i == len(result) - 1:
+                        is_end = True
+                        break
+            if is_range:
+                k = j
+                for val in sorted(result.index[j : i + 1], reverse=not ascending):
+                    new_index[k] = val
+                    k += 1
+                if is_end:
+                    break
+                is_range = False
+            else:
+                new_index[j] = result.index[j]
+            i += 1
+        return pandas.Series(result, index=new_index)
+
+    # We sort indices for pandas result because of issue #1650
+    values = np.array([3, 1, 2, 3, 4, np.nan])
+    modin_result = pd.value_counts(values, normalize=normalize, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, normalize=normalize, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, bins=bins, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, bins=bins, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, dropna=dropna, ascending=True)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, dropna=dropna, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
+
+
 def test_to_datetime():
     # DataFrame input for to_datetime
     modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})

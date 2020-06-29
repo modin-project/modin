@@ -13,7 +13,7 @@
 
 import warnings
 
-from modin import __execution_engine__ as execution_engine
+from modin import execution_engine
 
 import pandas
 
@@ -155,7 +155,7 @@ class PandasOnDaskFactory(BaseFactory):
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     def _read_sql(cls, **kwargs):
-        if execution_engine != "Ray":
+        if execution_engine.get() != "Ray":
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(

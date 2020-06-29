@@ -780,16 +780,26 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None):
-        """Apply function that will reduce the data to a Pandas Series.
+    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
+        """
+        Apply function that will reduce the data to a Pandas Series.
 
-        Args:
-            axis: 0 for columns and 1 for rows. Default is 0.
-            map_func: Callable function to map the dataframe.
-            reduce_func: Callable function to reduce the dataframe. If none,
-                then apply map_func twice.
+        Parameters
+        ----------
+            axis : 0 or 1
+                0 for columns and 1 for rows.
+            map_func : callable
+                Callable function to map the dataframe.
+            reduce_func : callable
+                Callable function to reduce the dataframe.
+                If none, then apply map_func twice. Default is None.
+            preserve_index : boolean
+                The flag to preserve index for default behavior
+                map and reduce operations. Default is True.
 
-        Return:
+        Returns
+        -------
+        BasePandasFrame
             A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
@@ -802,17 +812,36 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(axis, reduce_parts)
+        if preserve_index:
+            return self._compute_map_reduce_metadata(axis, reduce_parts)
+        else:
+            if axis == 0:
+                new_index = ["__reduced__"]
+                new_columns = self._frame_mgr_cls.get_indices(
+                    1, reduce_parts, lambda df: df.columns
+                )
+            else:
+                new_index = self._frame_mgr_cls.get_indices(
+                    0, reduce_parts, lambda df: df.index
+                )
+                new_columns = ["__reduced__"]
+            return self.__constructor__(reduce_parts, new_index, new_columns)
 
-    def _map(self, func, dtypes=None):
+    def _map(self, func, dtypes=None, validate_index=False):
         """Perform a function that maps across the entire dataset.
 
-        Args:
-            func: The function to apply.
-            dtypes: (optional) The data types for the result. This is an optimization
+        Pamareters
+        ----------
+            func : callable
+                The function to apply.
+            dtypes :
+                (optional) The data types for the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
-        Returns:
+            validate_index : bool, (default False)
+                Is index validation required after performing `func` on partitions.
+        Returns
+        -------
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
@@ -822,11 +851,21 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
+        if validate_index:
+            new_index = self._frame_mgr_cls.get_indices(
+                0, new_partitions, lambda df: df.index
+            )
+        else:
+            new_index = self.index
+        if len(new_index) != len(self.index):
+            new_row_lengths = None
+        else:
+            new_row_lengths = self._row_lengths
         return self.__constructor__(
             new_partitions,
-            self.index,
+            new_index,
             self.columns,
-            self._row_lengths,
+            new_row_lengths,
             self._column_widths,
             dtypes=dtypes,
         )

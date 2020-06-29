@@ -12,7 +12,7 @@ dependencies:
   - wheel=0.34.2=py38_0
   - wincertstore=0.2=py38_0
   - pip:
-    - pandas==1.0.3
+    - pandas==1.0.5
     - numpy
     - pyarrow>=0.13.0
     - dask[complete]>=2.1.0

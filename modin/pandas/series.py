@@ -1132,12 +1132,38 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            result = DataFrame(self.copy()).rename(index=index).squeeze()
+            result = DataFrame(self.copy()).rename(index=index).squeeze(axis=1)
             result.name = self.name
             return result
 
     def repeat(self, repeats, axis=None):
-        return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
+        """
+        Repeat elements of a Series.
+
+        Returns a new Series where each element of the current Series
+        is repeated consecutively a given number of times.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element. This should be a
+            non-negative integer. Repeating 0 times will return an empty
+            Series.
+        axis : None
+            Must be ``None``. Has no effect but is accepted for compatibility
+            with numpy.
+
+        Returns
+        -------
+        Series
+            Newly created Series with repeated elements.
+        """
+        if (isinstance(repeats, int) and repeats == 0) or (
+            is_list_like(repeats) and len(repeats) == 1 and repeats[0] == 0
+        ):
+            return self.__constructor__()
+
+        return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
         if drop and level is None:
@@ -1433,13 +1459,46 @@ class Series(BasePandasDataset):
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
     ):
-        return self._default_to_pandas(
-            pandas.Series.value_counts,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            bins=bins,
-            dropna=dropna,
+        """
+        Return a Series containing counts of unique values.
+
+        The resulting object will be in descending order so that the
+        first element is the most frequently-occurring element.
+        Excludes NA values by default.
+
+        Parameters
+        ----------
+        normalize : bool, default False
+            If True then the object returned will contain the relative
+            frequencies of the unique values.
+        sort : bool, default True
+            Sort by frequencies.
+        ascending : bool, default False
+            Sort in ascending order.
+        bins : int, optional
+            Rather than count values, group them into half-open bins,
+            a convenience for ``pd.cut``, only works with numeric data.
+        dropna : bool, default True
+            Don't include counts of NaN.
+
+        Returns
+        -------
+        Series
+
+        Notes
+        -----
+        The indices of resulting object will be in descending
+        (ascending, if ascending=True) order for equal values.
+        It slightly differ from pandas where indices are located in random order.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
         )
 
     def view(self, dtype=None):
@@ -1739,7 +1798,7 @@ class DatetimeProperties(object):
 
     def to_pytimedelta(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze().dt)
+            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
         )
 
     @property

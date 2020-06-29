@@ -53,6 +53,7 @@ from .utils import (
     int_arg_values,
     encoding_types,
     categories_equals,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -2272,12 +2273,30 @@ def test_reorder_levels():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "repeats", [2, 3, 4], ids=["repeats_{}".format(i) for i in [2, 3, 4]]
+    "repeats", [0, 2, 3, 4], ids=["repeats_{}".format(i) for i in [0, 2, 3, 4]]
 )
 def test_repeat(data, repeats):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        df_equals(modin_series.repeat(repeats), pandas_series.repeat(repeats))
+    eval_general(pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats))
+
+
+@pytest.mark.parametrize("data", [np.arange(256)])
+@pytest.mark.parametrize(
+    "repeats",
+    [
+        [0],
+        [2],
+        [3],
+        [4],
+        np.arange(256),
+        [0] * 64 + [2] * 64 + [3] * 32 + [4] * 32 + [5] * 64,
+        [2] * 257,
+        [2] * 128,
+    ],
+)
+def test_repeat_lists(data, repeats):
+    eval_general(
+        pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2871,12 +2890,55 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_value_counts(data):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+def test_value_counts(normalize, bins, dropna):
+    def sort_index_for_equal_values(result, ascending):
+        is_range = False
+        is_end = False
+        i = 0
+        new_index = np.empty(len(result), dtype=type(result.index))
+        while i < len(result):
+            j = i
+            if i < len(result) - 1:
+                while result[result.index[i]] == result[result.index[i + 1]]:
+                    i += 1
+                    if is_range is False:
+                        is_range = True
+                    if i == len(result) - 1:
+                        is_end = True
+                        break
+            if is_range:
+                k = j
+                for val in sorted(result.index[j : i + 1], reverse=not ascending):
+                    new_index[k] = val
+                    k += 1
+                if is_end:
+                    break
+                is_range = False
+            else:
+                new_index[j] = result.index[j]
+            i += 1
+        return pandas.Series(result, index=new_index)
 
-    with pytest.warns(UserWarning):
-        modin_series.value_counts()
+    # We sort indices for pandas result because of issue #1650
+    modin_series, pandas_series = create_test_series(test_data_values[0])
+    modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(normalize=normalize, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(bins=bins, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(bins=bins, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=dropna, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

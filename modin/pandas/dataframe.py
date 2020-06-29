@@ -111,9 +111,17 @@ class DataFrame(BasePandasDataset):
                 "Distributing {} object. This may take some time.".format(type(data))
             )
             if is_list_like(data) and not is_dict_like(data):
-                data = [
+                old_dtype = getattr(data, "dtype", None)
+                values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
+                if isinstance(data, np.ndarray):
+                    data = np.array(values, dtype=old_dtype)
+                else:
+                    try:
+                        data = type(data)(values, dtype=old_dtype)
+                    except TypeError:
+                        data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):

@@ -55,7 +55,7 @@ def _set_axis(axis):
 
 def _str_map(func_name):
     def str_op_builder(df, *args, **kwargs):
-        str_s = df.squeeze().str
+        str_s = df.squeeze(axis=1).str
         return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
 
     return str_op_builder
@@ -80,7 +80,7 @@ def _dt_prop_map(property_name):
     """
 
     def dt_op_builder(df, *args, **kwargs):
-        prop_val = getattr(df.squeeze().dt, property_name)
+        prop_val = getattr(df.squeeze(axis=1).dt, property_name)
         if isinstance(prop_val, pandas.Series):
             return prop_val.to_frame()
         elif isinstance(prop_val, pandas.DataFrame):
@@ -110,7 +110,7 @@ def _dt_func_map(func_name):
     """
 
     def dt_op_builder(df, *args, **kwargs):
-        dt_s = df.squeeze().dt
+        dt_s = df.squeeze(axis=1).dt
         return pandas.DataFrame(
             getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
         )
@@ -320,7 +320,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         copy_df_for_func(pandas.DataFrame.update), join_type="left"
     )
     series_update = BinaryFunction.register(
-        copy_df_for_func(lambda x, y: pandas.Series.update(x.squeeze(), y.squeeze())),
+        copy_df_for_func(
+            lambda x, y: pandas.Series.update(x.squeeze(axis=1), y.squeeze(axis=1))
+        ),
         join_type="left",
     )
 
@@ -461,11 +463,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         monotonic_fn = funcs.get(type, funcs["increasing"])
 
         def is_monotonic_map(df):
-            df = df.squeeze()
+            df = df.squeeze(axis=1)
             return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
 
         def is_monotonic_reduce(df):
-            df = df.squeeze()
+            df = df.squeeze(axis=1)
 
             common_case = df[0].all()
             left_edges = df[1]
@@ -509,6 +511,100 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ),
     )
 
+    def value_counts(self, **kwargs):
+        """
+        Return a QueryCompiler of Series containing counts of unique values.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+        if kwargs.get("bins", None) is not None:
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                0, lambda df: df.squeeze(axis=1).value_counts(**kwargs)
+            )
+            return self.__constructor__(new_modin_frame)
+
+        def map_func(df, *args, **kwargs):
+            return df.squeeze(axis=1).value_counts(**kwargs)
+
+        def reduce_func(df, *args, **kwargs):
+            normalize = kwargs.get("normalize", False)
+            sort = kwargs.get("sort", True)
+            ascending = kwargs.get("ascending", False)
+            dropna = kwargs.get("dropna", True)
+
+            try:
+                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except (ValueError):
+                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
+
+            if not dropna and np.nan in df.index:
+                result = result.append(
+                    pandas.Series(
+                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
+                    )
+                )
+            if normalize:
+                result = result / df.squeeze(axis=1).sum()
+
+            result = result.sort_values(ascending=ascending) if sort else result
+
+            # We want to sort both values and indices of the result object.
+            # This function will sort indices for equal values.
+            def sort_index_for_equal_values(result, ascending):
+                """
+                Sort indices for equal values of result object.
+
+                Parameters
+                ----------
+                result : pandas.Series or pandas.DataFrame with one column
+                    The object whose indices for equal values is needed to sort.
+                ascending : boolean
+                    Sort in ascending (if it is True) or descending (if it is False) order.
+
+                Returns
+                -------
+                pandas.DataFrame
+                    A new DataFrame with sorted indices.
+                """
+                is_range = False
+                is_end = False
+                i = 0
+                new_index = np.empty(len(result), dtype=type(result.index))
+                while i < len(result):
+                    j = i
+                    if i < len(result) - 1:
+                        while result[result.index[i]] == result[result.index[i + 1]]:
+                            i += 1
+                            if is_range is False:
+                                is_range = True
+                            if i == len(result) - 1:
+                                is_end = True
+                                break
+                    if is_range:
+                        k = j
+                        for val in sorted(
+                            result.index[j : i + 1], reverse=not ascending
+                        ):
+                            new_index[k] = val
+                            k += 1
+                        if is_end:
+                            break
+                        is_range = False
+                    else:
+                        new_index[j] = result.index[j]
+                    i += 1
+                return pandas.DataFrame(result, index=new_index)
+
+            return sort_index_for_equal_values(result, ascending)
+
+        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
+            self, **kwargs
+        )
+
     # END MapReduce operations
 
     # Reduction operations
@@ -526,7 +622,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(
-        lambda df, *args, **kwargs: pandas.to_datetime(df.squeeze(), *args, **kwargs),
+        lambda df, *args, **kwargs: pandas.to_datetime(
+            df.squeeze(axis=1), *args, **kwargs
+        ),
         axis=1,
     )
 
@@ -549,13 +647,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
     series_view = MapFunction.register(
-        lambda df, *args, **kwargs: pandas.DataFrame(df.squeeze().view(*args, **kwargs))
+        lambda df, *args, **kwargs: pandas.DataFrame(
+            df.squeeze(axis=1).view(*args, **kwargs)
+        )
     )
     to_numeric = MapFunction.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
-            pandas.to_numeric(df.squeeze(), *args, **kwargs)
+            pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
         )
     )
+
+    def repeat(self, repeats):
+        def map_fn(df):
+            return pandas.DataFrame(df.squeeze(axis=1).repeat(repeats))
+
+        if isinstance(repeats, int) or (is_list_like(repeats) and len(repeats) == 1):
+            return MapFunction.register(map_fn, validate_index=True)(self)
+        else:
+            return self.__constructor__(self._modin_frame._apply_full_axis(0, map_fn))
 
     # END Map partitions operations
 
@@ -619,7 +728,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             The unique values returned as a NumPy array.
         """
         new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze().unique(), new_columns=self.columns,
+            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -851,17 +960,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def nsmallest(self, n, columns=0, keep="first"):
+    def nsmallest(self, n, columns=None, keep="first"):
         def map_func(df, n=n, keep=keep, columns=columns):
-            if isinstance(df.squeeze(), pandas.DataFrame):
-                return pandas.DataFrame.nsmallest(df, n=n, columns=columns, keep=keep)
-            else:
-                return pandas.Series.nsmallest(df.squeeze(), n=n, keep=keep)
+            if columns is None:
+                return pandas.DataFrame(
+                    pandas.Series.nsmallest(df.squeeze(axis=1), n=n, keep=keep)
+                )
+            return pandas.DataFrame.nsmallest(df, n=n, columns=columns, keep=keep)
 
-        if len(self.columns) != 1:
-            new_columns = self.columns
+        if columns is None:
+            new_columns = ["__reduced__"]
         else:
-            new_columns = None
+            new_columns = self.columns
 
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis=0, func=map_func, new_columns=new_columns

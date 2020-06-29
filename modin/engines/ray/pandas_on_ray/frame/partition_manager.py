@@ -20,28 +20,27 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
 
-if __execution_engine__ == "Ray":
-    import ray
+import ray
 
-    @ray.remote
-    def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
-        if call_queue_df is not None and len(call_queue_df) > 0:
-            for call, kwargs in call_queue_df:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                df = call(df, **kwargs)
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                other = call(other, **kwargs)
-        return apply_func(df, other)
+
+@ray.remote
+def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, ray.ObjectID):
+                call = ray.get(call)
+            if isinstance(kwargs, ray.ObjectID):
+                kwargs = ray.get(kwargs)
+            df = call(df, **kwargs)
+    if call_queue_other is not None and len(call_queue_other) > 0:
+        for call, kwargs in call_queue_other:
+            if isinstance(call, ray.ObjectID):
+                call = ray.get(call)
+            if isinstance(kwargs, ray.ObjectID):
+                kwargs = ray.get(kwargs)
+            other = call(other, **kwargs)
+    return apply_func(df, other)
 
 
 class PandasOnRayFrameManager(RayFrameManager):
