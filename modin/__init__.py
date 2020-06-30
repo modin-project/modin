@@ -138,7 +138,6 @@ cloud_conn = None
 
 
 def _create_cloud_conn(
-    address="54.215.186.244",
     user="ubuntu",
     keyfile="~/.ssh/ray-autoscaler_us-west-1.pem",
     python_executable="~/miniconda/envs/modin/bin/python",
@@ -148,8 +147,18 @@ def _create_cloud_conn(
         from rpyc.utils.zerodeploy import DeployedServer
         from plumbum import SshMachine
 
-        # create the deployment
-        mach = SshMachine(address, user=user, keyfile=keyfile)
+        # TODO execute this command where `ray up` command will be executed
+        # export MODIN_RAY_REDIS_ADDRESS=`ray get_head_ip examples/cluster/aws_example.yaml`
+
+        redis_address = os.environ.get("MODIN_RAY_REDIS_ADDRESS")
+        proxy_address = os.environ.get("MODIN_RAY_PROXY_ADDRESS")
+
+        if proxy_address:
+            proxy_opts = ("-o", f"ProxyCommand=nc -x {proxy_address} %h %p")
+        else:
+            proxy_opts = None
+
+        mach = SshMachine(redis_address, user=user, keyfile=keyfile, ssh_opts=proxy_opts, scp_opts=proxy_opts)
         cloud_server = DeployedServer(mach, python_executable=python_executable)
         cloud_conn = cloud_server.classic_connect()
         # and now you can connect to it the usual way

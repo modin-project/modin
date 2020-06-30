@@ -28,12 +28,11 @@ To move an object from one context to another need to fix:
 
 """
 
-import ray
-ray.init(address="auto")
+import os
+os.environ["MODIN_ENGINE"] = "python"
 
 import modin.pandas as pd
 
-import os
 local_modin_path = os.environ["LOCAL_MODIN_PATH"]
 remote_modin_path = os.environ["REMOTE_MODIN_PATH"]
 
