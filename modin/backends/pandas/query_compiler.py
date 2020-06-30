@@ -740,32 +740,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
         """
 
-        def map_func(ser, *args, **kwargs):
-            ser = ser.squeeze()
-            ser_index_start = ser.index.values.min()
-            ser_index_stop = ser.index.values.max() + 1
+        def map_func(part, *args, **kwargs):
 
-            result = ser.searchsorted(*args, **kwargs)
+            elements_number = len(part.index)
+            assert elements_number > 0, "Wrong mapping behaviour of MapReduce"
+
+            if elements_number == 1:
+                part = part[part.columns[0]]
+            else:
+                part = part.squeeze()
+
+            part_index_start = part.index.values.min()
+            part_index_stop = part.index.values.max() + 1
+
+            result = part.searchsorted(*args, **kwargs)
 
             processed_results = {}
             value_number = 0
             for value_result in result:
-                value_result += ser_index_start
+                value_result += part_index_start
 
-                if value_result > ser_index_start and value_result < ser_index_stop:
+                if value_result > part_index_start and value_result < part_index_stop:
                     processed_results[f"value{value_number}"] = {
                         "allocation": 0,
                         "index": value_result,
                     }
-                elif value_result <= ser_index_start:
+                elif value_result <= part_index_start:
                     processed_results[f"value{value_number}"] = {
                         "allocation": -1,
-                        "index": ser_index_start,
+                        "index": part_index_start,
                     }
                 else:
                     processed_results[f"value{value_number}"] = {
                         "allocation": 1,
-                        "index": ser_index_stop,
+                        "index": part_index_stop,
                     }
 
                 value_number += 1
@@ -778,7 +786,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ind = value_result.groupby(level=0).get_group("index")
                 # executes if result is inside of the mapped part
                 if 0 in alloc.values:
-                    assert alloc[alloc == 0].count() == 1
+                    assert (
+                        alloc[alloc == 0].count() == 1
+                    ), "Each value should have single result"
                     return ind[alloc.values == 0]
                 # executes if result is between mapped parts
                 elif alloc.nunique(dropna=False) > 1:

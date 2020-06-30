@@ -2629,7 +2629,7 @@ def test_searchsorted(data, side, values_number, sorter):
     max_sammple = modin_series.max(skipna=True)
 
     values = []
-    values.append(modin_series.sample(n=values_number))
+    values.append(pandas_series.sample(n=values_number))
     values.append(
         np.random.uniform(low=min_sammple, high=max_sammple, size=values_number)
     )
@@ -2641,7 +2641,6 @@ def test_searchsorted(data, side, values_number, sorter):
             low=min_sammple - max_sammple, high=min_sammple, size=values_number
         )
     )
-    values = [list(value) for value in values]
 
     test_cases = [
         modin_series.searchsorted(value=value, side=side, sorter=sorter)
