@@ -85,7 +85,6 @@ from pandas import (
 )
 import threading
 import os
-import sys
 import multiprocessing
 
 from .. import __version__
@@ -134,108 +133,12 @@ from .general import (
     value_counts,
 )
 from .plotting import Plotting as plotting
+from .utils import initialize_ray
 from .. import execution_engine, Publisher
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
 num_cpus = 1
-
-
-# Register a fix import function to run on all_workers including the driver.
-# This is a hack solution to fix #647, #746
-def _move_stdlib_ahead_of_site_packages(*args):
-    site_packages_path = None
-    site_packages_path_index = -1
-    for i, path in enumerate(sys.path):
-        if sys.exec_prefix in path and path.endswith("site-packages"):
-            site_packages_path = path
-            site_packages_path_index = i
-            # break on first found
-            break
-
-    if site_packages_path is not None:
-        # stdlib packages layout as follows:
-        # - python3.x
-        #   - typing.py
-        #   - site-packages/
-        #     - pandas
-        # So extracting the dirname of the site_packages can point us
-        # to the directory containing standard libraries.
-        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
-
-
-# Register a fix to import pandas on all workers before running tasks.
-# This prevents a race condition between two threads deserializing functions
-# and trying to import pandas at the same time.
-def _import_pandas(*args):
-    import pandas  # noqa F401
-
-
-def initialize_ray(cluster=None, redis_address=None, redis_password=None):
-    import ray
-
-    """Initializes ray based on environment variables and internal defaults."""
-    if threading.current_thread().name == "MainThread":
-        import secrets
-
-        plasma_directory = None
-        num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None) or cluster
-        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None) or redis_address
-        redis_password = redis_password or secrets.token_hex(16)
-
-        if cluster == "True" and redis_address is not None:
-            # We only start ray in a cluster setting for the head node.
-            ray.init(
-                include_webui=False,
-                ignore_reinit_error=True,
-                address=redis_address,
-                redis_password=redis_password,
-                logging_level=100,
-            )
-        elif cluster is None:
-            object_store_memory = os.environ.get("MODIN_MEMORY", None)
-            if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
-                from tempfile import gettempdir
-
-                plasma_directory = gettempdir()
-                # We may have already set the memory from the environment variable, we don't
-                # want to overwrite that value if we have.
-                if object_store_memory is None:
-                    # Round down to the nearest Gigabyte.
-                    mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                    # Default to 8x memory for out of core
-                    object_store_memory = 8 * mem_bytes
-            # In case anything failed above, we can still improve the memory for Modin.
-            if object_store_memory is None:
-                # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                )
-                # If the memory pool is smaller than 2GB, just use the default in ray.
-                if object_store_memory == 0:
-                    object_store_memory = None
-            else:
-                object_store_memory = int(object_store_memory)
-            ray.init(
-                num_cpus=int(num_cpus),
-                include_webui=False,
-                ignore_reinit_error=True,
-                plasma_directory=plasma_directory,
-                object_store_memory=object_store_memory,
-                address=redis_address,
-                redis_password=redis_password,
-                logging_level=100,
-                memory=object_store_memory,
-                lru_evict=True,
-            )
-
-        _move_stdlib_ahead_of_site_packages()
-        ray.worker.global_worker.run_function_on_all_workers(
-            _move_stdlib_ahead_of_site_packages
-        )
-
-        ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
 
 DEFAULT_NPARTITIONS = 4
