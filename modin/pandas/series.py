@@ -929,6 +929,44 @@ class Series(BasePandasDataset):
         """
         return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
+    def slice_shift(self, periods=1, axis=0):
+        """
+        Equivalent to `shift` without copying data.
+        The shifted data will not include the dropped periods and the
+        shifted axis will be smaller than the original.
+        Parameters
+        ----------
+        periods : int
+            Number of periods to move, can be positive or negative.
+        axis : int or str
+            Shift direction.
+        Returns
+        -------
+        shifted : same type as caller
+        """
+        if periods == 0:
+            return self.copy()
+
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                return Series(dtype=self.dtype)
+            else:
+                if periods > 0:
+                    new_index = self.index.drop(labels=self.index[:periods])
+                    new_df = self.drop(self.index[-periods:])
+                else:
+                    new_index = self.index.drop(labels=self.index[periods:])
+                    new_df = self.drop(self.index[:-periods])
+
+                new_df.index = new_index
+                return new_df
+        else:
+            raise ValueError(
+                "No axis named {axis} for object type {type}".format(
+                    axis=axis, type=type(self)
+                )
+            )
+
     @property
     def plot(
         self,

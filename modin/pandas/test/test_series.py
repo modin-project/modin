@@ -2470,10 +2470,22 @@ def test_skew(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_slice_shift(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.slice_shift()
+@pytest.mark.parametrize("index", ["default", "ndarray"])
+@pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
+def test_slice_shift(data, index, periods):
+    if index == "default":
+        modin_series, pandas_series = create_test_series(data)
+    elif index == "ndarray":
+        modin_series, pandas_series = create_test_series(data)
+        data_column_length = len(data[next(iter(data))])
+        index_data = np.arange(2, data_column_length + 2)
+        modin_series.index = index_data
+        pandas_series.index = index_data
+
+    df_equals(
+        modin_series.slice_shift(periods=periods),
+        pandas_series.slice_shift(periods=periods),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

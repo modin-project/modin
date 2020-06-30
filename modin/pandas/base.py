@@ -2672,9 +2672,6 @@ class BasePandasDataset(object):
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):
-        return self._default_to_pandas("slice_shift", periods=periods, axis=axis)
-
     def sort_index(
         self,
         axis=0,
