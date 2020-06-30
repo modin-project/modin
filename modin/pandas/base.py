@@ -1487,11 +1487,7 @@ class BasePandasDataset(object):
                     .rename(None)
                 )
 
-            return self.__constructor__(
-                query_compiler=self._query_compiler.apply(
-                    func=lambda df: df.kurt(**func_kwargs), axis=0
-                )
-            )
+            return self.apply("kurt", **func_kwargs)
 
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
