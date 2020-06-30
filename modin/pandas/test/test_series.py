@@ -1769,9 +1769,10 @@ def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
         "level": level,
         "numeric_only": numeric_only,
     }
+    modin_series, pandas_series = create_test_series(data)
 
     eval_general(
-        pd.Series(data), pandas.Series(data), lambda df: df.apply(method), **func_kwargs
+        modin_series, pandas_series, lambda df: df.kurtosis(**func_kwargs),
     )
 
 

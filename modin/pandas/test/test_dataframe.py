@@ -2310,8 +2310,7 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
     @pytest.mark.parametrize("level", [None, -1, 0, 1])
     @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-    @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
-    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
+    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only):
         func_kwargs = {
             "axis": axis,
             "skipna": skipna,
@@ -2322,8 +2321,7 @@ class TestDataFrameDefault:
         eval_general(
             pd.DataFrame(test_data_values[0]),
             pandas.DataFrame(test_data_values[0]),
-            lambda df, *args, **kwargs: df.apply(method, *args, **kwargs),
-            **func_kwargs,
+            lambda df: df.kurtosis(**func_kwargs),
         )
 
     def test_last(self):
