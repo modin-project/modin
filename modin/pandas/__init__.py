@@ -156,7 +156,6 @@ def initialize_ray():
         if cluster == "True" and redis_address is not None:
             # We only start ray in a cluster setting for the head node.
             ray.init(
-                num_cpus=int(num_cpus),
                 include_webui=False,
                 ignore_reinit_error=True,
                 address=redis_address,
