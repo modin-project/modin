@@ -360,7 +360,7 @@ class DataFrame(BasePandasDataset):
                 init_kwargs = {"columns": self.columns}
             return_type = type(
                 getattr(pandas, self.__name__)(**init_kwargs).apply(
-                    func, axis=axis, raw=raw, result_type=result_type,
+                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
                 )
             ).__name__
         except Exception:
@@ -372,9 +372,9 @@ class DataFrame(BasePandasDataset):
                 query_compiler=query_compiler
             )
             if isinstance(result, Series):
-                if axis == 0 and result.name == self.index[0]:
+                if axis == 0 and result.name == self.index[0] or result.name == 0:
                     result.name = None
-                elif axis == 1 and result.name == self.columns[0]:
+                elif axis == 1 and result.name == self.columns[0] or result.name == 0:
                     result.name = None
             return result
 
