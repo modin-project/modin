@@ -57,8 +57,6 @@ from .utils import (
     eval_general,
 )
 
-from modin import execution_engine
-
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
@@ -3272,9 +3270,8 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
-    # just check
     @pytest.mark.skipif(
-        os.name == "nt" and execution_engine.get().lower() != "dask",
+        os.name == "nt",
         reason="Windows has a memory issue for large numbers on this test",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3328,9 +3325,8 @@ class TestDataFrameReduction_B:
             )
             df_equals(modin_result, pandas_result)
 
-    # just check
     @pytest.mark.skipif(
-        os.name == "nt" and execution_engine.get().lower() != "dask",
+        os.name == "nt",
         reason="Windows has a memory issue for large numbers on this test",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
