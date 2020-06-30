@@ -2312,20 +2312,19 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
     @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
     def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
-        data = test_data_values[0]
-        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-        try:
-            pandas_result = getattr(pandas_df, method)(
-                axis, skipna, level, numeric_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                repr(
-                    getattr(modin_df, method)(axis, skipna, level, numeric_only)
-                )  # repr to force materialization
-        else:
-            modin_result = getattr(modin_df, method)(axis, skipna, level, numeric_only)
-            df_equals(modin_result, pandas_result)
+        func_kwargs = {
+            "axis": axis,
+            "skipna": skipna,
+            "level": level,
+            "numeric_only": numeric_only,
+        }
+
+        eval_general(
+            pd.DataFrame(test_data_values[0]),
+            pandas.DataFrame(test_data_values[0]),
+            lambda df, *args, **kwargs: df.apply(method, *args, **kwargs),
+            **func_kwargs,
+        )
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")

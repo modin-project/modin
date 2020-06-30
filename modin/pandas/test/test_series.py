@@ -1763,19 +1763,16 @@ def test_keys(data):
 )
 @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = getattr(pandas_series, method)(
-            axis, skipna, level, numeric_only
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(
-                getattr(modin_series, method)(axis, skipna, level, numeric_only)
-            )  # repr to force materialization
-    else:
-        modin_result = getattr(modin_series, method)(axis, skipna, level, numeric_only)
-        df_equals(modin_result, pandas_result)
+    func_kwargs = {
+        "axis": axis,
+        "skipna": skipna,
+        "level": level,
+        "numeric_only": numeric_only,
+    }
+
+    eval_general(
+        pd.Series(data), pandas.Series(data), lambda df: df.apply(method), **func_kwargs
+    )
 
 
 def test_last():
