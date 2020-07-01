@@ -15,12 +15,11 @@ import pandas
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
-from modin.engines.base.frame.data import BasePandasFrame
 
 
 class BaseIO(object):
     query_compiler_cls: BaseQueryCompiler = None
-    frame_cls: BasePandasFrame = None
+    frame_cls = None
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):

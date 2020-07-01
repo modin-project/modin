@@ -14,7 +14,7 @@
 import warnings
 
 from modin import execution_engine
-from modin.engines.base.io.io import BaseIO
+from modin.engines.base.io import BaseIO
 
 import pandas
 
