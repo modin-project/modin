@@ -2329,6 +2329,7 @@ class DataFrame(BasePandasDataset):
         ).squeeze(axis=1)
         if isinstance(s, Series):
             s._parent = self
+            s._parent_axis = 1
         return s
 
     def _getitem_array(self, key):

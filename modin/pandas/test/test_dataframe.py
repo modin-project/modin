@@ -4456,6 +4456,48 @@ class TestDataFrameIndexing:
             transposed_pandas.loc[transposed_pandas.index[:-2], :],
         )
 
+    def test_loc_assignment(self):
+        modin_df = pd.DataFrame(
+            index=["row1", "row2", "row3"], columns=["col1", "col2"]
+        )
+        pandas_df = pandas.DataFrame(
+            index=["row1", "row2", "row3"], columns=["col1", "col2"]
+        )
+        modin_df.loc["row1"]["col1"] = 11
+        modin_df.loc["row2"]["col1"] = 21
+        modin_df.loc["row3"]["col1"] = 31
+        modin_df.loc["row1"]["col2"] = 12
+        modin_df.loc["row2"]["col2"] = 22
+        modin_df.loc["row3"]["col2"] = 32
+        pandas_df.loc["row1"]["col1"] = 11
+        pandas_df.loc["row2"]["col1"] = 21
+        pandas_df.loc["row3"]["col1"] = 31
+        pandas_df.loc["row1"]["col2"] = 12
+        pandas_df.loc["row2"]["col2"] = 22
+        pandas_df.loc["row3"]["col2"] = 32
+        df_equals(modin_df, pandas_df)
+
+    def test_iloc_assignment(self):
+        modin_df = pd.DataFrame(
+            index=["row1", "row2", "row3"], columns=["col1", "col2"]
+        )
+        pandas_df = pandas.DataFrame(
+            index=["row1", "row2", "row3"], columns=["col1", "col2"]
+        )
+        modin_df.iloc[0]["col1"] = 11
+        modin_df.iloc[1]["col1"] = 21
+        modin_df.iloc[2]["col1"] = 31
+        modin_df.iloc[0]["col2"] = 12
+        modin_df.iloc[1]["col2"] = 22
+        modin_df.iloc[2]["col2"] = 32
+        pandas_df.iloc[0]["col1"] = 11
+        pandas_df.iloc[1]["col1"] = 21
+        pandas_df.iloc[2]["col1"] = 31
+        pandas_df.iloc[0]["col2"] = 12
+        pandas_df.iloc[1]["col2"] = 22
+        pandas_df.iloc[2]["col2"] = 32
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_pop(self, request, data):
         modin_df = pd.DataFrame(data)

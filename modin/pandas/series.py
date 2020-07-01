@@ -113,6 +113,12 @@ class Series(BasePandasDataset):
 
     name = property(_get_name, _set_name)
     _parent = None
+    # Parent axis denotes axis that was used to select series in a parent dataframe.
+    # If _parent_axis == 0, then it means that index axis was used via df.loc[row]
+    # indexing operations and assignments should be done to rows of parent.
+    # If _parent_axis == 1 it means that column axis was used via df[column] and assignments
+    # should be done to columns of parent.
+    _parent_axis = 0
 
     def _reduce_dimension(self, query_compiler):
         return query_compiler.to_pandas().squeeze()
@@ -325,7 +331,10 @@ class Series(BasePandasDataset):
         )
         # Propagate changes back to parent so that column in dataframe had the same contents
         if self._parent is not None:
-            self._parent[self.name] = self
+            if self._parent_axis == 0:
+                self._parent.loc[self.name] = self
+            else:
+                self._parent[self.name] = self
 
     def __sub__(self, right):
         return self.sub(right)
