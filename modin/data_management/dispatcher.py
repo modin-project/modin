@@ -55,7 +55,7 @@ class EngineDispatcher(object):
     This is the 'ingestion' point which knows where to route the work
     """
 
-    __engine = None
+    __engine: factories.BaseFactory = None
 
     @classmethod
     def get_engine(cls) -> factories.BaseFactory:
