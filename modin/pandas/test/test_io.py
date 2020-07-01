@@ -259,7 +259,10 @@ def setup_excel_file(row_size, force=False):
 
 def teardown_excel_file():
     if os.path.exists(TEST_EXCEL_FILENAME):
-        os.remove(TEST_EXCEL_FILENAME)
+        try:
+            os.remove(TEST_EXCEL_FILENAME)
+        except PermissionError:
+            pass
 
 
 def setup_feather_file(row_size, force=False):
@@ -560,6 +563,30 @@ def test_from_excel():
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
+def test_from_excel_engine():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
+def test_from_excel_index_col():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, index_col=0)
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, index_col=0)
 
     df_equals(modin_df, pandas_df)
 

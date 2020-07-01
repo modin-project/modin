@@ -20,6 +20,7 @@ from modin.engines.base.io import (
     ParquetReader,
     FeatherReader,
     SQLReader,
+    ExcelReader,
 )
 from modin.backends.pandas.parsers import (
     PandasCSVParser,
@@ -28,6 +29,7 @@ from modin.backends.pandas.parsers import (
     PandasParquetParser,
     PandasFeatherParser,
     PandasSQLParser,
+    PandasExcelParser,
 )
 from modin.engines.ray.task_wrapper import RayTask
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
@@ -55,3 +57,4 @@ class PandasOnRayIO(RayIO):
         "", (RayTask, PandasFeatherParser, FeatherReader), build_args
     ).read
     read_sql = type("", (RayTask, PandasSQLParser, SQLReader), build_args).read
+    read_excel = type("", (RayTask, PandasExcelParser, ExcelReader), build_args).read
