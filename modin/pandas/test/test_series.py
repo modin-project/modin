@@ -880,10 +880,12 @@ def test_at_time():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_autocorr(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.autocorr()
+@pytest.mark.parametrize("lag", [1, 2, 3])
+def test_autocorr(data, lag):
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.autocorr(lag=lag)
+    pandas_result = pandas_series.autocorr(lag=lag)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
