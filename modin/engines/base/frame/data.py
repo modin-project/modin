@@ -553,6 +553,8 @@ class BasePandasFrame(object):
                 elif isinstance(new_dtype, str) and new_dtype == "category":
                     new_dtypes = None
                     break
+                else:
+                    new_dtypes[column] = new_dtype
 
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})

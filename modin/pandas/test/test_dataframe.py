@@ -809,6 +809,14 @@ class TestDataFrameMapMetadata:
         expected_df_casted = expected_df.astype(bad_dtype_dict)
         df_equals(modin_df_casted, expected_df_casted)
 
+        modin_df = pd.DataFrame(index=["row1"], columns=["col1"])
+        modin_df["col1"]["row1"] = 11
+        modin_df_casted = modin_df.astype(int)
+        expected_df = pandas.DataFrame(index=["row1"], columns=["col1"])
+        expected_df["col1"]["row1"] = 11
+        expected_df_casted = expected_df.astype(int)
+        df_equals(modin_df_casted, expected_df_casted)
+
         with pytest.raises(KeyError):
             modin_df.astype({"not_exists": np.uint8})
 
