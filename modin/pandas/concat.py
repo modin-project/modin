@@ -108,8 +108,15 @@ def concat(
             new_idx_labels = {
                 k: v.index if axis == 0 else v.columns for k, v in zip(keys, objs)
             }
-            tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
+            tuples = [
+                (k, *o) if isinstance(o, tuple) else (k, o)
+                for k, obj in new_idx_labels.items()
+                for o in obj
+            ]
             new_idx = pandas.MultiIndex.from_tuples(tuples)
+            old_name = _determine_name(objs, axis)
+            if old_name:
+                new_idx.names = [None] + old_name
     else:
         new_idx = None
     new_query_compiler = objs[0].concat(
@@ -132,3 +139,25 @@ def concat(
         else:
             result_df.columns = new_idx
     return result_df
+
+
+def _determine_name(objs: list, axis):
+    axis_getter = (lambda df: df.columns) if axis else (lambda df: df.index)
+    name_getter = (
+        (lambda df: axis_getter(df).names)
+        if isinstance(axis_getter(objs[0]), pandas.MultiIndex)
+        else (lambda df: axis_getter(df).name)
+    )
+
+    names = [name_getter(obj) for obj in objs]
+
+    if all(
+        [
+            names[i] == names[j]
+            for i in range(len(names))
+            for j in range(i + 1, len(names))
+        ]
+    ):
+        return [names[0]] if isinstance(names[0], str) else names[0]
+    else:
+        return None
