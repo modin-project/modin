@@ -23,26 +23,35 @@ pd.DEFAULT_NPARTITIONS = 4
 
 
 def generate_dfs():
-    df = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col4": [12, 13, 14, 15],
-            "col5": [0, 0, 0, 0],
-        }
-    )
+    data1 = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 10, 11],
+        "col4": [12, 13, 14, 15],
+        "col5": [0, 0, 0, 0],
+    }
+    data2 = {
+        "col1": [0, 1, 2, 3],
+        "col2": [4, 5, 6, 7],
+        "col3": [8, 9, 10, 11],
+        "col6": [12, 13, 14, 15],
+        "col7": [0, 0, 0, 0],
+    }
+    df = pandas.DataFrame(data1, columns=pandas.Index(data1.keys(), name="some name"))
 
-    df2 = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col6": [12, 13, 14, 15],
-            "col7": [0, 0, 0, 0],
-        }
-    )
+    df2 = pandas.DataFrame(data2, columns=pandas.Index(data2.keys(), name="some name"))
     return df, df2
+
+
+def generate_multiindex_dfs():
+    def generate_multiindex(index):
+        return pandas.MultiIndex.from_tuples(
+            [("a", x) for x in index.values], names=["name1", "name2"]
+        )
+
+    df1, df2 = generate_dfs()
+    df1.columns, df2.columns = map(generate_multiindex, [df1.columns, df2.columns])
+    return df1, df2
 
 
 def generate_none_dfs():
@@ -206,4 +215,16 @@ def test_concat_with_empty_frame():
     df_equals(
         pd.concat([modin_empty_df, modin_row]),
         pandas.concat([pandas_empty_df, pandas_row]),
+    )
+
+
+def test_concat_multiindex():
+    pd_df1, pd_df2 = generate_multiindex_dfs()
+    md_df1, md_df2 = map(from_pandas, [pd_df1, pd_df2])
+
+    keys = ["first", "second"]
+
+    df_equals(
+        pd.concat([md_df1, md_df2], keys=keys),
+        pandas.concat([pd_df1, pd_df2], keys=keys),
     )
