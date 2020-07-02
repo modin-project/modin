@@ -81,7 +81,7 @@ def create_test_dfs(*args, **kwargs):
 
 class TestDataFrameBinary:
     def inter_df_math_helper(self, modin_df, pandas_df, op):
-        # Test dataframe to datframe
+        # Test dataframe to dataframe
         try:
             pandas_result = getattr(pandas_df, op)(pandas_df)
         except Exception as e:

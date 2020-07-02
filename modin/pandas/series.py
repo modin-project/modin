@@ -559,10 +559,84 @@ class Series(BasePandasDataset):
         )
 
     def corr(self, other, method="pearson", min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.corr, other, method=method, min_periods=min_periods
+        """
+        Compute correlation with `other` Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the correlation.
+        method : {'pearson', 'kendall', 'spearman'} or callable
+            Method used to compute correlation:
+
+            - pearson : Standard correlation coefficient
+            - kendall : Kendall Tau correlation coefficient
+            - spearman : Spearman rank correlation
+            - callable: Callable with input two 1d ndarrays and returning a float.
+
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Correlation with other.
+
+        Notes
+        -----
+        Correlation floating point precision may slightly differ from pandas.
+
+        For now pearson method is available only. For other methods defaults to pandas.
+        """
+        if method == "pearson":
+            this, other = self.align(other, join="inner", copy=False)
+            this = self.__constructor__(this)
+            other = self.__constructor__(other)
+
+            if len(this) == 0:
+                return np.nan
+            if len(this) != len(other):
+                raise ValueError("Operands must have same size")
+
+            if min_periods is None:
+                min_periods = 1
+
+            valid = this.notna() & other.notna()
+            if not valid.all():
+                this = this[valid]
+                other = other[valid]
+            if len(this) < min_periods:
+                return np.nan
+
+            this = this.astype(dtype="float64")
+            other = other.astype(dtype="float64")
+            this -= this.mean()
+            other -= other.mean()
+
+            other = other.__constructor__(query_compiler=other._query_compiler.conj())
+            result = this * other / (len(this) - 1)
+            result = np.array([result.sum()])
+
+            stddev_this = ((this * this) / (len(this) - 1)).sum()
+            stddev_other = ((other * other) / (len(other) - 1)).sum()
+
+            stddev_this = np.array([np.sqrt(stddev_this)])
+            stddev_other = np.array([np.sqrt(stddev_other)])
+
+            result /= stddev_this * stddev_other
+
+            np.clip(result.real, -1, 1, out=result.real)
+            if np.iscomplexobj(result):
+                np.clip(result.imag, -1, 1, out=result.imag)
+            return result[0]
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.default_to_pandas(
+                pandas.Series.corr,
+                other._query_compiler,
+                method=method,
+                min_periods=min_periods,
+            )
         )
 
     def count(self, level=None):
