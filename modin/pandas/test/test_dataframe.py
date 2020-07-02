@@ -2095,11 +2095,10 @@ class TestDataFrameDefault:
             modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2)
         )
 
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_corr(self, data):
-        modin_result = pd.DataFrame(data).corr()
-        pandas_result = pandas.DataFrame(data).corr()
-        df_equals(modin_result, pandas_result)
+    def test_corr(self):
+        data = test_data_values[0]
+        with pytest.warns(UserWarning):
+            pd.DataFrame(data).corr()
 
     def test_corrwith(self):
         data = test_data_values[0]

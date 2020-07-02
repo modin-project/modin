@@ -606,50 +606,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(self, method="pearson", min_periods=1):
-        """
-        Compute pairwise correlation of columns, excluding NA/null values.
-
-        Parameters
-        ----------
-        method : {'pearson', 'kendall', 'spearman'} or callable
-            Method of correlation:
-
-            * pearson : standard correlation coefficient
-            * kendall : Kendall Tau correlation coefficient
-            * spearman : Spearman rank correlation
-            * callable: callable with input two 1d ndarrays
-                and returning a float. Note that the returned matrix from corr
-                will have 1 along the diagonals and will be symmetric
-                regardless of the callable's behavior.
-
-        min_periods : int, optional
-            Minimum number of observations required per pair of columns
-            to have a valid result. Currently only available for Pearson
-            and Spearman correlation.
-
-        Returns
-        -------
-        DataFrame
-            Correlation matrix.
-
-        Notes
-        -----
-        Correlation floating point precision may slightly differ from pandas.
-
-        For now pearson method is available only. For other methods defaults to pandas.
-        """
-        if method == "pearson":
-            numeric_df = self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-            cols = numeric_df.columns
-            idx = cols.copy()
-            numeric_df = numeric_df.astype(dtype="float64")
-            return numeric_df._nancorr(idx, cols, min_periods=min_periods)
-
-        return self._query_compiler.default_to_pandas(
+        return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
         )
 
@@ -2714,42 +2671,3 @@ class DataFrame(BasePandasDataset):
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
-
-    def _nancorr(self, index, columns, min_periods=None, cov=False):
-        n, k = self.shape
-
-        result = np.empty((k, k), dtype=np.float64)
-        mask = self.__constructor__(query_compiler=self._query_compiler.isfinite())
-
-        if min_periods is None:
-            min_periods = 1
-
-        for xi in range(k):
-            for yi in range(xi + 1):
-                colxi = columns[xi]
-                colyi = columns[yi]
-
-                valid = mask[colxi] & mask[colyi]
-
-                vx = (self[colxi])[valid]
-                vy = (self[colyi])[valid]
-
-                nobs = vx.count()
-                meanx = vx.mean()
-                meany = vy.mean()
-
-                if nobs < min_periods:
-                    result[xi, yi] = result[yi, xi] = np.nan
-                else:
-                    vx = vx - meanx
-                    vy = vy - meany
-                    sumxy = (vx * vy).sum()
-                    sumxx = (vx * vx).sum()
-                    sumyy = (vy * vy).sum()
-
-                    denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
-                    if denom != 0:
-                        result[xi, yi] = result[yi, xi] = sumxy / denom
-                    else:
-                        result[xi, yi] = result[yi, xi] = np.nan
-        return self.__constructor__(result, index=index, columns=columns)
