@@ -37,7 +37,7 @@ def from_pandas(df):
     return DataFrame(query_compiler=EngineDispatcher.from_pandas(df))
 
 def from_arrow(at):
-    """Converts a pandas DataFrame to a Modin DataFrame.
+    """Converts an arrow Table to a Modin DataFrame.
     Args:
         at (pyarrow table): The Arrow table to convert.
 
@@ -47,7 +47,7 @@ def from_arrow(at):
     from modin.data_management.dispatcher import EngineDispatcher
     from .dataframe import DataFrame
 
-    return DataFrame(query_compiler=EngineDispatcher.from_pandas(at))
+    return DataFrame(query_compiler=EngineDispatcher.from_arrow(at))
 
 
 def to_pandas(modin_obj):

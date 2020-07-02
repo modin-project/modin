@@ -24,15 +24,17 @@ if __execution_engine__ == "Ray":
 
 
 class OmnisciOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id=None, frame_id=None, length=None, width=None):
+    def __init__(self, object_id=None, frame_id=None, arrow_slice=None, length=None, width=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
         self.frame_id = frame_id
+        self.arrow_slice = arrow_slice
         self._length_cache = length
         self._width_cache = width
 
     def to_pandas(self):
+        #raise("arrow to pandas")
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
@@ -44,7 +46,17 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
     def put(cls, obj):
         return OmnisciOnRayFramePartition(
             object_id=ray.put(obj),
-            # frame_id = put_to_omnisci(obj),
+            # frame_id = None,
             length=len(obj.index),
+            width=len(obj.columns),
+        )
+
+    @classmethod
+    def put_arrow(cls, obj):
+        return OmnisciOnRayFramePartition(
+            object_id=ray.put(obj),
+            #frame_id=,
+            arrow_slice=obj,  # TODO question of life  when loaded in omnisci dbe
+            length=len(obj),
             width=len(obj.columns),
         )

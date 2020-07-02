@@ -319,6 +319,28 @@ class BaseFrameManager(object):
             return np.array(parts), row_lengths, col_widths
 
     @classmethod
+    def from_arrow(cls, at, return_dims=False):
+        #num_splits = at.num_chunks()
+        #put_func = cls._partition_class.put
+        put_func = cls._partition_class.put_arrow
+
+        parts = [[put_func(at)]]
+        #    [
+        #        put_func(j)  # or buffer?
+        #        for j in i.iterchunks()
+        #    ]
+        #    for i in at.itercolumns()
+        #]
+        if not return_dims:
+            return np.array(parts)
+        else:
+            row_lengths = [at.num_rows]  # [506] # TODO? [ len(i) for i in at.columns[0].iterchunks() ]
+            # col_widths = [ 1 for i in range(at.num_columns) ]         TODO check if we can import big tables
+            col_widths = [ at.num_columns ]    # 15
+            return np.array(parts), row_lengths, col_widths
+
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """This gets the internal indices stored in the partitions.
 

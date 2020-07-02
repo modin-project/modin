@@ -1319,25 +1319,25 @@ class BasePandasFrame(object):
         )
 
     @classmethod
-    def from_arrow(cls, at):       # main TODO?
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+    def from_arrow(cls, at):
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
 
         Args:
-            df: Pandas DataFrame object.
+            at: Arrow Table object.
 
         Returns:
             A new dataframe.
         """
-        new_index = at.index
-        new_columns = at.num_columns()
-        new_dtypes = at.dtypes
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(at, True)
+        new_columns = at.column_names
+        new_index = None #new_columns[0].to_list() # TODO TOOOODOOO
+        new_dtypes = list([i.type for i in at.columns])
         return cls(
-            new_frame,
-            new_index,
-            new_columns,
-            new_lengths,
-            new_widths,
+            partitions=new_frame,
+            index=new_index,
+            columns=new_columns,
+            row_lengths=new_lengths,
+            column_widths=new_widths,
             dtypes=new_dtypes,
         )
 
