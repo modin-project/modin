@@ -128,8 +128,8 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
 
         plasma_directory = None
         num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None) or cluster
-        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None) or redis_address
+        cluster = cluster or os.environ.get("MODIN_RAY_CLUSTER", None)
+        redis_address = redis_address or os.environ.get("MODIN_REDIS_ADDRESS", None)
         redis_password = redis_password or secrets.token_hex(16)
 
         if cluster == "True" and redis_address is not None:
