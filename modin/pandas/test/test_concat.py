@@ -23,23 +23,25 @@ pd.DEFAULT_NPARTITIONS = 4
 
 
 def generate_dfs():
-    data1 = {
-        "col1": [0, 1, 2, 3],
-        "col2": [4, 5, 6, 7],
-        "col3": [8, 9, 10, 11],
-        "col4": [12, 13, 14, 15],
-        "col5": [0, 0, 0, 0],
-    }
-    data2 = {
-        "col1": [0, 1, 2, 3],
-        "col2": [4, 5, 6, 7],
-        "col3": [8, 9, 10, 11],
-        "col6": [12, 13, 14, 15],
-        "col7": [0, 0, 0, 0],
-    }
-    df = pandas.DataFrame(data1, columns=pandas.Index(data1.keys(), name="some name"))
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
 
-    df2 = pandas.DataFrame(data2, columns=pandas.Index(data2.keys(), name="some name"))
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
     return df, df2
 
 
@@ -225,6 +227,6 @@ def test_concat_multiindex():
     keys = ["first", "second"]
 
     df_equals(
-        pd.concat([md_df1, md_df2], keys=keys),
-        pandas.concat([pd_df1, pd_df2], keys=keys),
+        pd.concat([md_df1, md_df2], keys=keys, axis=1),
+        pandas.concat([pd_df1, pd_df2], keys=keys, axis=1),
     )
