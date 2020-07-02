@@ -233,6 +233,9 @@ class _LocIndexer(_LocationIndexerBase):
                 "supported, see https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike"
             )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+        if isinstance(result, Series):
+            result._parent = self.df
+            result._parent_axis = 0
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
             if (
@@ -341,6 +344,9 @@ class _iLocIndexer(_LocationIndexerBase):
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+        if isinstance(result, Series):
+            result._parent = self.df
+            result._parent_axis = 0
         return result
 
     def __setitem__(self, key, item):

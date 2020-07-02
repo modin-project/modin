@@ -360,7 +360,7 @@ class DataFrame(BasePandasDataset):
                 init_kwargs = {"columns": self.columns}
             return_type = type(
                 getattr(pandas, self.__name__)(**init_kwargs).apply(
-                    func, axis=axis, raw=raw, result_type=result_type,
+                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
                 )
             ).__name__
         except Exception:
@@ -372,9 +372,9 @@ class DataFrame(BasePandasDataset):
                 query_compiler=query_compiler
             )
             if isinstance(result, Series):
-                if axis == 0 and result.name == self.index[0]:
+                if axis == 0 and result.name == self.index[0] or result.name == 0:
                     result.name = None
-                elif axis == 1 and result.name == self.columns[0]:
+                elif axis == 1 and result.name == self.columns[0] or result.name == 0:
                     result.name = None
             return result
 
@@ -1526,6 +1526,51 @@ class DataFrame(BasePandasDataset):
             )
         )
 
+    def slice_shift(self, periods=1, axis=0):
+        """
+        Equivalent to `shift` without copying data.
+        The shifted data will not include the dropped periods and the
+        shifted axis will be smaller than the original.
+        Parameters
+        ----------
+        periods : int
+            Number of periods to move, can be positive or negative.
+        axis : int or str
+            Shift direction.
+        Returns
+        -------
+        shifted : same type as caller
+        """
+        if periods == 0:
+            return self.copy()
+
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                return DataFrame(columns=self.columns)
+            else:
+                if periods > 0:
+                    new_index = self.index.drop(labels=self.index[:periods])
+                    new_df = self.drop(self.index[-periods:])
+                else:
+                    new_index = self.index.drop(labels=self.index[periods:])
+                    new_df = self.drop(self.index[:-periods])
+
+                new_df.index = new_index
+                return new_df
+        else:
+            if abs(periods) >= len(self.columns):
+                return DataFrame(index=self.index)
+            else:
+                if periods > 0:
+                    new_columns = self.columns.drop(labels=self.columns[:periods])
+                    new_df = self.drop(self.columns[-periods:], axis="columns")
+                else:
+                    new_columns = self.columns.drop(labels=self.columns[periods:])
+                    new_df = self.drop(self.columns[:-periods], axis="columns")
+
+                new_df.columns = new_columns
+                return new_df
+
     def pivot(self, index=None, columns=None, values=None):
         return self._default_to_pandas(
             pandas.DataFrame.pivot, index=index, columns=columns, values=values
@@ -2284,6 +2329,7 @@ class DataFrame(BasePandasDataset):
         ).squeeze(axis=1)
         if isinstance(s, Series):
             s._parent = self
+            s._parent_axis = 1
         return s
 
     def _getitem_array(self, key):

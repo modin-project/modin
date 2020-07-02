@@ -577,10 +577,7 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
-            if axis == 1:
-                kwds["axis"] = axis
-            result = self._string_function(func, *args, **kwds)
-            # Sometimes we can return a scalar here
+            result = self._query_compiler.apply(func, axis=axis, *args, **kwds)
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result
@@ -2674,9 +2671,6 @@ class BasePandasDataset(object):
                 **kwargs,
             )
         )
-
-    def slice_shift(self, periods=1, axis=0):
-        return self._default_to_pandas("slice_shift", periods=periods, axis=axis)
 
     def sort_index(
         self,

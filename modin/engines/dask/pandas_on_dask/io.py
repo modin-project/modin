@@ -21,6 +21,7 @@ from modin.engines.base.io import (
     ParquetReader,
     FeatherReader,
     SQLReader,
+    ExcelReader,
 )
 from modin.backends.pandas.parsers import (
     PandasCSVParser,
@@ -28,6 +29,7 @@ from modin.backends.pandas.parsers import (
     PandasParquetParser,
     PandasFeatherParser,
     PandasSQLParser,
+    PandasExcelParser,
 )
 from modin.engines.dask.task_wrapper import DaskTask
 
@@ -53,3 +55,4 @@ class PandasOnDaskIO(BaseIO):
         "", (DaskTask, PandasFeatherParser, FeatherReader), build_args
     ).read
     read_sql = type("", (DaskTask, PandasSQLParser, SQLReader), build_args).read
+    read_excel = type("", (DaskTask, PandasExcelParser, ExcelReader), build_args).read

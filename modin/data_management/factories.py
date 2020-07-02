@@ -14,6 +14,7 @@
 import warnings
 
 from modin import execution_engine
+from modin.engines.base.io import BaseIO
 
 import pandas
 
@@ -25,7 +26,7 @@ class BaseFactory(object):
     Abstract factory which allows to override the io module easily.
     """
 
-    io_cls = None  # The module where the I/O functionality exists.
+    io_cls: BaseIO = None  # The module where the I/O functionality exists.
 
     @classmethod
     def prepare(cls):

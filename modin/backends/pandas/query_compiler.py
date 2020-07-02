@@ -1410,7 +1410,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        if callable(func):
+        if isinstance(func, str):
+            return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
+        elif callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
         elif isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
@@ -1418,6 +1420,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
             pass
+
+    def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
+        """Apply func passed as str across given axis in elementwise manner.
+
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasQueryCompiler.
+        """
+        assert isinstance(func, str)
+        kwargs["axis"] = axis
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, lambda df: getattr(df, func)(**kwargs)
+        )
+        return self.__constructor__(new_modin_frame)
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """Apply function to certain indices across given axis.
