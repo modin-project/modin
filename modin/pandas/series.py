@@ -2196,3 +2196,46 @@ class StringMethods(object):
         return self._series._default_to_pandas(
             lambda series: op(series.str, *args, **kwargs)
         )
+
+    def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        """Return unbiased kurtosis over requested axis. Normalized by N-1
+
+        Kurtosis obtained using Fisher’s definition of kurtosis (kurtosis of normal == 0.0).
+
+        Args:
+            axis : {index (0), columns (1)}
+            skipna : boolean, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+            numeric_only : boolean, default None
+
+        Returns:
+            kurtosis : Series or DataFrame (if level specified)
+        """
+        axis = self._get_axis_number(axis)
+        if level is not None:
+            func_kwargs = {
+                "axis": 0,
+                "skipna": skipna,
+                "level": level,
+                "numeric_only": numeric_only,
+            }
+            return (
+                self.groupby(level=level, axis=axis, sort=False)
+                .apply(func="kurt", **func_kwargs)
+                .rename(None)
+            )
+
+        if numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        return self._reduce_dimension(
+            self._query_compiler.kurt(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
+    kurtosis = kurt

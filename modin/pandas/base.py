@@ -1472,20 +1472,12 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis)
         if level is not None:
-            from .series import Series
-
             func_kwargs = {
                 "axis": 0,
                 "skipna": skipna,
                 "level": level,
                 "numeric_only": numeric_only,
             }
-            if isinstance(self, Series):
-                return (
-                    self.groupby(level=level, axis=axis, sort=False)
-                    .apply(func="kurt", **func_kwargs)
-                    .rename(None)
-                )
 
             return self.apply("kurt", **func_kwargs)
 
