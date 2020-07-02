@@ -82,7 +82,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
 
-        curs = omniSession.executeRA("execute relalg "+calcite_json) # remove prefix
+        curs = omniSession.executeRA("execute relalg "+calcite_json) # TODO: remove prefix
         rb = curs.getArrowRecordBatch()
         assert rb
         df = rb.to_pandas()

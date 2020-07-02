@@ -255,6 +255,7 @@ class BaseFrameManager(object):
         Returns:
             A Pandas DataFrame
         """
+        #raise "to_arrow?"
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
@@ -285,10 +286,11 @@ class BaseFrameManager(object):
         Returns:
             A NumPy array
         """
+        #raise "from_arrow"
         return np.block([[block.to_numpy() for block in row] for row in partitions])
 
     @classmethod
-    def from_pandas(cls, df, return_dims=False):  # from_arrow here?
+    def from_pandas(cls, df, return_dims=False):
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)

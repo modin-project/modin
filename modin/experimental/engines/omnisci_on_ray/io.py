@@ -15,15 +15,16 @@ from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompile
 from modin.engines.ray.generic.io import RayIO
 from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFrame
 from modin.error_message import ErrorMessage
-from .frame.omnisci_worker import OmnisciServer
+from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
 class OmnisciOnRayIO(RayIO):
 
     frame_cls = OmnisciOnRayFrame
     query_compiler_cls = DFAlgQueryCompiler
 
-    def from_arrow(cls, df):
-        return cls.query_compiler_cls.from_arrow(df, cls.frame_cls)
+    #@classmethod
+    #def from_arrow(cls, at):
+    #    return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
     def read_csv(
@@ -88,9 +89,9 @@ class OmnisciOnRayIO(RayIO):
             # ...or leave it as is, in Arrow,
             # or convert to pandas
             print("hello from arrow read_csv:", at)
-            # todo like p.frame_id = omniSession.put_pandas_to_omnisci(df)
-            return cls.from_arrow(at)
+            return  cls.from_pandas(at.to_pandas()) #cls.from_arrow(at)  #
         except:
+            raise "abrakadabra"
             ErrorMessage.default_to_pandas("`read_csv`")
             mykwargs = {
                 "filepath_or_buffer": filepath_or_buffer,
