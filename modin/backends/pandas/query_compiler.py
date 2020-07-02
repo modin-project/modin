@@ -1582,6 +1582,52 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
+    def melt(self, *args, **kwargs):
+        def _convert_to_list(x):
+            if is_list_like(x):
+                x = [*x]
+            elif x is not None:
+                x = [x]
+            else:
+                x = []
+            return x
+
+        row_lengths = self._modin_frame._row_lengths
+
+        id_vars, values_vars = map(
+            _convert_to_list,
+            [kwargs.get("id_vars", None), kwargs.get("value_vars", None)],
+        )
+
+        value_vars = len(values_vars)
+        if value_vars == 0:
+            value_vars = len(self.columns) - len(id_vars)
+
+        shuffled = self._modin_frame._apply_full_axis(
+            1, lambda df: df.melt(*args, **kwargs)
+        )
+
+        def calc_range(i):
+            ranges = [
+                np.arange(
+                    i * row_lengths[j] + j * value_vars * row_lengths[j - 1],
+                    i * row_lengths[j]
+                    + j * value_vars * row_lengths[j - 1]
+                    + row_lengths[j],
+                )
+                for j in range(len(row_lengths))
+            ]
+            return np.concatenate(ranges)
+
+        ranges = [calc_range(i) for i in range(value_vars)]
+
+        new_order = np.concatenate(ranges)
+        ordered = shuffled.reorder_labels(row_numeric_idx=new_order)
+
+        result = self.__constructor__(ordered)
+
+        return result.reset_index(drop=True)
+
     # END Map across rows/columns
 
     # __getitem__ methods

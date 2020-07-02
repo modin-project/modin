@@ -2374,10 +2374,20 @@ class TestDataFrameDefault:
             except ValueError:
                 pass
 
-    def test_melt(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).melt()
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "id_vars", [lambda df: df.columns[0], lambda df: df.columns[:4], None]
+    )
+    @pytest.mark.parametrize(
+        "value_vars", [lambda df: df.columns[-1], lambda df: df.columns[-4:], None]
+    )
+    def test_melt(self, data, id_vars, value_vars):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: df.melt(*args, **kwargs),
+            id_vars=id_vars,
+            value_vars=value_vars,
+        )
 
     def test_pct_change(self):
         data = test_data_values[0]
