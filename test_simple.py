@@ -14,7 +14,7 @@ sys.setdlopenflags( 1|256 )    # RTLD_LAZY+RTLD_GLOBAL
 import modin.experimental.pandas as pd
 
 my_df = pd.read_csv("/users/amalakho/projects/modin/examples/data/boston_housing.csv")
-a = my_df['AGE']
+a = my_df[['AGE', 'INDUS']]
 print(a)
 
 a = pd.DataFrame([[1, 10, 100], [2, 20, 200], [3, 30, 300]], columns=['a', 'b', 'c'])

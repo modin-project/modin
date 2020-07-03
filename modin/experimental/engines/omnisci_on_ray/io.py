@@ -89,7 +89,7 @@ class OmnisciOnRayIO(RayIO):
             # ...or leave it as is, in Arrow,
             # or convert to pandas
             print("hello from arrow read_csv:", at)
-            return  cls.from_pandas(at.to_pandas()) #cls.from_arrow(at)  #
+            return cls.from_arrow(at) # cls.from_pandas(at.to_pandas())  #
         except:
             raise "abrakadabra"
             ErrorMessage.default_to_pandas("`read_csv`")

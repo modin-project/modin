@@ -1331,7 +1331,7 @@ class BasePandasFrame(object):
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(at, True)
         new_columns = at.column_names
         new_index = None #new_columns[0].to_list() # TODO TOOOODOOO
-        new_dtypes = list([i.type for i in at.columns])
+        new_dtypes = list([{"type": i.type, "name": i} for i in at.columns])
         return cls(
             partitions=new_frame,
             index=new_index,

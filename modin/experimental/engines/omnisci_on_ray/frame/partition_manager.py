@@ -85,16 +85,16 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         curs = omniSession.executeRA("execute relalg "+calcite_json) # TODO: remove prefix
         rb = curs.getArrowRecordBatch()
         assert rb
-        df = rb.to_pandas()
+        df = rb.to_pandas()  # TODO
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.
         # Using Arrow should solve the problem later.
-        for col in dtypes.index:
-            if dtypes[col] == "bool":
-                df[col] = df[col].astype("bool")
-            elif dtypes[col].name == "category":
-                df[col] = df[col].astype("category")
+        #for col in dtypes.index:
+        #    if dtypes[col] == "bool":
+        #        df[col] = df[col].astype("bool")
+        #    elif dtypes[col].name == "category":
+        #        df[col] = df[col].astype("category")
 
         if index_cols is not None:
             df = df.set_index(index_cols)

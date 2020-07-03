@@ -336,7 +336,7 @@ class BaseFrameManager(object):
         else:
             row_lengths = [at.num_rows]  # [506] # TODO? [ len(i) for i in at.columns[0].iterchunks() ]
             # col_widths = [ 1 for i in range(at.num_columns) ]         TODO check if we can import big tables
-            col_widths = [ at.num_columns ]    # 15
+            col_widths = [ at.num_columns ]    # [15]
             return np.array(parts), row_lengths, col_widths
 
 

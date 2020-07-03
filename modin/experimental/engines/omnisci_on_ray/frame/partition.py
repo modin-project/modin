@@ -17,6 +17,7 @@ from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
 from modin import __execution_engine__
+from .omnisci_worker import OmnisciServer
 
 if __execution_engine__ == "Ray":
     import ray
@@ -55,7 +56,7 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
     def put_arrow(cls, obj):
         return OmnisciOnRayFramePartition(
             object_id=ray.put(obj),
-            #frame_id=,
+            frame_id=OmnisciServer().put_arrow_to_omnisci(obj),  # TODO: make materialization later?
             arrow_slice=obj,  # TODO question of life  when loaded in omnisci dbe
             length=len(obj),
             width=len(obj.columns),
