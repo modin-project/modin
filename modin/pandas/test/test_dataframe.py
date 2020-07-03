@@ -2317,12 +2317,28 @@ class TestDataFrameDefault:
             "level": level,
             "numeric_only": numeric_only,
         }
+        data = test_data_values[0]
+        df_modin = pd.DataFrame(data)
+        df_pandas = pandas.DataFrame(data)
 
         eval_general(
-            pd.DataFrame(test_data_values[0]),
-            pandas.DataFrame(test_data_values[0]),
-            lambda df: df.kurtosis(**func_kwargs),
+            df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
         )
+
+        if level is not None:
+            cols_number = len(data.keys())
+            arrays = [
+                np.random.choice(["bar", "baz", "foo", "qux"], cols_number),
+                np.random.choice(["one", "two"], cols_number),
+            ]
+            index = pd.MultiIndex.from_tuples(
+                list(zip(*arrays)), names=["first", "second"]
+            )
+            df_modin.columns = index
+            df_pandas.columns = index
+            eval_general(
+                df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
+            )
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
