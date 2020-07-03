@@ -36,6 +36,7 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
 
     def to_pandas(self):
         #raise("arrow to pandas")
+        print ("switching to Pandas DataFrame..")
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
