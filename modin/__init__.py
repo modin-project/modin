@@ -122,7 +122,6 @@ class Publisher(object):
             del self.__once[value]
 
 
-__version__ = "0.6.3"
 execution_engine = Publisher(name="execution_engine", value=get_execution_engine())
 partition_format = Publisher(name="partition_format", value=get_partition_format())
 
