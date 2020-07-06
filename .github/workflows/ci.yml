@@ -113,9 +113,10 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        engine: ["ray", "dask"]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
-      MODIN_ENGINE: dask
+      MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
     steps:
       - uses: actions/checkout@v1
@@ -125,7 +126,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r requirements/windows_test_requires.txt
+      - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py

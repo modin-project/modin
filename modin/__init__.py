@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import os
-import sys
 import warnings
 from packaging import version
 import collections
@@ -48,27 +47,24 @@ def get_execution_engine():
         if "MODIN_DEBUG" in os.environ:
             return "Python"
         else:
-            if sys.platform != "win32":
-                try:
-                    import ray
+            try:
+                import ray
 
-                except ImportError:
-                    pass
-                else:
-                    if version.parse(ray.__version__) != version.parse("0.8.6"):
-                        raise ImportError(
-                            "Please `pip install modin[ray]` to install compatible Ray version."
-                        )
-                    return "Ray"
+            except ImportError:
+                pass
+            else:
+                if version.parse(ray.__version__) != version.parse("0.8.6"):
+                    raise ImportError(
+                        "Please `pip install modin[ray]` to install compatible Ray version."
+                    )
+                return "Ray"
             try:
                 import dask
                 import distributed
 
             except ImportError:
                 raise ImportError(
-                    "Please `pip install {}modin[dask]` to install an engine".format(
-                        "modin[ray]` or `" if sys.platform != "win32" else ""
-                    )
+                    "Please `pip install modin[ray]` or `modin[dask]` to install an engine"
                 )
             else:
                 if version.parse(dask.__version__) < version.parse(
