@@ -546,7 +546,29 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(pandas.Series.array)
 
     def autocorr(self, lag=1):
-        return self._default_to_pandas(pandas.Series.autocorr, lag=lag)
+        """
+        Compute the lag-N autocorrelation.
+
+        This method computes the Pearson correlation between
+        the Series and its shifted self.
+
+        Parameters
+        ----------
+        lag : int, default 1
+            Number of lags to apply before performing autocorrelation.
+
+        Returns
+        -------
+        float
+            The Pearson correlation between self and self.shift(lag).
+
+        Notes
+        -----
+        If the Pearson correlation is not well defined return 'NaN'.
+
+        Autocorrelation floating point precision may slightly differ from pandas.
+        """
+        return self.corr(self.shift(lag))
 
     def between(self, left, right, inclusive=True):
         return self._default_to_pandas(
