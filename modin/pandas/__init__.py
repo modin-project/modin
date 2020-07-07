@@ -259,9 +259,6 @@ def _update_engine(publisher: Publisher):
             initialize_ray()
         num_cpus = ray.cluster_resources()["CPU"]
     elif publisher.get() == "Cloudray":
-        import pdb
-
-        pdb.set_trace()
         ray = _create_cloud_conn().modules.ray
 
         if _is_first_update.get("Cloudray", True):
