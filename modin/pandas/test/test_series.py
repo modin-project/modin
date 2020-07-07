@@ -2619,6 +2619,8 @@ def test_sample(data):
 @pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_searchsorted(data, side, values_number, sorter):
+    import random
+
     if not sorter:
         modin_series, pandas_series = create_test_series(vals=data, sort=True)
     else:
@@ -2641,6 +2643,10 @@ def test_searchsorted(data, side, values_number, sorter):
             low=min_sammple - max_sammple, high=min_sammple, size=values_number
         )
     )
+    pure_float = random.uniform(float(min_sammple), float(max_sammple))
+    pure_int = int(pure_float)
+    values.append(pure_float)
+    values.append(pure_int)
 
     test_cases = [
         modin_series.searchsorted(value=value, side=side, sorter=sorter)

@@ -730,56 +730,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self, **kwargs
         )
 
-    def searchsorted(self, **kwargs):
-        """
-        Return a QueryCompiler with value/values indicies, which they should be inserted
-        to maintain order of the passed Series.
-
-        Returns
-        -------
-        PandasQueryCompiler
-        """
-
-        def map_func(part, *args, **kwargs):
-
-            elements_number = len(part.index)
-            assert elements_number > 0, "Wrong mapping behaviour of MapReduce"
-
-            if elements_number == 1:
-                part = part[part.columns[0]]
-            else:
-                part = part.squeeze()
-
-            part_index_start = part.index.values.min()
-            part_index_stop = part.index.values.max() + 1
-
-            result = part.searchsorted(*args, **kwargs)
-
-            processed_results = {}
-            value_number = 0
-            for value_result in result:
-                value_result += part_index_start
-
-                if value_result > part_index_start and value_result < part_index_stop:
-                    processed_results[f"value{value_number}"] = {
-                        "allocation": 0,
-                        "index": value_result,
-                    }
-                elif value_result <= part_index_start:
-                    processed_results[f"value{value_number}"] = {
-                        "allocation": -1,
-                        "index": part_index_start,
-                    }
-                else:
-                    processed_results[f"value{value_number}"] = {
-                        "allocation": 1,
-                        "index": part_index_stop,
-                    }
-
-                value_number += 1
-
-            return pandas.DataFrame(processed_results)
-
         def reduce_func(map_results, *args, **kwargs):
             def get_value_index(value_result):
                 alloc = value_result.groupby(level=0).get_group("allocation")
@@ -1347,6 +1297,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0,
             lambda x: x.squeeze(axis=1).unique(),
             new_columns=self.columns,
+        )
+        return self.__constructor__(new_modin_frame)
+
+    def searchsorted(self, **kwargs):
+        """
+        Find indices where elements should be inserted to maintain order.
+
+        Returns
+        -------
+        int or array of int
+            A scalar or array of insertion points with the same shape as value.
+        """
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0, lambda x: x.squeeze().searchsorted(**kwargs)
         )
         return self.__constructor__(new_modin_frame)
 
