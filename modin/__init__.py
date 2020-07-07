@@ -161,6 +161,7 @@ def _create_cloud_conn(
         mach = SshMachine(redis_address, user=user, keyfile=keyfile, ssh_opts=proxy_opts, scp_opts=proxy_opts)
         cloud_server = DeployedServer(mach, python_executable=python_executable)
         cloud_conn = cloud_server.classic_connect()
+        cloud_conn._config["sync_request_timeout"] = 2400
         # and now you can connect to it the usual way
         return cloud_conn
     return cloud_conn
