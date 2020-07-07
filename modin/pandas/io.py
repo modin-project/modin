@@ -141,13 +141,14 @@ read_table = _make_parser_func(sep="\t")
 # read_csv = _make_parser_func(sep=",")
 def read_csv(*args, **kwargs):
     from .. import execution_engine, _create_cloud_conn
-    conn = _create_cloud_conn()
-    import rpyc
-    args = rpyc.classic.deliver(conn, args)
-    kwargs = rpyc.classic.deliver(conn, kwargs)
 
     if execution_engine.get() == "Cloudray":
-        read_csv = _create_cloud_conn().modules["modin.pandas"].read_csv
+        import rpyc
+        conn = _create_cloud_conn()
+        args = rpyc.classic.deliver(conn, args)
+        kwargs = rpyc.classic.deliver(conn, kwargs)
+
+        read_csv = conn.modules["modin.pandas"].read_csv
         return read_csv(*args, **kwargs)
     else:
         return _make_parser_func(sep=",")(*args, **kwargs)
