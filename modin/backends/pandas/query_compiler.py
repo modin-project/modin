@@ -730,39 +730,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self, **kwargs
         )
 
-        def reduce_func(map_results, *args, **kwargs):
-            def get_value_index(value_result):
-                alloc = value_result.groupby(level=0).get_group("allocation")
-                ind = value_result.groupby(level=0).get_group("index")
-                # executes if result is inside of the mapped part
-                if 0 in alloc.values:
-                    assert (
-                        alloc[alloc == 0].count() == 1
-                    ), "Each value should have single result"
-                    return ind[alloc.values == 0]
-                # executes if result is between mapped parts
-                elif alloc.nunique(dropna=False) > 1:
-                    return ind[alloc.values == -1][0]
-                # executes if result is outside of the mapped part
-                else:
-                    if 1 in alloc.values:
-                        return ind[-1]
-                    else:
-                        return ind[0]
-
-            map_results_parsed = map_results.apply(
-                lambda ser: get_value_index(ser)
-            ).squeeze()
-
-            if isinstance(map_results_parsed, pandas.Series):
-                map_results_parsed = map_results_parsed.to_list()
-
-            return pandas.Series(map_results_parsed)
-
-        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
-            self, **kwargs
-        )
-
     # END MapReduce operations
 
     # Reduction operations
