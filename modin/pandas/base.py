@@ -1470,17 +1470,17 @@ class BasePandasDataset(object):
         Returns:
             kurtosis : Series or DataFrame (if level specified)
         """
-        if level is not None:
-            return self._default_to_pandas(
-                "kurt",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-
         axis = self._get_axis_number(axis)
+        if level is not None:
+            func_kwargs = {
+                "axis": axis,
+                "skipna": skipna,
+                "level": level,
+                "numeric_only": numeric_only,
+            }
+
+            return self.apply("kurt", **func_kwargs)
+
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
         return self._reduce_dimension(

@@ -2310,22 +2310,35 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
     @pytest.mark.parametrize("level", [None, -1, 0, 1])
     @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-    @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
-    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only, method):
+    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only):
+        func_kwargs = {
+            "axis": axis,
+            "skipna": skipna,
+            "level": level,
+            "numeric_only": numeric_only,
+        }
         data = test_data_values[0]
-        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-        try:
-            pandas_result = getattr(pandas_df, method)(
-                axis, skipna, level, numeric_only
+        df_modin = pd.DataFrame(data)
+        df_pandas = pandas.DataFrame(data)
+
+        eval_general(
+            df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
+        )
+
+        if level is not None:
+            cols_number = len(data.keys())
+            arrays = [
+                np.random.choice(["bar", "baz", "foo", "qux"], cols_number),
+                np.random.choice(["one", "two"], cols_number),
+            ]
+            index = pd.MultiIndex.from_tuples(
+                list(zip(*arrays)), names=["first", "second"]
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                repr(
-                    getattr(modin_df, method)(axis, skipna, level, numeric_only)
-                )  # repr to force materialization
-        else:
-            modin_result = getattr(modin_df, method)(axis, skipna, level, numeric_only)
-            df_equals(modin_result, pandas_result)
+            df_modin.columns = index
+            df_pandas.columns = index
+            eval_general(
+                df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
+            )
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
