@@ -13,7 +13,7 @@
 
 import pytest
 
-from modin import execution_engine, partition_format
+from modin import execution_engine, partition_format, set_backends
 
 from modin.data_management.dispatcher import EngineDispatcher, FactoryNotFoundError
 from modin.data_management import factories
@@ -45,9 +45,23 @@ class TestOnPythonFactory(factories.BaseFactory):
         cls.io_cls = "Bar"
 
 
+class FooOnBarFactory(factories.BaseFactory):
+    """
+    Stub factory to ensure we can switch engine and partition to 'Foo' and 'Bar'
+    """
+
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        cls.io_cls = "Zug-zug"
+
+
 # inject the stubs
 factories.PandasOnTestFactory = PandasOnTestFactory
 factories.TestOnPythonFactory = TestOnPythonFactory
+factories.FooOnBarFactory = FooOnBarFactory
 
 
 def test_default_engine():
@@ -71,3 +85,8 @@ def test_engine_wrong_factory():
     with pytest.raises(FactoryNotFoundError):
         execution_engine.put("BadEngine")
     execution_engine.put("Python")  # revert engine to default
+
+
+def test_set_backends():
+    set_backends("Bar", "Foo")
+    assert EngineDispatcher.get_engine() == FooOnBarFactory

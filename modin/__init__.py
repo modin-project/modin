@@ -137,7 +137,7 @@ def set_backends(engine=None, partition=None):
     if engine is not None:
         old_engine = execution_engine._put_nocallback(engine)
     if partition is not None:
-        old_partition = partition_format._put_nocallback(engine)
+        old_partition = partition_format._put_nocallback(partition)
     # execute callbacks if something was changed
     if old_engine is not None:
         execution_engine._check_callbacks(old_engine)
