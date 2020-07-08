@@ -133,7 +133,6 @@ from .general import (
     value_counts,
 )
 from .plotting import Plotting as plotting
-from .utils import initialize_ray
 from .. import execution_engine, Publisher
 
 # Set this so that Pandas doesn't try to multithread by itself
@@ -152,6 +151,7 @@ def _update_engine(publisher: Publisher):
     num_cpus = DEFAULT_NPARTITIONS
     if publisher.get() == "Ray":
         import ray
+        from modin.engines.ray.utils import initialize_ray
 
         if _is_first_update.get("Ray", True):
             initialize_ray()
