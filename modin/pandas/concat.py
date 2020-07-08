@@ -16,6 +16,7 @@ import numpy as np
 
 from typing import Hashable, Iterable, Mapping, Optional, Union
 from pandas._typing import FrameOrSeriesUnion
+from pandas.core.dtypes.common import is_list_like
 
 from .dataframe import DataFrame
 from .series import Series
@@ -116,7 +117,7 @@ def concat(
             ]
             new_idx = pandas.MultiIndex.from_tuples(tuples)
             old_name = _determine_name(objs, axis)
-            if old_name:
+            if old_name is not None:
                 new_idx.names = [None] + old_name
     else:
         new_idx = None
@@ -148,7 +149,7 @@ def _determine_name(objs: list, axis):
 
     Parameters
     ----------
-    objs : list of DataFrames
+    objs : list of DataFrames or QueryCompilers
         objects to concatenate
 
     axis : int or str
@@ -157,12 +158,17 @@ def _determine_name(objs: list, axis):
     Returns
     -------
         `list` with single element - computed index name, `None` if it could not
-        be determine 
+        be determined
     """
-    names = [obj.axes[axis].names for obj in objs]
+
+    def get_names(obj):
+        return obj.columns.names if axis else obj.index.names
+
+    names = np.array([get_names(obj) for obj in objs])
 
     # saving old name, only if index names of all objs are the same
-    if len(np.unique(names)) == 1:
-        return [names[0]] if isinstance(names[0], str) else names[0]
+    if np.all(names == names[0]):
+        # we must do this check to avoid this calls `list(str_like_name)`
+        return list(names[0]) if is_list_like(names[0]) else [names[0]]
     else:
         return None
