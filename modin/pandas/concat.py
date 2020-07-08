@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import numpy as np
 
 from typing import Hashable, Iterable, Mapping, Optional, Union
 from pandas._typing import FrameOrSeriesUnion
@@ -142,22 +143,26 @@ def concat(
 
 
 def _determine_name(objs: list, axis):
-    axis_getter = (lambda df: df.columns) if axis else (lambda df: df.index)
-    name_getter = (
-        (lambda df: axis_getter(df).names)
-        if isinstance(axis_getter(objs[0]), pandas.MultiIndex)
-        else (lambda df: axis_getter(df).name)
-    )
+    """
+    Determine names of index after concatenation along passed axis
 
-    names = [name_getter(obj) for obj in objs]
+    Parameters
+    ----------
+    objs : list of DataFrames
+        objects to concatenate
 
-    if all(
-        [
-            names[i] == names[j]
-            for i in range(len(names))
-            for j in range(i + 1, len(names))
-        ]
-    ):
+    axis : int or str
+        the axis to concatenate along
+
+    Returns
+    -------
+        `list` with single element - computed index name, `None` if it could not
+        be determine 
+    """
+    names = [obj.axes[axis].names for obj in objs]
+
+    # saving old name, only if index names of all objs are the same
+    if len(np.unique(names)) == 1:
         return [names[0]] if isinstance(names[0], str) else names[0]
     else:
         return None
