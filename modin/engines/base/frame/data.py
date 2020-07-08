@@ -688,23 +688,32 @@ class BasePandasFrame(object):
         return OrderedDict(partition_ids_with_indices)
 
     def _join_index_objects(self, axis, other_index, how, sort):
-        """Joins a pair of index objects (columns or rows) by a given strategy.
+        """
+        Joins a pair of index objects (columns or rows) by a given strategy.
 
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other_index: The other_index to join on.
-            how: The type of join to join to make (e.g. right, left).
+        Parameters
+        ----------
+            axis : 0 or 1
+                The axis index object to join (0 - rows, 1 - columns).
+            other_index : Index
+                The other_index to join on.
+            how : {'left', 'right', 'inner', 'outer'}
+                The type of join to join to make.
+            sort : boolean
+                Whether or not to sort the joined index
 
-        Returns:
+        Returns
+        -------
+        Index
             Joined indices.
         """
         if isinstance(other_index, list):
-            joined_obj = self.columns if not axis else self.index
+            joined_obj = self.columns if axis else self.index
             # TODO: revisit for performance
             for obj in other_index:
                 joined_obj = joined_obj.join(obj, how=how, sort=sort)
             return joined_obj
-        if not axis:
+        if axis:
             return self.columns.join(other_index, how=how, sort=sort)
         else:
             return self.index.join(other_index, how=how, sort=sort)
@@ -933,25 +942,36 @@ class BasePandasFrame(object):
         )
 
     def _apply_full_axis(
-        self, axis, func, new_index=None, new_columns=None, dtypes=None
+        self, axis, func, new_index=None, new_columns=None, dtypes=None,
     ):
-        """Perform a function across an entire axis.
+        """
+        Perform a function across an entire axis.
 
-        Note: The data shape may change as a result of the function.
-
-        Args:
-            axis: The axis to apply over.
-            func: The function to apply.
-            new_index: (optional) The index of the result. We may know this in advance,
+        Parameters
+        ----------
+            axis : 0 or 1
+                The axis to apply over (0 - rows, 1 - columns).
+            func : callable
+                The function to apply.
+            new_index : list-like (optional)
+                The index of the result. We may know this in advance,
                 and if not provided it must be computed.
-            new_columns: (optional) The columns of the result. We may know this in
+            new_columns : list-like (optional)
+                The columns of the result. We may know this in
                 advance, and if not provided it must be computed.
-            dtypes: (optional) The data types of the result. This is an optimization
+            dtypes : list-like (optional)
+                The data types of the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
 
-        Returns:
+        Returns
+        -------
+        BasePandasFrame
             A new dataframe.
+
+        Notes
+        -----
+        The data shape may change as a result of the function.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis,
@@ -1148,8 +1168,8 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int
-                The axis to copartition along.
+            axis : 0 or 1
+                The axis to copartition along (0 - rows, 1 - columns).
             other : BasePandasFrame
                 The other dataframes(s) to copartition against.
             how : str
@@ -1171,7 +1191,7 @@ class BasePandasFrame(object):
             other = [other]
 
         index_other_obj = [o.axes[axis] for o in other]
-        joined_index = self._join_index_objects(axis ^ 1, index_other_obj, how, sort)
+        joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.axes[axis]

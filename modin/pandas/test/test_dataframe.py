@@ -5608,7 +5608,82 @@ class TestDataFrameJoinSort:
             pandas_join = pandas_df.join([pandas_df2, pandas_df3], how=how)
             df_equals(modin_join, pandas_join)
 
-    def test_merge(self):
+    @pytest.mark.parametrize(
+        "test_data, test_data2",
+        [
+            (
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+                np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+            ),
+            (
+                np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            ),
+            (
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+            ),
+            (
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+                np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            ),
+        ],
+    )
+    def test_merge(self, test_data, test_data2):
+        modin_df = pd.DataFrame(
+            test_data,
+            columns=["col{}".format(i) for i in range(test_data.shape[1])],
+            index=pd.Index([i for i in range(1, test_data.shape[0] + 1)], name="key"),
+        )
+        pandas_df = pandas.DataFrame(
+            test_data,
+            columns=["col{}".format(i) for i in range(test_data.shape[1])],
+            index=pandas.Index(
+                [i for i in range(1, test_data.shape[0] + 1)], name="key"
+            ),
+        )
+        modin_df2 = pd.DataFrame(
+            test_data2,
+            columns=["col{}".format(i) for i in range(test_data2.shape[1])],
+            index=pd.Index([i for i in range(1, test_data2.shape[0] + 1)], name="key"),
+        )
+        pandas_df2 = pandas.DataFrame(
+            test_data2,
+            columns=["col{}".format(i) for i in range(test_data2.shape[1])],
+            index=pandas.Index(
+                [i for i in range(1, test_data2.shape[0] + 1)], name="key"
+            ),
+        )
+
+        hows = ["left", "inner"]
+        ons = ["col33", ["col33", "col34"]]
+        sorts = [False, True]
+        for i in range(2):
+            for j in range(2):
+                modin_result = modin_df.merge(
+                    modin_df2, how=hows[i], on=ons[j], sort=sorts[j]
+                )
+                pandas_result = pandas_df.merge(
+                    pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
+                )
+                df_equals(modin_result, pandas_result)
+
+                modin_result = modin_df.merge(
+                    modin_df2,
+                    how=hows[i],
+                    left_on="key",
+                    right_on="key",
+                    sort=sorts[j],
+                )
+                pandas_result = pandas_df.merge(
+                    pandas_df2,
+                    how=hows[i],
+                    left_on="key",
+                    right_on="key",
+                    sort=sorts[j],
+                )
+                df_equals(modin_result, pandas_result)
+
         frame_data = {
             "col1": [0, 1, 2, 3],
             "col2": [4, 5, 6, 7],

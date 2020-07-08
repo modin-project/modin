@@ -1254,20 +1254,41 @@ class DataFrame(BasePandasDataset):
             yield v
 
     def join(self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False):
-        """Join two or more DataFrames, or a DataFrame with a collection.
-
-        Args:
-            other: What to join this DataFrame with.
-            on: A column name to use from the left for the join.
-            how: What type of join to conduct.
-            lsuffix: The suffix to add to column names that match on left.
-            rsuffix: The suffix to add to column names that match on right.
-            sort: Whether or not to sort.
-
-        Returns:
-            The joined DataFrame.
         """
+        Join two or more DataFrames, or a DataFrame with a collection.
 
+        Parameters
+        ----------
+            other : DataFrame, Series, or list of DataFrame
+                Index should be similar to one of the columns in this one.
+                If a Series is passed, its name attribute must be set,
+                and that will be used as the column name in the resulting joined DataFrame.
+            on : str, list of str, or array-like, optional
+                Column or index level name(s) in the caller to join on the index in other,
+                otherwise joins index-on-index. If multiple values given,
+                the other DataFrame must have a MultiIndex. Can pass an array as the join key
+                if it is not already contained in the calling DataFrame.
+            how : {'left', 'right', 'outer', 'inner'}, Default is 'left'
+                How to handle the operation of the two objects.
+                - left: use calling frame's index (or column if on is specified)
+                - right: use other's index.
+                - outer: form union of calling frame's index (or column if on is specified)
+                with other's index, and sort it lexicographically.
+                - inner: form intersection of calling frame's index (or column if on is specified)
+                with other's index, preserving the order of the calling’s one.
+            lsuffix : str, default ''
+                Suffix to use from left frame's overlapping columns.
+            rsuffix : str, default ''
+                Suffix to use from right frame's overlapping columns.
+            sort : boolean. Default is False
+                Order result DataFrame lexicographically by the join key.
+                If False, the order of the join key depends on the join type (how keyword).
+
+        Returns
+        -------
+        DataFrame
+            A dataframe containing columns from both the caller and other.
+        """
         if on is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -1388,42 +1409,88 @@ class DataFrame(BasePandasDataset):
         indicator=False,
         validate=None,
     ):
-        """Database style join, where common columns in "on" are merged.
-
-        Args:
-            right: The DataFrame to merge against.
-            how: What type of join to use.
-            on: The common column name(s) to join on. If None, and left_on and
-                right_on  are also None, will default to all commonly named
-                columns.
-            left_on: The column(s) on the left to use for the join.
-            right_on: The column(s) on the right to use for the join.
-            left_index: Use the index from the left as the join keys.
-            right_index: Use the index from the right as the join keys.
-            sort: Sort the join keys lexicographically in the result.
-            suffixes: Add this suffix to the common names not in the "on".
-            copy: Does nothing in our implementation
-            indicator: Adds a column named _merge to the DataFrame with
-                metadata from the merge about each row.
-            validate: Checks if merge is a specific type.
-
-        Returns:
-             A merged Dataframe
         """
-
+        Merge DataFrame or named Series objects with a database-style join.
+        The join is done on columns or indexes. If joining columns on columns,
+        the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
+        indexes on a column or columns, the index will be passed on.
+        Parameters
+        ----------
+        right : DataFrame or named Series
+            Object to merge with.
+        how : {'left', 'right', 'outer', 'inner'}, default 'inner'
+            Type of merge to be performed.
+            - left: use only keys from left frame,
+              similar to a SQL left outer join; preserve key order.
+            - right: use only keys from right frame,
+              similar to a SQL right outer join; preserve key order.
+            - outer: use union of keys from both frames,
+              similar to a SQL full outer join; sort keys lexicographically.
+            - inner: use intersection of keys from both frames,
+              similar to a SQL inner join; preserve the order of the left keys.
+        on : label or list
+            Column or index level names to join on.
+            These must be found in both DataFrames. If on is None and not merging on indexes
+            then this defaults to the intersection of the columns in both DataFrames.
+        left_on : label or list, or array-like
+            Column or index level names to join on in the left DataFrame.
+            Can also be an array or list of arrays of the length of the left DataFrame.
+            These arrays are treated as if they are columns.
+        right_on : label or list, or array-like
+            Column or index level names to join on in the right DataFrame.
+            Can also be an array or list of arrays of the length of the right DataFrame.
+            These arrays are treated as if they are columns.
+        left_index : bool, default False
+            Use the index from the left DataFrame as the join key(s).
+            If it is a MultiIndex, the number of keys in the other DataFrame
+            (either the index or a number of columns) must match the number of levels.
+        right_index : bool, default False
+            Use the index from the right DataFrame as the join key. Same caveats as left_index.
+        sort : bool, default False
+            Sort the join keys lexicographically in the result DataFrame.
+            If False, the order of the join keys depends on the join type (how keyword).
+        suffixes : tuple of (str, str), default ('_x', '_y')
+            Suffix to apply to overlapping column names in the left and right side, respectively.
+            To raise an exception on overlapping columns use (False, False).
+        copy : bool, default True
+            If False, avoid copy if possible.
+        indicator : bool or str, default False
+            If True, adds a column to output DataFrame called "_merge" with information
+            on the source of each row. If string, column with information on source of each row
+            will be added to output DataFrame, and column will be named value of string.
+            Information column is Categorical-type and takes on a value of "left_only"
+            for observations whose merge key only appears in 'left' DataFrame,
+            "right_only" for observations whose merge key only appears in 'right' DataFrame,
+            and "both" if the observation’s merge key is found in both.
+        validate : str, optional
+            If specified, checks if merge is of specified type.
+            - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
+            - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
+            - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
+            - many_to_many' or 'm:m': allowed, but does not result in checks.
+        Returns
+        -------
+        DataFrame
+             A DataFrame of the two merged objects.
+        """
         if isinstance(right, Series):
             if right.name is None:
-                raise ValueError("Cannot merge a Series without a name")
+                raise ValueError("Can't merge a Series without a name")
             else:
                 right = right.to_frame()
         if not isinstance(right, DataFrame):
             raise ValueError(
-                "can not merge DataFrame with instance of type "
-                "{}".format(type(right))
+                "Can't merge DataFrame with instance of type " "{}".format(type(right))
             )
-        if left_index is False or right_index is False:
-            return self._create_or_update_from_compiler(
-                self._query_compiler.join(
+
+        if left_index and right_index:
+            return self.join(
+                right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
+            )
+
+        if how in ["left", "inner"] and left_index is False and right_index is False:
+            result = self.__constructor__(
+                query_compiler=self._query_compiler.merge(
                     right._query_compiler,
                     how=how,
                     on=on,
@@ -1431,17 +1498,63 @@ class DataFrame(BasePandasDataset):
                     right_on=right_on,
                     left_index=left_index,
                     right_index=right_index,
-                    sort=sort,
+                    sort=False,
                     suffixes=suffixes,
                     copy=copy,
                     indicator=indicator,
                     validate=validate,
                 )
             )
-        if left_index and right_index:
-            return self.join(
-                right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
+
+            is_reset_index = True
+            if left_on and right_on:
+                left_on = left_on if is_list_like(left_on) else [left_on]
+                right_on = right_on if is_list_like(right_on) else [right_on]
+                is_reset_index = (
+                    False
+                    if any(o in self.index.names for o in left_on)
+                    and any(o in right.index.names for o in right_on)
+                    else True
+                )
+                if sort:
+                    result = (
+                        result.sort_values(left_on.append(right_on))
+                        if is_reset_index
+                        else result.sort_index(axis=0, level=left_on.append(right_on))
+                    )
+            if on:
+                on = on if is_list_like(on) else [on]
+                is_reset_index = (
+                    False
+                    if any(o in self.index.names and o in right.index.names for o in on)
+                    else True
+                )
+                if sort:
+                    result = (
+                        result.sort_values(on)
+                        if is_reset_index
+                        else result.sort_index(axis=0, level=on)
+                    )
+
+            return result.reset_index(drop=True) if is_reset_index else result
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.default_to_pandas(
+                pandas.DataFrame.merge,
+                right._query_compiler,
+                how=how,
+                on=on,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                sort=sort,
+                suffixes=suffixes,
+                copy=copy,
+                indicator=indicator,
+                validate=validate,
             )
+        )
 
     def mod(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(

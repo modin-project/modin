@@ -271,18 +271,23 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def join(self, *args, **kwargs):
-        """Database-style join with another object.
+    def merge(self, right, **kwargs):
+        """
+        Merge DataFrame or named Series objects with a database-style join.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to merge with.
 
         Returns
         -------
         BaseQueryCompiler
-            The joined PandasQueryCompiler
+            A new query compiler that contains result of the merge.
 
-        Note
-        ----
-        This is not to be confused with `pandas.DataFrame.join` which does an
-        index-level join.
+        Notes
+        -----
+        See pd.merge or pd.DataFrame.merge for more info on kwargs.
         """
         pass
 
