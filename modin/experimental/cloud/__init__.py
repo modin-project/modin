@@ -13,7 +13,6 @@
 
 from typing import NamedTuple
 
-
 class ClusterError(Exception):
     """
     Generic cluster operating exception
@@ -41,3 +40,17 @@ class ConnectionDetails(NamedTuple):
     key_file: str = None
     address: str = None
     port: int = 22
+
+from .cluster import Provider, Cluster
+def cluster(provider: Provider,
+        project_name: str = None,
+        cluster_name: str = "modin-cluster",
+        worker_count: int = 4,
+        head_node_type: str = None,
+        worker_node_type: str = None,
+        spawner: str = 'rayscale') -> Cluster:
+    if spawner == 'rayscale':
+        from .rayscale import RayCluster as Spawner
+    else:
+        raise ValueError(f'Unknown spawner: {spawner}')
+    return Spawner(provider, project_name, cluster_name, worker_count, head_node_type, worker_node_type)

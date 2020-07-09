@@ -17,8 +17,6 @@ import os
 import random
 from shlex import quote
 
-import rpyc
-
 from . import ClusterError, ConnectionDetails
 
 
@@ -75,13 +73,14 @@ class Connection:
         Connection.__current = self
 
     @classmethod
-    def get(cls) -> rpyc.core.protocol.Connection:
+    def get(cls):
         if (
             not cls.__current
             or not cls.__current.proc
             or cls.__current.proc.poll() is not None
         ):
             raise ClusterError("SSH tunnel is not running")
+        import rpyc
         return rpyc.classic.connect(
             "localhost", cls.__current.rpyc_port, keepalive=True
         )
