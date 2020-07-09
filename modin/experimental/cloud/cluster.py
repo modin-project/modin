@@ -125,9 +125,10 @@ class Cluster:
         """
         raise NotImplementedError()
 
-    def destroy(self):
+    def destroy(self, wait=True):
         """
         Destroys the cluster. When already destroyed, should be a no-op.
+        When wait==False it destroys cluster asynchronously.
         """
         raise NotImplementedError()
 
@@ -157,4 +158,4 @@ class Cluster:
         self.old_backends = None
 
     def __del__(self):
-        self.destroy()
+        self.destroy(wait=True)
