@@ -74,15 +74,18 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
         redis_address = redis_address or os.environ.get("MODIN_REDIS_ADDRESS", None)
         redis_password = redis_password or secrets.token_hex(16)
 
-        if cluster == "True" and redis_address is not None:
+        if cluster == "True":
+            kwargs = {
+                "include_webui": False,
+                "ignore_reinit_error": True,
+                "redis_password": redis_password,
+                "logging_level": 100,
+            }
             # We only start ray in a cluster setting for the head node.
-            ray.init(
-                include_webui=False,
-                ignore_reinit_error=True,
-                address=redis_address,
-                redis_password=redis_password,
-                logging_level=100,
-            )
+            if redis_address is not None:
+                ray.init(address=redis_address, **kwargs)
+            else:
+                ray.init(address="auto", **kwargs)
         elif cluster is None:
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
@@ -119,6 +122,8 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
                 memory=object_store_memory,
                 lru_evict=True,
             )
+        else:
+            raise ValueError("cluster variable should be 'True' or None")
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
