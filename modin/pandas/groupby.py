@@ -349,9 +349,10 @@ class DataFrameGroupBy(object):
                 lambda df: df.aggregate(func, *args, **kwargs)
             )
 
-        agg_func = getattr(self, func, None)
-        if callable(agg_func):
-            return agg_func(*args, **kwargs)
+        if isinstance(func, str):
+            agg_func = getattr(self, func, None)
+            if callable(agg_func):
+                return agg_func(*args, **kwargs)
 
         return self._apply_agg_function(
             lambda df: df.aggregate(func, *args, **kwargs), drop=self._as_index

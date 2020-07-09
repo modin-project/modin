@@ -16,7 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
-from .utils import df_equals, check_df_columns_have_nans, create_test_dfs, eval_general as _eval_general
+from .utils import df_equals, check_df_columns_have_nans, create_test_dfs, eval_general as eval_general
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -39,25 +39,25 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
         df_equals(g1[1], g2[1])
 
 
-def eval_general(
-    modin_groupby, pandas_groupby, fn, comparator=df_equals, is_default=False
-):
-    try:
-        pandas_result = fn(pandas_groupby)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            if is_default:
-                with pytest.warns(UserWarning):
-                    fn(modin_groupby)
-            else:
-                fn(modin_groupby)
-    else:
-        if is_default:
-            with pytest.warns(UserWarning):
-                modin_result = fn(modin_groupby)
-        else:
-            modin_result = fn(modin_groupby)
-        comparator(modin_result, pandas_result)
+# def eval_groupby(
+#     modin_groupby, pandas_groupby, operation, comparator=df_equals, is_default=False
+# ):
+#     try:
+#         pandas_result = fn(pandas_groupby)
+#     except Exception as e:
+#         with pytest.raises(type(e)):
+#             if is_default:
+#                 with pytest.warns(UserWarning):
+#                     fn(modin_groupby)
+#             else:
+#                 fn(modin_groupby)
+#     else:
+#         if is_default:
+#             with pytest.warns(UserWarning):
+#                 modin_result = fn(modin_groupby)
+#         else:
+#             modin_result = fn(modin_groupby)
+#         comparator(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("as_index", [True, False])
@@ -1078,7 +1078,7 @@ def test_agg_func_None_rename():
 def eval_aggregation(md_df, pd_df, operation, by=None, *args, **kwargs):
     if by is None:
         by = md_df.columns[0]
-    return _eval_general(
+    return eval_general(
         md_df,
         pd_df,
         operation=lambda df: df.groupby(by=by).agg(operation),
@@ -1087,7 +1087,8 @@ def eval_aggregation(md_df, pd_df, operation, by=None, *args, **kwargs):
     )
 
 
-def test_agg_exceptions():
+@pytest.mark.parametrize("operation", ["quantile", "mean", "sum", "median", "unique", "cumprod"])
+def test_agg_exceptions(operation):
     N = 256
     fill_data = [
         ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
@@ -1116,9 +1117,4 @@ def test_agg_exceptions():
 
     data = {**data1, **data2}
 
-    eval_aggregation(*create_test_dfs(data), operation="quantile")
-    eval_aggregation(*create_test_dfs(data), operation="mean")
-    eval_aggregation(*create_test_dfs(data), operation="sum")
-    eval_aggregation(*create_test_dfs(data), operation="median")
-    eval_aggregation(*create_test_dfs(data), operation="nunique")
-    eval_aggregation(*create_test_dfs(data), operation="cumprod")
+    eval_aggregation(*create_test_dfs(data), operation=operation)
