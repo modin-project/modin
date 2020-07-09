@@ -20,7 +20,7 @@ from .utils import (
     df_equals,
     check_df_columns_have_nans,
     create_test_dfs,
-    eval_general as eval_general,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
