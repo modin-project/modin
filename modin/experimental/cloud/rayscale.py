@@ -23,7 +23,7 @@ from ray.autoscaler.commands import (
     get_head_node_ip,
 )
 
-from . import CannotSpawnCluster, CannotDestroyCluster, ConnectionDetails
+from .base import CannotSpawnCluster, CannotDestroyCluster, ConnectionDetails
 from .cluster import Cluster, Provider
 
 

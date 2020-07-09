@@ -17,7 +17,7 @@ import os
 import random
 from shlex import quote
 
-from . import ClusterError, ConnectionDetails
+from .base import ClusterError, ConnectionDetails
 
 
 class Connection:
@@ -81,6 +81,7 @@ class Connection:
         ):
             raise ClusterError("SSH tunnel is not running")
         import rpyc
+
         return rpyc.classic.connect(
             "localhost", cls.__current.rpyc_port, keepalive=True
         )

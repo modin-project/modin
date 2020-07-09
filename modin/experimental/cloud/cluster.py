@@ -17,7 +17,7 @@ from typing import NamedTuple
 
 from modin import set_backends
 
-from . import ConnectionDetails
+from .base import ConnectionDetails
 from .connection import Connection
 
 
