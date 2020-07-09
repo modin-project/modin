@@ -16,7 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
-from .utils import df_equals, check_df_columns_have_nans, create_test_dfs, eval_general
+from .utils import df_equals, check_df_columns_have_nans, create_test_dfs, eval_general as _eval_general
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -1078,7 +1078,7 @@ def test_agg_func_None_rename():
 def eval_aggregation(md_df, pd_df, operation, by=None, *args, **kwargs):
     if by is None:
         by = md_df.columns[0]
-    return eval_general(
+    return _eval_general(
         md_df,
         pd_df,
         operation=lambda df: df.groupby(by=by).agg(operation),
