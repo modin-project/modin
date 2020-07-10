@@ -13,8 +13,11 @@
 
 import threading
 import os
+import traceback
+import sys
 from shlex import quote
 from hashlib import sha1
+from typing import Callable
 
 import yaml
 from ray.autoscaler.commands import (
@@ -27,6 +30,14 @@ from .base import CannotSpawnCluster, CannotDestroyCluster, ConnectionDetails
 from .cluster import Cluster, Provider
 
 
+class _ThreadTask:
+    def __init__(self, target: Callable):
+        self.target = target
+        self.thread: threading.Thread = None
+        self.exc: Exception = None
+        self.silent = False
+
+
 class RayCluster(Cluster):
     __base_config = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
@@ -34,8 +45,9 @@ class RayCluster(Cluster):
     __instance_key = {Provider.AWS: "InstanceType"}
 
     def __init__(self, *a, **kw):
-        self.spawner, self.destroyer = None, None
-        self.spawn_exc, self.destroy_exc = None, None
+        self.spawner = _ThreadTask(self.__spawn)
+        self.destroyer = _ThreadTask(self.__destroy)
+
         self.ready = False
         super().__init__(self, *a, **kw)
         self.config = self.__make_config()
@@ -47,22 +59,22 @@ class RayCluster(Cluster):
 
         When wait==False it spawns cluster asynchronously.
         """
-        self.__run_thread(wait, "spawner", self.__spawn, "spawn_exc")
+        self.__run_thread(wait, self.spawner)
 
     def destroy(self, wait=True):
         """
         Destroys the cluster. When already destroyed, should be a no-op.
         """
-        self.__run_thread(wait, "destroyer", self.__destroy, "destroy_exc")
+        self.__run_thread(wait, self.destroyer)
 
-    def __run_thread(self, wait, name, target, exc_name):
-        if not getattr(self, name):
-            setattr(self, name, threading.Thread(target=target))
+    def __run_thread(self, wait, task: _ThreadTask):
+        if not task.thread:
+            task.thread = threading.Thread(target=task.target)
 
         if wait:
-            getattr(self, name).join()
-            exc = getattr(self, exc_name)
-            setattr(self, exc_name, None)
+            task.silent = True
+            task.thread.join()
+            exc, task.exc = task.exc, None
             if exc:
                 raise exc
 
@@ -130,6 +142,8 @@ class RayCluster(Cluster):
             self.ready = True
         except BaseException as ex:
             self.spawn_exc = CannotSpawnCluster("Cannot spawn cluster", cause=ex)
+            if not self.spawner.silent:
+                sys.stderr.write(f"Cannot spawn cluster:\n{traceback.format_exc()}\n")
 
     def __destroy(self):
         try:
@@ -144,6 +158,8 @@ class RayCluster(Cluster):
             self.config = None
         except BaseException as ex:
             self.destroy_exc = CannotDestroyCluster("Cannot destroy cluster", cause=ex)
+            if not self.destroyer.silent:
+                sys.stderr.write(f"Cannot destroy cluster:\n{traceback.format_exc()}\n")
 
     def _get_connection_details(self) -> ConnectionDetails:
         """
