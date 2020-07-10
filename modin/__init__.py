@@ -133,7 +133,7 @@ del get_partition_format
 __version__ = get_versions()["version"]
 del get_versions
 
-cloud_server = None
+cloud_tunnel = None
 cloud_conn = None
 
 
@@ -142,11 +142,10 @@ def _create_cloud_conn(
     keyfile="~/.ssh/ray-autoscaler_us-west-1.pem",
     python_executable="~/miniconda/envs/modin/bin/python",
 ):
-    global cloud_conn, cloud_server
+    global cloud_conn, cloud_tunnel
     if cloud_conn is None:
-        from rpyc.utils.zerodeploy import DeployedServer
         from plumbum import SshMachine
-
+        import rpyc
         # TODO execute this command where `ray up` command will be executed
         # export MODIN_RAY_REDIS_ADDRESS=`ray get_head_ip examples/cluster/aws_example.yaml`
 
@@ -158,9 +157,10 @@ def _create_cloud_conn(
         else:
             proxy_opts = None
 
-        mach = SshMachine(redis_address, user=user, keyfile=keyfile, ssh_opts=proxy_opts, scp_opts=proxy_opts)
-        cloud_server = DeployedServer(mach, python_executable=python_executable)
-        cloud_conn = cloud_server.classic_connect()
+        mach = SshMachine(redis_address, user=user, keyfile=keyfile, ssh_opts=proxy_opts, scp_opts=proxy_opts) #, connect_timeout=None)
+        cloud_tunnel = mach.tunnel(18812, 18812, dhost="localhost", connect_timeout=60*2)
+        cloud_conn = rpyc.classic.connect("localhost", port=18812)
+
         cloud_conn._config["sync_request_timeout"] = 2400
         # and now you can connect to it the usual way
         return cloud_conn

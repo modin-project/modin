@@ -121,7 +121,7 @@ setup_commands:
         mv acq/Acquisition_2000Q1.txt acq/Acquisition_2000Q1-old.txt &&
         head -n 1000 acq/Acquisition_2000Q1-old.txt > acq/Acquisition_2000Q1.txt &&
         mv perf/Performance_2000Q1.txt perf/Performance_2000Q1-old.txt &&
-        head -n 1000 perf/Performance_2000Q1-old.txt > perf/Performance_2000Q1.txt
+        head -n 1000 perf/Performance_2000Q1-old.txt > perf/Performance_2000Q1.txt && cd ~
 
         sudo apt-get update
         sudo apt-get install -y build-essential unzip
@@ -142,23 +142,6 @@ setup_commands:
         echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
         cd ~
 
-        # echo 'installing ray from source'
-        # pip install cython==0.29.0 pytest
-        # test -e ray || git clone --single-branch --branch add-ssh-proxy https://github.com/vnlitvinov/ray.git
-        # ray/ci/travis/install-bazel.sh
-        # cd ray/python && pip install -e .
-        # cd ~
-
-        echo 'get binary and patch it'
-
-        pip install ray==0.8.6
-        wget https://github.com/ray-project/ray/pull/8833.patch -O ~/ray-proxy.patch
-        git clone --single-branch --branch releases/0.8.6 https://github.com/ray-project/ray.git
-        cd ray && git apply ~/ray-proxy.patch
-        mv python/ray/autoscaler/commands.py ~/miniconda/envs/modin/lib/python3.7/site-packages/ray/autoscaler/commands.py
-        mv python/ray/autoscaler/ray-schema.json ~/miniconda/envs/modin/lib/python3.7/site-packages/ray/autoscaler/ray-schema.json
-        mv python/ray/autoscaler/updater.py ~/miniconda/envs/modin/lib/python3.7/site-packages/ray/autoscaler/updater.py
-
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
@@ -169,7 +152,7 @@ head_setup_commands:
     - |
         source ~/.bashrc
         conda activate modin
-        pip install boto3==1.4.8
+        pip install boto3==1.4.8 rpyc==4.1.5
         echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
 
 # Custom commands that will be run on worker nodes after common setup.
@@ -187,6 +170,7 @@ head_start_ray_commands:
         echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024}" /proc/meminfo)' >> ~/.bashrc
         echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
 
+        rpyc_classic.py --logfile=./rpyc.log &
         ulimit -n 65536; ray start --head --num-redis-shards=1 --redis-shard-ports=6380 --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
 
 # Command to start ray on worker nodes. You don't need to change this.

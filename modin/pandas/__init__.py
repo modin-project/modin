@@ -192,7 +192,8 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
             ray.init(
                 # TODO: create issue in Modin for running cluster; num_cpus shouldn't be defined
                 # num_cpus=int(num_cpus),
-                include_webui=False,
+                # removed after 0.8.6 
+                #iclude_webui=False,
                 ignore_reinit_error=True,
                 address=redis_address,
                 redis_password=redis_password,
@@ -224,7 +225,8 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
                 object_store_memory = int(object_store_memory)
             ray.init(
                 num_cpus=int(num_cpus),
-                include_webui=False,
+                # removed after 0.8.6
+                # include_webui=False,
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
@@ -259,6 +261,7 @@ def _update_engine(publisher: Publisher):
             initialize_ray()
         num_cpus = ray.cluster_resources()["CPU"]
     elif publisher.get() == "Cloudray":
+        #import pdb; pdb.set_trace()
         ray = _create_cloud_conn().modules.ray
 
         if _is_first_update.get("Cloudray", True):
