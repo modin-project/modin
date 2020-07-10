@@ -120,21 +120,44 @@ class Cluster:
         self.worker_node_type = worker_node_type or provider.default_worker_type
 
         self.old_backends = None
-        self.connection = None
+        self.connection: Connection = None
         self.spawn(wait=False)
 
     def spawn(self, wait=True):
         """
         Actually spawns the cluster. When already spawned, should be a no-op.
+        Always call .spawn(True) before assuming a cluster is ready.
 
         When wait==False it spawns cluster asynchronously.
         """
-        raise NotImplementedError()
+        self._spawn(wait=wait)
+        if wait:
+            # cluster is ready now
+            if self.connection is None:
+                self.connection = Connection(
+                    self._get_connection_details(), self._get_main_python()
+                )
 
     def destroy(self, wait=True):
         """
         Destroys the cluster. When already destroyed, should be a no-op.
+        Always call .destroy(True) before assuming a cluster is dead.
+
         When wait==False it destroys cluster asynchronously.
+        """
+        if self.connection is not None:
+            self.connection.stop()
+        self._destroy(wait=wait)
+
+    def _spawn(self, wait=True):
+        """
+        Subclass must implement the real spawning
+        """
+        raise NotImplementedError()
+
+    def _destroy(self, wait=True):
+        """
+        Subclass must implement the real destruction
         """
         raise NotImplementedError()
 
@@ -152,15 +175,13 @@ class Cluster:
 
     def __enter__(self):
         self.spawn(wait=True)  # make sure cluster is ready
-        self.connection = Connection(
-            self._get_connection_details(), self._get_main_python()
-        )
+        self.connection.activate()
         self.old_backends = set_backends(self.target_engine, self.target_partition)
         return self
 
     def __exit__(self, *a, **kw):
         set_backends(*self.old_backends)
-        self.connection.stop()
+        self.connection.deactivate()
         self.old_backends = None
 
     def __del__(self):

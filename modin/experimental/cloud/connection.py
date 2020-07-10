@@ -69,7 +69,7 @@ class Connection:
         else:
             raise ClusterError("Unable to bind a local port when forwarding")
 
-        Connection.__current = self
+        self.activate()
 
     @classmethod
     def get(cls):
@@ -85,7 +85,15 @@ class Connection:
             "localhost", cls.__current.rpyc_port, keepalive=True
         )
 
+    def activate(self):
+        Connection.__current = self
+
+    def deactivate(self):
+        if Connection.__current is self:
+            Connection.__current = None
+
     def stop(self):
+        self.deactivate()
         if self.proc and self.proc.poll() is None:
             self.proc.send_signal(signal.SIGINT)
             if self.proc.wait(self.connect_timeout) is None:
@@ -93,8 +101,6 @@ class Connection:
                 if self.proc.wait(self.connect_timeout) is None:
                     self.proc.kill()
         self.proc = None
-        if Connection.__current is self:
-            Connection.__current = None
 
     def __del__(self):
         self.stop()

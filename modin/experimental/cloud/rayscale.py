@@ -50,8 +50,8 @@ class RayCluster(Cluster):
     __credentials_env = {Provider.AWS: "AWS_CONFIG_FILE"}
 
     def __init__(self, *a, **kw):
-        self.spawner = _ThreadTask(self.__spawn)
-        self.destroyer = _ThreadTask(self.__destroy)
+        self.spawner = _ThreadTask(self.__do_spawn)
+        self.destroyer = _ThreadTask(self.__do_destroy)
 
         self.ready = False
         super().__init__(self, *a, **kw)
@@ -66,18 +66,10 @@ class RayCluster(Cluster):
         self.config = self.__make_config()
         self.config_file = self.__save_config(self.config)
 
-    def spawn(self, wait=True):
-        """
-        Actually spawns the cluster. When already spawned, should be a no-op.
-
-        When wait==False it spawns cluster asynchronously.
-        """
+    def _spawn(self, wait=True):
         self.__run_thread(wait, self.spawner)
 
-    def destroy(self, wait=True):
-        """
-        Destroys the cluster. When already destroyed, should be a no-op.
-        """
+    def _destroy(self, wait=True):
         self.__run_thread(wait, self.destroyer)
 
     def __run_thread(self, wait, task: _ThreadTask):
@@ -138,7 +130,7 @@ class RayCluster(Cluster):
             out.write(yaml.dump(config))
         return entry
 
-    def __spawn(self):
+    def __do_spawn(self):
         try:
             create_or_update_cluster(
                 self.config_file,
@@ -158,7 +150,7 @@ class RayCluster(Cluster):
             if not self.spawner.silent:
                 sys.stderr.write(f"Cannot spawn cluster:\n{traceback.format_exc()}\n")
 
-    def __destroy(self):
+    def __do_destroy(self):
         try:
             teardown_cluster(
                 self.config_file,
