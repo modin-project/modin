@@ -15,9 +15,8 @@ import subprocess
 import signal
 import os
 import random
-from shlex import quote
 
-from .base import ClusterError, ConnectionDetails
+from .base import ClusterError, ConnectionDetails, _get_ssh_proxy_command
 
 
 class Connection:
@@ -101,8 +100,6 @@ class Connection:
         self.stop()
 
     def __build_opts(self, details: ConnectionDetails, forward_port: int = None):
-        socks_proxy = os.environ.get("MODIN_SOCKS_PROXY", None)
-
         opts = [
             ("ConnectTimeout", "{}s".format(self.connect_timeout)),
             ("StrictHostKeyChecking", "no"),
@@ -115,8 +112,9 @@ class Connection:
             ("ServerAliveCountMax", 3),
         ]
 
-        if socks_proxy:
-            opts += [("ProxyCommand", f"nc -x {quote(socks_proxy)} %h %p")]
+        socks_proxy_cmd = _get_ssh_proxy_command()
+        if socks_proxy_cmd:
+            opts += [("ProxyCommand", socks_proxy_cmd)]
 
         cmdline = ["ssh", "-i", details.key_file]
         for oname, ovalue in opts:

@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 from typing import NamedTuple
+import os
+import sys
 
 
 class ClusterError(Exception):
@@ -41,3 +43,28 @@ class ConnectionDetails(NamedTuple):
     key_file: str = None
     address: str = None
     port: int = 22
+
+
+_EXT = (".exe", ".com", ".cmd", ".bat", "") if sys.platform == "win32" else ("",)
+
+
+def _which(prog):
+    for entry in os.environ["PATH"].split(os.pathsep):
+        for ext in _EXT:
+            path = os.path.join(entry, prog + ext)
+            if os.access(path, os.X_OK):
+                return path
+    return None
+
+
+def _get_ssh_proxy_command():
+    socks_proxy = os.environ.get("MODIN_SOCKS_PROXY", None)
+    if socks_proxy is None:
+        return None
+    if _which("nc"):
+        return f"nc -x {socks_proxy} %h %p"
+    elif _which("connect"):
+        return f"connect -S {socks_proxy} %h %p"
+    raise ClusterError(
+        "SSH through proxy required but no supported proxying tools found"
+    )

@@ -15,7 +15,6 @@ import threading
 import os
 import traceback
 import sys
-from shlex import quote
 from hashlib import sha1
 from typing import Callable
 
@@ -26,7 +25,12 @@ from ray.autoscaler.commands import (
     get_head_node_ip,
 )
 
-from .base import CannotSpawnCluster, CannotDestroyCluster, ConnectionDetails
+from .base import (
+    CannotSpawnCluster,
+    CannotDestroyCluster,
+    ConnectionDetails,
+    _get_ssh_proxy_command,
+)
 from .cluster import Cluster, Provider
 
 
@@ -103,10 +107,10 @@ class RayCluster(Cluster):
             config["provider"]["zone"] = self.provider.zone
 
         # connection details
-        socks_proxy = os.environ.get("MODIN_SOCKS_PROXY", None)
         config["auth"]["ssh_user"] = "modin"
-        if socks_proxy:
-            config["auth"]["ssh_proxy_command"] = f"nc -x {quote(socks_proxy)} %h %p"
+        socks_proxy_cmd = _get_ssh_proxy_command()
+        if socks_proxy_cmd:
+            config["auth"]["ssh_proxy_command"] = socks_proxy_cmd
 
         # instance types
         try:
