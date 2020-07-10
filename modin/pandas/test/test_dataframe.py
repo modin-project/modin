@@ -55,6 +55,7 @@ from .utils import (
     int_arg_keys,
     int_arg_values,
     eval_general,
+    create_test_dfs,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -73,10 +74,6 @@ def eval_insert(modin_df, pandas_df, **kwargs):
         operation=lambda df, **kwargs: df.insert(**kwargs),
         **_kwargs,
     )
-
-
-def create_test_dfs(*args, **kwargs):
-    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
 
 
 class TestDataFrameBinary:
