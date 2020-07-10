@@ -43,6 +43,7 @@ class RayCluster(Cluster):
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
     )
     __instance_key = {Provider.AWS: "InstanceType"}
+    __credentials_env = {Provider.AWS: "AWS_CONFIG_FILE"}
 
     def __init__(self, *a, **kw):
         self.spawner = _ThreadTask(self.__spawn)
@@ -50,6 +51,14 @@ class RayCluster(Cluster):
 
         self.ready = False
         super().__init__(self, *a, **kw)
+
+        if self.provider.credentials_file is not None:
+            try:
+                config_key = self.__credentials_env[self.provider.name]
+            except KeyError:
+                raise ValueError(f"Unsupported provider: {self.provider.name}")
+            os.environ[config_key] = self.provider.credentials_file
+
         self.config = self.__make_config()
         self.config_file = self.__save_config(self.config)
 

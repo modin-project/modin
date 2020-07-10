@@ -34,18 +34,22 @@ class Provider:
     __DEFAULT_WORKER = {AWS: "m5.large"}
 
     def __init__(
-        self, name: str, credentials_file: str, region: str = None, zone: str = None
+        self,
+        name: str,
+        credentials_file: str = None,
+        region: str = None,
+        zone: str = None,
     ):
         """
         Class that holds all information about particular connection to cluster provider, namely
             * provider name (must be one of known ones)
-            * path to file with credentials (file format is provider-specific)
+            * path to file with credentials (file format is provider-specific); omit to use global provider-default credentials
             * region and zone where cluster is to be spawned (optional, would be deduced if omitted)
         """
 
         if name not in self.__KNOWN:
             raise ValueError(f"Unknown provider name: {name}")
-        if not os.path.exists(credentials_file):
+        if credentials_file is not None and not os.path.exists(credentials_file):
             raise OSError(
                 errno.ENOENT, "Credentials file does not exist", credentials_file
             )
@@ -68,7 +72,9 @@ class Provider:
         self.name = name
         self.region = region
         self.zone = zone
-        self.credentials_file = os.path.abspath(credentials_file)
+        self.credentials_file = (
+            os.path.abspath(credentials_file) if credentials_file is not None else None
+        )
 
     @property
     def default_head_type(self):
