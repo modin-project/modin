@@ -4960,7 +4960,6 @@ class TestDataFrameIndexing:
         pandas_result = pandas_df.sample(frac=0.5, random_state=random_state, axis=axis)
         df_equals(modin_result, pandas_result)
 
-
     def test_select_dtypes(self):
         frame_data = {
             "test1": list("abc"),
