@@ -751,11 +751,11 @@ def test_from_csv_sep_none(make_csv_file):
 
 
 def test_from_csv_bad_quotes():
-    csv_bad_quotes = """
-    1, 2, 3, 4
-    one, two, three, four
-    five, "six", seven, "eight
-    """
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+
     with open(TEST_CSV_FILENAME, "w") as f:
         f.write(csv_bad_quotes)
 
@@ -766,11 +766,10 @@ def test_from_csv_bad_quotes():
 
 
 def test_from_csv_quote_none():
-    csv_bad_quotes = """
-    1, 2, 3, 4
-    one, two, three, four
-    five, "six", seven, "eight
-    """
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
     with open(TEST_CSV_FILENAME, "w") as f:
         f.write(csv_bad_quotes)
 
