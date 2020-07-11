@@ -2480,7 +2480,7 @@ class BasePandasDataset(object):
             # random_state that is passed in
             if isinstance(random_state, int):
                 random_num_gen = np.random.RandomState(random_state)
-            elif isinstance(random_state, np.random.randomState):
+            elif isinstance(random_state, np.random.RandomState):
                 random_num_gen = random_state
             else:
                 # random_state must be an int or a numpy RandomState object
