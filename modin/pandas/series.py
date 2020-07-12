@@ -542,9 +542,6 @@ class Series(BasePandasDataset):
             pandas.Series.argsort, axis=axis, kind=kind, order=order
         )
 
-    def array(self):
-        return self._default_to_pandas(pandas.Series.array)
-
     def autocorr(self, lag=1):
         """
         Compute the lag-N autocorrelation.
@@ -1603,7 +1600,13 @@ class Series(BasePandasDataset):
         def attrs(df):
             return df.attrs
 
-        self._default_to_pandas(attrs)
+        return self._default_to_pandas(attrs)
+
+    def array(self):
+        def array(df):
+            return df.array
+
+        return self._default_to_pandas(array)
 
     @property
     def axes(self):
