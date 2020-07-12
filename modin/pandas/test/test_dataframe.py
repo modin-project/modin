@@ -4950,6 +4950,16 @@ class TestDataFrameIndexing:
         pandas_result = pandas_df.sample(n=2, random_state=42, axis=axis)
         df_equals(modin_result, pandas_result)
 
+        # issue #1692, numpy RandomState object
+        # We must create a new random state for each iteration because the values that
+        # are selected will be impacted if the object has already been used.
+        random_state = np.random.RandomState(42)
+        modin_result = modin_df.sample(frac=0.5, random_state=random_state, axis=axis)
+
+        random_state = np.random.RandomState(42)
+        pandas_result = pandas_df.sample(frac=0.5, random_state=random_state, axis=axis)
+        df_equals(modin_result, pandas_result)
+
     def test_select_dtypes(self):
         frame_data = {
             "test1": list("abc"),
