@@ -1473,7 +1473,6 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         if level is not None:
             func_kwargs = {
-                # "axis": axis,
                 "skipna": skipna,
                 "level": level,
                 "numeric_only": numeric_only,
