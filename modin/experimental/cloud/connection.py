@@ -25,6 +25,13 @@ class Connection:
     tries = 10
     rpyc_port = 18813
 
+    @staticmethod
+    def __wait_noexc(proc:subprocess.Popen, timeout:float):
+        try:
+            return proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return None
+
     def __init__(self, details: ConnectionDetails, main_python: str, log_rpyc=None):
         if log_rpyc is None:
             log_rpyc = os.environ.get("MODIN_LOG_RPYC", "").title() == "True"
@@ -61,7 +68,7 @@ class Connection:
             proc = self.__run(
                 self.__build_sshcmd(details, forward_port=port), cmd, capture_out=False
             )
-            if proc.wait(1) is None:
+            if self.__wait_noexc(proc, 1) is None:
                 # started successfully
                 self.proc = proc
                 self.rpyc_port = port
@@ -99,9 +106,9 @@ class Connection:
         self.deactivate()
         if self.proc and self.proc.poll() is None:
             self.proc.send_signal(sigint)
-            if self.proc.wait(self.connect_timeout) is None:
+            if self.__wait_noexc(self.proc, self.connect_timeout) is None:
                 self.proc.terminate()
-                if self.proc.wait(self.connect_timeout) is None:
+                if self.__wait_noexc(self.proc, self.connect_timeout) is None:
                     self.proc.kill()
         self.proc = None
 
