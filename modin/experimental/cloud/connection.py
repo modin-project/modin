@@ -19,6 +19,8 @@ import time
 
 from .base import ClusterError, ConnectionDetails, _get_ssh_proxy_command
 
+RPYC_REQUEST_TIMEOUT = 2400
+
 
 class Connection:
     __current = None
@@ -105,8 +107,12 @@ class Connection:
 
             while time.time() < self.__started + self.connect_timeout + 1.0:
                 try:
-                    self.__connection = rpyc.classic.connect(
-                        "127.0.0.1", self.rpyc_port, keepalive=True
+                    self.__connection = rpyc.connect(
+                        "127.0.0.1",
+                        self.rpyc_port,
+                        rpyc.ClassicService,
+                        config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
+                        keepalive=True,
                     )
                 except (ConnectionRefusedError, EOFError):
                     if self.proc.poll() is not None:

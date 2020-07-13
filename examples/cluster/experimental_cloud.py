@@ -30,7 +30,7 @@ from modin.experimental.cloud import Provider, cluster, get_connection
 aws = Provider(Provider.AWS, os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_credentials'), 'us-west-1')
 with cluster(aws, cluster_name='rayscale-test') as c:
     conn = get_connection()
+    import pdb;pdb.set_trace()
     modin = conn.modules.modin
     print(modin)
     print(type(modin))
-    import pdb;pdb.set_trace()
