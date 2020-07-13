@@ -123,7 +123,7 @@ setup_commands:
         conda activate modin
         conda install python==3.7.6
 
-        pip install modin
+        pip install modin "ray==0.8.6"
         echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
