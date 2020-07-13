@@ -123,7 +123,7 @@ class Cluster:
         self.old_backends = None
         self.connection: Connection = None
 
-    def spawn(self, wait=True):
+    def spawn(self, wait=False):
         """
         Actually spawns the cluster. When already spawned, should be a no-op.
         Always call .spawn(True) before assuming a cluster is ready.
@@ -139,7 +139,7 @@ class Cluster:
                     self._get_connection_details(), self._get_main_python()
                 )
 
-    def destroy(self, wait=True):
+    def destroy(self, wait=False):
         """
         Destroys the cluster. When already destroyed, should be a no-op.
         Always call .destroy(True) before assuming a cluster is dead.
@@ -152,13 +152,13 @@ class Cluster:
         if wait:
             atexit.unregister(self.destroy)
 
-    def _spawn(self, wait=True):
+    def _spawn(self, wait=False):
         """
         Subclass must implement the real spawning
         """
         raise NotImplementedError()
 
-    def _destroy(self, wait=True):
+    def _destroy(self, wait=False):
         """
         Subclass must implement the real destruction
         """

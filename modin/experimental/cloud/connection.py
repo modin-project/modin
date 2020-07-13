@@ -15,13 +15,14 @@ import subprocess
 import signal
 import os
 import random
+import time
 
 from .base import ClusterError, ConnectionDetails, _get_ssh_proxy_command
 
 
 class Connection:
     __current = None
-    connect_timeout = 5
+    connect_timeout = 10
     tries = 10
     rpyc_port = 18813
 
@@ -83,6 +84,7 @@ class Connection:
         else:
             raise ClusterError("Unable to bind a local port when forwarding")
         self.__connection = None
+        self.__started = time.time()
 
     @classmethod
     def get(cls):
@@ -101,9 +103,19 @@ class Connection:
         if self.__connection is None:
             import rpyc
 
-            self.__connection = rpyc.classic.connect(
-                "127.0.0.1", self.rpyc_port, keepalive=True
-            )
+            while time.time() < self.__started + self.connect_timeout + 1.0:
+                try:
+                    self.__connection = rpyc.classic.connect(
+                        "127.0.0.1", self.rpyc_port, keepalive=True
+                    )
+                except (ConnectionRefusedError, EOFError):
+                    if self.proc.poll() is not None:
+                        raise ClusterError(
+                            f"SSH tunnel died, return code: {self.proc.returncode}"
+                        )
+                    time.sleep(1.0)
+            if self.__connection is None:
+                raise ClusterError("Timeout establishing RPyC connection")
 
         Connection.__current = self
 
