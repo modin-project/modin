@@ -75,17 +75,14 @@ def initialize_ray(cluster=None, redis_address=None, redis_password=None):
         redis_password = redis_password or secrets.token_hex(16)
 
         if cluster == "True":
-            kwargs = {
-                "include_webui": False,
-                "ignore_reinit_error": True,
-                "redis_password": redis_password,
-                "logging_level": 100,
-            }
             # We only start ray in a cluster setting for the head node.
-            if redis_address is not None:
-                ray.init(address=redis_address, **kwargs)
-            else:
-                ray.init(address="auto", **kwargs)
+            ray.init(
+                address=redis_address or "auto",
+                include_webui=False,
+                ignore_reinit_error=True,
+                redis_password=redis_password,
+                logging_level=100,
+            )
         elif cluster is None:
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
