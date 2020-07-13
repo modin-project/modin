@@ -149,6 +149,8 @@ class Cluster:
         if self.connection is not None:
             self.connection.stop()
         self._destroy(wait=wait)
+        if wait:
+            atexit.unregister(self.destroy)
 
     def _spawn(self, wait=True):
         """

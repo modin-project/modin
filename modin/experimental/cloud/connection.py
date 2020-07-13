@@ -77,8 +77,7 @@ class Connection:
             port = random.randint(1024, 65000)
         else:
             raise ClusterError("Unable to bind a local port when forwarding")
-
-        self.activate()
+        self.__connection = None
 
     @classmethod
     def get(cls):
@@ -88,13 +87,19 @@ class Connection:
             or cls.__current.proc.poll() is not None
         ):
             raise ClusterError("SSH tunnel is not running")
-        import rpyc
+        if cls.__current.__connection is None:
+            raise ClusterError("Connection not activated")
 
-        return rpyc.classic.connect(
-            "localhost", cls.__current.rpyc_port, keepalive=True
-        )
+        return cls.__current.__connection
 
     def activate(self):
+        if self.__connection is None:
+            import rpyc
+
+            self.__connection = rpyc.classic.connect(
+                "localhost", self.rpyc_port, keepalive=True
+            )
+
         Connection.__current = self
 
     def deactivate(self):
