@@ -61,18 +61,18 @@ def _import_pandas(*args):
     import pandas  # noqa F401
 
 
-def initialize_ray(cluster=None, redis_address=None, redis_password=None):
+def initialize_ray():
+    """Initializes ray based on environment variables and internal defaults."""
     import ray
 
-    """Initializes ray based on environment variables and internal defaults."""
     if threading.current_thread().name == "MainThread":
         import secrets
 
         plasma_directory = None
         num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = cluster or os.environ.get("MODIN_RAY_CLUSTER", None)
-        redis_address = redis_address or os.environ.get("MODIN_REDIS_ADDRESS", None)
-        redis_password = redis_password or secrets.token_hex(16)
+        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
+        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
+        redis_password = secrets.token_hex(16)
 
         if cluster == "True":
             # We only start ray in a cluster setting for the head node.
