@@ -97,7 +97,7 @@ class Connection:
             import rpyc
 
             self.__connection = rpyc.classic.connect(
-                "localhost", self.rpyc_port, keepalive=True
+                "127.0.0.1", self.rpyc_port, keepalive=True
             )
 
         Connection.__current = self
@@ -141,7 +141,9 @@ class Connection:
         for oname, ovalue in opts:
             cmdline.extend(["-o", f"{oname}={ovalue}"])
         if forward_port:
-            cmdline.extend(["-L", f"{forward_port}:localhost:{self.rpyc_port}"])
+            cmdline.extend(
+                ["-L", f"127.0.0.1:{forward_port}:127.0.0.1:{self.rpyc_port}"]
+            )
         cmdline.append(f"{details.user_name}@{details.address}")
 
         return cmdline
