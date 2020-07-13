@@ -358,17 +358,19 @@ class BasePandasFrame(object):
         if row_indices is not None:
             row_numeric_idx = self.index.get_indexer_for(row_indices)
         if row_numeric_idx is not None:
-            row_partitions_list = self._get_dict_of_block_index(1, row_numeric_idx)
+            row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
             if isinstance(row_numeric_idx, slice):
+                # Row lengths for slice are calculated as the length of the slice
+                # on the partition. Often this will be the same length as the current
+                # length, but sometimes it is different, thus the extra calculation.
                 new_row_lengths = [
                     len(range(*idx.indices(self._row_lengths[p])))
                     for p, idx in row_partitions_list.items()
                 ]
+                # Use the slice to calculate the new row index
                 new_index = self.index[row_numeric_idx]
             else:
-                new_row_lengths = [
-                    len(indices) for _, indices in row_partitions_list.items()
-                ]
+                new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
                 new_index = self.index[sorted(row_numeric_idx)]
         else:
             row_partitions_list = {
@@ -380,15 +382,29 @@ class BasePandasFrame(object):
         if col_indices is not None:
             col_numeric_idx = self.columns.get_indexer_for(col_indices)
         if col_numeric_idx is not None:
-            col_partitions_list = self._get_dict_of_block_index(0, col_numeric_idx)
-            new_col_widths = [
-                len(indices) for _, indices in col_partitions_list.items()
-            ]
-            new_columns = self.columns[sorted(col_numeric_idx)]
-            if self._dtypes is not None:
-                new_dtypes = self.dtypes[sorted(col_numeric_idx)]
+            col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
+            if isinstance(col_numeric_idx, slice):
+                # Column widths for slice are calculated as the length of the slice
+                # on the partition. Often this will be the same length as the current
+                # length, but sometimes it is different, thus the extra calculation.
+                new_col_widths = [
+                    len(range(*idx.indices(self._column_widths[p])))
+                    for p, idx in col_partitions_list.items()
+                ]
+                # Use the slice to calculate the new columns
+                new_columns = self.columns[col_numeric_idx]
+                assert sum(new_col_widths) == len(new_columns), "{} != {}.\n{}\n{}\n{}".format(sum(new_col_widths), len(new_columns), col_numeric_idx, self._column_widths, col_partitions_list)
+                if self._dtypes is not None:
+                    new_dtypes = self.dtypes[col_numeric_idx]
+                else:
+                    new_dtypes = None
             else:
-                new_dtypes = None
+                new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
+                new_columns = self.columns[sorted(col_numeric_idx)]
+                if self._dtypes is not None:
+                    new_dtypes = self.dtypes[sorted(col_numeric_idx)]
+                else:
+                    new_dtypes = None
         else:
             col_partitions_list = {
                 i: slice(None) for i in range(len(self._column_widths))
@@ -640,7 +656,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : (0 - columns, 1 - rows)
+        axis : (0 - rows, 1 - columns)
                The axis along which to get the indices
         indices : list of int
                 A list of global indices to convert.
@@ -707,11 +723,12 @@ class BasePandasFrame(object):
                         )
                         dict_of_slices.update({last_part: slice(None, last_idx[0])})
                         return dict_of_slices
-        indices = np.sort(indices)
-        if not axis:
-            bins = np.array(self._column_widths)
-        else:
+        # Sort and convert negative indices to positive
+        indices = np.sort([i if i >= 0 else len(self.axes[axis]) + i for i in indices])
+        if axis == 0:
             bins = np.array(self._row_lengths)
+        else:
+            bins = np.array(self._column_widths)
         # INT_MAX to make sure we don't try to compute on partitions that don't exist.
         cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
@@ -1078,7 +1095,9 @@ class BasePandasFrame(object):
         old_index = self.index if axis else self.columns
         if apply_indices is not None:
             numeric_indices = old_index.get_indexer_for(apply_indices)
-        dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
+        # Get the indices for the axis being applied to (it is the opposite of axis
+        # being applied over)
+        dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
         new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
             axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
         )
@@ -1133,7 +1152,8 @@ class BasePandasFrame(object):
             # Convert indices to numeric indices
             old_index = self.index if axis else self.columns
             numeric_indices = old_index.get_indexer_for(apply_indices)
-            dict_indices = self._get_dict_of_block_index(axis, numeric_indices)
+            # Get indices being applied to (opposite of indices being applied over)
+            dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
             new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
                 axis,
                 self._partitions,
@@ -1162,8 +1182,8 @@ class BasePandasFrame(object):
             assert row_indices is not None and col_indices is not None
             assert keep_remaining
             assert item_to_distribute is not None
-            row_partitions_list = self._get_dict_of_block_index(1, row_indices).items()
-            col_partitions_list = self._get_dict_of_block_index(0, col_indices).items()
+            row_partitions_list = self._get_dict_of_block_index(0, row_indices).items()
+            col_partitions_list = self._get_dict_of_block_index(1, col_indices).items()
             new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
