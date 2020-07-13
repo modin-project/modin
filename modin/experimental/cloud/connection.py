@@ -26,7 +26,7 @@ class Connection:
     rpyc_port = 18813
 
     @staticmethod
-    def __wait_noexc(proc:subprocess.Popen, timeout:float):
+    def __wait_noexc(proc: subprocess.Popen, timeout: float):
         try:
             return proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -143,7 +143,10 @@ class Connection:
 
     @staticmethod
     def __run(sshcmd: list, cmd: list, capture_out: bool = True):
-        redirect = subprocess.PIPE if capture_out else None
+        redirect = subprocess.PIPE if capture_out else subprocess.DEVNULL
         return subprocess.Popen(
-            sshcmd + [subprocess.list2cmdline(cmd)], stdout=redirect, stderr=redirect
+            sshcmd + [subprocess.list2cmdline(cmd)],
+            stdin=subprocess.DEVNULL,
+            stdout=redirect,
+            stderr=redirect,
         )
