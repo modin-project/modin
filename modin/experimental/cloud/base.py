@@ -21,8 +21,9 @@ class ClusterError(Exception):
     Generic cluster operating exception
     """
 
-    def __init__(self, *args, cause=None, **kw):
+    def __init__(self, *args, cause: BaseException = None, traceback: str = None, **kw):
         self.cause = cause
+        self.traceback = traceback
         super().__init__(*args, **kw)
 
 

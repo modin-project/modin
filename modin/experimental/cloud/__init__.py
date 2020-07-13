@@ -29,7 +29,7 @@ def cluster(
         from .rayscale import RayCluster as Spawner
     else:
         raise ValueError(f"Unknown spawner: {spawner}")
-    return Spawner(
+    instance = Spawner(
         provider,
         project_name,
         cluster_name,
@@ -37,6 +37,8 @@ def cluster(
         head_node_type,
         worker_node_type,
     )
+    instance.spawn(wait=True)  # XXX for testing
+    return instance
 
 
 def get_connection():

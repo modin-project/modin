@@ -14,6 +14,7 @@
 import os
 import errno
 from typing import NamedTuple
+import atexit
 
 from modin import set_backends
 
@@ -121,7 +122,6 @@ class Cluster:
 
         self.old_backends = None
         self.connection: Connection = None
-        self.spawn(wait=False)
 
     def spawn(self, wait=True):
         """
@@ -131,6 +131,7 @@ class Cluster:
         When wait==False it spawns cluster asynchronously.
         """
         self._spawn(wait=wait)
+        atexit.register(self.destroy, wait=True)
         if wait:
             # cluster is ready now
             if self.connection is None:
@@ -183,6 +184,3 @@ class Cluster:
         set_backends(*self.old_backends)
         self.connection.deactivate()
         self.old_backends = None
-
-    def __del__(self):
-        self.destroy(wait=True)

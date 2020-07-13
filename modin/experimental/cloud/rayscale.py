@@ -23,6 +23,7 @@ from ray.autoscaler.commands import (
     create_or_update_cluster,
     teardown_cluster,
     get_head_node_ip,
+    _bootstrap_config,
 )
 
 from .base import (
@@ -42,19 +43,30 @@ class _ThreadTask:
         self.silent = False
 
 
+class _Immediate:
+    def __init__(self, target: Callable):
+        self.target = target
+
+    def start(self):
+        self.target()
+
+    def join(self):
+        pass
+
+
 class RayCluster(Cluster):
     __base_config = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
     )
     __instance_key = {Provider.AWS: "InstanceType"}
-    __credentials_env = {Provider.AWS: "AWS_CONFIG_FILE"}
+    __credentials_env = {Provider.AWS: "AWS_SHARED_CREDENTIALS_FILE"}
 
     def __init__(self, *a, **kw):
         self.spawner = _ThreadTask(self.__do_spawn)
         self.destroyer = _ThreadTask(self.__do_destroy)
 
         self.ready = False
-        super().__init__(self, *a, **kw)
+        super().__init__(*a, **kw)
 
         if self.provider.credentials_file is not None:
             try:
@@ -74,7 +86,8 @@ class RayCluster(Cluster):
 
     def __run_thread(self, wait, task: _ThreadTask):
         if not task.thread:
-            task.thread = threading.Thread(target=task.target)
+            task.thread = (_Immediate if wait else threading.Thread)(target=task.target)
+            task.thread.start()
 
         if wait:
             task.silent = True
@@ -99,7 +112,7 @@ class RayCluster(Cluster):
             config["provider"]["zone"] = self.provider.zone
 
         # connection details
-        config["auth"]["ssh_user"] = "modin"
+        config["auth"]["ssh_user"] = "ubuntu"
         socks_proxy_cmd = _get_ssh_proxy_command()
         if socks_proxy_cmd:
             config["auth"]["ssh_proxy_command"] = socks_proxy_cmd
@@ -112,19 +125,14 @@ class RayCluster(Cluster):
         config["head_node"][instance_key] = self.head_node_type
         config["worker_nodes"][instance_key] = self.worker_node_type
 
-        return config
+        return _bootstrap_config(config)
 
     @staticmethod
     def __save_config(config):
         cfgdir = os.path.abspath(os.path.expanduser("~/.modin/cloud"))
         os.makedirs(cfgdir, mode=0o700, exist_ok=True)
-        namehash = sha1(repr(config).encode("utf8")).hexdigest()
-        for stop in range(4, len(namehash)):
-            entry = os.path.join(cfgdir, f"config-{namehash[:stop]}.yml")
-            if not os.path.exists(entry):
-                break
-        else:
-            entry = os.path.join(cfgdir, f"config-{namehash}.yml")
+        namehash = sha1(repr(config).encode("utf8")).hexdigest()[:8]
+        entry = os.path.join(cfgdir, f"config-{namehash}.yml")
 
         with open(entry, "w") as out:
             out.write(yaml.dump(config))
@@ -146,7 +154,9 @@ class RayCluster(Cluster):
                 self.config = yaml.safe_load(inp.read())
             self.ready = True
         except BaseException as ex:
-            self.spawn_exc = CannotSpawnCluster("Cannot spawn cluster", cause=ex)
+            self.spawner.exc = CannotSpawnCluster(
+                "Cannot spawn cluster", cause=ex, traceback=traceback.format_exc()
+            )
             if not self.spawner.silent:
                 sys.stderr.write(f"Cannot spawn cluster:\n{traceback.format_exc()}\n")
 
@@ -162,7 +172,9 @@ class RayCluster(Cluster):
             self.ready = False
             self.config = None
         except BaseException as ex:
-            self.destroy_exc = CannotDestroyCluster("Cannot destroy cluster", cause=ex)
+            self.destroyer.exc = CannotDestroyCluster(
+                "Cannot destroy cluster", cause=ex, traceback=traceback.format_exc()
+            )
             if not self.destroyer.silent:
                 sys.stderr.write(f"Cannot destroy cluster:\n{traceback.format_exc()}\n")
 
