@@ -46,7 +46,12 @@ class Connection:
                 "import os; from distutils.dist import Distribution; from distutils.command.install import install; cmd = install(Distribution()); cmd.finalize_options(); print(os.path.join(cmd.install_scripts, 'rpyc_classic.py'))",
             ],
         )
-        out, err = locator.communicate(timeout=5)
+        try:
+            out, err = locator.communicate(timeout=self.connect_timeout)
+        except subprocess.TimeoutExpired as ex:
+            raise ClusterError(
+                "Cannot get path to rpyc_classic: cannot connect to host", cause=ex
+            )
         if locator.returncode != 0:
             raise ClusterError(
                 f"Cannot get path to rpyc_classic, return code: {locator.returncode}"
