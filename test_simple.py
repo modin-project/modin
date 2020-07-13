@@ -20,3 +20,16 @@ print(a)
 a = pd.DataFrame([[1, 10, 100], [2, 20, 200], [3, 30, 300]], columns=['a', 'b', 'c'])
 a = a[['a', 'b']]
 print(a)
+
+
+cols = ["seller_name", "new_name"]
+dtypes = {'seller_name':'category', 'new_name':'category'}
+df = pd.read_csv("names_small.csv", names=cols, dtype=dtypes, delimiter=",")
+#print(df)
+
+
+data = { "id": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"], }
+df = pd.DataFrame(data)
+df["id1"] = df["id"].astype("category")
+a = pa.Table.from_pandas(df)
+pdb.consumeArrowTable('testtable', a)

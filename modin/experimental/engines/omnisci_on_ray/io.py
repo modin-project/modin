@@ -26,6 +26,58 @@ class OmnisciOnRayIO(RayIO):
     #def from_arrow(cls, at):
     #    return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
+    arg_keys = [
+                "filepath_or_buffer",
+                "sep",
+                "delimiter",
+                "header",
+                "names",
+                "index_col",
+                "usecols",
+                "squeeze",
+                "prefix",
+                "mangle_dupe_cols",
+                "dtype",
+                "engine",
+                "converters",
+                "true_values",
+                "false_values",
+                "skipinitialspace",
+                "skiprows",
+                "nrows",
+                "na_values",
+                "keep_default_na",
+                "na_filter",
+                "verbose",
+                "skip_blank_lines",
+                "parse_dates",
+                "infer_datetime_format",
+                "keep_date_col",
+                "date_parser",
+                "dayfirst",
+                "cache_dates",
+                "iterator",
+                "chunksize",
+                "compression",
+                "thousands",
+                "decimal",
+                "lineterminator",
+                "quotechar",
+                "quoting",
+                "escapechar",
+                "comment",
+                "encoding",
+                "dialect",
+                "error_bad_lines",
+                "warn_bad_lines",
+                "skipfooter",
+                "doublequote",
+                "delim_whitespace",
+                "low_memory",
+                "memory_map",
+                "float_precision",
+    ]
+
     @classmethod
     def read_csv(
         cls,
@@ -79,70 +131,167 @@ class OmnisciOnRayIO(RayIO):
         memory_map=False,
         float_precision=None,
     ):
+        items = locals().copy()
+        mykwargs = {k : items[k] for k in items if k in cls.arg_keys}
 
         try:
-            from pyarrow.csv import read_csv
-            at = read_csv(filepath_or_buffer)
+            from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
+
+            if str(engine).lower().strip() in ['pandas', 'c']:
+                return cls._read(**mykwargs)
+
+            """
+            class ParseOptions(delimiter=None, quote_char=None, double_quote=None, escape_char=None, newlines_in_values=None, ignore_empty_lines=None)
+            Options for parsing CSV files.
+
+            Parameters
+            delimiter: 1-character string, optional (default ',')
+
+                The character delimiting individual cells in the CSV data.  
+            quote_char: 1-character string or False, optional (default '"')
+
+                The character used optionally for quoting CSV values  
+                (False if quoting is not allowed).  
+            double_quote: bool, optional (default True)
+
+                Whether two quotes in a quoted CSV value denote a single quote  
+                in the data.  
+            escape_char: 1-character string or False, optional (default False)
+
+                The character used optionally for escaping special characters  
+                (False if escaping is not allowed).  
+            newlines_in_values: bool, optional (default False)
+
+                Whether newline characters are allowed in CSV values.  
+                Setting this to True reduces the performance of multi-threaded  
+                CSV reading.  
+            ignore_empty_lines: bool, optional (default True)
+
+                Whether empty lines are ignored in CSV input.  
+                If False, an empty line is interpreted as containing a single empty  
+                value (assuming a one-column CSV file).  
+            """
+            po = ParseOptions(
+                    delimiter = sep if sep else '\s+' if delim_whitespace else delimiter,
+                    quote_char=quotechar,
+                    double_quote=doublequote, 
+                    escape_char=escapechar,
+                    newlines_in_values=False,
+                    ignore_empty_lines=skip_blank_lines
+            )
+
+
+            """
+            Options for converting CSV data.
+
+            Parameters
+            check_utf8 : bool, optional (default True)
+
+                Whether to check UTF8 validity of string columns.  
+            column_types: dict, optional
+
+                Map column names to column types  
+                (disabling type inference on those columns).  
+            null_values: list, optional
+
+                A sequence of strings that denote nulls in the data  
+                (defaults are appropriate in most cases).  
+            true_values: list, optional
+
+                A sequence of strings that denote true booleans in the data  
+                (defaults are appropriate in most cases).  
+            false_values: list, optional
+
+                A sequence of strings that denote false booleans in the data  
+                (defaults are appropriate in most cases).  
+            strings_can_be_null: bool, optional (default False)
+
+                Whether string / binary columns can have null values.  
+                If true, then strings in null_values are considered null for  
+                string columns.  
+                If false, then all strings are valid string values.  
+            auto_dict_encode: bool, optional (default False)
+
+                Whether to try to automatically dict-encode string / binary data.  
+                If true, then when type inference detects a string or binary column,  
+                it it dict-encoded up to `auto_dict_max_cardinality` distinct values  
+                (per chunk), after which it switches to regular encoding.  
+                This setting is ignored for non-inferred columns (those in  
+                `column_types`).  
+            auto_dict_max_cardinality: int, optional
+
+                The maximum dictionary cardinality for `auto_dict_encode`.  
+                This value is per chunk.  
+            include_columns: list, optional
+
+                The names of columns to include in the Table.  
+                If empty, the Table will include all columns from the CSV file.  
+                If not empty, only these columns will be included, in this order.  
+            include_missing_columns: bool, optional (default False)
+
+                If false, columns in `include_columns` but not in the CSV file will  
+                error out.  
+                If true, columns in `include_columns` but not in the CSV file will  
+                produce a column of nulls (whose type is selected using  
+                `column_types`, or null by default).  
+                This option is ignored if `include_columns` is empty.  
+            """
+            co = ConvertOptions(
+                    check_utf8=None, 
+                    column_types=None, 
+                    null_values=None,
+                    true_values=None, 
+                    false_values=None, 
+                    strings_can_be_null=None, 
+                    include_columns=None, 
+                    include_missing_columns=None, 
+                    auto_dict_encode=None, 
+                    auto_dict_max_cardinality=None)
+
+            """
+            class ReadOptions(use_threads=None, block_size=None, skip_rows=None, column_names=None, autogenerate_column_names=None)
+            Options for reading CSV files.
+
+            Parameters
+            use_threads : bool, optional (default True)
+
+                Whether to use multiple threads to accelerate reading  
+            block_size : int, optional
+
+                How much bytes to process at a time from the input stream.  
+                This will determine multi-threading granularity as well as  
+                the size of individual chunks in the Table.  
+            skip_rows: int, optional (default 0)
+
+                The number of rows to skip at the start of the CSV data, not  
+                including the row of column names (if any).  
+            column_names: list, optional
+
+                The column names of the target table.  If empty, fall back on  
+                `autogenerate_column_names`.  
+            autogenerate_column_names: bool, optional (default False)
+
+                Whether to autogenerate column names if `column_names` is empty.  
+                If true, column names will be of the form "f0", "f1"...  
+                If false, column names will be read from the first CSV row  
+                after `skip_rows`.  
+            """
+            ro = ReadOptions(
+                    use_threads=True,
+                    block_size=None,
+                    skip_rows=skiprows,
+                    column_names=None,
+                    autogenerate_column_names=None)
+
+            at = read_csv(filepath_or_buffer, read_options=ro, parse_options=po, convert_options=co)
+            
             # three options, to omnisci or...
             #   omniSession = OmnisciServer()
             #   omniSession... consume
             # ...or leave it as is, in Arrow,
             # or convert to pandas
-            print("hello from arrow read_csv:", at)
             return cls.from_arrow(at) # cls.from_pandas(at.to_pandas())  #
         except:
-            raise "abrakadabra"
             ErrorMessage.default_to_pandas("`read_csv`")
-            mykwargs = {
-                "filepath_or_buffer": filepath_or_buffer,
-                "sep": sep,
-                "delimiter": delimiter,
-                "header": header,
-                "names": names,
-                "index_col": index_col,
-                "usecols": usecols,
-                "squeeze": squeeze,
-                "prefix": prefix,
-                "mangle_dupe_cols": mangle_dupe_cols,
-                "dtype": dtype,
-                "engine": engine,
-                "converters": converters,
-                "true_values": true_values,
-                "false_values": false_values,
-                "skipinitialspace": skipinitialspace,
-                "skiprows": skiprows,
-                "nrows": nrows,
-                "na_values": na_values,
-                "keep_default_na": keep_default_na,
-                "na_filter": na_filter,
-                "verbose": verbose,
-                "skip_blank_lines": skip_blank_lines,
-                "parse_dates": parse_dates,
-                "infer_datetime_format": infer_datetime_format,
-                "keep_date_col": keep_date_col,
-                "date_parser": date_parser,
-                "dayfirst": dayfirst,
-                "cache_dates": cache_dates,
-                "iterator": iterator,
-                "chunksize": chunksize,
-                "compression": compression,
-                "thousands": thousands,
-                "decimal": decimal,
-                "lineterminator": lineterminator,
-                "quotechar": quotechar,
-                "quoting": quoting,
-                "escapechar": escapechar,
-                "comment": comment,
-                "encoding": encoding,
-                "dialect": dialect,
-                "error_bad_lines": error_bad_lines,
-                "warn_bad_lines": warn_bad_lines,
-                "skipfooter": skipfooter,
-                "doublequote": doublequote,
-                "delim_whitespace": delim_whitespace,
-                "low_memory": low_memory,
-                "memory_map": memory_map,
-                "float_precision": float_precision,
-            }
             return cls._read(**mykwargs)
 
