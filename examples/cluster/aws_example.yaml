@@ -114,18 +114,6 @@ initialization_commands: []
 # List of shell commands to run to set up nodes.
 setup_commands:
     - |
-        echo "getting mortgage dataset"
-        test -e bench_data || mkdir bench_data && cd bench_data &&
-        wget "http://rapidsai-data.s3-website.us-east-2.amazonaws.com/notebook-mortgage-data/mortgage_2000-2001.tgz" &&
-        tar -xzvf mortgage_2000-2001.tgz &&
-        mv acq/Acquisition_2000Q1.txt acq/Acquisition_2000Q1-old.txt &&
-        head -n 1000 acq/Acquisition_2000Q1-old.txt > acq/Acquisition_2000Q1.txt &&
-        mv perf/Performance_2000Q1.txt perf/Performance_2000Q1-old.txt &&
-        head -n 1000 perf/Performance_2000Q1-old.txt > perf/Performance_2000Q1.txt && cd ~
-
-        sudo apt-get update
-        sudo apt-get install -y build-essential unzip
-
         # need to install python 3.7.6
         wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
         bash ~/miniconda.sh -b -p ~/miniconda
@@ -135,12 +123,8 @@ setup_commands:
         conda activate modin
         conda install python==3.7.6
 
-        echo 'installing modin from source'
-        test -e modin || git clone --single-branch --branch test-autoscaler https://github.com/anmyachev/modin.git
-        cd modin && pip install -r requirements.txt
-        pip install -e .
+        pip install modin
         echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
-        cd ~
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
