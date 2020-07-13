@@ -136,7 +136,7 @@ head_setup_commands:
     - |
         source ~/.bashrc
         conda activate modin
-        pip install boto3==1.4.8 rpyc
+        pip install boto3==1.4.8 rpyc==4.1.5
         echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
 
 # Custom commands that will be run on worker nodes after common setup.
