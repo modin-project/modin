@@ -32,33 +32,35 @@ class Connection:
 
         # find where rpyc_classic is located
         locator = self.__run(
-            self.__build_opts(details)
-            + [
+            self.__build_sshcmd(details),
+            [
                 main_python,
                 "-c",
                 "import os; from distutils.dist import Distribution; from distutils.command.install import install; cmd = install(Distribution()); cmd.finalize_options(); print(os.path.join(cmd.install_scripts, 'rpyc_classic.py'))",
-            ]
+            ],
         )
         out, err = locator.communicate(timeout=5)
         if locator.returncode != 0:
             raise ClusterError(
                 f"Cannot get path to rpyc_classic, return code: {locator.returncode}"
             )
-        rpyc_classic = out.splitlines()[0].strip()
+        rpyc_classic = out.splitlines()[0].strip().decode("utf8")
         if not rpyc_classic:
             raise ClusterError("Got empty path to rpyc_classic")
 
         port = self.rpyc_port
+        cmd = [
+            main_python,
+            rpyc_classic,
+            "--port",
+            str(self.rpyc_port),
+        ]
+        if log_rpyc:
+            cmd.extend(["--logfile", "/tmp/rpyc.log"])
         for _ in range(self.tries):
-            cmd = self.__build_opts(details, forward_port=port) + [
-                main_python,
-                rpyc_classic,
-                "--port",
-                str(self.rpyc_port),
-            ]
-            if log_rpyc:
-                cmd.extend(["--logfile", "/tmp/rpyc.log"])
-            proc = self.__run(cmd, capture_out=False)
+            proc = self.__run(
+                self.__build_sshcmd(details, forward_port=port), cmd, capture_out=False
+            )
             if proc.wait(1) is None:
                 # started successfully
                 self.proc = proc
@@ -92,10 +94,11 @@ class Connection:
         if Connection.__current is self:
             Connection.__current = None
 
-    def stop(self):
+    def stop(self, sigint=signal.SIGINT):
+        # capture signal.SIGINT in closure so it won't get removed before __del__ is called
         self.deactivate()
         if self.proc and self.proc.poll() is None:
-            self.proc.send_signal(signal.SIGINT)
+            self.proc.send_signal(sigint)
             if self.proc.wait(self.connect_timeout) is None:
                 self.proc.terminate()
                 if self.proc.wait(self.connect_timeout) is None:
@@ -105,7 +108,7 @@ class Connection:
     def __del__(self):
         self.stop()
 
-    def __build_opts(self, details: ConnectionDetails, forward_port: int = None):
+    def __build_sshcmd(self, details: ConnectionDetails, forward_port: int = None):
         opts = [
             ("ConnectTimeout", "{}s".format(self.connect_timeout)),
             ("StrictHostKeyChecking", "no"),
@@ -132,6 +135,8 @@ class Connection:
         return cmdline
 
     @staticmethod
-    def __run(cmd: list, capture_out: bool = True):
+    def __run(sshcmd: list, cmd: list, capture_out: bool = True):
         redirect = subprocess.PIPE if capture_out else None
-        return subprocess.Popen(cmd, stdout=redirect, stderr=redirect)
+        return subprocess.Popen(
+            sshcmd + [subprocess.list2cmdline(cmd)], stdout=redirect, stderr=redirect
+        )
