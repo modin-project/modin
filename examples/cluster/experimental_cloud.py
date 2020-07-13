@@ -24,11 +24,11 @@ logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-from modin.experimental.cloud import Provider, cluster, get_connection
+from modin.experimental.cloud import Provider, Cluster, get_connection
 
 
 aws = Provider(Provider.AWS, os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_credentials'), 'us-west-1')
-with cluster(aws, cluster_name='rayscale-test') as c:
+with Cluster(aws, cluster_name='rayscale-test') as c:
     conn = get_connection()
     import pdb;pdb.set_trace()
     modin = conn.modules.modin

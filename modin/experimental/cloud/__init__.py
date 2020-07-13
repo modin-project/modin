@@ -12,11 +12,11 @@
 # governing permissions and limitations under the License.
 
 from .base import ClusterError, CannotSpawnCluster, CannotDestroyCluster
-from .cluster import Provider, Cluster
+from .cluster import Provider, BaseCluster
 from .connection import Connection
 
 
-def cluster(
+def Cluster(
     provider: Provider,
     project_name: str = None,
     cluster_name: str = "modin-cluster",
@@ -24,7 +24,7 @@ def cluster(
     head_node_type: str = None,
     worker_node_type: str = None,
     spawner: str = "rayscale",
-) -> Cluster:
+) -> BaseCluster:
     if spawner == "rayscale":
         from .rayscale import RayCluster as Spawner
     else:

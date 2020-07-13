@@ -32,7 +32,7 @@ from .base import (
     ConnectionDetails,
     _get_ssh_proxy_command,
 )
-from .cluster import Cluster, Provider
+from .cluster import BaseCluster, Provider
 
 
 class _ThreadTask:
@@ -54,7 +54,7 @@ class _Immediate:
         pass
 
 
-class RayCluster(Cluster):
+class RayCluster(BaseCluster):
     __base_config = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
     )

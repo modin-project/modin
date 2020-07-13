@@ -86,7 +86,7 @@ class Provider:
         return self.__DEFAULT_WORKER[self.name]
 
 
-class Cluster:
+class BaseCluster:
     """
     Cluster manager for Modin. Knows how to use certain tools to spawn and destroy clusters,
     can serve as context manager to switch execution engine and partition to remote.
