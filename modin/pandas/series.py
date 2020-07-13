@@ -1602,6 +1602,7 @@ class Series(BasePandasDataset):
 
         return self._default_to_pandas(attrs)
 
+    @property
     def array(self):
         def array(df):
             return df.array
