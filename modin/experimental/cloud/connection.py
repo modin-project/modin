@@ -101,25 +101,28 @@ class Connection:
 
         return cls.__current.__connection
 
+    def __try_connect(self):
+        import rpyc
+        try:
+            self.__connection = rpyc.connect(
+                "127.0.0.1",
+                self.rpyc_port,
+                rpyc.ClassicService,
+                config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
+                keepalive=True,
+            )
+        except (ConnectionRefusedError, EOFError):
+            if self.proc.poll() is not None:
+                raise ClusterError(
+                    f"SSH tunnel died, return code: {self.proc.returncode}"
+                )
+
     def activate(self):
         if self.__connection is None:
-            import rpyc
-
-            while time.time() < self.__started + self.connect_timeout + 1.0:
-                try:
-                    self.__connection = rpyc.connect(
-                        "127.0.0.1",
-                        self.rpyc_port,
-                        rpyc.ClassicService,
-                        config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
-                        keepalive=True,
-                    )
-                except (ConnectionRefusedError, EOFError):
-                    if self.proc.poll() is not None:
-                        raise ClusterError(
-                            f"SSH tunnel died, return code: {self.proc.returncode}"
-                        )
-                    time.sleep(1.0)
+            self.__try_connect()
+            while self.__connection is None and time.time() < self.__started + self.connect_timeout + 1.0:
+                time.sleep(1.0)
+                self.__try_connect()
             if self.__connection is None:
                 raise ClusterError("Timeout establishing RPyC connection")
 
