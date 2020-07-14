@@ -1135,8 +1135,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
     dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
     dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
-    dt_tz = MapFunction.register(_dt_prop_map("tz"))
-    dt_freq = MapFunction.register(_dt_prop_map("freq"))
+    dt_tz = MapReduceFunction.register(
+        _dt_prop_map("tz"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
+    )
+    dt_freq = MapReduceFunction.register(
+        _dt_prop_map("freq"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
+    )
     dt_to_period = MapFunction.register(_dt_func_map("to_period"))
     dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
     dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
@@ -1154,7 +1158,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_days = MapFunction.register(_dt_prop_map("days"))
     dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
     dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
-    dt_components = MapFunction.register(_dt_prop_map("components"))
+    dt_components = MapFunction.register(
+        _dt_prop_map("components"), validate_columns=True
+    )
     dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
     dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
     dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
