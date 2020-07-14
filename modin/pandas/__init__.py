@@ -262,13 +262,15 @@ def _update_engine(publisher: Publisher):
 
             warnings.warn("The Dask Engine for Modin is experimental.")
 
-        try:
-            dask_client = get_client()
-        except ValueError:
-            from distributed import Client
+            try:
+                dask_client = get_client()
+            except ValueError:
+                from distributed import Client
 
-            num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-            dask_client = Client(n_workers=int(num_cpus))
+                num_cpus = (
+                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
+                )
+                dask_client = Client(n_workers=int(num_cpus))
 
     elif publisher.get() != "Python":
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
