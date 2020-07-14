@@ -176,6 +176,38 @@ def _update_engine(publisher: Publisher):
                 )
                 dask_client = Client(n_workers=int(num_cpus))
 
+    elif publisher.get() == 'Cloudray':
+        from modin.experimental.cloud import get_connection
+        import rpyc
+        conn : rpyc.ClassicService = get_connection()
+        remote_ray = conn.modules['ray']
+        if _is_first_update.get('Cloudray', True):
+            @conn.teleport
+            def init_remote_ray():
+                # XXX hack alert! things being monkey-patched below should be not needed when initialize_ray() accepts parameters
+                import os
+                import ray.ray_constants
+                import secrets
+                import threading
+
+                os.environ['MODIN_ENGINE'] = 'Ray'
+                os.environ['MODIN_RAY_CLUSTER'] = 'True'
+                os.environ['MODIN_REDIS_ADDRESS'] = 'localhost:6379'
+
+                old_name = threading.current_thread().name
+                threading.current_thread().name = 'MainThread'
+
+                old_token = secrets.token_hex
+                secrets.token_hex = lambda *a, **kw: ray.ray_constants.REDIS_DEFAULT_PASSWORD
+                try:
+                    import modin.pandas # this would initialize remote ray
+                finally:
+                    threading.current_thread().name = old_name
+                    secrets.token_hex = old_token
+            init_remote_ray()
+
+        num_cpus = remote_ray.cluster_resources()['CPU']
+
     elif publisher.get() != "Python":
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
