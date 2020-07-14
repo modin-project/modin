@@ -37,12 +37,20 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 
 
 class TestCSV:
-    root = os.path.abspath(__file__+"/.."*6)
-    csv_file1 = os.path.join(root, "examples/data/boston_housing.csv")
+    root = os.path.abspath(__file__+"/.."*6)  # root of modin repo
+    csv_file = os.path.join(root, "examples/data/boston_housing.csv")
 
     def test_simple1(self):
-        my_df = mpd.read_csv(self.csv_file1)
-        a = my_df[['AGE', 'INDUS']]
+        """ check with the following arguments: names, dtype, skiprows, delimiter, parse_dates """
+        r1 = mpd.read_csv(self.csv_file, skiprows=1, names=["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",])
+        r2 = mpd.read_csv(self.csv_file, names=["noname",])
+        r3 = mpd.read_csv(self.csv_file, dtypes=[np.int64, np.float64])
+        r4 = mpd.read_csv(self.csv_file, sep=None)
+        #import pdb; pdb.set_trace()
+        df_equals(r1, r2)
+        df_equals(r3, r4)
+        prj = r1[['AGE', 'INDUS']]
+        str(prj)
 
 
 class TestMasks:
@@ -926,3 +934,6 @@ class TestCategory:
         pandas_df["a"] = pandas_df["a"].cat.codes
 
         df_equals(pandas_df, exp)
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])
