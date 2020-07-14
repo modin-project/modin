@@ -280,17 +280,12 @@ class OmnisciOnRayIO(RayIO):
                     use_threads=True,
                     block_size=None,
                     skip_rows=skiprows,
-                    column_names=None,
+                    column_names=names,
                     autogenerate_column_names=None)
 
             at = read_csv(filepath_or_buffer, read_options=ro, parse_options=po, convert_options=co)
             
-            # three options, to omnisci or...
-            #   omniSession = OmnisciServer()
-            #   omniSession... consume
-            # ...or leave it as is, in Arrow,
-            # or convert to pandas
-            return cls.from_arrow(at) # cls.from_pandas(at.to_pandas())  #
+            return cls.from_arrow(at) # can be used to switch between arrow and pandas frames: cls.from_pandas(at.to_pandas())
         except:
             ErrorMessage.default_to_pandas("`read_csv`")
             return cls._read(**mykwargs)

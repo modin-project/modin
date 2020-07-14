@@ -85,7 +85,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         curs = omniSession.executeRA("execute relalg "+calcite_json) # TODO: remove prefix
         rb = curs.getArrowRecordBatch()
         assert rb
-        df = rb.to_pandas()  # TODO
+        df = rb.to_pandas()  # TODO continue with arrow frames #1721
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.

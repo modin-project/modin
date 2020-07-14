@@ -4,8 +4,8 @@ os.environ["MODIN_EXPERIMENTAL"] = "True"
 os.environ["MODIN_ENGINE"] = "ray"
 os.environ["MODIN_BACKEND"] = "omnisci"
 
-if os.environ["OMNISCI_SERVER"] is None:
-    raise RuntimeError("OMNISCI_SERVER variable must be initialized")
+if os.getenv("OMNISCI_SERVER", None) is None:
+    print("Warning: OMNISCI_SERVER is not set")
 
 import modin.pandas as mpd
 import pandas as pd
@@ -36,6 +36,15 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
     df_equals(ref_res, exp_res)
 
 
+class TestCSV:
+    root = os.path.abspath(__file__+"/.."*6)
+    csv_file1 = os.path.join(root, "examples/data/boston_housing.csv")
+
+    def test_simple1(self):
+        my_df = mpd.read_csv(self.csv_file1)
+        a = my_df[['AGE', 'INDUS']]
+
+
 class TestMasks:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
     cols_values = ["a", ["a", "b"], ["a", "b", "c"]]
@@ -49,7 +58,7 @@ class TestMasks:
 
     def test_drop(self):
         pandas_df = pd.DataFrame(self.data)
-        modin_df = pd.DataFrame(self.data)
+        modin_df = mpd.DataFrame(self.data)
 
         pandas_df = pandas_df.drop(columns="a")
         modin_df = modin_df.drop(columns="a")
