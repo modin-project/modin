@@ -87,68 +87,19 @@ import threading
 import os
 import multiprocessing
 
-from .. import __version__
-from .concat import concat
-from .dataframe import DataFrame
-from .datetimes import to_datetime
-from .io import (
-    read_csv,
-    read_parquet,
-    read_json,
-    read_html,
-    read_clipboard,
-    read_excel,
-    read_hdf,
-    read_feather,
-    read_stata,
-    read_sas,
-    read_pickle,
-    read_sql,
-    read_gbq,
-    read_table,
-    read_fwf,
-    read_sql_table,
-    read_sql_query,
-    read_spss,
-    ExcelFile,
-    to_pickle,
-    HDFStore,
-    json_normalize,
-    read_orc,
-)
-from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
-from .series import Series
-from .general import (
-    isna,
-    isnull,
-    merge,
-    merge_asof,
-    merge_ordered,
-    pivot_table,
-    notnull,
-    notna,
-    pivot,
-    to_numeric,
-    unique,
-    value_counts,
-)
-from .plotting import Plotting as plotting
 from .. import execution_engine, Publisher
 
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ["OMP_NUM_THREADS"] = "1"
+DEFAULT_NPARTITIONS = 4
 num_cpus = 1
 
 
-DEFAULT_NPARTITIONS = 4
 _is_first_update = {}
 dask_client = None
 
 
 def _update_engine(publisher: Publisher):
-    global DEFAULT_NPARTITIONS, dask_client
+    global DEFAULT_NPARTITIONS, dask_client, num_cpus
 
-    num_cpus = DEFAULT_NPARTITIONS
     if publisher.get() == "Ray":
         import ray
         from modin.engines.ray.utils import initialize_ray
@@ -214,9 +165,57 @@ def _update_engine(publisher: Publisher):
     _is_first_update[publisher.get()] = False
     DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
-
 execution_engine.subscribe(_update_engine)
 
+from .. import __version__
+from .concat import concat
+from .dataframe import DataFrame
+from .datetimes import to_datetime
+from .io import (
+    read_csv,
+    read_parquet,
+    read_json,
+    read_html,
+    read_clipboard,
+    read_excel,
+    read_hdf,
+    read_feather,
+    read_stata,
+    read_sas,
+    read_pickle,
+    read_sql,
+    read_gbq,
+    read_table,
+    read_fwf,
+    read_sql_table,
+    read_sql_query,
+    read_spss,
+    ExcelFile,
+    to_pickle,
+    HDFStore,
+    json_normalize,
+    read_orc,
+)
+from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
+from .series import Series
+from .general import (
+    isna,
+    isnull,
+    merge,
+    merge_asof,
+    merge_ordered,
+    pivot_table,
+    notnull,
+    notna,
+    pivot,
+    to_numeric,
+    unique,
+    value_counts,
+)
+from .plotting import Plotting as plotting
+
+# Set this so that Pandas doesn't try to multithread by itself
+os.environ["OMP_NUM_THREADS"] = "1"
 __all__ = [
     "DataFrame",
     "Series",
