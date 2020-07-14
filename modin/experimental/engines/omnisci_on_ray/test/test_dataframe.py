@@ -4,9 +4,6 @@ os.environ["MODIN_EXPERIMENTAL"] = "True"
 os.environ["MODIN_ENGINE"] = "ray"
 os.environ["MODIN_BACKEND"] = "omnisci"
 
-if os.getenv("OMNISCI_SERVER", None) is None:
-    print("Warning: OMNISCI_SERVER is not set")
-
 import modin.pandas as mpd
 import pandas as pd
 import numpy as np
@@ -39,16 +36,22 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 class TestCSV:
     root = os.path.abspath(__file__+"/.."*6)  # root of modin repo
     csv_file = os.path.join(root, "examples/data/boston_housing.csv")
+    #  more csv files are here: modin/pandas/test/data
 
     def test_simple1(self):
         """ check with the following arguments: names, dtype, skiprows, delimiter, parse_dates """
-        r1 = mpd.read_csv(self.csv_file, skiprows=1, names=["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",])
-        r2 = mpd.read_csv(self.csv_file, names=["noname",])
-        r3 = mpd.read_csv(self.csv_file, dtypes=[np.int64, np.float64])
-        r4 = mpd.read_csv(self.csv_file, sep=None)
-        #import pdb; pdb.set_trace()
-        df_equals(r1, r2)
-        df_equals(r3, r4)
+        for kwargs in (
+            {"skiprows": 1, "names": ["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",] },
+            {"names": ["noname",]},
+            {"dtypes": [np.int64, np.float64,]},
+            {"sep": None},
+            # TODO: parse_date
+            ):
+                r1 = mpd.read_csv(self.csv_file, **kwargs)
+                print(r1)
+                r2 = pd.read_csv(self.csv_file, **kwargs)
+                print(r2)
+                df_equals(r1, r2)
         prj = r1[['AGE', 'INDUS']]
         str(prj)
 
