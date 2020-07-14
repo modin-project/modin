@@ -1277,7 +1277,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A scalar or array of insertion points with the same shape as value.
         """
         new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze().searchsorted(**kwargs)
+            0, lambda x: x.squeeze().searchsorted(**kwargs), clear_call_queue=True
         )
         return self.__constructor__(new_modin_frame)
 

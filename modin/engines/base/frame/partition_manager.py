@@ -260,6 +260,11 @@ class BaseFrameManager(object):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
+        if clear_call_queue:
+            for col_partitions in partitions:
+                for row_partitions in col_partitions:
+                    row_partitions.call_queue = []
+        
         if keep_partitioning:
             num_splits = len(partitions) if axis == 0 else len(partitions.T)
         else:
