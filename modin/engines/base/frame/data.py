@@ -1179,7 +1179,13 @@ class BasePandasFrame(object):
         )
 
     def _apply_full_axis(
-        self, axis, func, new_index=None, new_columns=None, dtypes=None, clear_call_queue=False
+        self,
+        axis,
+        func,
+        new_index=None,
+        new_columns=None,
+        dtypes=None,
+        clear_call_queue=False,
     ):
         """
         Perform a function across an entire axis.
