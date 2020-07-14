@@ -267,7 +267,9 @@ def _update_engine(publisher: Publisher):
             except ValueError:
                 from distributed import Client
 
-                num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
+                num_cpus = (
+                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
+                )
                 dask_client = Client(n_workers=int(num_cpus))
 
     elif publisher.get() != "Python":
