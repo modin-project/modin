@@ -133,20 +133,20 @@ class MaskNode(DFAlgNode):
 
 
 class GroupbyAggNode(DFAlgNode):
-    def __init__(self, base, by, agg, groupby_opts):
+    def __init__(self, base, by, agg_exprs, groupby_opts):
         self.by = by
-        self.agg = agg
+        self.agg_exprs = agg_exprs
         self.groupby_opts = groupby_opts
         self.input = [base]
 
     def copy(self):
-        return GroupbyAggNode(self.input[0], self.by, self.agg, self.groupby_opts)
+        return GroupbyAggNode(self.input[0], self.by, self.agg_exprs, self.groupby_opts)
 
     def _prints(self, prefix):
         return (
             f"{prefix}AggNode:\n"
             f"{prefix}  by: {self.by}\n"
-            f"{prefix}  agg: {self.agg}\n"
+            f"{prefix}  aggs: {self.agg_exprs}\n"
             f"{prefix}  groupby_opts: {self.groupby_opts}\n"
             + self._prints_input(prefix + "  ")
         )
