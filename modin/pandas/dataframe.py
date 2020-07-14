@@ -2623,9 +2623,9 @@ class DataFrame(BasePandasDataset):
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
         assert (
-            isinstance(new_query_compiler, type(self._query_compiler))
-            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
-        ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
+            isinstance(new_query_compiler, self._query_compiler.__class__)
+            or new_query_compiler.__class__ in self._query_compiler.__class__.__bases__
+        ), "Invalid Query Compiler object: {}".format(new_query_compiler.__class__)
         if not inplace:
             return DataFrame(query_compiler=new_query_compiler)
         else:
