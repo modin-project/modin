@@ -898,7 +898,6 @@ def test_axes(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_attrs(data):
     modin_series, pandas_series = create_test_series(data)
-    # assert modin_series.attrs == pandas_series.attrs
     eval_general(modin_series, pandas_series, lambda df: df.attrs)
 
 
