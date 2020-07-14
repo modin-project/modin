@@ -210,3 +210,13 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
+
+class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
+    @classmethod
+    def prepare(cls):
+        # query_compiler import is needed so remote PandasQueryCompiler has an imported local counterpart;
+        # if there isn't such counterpart rpyc generates some bogus class type which raises TypeError()
+        # upon checking its isinstance() or issubclass()
+        import modin.backends.pandas.query_compiler
+        from modin.experimental.cloud import get_connection
+        cls.io_cls = get_connection().modules["modin.engines.ray.pandas_on_ray.io"].PandasOnRayIO
