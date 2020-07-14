@@ -31,6 +31,7 @@ import sys
 from typing import Tuple, Union
 import warnings
 
+from modin import execution_engine, Publisher
 from modin.error_message import ErrorMessage
 from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
@@ -41,7 +42,7 @@ from .base import BasePandasDataset
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
-class DataFrame(BasePandasDataset):
+class _DataFrame(BasePandasDataset):
     def __init__(
         self,
         data=None,
@@ -2795,3 +2796,23 @@ class DataFrame(BasePandasDataset):
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
+
+class DataFrame(_DataFrame):
+    __real_cls :_DataFrame = None
+    @classmethod
+    def _update_engine(cls, publisher: Publisher):
+        if publisher.get() == 'Cloudray':
+            from modin.experimental.cloud import get_connection
+            remote_module = get_connection().modules['modin.pandas.dataframe']
+            try:
+                cls.__real_cls = remote_module._DataFrame
+            except AttributeError:
+                # older version of Modin there
+                cls.__real_cls = remote_module.DataFrame
+        else:
+            cls.__real_cls = _DataFrame
+    
+    def __new__(cls, *a, **kw):
+        return cls.__real_cls(*a, **kw)
+
+execution_engine.subscribe(DataFrame._update_engine)
