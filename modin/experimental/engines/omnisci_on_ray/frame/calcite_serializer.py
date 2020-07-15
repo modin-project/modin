@@ -126,11 +126,11 @@ class CalciteSerializer:
             return {
                 "literal": int(str_val.replace(".", "")),
                 "type": "DECIMAL",
-                "target_type": "DECIMAL",
+                "target_type": "DOUBLE",
                 "scale": scale,
                 "precision": precision,
-                "type_scale": scale,
-                "type_precision": precision,
+                "type_scale": -2147483648,
+                "type_precision": 15,
             }
         if type(literal.val) is bool:
             return {
