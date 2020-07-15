@@ -659,7 +659,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)
-        #assert self._partitions.size == 1
+        assert self._partitions.size == 1
         self._index_cache = ray.get(self._partitions[0][0].oid).index
 
     def _get_index(self):

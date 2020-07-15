@@ -35,8 +35,7 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
         self._width_cache = width
 
     def to_pandas(self):
-        #raise("arrow to pandas")
-        print ("switching to Pandas DataFrame..")
+        print ("Warning: switching to Pandas DataFrame..")
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
@@ -58,7 +57,7 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
         return OmnisciOnRayFramePartition(
             object_id=ray.put(obj),
             frame_id=OmnisciServer().put_arrow_to_omnisci(obj),  # TODO: make materialization later?
-            arrow_slice=obj,  # TODO question of life  when loaded in omnisci dbe
+            arrow_slice=obj,                                     # TODO question of life time when loaded in omnisci dbe
             length=len(obj),
             width=len(obj.columns),
         )

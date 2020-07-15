@@ -255,7 +255,6 @@ class BaseFrameManager(object):
         Returns:
             A Pandas DataFrame
         """
-        #raise "to_arrow?"
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
@@ -286,7 +285,6 @@ class BaseFrameManager(object):
         Returns:
             A NumPy array
         """
-        #raise "from_arrow"
         return np.block([[block.to_numpy() for block in row] for row in partitions])
 
     @classmethod
@@ -320,12 +318,10 @@ class BaseFrameManager(object):
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
-        #num_splits = at.num_chunks()
-        #put_func = cls._partition_class.put
         put_func = cls._partition_class.put_arrow
 
         parts = [[put_func(at)]]
-        #    [
+        #TODO? [
         #        put_func(j)  # or buffer?
         #        for j in i.iterchunks()
         #    ]
@@ -334,8 +330,8 @@ class BaseFrameManager(object):
         if not return_dims:
             return np.array(parts)
         else:
-            row_lengths = [at.num_rows]  # [506] # TODO? [ len(i) for i in at.columns[0].iterchunks() ]
-            # col_widths = [ 1 for i in range(at.num_columns) ]         TODO check if we can import big tables
+            row_lengths = [at.num_rows]  # [506]                 # TODO? [ len(i) for i in at.columns[0].iterchunks() ]
+            # col_widths = [ 1 for i in range(at.num_columns) ]    TODO check if we can import big tables
             col_widths = [ at.num_columns ]    # [15]
             return np.array(parts), row_lengths, col_widths
 
