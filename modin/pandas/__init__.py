@@ -157,7 +157,8 @@ def _update_engine(publisher: Publisher):
                     lambda *a, **kw: ray.ray_constants.REDIS_DEFAULT_PASSWORD
                 )
                 try:
-                    import modin.pandas  # this would initialize remote ray
+                    # this would initialize remote ray
+                    import modin.pandas  # noqa" F401
                 finally:
                     threading.current_thread().name = old_name
                     secrets.token_hex = old_token

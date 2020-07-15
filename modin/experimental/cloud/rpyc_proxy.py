@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from . import get_connection
+
 _SPECIAL = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
@@ -94,3 +96,67 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
     Wrapper.__name__ = Wrapped.__name__
 
     return Wrapped
+
+
+def _deliveringWrapper(origin_cls, methods, mixin=None):
+    from rpyc.utils.classic import deliver
+
+    conn = get_connection()
+    remote_cls = getattr(conn.modules[origin_cls.__module__], origin_cls.__name__)
+
+    if mixin is None:
+
+        class DeliveringMixin:
+            pass
+
+        mixin = DeliveringMixin
+
+    for method in methods:
+
+        def wrapper(self, *args, __remote_conn__=conn, __method_name__=method, **kw):
+            args, kw = deliver(__remote_conn__, (args, kw))
+            return getattr(self.__remote_end__, __method_name__)(*args, **kw)
+
+        wrapper.__name__ = method
+        setattr(mixin, method, wrapper)
+    return make_proxy_cls(remote_cls, origin_cls, mixin, origin_cls.__name__)
+
+
+def _prepare_loc_mixin():
+    from modin.pandas.indexing import _LocIndexer, _iLocIndexer
+
+    DeliveringLocIndexer = _deliveringWrapper(
+        _LocIndexer, ["__getitem__", "__setitem__"]
+    )
+    DeliveringILocIndexer = _deliveringWrapper(
+        _iLocIndexer, ["__getitem__", "__setitem__"]
+    )
+
+    class DeliveringMixin:
+        @property
+        def loc(self):
+            return DeliveringLocIndexer(self)
+
+        @property
+        def iloc(self):
+            return DeliveringILocIndexer(self)
+
+    return DeliveringMixin
+
+
+def make_dataframe_wrapper():
+    from modin.pandas.dataframe import DataFrame
+
+    DeliveringDataFrame = _deliveringWrapper(
+        DataFrame, ["groupby", "agg", "aggregate"], _prepare_loc_mixin()
+    )
+    return DeliveringDataFrame
+
+
+def make_base_dataset_wrapper():
+    from modin.pandas.base import BasePandasDataset
+
+    DeliveringBasePandasDataset = _deliveringWrapper(
+        BasePandasDataset, ["agg", "aggregate"], _prepare_loc_mixin()
+    )
+    return DeliveringBasePandasDataset

@@ -218,7 +218,7 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
         # query_compiler import is needed so remote PandasQueryCompiler has an imported local counterpart;
         # if there isn't such counterpart rpyc generates some bogus class type which raises TypeError()
         # upon checking its isinstance() or issubclass()
-        import modin.backends.pandas.query_compiler
+        import modin.backends.pandas.query_compiler  # noqa: F401
         from modin.experimental.cloud import get_connection
         from rpyc.utils.classic import deliver
 
