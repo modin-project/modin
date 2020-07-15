@@ -43,6 +43,7 @@ from .base import BasePandasDataset
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
 class _DataFrame(BasePandasDataset):
+    __name__ = "DataFrame" # for compat with .default_to_pandas()
     def __init__(
         self,
         data=None,
