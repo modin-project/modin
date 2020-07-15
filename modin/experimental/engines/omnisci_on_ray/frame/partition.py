@@ -18,6 +18,7 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
 from modin import __execution_engine__
 from .omnisci_worker import OmnisciServer
+import pyarrow
 
 if __execution_engine__ == "Ray":
     import ray
@@ -35,10 +36,11 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
         self._width_cache = width
 
     def to_pandas(self):
-        print ("Warning: switching to Pandas DataFrame..")
-        dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-        return dataframe
+        obj = self.get()
+        if isinstance(obj, (pandas.DataFrame, pandas.Series)):
+            return obj
+        assert isinstance(obj, pyarrow.Table)
+        return obj.to_pandas()
 
     def get(self):
         return ray.get(self.oid)

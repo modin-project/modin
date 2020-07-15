@@ -42,6 +42,7 @@ from collections import OrderedDict
 
 import ray
 import numpy as np
+import pyarrow
 
 
 class OmnisciOnRayFrame(BasePandasFrame):
@@ -660,7 +661,21 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)
         assert self._partitions.size == 1
-        self._index_cache = ray.get(self._partitions[0][0].oid).index
+        obj = ray.get(self._partitions[0][0].oid)
+        if isinstance(obj, (pd.DataFrame, pd.Series)):
+            self._index_cache = obj.index
+        else:
+            assert isinstance(obj, pyarrow.Table)
+            if self._index_cols is None:
+                self._index_cache = Index.__new__(
+                    Index, data=np.arange(0, obj.num_rows), dtype="int"
+                )
+            else:
+                index_at = obj.drop_columns(self.columns)
+                index_df = index.at.to_pandas()
+                index_df.set_index(self._index_cols)
+                index_df.index.rename(self._index_names(self._index_cols), inplace=True)
+                self._index_cache = index_df.index
 
     def _get_index(self):
         self._execute()
@@ -721,7 +736,31 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def to_pandas(self):
         self._execute()
-        return super(OmnisciOnRayFrame, self).to_pandas()
+
+        df = self._frame_mgr_cls.to_pandas(self._partitions)
+
+        # If we make dataframe from Arrow table then we might need to set
+        # index columns.
+        if len(df.columns) != len(self.columns):
+            assert self._index_cols
+            df = df.set_index(self._index_cols)
+            df.index.rename(self._index_names(self._index_cols), inplace=True)
+            assert len(df.columns) == len(self.columns)
+        else:
+            assert self._index_cols is None
+            assert df.index.name is None, f"index name '{df.index.name}' is not None"
+
+        return df
+
+    def _index_names(self, cols):
+        if len(cols) == 1:
+            return self._index_name(cols[0])
+        return [self._index_name(n) for n in cols]
+
+    def _index_name(self, col):
+        if col.startswith("__index__"):
+            return None
+        return col
 
     # @classmethod
     # def from_pandas(cls, df):

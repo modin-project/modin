@@ -14,7 +14,7 @@
 from collections import OrderedDict
 import numpy as np
 import pandas
-from pandas.core.indexes.api import ensure_index
+from pandas.core.indexes.api import ensure_index, Index
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
@@ -1329,9 +1329,11 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(at, True)
-        new_columns = at.column_names
-        new_index = None #new_columns[0].to_list() # TODO TOOOODOOO
-        new_dtypes = list([{"type": i.type, "name": i} for i in at.columns])
+        new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
+        # OmniSci backend can handle None index, others might require
+        # explicit index construction.
+        new_index = None
+        new_dtypes = pandas.Series([i.type for i in at.columns], index=at.column_names)
         return cls(
             partitions=new_frame,
             index=new_index,

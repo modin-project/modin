@@ -6,7 +6,7 @@ import pytest
 os.environ["MODIN_EXPERIMENTAL"] = "True"
 os.environ["MODIN_ENGINE"] = "ray"
 os.environ["MODIN_BACKEND"] = "omnisci"
-sys.setdlopenflags( 1|256 )    # RTLD_LAZY+RTLD_GLOBAL
+sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
 
 import modin.pandas as mpd
 from modin.pandas.test.utils import (
@@ -34,23 +34,24 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 
 
 class TestCSV:
-    root = os.path.abspath(__file__+"/.."*6)  # root of modin repo
+    root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
     csv_file = os.path.join(root, "examples/data/boston_housing.csv")
     #  more csv files are here: modin/pandas/test/data
 
     def test_simple1(self):
         """ check with the following arguments: names, dtype, skiprows, delimiter, parse_dates """
         for kwargs in (
-            {"sep": ','}, {"sep": None},
+            {"sep": ","},
+            {"sep": None},
             # TODO remove comments below when the test starts working
-            #{"skiprows": 1, "names": ["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",] },
-            #{"names": ["noname",]},
-            #{"dtypes": [np.int64, np.float64,]},
+            # {"skiprows": 1, "names": ["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",] },
+            # {"names": ["noname",]},
+            # {"dtypes": [np.int64, np.float64,]},
             # TODO: parse_date
-            ):
-                rp = pd.read_csv(self.csv_file, **kwargs)
-                rm = mpd.read_csv(self.csv_file, **kwargs)
-                df_equals(rm, rp)
+        ):
+            rp = pd.read_csv(self.csv_file, **kwargs)
+            rm = mpd.read_csv(self.csv_file, **kwargs)
+            df_equals(rm, rp)
 
 
 class TestMasks:
@@ -934,6 +935,7 @@ class TestCategory:
         pandas_df["a"] = pandas_df["a"].cat.codes
 
         df_equals(pandas_df, exp)
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
