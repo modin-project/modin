@@ -31,6 +31,7 @@ import re
 import warnings
 import pickle as pkl
 
+from modin import execution_engine, Publisher
 from modin.error_message import ErrorMessage
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
@@ -38,7 +39,7 @@ from modin.error_message import ErrorMessage
 sentinel = object()
 
 
-class BasePandasDataset(object):
+class _BasePandasDataset(object):
     """This object is the base for most of the common code that exists in
         DataFrame/Series. Since both objects share the same underlying representation,
         and the algorithms are the same, we use this object to define the general
@@ -3907,6 +3908,25 @@ class Resampler(object):
                 self.resample_args, q, **kwargs
             )
         )
+
+
+class BasePandasDataset(_BasePandasDataset):
+    __real_cls: _BasePandasDataset = None
+
+    @classmethod
+    def _update_engine(cls, publisher: Publisher):
+        if publisher.get() == "Cloudray":
+            from modin.experimental.cloud.rpyc_proxy import make_base_dataset_wrapper
+
+            cls.__real_cls = make_base_dataset_wrapper()
+        else:
+            cls.__real_cls = _BasePandasDataset
+
+    def __new__(cls, *a, **kw):
+        return cls.__real_cls(*a, **kw)
+
+
+execution_engine.subscribe(BasePandasDataset._update_engine)
 
 
 class Window(object):

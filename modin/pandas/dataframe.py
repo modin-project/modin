@@ -2806,14 +2806,9 @@ class DataFrame(_DataFrame):
     @classmethod
     def _update_engine(cls, publisher: Publisher):
         if publisher.get() == "Cloudray":
-            from modin.experimental.cloud import get_connection
+            from modin.experimental.cloud.rpyc_proxy import make_dataframe_wrapper
 
-            remote_module = get_connection().modules["modin.pandas.dataframe"]
-            try:
-                cls.__real_cls = remote_module._DataFrame
-            except AttributeError:
-                # older version of Modin there
-                cls.__real_cls = remote_module.DataFrame
+            cls.__real_cls = make_dataframe_wrapper()
         else:
             cls.__real_cls = _DataFrame
 
