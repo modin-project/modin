@@ -43,7 +43,8 @@ from .base import BasePandasDataset
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
 class _DataFrame(BasePandasDataset):
-    __name__ = "DataFrame" # for compat with .default_to_pandas()
+    __name__ = "DataFrame"  # for compat with .default_to_pandas()
+
     def __init__(
         self,
         data=None,
@@ -2798,13 +2799,16 @@ class _DataFrame(BasePandasDataset):
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
 
+
 class DataFrame(_DataFrame):
-    __real_cls :_DataFrame = None
+    __real_cls: _DataFrame = None
+
     @classmethod
     def _update_engine(cls, publisher: Publisher):
-        if publisher.get() == 'Cloudray':
+        if publisher.get() == "Cloudray":
             from modin.experimental.cloud import get_connection
-            remote_module = get_connection().modules['modin.pandas.dataframe']
+
+            remote_module = get_connection().modules["modin.pandas.dataframe"]
             try:
                 cls.__real_cls = remote_module._DataFrame
             except AttributeError:
@@ -2812,8 +2816,9 @@ class DataFrame(_DataFrame):
                 cls.__real_cls = remote_module.DataFrame
         else:
             cls.__real_cls = _DataFrame
-    
+
     def __new__(cls, *a, **kw):
         return cls.__real_cls(*a, **kw)
+
 
 execution_engine.subscribe(DataFrame._update_engine)
