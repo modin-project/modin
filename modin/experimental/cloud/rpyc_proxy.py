@@ -70,26 +70,36 @@ class RemoteMeta(type):
 
 
 _SPECIAL_ATTRS = frozenset(["__name__", "__remote_end__"])
+_NO_OVERRIDE = (
+    _SPECIAL | _SPECIAL_ATTRS | frozenset(_WRAP_ATTRS) | rpyc.core.netref.DELETED_ATTRS
+)
 
 
 def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
     class ProxyMeta(type):
         def __repr__(self):
-            return f"<proxy for {origin_cls.__module__}.{origin_cls.__name__}:{cls_name or origin_cls.__name__}"
+            return f"<proxy for {origin_cls.__module__}.{origin_cls.__name__}:{cls_name or origin_cls.__name__}>"
 
         def __prepare__(self, *args, **kw):
             namespace = type.__prepare__(*args, **kw)
-            for entry in dir(origin_cls):
-                if entry.startswith("__") and entry.endswith("__"):
-                    origin_entry = getattr(origin_cls, entry, None)
-                    if callable(origin_entry) and origin_entry != getattr(
-                        object, entry, None
+
+            for base in origin_cls.__mro__:
+                if base == object:
+                    continue
+                for name, entry in base.__dict__.items():
+                    if (
+                        name not in namespace
+                        and name.startswith("__")
+                        and name.endswith("__")
+                        and name not in _NO_OVERRIDE
+                        and callable(entry)
                     ):
-                        try:
-                            remote_entry = getattr(remote_cls, entry)
-                        except AttributeError:
-                            continue
-                        namespace[entry] = remote_entry
+
+                        def method(_self, *_args, __method_name__=name, **_kw):
+                            return getattr(remote_cls, __method_name__)(*_args, **_kw)
+
+                        method.__name__ = name
+                        namespace[name] = method
             return namespace
 
     class Wrapper(override, metaclass=ProxyMeta):
@@ -151,7 +161,8 @@ def _deliveringWrapper(origin_cls, methods, mixin=None, target_name=None):
     for method in methods:
 
         def wrapper(self, *args, __remote_conn__=conn, __method_name__=method, **kw):
-            args, kw = deliver(__remote_conn__, (args, kw))
+            args = tuple(deliver(__remote_conn__, x) for x in args)
+            kw = {k: deliver(__remote_conn__, v) for k, v in kw.items()}
             return getattr(self.__remote_end__, __method_name__)(*args, **kw)
 
         wrapper.__name__ = method
