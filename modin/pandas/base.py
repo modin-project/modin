@@ -3923,7 +3923,9 @@ class BasePandasDataset(_BasePandasDataset):
             cls.__real_cls__ = _BasePandasDataset
 
     def __new__(cls, *a, **kw):
-        return cls.__real_cls__(*a, **kw)
+        if cls is BasePandasDataset:
+            return cls.__real_cls__(*a, **kw)
+        return super().__new__(cls)
 
 
 execution_engine.subscribe(BasePandasDataset._update_engine)
