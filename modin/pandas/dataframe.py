@@ -2723,19 +2723,19 @@ class _DataFrame(BasePandasDataset):
 
 
 class DataFrame(_DataFrame):
-    __real_cls: _DataFrame = None
+    __real_cls__: _DataFrame = None
 
     @classmethod
     def _update_engine(cls, publisher: Publisher):
         if publisher.get() == "Cloudray":
             from modin.experimental.cloud.rpyc_proxy import make_dataframe_wrapper
 
-            cls.__real_cls = make_dataframe_wrapper()
+            cls.__real_cls__ = make_dataframe_wrapper()
         else:
-            cls.__real_cls = _DataFrame
+            cls.__real_cls__ = _DataFrame
 
     def __new__(cls, *a, **kw):
-        return cls.__real_cls(*a, **kw)
+        return cls.__real_cls__(*a, **kw)
 
 
 execution_engine.subscribe(DataFrame._update_engine)

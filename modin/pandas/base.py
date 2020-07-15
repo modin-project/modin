@@ -3894,19 +3894,19 @@ class Resampler(object):
 
 
 class BasePandasDataset(_BasePandasDataset):
-    __real_cls: _BasePandasDataset = None
+    __real_cls__: _BasePandasDataset = None
 
     @classmethod
     def _update_engine(cls, publisher: Publisher):
         if publisher.get() == "Cloudray":
             from modin.experimental.cloud.rpyc_proxy import make_base_dataset_wrapper
 
-            cls.__real_cls = make_base_dataset_wrapper()
+            cls.__real_cls__ = make_base_dataset_wrapper()
         else:
-            cls.__real_cls = _BasePandasDataset
+            cls.__real_cls__ = _BasePandasDataset
 
     def __new__(cls, *a, **kw):
-        return cls.__real_cls(*a, **kw)
+        return cls.__real_cls__(*a, **kw)
 
 
 execution_engine.subscribe(BasePandasDataset._update_engine)
