@@ -12,6 +12,20 @@
 # governing permissions and limitations under the License.
 
 from . import get_connection
+from rpyc.utils.classic import deliver
+import rpyc
+
+
+class WrappingConnection(rpyc.Connection):
+    def _netref_factory(self, id_pack):
+        result = super()._netref_factory(id_pack)
+        real_class = getattr(getattr(result, "__class__", None), "__real_cls__", None)
+        return real_class.from_remote_end(result) if real_class else result
+
+
+class WrappingService(rpyc.ClassicService):
+    _protocol = WrappingConnection
+
 
 _SPECIAL = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
@@ -59,9 +73,34 @@ _SPECIAL_ATTRS = frozenset(["__name__", "__remote_end__"])
 
 
 def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
-    class Wrapper(override):
-        def __init__(self, *a, **kw):
-            object.__setattr__(self, "__remote_end__", remote_cls(*a, **kw))
+    class ProxyMeta(type):
+        def __repr__(self):
+            return f"<proxy for {origin_cls.__module__}.{origin_cls.__name__}:{cls_name or origin_cls.__name__}"
+
+        def __prepare__(self, *args, **kw):
+            namespace = type.__prepare__(*args, **kw)
+            for entry in dir(origin_cls):
+                if entry.startswith("__") and entry.endswith("__"):
+                    origin_entry = getattr(origin_cls, entry, None)
+                    if callable(origin_entry) and origin_entry != getattr(
+                        object, entry, None
+                    ):
+                        try:
+                            remote_entry = getattr(remote_cls, entry)
+                        except AttributeError:
+                            continue
+                        namespace[entry] = remote_entry
+            return namespace
+
+    class Wrapper(override, metaclass=ProxyMeta):
+        def __init__(self, *a, __remote_end__=None, **kw):
+            if __remote_end__ is None:
+                __remote_end__ = remote_cls(*a, **kw)
+            object.__setattr__(self, "__remote_end__", __remote_end__)
+
+        @classmethod
+        def from_remote_end(cls, remote_inst):
+            return cls(__remote_end__=remote_inst)
 
         def __getattr__(self, name):
             """
@@ -98,9 +137,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
     return Wrapped
 
 
-def _deliveringWrapper(origin_cls, methods, mixin=None):
-    from rpyc.utils.classic import deliver
-
+def _deliveringWrapper(origin_cls, methods, mixin=None, target_name=None):
     conn = get_connection()
     remote_cls = getattr(conn.modules[origin_cls.__module__], origin_cls.__name__)
 
@@ -119,7 +156,9 @@ def _deliveringWrapper(origin_cls, methods, mixin=None):
 
         wrapper.__name__ = method
         setattr(mixin, method, wrapper)
-    return make_proxy_cls(remote_cls, origin_cls, mixin, origin_cls.__name__)
+    return make_proxy_cls(
+        remote_cls, origin_cls, mixin, target_name or origin_cls.__name__
+    )
 
 
 def _prepare_loc_mixin():
@@ -145,18 +184,21 @@ def _prepare_loc_mixin():
 
 
 def make_dataframe_wrapper():
-    from modin.pandas.dataframe import DataFrame
+    from modin.pandas.dataframe import _DataFrame
 
     DeliveringDataFrame = _deliveringWrapper(
-        DataFrame, ["groupby", "agg", "aggregate"], _prepare_loc_mixin()
+        _DataFrame, ["groupby", "agg", "aggregate"], _prepare_loc_mixin(), "DataFrame"
     )
     return DeliveringDataFrame
 
 
 def make_base_dataset_wrapper():
-    from modin.pandas.base import BasePandasDataset
+    from modin.pandas.base import _BasePandasDataset
 
     DeliveringBasePandasDataset = _deliveringWrapper(
-        BasePandasDataset, ["agg", "aggregate"], _prepare_loc_mixin()
+        _BasePandasDataset,
+        ["agg", "aggregate"],
+        _prepare_loc_mixin(),
+        "BasePandasDataset",
     )
     return DeliveringBasePandasDataset
