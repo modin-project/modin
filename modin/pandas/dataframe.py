@@ -2735,7 +2735,9 @@ class DataFrame(_DataFrame):
             cls.__real_cls__ = _DataFrame
 
     def __new__(cls, *a, **kw):
-        return cls.__real_cls__(*a, **kw)
+        if cls is DataFrame:
+            return cls.__real_cls__(*a, **kw)
+        return super().__new__(cls)
 
 
 execution_engine.subscribe(DataFrame._update_engine)

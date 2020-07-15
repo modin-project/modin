@@ -106,8 +106,8 @@ def _make_parser_func(sep):
         memory_map=False,
         float_precision=None,
     ):
-        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-        if kwargs.get("sep", sep) is False:
+        kwargs = dict(locals())
+        if kwargs.get("sep", False) is False:
             kwargs["sep"] = "\t"
         return _read(**kwargs)
 
