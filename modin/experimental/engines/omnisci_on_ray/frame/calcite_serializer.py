@@ -67,8 +67,7 @@ class CalciteSerializer:
 
     def serialize_typed_obj(self, obj):
         res = self.serialize_obj(obj)
-        force_decimal = self.force_decimal_type(obj)
-        res["type"] = self.serialize_dtype(obj._dtype, force_decimal)
+        res["type"] = self.serialize_dtype(obj._dtype)
         return res
 
     def serialize_expr(self, expr):
@@ -126,11 +125,11 @@ class CalciteSerializer:
             return {
                 "literal": int(str_val.replace(".", "")),
                 "type": "DECIMAL",
-                "target_type": "DECIMAL",
+                "target_type": "DOUBLE",
                 "scale": scale,
                 "precision": precision,
-                "type_scale": scale,
-                "type_precision": precision,
+                "type_scale": -2147483648,
+                "type_precision": 15,
             }
         if type(literal.val) is bool:
             return {
@@ -155,15 +154,7 @@ class CalciteSerializer:
             return "BIGINT", 19
         raise NotImplementedError(f"Unsupported integer type {int_type.__name__}")
 
-    def force_decimal_type(self, obj):
-        """In some cases calcite representation requieres DECIMAL type
-           with 0 scale instead of an INTEGER type. Dectect such cases
-           here."""
-        return isinstance(obj, OpExpr) and obj.op == "FLOOR"
-
-    def serialize_dtype(self, dtype, force_decimal):
-        if is_integer_dtype(dtype) and force_decimal:
-            return {"type": "DECIMAL", "nullable": True, "scale": 0}
+    def serialize_dtype(self, dtype):
         return {"type": type(self).dtype_strings[dtype.name], "nullable": True}
 
     def serialize_input_idx(self, expr):
