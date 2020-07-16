@@ -13,24 +13,23 @@
 
 """
 This is a very basic sample script for running things remotely.
-It requires `aws_credentials` file to be present next to it.
+It requires `aws_credentials` file to be present in current working directory.
 
 On credentials file format see https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where
 """
 
-import os
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s')
+
+import modin.pandas as pd
+from modin.experimental.cloud import cluster
+
+# set up verbose logging so Ray autoscaler would print a lot of things
+# and we'll see that stuff is alive and kicking
+logging.basicConfig(format="%(asctime)s %(message)s")
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-from modin.experimental.cloud import Provider, Cluster, get_connection
-
-
-aws = Provider(Provider.AWS, os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_credentials'), 'us-west-1')
-with Cluster(aws, cluster_name='rayscale-test') as c:
-    conn = get_connection()
-    import pdb;pdb.set_trace()
-    modin = conn.modules.modin
-    print(modin)
-    print(type(modin))
+example_cluster = cluster.create("aws", "aws_credentials")
+with example_cluster:
+    remote_df = pd.DataFrame([1, 2, 3, 4])
+    print(len(remote_df))  # len() is executed remotely

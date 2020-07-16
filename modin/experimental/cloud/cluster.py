@@ -13,8 +13,9 @@
 
 import os
 import errno
-from typing import NamedTuple
+from typing import NamedTuple, Union
 import atexit
+import warnings
 
 from modin import set_backends
 
@@ -186,3 +187,85 @@ class BaseCluster:
         set_backends(*self.old_backends)
         self.connection.deactivate()
         self.old_backends = None
+
+    # TODO: implement __del__() properly; naive implementation calling .destroy() crashes
+    # somewhere in the innards of Ray when a cluster is destroyed during interpreter exit.
+
+
+def create(
+    provider: Union[Provider, str],
+    credentials: str = None,
+    region: str = None,
+    zone: str = None,
+    project_name: str = None,
+    cluster_name: str = "modin-cluster",
+    workers: int = 4,
+    head_node: str = None,
+    worker_node: str = None,
+    __spawner__: str = "rayscale",
+) -> BaseCluster:
+    """
+    Creates an instance of a cluster with desired characteristics in a cloud.
+    Upon entering a context via with statement Modin will redirect its work to the remote cluster.
+    Spawned cluster can be destroyed manually, or it will be destroyed when the program exits.
+
+    Parameters
+    ----------
+    provider : str or instance of Provider class
+        Specify the name of the provider to use or a Provider object.
+        If Provider object is given, then credentials, region and zone are ignored.
+    credentials : str, optional
+        Path to the file which holds credentials used by given cloud provider.
+        If not specified, cloud provider will use its default means of finding credentials on the system.
+    region : str, optional
+        Region in the cloud where to spawn the cluster.
+        If omitted a default for given provider will be taken.
+    zone : str, optional
+        Availability zone (part of region) where to spawn the cluster.
+        If omitted a default for given provider will be taken.
+    project_name : str, optional
+        Project name to assign to the cluster in cloud, for easier manual tracking.
+    cluster_name : str, optional
+        Name to be given to the cluster.
+        To spawn multiple clusters in single region and zone use different names.
+    workers : int, optional
+        How many worker nodes to spawn in the cluster. Head node is not counted for here.
+    head_node : str, optional
+        What machine type to use for head node in the cluster.
+    worker_node : str, optional
+        What machine type to use for worker nodes in the cluster.
+    __spawner__ : str, optional, internal
+        How to spawn the cluster.
+        Currently only spawning by Ray autoscaler ("rayscale") is supported
+
+    Returns
+    -------
+    BaseCluster descendant
+        The object that knows how to destroy the cluster and how to activate it as remote context.
+        Note that by default spawning and destroying of the cluster happens in the background,
+        as it's usually a rather lengthy process.
+    """
+    if not isinstance(provider, Provider):
+        provider = Provider(
+            name=provider, credentials_file=credentials, region=region, zone=zone
+        )
+    else:
+        if any(p is not None for p in (credentials, region, zone)):
+            warnings.warn(
+                "Ignoring credentials, region and zone parameters because provider is specified as Provider descriptor, not as name",
+                UserWarning,
+            )
+    if __spawner__ == "rayscale":
+        from .rayscale import RayCluster as Spawner
+    else:
+        raise ValueError(f"Unknown spawner: {__spawner__}")
+    instance = Spawner(
+        provider,
+        project_name,
+        cluster_name,
+        worker_count=workers,
+        head_node_type=head_node,
+        worker_node_type=worker_node,
+    )
+    instance.spawn(wait=False)
+    return instance

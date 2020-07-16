@@ -12,38 +12,13 @@
 # governing permissions and limitations under the License.
 
 from .base import ClusterError, CannotSpawnCluster, CannotDestroyCluster
-from .cluster import Provider, BaseCluster
+from .cluster import Provider, create as create_cluster
 from .connection import Connection
-
-
-def Cluster(
-    provider: Provider,
-    project_name: str = None,
-    cluster_name: str = "modin-cluster",
-    worker_count: int = 4,
-    head_node_type: str = None,
-    worker_node_type: str = None,
-    spawner: str = "rayscale",
-) -> BaseCluster:
-    if spawner == "rayscale":
-        from .rayscale import RayCluster as Spawner
-    else:
-        raise ValueError(f"Unknown spawner: {spawner}")
-    instance = Spawner(
-        provider,
-        project_name,
-        cluster_name,
-        worker_count,
-        head_node_type,
-        worker_node_type,
-    )
-    instance.spawn(wait=False)
-    return instance
 
 
 def get_connection():
     """
-    Returns an RPyC connection object to execute Python code remotely.
+    Returns an RPyC connection object to execute Python code remotely on the active cluster.
     """
     return Connection.get()
 
@@ -53,6 +28,6 @@ __all__ = [
     "CannotSpawnCluster",
     "CannotDestroyCluster",
     "Provider",
-    "Cluster",
+    "create_cluster",
     "get_connection",
 ]

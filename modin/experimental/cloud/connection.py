@@ -103,6 +103,7 @@ class Connection:
 
     def __try_connect(self):
         import rpyc
+
         try:
             self.__connection = rpyc.connect(
                 "127.0.0.1",
@@ -120,7 +121,10 @@ class Connection:
     def activate(self):
         if self.__connection is None:
             self.__try_connect()
-            while self.__connection is None and time.time() < self.__started + self.connect_timeout + 1.0:
+            while (
+                self.__connection is None
+                and time.time() < self.__started + self.connect_timeout + 1.0
+            ):
                 time.sleep(1.0)
                 self.__try_connect()
             if self.__connection is None:
