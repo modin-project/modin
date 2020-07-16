@@ -60,6 +60,9 @@ class RemoteMeta(MetaComparer):
         return getter(self)
 
 
+_KNOWN_DUALS = {}
+
+
 def make_wrapped_class(local_cls, cls_name, rpyc_wrapper_name):
     from modin import execution_engine
 
@@ -93,4 +96,6 @@ def make_wrapped_class(local_cls, cls_name, rpyc_wrapper_name):
     }
     result = MetaComparer(cls_name, (local_cls,), namespace)
     execution_engine.subscribe(result._update_engine)
+
+    _KNOWN_DUALS[local_cls] = result
     return result
