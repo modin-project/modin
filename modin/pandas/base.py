@@ -31,8 +31,8 @@ import re
 import warnings
 import pickle as pkl
 
-from modin import execution_engine, Publisher
 from modin.error_message import ErrorMessage
+from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -3891,8 +3891,6 @@ class Resampler(object):
             )
         )
 
-
-from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 BasePandasDataset = make_wrapped_class(
     _BasePandasDataset, "BasePandasDataset", "make_base_dataset_wrapper"

@@ -17,7 +17,12 @@ _SPECIAL = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
 
-class RemoteMeta(type):
+class MetaComparer(type):
+    def __instancecheck__(self, instance):
+        return issubclass(instance.__class__, self.__real_cls__)
+
+
+class RemoteMeta(MetaComparer):
     """
     Metaclass that relays getting non-existing attributes from
     a proxying object *CLASS* to a remote end transparently.
@@ -53,11 +58,6 @@ class RemoteMeta(type):
         except AttributeError:
             return res
         return getter(self)
-
-
-class MetaComparer(type):
-    def __instancecheck__(self, instance):
-        return issubclass(instance.__class__, self.__real_cls__)
 
 
 def make_wrapped_class(local_cls, cls_name, rpyc_wrapper_name):

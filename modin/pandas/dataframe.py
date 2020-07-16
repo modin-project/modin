@@ -31,12 +31,13 @@ import sys
 from typing import Tuple, Union
 import warnings
 
-from modin import execution_engine, Publisher
 from modin.error_message import ErrorMessage
 from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
+
+from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 
 @_inherit_docstrings(
@@ -2721,7 +2722,5 @@ class _DataFrame(BasePandasDataset):
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
 
-
-from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 DataFrame = make_wrapped_class(_DataFrame, "DataFrame", "make_dataframe_wrapper")
