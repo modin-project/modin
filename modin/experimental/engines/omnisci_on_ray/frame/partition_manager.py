@@ -83,6 +83,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         calcite_json = CalciteSerializer().serialize(calcite_plan)
 
         curs = omniSession.executeRA("execute relalg " + calcite_json)
+        assert curs
         rb = curs.getArrowRecordBatch()
         assert rb
         at = pyarrow.Table.from_batches([rb])
