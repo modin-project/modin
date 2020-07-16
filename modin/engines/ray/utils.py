@@ -120,7 +120,10 @@ def initialize_ray():
                 lru_evict=True,
             )
         else:
-            raise ValueError("'MODIN_RAY_CLUSTER' env variable not correctly set! Did you mean `os.environ["MODIN_RAY_CLUSTER"] = "True"`?")
+            raise ValueError(
+                '"MODIN_RAY_CLUSTER" env variable not correctly set! \
+                Did you mean `os.environ["MODIN_RAY_CLUSTER"] = "True"`?'
+            )
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
