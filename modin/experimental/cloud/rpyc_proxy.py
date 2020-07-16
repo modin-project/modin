@@ -15,7 +15,7 @@ from rpyc.utils.classic import deliver
 import rpyc
 
 from . import get_connection
-from .meta_magic import _SPECIAL, _WRAP_ATTRS, RemoteMeta
+from .meta_magic import _SPECIAL, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
 
 
 class WrappingConnection(rpyc.Connection):
@@ -27,11 +27,21 @@ class WrappingConnection(rpyc.Connection):
 
         # we cannot use 'result.__class__' as this could cause a lookup of
         # '__class__' on remote end
+        try:
+            local_cls = object.__getattribute__(result, "__class__")
+        except AttributeError:
+            return result
 
         try:
-            wrapping_cls = object.__getattribute__(
-                object.__getattribute__(result, "__class__"), "__dict__"
-            )["__real_cls__"]
+            # first of all, check if remote object has a known "wrapping" class
+            # example: _DataFrame has DataFrame dual-nature wrapper
+            local_cls = _KNOWN_DUALS[local_cls]
+        except KeyError:
+            pass
+        try:
+            wrapping_cls = object.__getattribute__(local_cls, "__dict__")[
+                "__real_cls__"
+            ]
         except (AttributeError, KeyError):
             return result
         return wrapping_cls.from_remote_end(result)
