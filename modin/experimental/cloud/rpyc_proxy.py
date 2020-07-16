@@ -11,67 +11,46 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from . import get_connection
 from rpyc.utils.classic import deliver
 import rpyc
+
+from . import get_connection
+from .meta_magic import _SPECIAL, _WRAP_ATTRS, RemoteMeta
 
 
 class WrappingConnection(rpyc.Connection):
     def _netref_factory(self, id_pack):
         result = super()._netref_factory(id_pack)
-        real_class = getattr(getattr(result, "__class__", None), "__real_cls__", None)
-        return real_class.from_remote_end(result) if real_class else result
+        # try getting __real_cls__ from result.__class__ BUT make sure to
+        # NOT get it from some parent class for result.__class__, otherwise
+        # multiple wrappings happen
+
+        # we cannot use 'result.__class__' as this could cause a lookup of
+        # '__class__' on remote end
+
+        try:
+            wrapping_cls = object.__getattribute__(
+                object.__getattribute__(result, "__class__"), "__dict__"
+            )["__real_cls__"]
+        except (AttributeError, KeyError):
+            return result
+        return wrapping_cls.from_remote_end(result)
+
+    def _box(self, obj):
+        try:
+            remote_obj = object.__getattribute__(obj, "__remote_end__")
+        except AttributeError:
+            remote_obj = obj
+        return super()._box(remote_obj)
 
 
 class WrappingService(rpyc.ClassicService):
     _protocol = WrappingConnection
 
 
-_SPECIAL = frozenset(("__new__", "__dict__"))
-_WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
-
-
-class RemoteMeta(type):
-    """
-    Metaclass that relays getting non-existing attributes from
-    a proxying object *CLASS* to a remote end transparently.
-
-    Attributes existing on a proxying object are retrieved locally.
-    """
-
-    def __getattribute__(self, name):
-        if name in _SPECIAL:
-            # never proxy special attributes, always get them from the class type
-            res = object.__getattribute__(self, name)
-        else:
-            try:
-                # go for proxying class-level attributes first
-                res = object.__getattribute__(self, "__dict__")[name]
-            except KeyError:
-                attr_ex = None
-                for wrap_name in _WRAP_ATTRS:
-                    # now try getting an attribute from an overriding object first,
-                    # and only if it fails resort to getting from the remote end
-                    try:
-                        res = getattr(object.__getattribute__(self, wrap_name), name)
-                        break
-                    except AttributeError as ex:
-                        attr_ex = ex
-                        continue
-                else:
-                    raise attr_ex
-        try:
-            # note that any attribute might be in fact a data descriptor,
-            # account for that
-            getter = res.__get__
-        except AttributeError:
-            return res
-        return getter(self)
-
-
 _SPECIAL_ATTRS = frozenset(["__name__", "__remote_end__"])
 _NO_OVERRIDE = (
-    _SPECIAL | _SPECIAL_ATTRS | frozenset(_WRAP_ATTRS) | rpyc.core.netref.DELETED_ATTRS
+    _SPECIAL | _SPECIAL_ATTRS | frozenset(_WRAP_ATTRS) | rpyc.core.netref.LOCAL_ATTRS
 )
 
 
