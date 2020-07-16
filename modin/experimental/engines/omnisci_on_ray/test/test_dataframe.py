@@ -52,11 +52,8 @@ class TestCSV:
             # TODO: parse_date
             ):
                 rp = pd.read_csv(self.csv_file, **kwargs)
-                rm = mpd.read_csv(self.csv_file, **kwargs)._to_pandas()
-                assert_almost_equal(rm, rp,
-                    check_dtype=False,
-                    check_less_precise=2,
-                    )
+                rm = mpd.read_csv(self.csv_file, **kwargs)
+                df_equals(rp, rm)
 
 
 class TestMasks:
