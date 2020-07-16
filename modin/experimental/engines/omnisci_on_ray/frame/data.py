@@ -40,7 +40,6 @@ from .expr import (
 )
 from collections import OrderedDict
 
-import ray
 import numpy as np
 import pyarrow
 
@@ -661,7 +660,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)
         assert self._partitions.size == 1
-        obj = ray.get(self._partitions[0][0].oid)
+        obj = self._partitions[0][0].get()
         if isinstance(obj, (pd.DataFrame, pd.Series)):
             self._index_cache = obj.index
         else:
@@ -671,9 +670,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     Index, data=np.arange(0, obj.num_rows), dtype="int"
                 )
             else:
-                index_at = obj.drop_columns(self.columns)
-                index_df = index.at.to_pandas()
-                index_df.set_index(self._index_cols)
+                index_at = obj.drop(self.columns)
+                index_df = index_at.to_pandas()
+                index_df.set_index(self._index_cols, inplace=True)
                 index_df.index.rename(self._index_names(self._index_cols), inplace=True)
                 self._index_cache = index_df.index
 
@@ -743,7 +742,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         # index columns.
         if len(df.columns) != len(self.columns):
             assert self._index_cols
-            df = df.set_index(self._index_cols)
+            df.set_index(self._index_cols, inplace=True)
             df.index.rename(self._index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:

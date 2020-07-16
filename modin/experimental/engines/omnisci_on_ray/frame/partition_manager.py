@@ -27,6 +27,7 @@ from .calcite_serializer import CalciteSerializer
 
 import pyarrow
 import json
+import pandas
 
 if __execution_engine__ == "Ray":
     import ray
@@ -71,14 +72,12 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:
-                    df = ray.get(p.oid)
-                    # Currently DataFrame loader uploads only columns
-                    # and ignores index. So, move index to columns and
-                    # set proper column names.
-                    if frame._index_cols is not None:
-                        df.reset_index(inplace=True)
-                        df.columns = frame._table_cols
-                    p.frame_id = omniSession.put_pandas_to_omnisci(df)
+                    obj = p.get()
+                    if isinstance(obj, (pandas.DataFrame, pandas.Series)):
+                        p.frame_id = omniSession.put_pandas_to_omnisci(obj)
+                    else:
+                        assert isinstance(obj, pyarrow.Table)
+                        p.frame_id = omniSession.put_arrow_to_omnisci(obj)
 
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)

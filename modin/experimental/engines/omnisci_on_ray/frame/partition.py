@@ -26,12 +26,12 @@ if __execution_engine__ == "Ray":
 
 
 class OmnisciOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id=None, frame_id=None, arrow_slice=None, length=None, width=None):
+    def __init__(self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
         self.frame_id = frame_id
-        self.arrow_slice = arrow_slice
+        self.arrow_table = arrow_table
         self._length_cache = length
         self._width_cache = width
 
@@ -43,6 +43,8 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
         return obj.to_pandas()
 
     def get(self):
+        if self.arrow_table is not None:
+            return self.arrow_table
         return ray.get(self.oid)
 
     @classmethod
@@ -57,9 +59,9 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
     @classmethod
     def put_arrow(cls, obj):
         return OmnisciOnRayFramePartition(
-            object_id=ray.put(obj),
-            frame_id=OmnisciServer().put_arrow_to_omnisci(obj),  # TODO: make materialization later?
-            arrow_slice=obj,                                     # TODO question of life time when loaded in omnisci dbe
+            object_id=ray.put(None),
+            frame_id=OmnisciServer().put_arrow_to_omnisci(obj),
+            arrow_table=obj,
             length=len(obj),
             width=len(obj.columns),
         )
