@@ -36,6 +36,7 @@ from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
+from .groupby import DataFrameGroupBy
 
 from modin.experimental.cloud.meta_magic import make_wrapped_class
 
@@ -460,8 +461,6 @@ class _DataFrame(BasePandasDataset):
                     pass
                 elif mismatch:
                     raise KeyError(next(x for x in by if x not in self))
-
-        from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
             self,
