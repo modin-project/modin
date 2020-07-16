@@ -85,7 +85,9 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                     ):
 
                         def method(_self, *_args, __method_name__=name, **_kw):
-                            return getattr(remote_cls, __method_name__)(*_args, **_kw)
+                            return getattr(_self.__remote_end__, __method_name__)(
+                                *_args, **_kw
+                            )
 
                         method.__name__ = name
                         namespace[name] = method
