@@ -19,7 +19,19 @@ _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
 class MetaComparer(type):
     def __instancecheck__(self, instance):
-        return issubclass(instance.__class__, self.__dict__.get("__real_cls__", self))
+        # see if self is a type that has __real_cls__ defined,
+        # as if it's a dual-nature class we need to use its internal class to compare
+        try:
+            my_cls = self.__dict__["__real_cls__"]
+        except KeyError:
+            my_cls = self
+        try:
+            # see if it's a proxying wrapper, in which case
+            # use wrapped local class as a comparison base
+            my_cls = object.__getattribute__(my_cls, "__wrapper_local__")
+        except AttributeError:
+            pass
+        return issubclass(instance.__class__, my_cls)
 
 
 class RemoteMeta(MetaComparer):
