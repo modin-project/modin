@@ -19,7 +19,7 @@ _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
 class MetaComparer(type):
     def __instancecheck__(self, instance):
-        return issubclass(instance.__class__, self.__real_cls__)
+        return issubclass(instance.__class__, self.__dict__.get("__real_cls__", self))
 
 
 class RemoteMeta(MetaComparer):
