@@ -17,6 +17,8 @@ from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
+from modin.experimental.cloud.meta_magic import make_wrapped_class
+
 from .utils import _inherit_docstrings
 from .series import Series
 
@@ -28,7 +30,7 @@ from .series import Series
         pandas.core.groupby.DataFrameGroupBy.__init__,
     ],
 )
-class DataFrameGroupBy(object):
+class _DataFrameGroupBy(object):
     def __init__(
         self,
         df,
@@ -681,6 +683,11 @@ class DataFrameGroupBy(object):
             return f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
 
         return self._df._default_to_pandas(groupby_on_multiple_columns)
+
+
+DataFrameGroupBy = make_wrapped_class(
+    _DataFrameGroupBy, "DataFrameGroupBy", "make_dataframe_groupby_wrapper"
+)
 
 
 class SeriesGroupBy(DataFrameGroupBy):

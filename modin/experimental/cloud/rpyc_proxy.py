@@ -78,6 +78,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                 for name, entry in base.__dict__.items():
                     if (
                         name not in namespace
+                        and name not in override.__dict__
                         and name.startswith("__")
                         and name.endswith("__")
                         and name not in _NO_OVERRIDE
@@ -204,3 +205,14 @@ def make_base_dataset_wrapper():
         "BasePandasDataset",
     )
     return DeliveringBasePandasDataset
+
+
+def make_dataframe_groupby_wrapper():
+    from modin.pandas.groupby import _DataFrameGroupBy
+
+    DeliveringDataFrameGroupBy = _deliveringWrapper(
+        _DataFrameGroupBy,
+        ["agg", "aggregate", "apply"],
+        target_name="DataFrameGroupBy",
+    )
+    return DeliveringDataFrameGroupBy
