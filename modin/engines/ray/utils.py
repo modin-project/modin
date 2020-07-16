@@ -70,7 +70,7 @@ def initialize_ray():
 
         plasma_directory = None
         num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", None)
+        cluster = os.environ.get("MODIN_RAY_CLUSTER", "").title()
         redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
         redis_password = secrets.token_hex(16)
 
@@ -83,7 +83,7 @@ def initialize_ray():
                 redis_password=redis_password,
                 logging_level=100,
             )
-        elif cluster is None:
+        elif cluster == "":
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
                 from tempfile import gettempdir
@@ -120,7 +120,7 @@ def initialize_ray():
                 lru_evict=True,
             )
         else:
-            raise ValueError("cluster variable should be 'True' or None")
+            raise ValueError("'MODIN_RAY_CLUSTER' env variable not correctly set! Did you mean `os.environ["MODIN_RAY_CLUSTER"] = "True"`?")
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
