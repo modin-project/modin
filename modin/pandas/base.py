@@ -3623,7 +3623,6 @@ class Resampler(object):
             on,
             level,
         ]
-
         self.__groups = self.__get_groups(*self.resample_args)
 
     def __get_groups(
@@ -3910,26 +3909,11 @@ class Resampler(object):
         )
 
 
-class BasePandasDataset(_BasePandasDataset):
-    __real_cls__: _BasePandasDataset = None
+from modin.experimental.cloud.meta_magic import make_wrapped_class
 
-    @classmethod
-    def _update_engine(cls, publisher: Publisher):
-        if publisher.get() == "Cloudray":
-            from modin.experimental.cloud.rpyc_proxy import make_base_dataset_wrapper
-
-            cls.__real_cls__ = make_base_dataset_wrapper()
-        else:
-            cls.__real_cls__ = _BasePandasDataset
-
-    def __new__(cls, *a, **kw):
-        if cls is BasePandasDataset:
-            return cls.__real_cls__(*a, **kw)
-        return super().__new__(cls)
-
-
-execution_engine.subscribe(BasePandasDataset._update_engine)
-
+BasePandasDataset = make_wrapped_class(
+    _BasePandasDataset, "BasePandasDataset", "make_base_dataset_wrapper"
+)
 
 class Window(object):
     def __init__(
