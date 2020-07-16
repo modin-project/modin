@@ -15,7 +15,11 @@ from modin.pandas.test.utils import (
     join_type_keys,
     to_pandas,
 )
-
+from pandas.util.testing import (
+    assert_almost_equal,
+    assert_frame_equal,
+    assert_categorical_equal,
+)
 
 def run_and_compare(fn, data, data2=None, *args, **kwargs):
     if data2 is None:
@@ -35,23 +39,24 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
-    csv_file = os.path.join(root, "examples/data/boston_housing.csv")
-    #  more csv files are here: modin/pandas/test/data
+    csv_file = os.path.join(root, "modin/pandas/test/data", "test_usecols.csv")
+    #  more csv files are here: modin/pandas/test/data/ and examples/data/boston_housing.csv
 
     def test_simple1(self):
         """ check with the following arguments: names, dtype, skiprows, delimiter, parse_dates """
         for kwargs in (
-            {"sep": ","},
-            {"sep": None},
-            # TODO remove comments below when the test starts working
-            # {"skiprows": 1, "names": ["noname","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",] },
-            # {"names": ["noname",]},
-            # {"dtypes": [np.int64, np.float64,]},
+            {"sep": ','}, {"sep": None},
+            {"skiprows": 1, "names": ["A", "B", "C", "D", "E"] },
+            {"dtype": {'a': 'int64', 'e':'float64'}},
+            # TODO boston housing 
             # TODO: parse_date
-        ):
-            rp = pd.read_csv(self.csv_file, **kwargs)
-            rm = mpd.read_csv(self.csv_file, **kwargs)
-            df_equals(rm, rp)
+            ):
+                rp = pd.read_csv(self.csv_file, **kwargs)
+                rm = mpd.read_csv(self.csv_file, **kwargs)._to_pandas()
+                assert_almost_equal(rm, rp,
+                    check_dtype=False,
+                    check_less_precise=2,
+                    )
 
 
 class TestMasks:
