@@ -2722,22 +2722,6 @@ class _DataFrame(BasePandasDataset):
         return self._query_compiler.to_pandas()
 
 
-class DataFrame(_DataFrame):
-    __real_cls__: _DataFrame = None
+from modin.experimental.cloud.meta_magic import make_wrapped_class
 
-    @classmethod
-    def _update_engine(cls, publisher: Publisher):
-        if publisher.get() == "Cloudray":
-            from modin.experimental.cloud.rpyc_proxy import make_dataframe_wrapper
-
-            cls.__real_cls__ = make_dataframe_wrapper()
-        else:
-            cls.__real_cls__ = _DataFrame
-
-    def __new__(cls, *a, **kw):
-        if cls is DataFrame:
-            return cls.__real_cls__(*a, **kw)
-        return super().__new__(cls)
-
-
-execution_engine.subscribe(DataFrame._update_engine)
+DataFrame = make_wrapped_class(_DataFrame, "DataFrame", "make_dataframe_wrapper")
