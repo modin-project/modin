@@ -139,29 +139,16 @@ def _update_engine(publisher: Publisher):
 
             @conn.teleport
             def init_remote_ray():
-                # XXX hack alert! things being monkey-patched below should be not needed when initialize_ray() accepts parameters
-                import os
-                import ray.ray_constants
-                import secrets
-                import threading
+                from ray import ray_constants
+                import modin
+                from modin.engines.ray.utils import initialize_ray
 
-                os.environ["MODIN_ENGINE"] = "Ray"
-                os.environ["MODIN_RAY_CLUSTER"] = "True"
-                os.environ["MODIN_REDIS_ADDRESS"] = "localhost:6379"
-
-                old_name = threading.current_thread().name
-                threading.current_thread().name = "MainThread"
-
-                old_token = secrets.token_hex
-                secrets.token_hex = (
-                    lambda *a, **kw: ray.ray_constants.REDIS_DEFAULT_PASSWORD
+                modin.set_backends("Ray")
+                initialize_ray(
+                    override_is_cluster=True,
+                    override_redis_address=f"localhost:{ray_constants.DEFAULT_PORT}",
+                    override_redis_password=ray_constants.REDIS_DEFAULT_PASSWORD,
                 )
-                try:
-                    # this would initialize remote ray
-                    import modin.pandas  # noqa" F401
-                finally:
-                    threading.current_thread().name = old_name
-                    secrets.token_hex = old_token
 
             init_remote_ray()
 
