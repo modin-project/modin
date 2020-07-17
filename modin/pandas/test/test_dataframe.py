@@ -5856,7 +5856,7 @@ class TestDataFrameJoinSort:
         s = pd.Series(frame_data2.get("col1"), name="col1")
         df_equals(modin_df.merge(s), modin_df.merge(modin_df2[["col1"]]))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             modin_df.merge("Non-valid type")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

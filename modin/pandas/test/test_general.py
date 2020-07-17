@@ -151,8 +151,12 @@ def test_merge():
         )
         df_equals(modin_result, pandas_result)
 
-        with pytest.raises(ValueError):
-            pd.merge(modin_df["col1"], modin_df2)
+    s = pd.Series(frame_data.get("col1"))
+    with pytest.raises(ValueError):
+        pd.merge(s, modin_df2)
+
+    with pytest.raises(TypeError):
+        pd.merge("Non-valid type", modin_df2)
 
 
 def test_merge_ordered():

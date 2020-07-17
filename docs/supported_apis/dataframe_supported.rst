@@ -231,8 +231,13 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``memory_usage``           | `memory_usage`_           | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-|                            |                           |                        | Only implemented for ``left_index=True`` and       |
-| ``merge``                  | `merge`_                  | P                      | ``right_index=True``, defaults to pandas otherwise |
+|                            |                           |                        | Implemented the following cases:                   |
+|                            |                           |                        | ``left_index=True`` and ``right_index=True``,      |
+|                            |                           |                        | ``how=left`` and ``how=inner`` for all values      |
+| ``merge``                  | `merge`_                  | P                      | of parameters except ``left_index=True`` and       |
+|                            |                           |                        | ``right_index=False`` or ``left_index=False``      |
+|                            |                           |                        | and ``right_index=True``.                          |
+|                            |                           |                        | Defaults to pandas otherwise.                      |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``min``                    | `min`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
