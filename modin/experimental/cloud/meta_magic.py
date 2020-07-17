@@ -12,12 +12,29 @@
 # governing permissions and limitations under the License.
 
 import sys
+import inspect
+import types
 
 _SPECIAL = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
 
 class MetaComparer(type):
+    @property
+    def __signature__(self):
+        """
+        Override detection performed by inspect.signature().
+        Defining custom __new__() throws off inspect.signature(ClassType)
+        as it returns a signature of __new__(), even if said __new__() is defined
+        in a parent class.
+        """
+        # Note that we create an artificial bound method here, as otherwise
+        # self.__init__ is an ordinary function, and inspect.signature() shows
+        # "self" argument while it should hide it for our purposes.
+        # So we make a method bound to class type (it would normally be bound to instance)
+        # and pass that to .signature()
+        return inspect.signature(types.MethodType(self.__init__, self))
+
     def __instancecheck__(self, instance):
         # see if self is a type that has __real_cls__ defined,
         # as if it's a dual-nature class we need to use its internal class to compare
