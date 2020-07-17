@@ -33,12 +33,15 @@ with cl:
 
     parameters = {
         "data_file": "https://modin-datasets.s3.amazonaws.com/mortgage",
+        # "data_file": "s3://modin-datasets/mortgage",
         "dfiles_num": 1,
         "no_ml": True,
         "validation": False,
         "no_ibis": True,
         "no_pandas": False,
         "pandas_mode": "Modin_on_ray",
+        "ray_tmpdir": "/tmp",
+        "ray_memory": 1024 * 1024 * 1024,
     }
 
     run_benchmark(parameters)
