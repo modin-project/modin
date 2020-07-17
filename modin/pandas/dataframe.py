@@ -1524,11 +1524,7 @@ class DataFrame(BasePandasDataset):
                     )
             if on:
                 on = on if is_list_like(on) else [on]
-                is_reset_index = (
-                    False
-                    if any(o in self.index.names and o in right.index.names for o in on)
-                    else True
-                )
+                is_reset_index = not any(o in self.index.names and o in right.index.names for o in on)
                 if sort:
                     result = (
                         result.sort_values(on)
