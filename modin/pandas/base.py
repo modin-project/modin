@@ -2820,6 +2820,7 @@ class BasePandasDataset(object):
                 na_position=na_position,
             ).index
             if inplace:
+                self.reset_index(drop=True, inplace=True)
                 self.reindex(index=new_index2, copy=False)
                 self.index = new_index1
             else:
