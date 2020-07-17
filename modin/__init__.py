@@ -102,24 +102,50 @@ class Publisher(object):
     def get(self):
         return self.__value
 
-    def put(self, value):
+    def _put_nocallback(self, value):
         value = value.title()  # normalize the value
         oldvalue, self.__value = self.__value, value
-        if oldvalue != value:
-            for callback in self.__subs:
-                callback(self)
-            try:
-                once = self.__once[value]
-            except KeyError:
-                return
-            if once:
-                for callback in once:
-                    callback(self)
-            del self.__once[value]
+        return oldvalue
+
+    def _check_callbacks(self, oldvalue):
+        if oldvalue == self.__value:
+            return
+        for callback in self.__subs:
+            callback(self)
+        once = self.__once.pop(self.__value, ())
+        for callback in once:
+            callback(self)
+
+    def put(self, value):
+        self._check_callbacks(self._put_nocallback(value))
 
 
 execution_engine = Publisher(name="execution_engine", value=get_execution_engine())
 partition_format = Publisher(name="partition_format", value=get_partition_format())
+
+
+def set_backends(engine=None, partition=None):
+    """
+    Method to set the _pair_ of execution engine and partition format simultaneously.
+    This is needed because there might be cases where switching one by one would be
+    impossible, as not all pairs of values are meaningful.
+
+    The method returns pair of old values, so it is easy to return back.
+    """
+    old_engine, old_partition = None, None
+    # defer callbacks until both entities are set
+    if engine is not None:
+        old_engine = execution_engine._put_nocallback(engine)
+    if partition is not None:
+        old_partition = partition_format._put_nocallback(partition)
+    # execute callbacks if something was changed
+    if old_engine is not None:
+        execution_engine._check_callbacks(old_engine)
+    if old_partition is not None:
+        partition_format._check_callbacks(old_partition)
+
+    return old_engine, old_partition
+
 
 # We don't want these used outside of this file.
 del get_execution_engine

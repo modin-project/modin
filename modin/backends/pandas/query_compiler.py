@@ -644,6 +644,197 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Reduction operations
 
+    def _resample_func(
+        self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs
+    ):
+        def map_func(df, resample_args=resample_args):
+            if df_op is not None:
+                df = df_op(df)
+            resampled_val = df.resample(*resample_args)
+            op = getattr(pandas.core.resample.Resampler, func_name)
+            if callable(op):
+                try:
+                    # This will happen with Arrow buffer read-only errors. We don't want to copy
+                    # all the time, so this will try to fast-path the code first.
+                    val = op(resampled_val, *args, **kwargs)
+                except (ValueError):
+                    resampled_val = df.copy().resample(*resample_args)
+                    val = op(resampled_val, *args, **kwargs)
+            else:
+                val = getattr(resampled_val, func_name)
+
+            if isinstance(val, pandas.Series):
+                return val.to_frame()
+            else:
+                return val
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis=0, func=map_func, new_columns=new_columns
+        )
+        return self.__constructor__(new_modin_frame)
+
+    def resample_get_group(self, resample_args, name, obj):
+        return self._resample_func(resample_args, "get_group", name=name, obj=obj)
+
+    def resample_app_ser(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "apply",
+            df_op=lambda df: df.squeeze(axis=1),
+            func=func,
+            *args,
+            **kwargs
+        )
+
+    def resample_app_df(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(resample_args, "apply", func=func, *args, **kwargs)
+
+    def resample_agg_ser(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "aggregate",
+            df_op=lambda df: df.squeeze(axis=1),
+            func=func,
+            *args,
+            **kwargs
+        )
+
+    def resample_agg_df(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "aggregate", func=func, *args, **kwargs
+        )
+
+    def resample_transform(self, resample_args, arg, *args, **kwargs):
+        return self._resample_func(resample_args, "transform", arg=arg, *args, **kwargs)
+
+    def resample_pipe(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(resample_args, "pipe", func=func, *args, **kwargs)
+
+    def resample_ffill(self, resample_args, limit):
+        return self._resample_func(resample_args, "ffill", limit=limit)
+
+    def resample_backfill(self, resample_args, limit):
+        return self._resample_func(resample_args, "backfill", limit=limit)
+
+    def resample_bfill(self, resample_args, limit):
+        return self._resample_func(resample_args, "bfill", limit=limit)
+
+    def resample_pad(self, resample_args, limit):
+        return self._resample_func(resample_args, "pad", limit=limit)
+
+    def resample_nearest(self, resample_args, limit):
+        return self._resample_func(resample_args, "nearest", limit=limit)
+
+    def resample_fillna(self, resample_args, method, limit):
+        return self._resample_func(resample_args, "fillna", method=method, limit=limit)
+
+    def resample_asfreq(self, resample_args, fill_value):
+        return self._resample_func(resample_args, "asfreq", fill_value=fill_value)
+
+    def resample_interpolate(
+        self,
+        resample_args,
+        method,
+        axis,
+        limit,
+        inplace,
+        limit_direction,
+        limit_area,
+        downcast,
+        **kwargs
+    ):
+        return self._resample_func(
+            resample_args,
+            "interpolate",
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            downcast=downcast,
+            **kwargs
+        )
+
+    def resample_count(self, resample_args):
+        return self._resample_func(resample_args, "count")
+
+    def resample_nunique(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "nunique", _method=_method, *args, **kwargs
+        )
+
+    def resample_first(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "first", _method=_method, *args, **kwargs
+        )
+
+    def resample_last(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "last", _method=_method, *args, **kwargs
+        )
+
+    def resample_max(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "max", _method=_method, *args, **kwargs
+        )
+
+    def resample_mean(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "median", _method=_method, *args, **kwargs
+        )
+
+    def resample_median(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "median", _method=_method, *args, **kwargs
+        )
+
+    def resample_min(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "min", _method=_method, *args, **kwargs
+        )
+
+    def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "ohlc",
+            df_op=lambda df: df.squeeze(axis=1),
+            _method=_method,
+            *args,
+            **kwargs
+        )
+
+    def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "ohlc", _method=_method, *args, **kwargs
+        )
+
+    def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "prod", _method=_method, min_count=min_count, *args, **kwargs
+        )
+
+    def resample_size(self, resample_args):
+        return self._resample_func(resample_args, "size", new_columns=["__reduced__"])
+
+    def resample_sem(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "sem", _method=_method, *args, **kwargs
+        )
+
+    def resample_std(self, resample_args, ddof, *args, **kwargs):
+        return self._resample_func(resample_args, "std", ddof=ddof, *args, **kwargs)
+
+    def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "sum", _method=_method, min_count=min_count, *args, **kwargs
+        )
+
+    def resample_var(self, resample_args, ddof, *args, **kwargs):
+        return self._resample_func(resample_args, "var", ddof=ddof, *args, **kwargs)
+
+    def resample_quantile(self, resample_args, q, **kwargs):
+        return self._resample_func(resample_args, "quantile", q=q, **kwargs)
+
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
@@ -1588,6 +1779,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis, lambda df: groupby_agg_builder(df)
         )
         result = self.__constructor__(new_modin_frame)
+
+        # that means that exception in `compute_groupby` was raised
+        # in every partition, so we also should raise it
+        if len(result.columns) == 0 and len(self.columns) != 0:
+            # determening type of raised exception by applying `aggfunc`
+            # to empty DataFrame
+            try:
+                agg_func(
+                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
+                    **agg_args
+                )
+            except Exception as e:
+                raise type(e)("No numeric types to aggregate.")
+
         # Reset `as_index` because it was edited inplace.
         groupby_args["as_index"] = as_index
         if as_index:

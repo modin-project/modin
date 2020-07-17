@@ -585,3 +585,7 @@ def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs)
     values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
     if values is not None:
         comparator(*values)
+
+
+def create_test_dfs(*args, **kwargs):
+    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)

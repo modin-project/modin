@@ -55,6 +55,7 @@ from .utils import (
     int_arg_keys,
     int_arg_values,
     eval_general,
+    create_test_dfs,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -73,10 +74,6 @@ def eval_insert(modin_df, pandas_df, **kwargs):
         operation=lambda df, **kwargs: df.insert(**kwargs),
         **_kwargs,
     )
-
-
-def create_test_dfs(*args, **kwargs):
-    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
 
 
 class TestDataFrameBinary:
@@ -2449,17 +2446,108 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).replace()
 
-    def test_resample(self):
-        d = dict(
-            {
-                "price": [10, 11, 9, 13, 14, 18, 17, 19],
-                "volume": [50, 60, 40, 100, 50, 100, 40, 50],
-            }
+    @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
+    @pytest.mark.parametrize("axis", [0, "columns"])
+    @pytest.mark.parametrize("closed", ["left", "right"])
+    @pytest.mark.parametrize("label", ["right", "left"])
+    @pytest.mark.parametrize("on", [None, "DateColumn"])
+    @pytest.mark.parametrize("level", [None, 1])
+    def test_resample(self, rule, axis, closed, label, on, level):
+        freq = "H"
+        base = 2
+        index = pandas.date_range("31/12/2000", periods=12, freq=freq)
+        data = {"A": range(12), "B": range(12)}
+
+        pandas_df = pandas.DataFrame(data, index=index)
+        modin_df = pd.DataFrame(data, index=index)
+
+        if on is not None and axis == 0:
+            pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+            modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+        else:
+            on = None
+
+        if axis == "columns":
+            pandas_df = pandas_df.T
+            modin_df = modin_df.T
+
+        if level is not None and axis == 0 and on is None:
+            index = pandas.MultiIndex.from_product(
+                [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq=freq)]
+            )
+            pandas_df.index = index
+            modin_df.index = index
+        else:
+            level = None
+
+        pandas_resampler = pandas_df.resample(
+            rule, axis=axis, closed=closed, label=label, base=base, on=on, level=level
         )
-        df = pd.DataFrame(d)
-        df["week_starting"] = pd.date_range("01/01/2018", periods=8, freq="W")
-        with pytest.warns(UserWarning):
-            df.resample("M", on="week_starting")
+        modin_resampler = modin_df.resample(
+            rule, axis=axis, closed=closed, label=label, base=base, on=on, level=level
+        )
+
+        df_equals(modin_resampler.count(), pandas_resampler.count())
+        df_equals(modin_resampler.var(0), pandas_resampler.var(0))
+        df_equals(modin_resampler.sum(), pandas_resampler.sum())
+        df_equals(modin_resampler.std(), pandas_resampler.std())
+        df_equals(modin_resampler.sem(), pandas_resampler.sem())
+        df_equals(modin_resampler.size(), pandas_resampler.size())
+        df_equals(modin_resampler.prod(), pandas_resampler.prod())
+        if on is None:
+            df_equals(modin_resampler.ohlc(), pandas_resampler.ohlc())
+        df_equals(modin_resampler.min(), pandas_resampler.min())
+        df_equals(modin_resampler.median(), pandas_resampler.median())
+        df_equals(modin_resampler.mean(), pandas_resampler.mean())
+        df_equals(modin_resampler.max(), pandas_resampler.max())
+        df_equals(modin_resampler.last(), pandas_resampler.last())
+        df_equals(modin_resampler.first(), pandas_resampler.first())
+        df_equals(modin_resampler.nunique(), pandas_resampler.nunique())
+        df_equals(
+            modin_resampler.pipe(lambda x: x.max() - x.min()),
+            pandas_resampler.pipe(lambda x: x.max() - x.min()),
+        )
+        df_equals(
+            modin_resampler.transform(lambda x: (x - x.mean()) / x.std()),
+            pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
+        )
+        df_equals(
+            pandas_resampler.aggregate("max"), modin_resampler.aggregate("max"),
+        )
+        df_equals(
+            modin_resampler.apply("sum"), pandas_resampler.apply("sum"),
+        )
+        df_equals(
+            modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
+            pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
+        )
+        assert pandas_resampler.indices == modin_resampler.indices
+        assert pandas_resampler.groups == modin_resampler.groups
+        df_equals(modin_resampler.quantile(), pandas_resampler.quantile())
+        if axis == 0:
+            # Upsampling from level= or on= selection is not supported
+            if on is None and level is None:
+                df_equals(
+                    modin_resampler.interpolate(), pandas_resampler.interpolate(),
+                )
+                df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
+                df_equals(
+                    modin_resampler.fillna(method="nearest"),
+                    pandas_resampler.fillna(method="nearest"),
+                )
+                df_equals(modin_resampler.pad(), pandas_resampler.pad())
+                df_equals(modin_resampler.nearest(), pandas_resampler.nearest())
+                df_equals(modin_resampler.bfill(), pandas_resampler.bfill())
+                df_equals(modin_resampler.backfill(), pandas_resampler.backfill())
+                df_equals(modin_resampler.ffill(), pandas_resampler.ffill())
+            df_equals(
+                pandas_resampler.apply(["sum", "mean", "max"]),
+                modin_resampler.apply(["sum", "mean", "max"]),
+            )
+            df_equals(
+                modin_resampler.aggregate(["sum", "mean", "max"]),
+                pandas_resampler.aggregate(["sum", "mean", "max"]),
+            )
 
     def test_rolling(self):
         df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
@@ -4951,6 +5039,16 @@ class TestDataFrameIndexing:
 
         modin_result = modin_df.sample(n=2, random_state=42, axis=axis)
         pandas_result = pandas_df.sample(n=2, random_state=42, axis=axis)
+        df_equals(modin_result, pandas_result)
+
+        # issue #1692, numpy RandomState object
+        # We must create a new random state for each iteration because the values that
+        # are selected will be impacted if the object has already been used.
+        random_state = np.random.RandomState(42)
+        modin_result = modin_df.sample(frac=0.5, random_state=random_state, axis=axis)
+
+        random_state = np.random.RandomState(42)
+        pandas_result = pandas_df.sample(frac=0.5, random_state=random_state, axis=axis)
         df_equals(modin_result, pandas_result)
 
     def test_select_dtypes(self):
