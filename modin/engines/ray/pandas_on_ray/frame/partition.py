@@ -105,12 +105,17 @@ class PandasOnRayFramePartition(BaseFramePartition):
         if (
             (isinstance(row_indices, slice) and row_indices == slice(None))
             or (
-                self._length_cache is not None
+                not isinstance(row_indices, slice)
+                and self._length_cache is not None
                 and len(row_indices) == self._length_cache
             )
         ) and (
             (isinstance(col_indices, slice) and col_indices == slice(None))
-            or (self._width_cache is not None and len(col_indices) == self._width_cache)
+            or (
+                not isinstance(col_indices, slice)
+                and self._width_cache is not None
+                and len(col_indices) == self._width_cache
+            )
         ):
             return self.__copy__()
 
