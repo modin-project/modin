@@ -61,18 +61,24 @@ def _import_pandas(*args):
     import pandas  # noqa F401
 
 
-def initialize_ray():
+def initialize_ray(
+    override_is_cluster=False, override_redis_address=None, override_redis_password=None
+):
     """Initializes ray based on environment variables and internal defaults."""
     import ray
 
-    if threading.current_thread().name == "MainThread":
+    if threading.current_thread().name == "MainThread" or override_is_cluster:
         import secrets
 
-        plasma_directory = None
-        num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-        cluster = os.environ.get("MODIN_RAY_CLUSTER", "").title()
-        redis_address = os.environ.get("MODIN_REDIS_ADDRESS", None)
-        redis_password = secrets.token_hex(16)
+        cluster = (
+            "True"
+            if override_is_cluster
+            else os.environ.get("MODIN_RAY_CLUSTER", "").title()
+        )
+        redis_address = override_redis_address or os.environ.get(
+            "MODIN_REDIS_ADDRESS", None
+        )
+        redis_password = override_redis_password or secrets.token_hex(16)
 
         if cluster == "True":
             # We only start ray in a cluster setting for the head node.
@@ -84,7 +90,9 @@ def initialize_ray():
                 logging_level=100,
             )
         elif cluster == "":
+            num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
+            plasma_directory = None
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
                 from tempfile import gettempdir
 
