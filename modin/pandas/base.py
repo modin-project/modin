@@ -2791,6 +2791,23 @@ class BasePandasDataset(object):
              A sorted DataFrame.
         """
         axis = self._get_axis_number(axis)
+        inplace = validate_bool_kwarg(inplace, "inplace")
+        if axis == 0:
+            result = self._query_compiler.sort_rows_by_column_values(
+                by,
+                ascending=ascending,
+                na_position=na_position,
+                ignore_index=ignore_index,
+            )
+        else:
+            result = self._query_compiler.sort_columns_by_row_values(
+                by,
+                ascending=ascending,
+                na_position=na_position,
+                ignore_index=ignore_index,
+            )
+        return self._create_or_update_from_compiler(result, inplace)
+
         if not is_list_like(by):
             by = [by]
         # Currently, sort_values will just reindex based on the sorted values.
