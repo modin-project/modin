@@ -390,6 +390,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         right = right.to_pandas()
 
+        sort = kwargs.get("sort")
+        kwargs["sort"] = not sort if sort else sort
+
         def map_func(left, right=right, kwargs=kwargs):
             return pandas.merge(left, right, **kwargs)
 

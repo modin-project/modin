@@ -1411,9 +1411,11 @@ class DataFrame(BasePandasDataset):
     ):
         """
         Merge DataFrame or named Series objects with a database-style join.
+
         The join is done on columns or indexes. If joining columns on columns,
         the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
         indexes on a column or columns, the index will be passed on.
+
         Parameters
         ----------
         right : DataFrame or named Series
@@ -1467,7 +1469,8 @@ class DataFrame(BasePandasDataset):
             - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
             - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
             - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
-            - many_to_many' or 'm:m': allowed, but does not result in checks.
+            - 'many_to_many' or 'm:m': allowed, but does not result in checks.
+
         Returns
         -------
         DataFrame
@@ -1475,12 +1478,12 @@ class DataFrame(BasePandasDataset):
         """
         if isinstance(right, Series):
             if right.name is None:
-                raise ValueError("Can't merge a Series without a name")
+                raise ValueError("Cannot merge a Series without a name")
             else:
                 right = right.to_frame()
         if not isinstance(right, DataFrame):
-            raise ValueError(
-                "Can't merge DataFrame with instance of type " "{}".format(type(right))
+            raise TypeError(
+                f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
         if left_index and right_index:
@@ -1498,7 +1501,7 @@ class DataFrame(BasePandasDataset):
                     right_on=right_on,
                     left_index=left_index,
                     right_index=right_index,
-                    sort=False,
+                    sort=sort,
                     suffixes=suffixes,
                     copy=copy,
                     indicator=indicator,
@@ -1524,7 +1527,9 @@ class DataFrame(BasePandasDataset):
                     )
             if on:
                 on = on if is_list_like(on) else [on]
-                is_reset_index = not any(o in self.index.names and o in right.index.names for o in on)
+                is_reset_index = not any(
+                    o in self.index.names and o in right.index.names for o in on
+                )
                 if sort:
                     result = (
                         result.sort_values(on)

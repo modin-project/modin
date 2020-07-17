@@ -51,23 +51,25 @@ notnull = notna
 def merge(
     left,
     right,
-    how="inner",
+    how: str = "inner",
     on=None,
     left_on=None,
     right_on=None,
-    left_index=False,
-    right_index=False,
-    sort=False,
+    left_index: bool = False,
+    right_index: bool = False,
+    sort: bool = False,
     suffixes=("_x", "_y"),
-    copy=True,
-    indicator=False,
+    copy: bool = True,
+    indicator: bool = False,
     validate=None,
 ):
     """
     Merge DataFrame or named Series objects with a database-style join.
+
     The join is done on columns or indexes. If joining columns on columns,
     the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
     indexes on a column or columns, the index will be passed on.
+
     Parameters
     ----------
     right : DataFrame or named Series
@@ -121,15 +123,22 @@ def merge(
         - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
         - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
         - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
-        - many_to_many' or 'm:m': allowed, but does not result in checks.
+        - 'many_to_many' or 'm:m': allowed, but does not result in checks.
+
     Returns
     -------
     DataFrame
         A DataFrame of the two merged objects.
     """
+    if isinstance(left, Series):
+        if left.name is None:
+            raise ValueError("Cannot merge a Series without a name")
+        else:
+            left = left.to_frame()
+
     if not isinstance(left, DataFrame):
-        raise ValueError(
-            "The left object has to be DataFrame whereas it is {}".format(type(left))
+        raise TypeError(
+            f"Can only merge Series or DataFrame objects, a {type(left)} was passed"
         )
 
     return left.merge(
