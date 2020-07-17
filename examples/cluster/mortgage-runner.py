@@ -16,42 +16,29 @@
 
 # NOTE: expects https://github.com/intel-go/omniscripts/tree/modin-rpyc-test checked out and in PYTHONPATH
 
-import os
-os.environ["MODIN_ENGINE"] = "python"
-os.environ['MODIN_EXPERIMENTAL'] = 'True'
-
-# logging for Ray
-import logging
-logging.basicConfig(format='%(asctime)s %(message)s')
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-import modin.pandas as pd
+# the following import turns on experimental mode in Modin,
+# including enabling running things in remote cloud
+import modin.experimental.pandas as pd  # noqa: F401
+from modin.experimental.cloud import create_cluster, get_connection
 
 from mortgage import run_benchmark
 from mortgage.mortgage_pandas import etl_pandas
 
-from modin.experimental.cloud import Provider, Cluster, get_connection
-
-aws = Provider(Provider.AWS, os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_credentials'), 'us-west-1')
-cl = Cluster(aws, cluster_name='rayscale-test')
+cl = create_cluster("aws", "aws_credentials", cluster_name="rayscale-test")
 
 with cl:
-    import rpyc
-    conn: rpyc.ClassicService = get_connection()
+    conn = get_connection()
     np = conn.modules["numpy"]
-    run_benchmark.__globals__["pd"] = pd
-    etl_pandas.__globals__["pd"] = pd
     etl_pandas.__globals__["np"] = np
 
-    parameters = {}
-    #parameters["data_file"] = "/home/ubuntu/bench_data"
-    parameters["data_file"] = "https://modin-datasets.s3.amazonaws.com/mortgage"
-    parameters["dfiles_num"] = 1
-    parameters["no_ml"] = False
-    parameters["validation"] = False
-    parameters["no_ibis"] = True
-    parameters["no_pandas"] = False
-    parameters["pandas_mode"] = "Modin_on_ray"
+    parameters = {
+        "data_file": "https://modin-datasets.s3.amazonaws.com/mortgage",
+        "dfiles_num": 1,
+        "no_ml": True,
+        "validation": False,
+        "no_ibis": True,
+        "no_pandas": False,
+        "pandas_mode": "Modin_on_ray",
+    }
 
     run_benchmark(parameters)
