@@ -35,13 +35,13 @@ def _tuplize(arg):
     return tuple(arg)
 
 
-
 _msg_to_name = collections.defaultdict(list)
 for name in dir(consts):
     if name.upper() == name:
-        category, _ = name.split('_', 1)
+        category, _ = name.split("_", 1)
         _msg_to_name[category][getattr(consts, name)] = name
 _msg_to_name = dict(_msg_to_name)
+
 
 class WrappingConnection(rpyc.Connection):
     def __init__(self, *a, **kw):
@@ -51,20 +51,28 @@ class WrappingConnection(rpyc.Connection):
         self._static_cache = collections.defaultdict(dict)
         self._remote_dumps = None
         self._remote_tuplize = None
+
         self.logLock = threading.RLock()
         self.timings = {}
+        with open('rpyc-trace.log', 'a') as out:
+            out.write(f'------------[new trace at {time.asctime()}]----------\n')
+        self.logfiles = set(['rpyc-trace.log'])
+
+
     def _send(self, msg, seq, args):
-        str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
+        str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
         if msg == consts.MSG_REQUEST:
             handler, _ = args
             str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
         else:
-            str_handler = ''
+            str_handler = ""
         with self.logLock:
-            with open('rpyc-trace.log', 'a') as out:
-                out.write(f"send:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
+            for logfile in self.logfiles:
+                with open(logfile, 'a') as out:
+                    out.write(f"send:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
         self.timings[seq] = time.time()
         return super()._send(msg, seq, args)
+
     def _dispatch(self, data):
         got1 = time.time()
         try:
@@ -72,18 +80,17 @@ class WrappingConnection(rpyc.Connection):
         finally:
             got2 = time.time()
             msg, seq, args = brine.load(data)
-            sent = self.timings.pop(seq, 0)
+            sent = self.timings.pop(seq, got1)
             if msg == consts.MSG_REQUEST:
                 handler, args = args
                 str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
             else:
-                str_handler = ''
-            str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
+                str_handler = ""
+            str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
             with self.logLock:
-                with open('rpyc-trace.log', 'a') as out:
-                    out.write(f"recv:timing={got1 - sent}+{got2 - got1}:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
-
-
+                for logfile in self.logfiles:
+                    with open(logfile, 'a') as out:
+                        out.write(f"recv:timing={got1 - sent}+{got2 - got1}:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
 
     def __wrap(self, local_obj):
         while True:
@@ -263,6 +270,22 @@ class WrappingConnection(rpyc.Connection):
                 break
         return super()._box(obj)
 
+    class _Logger:
+        def __init__(self, conn, logname):
+            self.conn = conn
+            self.logname = logname
+        def __enter__(self):
+            with self.conn.logLock:
+                self.conn.logfiles.add(self.logname)
+                with open(self.logname, 'a') as out:
+                    out.write(f'------------[new trace at {time.asctime()}]----------\n')
+            return self
+        def __exit__(self, *a, **kw):
+            with self.conn.logLock:
+                self.conn.logfiles.remove(self.logname)
+    def _logmore(self, logname):
+        return self._Logger(self, logname)
+
     def _init_deliver(self):
         self._remote_batch_loads = self.modules[
             "modin.experimental.cloud.rpyc_proxy"
@@ -271,9 +294,6 @@ class WrappingConnection(rpyc.Connection):
         self._remote_tuplize = self.modules[
             "modin.experimental.cloud.rpyc_proxy"
         ]._tuplize
-
-    def _init_deliver(self):
-        self._remote_pickle_loads = self.modules["rpyc.lib.compat"].pickle.loads
 
 
 class WrappingService(rpyc.ClassicService):
