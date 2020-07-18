@@ -12,13 +12,15 @@
 # governing permissions and limitations under the License.
 
 import types
+import time
+import threading
 import collections
 
 import rpyc
 from rpyc.lib.compat import pickle
 from rpyc.lib import get_methods
 
-from rpyc.core import netref, AsyncResult, consts
+from rpyc.core import brine, netref, AsyncResult, consts
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
@@ -33,6 +35,16 @@ def _tuplize(arg):
     return tuple(arg)
 
 
+
+_msg_to_name = collections.defaultdict(list)
+for name in dir(consts):
+    if name.upper() == name:
+        _msg_to_name[getattr(consts, name)].append(name)
+for name, value in dict(_msg_to_name).items():
+    _msg_to_name[name] = '|'.join(value)
+#with open('rpyc-trace.log', 'w') as out:
+#    out.write('operation\ttiming\tmsg\t')
+
 class WrappingConnection(rpyc.Connection):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -41,6 +53,26 @@ class WrappingConnection(rpyc.Connection):
         self._static_cache = collections.defaultdict(dict)
         self._remote_dumps = None
         self._remote_tuplize = None
+        self.logLock = threading.RLock()
+        self.timings = {}
+    def _send(self, msg, seq, args):
+        str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
+        with self.logLock:
+            with open('rpyc-trace.log', 'a') as out:
+                out.write(f"send->msg={_msg_to_name[msg]}:seq={seq}:args={str_args}\n")
+        self.timings[seq] = time.time()
+        return super()._send(msg, seq, args)
+    def _dispatch(self, data):
+        try:
+            return super()._dispatch(data)
+        finally:
+            msg, seq, args = brine.load(data)
+            str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
+            with self.logLock:
+                with open('rpyc-trace.log', 'a') as out:
+                    out.write(f"recv<-timing={time.time() - self.timings.pop(seq, 0)}:msg={_msg_to_name[msg]}:seq={seq}:args={str_args}\n")
+
+
 
     def __wrap(self, local_obj):
         while True:
@@ -228,6 +260,9 @@ class WrappingConnection(rpyc.Connection):
         self._remote_tuplize = self.modules[
             "modin.experimental.cloud.rpyc_proxy"
         ]._tuplize
+
+    def _init_deliver(self):
+        self._remote_pickle_loads = self.modules["rpyc.lib.compat"].pickle.loads
 
 
 class WrappingService(rpyc.ClassicService):
