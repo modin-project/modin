@@ -45,8 +45,6 @@ from modin.experimental.cloud.meta_magic import make_wrapped_class
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
 class _DataFrame(BasePandasDataset):
-    __name__ = "DataFrame"  # for compat with .default_to_pandas()
-
     def __init__(
         self,
         data=None,
@@ -2715,5 +2713,8 @@ class _DataFrame(BasePandasDataset):
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
 
+
+# disguise _DataFrame as much as possible for compat with .default_to_pandas() and some tests
+_DataFrame.__name__ = "DataFrame"
 
 DataFrame = make_wrapped_class(_DataFrame, "DataFrame", "make_dataframe_wrapper")
