@@ -980,7 +980,9 @@ class _DataFrame(BasePandasDataset):
 
         output = []
 
-        type_line = str(type(self))
+        # disguise as DataFrame if we're its implementation
+        own_cls = type(self)
+        type_line = str(own_cls if own_cls is not _DataFrame else DataFrame)
         index_line = self.index._summary()
         columns = self.columns
         columns_len = len(columns)
