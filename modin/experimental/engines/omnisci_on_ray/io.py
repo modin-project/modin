@@ -238,7 +238,7 @@ class OmnisciOnRayIO(RayIO):
             """
             co = ConvertOptions(
                     check_utf8=None, 
-                    column_types=None, 
+                    column_types=dtype, 
                     null_values=None,
                     true_values=None, 
                     false_values=None, 
