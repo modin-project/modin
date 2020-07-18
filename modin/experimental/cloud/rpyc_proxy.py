@@ -13,12 +13,24 @@
 
 from rpyc.utils.classic import deliver
 import rpyc
+from rpyc.lib.compat import pickle
+
+from rpyc.core import brine, consts
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
 
-
 class WrappingConnection(rpyc.Connection):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self._remote_pickle_loads = None
+
+    def deliver(self, local_obj):
+        """
+        More caching version of rpyc.classic.deliver()
+        """
+        return self._remote_pickle_loads(bytes(pickle.dumps(local_obj)))
+
     def _netref_factory(self, id_pack):
         result = super()._netref_factory(id_pack)
         # try getting __real_cls__ from result.__class__ BUT make sure to
@@ -57,9 +69,16 @@ class WrappingConnection(rpyc.Connection):
             remote_obj = obj
         return super()._box(remote_obj)
 
+    def _init_deliver(self):
+        self._remote_pickle_loads = self.modules["rpyc.lib.compat"].pickle.loads
+
 
 class WrappingService(rpyc.ClassicService):
     _protocol = WrappingConnection
+
+    def on_connect(self, conn):
+        super().on_connect(conn)
+        conn._init_deliver()
 
 
 _PROXY_LOCAL_ATTRS = frozenset(["__name__", "__remote_end__"])
@@ -160,8 +179,8 @@ def _deliveringWrapper(origin_cls, methods, mixin=None, target_name=None):
     for method in methods:
 
         def wrapper(self, *args, __remote_conn__=conn, __method_name__=method, **kw):
-            args = tuple(deliver(__remote_conn__, x) for x in args)
-            kw = {k: deliver(__remote_conn__, v) for k, v in kw.items()}
+            args = tuple(__remote_conn__.deliver(x) for x in args)
+            kw = {k: __remote_conn__.deliver(v) for k, v in kw.items()}
             return getattr(self.__remote_end__, __method_name__)(*args, **kw)
 
         wrapper.__name__ = method
@@ -184,11 +203,11 @@ def _prepare_loc_mixin():
     class DeliveringMixin:
         @property
         def loc(self):
-            return DeliveringLocIndexer(self)
+            return DeliveringLocIndexer(self.__remote_end__)
 
         @property
         def iloc(self):
-            return DeliveringILocIndexer(self)
+            return DeliveringILocIndexer(self.__remote_end__)
 
     return DeliveringMixin
 

@@ -240,8 +240,8 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
                     except KeyError:
 
                         def wrap(*a, _original=getattr(self.__io_cls, name), **kw):
-                            a = tuple(deliver(self.__conn, x) for x in a)
-                            kw = {k: deliver(self.__conn, v) for k, v in kw.items()}
+                            a = tuple(self.__conn.deliver(x) for x in a)
+                            kw = {k: self.__conn.deliver(v) for k, v in kw.items()}
                             return _original(*a, **kw)
 
                         self.__wrappers[name] = wrap
