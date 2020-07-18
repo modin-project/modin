@@ -39,11 +39,9 @@ def _tuplize(arg):
 _msg_to_name = collections.defaultdict(list)
 for name in dir(consts):
     if name.upper() == name:
-        _msg_to_name[getattr(consts, name)].append(name)
-for name, value in dict(_msg_to_name).items():
-    _msg_to_name[name] = '|'.join(value)
-#with open('rpyc-trace.log', 'w') as out:
-#    out.write('operation\ttiming\tmsg\t')
+        category, _ = name.split('_', 1)
+        _msg_to_name[category][getattr(consts, name)] = name
+_msg_to_name = dict(_msg_to_name)
 
 class WrappingConnection(rpyc.Connection):
     def __init__(self, *a, **kw):
@@ -57,20 +55,33 @@ class WrappingConnection(rpyc.Connection):
         self.timings = {}
     def _send(self, msg, seq, args):
         str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
+        if msg == consts.MSG_REQUEST:
+            handler, _ = args
+            str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
+        else:
+            str_handler = ''
         with self.logLock:
             with open('rpyc-trace.log', 'a') as out:
-                out.write(f"send->msg={_msg_to_name[msg]}:seq={seq}:args={str_args}\n")
+                out.write(f"send:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
         self.timings[seq] = time.time()
         return super()._send(msg, seq, args)
     def _dispatch(self, data):
+        got1 = time.time()
         try:
             return super()._dispatch(data)
         finally:
+            got2 = time.time()
             msg, seq, args = brine.load(data)
+            sent = self.timings.pop(seq, 0)
+            if msg == consts.MSG_REQUEST:
+                handler, args = args
+                str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
+            else:
+                str_handler = ''
             str_args = str(args).replace('\r','').replace('\n', '\tNEWLINE\t')
             with self.logLock:
                 with open('rpyc-trace.log', 'a') as out:
-                    out.write(f"recv<-timing={time.time() - self.timings.pop(seq, 0)}:msg={_msg_to_name[msg]}:seq={seq}:args={str_args}\n")
+                    out.write(f"recv:timing={got1 - sent}+{got2 - got1}:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
 
 
 
