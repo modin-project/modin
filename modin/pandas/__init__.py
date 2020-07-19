@@ -153,7 +153,7 @@ def _update_engine(publisher: Publisher):
             init_remote_ray()
             # import EngineDispatcher here to initialize IO class
             # so it doesn't skew read_csv() timings later on
-            import modin.data_management.dispatcher # noqa: F401
+            import modin.data_management.dispatcher  # noqa: F401
 
         num_cpus = remote_ray.cluster_resources()["CPU"]
 

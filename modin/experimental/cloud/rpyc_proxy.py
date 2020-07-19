@@ -11,11 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+
+import types
+
 from rpyc.utils.classic import deliver
 import rpyc
 from rpyc.lib.compat import pickle
 
-from rpyc.core import brine, consts
+from rpyc.core import brine, consts, netref
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
@@ -29,8 +32,13 @@ class WrappingConnection(rpyc.Connection):
         """
         More caching version of rpyc.classic.deliver()
         """
+        try:
+            local_obj = object.__getattribute__(local_obj, "__remote_end__")
+        except AttributeError:
+            pass
+        if isinstance(local_obj, netref.BaseNetref) and local_obj.____conn__ is self:
+            return local_obj
         return self._remote_pickle_loads(bytes(pickle.dumps(local_obj)))
-
     def _netref_factory(self, id_pack):
         result = super()._netref_factory(id_pack)
         # try getting __real_cls__ from result.__class__ BUT make sure to
@@ -105,10 +113,8 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                     if (
                         name not in namespace
                         and name not in override.__dict__
-                        and name.startswith("__")
-                        and name.endswith("__")
                         and name not in _NO_OVERRIDE
-                        and callable(entry)
+                        and isinstance(entry, types.FunctionType)
                     ):
 
                         def method(_self, *_args, __method_name__=name, **_kw):
@@ -124,6 +130,14 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
                 __remote_end__ = remote_cls(*a, **kw)
+            while True:
+                # unwrap the object if it's a wrapper
+                try:
+                    __remote_end__ = object.__getattribute__(
+                        __remote_end__, "__remote_end__"
+                    )
+                except AttributeError:
+                    break
             object.__setattr__(self, "__remote_end__", __remote_end__)
 
         @classmethod
@@ -165,7 +179,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
     return Wrapped
 
 
-def _deliveringWrapper(origin_cls, methods, mixin=None, target_name=None):
+def _deliveringWrapper(origin_cls, methods=(), mixin=None, target_name=None):
     conn = get_connection()
     remote_cls = getattr(conn.modules[origin_cls.__module__], origin_cls.__name__)
 
@@ -217,7 +231,7 @@ def make_dataframe_wrapper():
 
     DeliveringDataFrame = _deliveringWrapper(
         _DataFrame,
-        ["groupby", "agg", "aggregate", "__getitem__", "astype"],
+        ["groupby", "agg", "aggregate", "__getitem__", "astype", "drop", "merge"],
         _prepare_loc_mixin(),
         "DataFrame",
     )
@@ -245,3 +259,7 @@ def make_dataframe_groupby_wrapper():
         target_name="DataFrameGroupBy",
     )
     return DeliveringDataFrameGroupBy
+
+def make_series_wrapper():
+    from modin.pandas.series import _Series
+    return _deliveringWrapper(_Series, target_name="Series")
