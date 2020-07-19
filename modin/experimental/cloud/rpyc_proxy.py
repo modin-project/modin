@@ -27,7 +27,6 @@ class WrappingConnection(rpyc.Connection):
         self._remote_pickle_loads = None
         self._remote_cls_cache = {}
 
-
     def deliver(self, local_obj):
         """
         More caching version of rpyc.classic.deliver()
@@ -43,8 +42,8 @@ class WrappingConnection(rpyc.Connection):
     def _netref_factory(self, id_pack):
         id_name, cls_id, inst_id = id_pack
         id_name = str(id_name)
-        first = id_name.split('.', 1)[0]
-        if first in ('modin', 'numpy', 'pandas') and inst_id:
+        first = id_name.split(".", 1)[0]
+        if first in ("modin", "numpy", "pandas") and inst_id:
             try:
                 cached_cls = self._remote_cls_cache[(id_name, cls_id)]
             except KeyError:
@@ -181,7 +180,7 @@ def make_proxy_cls(
             type(obj).__dict__ (EXCLUDING parent classes) and then goes to proxy type.
             """
             namespace = type.__prepare__(*args, **kw)
-            namespace['__remote_methods__'] = {}
+            namespace["__remote_methods__"] = {}
 
             # try computing overridden differently to allow subclassing one override from another
             no_override = set(_NO_OVERRIDE)
@@ -219,11 +218,15 @@ def make_proxy_cls(
                     ):
 
                         def method(_self, *_args, __method_name__=name, **_kw):
+                            # TODO: see if we can just use _self.__remote_methods__
                             cache = object.__getattribute__(_self, "__remote_methods__")
+                            # cache = _self.__remote_methods__
                             try:
                                 remote = cache[__method_name__]
                             except KeyError:
-                                cache[__method_name__] = remote = getattr(remote_cls, __method_name__)
+                                cache[__method_name__] = remote = getattr(
+                                    remote_cls, __method_name__
+                                )
                             return remote(_self.__remote_end__, *_args, **_kw)
 
                         method.__name__ = name
@@ -373,7 +376,7 @@ def _deliveringWrapper(
         def wrapper(self, *args, __remote_conn__=conn, __method_name__=method, **kw):
             args = tuple(__remote_conn__.deliver(x) for x in args)
             kw = {k: __remote_conn__.deliver(v) for k, v in kw.items()}
-            cache = object.__getattribute__(self, '__remote_methods__')
+            cache = object.__getattribute__(self, "__remote_methods__")
             try:
                 remote = cache[__method_name__]
             except KeyError:
