@@ -5945,9 +5945,26 @@ class TestDataFrameJoinSort:
         pandas_df = pandas.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
 
         key = modin_df.columns[0]
-        modin_result = modin_df.sort_values(key, inplace=False,)
-        pandas_result = pandas_df.sort_values(key, inplace=False,)
+        modin_result = modin_df.sort_values(key, inplace=False)
+        pandas_result = pandas_df.sort_values(key, inplace=False)
         df_equals(modin_result, pandas_result)
+
+        modin_df.sort_values(key, inplace=True)
+        pandas_df.sort_values(key, inplace=True)
+        df_equals(modin_df, pandas_df)
+
+    def test_sort_values_with_string_index(self):
+        modin_df = pd.DataFrame({"col": [25, 17, 1]}, index=["ccc", "bbb", "aaa"])
+        pandas_df = pandas.DataFrame({"col": [25, 17, 1]}, index=["ccc", "bbb", "aaa"])
+
+        key = modin_df.columns[0]
+        modin_result = modin_df.sort_values(key, inplace=False)
+        pandas_result = pandas_df.sort_values(key, inplace=False)
+        df_equals(modin_result, pandas_result)
+
+        modin_df.sort_values(key, inplace=True)
+        pandas_df.sort_values(key, inplace=True)
+        df_equals(modin_df, pandas_df)
 
     def test_where(self):
         frame_data = random_state.randn(100, 10)
