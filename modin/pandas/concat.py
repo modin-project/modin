@@ -147,15 +147,13 @@ def concat(
     return result_df
 
 
-def _determine_name(
-    objs: Iterable[Union[DataFrame, BaseQueryCompiler]], axis: Union[int, str]
-):
+def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
     """
     Determine names of index after concatenation along passed axis
 
     Parameters
     ----------
-    objs : iterable of DataFrames or QueryCompilers
+    objs : iterable of QueryCompilers
         objects to concatenate
 
     axis : int or str
