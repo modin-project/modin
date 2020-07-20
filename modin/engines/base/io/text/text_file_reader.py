@@ -14,6 +14,8 @@
 from modin.engines.base.io.file_reader import FileReader
 import re
 import numpy as np
+import warnings
+import csv
 
 
 class TextFileReader(FileReader):
@@ -22,12 +24,21 @@ class TextFileReader(FileReader):
         args["start"] = f.tell()
         chunk = f.read(chunk_size)
         line = f.readline()  # Ensure we read up to a newline
-        # We need to ensure that
-        quote_count = (
-            re.subn(quotechar, b"", chunk)[1] + re.subn(quotechar, b"", line)[1]
-        )
-        while quote_count % 2 != 0:
-            quote_count += re.subn(quotechar, b"", f.readline())[1]
+        # We need to ensure that one row isn't being split across different partitions
+
+        if args.get("quoting", "") != csv.QUOTE_NONE:
+            quote_count = (
+                re.subn(quotechar, b"", chunk)[1] + re.subn(quotechar, b"", line)[1]
+            )
+            while quote_count % 2 != 0:
+                line = f.readline()
+                quote_count += re.subn(quotechar, b"", line)[1]
+                if not line:
+                    break
+
+            if quote_count % 2 != 0:
+                warnings.warn("File has mismatched quotes")
+
         # The workers return multiple objects for each part of the file read:
         # - The first n - 2 objects are partitions of data
         # - The n - 1 object is the length of the partition or the index if

@@ -6,7 +6,7 @@
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.7.3-blue.svg" align="center"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.7.4-blue.svg" align="center"></a>
 </p>
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
