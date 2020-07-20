@@ -15,11 +15,6 @@ from modin.pandas.test.utils import (
     join_type_keys,
     to_pandas,
 )
-from pandas.util.testing import (
-    assert_almost_equal,
-    assert_frame_equal,
-    assert_categorical_equal,
-)
 
 def run_and_compare(fn, data, data2=None, *args, **kwargs):
     if data2 is None:
@@ -39,20 +34,44 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
-    csv_file = os.path.join(root, "modin/pandas/test/data", "test_usecols.csv")
-    #  more csv files are here: modin/pandas/test/data/ and examples/data/boston_housing.csv
 
-    def test_simple1(self):
-        """ check with the following arguments: names, dtype, skiprows, delimiter, parse_dates """
+    def test_usecols_csv(self):
+        """ check with the following arguments: names, dtype, skiprows, delimiter """
+        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+
         for kwargs in (
-            {"sep": ','}, {"sep": None},
+            {"delimiter": ','}, {"sep": None},
             {"skiprows": 1, "names": ["A", "B", "C", "D", "E"] },
-            {"dtype": {'a': 'int64', 'e':'float64'}},
-            # TODO boston housing 
-            # TODO: parse_date
+            {"dtype": {'a': 'int64', 'e':'string'} },
             ):
-                rp = pd.read_csv(self.csv_file, **kwargs)
-                rm = mpd.read_csv(self.csv_file, **kwargs)
+                rp = pd.read_csv(csv_file, **kwargs)
+                rm = mpd.read_csv(csv_file, **kwargs)
+                df_equals(rp, rm)
+
+    def test_housing_csv(self):
+        csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
+        for kwargs in (
+            {"skiprows": 1, "names": ["index","CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT","PRICE",],
+             "dtype": {'index':'int64', "CRIM":'float64', "ZN":'float64', 'INDUS':'float64', 'CHAS':'float64', 'NOX':'float64', 'RM':'float64',
+                'AGE':'float64', 'DIS':'float64', 'RAD':'float64', 'TAX':'float64', 'PTRATIO':'float64', 'B':'float64', 'LSTAT':'float64', 'PRICE':'float64'}
+            },
+            ):
+                rp = pd.read_csv(csv_file, **kwargs)
+                rm = mpd.read_csv(csv_file, **kwargs)
+                print(rm)
+                # TODO: df_equals(rp, rm) does not support inexact comparison of numberic columns
+
+    def test_time_parsing(self):
+        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_time_parsing.csv")
+        for kwargs in (
+            {"sep": None},
+            {"skiprows": 1, "names": ["timestamp","symbol","high","low","open","close","spread","volume"],
+                        #TODO: "parse_dates": ["timestamp"],
+            },
+            ):
+                rp = pd.read_csv(csv_file, **kwargs)
+                rm = mpd.read_csv(csv_file, **kwargs)
+                print(rm)
                 df_equals(rp, rm)
 
 
@@ -940,4 +959,4 @@ class TestCategory:
 
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    pytest.main(["-v", __file__+"::TestCSV"])
