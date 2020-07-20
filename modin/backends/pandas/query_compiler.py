@@ -1877,6 +1877,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new query compiler that contains result of the sort
         """
         na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
         if not is_list_like(columns):
             columns = [columns]
         # Currently, sort_values will just reindex based on the sorted values.
@@ -1893,11 +1894,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         broadcast_values2 = broadcast_values2.reset_index(drop=True)
         # Index may contain duplicates
         new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, na_position=na_position,
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
         ).index
         # Index without duplicates
         new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, na_position=na_position,
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
         ).index
 
         result = self.reset_index(drop=True).reindex(0, new_index2)
@@ -1920,6 +1921,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new query compiler that contains result of the sort
         """
         na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
         if not is_list_like(rows):
             rows = [rows]
         ErrorMessage.default_to_pandas("sort_values")
@@ -1932,6 +1934,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         broadcast_values.columns = self.columns
         new_columns = broadcast_values.sort_values(
-            by=rows, axis=1, ascending=ascending, na_position=na_position,
+            by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
         ).columns
         return self.reindex(1, new_columns)
