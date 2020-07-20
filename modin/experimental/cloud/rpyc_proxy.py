@@ -62,6 +62,50 @@ class WrappingConnection(rpyc.Connection):
         return tuple(delivered_args), delivered_kw
 
 
+    def sync_request(self, handler, *args):
+        if handler == consts.HANDLE_INSPECT:
+            id_name = str(args[0][0])
+            if id_name.split('.', 1)[0] in ('modin', 'pandas', 'numpy'):
+                try:
+                    modobj = __import__(id_name)
+                    for subname in id_name.split('.')[1:]:
+                        modobj = getattr(modobj, subname)
+                except (ImportError, AttributeError):
+                    pass
+                else:
+                    return get_methods(netref.LOCAL_ATTRS, modobj)
+                modname, clsname = id_name.rsplit('.', 1)
+                try:
+                    modobj = __import__(modname)
+                    for subname in modname.split('.')[1:]:
+                        modobj = getattr(modobj, subname)
+                    clsobj = getattr(modobj, clsname)
+                except (ImportError, AttributeError):
+                    pass
+                else:
+                    return get_methods(netref.LOCAL_ATTRS, clsobj)
+        elif handler in (consts.HANDLE_GETATTR, consts.HANDLE_STR):
+            if handler == consts.HANDLE_GETATTR:
+                obj, attr = args
+            else:
+                obj, attr = args[0], '__str__'
+            try:
+                obj_class = object.__getattribute__(obj, '__class__')
+            except AttributeError:
+                obj_class = None
+            if type(obj).__name__ in ('numpy',) or (getattr(obj_class, '__module__', None) in ('numpy',) and obj_class.__name__ in ('dtype',)):
+                try:
+                    cache = self._static_cache[obj.____id_pack__]
+                except KeyError:
+                    cache = self._static_cache[obj.____id_pack__] = {}
+                try:
+                    result = cache[(attr, handler)]
+                except KeyError:
+                    result = cache[(attr, handler)] = super().sync_request(handler, *args)
+                return result
+
+        return super().sync_request(handler, *args)
+
     def _netref_factory(self, id_pack):
         id_name, cls_id, inst_id = id_pack
         id_name = str(id_name)
