@@ -1866,10 +1866,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Parameters
         ----------
-        :param columns:
-        :param ascending:
-        :param kwargs:
-        :return:
+        columns : scalar or list of scalar
+            The column or columns to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
         """
         na_position = kwargs.get("na_position", "last")
         if not is_list_like(columns):
@@ -1904,10 +1909,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Parameters
         ----------
-        :param rows:
-        :param ascending:
-        :param kwargs:
-        :return:
+        rows : scalar or list of scalar
+            The row or rows to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
         """
         na_position = kwargs.get("na_position", "last")
         if not is_list_like(rows):

@@ -2796,6 +2796,7 @@ class BasePandasDataset(object):
             result = self._query_compiler.sort_rows_by_column_values(
                 by,
                 ascending=ascending,
+                kind=kind,
                 na_position=na_position,
                 ignore_index=ignore_index,
             )
@@ -2803,6 +2804,7 @@ class BasePandasDataset(object):
             result = self._query_compiler.sort_columns_by_row_values(
                 by,
                 ascending=ascending,
+                kind=kind,
                 na_position=na_position,
                 ignore_index=ignore_index,
             )
