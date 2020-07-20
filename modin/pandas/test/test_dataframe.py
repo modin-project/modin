@@ -2549,11 +2549,6 @@ class TestDataFrameDefault:
                 pandas_resampler.aggregate(["sum", "mean", "max"]),
             )
 
-    def test_rolling(self):
-        df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
-        with pytest.warns(UserWarning):
-            df.rolling(2, win_type="triang")
-
     def test_sem(self):
         data = test_data_values[0]
         with pytest.warns(UserWarning):

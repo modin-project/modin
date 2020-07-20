@@ -2449,13 +2449,6 @@ def test_rmul(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rolling(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.rolling(10)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_round(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.round(), pandas_series.round())
