@@ -585,3 +585,60 @@ def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs)
     values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
     if values is not None:
         comparator(*values)
+
+
+def generate_dfs():
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
+
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
+    return df, df2
+
+
+def generate_multiindex_dfs():
+    def generate_multiindex(index):
+        return pandas.MultiIndex.from_tuples(
+            [("a", x) for x in index.values], names=["name1", "name2"]
+        )
+
+    df1, df2 = generate_dfs()
+    df1.columns, df2.columns = map(generate_multiindex, [df1.columns, df2.columns])
+    return df1, df2
+
+
+def generate_none_dfs():
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, None, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [None, None, None, None],
+        }
+    )
+
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
+    return df, df2
