@@ -3913,6 +3913,7 @@ BasePandasDataset = make_wrapped_class(
     _BasePandasDataset, "BasePandasDataset", "make_base_dataset_wrapper"
 )
 
+
 class Window(object):
     def __init__(
         self,

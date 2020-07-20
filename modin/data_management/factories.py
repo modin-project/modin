@@ -229,7 +229,7 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
                     "modin.engines.ray.pandas_on_ray.io"
                 ].PandasOnRayIO
                 self.__reads = {
-                    name for name in self.__io_cls.__dict__ if name.startswith("read_")
+                    name for name in BaseIO.__dict__ if name.startswith("read_")
                 }
                 self.__wrappers = {}
 

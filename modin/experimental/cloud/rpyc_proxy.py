@@ -23,6 +23,7 @@ from rpyc.core import brine, consts, netref
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
 
+
 class WrappingConnection(rpyc.Connection):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -39,6 +40,7 @@ class WrappingConnection(rpyc.Connection):
         if isinstance(local_obj, netref.BaseNetref) and local_obj.____conn__ is self:
             return local_obj
         return self._remote_pickle_loads(bytes(pickle.dumps(local_obj)))
+
     def _netref_factory(self, id_pack):
         result = super()._netref_factory(id_pack)
         # try getting __real_cls__ from result.__class__ BUT make sure to
@@ -71,11 +73,12 @@ class WrappingConnection(rpyc.Connection):
         return wrapping_cls.from_remote_end(result)
 
     def _box(self, obj):
-        try:
-            remote_obj = object.__getattribute__(obj, "__remote_end__")
-        except AttributeError:
-            remote_obj = obj
-        return super()._box(remote_obj)
+        while True:
+            try:
+                obj = object.__getattribute__(obj, "__remote_end__")
+            except AttributeError:
+                break
+        return super()._box(obj)
 
     def _init_deliver(self):
         self._remote_pickle_loads = self.modules["rpyc.lib.compat"].pickle.loads
@@ -94,7 +97,8 @@ _NO_OVERRIDE = (
     _LOCAL_ATTRS
     | _PROXY_LOCAL_ATTRS
     | frozenset(_WRAP_ATTRS)
-    | rpyc.core.netref.LOCAL_ATTRS
+    | rpyc.core.netref.DELETED_ATTRS
+    | frozenset(["__getattribute__"])
 )
 
 
@@ -103,16 +107,31 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
         def __repr__(self):
             return f"<proxy for {origin_cls.__module__}.{origin_cls.__name__}:{cls_name or origin_cls.__name__}>"
 
-        def __prepare__(self, *args, **kw):
+        def __prepare__(*args, **kw):
             namespace = type.__prepare__(*args, **kw)
+
+            overridden = {
+                name
+                for (name, func) in override.__dict__.items()
+                if getattr(object, name, None) != func
+            }
 
             for base in origin_cls.__mro__:
                 if base == object:
                     continue
+                # try unwrapping a dual-nature class first
+                while True:
+                    try:
+                        base = object.__getattribute__(
+                            object.__getattribute__(base, "__real_cls__"),
+                            "__wrapper_local__",
+                        )
+                    except AttributeError:
+                        break
                 for name, entry in base.__dict__.items():
                     if (
                         name not in namespace
-                        and name not in override.__dict__
+                        and name not in overridden
                         and name not in _NO_OVERRIDE
                         and isinstance(entry, types.FunctionType)
                     ):
@@ -260,6 +279,8 @@ def make_dataframe_groupby_wrapper():
     )
     return DeliveringDataFrameGroupBy
 
+
 def make_series_wrapper():
     from modin.pandas.series import _Series
+
     return _deliveringWrapper(_Series, target_name="Series")

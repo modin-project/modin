@@ -1291,9 +1291,7 @@ class _Series(BasePandasDataset):
     rdiv = rtruediv
 
     def quantile(self, q=0.5, interpolation="linear"):
-        return super().quantile(
-            q=q, numeric_only=False, interpolation=interpolation
-        )
+        return super().quantile(q=q, numeric_only=False, interpolation=interpolation)
 
     def reorder_levels(self, order):
         return super().reorder_levels(order)
@@ -1704,7 +1702,10 @@ class _Series(BasePandasDataset):
             series.name = None
         return series
 
+
+_Series.__name__ = "Series"
 Series = make_wrapped_class(_Series, "Series", "make_series_wrapper")
+
 
 class DatetimeProperties(object):
     def __init__(self, series):
