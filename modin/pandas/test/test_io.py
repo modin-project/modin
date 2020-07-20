@@ -23,6 +23,7 @@ import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
+import csv
 
 from .utils import (
     df_equals,
@@ -746,6 +747,35 @@ def test_from_csv_sep_none(make_csv_file):
         pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None)
     with pytest.warns(ParserWarning):
         modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None)
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_bad_quotes():
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+
+    with open(TEST_CSV_FILENAME, "w") as f:
+        f.write(csv_bad_quotes)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_quote_none():
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+    with open(TEST_CSV_FILENAME, "w") as f:
+        f.write(csv_bad_quotes)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
+
     df_equals(modin_df, pandas_df)
 
 

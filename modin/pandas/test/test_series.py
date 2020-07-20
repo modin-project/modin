@@ -880,10 +880,12 @@ def test_at_time():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_autocorr(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.autocorr()
+@pytest.mark.parametrize("lag", [1, 2, 3])
+def test_autocorr(data, lag):
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.autocorr(lag=lag)
+    pandas_result = pandas_series.autocorr(lag=lag)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -891,6 +893,18 @@ def test_axes(data):
     modin_series, pandas_series = create_test_series(data)
     assert modin_series.axes[0].equals(pandas_series.axes[0])
     assert len(modin_series.axes) == len(pandas_series.axes)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(modin_series, pandas_series, lambda df: df.attrs)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_array(data):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(modin_series, pandas_series, lambda df: df.array)
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
@@ -1023,9 +1037,10 @@ def test_copy(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_corr(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.corr(modin_series)
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.corr(modin_series)
+    pandas_result = pandas_series.corr(pandas_series)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1762,19 +1777,17 @@ def test_keys(data):
 )
 @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
+    func_kwargs = {
+        "axis": axis,
+        "skipna": skipna,
+        "level": level,
+        "numeric_only": numeric_only,
+    }
     modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = getattr(pandas_series, method)(
-            axis, skipna, level, numeric_only
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(
-                getattr(modin_series, method)(axis, skipna, level, numeric_only)
-            )  # repr to force materialization
-    else:
-        modin_result = getattr(modin_series, method)(axis, skipna, level, numeric_only)
-        df_equals(modin_result, pandas_result)
+
+    eval_general(
+        modin_series, pandas_series, lambda df: df.kurtosis(**func_kwargs),
+    )
 
 
 def test_last():
@@ -2305,13 +2318,90 @@ def test_replace(data):
         modin_series.replace(0, 5)
 
 
-def test_resample():
-    modin_series = pd.Series(
-        [10, 11, 9, 13, 14, 18, 17, 19],
-        index=pd.date_range("01/01/2018", periods=8, freq="W"),
+@pytest.mark.parametrize("closed", ["left", "right"])
+@pytest.mark.parametrize("label", ["right", "left"])
+@pytest.mark.parametrize("level", [None, 1])
+def test_resample(closed, label, level):
+    rule = "5T"
+    freq = "H"
+    base = 2
+
+    index = pandas.date_range("1/1/2000", periods=12, freq=freq)
+    pandas_series = pandas.Series(range(12), index=index)
+    modin_series = pd.Series(range(12), index=index)
+
+    if level is not None:
+        index = pandas.MultiIndex.from_product(
+            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq=freq)]
+        )
+        pandas_series.index = index
+        modin_series.index = index
+    pandas_resampler = pandas_series.resample(
+        rule, closed=closed, label=label, base=base, level=level
     )
-    with pytest.warns(UserWarning):
-        modin_series.resample("M")
+    modin_resampler = modin_series.resample(
+        rule, closed=closed, label=label, base=base, level=level
+    )
+
+    df_equals(modin_resampler.count(), pandas_resampler.count())
+    df_equals(modin_resampler.var(0), pandas_resampler.var(0))
+    df_equals(modin_resampler.sum(), pandas_resampler.sum())
+    df_equals(modin_resampler.std(), pandas_resampler.std())
+    df_equals(modin_resampler.sem(), pandas_resampler.sem())
+    df_equals(modin_resampler.size(), pandas_resampler.size())
+    df_equals(modin_resampler.prod(), pandas_resampler.prod())
+    df_equals(modin_resampler.ohlc(), pandas_resampler.ohlc())
+    df_equals(modin_resampler.min(), pandas_resampler.min())
+    df_equals(modin_resampler.median(), pandas_resampler.median())
+    df_equals(modin_resampler.mean(), pandas_resampler.mean())
+    df_equals(modin_resampler.max(), pandas_resampler.max())
+    df_equals(modin_resampler.last(), pandas_resampler.last())
+    df_equals(modin_resampler.first(), pandas_resampler.first())
+    df_equals(modin_resampler.nunique(), pandas_resampler.nunique())
+    df_equals(
+        modin_resampler.pipe(lambda x: x.max() - x.min()),
+        pandas_resampler.pipe(lambda x: x.max() - x.min()),
+    )
+    df_equals(
+        modin_resampler.transform(lambda x: (x - x.mean()) / x.std()),
+        pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
+    )
+    df_equals(
+        pandas_resampler.aggregate("max"), modin_resampler.aggregate("max"),
+    )
+    df_equals(
+        modin_resampler.apply("sum"), pandas_resampler.apply("sum"),
+    )
+    df_equals(
+        modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
+        pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
+    )
+    assert pandas_resampler.indices == modin_resampler.indices
+    assert pandas_resampler.groups == modin_resampler.groups
+    df_equals(modin_resampler.quantile(), pandas_resampler.quantile())
+    # Upsampling from level= or on= selection is not supported
+    if level is None:
+        df_equals(
+            modin_resampler.interpolate(), pandas_resampler.interpolate(),
+        )
+        df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
+        df_equals(
+            modin_resampler.fillna(method="nearest"),
+            pandas_resampler.fillna(method="nearest"),
+        )
+        df_equals(modin_resampler.pad(), pandas_resampler.pad())
+        df_equals(modin_resampler.nearest(), pandas_resampler.nearest())
+        df_equals(modin_resampler.bfill(), pandas_resampler.bfill())
+        df_equals(modin_resampler.backfill(), pandas_resampler.backfill())
+        df_equals(modin_resampler.ffill(), pandas_resampler.ffill())
+    df_equals(
+        pandas_resampler.apply(["sum", "mean", "max"]),
+        modin_resampler.apply(["sum", "mean", "max"]),
+    )
+    df_equals(
+        modin_resampler.aggregate(["sum", "mean", "max"]),
+        pandas_resampler.aggregate(["sum", "mean", "max"]),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
