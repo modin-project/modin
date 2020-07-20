@@ -344,9 +344,13 @@ class BasePandasFrame(object):
         BasePandasFrame
              A new BasePandasFrame from the mask provided.
         """
-        if isinstance(row_numeric_idx, slice) and row_numeric_idx == slice(None):
+        if isinstance(row_numeric_idx, slice) and (
+            row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
+        ):
             row_numeric_idx = None
-        if isinstance(col_numeric_idx, slice) and col_numeric_idx == slice(None):
+        if isinstance(col_numeric_idx, slice) and (
+            col_numeric_idx == slice(None) or col_numeric_idx == slice(0, None)
+        ):
             col_numeric_idx = None
         if (
             row_indices is None
@@ -666,7 +670,7 @@ class BasePandasFrame(object):
         ----------
         axis : (0 - rows, 1 - columns)
                The axis along which to get the indices
-        indices : list of int
+        indices : list of int, slice
                 A list of global indices to convert.
 
         Returns
@@ -677,7 +681,7 @@ class BasePandasFrame(object):
         """
         # Fasttrack slices
         if isinstance(indices, slice):
-            if indices == slice(None):
+            if indices == slice(None) or indices == slice(0, None):
                 return OrderedDict(
                     zip(
                         range(len(self.axes[axis])),
@@ -732,7 +736,9 @@ class BasePandasFrame(object):
                         dict_of_slices.update({last_part: slice(None, last_idx[0])})
                         return dict_of_slices
         # Sort and convert negative indices to positive
-        indices = np.sort([i if i >= 0 else len(self.axes[axis]) + i for i in indices])
+        indices = np.sort(
+            [i if i >= 0 else max(0, len(self.axes[axis]) + i) for i in indices]
+        )
         if axis == 0:
             bins = np.array(self._row_lengths)
         else:

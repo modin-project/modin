@@ -157,12 +157,16 @@ class _LocationIndexerBase(object):
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
         if isinstance(row_lookup, slice):
-            row_lookup = range(len(self.df.index))[row_lookup]
+            row_lookup = range(len(self.qc.index))[row_lookup]
         if isinstance(col_lookup, slice):
-            col_lookup = range(len(self.df.columns))[col_lookup]
+            col_lookup = range(len(self.qc.columns))[col_lookup]
         # This is True when we dealing with assignment of a full column. This case
         # should be handled in a fastpath with `df[col] = item`.
-        if len(row_lookup) == len(self.qc.index) and len(col_lookup) == 1:
+        if (
+            len(row_lookup) == len(self.qc.index)
+            and len(col_lookup) == 1
+            and hasattr(self.df, "columns")
+        ):
             self.df[self.df.columns[col_lookup][0]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
