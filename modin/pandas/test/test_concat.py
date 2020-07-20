@@ -163,13 +163,19 @@ def test_concat_with_empty_frame():
     )
 
 
-def test_concat_multiindex():
-    pd_df1, pd_df2 = generate_multiindex_dfs()
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("names", [False, True])
+def test_concat_multiindex(axis, names):
+    pd_df1, pd_df2 = generate_multiindex_dfs(axis=axis)
     md_df1, md_df2 = map(from_pandas, [pd_df1, pd_df2])
 
     keys = ["first", "second"]
+    if names:
+        names = [str(i) for i in np.arange(pd_df1.axes[axis].nlevels + 1)]
+    else:
+        names = None
 
     df_equals(
-        pd.concat([md_df1, md_df2], keys=keys, axis=1),
-        pandas.concat([pd_df1, pd_df2], keys=keys, axis=1),
+        pd.concat([md_df1, md_df2], keys=keys, axis=axis, names=names),
+        pandas.concat([pd_df1, pd_df2], keys=keys, axis=axis, names=names),
     )

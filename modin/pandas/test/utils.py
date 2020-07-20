@@ -610,14 +610,16 @@ def generate_dfs():
     return df, df2
 
 
-def generate_multiindex_dfs():
+def generate_multiindex_dfs(axis=1):
     def generate_multiindex(index):
         return pandas.MultiIndex.from_tuples(
             [("a", x) for x in index.values], names=["name1", "name2"]
         )
 
     df1, df2 = generate_dfs()
-    df1.columns, df2.columns = map(generate_multiindex, [df1.columns, df2.columns])
+    df1.axes[axis], df2.axes[axis] = map(
+        generate_multiindex, [df1.axes[axis], df2.axes[axis]]
+    )
     return df1, df2
 
 

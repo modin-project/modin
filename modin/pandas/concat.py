@@ -116,9 +116,12 @@ def concat(
                 for o in obj
             ]
             new_idx = pandas.MultiIndex.from_tuples(tuples)
-            old_name = _determine_name(objs, axis)
-            if old_name is not None:
-                new_idx.names = [None] + old_name
+            if names is not None:
+                new_idx.names = names
+            else:
+                old_name = _determine_name(objs, axis)
+                if old_name is not None:
+                    new_idx.names = [None] + old_name
     else:
         new_idx = None
     new_query_compiler = objs[0].concat(
