@@ -224,9 +224,9 @@ def make_proxy_cls(
                             try:
                                 remote = cache[__method_name__]
                             except KeyError:
-                                cache[__method_name__] = remote = getattr(
-                                    remote_cls, __method_name__
-                                )
+                                # use remote_cls.__getattr__ to force RPyC return us
+                                # a proxy for remote method call instead of its local wrapper
+                                cache[__method_name__] = remote = remote_cls.__getattr__(__method_name__)
                             return remote(_self.__remote_end__, *_args, **_kw)
 
                         method.__name__ = name
