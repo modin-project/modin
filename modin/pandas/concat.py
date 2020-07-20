@@ -18,7 +18,7 @@ from typing import Hashable, Iterable, Mapping, Optional, Union
 from pandas._typing import FrameOrSeriesUnion
 from pandas.core.dtypes.common import is_list_like
 
-from modin.backends.base import BaseQueryCompiler
+from modin.backends.base.query_compiler import BaseQueryCompiler
 from .dataframe import DataFrame
 from .series import Series
 
