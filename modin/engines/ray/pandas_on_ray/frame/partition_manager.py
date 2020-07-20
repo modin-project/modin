@@ -53,20 +53,28 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
-        """This gets the internal indices stored in the partitions.
+        """
+        This gets the internal indices stored in the partitions.
 
-        Note: These are the global indices of the object. This is mostly useful
-            when you have deleted rows/columns internally, but do not know
-            which ones were deleted.
+        Parameters
+        ----------
+            axis : 0 or 1
+                This axis to extract the labels (0 - index, 1 - columns).
+            partitions : NumPy array
+                The array of partitions from which need to extract the labels.
+            index_func : callable
+                The function to be used to extract the function.
 
-        Args:
-            axis: This axis to extract the labels. (0 - index, 1 - columns).
-            index_func: The function to be used to extract the function.
-            old_blocks: An optional previous object that this object was
-                created from. This is used to compute the correct offsets.
-
-        Returns:
+        Returns
+        -------
+        Index
             A Pandas Index object.
+
+        Notes
+        -----
+        These are the global indices of the object. This is mostly useful
+        when you have deleted rows/columns internally, but do not know
+        which ones were deleted.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)

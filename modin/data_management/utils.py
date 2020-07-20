@@ -62,17 +62,24 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
 
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
-    """Split the Pandas result evenly based on the provided number of splits.
+    """
+    Split the Pandas result evenly based on the provided number of splits.
 
-    Args:
-        axis: The axis to split across.
-        num_splits: The number of even splits to create.
-        result: The result of the computation. This should be a Pandas
-            DataFrame.
-        length_list: The list of lengths to split this DataFrame into. This is used to
+    Parameters
+    ----------
+        axis : 0 or 1
+            The axis to split across (0 - index, 1 - columns).
+        num_splits : int
+            The number of even splits to create.
+        result : pandas.DataFrame
+            The result of the computation. This should be a Pandas DataFrame.
+        length_list : list
+            The list of lengths to split this DataFrame into. This is used to
             return the DataFrame to its original partitioning schema.
 
-    Returns:
+    Returns
+    -------
+    list
         A list of Pandas DataFrames.
     """
     if num_splits == 1:
