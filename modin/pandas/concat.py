@@ -18,6 +18,7 @@ from typing import Hashable, Iterable, Mapping, Optional, Union
 from pandas._typing import FrameOrSeriesUnion
 from pandas.core.dtypes.common import is_list_like
 
+from modin.backends.base import BaseQueryCompiler
 from .dataframe import DataFrame
 from .series import Series
 
@@ -146,13 +147,15 @@ def concat(
     return result_df
 
 
-def _determine_name(objs: list, axis):
+def _determine_name(
+    objs: Iterable[Union[DataFrame, BaseQueryCompiler]], axis: Union[int, str]
+):
     """
     Determine names of index after concatenation along passed axis
 
     Parameters
     ----------
-    objs : list of DataFrames or QueryCompilers
+    objs : iterable of DataFrames or QueryCompilers
         objects to concatenate
 
     axis : int or str
@@ -163,6 +166,7 @@ def _determine_name(objs: list, axis):
         `list` with single element - computed index name, `None` if it could not
         be determined
     """
+    axis = pandas.DataFrame()._get_axis_number(axis)
 
     def get_names(obj):
         return obj.columns.names if axis else obj.index.names
