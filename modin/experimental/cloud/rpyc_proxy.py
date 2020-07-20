@@ -26,7 +26,6 @@ def _batch_loads(items):
 class WrappingConnection(rpyc.Connection):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        self._remote_pickle_loads = None
         self._remote_batch_loads = None
         self._remote_cls_cache = {}
     def __wrap(self, local_obj):
@@ -115,7 +114,6 @@ class WrappingConnection(rpyc.Connection):
         return super()._box(obj)
 
     def _init_deliver(self):
-        self._remote_pickle_loads = self.modules["rpyc.lib.compat"].pickle.loads
         self._remote_batch_loads = self.modules["modin.experimental.cloud.rpyc_proxy"]._batch_loads
 
 
