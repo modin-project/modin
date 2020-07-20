@@ -140,7 +140,7 @@ class OmnisciOnRayIO(RayIO):
 
             from pyarrow.csv import read_csv, timestamp, ParseOptions, ConvertOptions, ReadOptions
 
-            column_types= dtype if dtype is list else {}
+            column_types= dtype if dtype is dict else {}
             if( (type(parse_dates) is list) # and (type(parse_dates[0]) is str)  # like parse_dates=["dd",]
                 and type(column_types) is dict):
                 for c in parse_dates:
