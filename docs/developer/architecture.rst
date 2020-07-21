@@ -20,8 +20,8 @@ Modin is logically separated into different layers that represent the hierarchy 
 typical Database Management System. Abstracting out each component allows us to
 individually optimize and swap out components without affecting the rest of the system.
 We can implement, for example, new compute kernels that are optimized for a certain type
-of data and can simply plug it in to the existing infrastructure by implementing a small
-interface. It can still be distributed by our choice of compute engine with the
+of data by simply plugging it in to the existing infrastructure at the appropriate
+interface. It will still be distributed by the computation engine layer with the
 logic internally.
 
 System View
@@ -32,35 +32,35 @@ look to something like this:
 .. image:: /img/10000_meter.png
    :align: center
 
-The user - Data Scientist interacts with the Modin system by sending interactive or
-batch commands through API and Modin executes them using various backend execution
+The user, a Data Scientist, interacts with the Modin system by sending interactive or
+batch commands through the API layer, and Modin executes them using various backend execution
 engines: Ray, Dask and MPI are currently supported.
 
 Subsystem/Container View
 ------------------------
-If we click down to the next level of details we will see that inside Modin the layered
+If we look at the next level of detail. we will see that inside Modin, the layered
 architecture is implemented using several interacting components:
 
 .. image:: /img/component_view.png
    :align: center
 
-For the simplicity the other backend systems - Dask and MPI are omitted and only Ray backend is shown.
+For simplicity, other compute engines (e.g., Dask and MPI) are omitted and only Ray is shown.
 
-* Dataframe subsystem is the backbone of the dataframe holding and query compilation. It is responsible for
-  dispatching the ingress/egress to the appropriate module, getting the Pandas API and calling the query
+* The **Dataframe subsystem** is the backbone of the dataframe holding and query compilation. It is responsible for
+  dispatching the ingress/egress to the appropriate module, translating the Pandas API and to the query
   compiler to convert calls to the internal intermediate Dataframe Algebra.
-* Data Ingress/Egress Module is working in conjunction with Dataframe and Partitions subsystem to read data
-  split into partitions and send data into the appropriate node for storing.
-* Query Planner is subsystem that translates the Pandas API to intermediate Dataframe Algebra representation
+* The **Data Ingress/Egress Module** works in conjunction with the Dataframe and Partitions subsystem to read data
+  split into partitions and send data to the appropriate node for storing.
+* The **Query Planner** is subsystem that translates the Pandas API to Modin's intermediate Dataframe Algebra representation
   DAG and performs an initial set of optimizations.
-* Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
-  on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
+* The **Query Executor** is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
+  on the selected backend execution subsystem, and mapping or compiling the Dataframe Algebra DAG to an actual
   execution sequence.
-* Backends module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
-  PyArrow, custom backend.
-* Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
-  selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
-  of executors and provides telemetry
+* The **Backends Module** is responsible for mapping the abstract operation to a kernel executor call, e.g. Pandas,
+  PyArrow, or a custom backend.
+* The **Orchestration subsystem** is responsible for spawning and controlling the execution environment for the
+  selected backend. It spawns the physical nodes, fires up the execution environment, e.g. Ray, monitors the state
+  of executors, and provides telemetry.
 
 Component View
 --------------
