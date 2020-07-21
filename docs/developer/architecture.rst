@@ -1,10 +1,74 @@
-Architecture
-============
+System Architecture
+===================
 
-In this documentation page, we will lay out the overall architecture for Modin, as well
-as go into detail about the implementation and other important details. This document
-also contains important reference information for those interested in contributing new
-functionality, bugfixes, and enhancements.
+In this section, we will lay out the overall system architecture for
+Modin, as well as go into detail about the component design, implementation and
+other important details. This document also contains important reference
+information for those interested in contributing new functionality, bugfixes
+and enhancements.
+
+High-Level Architectural View
+-----------------------------
+The diagram below outlines the general layered view to the components of Modin
+with a short description of each major section of the documentation following.
+
+
+.. image:: /img/modin_architecture.png
+   :align: center
+
+Modin is logically separated into different layers that represent the hierarchy of a
+typical Database Management System. Abstracting out each component allows us to
+individually optimize and swap out components without affecting the rest of the system.
+We can implement, for example, new compute kernels that are optimized for a certain type
+of data and can simply plug it in to the existing infrastructure by implementing a small
+interface. It can still be distributed by our choice of compute engine with the
+logic internally.
+
+System View
+---------------------------
+If we look to the overall class structure of the Modin system from very top, it will
+look to something like this:
+
+.. image:: /img/10000_meter.png
+   :align: center
+
+The user - Data Scientist interacts with the Modin system by sending interactive or
+batch commands through API and Modin executes them using various backend execution
+engines: Ray, Dask and MPI are currently supported.
+
+Subsystem/Container View
+------------------------
+If we click down to the next level of details we will see that inside Modin the layered
+architecture is implemented using several interacting components:
+
+.. image:: /img/component_view.png
+   :align: center
+
+For the simplicity the other backend systems - Dask and MPI are omitted and only Ray backend is shown.
+
+* Dataframe subsystem is the backbone of the dataframe holding and query compilation. It is responsible for
+  dispatching the ingress/egress to the appropriate module, getting the Pandas API and calling the query
+  compiler to convert calls to the internal intermediate Dataframe Algebra.
+* Data Ingress/Egress Module is working in conjunction with Dataframe and Partitions subsystem to read data
+  split into partitions and send data into the appropriate node for storing.
+* Query Planner is subsystem that translates the Pandas API to intermediate Dataframe Algebra representation
+  DAG and performs an initial set of optimizations.
+* Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
+  on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
+  execution sequence.
+* Backends module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
+  PyArrow, custom backend.
+* Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
+  selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
+  of executors and provides telemetry
+
+Component View
+--------------
+Coming soon...
+
+Module/Class View
+-----------------
+Coming soon...
 
 DataFrame Partitioning
 ----------------------
@@ -15,7 +79,7 @@ partitions along both columns and rows because it gives Modin flexibility and
 scalability in both the number of columns and the number of rows supported. The
 following figure illustrates this concept.
 
-.. image:: img/block_partitions_diagram.png
+.. image:: /img/block_partitions_diagram.png
    :align: center
 
 Currently, each partition's memory format is a `pandas DataFrame`_. In the future, we will
@@ -32,21 +96,6 @@ not be affected by this scalability limit. **Important note**: If you are using 
 default index (``pandas.RangeIndex``) there is a fixed memory overhead (~200 bytes) and
 there will be no scalability issues with the index.
 
-System Architecture
--------------------
-
-The figure below outlines the general architecture for the implementation of Modin.
-
-.. image:: img/modin_architecture.png
-   :align: center
-
-Modin is logically separated into different layers that represent the hierarchy of a
-typical Database Management System. Abstracting out each component allows us to
-individually optimize and swap out components without affecting the rest of the system.
-We can implement, for example, new compute kernels that are optimized for a certain type
-of data and can simply plug it in to the existing infrastructure by implementing a small
-interface. It can still be distributed by our choice of compute engine with the
-logic internally.
 
 API
 """
@@ -123,7 +172,7 @@ Modin DataFrame API
 * import/export functions
    * ``from_pandas``: Convert a pandas dataframe to a Modin dataframe.
    * ``to_pandas``: Convert a Modin dataframe to a pandas dataframe.
-   * ``to_numpy``: Convert a Modin dataframe to a NumPy array.
+   * ``to_numpy``: Convert a Modin dataframe to a numpy array.
 
 More documentation can be found internally in the code_. This API is not complete, but
 represents an overwhelming majority of operations and behaviors.
@@ -202,8 +251,8 @@ documentation page on Contributing_.
 .. _Ray: https://github.com/ray-project/ray
 .. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
 .. _Contributing: contributing.html
-.. _Pandas on Ray: UsingPandasonRay/index.html
-.. _Pandas on Dask: UsingPandasonDask/index.html
+.. _Pandas on Ray: UsingPandasonRay/optimizations.html
+.. _Pandas on Dask: UsingPandasonDask/optimizations.html
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
