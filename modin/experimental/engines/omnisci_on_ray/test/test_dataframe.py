@@ -7,7 +7,6 @@ import pytest
 os.environ["MODIN_EXPERIMENTAL"] = "True"
 os.environ["MODIN_ENGINE"] = "ray"
 os.environ["MODIN_BACKEND"] = "omnisci"
-sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
 
 import modin.pandas as mpd
 from modin.pandas.test.utils import (
@@ -43,10 +42,10 @@ class TestCSV:
         for kwargs in (
             {"delimiter": ','}, {"sep": None},
             {"skiprows": 1, "names": ["A", "B", "C", "D", "E"]},
-            {"dtype": {'a': 'int64', 'e': 'string'}},
+            {"dtype": {'a': 'int32', 'e': 'string'}},
         ):
             rp = pd.read_csv(csv_file, **kwargs)
-            rm = mpd.read_csv(csv_file, **kwargs)
+            rm = to_pandas(mpd.read_csv(csv_file, **kwargs))
             df_equals(rp, rm)
 
     def test_housing_csv(self):
@@ -58,7 +57,7 @@ class TestCSV:
             },
         ):
             rp = pd.read_csv(csv_file, **kwargs)
-            rm = mpd.read_csv(csv_file, **kwargs)
+            rm = to_pandas(mpd.read_csv(csv_file, **kwargs))
             df_equals(rp, rm)  # might need inexact comparison
 
     def test_time_parsing(self):
@@ -69,7 +68,7 @@ class TestCSV:
             },
             ):
                 rp = pd.read_csv(csv_file, **kwargs)
-                rm = mpd.read_csv(csv_file, **kwargs)
+                rm = to_pandas(mpd.read_csv(csv_file, **kwargs))
                 df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
 
 
@@ -957,4 +956,4 @@ class TestCategory:
 
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__+"::TestCSV"])
+    pytest.main(["-v", __file__])

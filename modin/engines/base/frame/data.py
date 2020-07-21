@@ -1364,7 +1364,6 @@ class BasePandasFrame(object):
         Returns:
             NumPy array.
         """
-        raise "to_numpy"
         return self._frame_mgr_cls.to_numpy(self._partitions)
 
     def transpose(self):

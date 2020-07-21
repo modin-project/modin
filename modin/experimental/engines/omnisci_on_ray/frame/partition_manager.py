@@ -87,7 +87,6 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         rb = curs.getArrowRecordBatch()
         assert rb
         at = pyarrow.Table.from_batches([rb])
-        # df = rb.to_pandas()  # TODO continue with arrow frames #1721
 
         # Currently boolean columns are loaded as integer
         # series for some reason. Fix it here for now.
@@ -102,12 +101,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         #    df = df.set_index(index_cols)
         #    df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
 
-        # print("Execution result:")
-        # print(at)
-        # print(df.dtypes)
-
         res = np.empty((1, 1), dtype=np.dtype(object))
-        # res[0][0] = cls._partition_class.put(df)
         res[0][0] = cls._partition_class.put_arrow(at)
 
         return res

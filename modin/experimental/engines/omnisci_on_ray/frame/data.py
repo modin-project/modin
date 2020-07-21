@@ -91,7 +91,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         else:
             self._dtypes = dtypes
 
-        if partitions is not None and self._index_cols is not None:
+        if partitions is not None:
             self._filter_empties()
 
         self._uses_rowid = uses_rowid

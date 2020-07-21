@@ -320,19 +320,14 @@ class BaseFrameManager(object):
     def from_arrow(cls, at, return_dims=False):
         put_func = cls._partition_class.put_arrow
 
+        #TODO: support more parts. issue #1762. Use: [put_func(j) for j in i.iterchunks()] for i in at.itercolumns()]
         parts = [[put_func(at)]]
-        #TODO? [
-        #        put_func(j)  # or buffer?
-        #        for j in i.iterchunks()
-        #    ]
-        #    for i in at.itercolumns()
-        #]
+
         if not return_dims:
             return np.array(parts)
         else:
-            row_lengths = [at.num_rows]  # [506]                 # TODO? [ len(i) for i in at.columns[0].iterchunks() ]
-            # col_widths = [ 1 for i in range(at.num_columns) ]    TODO check if we can import big tables
-            col_widths = [ at.num_columns ]    # [15]
+            row_lengths = [at.num_rows]  # TODO #1762: [ len(i) for i in at.columns[0].iterchunks() ]
+            col_widths = [ at.num_columns ]
             return np.array(parts), row_lengths, col_widths
 
 
