@@ -526,11 +526,19 @@ class BaseFrameManager(object):
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
+        if not keep_remaining:
+            selected_partitions = partitions.T if not axis else partitions
+            selected_partitions = np.array([selected_partitions[i] for i in indices])
+            selected_partitions = (
+                selected_partitions.T if not axis else selected_partitions
+            )
+        else:
+            selected_partitions = partitions
         if not axis:
-            partitions_for_apply = cls.column_partitions(partitions)
+            partitions_for_apply = cls.column_partitions(selected_partitions)
             partitions_for_remaining = partitions.T
         else:
-            partitions_for_apply = cls.row_partitions(partitions)
+            partitions_for_apply = cls.row_partitions(selected_partitions)
             partitions_for_remaining = partitions
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
@@ -540,11 +548,11 @@ class BaseFrameManager(object):
             if not keep_remaining:
                 result = np.array(
                     [
-                        partitions_for_apply[i].apply(
+                        part.apply(
                             preprocessed_func,
                             func_dict={idx: dict_func[idx] for idx in indices[i]},
                         )
-                        for i in indices
+                        for i, part in zip(indices, partitions_for_apply)
                     ]
                 )
             else:
@@ -565,10 +573,8 @@ class BaseFrameManager(object):
                 # See notes in `apply_func_to_select_indices`
                 result = np.array(
                     [
-                        partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=indices[i]
-                        )
-                        for i in indices
+                        part.apply(preprocessed_func, internal_indices=indices[i])
+                        for i, part in zip(indices, partitions_for_apply)
                     ]
                 )
             else:
