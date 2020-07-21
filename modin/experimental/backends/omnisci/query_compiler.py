@@ -405,6 +405,46 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
+    def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        """Reorder the rows based on the lexicographic order of the given columns.
+
+        Parameters
+        ----------
+        columns : scalar or list of scalar
+            The column or columns to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        ignore_index = kwargs.get("ignore_index", False)
+        na_position = kwargs.get("na_position", "last")
+        return self.__constructor__(
+            self._modin_frame.sort_rows(columns, ascending, ignore_index, na_position)
+        )
+
+    def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
+        """Reorder the columns based on the lexicographic order of the given rows.
+
+        Parameters
+        ----------
+        rows : scalar or list of scalar
+            The row or rows to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        raise NotImplementedError(
+            "column sorting is not yet suported in DFAlgQueryCompiler"
+        )
+
     def cat_codes(self):
         return self.__constructor__(self._modin_frame.cat_codes())
 

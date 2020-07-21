@@ -231,6 +231,28 @@ class UnionNode(DFAlgNode):
         return f"{prefix}UnionNode:\n" + self._prints_input(prefix + "  ")
 
 
+class SortNode(DFAlgNode):
+    """Sort rows by specified columns."""
+
+    def __init__(self, frame, columns, ascending, na_position):
+        self.input = [frame]
+        self.columns = columns
+        self.ascending = ascending
+        self.na_position = na_position
+
+    def copy(self):
+        return SortNode(self.input[0], self.columns, self.ascending, self.na_position)
+
+    def _prints(self, prefix):
+        return (
+            f"{prefix}SortNode:\n"
+            f"{prefix}  Columns: {self.columns}\n"
+            f"{prefix}  Ascending: {self.ascending}\n"
+            f"{prefix}  NULLs position: {self.na_position}\n"
+            + self._prints_input(prefix + "  ")
+        )
+
+
 def translate_exprs_to_base(exprs, base):
     new_exprs = dict(exprs)
 
