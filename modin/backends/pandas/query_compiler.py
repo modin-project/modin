@@ -1539,3 +1539,80 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def has_multiindex(self):
         return isinstance(self.index, pandas.MultiIndex)
+
+    def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        """Reorder the rows based on the lexicographic order of the given columns.
+
+        Parameters
+        ----------
+        columns : scalar or list of scalar
+            The column or columns to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
+        if not is_list_like(columns):
+            columns = [columns]
+        # Currently, sort_values will just reindex based on the sorted values.
+        # TODO create a more efficient way to sort
+        ErrorMessage.default_to_pandas("sort_values")
+        broadcast_value_dict = {
+            col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
+            for col in columns
+        }
+        # Index may contain duplicates
+        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+        # Index without duplicates
+        broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
+        broadcast_values2 = broadcast_values2.reset_index(drop=True)
+        # Index may contain duplicates
+        new_index1 = broadcast_values1.sort_values(
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+        ).index
+        # Index without duplicates
+        new_index2 = broadcast_values2.sort_values(
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+        ).index
+
+        result = self.reset_index(drop=True).reindex(0, new_index2)
+        result.index = new_index1
+        return result
+
+    def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
+        """Reorder the columns based on the lexicographic order of the given rows.
+
+        Parameters
+        ----------
+        rows : scalar or list of scalar
+            The row or rows to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
+        if not is_list_like(rows):
+            rows = [rows]
+        ErrorMessage.default_to_pandas("sort_values")
+        broadcast_value_list = [
+            self.getitem_row_array([row]).to_pandas() for row in rows
+        ]
+        index_builder = list(zip(broadcast_value_list, rows))
+        broadcast_values = pandas.concat(
+            [row for row, idx in index_builder], copy=False
+        )
+        broadcast_values.columns = self.columns
+        new_columns = broadcast_values.sort_values(
+            by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
+        ).columns
+        return self.reindex(1, new_columns)
