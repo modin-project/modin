@@ -408,6 +408,30 @@ class TestGroupby:
 
         df_equals(ref, exp)
 
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_taxi_q4(self, as_index):
+        df = pd.DataFrame(self.taxi_data)
+        df["c"] = df["c"].dt.year
+        df["d"] = df["d"].astype("int64")
+        ref = (
+            df.groupby(["b", "c", "d"], sort=True, as_index=as_index)
+            .size()
+            .reset_index()
+            .sort_values(by=["c", 0], ignore_index=True, ascending=[True, False])
+        )
+
+        modin_df = mpd.DataFrame(self.taxi_data)
+        modin_df["c"] = modin_df["c"].dt.year
+        modin_df["d"] = modin_df["d"].astype("int64")
+        exp = (
+            modin_df.groupby(["b", "c", "d"], sort=True, as_index=as_index)
+            .size()
+            .reset_index()
+            .sort_values(by=["c", 0], ignore_index=True, ascending=[True, False])
+        )
+
+        df_equals(ref, exp)
+
     h2o_data = {
         "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
         "id2": ["id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2", "id1", "id2"],

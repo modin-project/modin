@@ -773,9 +773,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     Index, data=np.arange(0, obj.num_rows), dtype="int"
                 )
             else:
-                index_at = obj.drop(self.columns)
+                index_at = obj.drop([f"F_{col}" for col in self.columns])
                 index_df = index_at.to_pandas()
-                index_df.set_index(self._index_cols, inplace=True)
+                index_df.set_index(
+                    [f"F_{col}" for col in self._index_cols], inplace=True
+                )
                 index_df.index.rename(self._index_names(self._index_cols), inplace=True)
                 self._index_cache = index_df.index
 
@@ -845,12 +847,16 @@ class OmnisciOnRayFrame(BasePandasFrame):
         # index columns.
         if len(df.columns) != len(self.columns):
             assert self._index_cols
-            df.set_index(self._index_cols, inplace=True)
+            df.set_index([f"F_{col}" for col in self._index_cols], inplace=True)
             df.index.rename(self._index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
+
+        # Restore original column labels encoded in OmniSci to meet its
+        # restirctions on column names.
+        df.columns = self.columns
 
         return df
 
