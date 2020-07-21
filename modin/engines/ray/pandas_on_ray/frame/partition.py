@@ -103,30 +103,29 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def mask(self, row_indices, col_indices):
         if (
-            isinstance(row_indices, slice)
+            (isinstance(row_indices, slice) and row_indices == slice(None))
             or (
-                self._length_cache is not None
+                not isinstance(row_indices, slice)
+                and self._length_cache is not None
                 and len(row_indices) == self._length_cache
             )
         ) and (
-            isinstance(col_indices, slice)
-            or (self._width_cache is not None and len(col_indices) == self._width_cache)
+            (isinstance(col_indices, slice) and col_indices == slice(None))
+            or (
+                not isinstance(col_indices, slice)
+                and self._width_cache is not None
+                and len(col_indices) == self._width_cache
+            )
         ):
             return self.__copy__()
 
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache = (
-            len(row_indices)
-            if not isinstance(row_indices, slice)
-            else self._length_cache
-        )
-        new_obj._width_cache = (
-            len(col_indices)
-            if not isinstance(col_indices, slice)
-            else self._width_cache
-        )
+        if not isinstance(row_indices, slice):
+            new_obj._length_cache = len(row_indices)
+        if not isinstance(col_indices, slice):
+            new_obj._width_cache = len(col_indices)
         return new_obj
 
     @classmethod
