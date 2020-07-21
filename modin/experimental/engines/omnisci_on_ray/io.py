@@ -133,12 +133,13 @@ class OmnisciOnRayIO(RayIO):
     ):
         items = locals().copy()
         mykwargs = {k : items[k] for k in items if k in cls.arg_keys}
-
+        eng = str(engine).lower().strip()
         try:
-            if str(engine).lower().strip() in ['pandas', 'c']:
+            if eng in ['pandas', 'c']:
                 return cls._read(**mykwargs)
 
-            from pyarrow.csv import read_csv, timestamp, ParseOptions, ConvertOptions, ReadOptions
+            from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
+            from pyarrow import timestamp
 
             column_types= dtype if type(dtype) is dict else {}
             if( (type(parse_dates) is list) # and (type(parse_dates[0]) is str)  # like parse_dates=["dd",]
@@ -176,6 +177,9 @@ class OmnisciOnRayIO(RayIO):
             
             return cls.from_arrow(at) # can be used to switch between arrow and pandas frames: cls.from_pandas(at.to_pandas())
         except:
+            if eng in ['arrow']:
+                raise
+
             ErrorMessage.default_to_pandas("`read_csv`")
             return cls._read(**mykwargs)
 
