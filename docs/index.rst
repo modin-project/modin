@@ -138,6 +138,12 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    supported_apis/io_supported
 
 .. toctree::
+   :caption: Developer Documentation
+
+   developer/contributing
+   developer/architecture
+
+.. toctree::
    :caption: Engines, Backends, and APIs
 
    UsingPandasonRay/index
