@@ -112,11 +112,8 @@ class WrappingConnection(rpyc.Connection):
                 obj, attr = args
             else:
                 obj, attr = args[0], '__str__'
-            try:
-                obj_class = object.__getattribute__(obj, '__class__')
-            except AttributeError:
-                obj_class = None
-            if type(obj).__name__ in ('numpy',) or (getattr(obj_class, '__module__', None) in ('numpy',) and obj_class.__name__ in ('dtype',)):
+
+            if str(obj.____id_pack__[0]) in {'numpy', 'numpy.dtype'}:
                 try:
                     cache = self._static_cache[obj.____id_pack__]
                 except KeyError:
@@ -131,24 +128,17 @@ class WrappingConnection(rpyc.Connection):
 
     def async_request(self, handler, *args, **kw):
         if handler == consts.HANDLE_DEL:
-            obj, refcount = args
-            try:
-                obj_class = object.__getattribute__(obj, '__class__')
-            except AttributeError:
-                obj_class = None
-            if type(obj).__name__ in ('numpy',) or (getattr(obj_class, '__module__', None) in ('numpy',) and obj_class.__name__ in ('dtype',)):
+            obj, _ = args
+            if str(obj.____id_pack__[0]) in {'numpy', 'numpy.dtype'}:
                 """
                 # we have this cached, but a deletion is requested, remove the from cache
                 self._static_cache.pop(obj.____id_pack__, None)
                 """
-                try:
-                    cache = self._static_cache[obj.____id_pack__]
-                except KeyError:
-                    pass
-                else:
-                    # object is cached by us, so ignore the request or remote end dies and cache is suddenly stale
+                if obj.____id_pack__ in self._static_cache:
+                    # object is cached by us, so ignore the request or remote end dies and cache is suddenly stale;
+                    # we shouldn't remove item from cache as it would reduce performance
                     res = AsyncResult(self)
-                    res._is_ready = True
+                    res._is_ready = True # simulate finished async request
                     return res
         return super().async_request(handler, *args, **kw)
 
