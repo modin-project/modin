@@ -67,7 +67,7 @@ class CalciteScanNode(CalciteBaseNode):
         assert modin_frame._partitions[0][0].frame_id is not None
         super(CalciteScanNode, self).__init__("EnumerableTableScan")
         self.table = ["modin_db", modin_frame._partitions[0][0].frame_id]
-        self.fieldNames = modin_frame._table_cols + ["rowid"]
+        self.fieldNames = [f"F_{col}" for col in modin_frame._table_cols] + ["rowid"]
         # OmniSci expects from scan node to have 'inputs' field
         # holding empty list
         self.inputs = []
@@ -76,7 +76,7 @@ class CalciteScanNode(CalciteBaseNode):
 class CalciteProjectionNode(CalciteBaseNode):
     def __init__(self, fields, exprs):
         super(CalciteProjectionNode, self).__init__("LogicalProject")
-        self.fields = fields
+        self.fields = [f"F_{field}" for field in fields]
         self.exprs = exprs
 
 
@@ -89,7 +89,7 @@ class CalciteFilterNode(CalciteBaseNode):
 class CalciteAggregateNode(CalciteBaseNode):
     def __init__(self, fields, group, aggs):
         super(CalciteAggregateNode, self).__init__("LogicalAggregate")
-        self.fields = fields
+        self.fields = [f"F_{field}" for field in fields]
         self.group = group
         self.aggs = aggs
 
