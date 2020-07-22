@@ -1021,5 +1021,99 @@ class TestCategory:
         df_equals(pandas_df, exp)
 
 
+class TestSort:
+    data = {
+        "a": [1, 2, 5, 2, 5, 4, 4, 5, 2],
+        "b": [1, 2, 3, 6, 5, 1, 4, 5, 3],
+        "c": [5, 4, 2, 3, 1, 1, 4, 5, 6],
+        "d": ["1", "4", "3", "2", "1", "6", "7", "5", "0"],
+    }
+    data_nulls = {
+        "a": [1, 2, 5, 2, 5, 4, 4, None, 2],
+        "b": [1, 2, 3, 6, 5, None, 4, 5, 3],
+        "c": [None, 4, 2, 3, 1, 1, 4, 5, 6],
+    }
+    data_multiple_nulls = {
+        "a": [1, 2, None, 2, 5, 4, 4, None, 2],
+        "b": [1, 2, 3, 6, 5, None, 4, 5, None],
+        "c": [None, 4, 2, None, 1, 1, 4, 5, 6],
+    }
+    cols_values = ["a", ["a", "b"], ["b", "a"], ["c", "a", "b"]]
+    # Issue #1766 - support set_index for OmniSci backend
+    # index_cols_values = [None, "a", ["a", "b"]]
+    index_cols_values = [None]
+    ascending_values = [True, False]
+    ascending_list_values = [[True, False], [False, True]]
+    na_position_values = ["first", "last"]
+
+    @pytest.mark.parametrize("cols", cols_values)
+    @pytest.mark.parametrize("ignore_index", bool_arg_values)
+    @pytest.mark.parametrize("ascending", ascending_values)
+    @pytest.mark.parametrize("index_cols", index_cols_values)
+    def test_sort_cols(self, cols, ignore_index, index_cols, ascending):
+        def sort(df, cols, ignore_index, index_cols, ascending, **kwargs):
+            if index_cols:
+                df = df.set_index(index_cols)
+            return df.sort_values(cols, ignore_index=ignore_index, ascending=ascending)
+
+        run_and_compare(
+            sort,
+            data=self.data,
+            cols=cols,
+            ignore_index=ignore_index,
+            index_cols=index_cols,
+            ascending=ascending,
+        )
+
+    @pytest.mark.parametrize("ascending", ascending_list_values)
+    def test_sort_cols_asc_list(self, ascending):
+        def sort(df, ascending, **kwargs):
+            return df.sort_values(["a", "b"], ascending=ascending)
+
+        run_and_compare(
+            sort, data=self.data, ascending=ascending,
+        )
+
+    @pytest.mark.parametrize("ascending", ascending_values)
+    def test_sort_cols_str(self, ascending):
+        def sort(df, ascending, **kwargs):
+            return df.sort_values("d", ascending=ascending)
+
+        run_and_compare(
+            sort, data=self.data, ascending=ascending,
+        )
+
+    @pytest.mark.parametrize("cols", cols_values)
+    @pytest.mark.parametrize("ascending", ascending_values)
+    @pytest.mark.parametrize("na_position", na_position_values)
+    def test_sort_cols_nulls(self, cols, ascending, na_position):
+        def sort(df, cols, ascending, na_position, **kwargs):
+            return df.sort_values(cols, ascending=ascending, na_position=na_position)
+
+        run_and_compare(
+            sort,
+            data=self.data_nulls,
+            cols=cols,
+            ascending=ascending,
+            na_position=na_position,
+        )
+
+    # Issue #1767 - rows order is not preserved for NULL keys
+    # @pytest.mark.parametrize("cols", cols_values)
+    # @pytest.mark.parametrize("ascending", ascending_values)
+    # @pytest.mark.parametrize("na_position", na_position_values)
+    # def test_sort_cols_multiple_nulls(self, cols, ascending, na_position):
+    #    def sort(df, cols, ascending, na_position, **kwargs):
+    #        return df.sort_values(cols, ascending=ascending, na_position=na_position)
+    #
+    #    run_and_compare(
+    #        sort,
+    #        data=self.data_multiple_nulls,
+    #        cols=cols,
+    #        ascending=ascending,
+    #        na_position=na_position,
+    #    )
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

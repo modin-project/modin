@@ -252,6 +252,8 @@ class CalciteBuilder:
                 self._process_join(op)
             elif isinstance(op, UnionNode):
                 self._process_union(op)
+            elif isinstance(op, SortNode):
+                self._process_sort(op)
             else:
                 raise NotImplementedError(
                     f"CalciteBuilder doesn't support {type(op).__name__}"
@@ -401,3 +403,23 @@ class CalciteBuilder:
 
     def _process_union(self, op):
         self._push(CalciteUnionNode(self._input_ids(), True))
+
+    def _process_sort(self, op):
+        frame = op.input[0]
+
+        # Sort should be applied to projections.
+        if not isinstance(self._input_node(0), CalciteProjectionNode):
+            proj = CalciteProjectionNode(
+                frame._table_cols, [self._ref(frame, col) for col in frame._table_cols]
+            )
+            self._push(proj)
+            self._input_ctx().replace_input_node(frame, proj, frame._table_cols)
+
+        nulls = op.na_position.upper()
+        collations = []
+        for col, asc in zip(op.columns, op.ascending):
+            ascending = "ASCENDING" if asc else "DESCENDING"
+            collations.append(
+                CalciteCollation(self._ref_idx(frame, col), ascending, nulls)
+            )
+        self._push(CalciteSortNode(collations))
