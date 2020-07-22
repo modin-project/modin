@@ -12,10 +12,13 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import numpy as np
 
 from typing import Hashable, Iterable, Mapping, Optional, Union
 from pandas._typing import FrameOrSeriesUnion
+from pandas.core.dtypes.common import is_list_like
 
+from modin.backends.base.query_compiler import BaseQueryCompiler
 from .dataframe import DataFrame
 from .series import Series
 
@@ -108,8 +111,18 @@ def concat(
             new_idx_labels = {
                 k: v.index if axis == 0 else v.columns for k, v in zip(keys, objs)
             }
-            tuples = [(k, o) for k, obj in new_idx_labels.items() for o in obj]
+            tuples = [
+                (k, *o) if isinstance(o, tuple) else (k, o)
+                for k, obj in new_idx_labels.items()
+                for o in obj
+            ]
             new_idx = pandas.MultiIndex.from_tuples(tuples)
+            if names is not None:
+                new_idx.names = names
+            else:
+                old_name = _determine_name(objs, axis)
+                if old_name is not None:
+                    new_idx.names = [None] + old_name
     else:
         new_idx = None
     new_query_compiler = objs[0].concat(
@@ -132,3 +145,35 @@ def concat(
         else:
             result_df.columns = new_idx
     return result_df
+
+
+def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
+    """
+    Determine names of index after concatenation along passed axis
+
+    Parameters
+    ----------
+    objs : iterable of QueryCompilers
+        objects to concatenate
+
+    axis : int or str
+        the axis to concatenate along
+
+    Returns
+    -------
+        `list` with single element - computed index name, `None` if it could not
+        be determined
+    """
+    axis = pandas.DataFrame()._get_axis_number(axis)
+
+    def get_names(obj):
+        return obj.columns.names if axis else obj.index.names
+
+    names = np.array([get_names(obj) for obj in objs])
+
+    # saving old name, only if index names of all objs are the same
+    if np.all(names == names[0]):
+        # we must do this check to avoid this calls `list(str_like_name)`
+        return list(names[0]) if is_list_like(names[0]) else [names[0]]
+    else:
+        return None
