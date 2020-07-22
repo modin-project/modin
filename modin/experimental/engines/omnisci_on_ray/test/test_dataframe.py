@@ -40,36 +40,131 @@ class TestCSV:
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
 
         for kwargs in (
-            {"delimiter": ','}, {"sep": None},
+            {"delimiter": ","},
+            {"sep": None},
             {"skiprows": 1, "names": ["A", "B", "C", "D", "E"]},
-            {"dtype": {'a': 'int32', 'e': 'string'}},
+            {"dtype": {"a": "int32", "e": "string"}},
         ):
             rp = pd.read_csv(csv_file, **kwargs)
-            rm = to_pandas(mpd.read_csv(csv_file, engine='arrow', **kwargs))
+            rm = to_pandas(mpd.read_csv(csv_file, engine="arrow", **kwargs))
             df_equals(rp, rm)
 
     def test_housing_csv(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
         for kwargs in (
-            {"skiprows": 1, "names": ["index", "CRIM", "ZN", "INDUS", "CHAS", "NOX", "RM", "AGE", "DIS", "RAD", "TAX", "PTRATIO", "B", "LSTAT", "PRICE", ],
-             "dtype": {'index': 'int64', "CRIM": 'float64', "ZN": 'float64', 'INDUS': 'float64', 'CHAS': 'float64', 'NOX': 'float64', 'RM': 'float64',
-             'AGE': 'float64', 'DIS': 'float64', 'RAD': 'float64', 'TAX': 'float64', 'PTRATIO': 'float64', 'B': 'float64', 'LSTAT': 'float64', 'PRICE': 'float64'}
+            {
+                "skiprows": 1,
+                "names": [
+                    "index",
+                    "CRIM",
+                    "ZN",
+                    "INDUS",
+                    "CHAS",
+                    "NOX",
+                    "RM",
+                    "AGE",
+                    "DIS",
+                    "RAD",
+                    "TAX",
+                    "PTRATIO",
+                    "B",
+                    "LSTAT",
+                    "PRICE",
+                ],
+                "dtype": {
+                    "index": "int64",
+                    "CRIM": "float64",
+                    "ZN": "float64",
+                    "INDUS": "float64",
+                    "CHAS": "float64",
+                    "NOX": "float64",
+                    "RM": "float64",
+                    "AGE": "float64",
+                    "DIS": "float64",
+                    "RAD": "float64",
+                    "TAX": "float64",
+                    "PTRATIO": "float64",
+                    "B": "float64",
+                    "LSTAT": "float64",
+                    "PRICE": "float64",
+                },
             },
         ):
             rp = pd.read_csv(csv_file, **kwargs)
-            rm = to_pandas(mpd.read_csv(csv_file, engine='arrow', **kwargs))
-            #TODO: df_equals(rp, rm)  #  needs inexact comparison
+            rm = to_pandas(mpd.read_csv(csv_file, engine="arrow", **kwargs))
+            # TODO: df_equals(rp, rm)  #  needs inexact comparison
 
     def test_time_parsing(self):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_time_parsing.csv")
+        csv_file = os.path.join(
+            self.root, "modin/pandas/test/data", "test_time_parsing.csv"
+        )
         for kwargs in (
-            {"skiprows": 1, "names": ["timestamp", "symbol", "high", "low", "open", "close", "spread", "volume"],
-                "parse_dates": ["timestamp"], "dtype": {"symbol": "string"}
+            {
+                "skiprows": 1,
+                "names": [
+                    "timestamp",
+                    "symbol",
+                    "high",
+                    "low",
+                    "open",
+                    "close",
+                    "spread",
+                    "volume",
+                ],
+                "parse_dates": ["timestamp"],
+                "dtype": {"symbol": "string"},
             },
-            ):
-                rp = pd.read_csv(csv_file, **kwargs)
-                rm = to_pandas(mpd.read_csv(csv_file, engine='arrow', **kwargs))
-                df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+        ):
+            rp = pd.read_csv(csv_file, **kwargs)
+            rm = to_pandas(mpd.read_csv(csv_file, engine="arrow", **kwargs))
+            df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+
+    def test_csv_fillna(self):
+        csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
+        for kwargs in (
+            {
+                "skiprows": 1,
+                "names": [
+                    "index",
+                    "CRIM",
+                    "ZN",
+                    "INDUS",
+                    "CHAS",
+                    "NOX",
+                    "RM",
+                    "AGE",
+                    "DIS",
+                    "RAD",
+                    "TAX",
+                    "PTRATIO",
+                    "B",
+                    "LSTAT",
+                    "PRICE",
+                ],
+                "dtype": {
+                    "index": "int64",
+                    "CRIM": "float64",
+                    "ZN": "float64",
+                    "INDUS": "float64",
+                    "CHAS": "float64",
+                    "NOX": "float64",
+                    "RM": "float64",
+                    "AGE": "float64",
+                    "DIS": "float64",
+                    "RAD": "float64",
+                    "TAX": "float64",
+                    "PTRATIO": "float64",
+                    "B": "float64",
+                    "LSTAT": "float64",
+                    "PRICE": "float64",
+                },
+            },
+        ):
+            rp = pd.read_csv(csv_file, **kwargs)
+            rp = rp["CRIM"].fillna(1000)
+            rm = mpd.read_csv(csv_file, engine="arrow", **kwargs)
+            rm = rm["CRIM"].fillna(1000)
+            df_equals(rp, rm)
 
 
 class TestMasks:

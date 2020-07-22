@@ -1333,7 +1333,7 @@ class BasePandasFrame(object):
         # OmniSci backend can handle None index, others might require
         # explicit index construction.
         new_index = None
-        new_dtypes = pandas.Series([i.type for i in at.columns], index=at.column_names)
+        new_dtypes = pandas.Series([i.type.to_pandas_dtype() for i in at.columns], index=at.column_names)
         return cls(
             partitions=new_frame,
             index=new_index,
