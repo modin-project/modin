@@ -333,15 +333,12 @@ def make_proxy_cls(
                     ):
 
                         def method(_self, *_args, __method_name__=name, **_kw):
-                            # TODO: see if we can just use _self.__remote_methods__
-                            cache = object.__getattribute__(_self, "__remote_methods__")
-                            # cache = _self.__remote_methods__
                             try:
-                                remote = cache[__method_name__]
+                                remote = _self.__remote_methods__[__method_name__]
                             except KeyError:
                                 # use remote_cls.__getattr__ to force RPyC return us
                                 # a proxy for remote method call instead of its local wrapper
-                                cache[__method_name__] = remote = remote_cls.__getattr__(__method_name__)
+                                _self.__remote_methods__[__method_name__] = remote = remote_cls.__getattr__(__method_name__)
                             return remote(_self.__remote_end__, *_args, **_kw)
 
                         method.__name__ = name
@@ -547,14 +544,11 @@ def make_dataframe_wrapper(DataFrame):
             return conn.obtain_tuple(self.__remote_end__.iteritems())
     ObtainingItems = _deliveringWrapper(Series, mixin=ObtainingItems)
 
-
-    @property
-    def dtypes(self):
-        remote_dtypes = self.__remote_end__.dtypes
-        return ObtainingItems(__remote_end__=remote_dtypes)
-
-    DataFrameOverrides = _prepare_loc_mixin()
-    DataFrameOverrides.dtypes = dtypes
+    class DataFrameOverrides(_prepare_loc_mixin()):
+        @property
+        def dtypes(self):
+            remote_dtypes = self.__remote_end__.dtypes
+            return ObtainingItems(__remote_end__=remote_dtypes)
 
     DeliveringDataFrame = _deliveringWrapper(
         DataFrame,
