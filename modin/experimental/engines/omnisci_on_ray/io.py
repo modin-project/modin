@@ -22,10 +22,6 @@ class OmnisciOnRayIO(RayIO):
     frame_cls = OmnisciOnRayFrame
     query_compiler_cls = DFAlgQueryCompiler
 
-    #@classmethod
-    #def from_arrow(cls, at):
-    #    return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
-
     arg_keys = [
                 "filepath_or_buffer",
                 "sep",

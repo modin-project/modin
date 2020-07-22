@@ -106,7 +106,7 @@ def _make_parser_func(sep):
         memory_map=False,
         float_precision=None,
     ):
-        kwargs = locals().copy()  # copy now to prevent pollution of kwargs 
+        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
         if kwargs.get("sep", sep) is False:
             kwargs["sep"] = "\t"
         return _read(**kwargs)
