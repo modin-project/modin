@@ -30,7 +30,7 @@ class OmnisciServer:
     @classmethod
     def start_server(cls, db_path="data", calc_port=6001):
         if cls._server is None:
-            cls._server = PyDbEngine(db_path, calc_port)
+            cls._server = PyDbEngine(path=db_path, port=calc_port, enable_union=1, enable_columnar_output=1)
 
     @classmethod
     def stop_server(cls):
