@@ -1473,13 +1473,16 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         if level is not None:
             func_kwargs = {
-                "axis": axis,
                 "skipna": skipna,
                 "level": level,
                 "numeric_only": numeric_only,
             }
 
-            return self.apply("kurt", **func_kwargs)
+            return self.__constructor__(
+                query_compiler=self._query_compiler._apply_text_func_elementwise(
+                    "kurt", axis, **func_kwargs
+                )
+            )
 
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
