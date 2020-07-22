@@ -97,6 +97,42 @@ class BaseFrameManager(object):
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
+    def broadcast_apply_select_indices(
+        cls, axis, apply_func, left, right, left_indices, right_indices
+    ):
+        if not axis:
+            partitions_for_apply = left.T
+            right = right.T
+        else:
+            partitions_for_apply = left
+            right = right
+
+        [obj.drain_call_queue() for row in right for obj in row]
+
+        def get_partitions(index):
+            must_grab = right_indices[index]
+            partitions_list = np.array([right[i] for i in must_grab.keys()])
+            indices_list = list(must_grab.values())
+            return {"other": partitions_list, "internal_other_indices": indices_list}
+
+        new_partitions = np.array(
+            [
+                partitions_for_apply[i]
+                if i not in left_indices
+                else cls._apply_func_to_list_of_partitions_broadcast(
+                    apply_func,
+                    partitions_for_apply[i],
+                    internal_indices=left_indices[i],
+                    **get_partitions(i),
+                )
+                for i in range(len(partitions_for_apply))
+            ]
+        )
+        if not axis:
+            new_partitions = new_partitions.T
+        return new_partitions
+
+    @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right):
         """Broadcast the right partitions to left and apply a function.
 
@@ -372,7 +408,17 @@ class BaseFrameManager(object):
         return DEFAULT_NPARTITIONS
 
     @classmethod
-    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
+    def _apply_func_to_list_of_partitions_broadcast(
+        cls, func, partitions, other, **kwargs
+    ):
+        preprocessed_func = cls.preprocess_func(func)
+        return [
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
+            for obj, broadcasted in zip(partitions, other.T)
+        ]
+
+    @classmethod
+    def _apply_func_to_list_of_partitions(cls, func, partitions, other=None, **kwargs):
         """Applies a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
@@ -389,7 +435,7 @@ class BaseFrameManager(object):
 
     @classmethod
     def apply_func_to_select_indices(
-        cls, axis, partitions, func, indices, keep_remaining=False
+        cls, axis, partitions, func, indices, keep_remaining=False,
     ):
         """Applies a function to select indices.
 

@@ -683,7 +683,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_app_df(self, resample_args, func, *args, **kwargs):
@@ -696,7 +696,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_agg_df(self, resample_args, func, *args, **kwargs):
@@ -741,7 +741,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit_direction,
         limit_area,
         downcast,
-        **kwargs
+        **kwargs,
     ):
         return self._resample_func(
             resample_args,
@@ -752,7 +752,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def resample_count(self, resample_args):
@@ -800,7 +800,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             _method=_method,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
@@ -1576,6 +1576,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+        if isinstance(value, type(self)):
+            if self._modin_frame._row_lengths == value._modin_frame._row_lengths:
+                return self._insert_qc(locs=[loc], columns=[column], other_qc=value)
+            else:
+                return self.insert(
+                    loc=loc, columns=column, value=value.to_pandas().squeeze()
+                )
+
         if is_list_like(value):
             # TODO make work with another querycompiler object as `value`.
             # This will require aligning the indices with a `reindex` and ensuring that
@@ -1599,6 +1607,63 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=self.columns.insert(loc, column),
         )
         return self.__constructor__(new_modin_frame)
+
+    def _insert_qc(self, locs, other_qc, columns=None):
+        """
+        Inserts all columns from `other_qc` at specified `locs`
+
+        Parameters
+        ----------
+            locs : list,
+                location where each column from `other_qc` should be inserted
+            other_qc : PandasQueryCompiler,
+                Frame with columns to insert
+            columns : list (optional),
+                Labels for newly inserted columns, if None grabs columns names
+                from `other_qc`
+
+        Returns
+        -------
+            PandasQueryCompiler
+        """
+        assert type(self) == type(other_qc), "Query compilers must be the same types"
+        assert (
+            self._modin_frame._row_lengths == other_qc._modin_frame._row_lengths
+        ), "Partitioning of query compilers are not identical"
+        assert len(locs) == len(
+            other_qc.columns
+        ), f"Locations to insert do not matches with columns, len(locs) != len(other_qc.columns), {len(locs)} != {len(other_qc.columns)}"
+
+        if columns is not None:
+            other_qc = other_qc.copy()
+            other_qc.columns = columns
+
+        def insert(df, internal_indices, other, internal_other_indices):
+            ip = 0
+            for other_df, other_index in zip(other, internal_other_indices):
+                for i in other_index:
+                    df.insert(
+                        loc=int(internal_indices[ip]),
+                        column=other_df.columns[i],
+                        value=other_df[other_df.columns[i]],
+                    )
+                    ip += 1
+            return df
+
+        new_columns = self.columns
+        for loc, col in zip(locs, other_qc.columns):
+            new_columns = new_columns.insert(loc, col)
+
+        return self.__constructor__(
+            self._modin_frame.broadcast_apply_select_indices(
+                0,
+                insert,
+                numeric_indices=locs,
+                other=other_qc._modin_frame,
+                new_index=self.index,
+                new_columns=new_columns,
+            )
+        )
 
     # END Insert
 
@@ -1788,7 +1853,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             try:
                 agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args
+                    **agg_args,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
