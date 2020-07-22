@@ -35,6 +35,41 @@ def run_and_compare(fn, data, data2=None, *args, **kwargs):
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
 
+    boston_housing_names = [
+        "index",
+        "CRIM",
+        "ZN",
+        "INDUS",
+        "CHAS",
+        "NOX",
+        "RM",
+        "AGE",
+        "DIS",
+        "RAD",
+        "TAX",
+        "PTRATIO",
+        "B",
+        "LSTAT",
+        "PRICE",
+    ]
+    boston_housing_dtypes = {
+        "index": "int64",
+        "CRIM": "float64",
+        "ZN": "float64",
+        "INDUS": "float64",
+        "CHAS": "float64",
+        "NOX": "float64",
+        "RM": "float64",
+        "AGE": "float64",
+        "DIS": "float64",
+        "RAD": "float64",
+        "TAX": "float64",
+        "PTRATIO": "float64",
+        "B": "float64",
+        "LSTAT": "float64",
+        "PRICE": "float64",
+    }
+
     def test_usecols_csv(self):
         """ check with the following arguments: names, dtype, skiprows, delimiter """
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
@@ -54,40 +89,8 @@ class TestCSV:
         for kwargs in (
             {
                 "skiprows": 1,
-                "names": [
-                    "index",
-                    "CRIM",
-                    "ZN",
-                    "INDUS",
-                    "CHAS",
-                    "NOX",
-                    "RM",
-                    "AGE",
-                    "DIS",
-                    "RAD",
-                    "TAX",
-                    "PTRATIO",
-                    "B",
-                    "LSTAT",
-                    "PRICE",
-                ],
-                "dtype": {
-                    "index": "int64",
-                    "CRIM": "float64",
-                    "ZN": "float64",
-                    "INDUS": "float64",
-                    "CHAS": "float64",
-                    "NOX": "float64",
-                    "RM": "float64",
-                    "AGE": "float64",
-                    "DIS": "float64",
-                    "RAD": "float64",
-                    "TAX": "float64",
-                    "PTRATIO": "float64",
-                    "B": "float64",
-                    "LSTAT": "float64",
-                    "PRICE": "float64",
-                },
+                "names": self.boston_housing_names,
+                "dtype": self.boston_housing_dtypes,
             },
         ):
             rp = pd.read_csv(csv_file, **kwargs)
@@ -124,40 +127,8 @@ class TestCSV:
         for kwargs in (
             {
                 "skiprows": 1,
-                "names": [
-                    "index",
-                    "CRIM",
-                    "ZN",
-                    "INDUS",
-                    "CHAS",
-                    "NOX",
-                    "RM",
-                    "AGE",
-                    "DIS",
-                    "RAD",
-                    "TAX",
-                    "PTRATIO",
-                    "B",
-                    "LSTAT",
-                    "PRICE",
-                ],
-                "dtype": {
-                    "index": "int64",
-                    "CRIM": "float64",
-                    "ZN": "float64",
-                    "INDUS": "float64",
-                    "CHAS": "float64",
-                    "NOX": "float64",
-                    "RM": "float64",
-                    "AGE": "float64",
-                    "DIS": "float64",
-                    "RAD": "float64",
-                    "TAX": "float64",
-                    "PTRATIO": "float64",
-                    "B": "float64",
-                    "LSTAT": "float64",
-                    "PRICE": "float64",
-                },
+                "names": self.boston_housing_names,
+                "dtype": self.boston_housing_dtypes,
             },
         ):
             rp = pd.read_csv(csv_file, **kwargs)
