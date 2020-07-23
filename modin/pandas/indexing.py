@@ -337,7 +337,10 @@ class _LocIndexer(_LocationIndexerBase):
                 self.qc.index.to_series().loc[row_loc]
             )
         elif isinstance(self.qc.index, pandas.MultiIndex):
-            row_lookup = self.qc.index.get_locs(row_loc)
+            if isinstance(row_loc, pandas.MultiIndex):
+                row_lookup = self.qc.index.get_indexer_for(row_loc)
+            else:
+                row_lookup = self.qc.index.get_locs(row_loc)
         elif is_boolean_array(row_loc):
             # If passed in a list of booleans, we return the index of the true values
             row_lookup = [i for i, row_val in enumerate(row_loc) if row_val]
@@ -348,7 +351,10 @@ class _LocIndexer(_LocationIndexerBase):
                 self.qc.columns.to_series().loc[col_loc]
             )
         elif isinstance(self.qc.columns, pandas.MultiIndex):
-            col_lookup = self.qc.columns.get_locs(col_loc)
+            if isinstance(col_loc, pandas.MultiIndex):
+                col_lookup = self.qc.columns.get_indexer_for(col_loc)
+            else:
+                col_lookup = self.qc.columns.get_locs(col_loc)
         elif is_boolean_array(col_loc):
             # If passed in a list of booleans, we return the index of the true values
             col_lookup = [i for i, col_val in enumerate(col_loc) if col_val]
