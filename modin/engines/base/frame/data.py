@@ -256,7 +256,7 @@ class BasePandasFrame(object):
         self._column_widths_cache = [w for w in self._column_widths if w > 0]
         self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
 
-    def _validate_axis_equality(self, axis: int, update: bool):
+    def _validate_axis_equality(self, axis: int):
         """
         Validates internal and external indices of modin_frame at the specified axis.
 
@@ -264,18 +264,12 @@ class BasePandasFrame(object):
         ----------
             axis : int,
                 Axis to validate indices along
-            update : bool,
-                Update or raise an exception if indices don't match
         """
         internal_axis = self._frame_mgr_cls.get_indices(
             axis, self._partitions, lambda df: df.axes[axis]
         )
         is_equals = self.axes[axis].equals(internal_axis)
-        if not update:
-            ErrorMessage.catch_bugs_and_request_email(
-                not is_equals, "Internal and external indices do not match.",
-            )
-        elif not is_equals:
+        if not is_equals:
             self._set_axis(axis, self.axes[axis])
 
     def _validate_internal_indices(self, mode=None, **kwargs):
@@ -293,14 +287,10 @@ class BasePandasFrame(object):
             mode : str or bool, default None
             validate_index : bool, (optional, could be specified via `mode`)
             validate_columns : bool, (optional, could be specified via `mode`)
-            update : bool, (optional, could be specified via `mode`)
         """
 
         if isinstance(mode, bool):
-            default_update_value = kwargs.get("update", mode)
             mode = "all"
-        else:
-            default_update_value = kwargs.get("update", False)
 
         reduced_sample = pandas.Index(["__reduced__"])
         args_dict = {
@@ -308,21 +298,16 @@ class BasePandasFrame(object):
             "reduced": {
                 "validate_index": self.index.equals(reduced_sample),
                 "validate_columns": self.columns.equals(reduced_sample),
-                "update": True,
             },
-            "all": {
-                "validate_index": True,
-                "validate_columns": True,
-                "update": default_update_value,
-            },
+            "all": {"validate_index": True, "validate_columns": True},
         }
 
         args = args_dict.get(mode, args_dict["custom"])
 
         if args.get("validate_index", True):
-            self._validate_axis_equality(0, args.get("update", False))
+            self._validate_axis_equality(axis=0)
         if args.get("validate_columns", True):
-            self._validate_axis_equality(1, args.get("update", False))
+            self._validate_axis_equality(axis=1)
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
