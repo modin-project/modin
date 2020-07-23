@@ -26,6 +26,11 @@ class ClusterError(Exception):
         self.traceback = traceback
         super().__init__(*args, **kw)
 
+    def __str__(self):
+        if self.clause:
+            return f"clause: {self.cause}\n{super()}"
+        return str(super())
+
 
 class CannotSpawnCluster(ClusterError):
     """
