@@ -38,10 +38,7 @@ class MetaComparer(type):
     def __instancecheck__(self, instance):
         # see if self is a type that has __real_cls__ defined,
         # as if it's a dual-nature class we need to use its internal class to compare
-        try:
-            my_cls = self.__dict__["__real_cls__"]
-        except KeyError:
-            my_cls = self
+        my_cls = self.__dict__.get("__real_cls__", self)
         try:
             # see if it's a proxying wrapper, in which case
             # use wrapped local class as a comparison base
@@ -65,7 +62,10 @@ class RemoteMeta(MetaComparer):
             res = object.__getattribute__(self, name)
         else:
             try:
-                # go for proxying class-level attributes first
+                # Go for proxying class-level attributes first;
+                # make sure to check for attribute in self.__dict__ to get the class-level
+                # attribute from the class itself, not from some of its parent classes.
+                # Also note we use object.__getattribute__() to skip any potential class-level __getattr__
                 res = object.__getattribute__(self, "__dict__")[name]
             except KeyError:
                 attr_ex = None

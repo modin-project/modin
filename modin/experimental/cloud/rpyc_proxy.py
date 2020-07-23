@@ -39,6 +39,10 @@ class WrappingConnection(rpyc.Connection):
         except KeyError:
             pass
         try:
+            # Try to get local_cls.__real_cls__ but look it up within
+            # local_cls.__dict__ to not grab it from any parent class.
+            # Also get the __dict__ by using low-level __getattribute__
+            # to override any potential __getattr__ callbacks on the class.
             wrapping_cls = object.__getattribute__(local_cls, "__dict__")[
                 "__real_cls__"
             ]
@@ -193,7 +197,10 @@ def make_dataframe_wrapper():
     from modin.pandas.dataframe import _DataFrame
 
     DeliveringDataFrame = _deliveringWrapper(
-        _DataFrame, ["groupby", "agg", "aggregate"], _prepare_loc_mixin(), "DataFrame"
+        _DataFrame,
+        ["groupby", "agg", "aggregate", "__getitem__", "astype"],
+        _prepare_loc_mixin(),
+        "DataFrame",
     )
     return DeliveringDataFrame
 
