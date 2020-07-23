@@ -412,3 +412,28 @@ def test_to_numeric(data, errors, downcast):
     modin_result = pd.to_numeric(modin_series, errors=errors, downcast=downcast)
     pandas_result = pandas.to_numeric(pandas_series, errors=errors, downcast=downcast)
     df_equals(modin_result, pandas_result)
+
+
+def test_to_pandas_indices():
+    data = test_data_values[0]
+
+    md_df = pd.DataFrame(data)
+    index = pandas.MultiIndex.from_tuples(
+        [(i, i * 2) for i in np.arange(len(md_df) + 1)], names=["A", "B"]
+    ).drop(0)
+    columns = pandas.MultiIndex.from_tuples(
+        [(i, i * 2) for i in np.arange(len(md_df.columns) + 1)], names=["A", "B"]
+    ).drop(0)
+
+    md_df.index = index
+    md_df.columns = columns
+
+    pd_df = md_df._to_pandas()
+
+    for axis in [0, 1]:
+        assert md_df.axes[axis].equals(
+            pd_df.axes[axis]
+        ), f"Indices at axis {axis} are different!"
+        assert md_df.axes[axis].equal_levels(
+            pd_df.axes[axis]
+        ), f"Levels of indices at axis {axis} are different!"

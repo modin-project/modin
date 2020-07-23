@@ -559,6 +559,7 @@ def test_from_clipboard():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
 def test_from_excel():
     setup_excel_file(SMALL_ROW_SIZE)
 

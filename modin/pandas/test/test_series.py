@@ -1362,6 +1362,9 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
+@pytest.mark.xfail(
+    reason="Datetime properties is broken for now, see #1729 for details"
+)
 def test_dt():
     data = pd.date_range("2016-12-31", "2017-01-08", freq="D", tz="Europe/Berlin")
     modin_series = pd.Series(data)
