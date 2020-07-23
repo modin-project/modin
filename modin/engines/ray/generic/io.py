@@ -41,6 +41,6 @@ class RayIO(BaseIO):
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._modin_frame._fold_reduce(1, func)
+        result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])
         # blocking operation
         result.to_pandas()

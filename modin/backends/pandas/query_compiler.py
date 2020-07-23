@@ -468,13 +468,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
-    def _is_monotonic(self, type=None):
+    def _is_monotonic(self, func_type=None):
         funcs = {
             "increasing": lambda df: df.is_monotonic_increasing,
             "decreasing": lambda df: df.is_monotonic_decreasing,
         }
 
-        monotonic_fn = funcs.get(type, funcs["increasing"])
+        monotonic_fn = funcs.get(func_type, funcs["increasing"])
 
         def is_monotonic_map(df):
             df = df.squeeze(axis=1)
@@ -494,10 +494,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             edge_case = monotonic_fn(pandas.Series(edges_list))
             return [common_case and edge_case]
 
-        return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
+        return MapReduceFunction.register(
+            is_monotonic_map, is_monotonic_reduce, axis=0
+        )(self)
 
     def is_monotonic_decreasing(self):
-        return self._is_monotonic(type="decreasing")
+        return self._is_monotonic(func_type="decreasing")
 
     is_monotonic = _is_monotonic
 
@@ -626,7 +628,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
@@ -1162,13 +1163,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def nsmallest(self, n, columns=None, keep="first"):
+    def nsort(self, n, columns=None, keep="first", sort_type="nsmallest"):
         def map_func(df, n=n, keep=keep, columns=columns):
             if columns is None:
                 return pandas.DataFrame(
-                    pandas.Series.nsmallest(df.squeeze(axis=1), n=n, keep=keep)
+                    getattr(pandas.Series, sort_type)(
+                        df.squeeze(axis=1), n=n, keep=keep
+                    )
                 )
-            return pandas.DataFrame.nsmallest(df, n=n, columns=columns, keep=keep)
+            return getattr(pandas.DataFrame, sort_type)(
+                df, n=n, columns=columns, keep=keep
+            )
 
         if columns is None:
             new_columns = ["__reduced__"]
@@ -1179,6 +1184,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=0, func=map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
+
+    def nsmallest(self, *args, **kwargs):
+        return self.nsort(sort_type="nsmallest", *args, **kwargs)
+
+    def nlargest(self, *args, **kwargs):
+        return self.nsort(sort_type="nlargest", *args, **kwargs)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
