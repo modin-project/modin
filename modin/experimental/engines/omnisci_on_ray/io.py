@@ -17,6 +17,9 @@ from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFra
 from modin.error_message import ErrorMessage
 from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
+from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
+import pyarrow as pa
+
 
 class OmnisciOnRayIO(RayIO):
 
@@ -135,28 +138,12 @@ class OmnisciOnRayIO(RayIO):
             if eng in ["pandas", "c"]:
                 return cls._read(**mykwargs)
 
-            from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
-            import pyarrow
+            if isinstance(dtype, dict):
+                column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
+            else:
+                column_types = cls._dtype_to_arrow(dtype)
 
-            dtype = {} if dtype is None else dtype
-            column_types = {}
-            for c, t in dtype.items():
-                tname = t if isinstance(t, str) else t.name
-                if tname == "category":
-                    arrow_type = pyarrow.dictionary(
-                        index_type=pyarrow.int32(), value_type=pyarrow.string()
-                    )
-                elif tname == "string":
-                    arrow_type = pyarrow.string()
-                else:
-                    arrow_type = pyarrow.from_numpy_dtype(tname)
-                column_types[c] = arrow_type
-            if (
-                (
-                    type(parse_dates) is list
-                )  # and (type(parse_dates[0]) is str)  # like parse_dates=["dd",]
-                and type(column_types) is dict
-            ):
+            if (type(parse_dates) is list) and type(column_types) is dict:
                 for c in parse_dates:
                     column_types[c] = pyarrow.timestamp("s")
 
@@ -195,9 +182,7 @@ class OmnisciOnRayIO(RayIO):
                 convert_options=co,
             )
 
-            return cls.from_arrow(
-                at
-            )  # can be used to switch between arrow and pandas frames: cls.from_pandas(at.to_pandas())
+            return cls.from_arrow(at)
         except:
             if eng in ["arrow"]:
                 raise
@@ -205,3 +190,14 @@ class OmnisciOnRayIO(RayIO):
             ErrorMessage.default_to_pandas("`read_csv`")
             return cls._read(**mykwargs)
 
+    @classmethod
+    def _dtype_to_arrow(cls, dtype):
+        if dypes is None:
+            return None
+        tname = t if isinstance(t, str) else t.name
+        if tname == "category":
+            return pa.dictionary(index_type=pa.int32(), value_type=pa.string())
+        elif tname == "string":
+            return pa.string()
+        else:
+            return pa.from_numpy_dtype(tname)
