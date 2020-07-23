@@ -107,11 +107,13 @@ class WrappingConnection(rpyc.Connection):
                     pass
                 else:
                     return get_methods(netref.LOCAL_ATTRS, clsobj)
-        elif handler in (consts.HANDLE_GETATTR, consts.HANDLE_STR):
+        elif handler in (consts.HANDLE_GETATTR, consts.HANDLE_STR, consts.HANDLE_HASH):
             if handler == consts.HANDLE_GETATTR:
                 obj, attr = args
+                key = (attr, handler)
             else:
-                obj, attr = args[0], '__str__'
+                obj = args[0]
+                key = handler
 
             if str(obj.____id_pack__[0]) in {'numpy', 'numpy.dtype'}:
                 try:
@@ -119,9 +121,9 @@ class WrappingConnection(rpyc.Connection):
                 except KeyError:
                     cache = self._static_cache[obj.____id_pack__] = {}
                 try:
-                    result = cache[(attr, handler)]
+                    result = cache[key]
                 except KeyError:
-                    result = cache[(attr, handler)] = super().sync_request(handler, *args)
+                    result = cache[key] = super().sync_request(handler, *args)
                 return result
 
         return super().sync_request(handler, *args)
