@@ -836,6 +836,136 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_args, q, **kwargs):
         return self._resample_func(resample_args, "quantile", q=q, **kwargs)
 
+    window_mean = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).mean(*args, **kwargs)
+        )
+    )
+    window_sum = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    window_var = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        )
+    )
+    window_std = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_count = FoldFunction.register(
+        lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
+    )
+    rolling_sum = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    rolling_mean = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).mean(*args, **kwargs)
+        )
+    )
+    rolling_median = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).median(**kwargs)
+        )
+    )
+    rolling_var = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_std = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_min = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).min(*args, **kwargs)
+        )
+    )
+    rolling_max = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).max(*args, **kwargs)
+        )
+    )
+    rolling_skew = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).skew(**kwargs)
+        )
+    )
+    rolling_kurt = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).kurt(**kwargs)
+        )
+    )
+    rolling_apply = FoldFunction.register(
+        lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).apply(
+                func=func,
+                raw=raw,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
+                args=args,
+                kwargs=kwargs,
+            )
+        )
+    )
+    rolling_quantile = FoldFunction.register(
+        lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).quantile(
+                quantile=quantile, interpolation=interpolation, **kwargs
+            )
+        )
+    )
+
+    def rolling_corr(self, rolling_args, other, pairwise, *args, **kwargs):
+        if len(self.columns) > 1:
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.rolling(df, *rolling_args).corr(
+                    other=other, pairwise=pairwise, *args, **kwargs
+                )
+            )
+        else:
+            return FoldFunction.register(
+                lambda df: pandas.DataFrame(
+                    df.rolling(*rolling_args).corr(
+                        other=other, pairwise=pairwise, *args, **kwargs
+                    )
+                )
+            )(self)
+
+    def rolling_cov(self, rolling_args, other, pairwise, ddof, **kwargs):
+        if len(self.columns) > 1:
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.rolling(df, *rolling_args).cov(
+                    other=other, pairwise=pairwise, ddof=ddof, **kwargs
+                )
+            )
+        else:
+            return FoldFunction.register(
+                lambda df: pandas.DataFrame(
+                    df.rolling(*rolling_args).cov(
+                        other=other, pairwise=pairwise, ddof=ddof, **kwargs
+                    )
+                )
+            )(self)
+
+    def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0,
+            lambda df: pandas.DataFrame(
+                df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+            ),
+            new_index=self.index,
+        )
+        return self.__constructor__(new_modin_frame)
+
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
