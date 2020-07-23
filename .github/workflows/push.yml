@@ -27,6 +27,8 @@ jobs:
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_rolling.py
+        if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_groupby.py
@@ -62,6 +64,8 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_rolling.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
