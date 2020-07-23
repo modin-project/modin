@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
-from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 from .utils import _inherit_docstrings
 from .series import Series
@@ -30,7 +30,7 @@ from .series import Series
         pandas.core.groupby.DataFrameGroupBy.__init__,
     ],
 )
-class _DataFrameGroupBy(object):
+class DataFrameGroupBy(object):
     def __init__(
         self,
         df,
@@ -685,9 +685,10 @@ class _DataFrameGroupBy(object):
         return self._df._default_to_pandas(groupby_on_multiple_columns)
 
 
-DataFrameGroupBy = make_wrapped_class(
-    _DataFrameGroupBy, "DataFrameGroupBy", "make_dataframe_groupby_wrapper"
-)
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")
 
 
 class SeriesGroupBy(DataFrameGroupBy):

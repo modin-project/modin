@@ -145,7 +145,11 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                         namespace[name] = method
             return namespace
 
-    class Wrapper(override, metaclass=ProxyMeta):
+    class Wrapper(override, origin_cls, metaclass=ProxyMeta):
+        __name__ = cls_name or origin_cls.__name__
+        __wrapper_remote__ = remote_cls
+        __wrapper_local__ = Wrapper
+
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
                 __remote_end__ = remote_cls(*a, **kw)
@@ -184,18 +188,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                 if name not in _PROXY_LOCAL_ATTRS:
                     delattr(self.__remote_end__, name)
 
-    class Wrapped(origin_cls, metaclass=RemoteMeta):
-        __name__ = cls_name or origin_cls.__name__
-        __wrapper_remote__ = remote_cls
-        __wrapper_local__ = Wrapper
-        __class__ = Wrapper
-
-        def __new__(cls, *a, **kw):
-            return Wrapper(*a, **kw)
-
-    Wrapper.__name__ = Wrapped.__name__
-
-    return Wrapped
+    return Wrapper
 
 
 def _deliveringWrapper(origin_cls, methods=(), mixin=None, target_name=None):

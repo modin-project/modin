@@ -15,6 +15,8 @@ import sys
 import inspect
 import types
 
+from modin import execution_engine
+
 _LOCAL_ATTRS = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
@@ -92,39 +94,27 @@ class RemoteMeta(MetaComparer):
 _KNOWN_DUALS = {}
 
 
-def make_wrapped_class(local_cls, cls_name, rpyc_wrapper_name):
-    from modin import execution_engine
-
-    current_frame = sys._getframe()
-    try:
-        module_name = current_frame.f_back.f_globals["__name__"]
-    except (AttributeError, KeyError):
-        module_name = __name__
-    finally:
-        del current_frame  # avoid reference cycles
-
-    @classmethod
-    def _update_engine(cls, _):
-        if execution_engine.get() == "Cloudray":
-            from . import rpyc_proxy
-
-            cls.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)()
-        else:
-            cls.__real_cls__ = local_cls
-
+def make_wrapped_class(local_cls, rpyc_wrapper_name):
     def __new__(cls, *a, **kw):
-        if cls.__name__ == cls_name:
+        if cls is local_cls and cls.__real_cls__ is not local_cls:
             return cls.__real_cls__(*a, **kw)
-        return local_cls.__new__(cls)
+        return super().__new__(cls)
 
     namespace = {
         "__real_cls__": None,
-        "_update_engine": _update_engine,
         "__new__": __new__,
-        "__module__": module_name,
+        "__module__": local_cls.__module__,
     }
-    result = MetaComparer(cls_name, (local_cls,), namespace)
-    execution_engine.subscribe(result._update_engine)
-
+    result = MetaComparer(local_cls.__name__, (local_cls,), namespace)
+    setattr(sys.modules[local_cls.__module__], local_cls.__name__, result)
     _KNOWN_DUALS[local_cls] = result
-    return result
+
+    def update_class(_):
+        if execution_engine.get() == "Cloudray":
+            from . import rpyc_proxy
+
+            result.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)()
+        else:
+            result.__real_cls__ = result
+
+    execution_engine.subscribe(update_class)

@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import numpy as np
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -28,8 +29,6 @@ from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
 from .utils import from_pandas, to_pandas
 
-from modin.experimental.cloud.meta_magic import make_wrapped_class
-
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     # Python >= 3.7
     from re import Pattern as _pattern_type
@@ -39,7 +38,7 @@ else:
 
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series, pandas.Series.__init__])
-class _Series(BasePandasDataset):
+class Series(BasePandasDataset):
     def __init__(
         self,
         data=None,
@@ -180,7 +179,7 @@ class _Series(BasePandasDataset):
 
     def __and__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).__and__(new_other)
+        return super(Series, new_self).__and__(new_other)
 
     def __array__(self, dtype=None):
         return super().__array__(dtype).flatten()
@@ -299,7 +298,7 @@ class _Series(BasePandasDataset):
 
     def __or__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).__or__(new_other)
+        return super(Series, new_self).__or__(new_other)
 
     def __pow__(self, right):
         return self.pow(right)
@@ -370,11 +369,11 @@ class _Series(BasePandasDataset):
 
     def __xor__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).__xor__(new_other)
+        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).add(
+        return super(Series, new_self).add(
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
@@ -808,7 +807,7 @@ class _Series(BasePandasDataset):
 
     def eq(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).eq(new_other, level=level, axis=axis)
+        return super(Series, new_self).eq(new_other, level=level, axis=axis)
 
     def equals(self, other):
         return (
@@ -827,13 +826,13 @@ class _Series(BasePandasDataset):
 
     def floordiv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).floordiv(
+        return super(Series, new_self).floordiv(
             new_other, level=level, fill_value=None, axis=axis
         )
 
     def ge(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).ge(new_other, level=level, axis=axis)
+        return super(Series, new_self).ge(new_other, level=level, axis=axis)
 
     def groupby(
         self,
@@ -873,7 +872,7 @@ class _Series(BasePandasDataset):
 
     def gt(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).gt(new_other, level=level, axis=axis)
+        return super(Series, new_self).gt(new_other, level=level, axis=axis)
 
     def hist(
         self,
@@ -954,11 +953,11 @@ class _Series(BasePandasDataset):
 
     def le(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).le(new_other, level=level, axis=axis)
+        return super(Series, new_self).le(new_other, level=level, axis=axis)
 
     def lt(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).lt(new_other, level=level, axis=axis)
+        return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
     def map(self, arg, na_action=None):
         if not callable(arg) and hasattr(arg, "get"):
@@ -986,7 +985,7 @@ class _Series(BasePandasDataset):
 
     def mod(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).mod(
+        return super(Series, new_self).mod(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -995,7 +994,7 @@ class _Series(BasePandasDataset):
 
     def mul(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).mul(
+        return super(Series, new_self).mul(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -1003,7 +1002,7 @@ class _Series(BasePandasDataset):
 
     def ne(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).ne(new_other, level=level, axis=axis)
+        return super(Series, new_self).ne(new_other, level=level, axis=axis)
 
     def nlargest(self, n=5, keep="first"):
         return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
@@ -1101,7 +1100,7 @@ class _Series(BasePandasDataset):
 
     def pow(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).pow(
+        return super(Series, new_self).pow(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -1260,31 +1259,31 @@ class _Series(BasePandasDataset):
 
     def rfloordiv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).rfloordiv(
+        return super(Series, new_self).rfloordiv(
             new_other, level=level, fill_value=None, axis=axis
         )
 
     def rmod(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).rmod(
+        return super(Series, new_self).rmod(
             new_other, level=level, fill_value=None, axis=axis
         )
 
     def rpow(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).rpow(
+        return super(Series, new_self).rpow(
             new_other, level=level, fill_value=None, axis=axis
         )
 
     def rsub(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).rsub(
+        return super(Series, new_self).rsub(
             new_other, level=level, fill_value=None, axis=axis
         )
 
     def rtruediv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).rtruediv(
+        return super(Series, new_self).rtruediv(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -1346,7 +1345,7 @@ class _Series(BasePandasDataset):
 
     def sub(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).sub(
+        return super(Series, new_self).sub(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -1478,7 +1477,7 @@ class _Series(BasePandasDataset):
 
     def truediv(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(_Series, new_self).truediv(
+        return super(Series, new_self).truediv(
             new_other, level=level, fill_value=None, axis=axis
         )
 
@@ -1703,8 +1702,10 @@ class _Series(BasePandasDataset):
         return series
 
 
-_Series.__name__ = "Series"
-Series = make_wrapped_class(_Series, "Series", "make_series_wrapper")
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(Series, "make_series_wrapper")
 
 
 class DatetimeProperties(object):

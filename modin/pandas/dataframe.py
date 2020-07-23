@@ -28,6 +28,7 @@ import itertools
 import functools
 import numpy as np
 import sys
+import os
 from typing import Tuple, Union
 import warnings
 
@@ -38,13 +39,11 @@ from .series import Series
 from .base import BasePandasDataset
 from .groupby import DataFrameGroupBy
 
-from modin.experimental.cloud.meta_magic import make_wrapped_class
-
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
 )
-class _DataFrame(BasePandasDataset):
+class DataFrame(BasePandasDataset):
     def __init__(
         self,
         data=None,
@@ -980,9 +979,7 @@ class _DataFrame(BasePandasDataset):
 
         output = []
 
-        # disguise as DataFrame if we're its implementation
-        own_cls = type(self)
-        type_line = str(own_cls if own_cls is not _DataFrame else DataFrame)
+        type_line = str(type(self))
         index_line = self.index._summary()
         columns = self.columns
         columns_len = len(columns)
@@ -2800,7 +2797,7 @@ class _DataFrame(BasePandasDataset):
         return self._query_compiler.to_pandas()
 
 
-# disguise _DataFrame as much as possible for compat with .default_to_pandas() and some tests
-_DataFrame.__name__ = "DataFrame"
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
 
-DataFrame = make_wrapped_class(_DataFrame, "DataFrame", "make_dataframe_wrapper")
+    make_wrapped_class(DataFrame, "make_dataframe_wrapper")

@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import numpy as np
 from numpy import nan
 import pandas
@@ -32,14 +33,13 @@ import warnings
 import pickle as pkl
 
 from modin.error_message import ErrorMessage
-from modin.experimental.cloud.meta_magic import make_wrapped_class
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
 
 
-class _BasePandasDataset(object):
+class BasePandasDataset(object):
     """This object is the base for most of the common code that exists in
         DataFrame/Series. Since both objects share the same underlying representation,
         and the algorithms are the same, we use this object to define the general
@@ -3594,6 +3594,12 @@ class _BasePandasDataset(object):
         return object.__getattribute__(self, item)
 
 
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
+
+
 class Resampler(object):
     def __init__(
         self,
@@ -3907,11 +3913,6 @@ class Resampler(object):
                 self.resample_args, q, **kwargs
             )
         )
-
-
-BasePandasDataset = make_wrapped_class(
-    _BasePandasDataset, "BasePandasDataset", "make_base_dataset_wrapper"
-)
 
 
 class Window(object):
