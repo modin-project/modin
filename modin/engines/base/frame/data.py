@@ -1333,7 +1333,10 @@ class BasePandasFrame(object):
         # OmniSci backend can handle None index, others might require
         # explicit index construction.
         new_index = None
-        new_dtypes = pandas.Series([i.type.to_pandas_dtype() for i in at.columns], index=at.column_names)
+        new_dtypes = pandas.Series(
+            [cls._arrow_type_to_dtype(i.type) for i in at.columns],
+            index=at.column_names,
+        )
         return cls(
             partitions=new_frame,
             index=new_index,
@@ -1342,6 +1345,13 @@ class BasePandasFrame(object):
             column_widths=new_widths,
             dtypes=new_dtypes,
         )
+
+    @classmethod
+    def _arrow_type_to_dtype(cls, arrow_type):
+        res = arrow_type.to_pandas_dtype()
+        if not isinstance(res, (np.dtype, str)):
+            return np.dtype(res)
+        return res
 
     def to_pandas(self):
         """Converts Modin DataFrame to Pandas DataFrame.
