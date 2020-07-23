@@ -14,7 +14,7 @@
 
 # pip install git+https://github.com/intel-go/ibis.git@develop
 
-# NOTE: expects https://github.com/intel-go/omniscripts/tree/modin-rpyc-test checked out and in PYTHONPATH
+# NOTE: expects https://github.com/intel-go/omniscripts/ checked out and in PYTHONPATH
 
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
