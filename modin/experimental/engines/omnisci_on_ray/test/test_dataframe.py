@@ -79,6 +79,7 @@ class TestCSV:
             {"sep": None},
             {"skiprows": 1, "names": ["A", "B", "C", "D", "E"]},
             {"dtype": {"a": "int32", "e": "string"}},
+            {"dtype": {"a": np.dtype("int32"), "b": np.dtype("int64"), "e": "string"}},
         ):
             rp = pd.read_csv(csv_file, **kwargs)
             rm = to_pandas(mpd.read_csv(csv_file, engine="arrow", **kwargs))
