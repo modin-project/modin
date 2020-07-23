@@ -17,65 +17,61 @@ from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFra
 from modin.error_message import ErrorMessage
 from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
-from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
-import pyarrow as pa
-
-
 class OmnisciOnRayIO(RayIO):
 
     frame_cls = OmnisciOnRayFrame
     query_compiler_cls = DFAlgQueryCompiler
 
     arg_keys = [
-        "filepath_or_buffer",
-        "sep",
-        "delimiter",
-        "header",
-        "names",
-        "index_col",
-        "usecols",
-        "squeeze",
-        "prefix",
-        "mangle_dupe_cols",
-        "dtype",
-        "engine",
-        "converters",
-        "true_values",
-        "false_values",
-        "skipinitialspace",
-        "skiprows",
-        "nrows",
-        "na_values",
-        "keep_default_na",
-        "na_filter",
-        "verbose",
-        "skip_blank_lines",
-        "parse_dates",
-        "infer_datetime_format",
-        "keep_date_col",
-        "date_parser",
-        "dayfirst",
-        "cache_dates",
-        "iterator",
-        "chunksize",
-        "compression",
-        "thousands",
-        "decimal",
-        "lineterminator",
-        "quotechar",
-        "quoting",
-        "escapechar",
-        "comment",
-        "encoding",
-        "dialect",
-        "error_bad_lines",
-        "warn_bad_lines",
-        "skipfooter",
-        "doublequote",
-        "delim_whitespace",
-        "low_memory",
-        "memory_map",
-        "float_precision",
+                "filepath_or_buffer",
+                "sep",
+                "delimiter",
+                "header",
+                "names",
+                "index_col",
+                "usecols",
+                "squeeze",
+                "prefix",
+                "mangle_dupe_cols",
+                "dtype",
+                "engine",
+                "converters",
+                "true_values",
+                "false_values",
+                "skipinitialspace",
+                "skiprows",
+                "nrows",
+                "na_values",
+                "keep_default_na",
+                "na_filter",
+                "verbose",
+                "skip_blank_lines",
+                "parse_dates",
+                "infer_datetime_format",
+                "keep_date_col",
+                "date_parser",
+                "dayfirst",
+                "cache_dates",
+                "iterator",
+                "chunksize",
+                "compression",
+                "thousands",
+                "decimal",
+                "lineterminator",
+                "quotechar",
+                "quoting",
+                "escapechar",
+                "comment",
+                "encoding",
+                "dialect",
+                "error_bad_lines",
+                "warn_bad_lines",
+                "skipfooter",
+                "doublequote",
+                "delim_whitespace",
+                "low_memory",
+                "memory_map",
+                "float_precision",
     ]
 
     @classmethod
@@ -132,72 +128,54 @@ class OmnisciOnRayIO(RayIO):
         float_precision=None,
     ):
         items = locals().copy()
-        mykwargs = {k: items[k] for k in items if k in cls.arg_keys}
+        mykwargs = {k : items[k] for k in items if k in cls.arg_keys}
         eng = str(engine).lower().strip()
         try:
-            if eng in ["pandas", "c"]:
+            if eng in ['pandas', 'c']:
                 return cls._read(**mykwargs)
 
-            if isinstance(dtype, dict):
-                column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
-            else:
-                column_types = cls._dtype_to_arrow(dtype)
+            from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
+            from pyarrow import timestamp
 
-            if (type(parse_dates) is list) and type(column_types) is dict:
+            column_types= dtype if type(dtype) is dict else {}
+            if( (type(parse_dates) is list) # and (type(parse_dates[0]) is str)  # like parse_dates=["dd",]
+                and type(column_types) is dict):
                 for c in parse_dates:
-                    column_types[c] = pyarrow.timestamp("s")
+                    column_types[c] = timestamp('s') 
 
             po = ParseOptions(
-                delimiter=sep if sep else "\s+" if delim_whitespace else delimiter,
-                quote_char=quotechar,
-                double_quote=doublequote,
-                escape_char=escapechar,
-                newlines_in_values=False,
-                ignore_empty_lines=skip_blank_lines,
+                    delimiter = sep if sep else '\s+' if delim_whitespace else delimiter,
+                    quote_char=quotechar,
+                    double_quote=doublequote, 
+                    escape_char=escapechar,
+                    newlines_in_values=False,
+                    ignore_empty_lines=skip_blank_lines
             )
             co = ConvertOptions(
-                check_utf8=None,
-                column_types=column_types,
-                null_values=None,
-                true_values=None,
-                false_values=None,
-                strings_can_be_null=None,
-                include_columns=None,
-                include_missing_columns=None,
-                auto_dict_encode=None,
-                auto_dict_max_cardinality=None,
-            )
+                    check_utf8=None, 
+                    column_types=column_types, 
+                    null_values=None,
+                    true_values=None, 
+                    false_values=None, 
+                    strings_can_be_null=None, 
+                    include_columns=None, 
+                    include_missing_columns=None, 
+                    auto_dict_encode=None, 
+                    auto_dict_max_cardinality=None)
             ro = ReadOptions(
-                use_threads=True,
-                block_size=None,
-                skip_rows=skiprows,
-                column_names=names,
-                autogenerate_column_names=None,
-            )
+                    use_threads=True,
+                    block_size=None,
+                    skip_rows=skiprows,
+                    column_names=names,
+                    autogenerate_column_names=None)
 
-            at = read_csv(
-                filepath_or_buffer,
-                read_options=ro,
-                parse_options=po,
-                convert_options=co,
-            )
-
-            return cls.from_arrow(at)
+            at = read_csv(filepath_or_buffer, read_options=ro, parse_options=po, convert_options=co)
+            
+            return cls.from_arrow(at) # can be used to switch between arrow and pandas frames: cls.from_pandas(at.to_pandas())
         except:
-            if eng in ["arrow"]:
+            if eng in ['arrow']:
                 raise
 
             ErrorMessage.default_to_pandas("`read_csv`")
             return cls._read(**mykwargs)
 
-    @classmethod
-    def _dtype_to_arrow(cls, dtype):
-        if dypes is None:
-            return None
-        tname = t if isinstance(t, str) else t.name
-        if tname == "category":
-            return pa.dictionary(index_type=pa.int32(), value_type=pa.string())
-        elif tname == "string":
-            return pa.string()
-        else:
-            return pa.from_numpy_dtype(tname)
