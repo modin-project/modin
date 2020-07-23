@@ -106,9 +106,9 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 def length_fn_pandas(df):
     assert isinstance(df, pandas.DataFrame)
-    return len(df) if len(df.columns) > 0 else 0
+    return len(df) if len(df) > 0 else 0
 
 
 def width_fn_pandas(df):
     assert isinstance(df, pandas.DataFrame)
-    return len(df.columns) if len(df) > 0 else 0
+    return len(df.columns) if len(df.columns) > 0 else 0
