@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import types
+import collections
 
 import rpyc
 from rpyc.lib.compat import pickle
@@ -34,7 +35,11 @@ class WrappingConnection(rpyc.Connection):
         super().__init__(*a, **kw)
         self._remote_batch_loads = None
         self._remote_cls_cache = {}
-        self._static_cache = {}
+        self._static_cache = collections.defaultdict(dict)
+        self._remote_dumps = None
+        self._remote_tuplize = None
+
+
 
     def __wrap(self, local_obj):
         while True:
@@ -116,14 +121,14 @@ class WrappingConnection(rpyc.Connection):
                 key = handler
 
             if str(obj.____id_pack__[0]) in {'numpy', 'numpy.dtype'}:
-                try:
-                    cache = self._static_cache[obj.____id_pack__]
-                except KeyError:
-                    cache = self._static_cache[obj.____id_pack__] = {}
+                cache = self._static_cache[obj.____id_pack__]
                 try:
                     result = cache[key]
                 except KeyError:
                     result = cache[key] = super().sync_request(handler, *args)
+                    if handler == consts.HANDLE_GETATTR:
+                        # save an entry in our cache telling that we get this attribute cached
+                        self._static_cache[result.____id_pack__]['__getattr__'] = True
                 return result
 
         return super().sync_request(handler, *args)
@@ -132,10 +137,6 @@ class WrappingConnection(rpyc.Connection):
         if handler == consts.HANDLE_DEL:
             obj, _ = args
             if str(obj.____id_pack__[0]) in {'numpy', 'numpy.dtype'}:
-                """
-                # we have this cached, but a deletion is requested, remove the from cache
-                self._static_cache.pop(obj.____id_pack__, None)
-                """
                 if obj.____id_pack__ in self._static_cache:
                     # object is cached by us, so ignore the request or remote end dies and cache is suddenly stale;
                     # we shouldn't remove item from cache as it would reduce performance
