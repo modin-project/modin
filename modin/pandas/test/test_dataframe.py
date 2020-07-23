@@ -5777,6 +5777,15 @@ class TestDataFrameJoinSort:
                 )
                 df_equals(modin_result, pandas_result)
 
+        # Test for issue #1771
+        modin_df = pd.DataFrame({"name": np.arange(40)})
+        modin_df2 = pd.DataFrame({"name": [39], "position": [0]})
+        pandas_df = pandas.DataFrame({"name": np.arange(40)})
+        pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
+        modin_result = modin_df.merge(modin_df2, on="name", how="inner")
+        pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
+        df_equals(modin_result, pandas_result)
+
         frame_data = {
             "col1": [0, 1, 2, 3],
             "col2": [4, 5, 6, 7],
