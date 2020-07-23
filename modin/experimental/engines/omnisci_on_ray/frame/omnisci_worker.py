@@ -15,7 +15,8 @@ import uuid
 import os
 import sys
 
-import pyarrow
+import pyarrow as pa
+import numpy as np
 
 prev = sys.getdlopenflags()
 sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
@@ -74,16 +75,29 @@ class OmnisciServer:
         # https://github.com/modin-project/modin/issues/1738
         schema = table.schema
         new_schema = schema
-        has_dicts = False
+        need_cast = False
+        new_cols = {}
         for i, field in enumerate(schema):
-            if pyarrow.types.is_dictionary(field.type):
-                has_dicts = True
-                new_field = pyarrow.field(
-                    field.name, field.type.value_type, field.nullable, field.metadata
+            if pa.types.is_dictionary(field.type):
+                # Conversion for dictionary of null type to string is not supported
+                # in Arrow. Build new column for this case for now.
+                if pa.types.is_null(field.type.value_type):
+                    mask_vals = np.full(table.num_rows, True, dtype=bool)
+                    mask = pa.array(mask_vals)
+                    new_col_data = np.empty(table.num_rows, dtype=str)
+                    new_col = pa.array(new_col_data, pa.string(), mask)
+                    new_cols[i] = new_col
+                else:
+                    need_cast = True
+                new_field = pa.field(
+                    field.name, pa.string(), field.nullable, field.metadata
                 )
                 new_schema = new_schema.set(i, new_field)
 
-        if has_dicts:
+        for i, col in new_cols.items():
+            table = table.set_column(i, new_schema[i], col)
+
+        if need_cast:
             table = table.cast(new_schema)
 
         cls._server.consumeArrowTable(name, table)
@@ -92,4 +106,4 @@ class OmnisciServer:
 
     @classmethod
     def put_pandas_to_omnisci(cls, df, name=None):
-        return cls.put_arrow_to_omnisci(pyarrow.Table.from_pandas(df))
+        return cls.put_arrow_to_omnisci(pa.Table.from_pandas(df))

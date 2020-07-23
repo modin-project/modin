@@ -138,6 +138,35 @@ class TestCSV:
             rm = rm["CRIM"].fillna(1000)
             df_equals(rp, rm)
 
+    @pytest.mark.parametrize("null_dtype", ["category", "float64"])
+    def test_null_col(self, null_dtype):
+        csv_file = os.path.join(
+            self.root, "modin/pandas/test/data", "test_null_col.csv"
+        )
+        ref = pd.read_csv(
+            csv_file,
+            names=["a", "b", "c"],
+            dtype={"a": "int64", "b": "int64", "c": null_dtype},
+            skiprows=1,
+        )
+        ref["a"] = ref["a"] + ref["b"]
+
+        exp = mpd.read_csv(
+            csv_file,
+            names=["a", "b", "c"],
+            dtype={"a": "int64", "b": "int64", "c": null_dtype},
+            skiprows=1,
+        )
+        exp["a"] = exp["a"] + exp["b"]
+
+        # df_equals cannot compare empty categories
+        if null_dtype == "category":
+            ref["c"] = ref["c"].astype("string")
+            exp = to_pandas(exp)
+            exp["c"] = exp["c"].astype("string")
+
+        df_equals(ref, exp)
+
 
 class TestMasks:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
