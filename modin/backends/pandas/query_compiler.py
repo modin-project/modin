@@ -2029,6 +2029,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
+        # we want to copy it to not propagate these changes into source dict, in case
+        # of unsuccessful end of function
+        groupby_args = groupby_args.copy()
+
         as_index = groupby_args.get("as_index", True)
 
         def groupby_agg_builder(df):
