@@ -95,17 +95,26 @@ _KNOWN_DUALS = {}
 
 
 def make_wrapped_class(local_cls, rpyc_wrapper_name):
-    def __new__(cls, *a, **kw):
-        if cls is local_cls and cls.__real_cls__ is not local_cls:
-            return cls.__real_cls__(*a, **kw)
-        return super().__new__(cls)
-
     namespace = {
         "__real_cls__": None,
-        "__new__": __new__,
+        "__new__": None,
         "__module__": local_cls.__module__,
     }
     result = MetaComparer(local_cls.__name__, (local_cls,), namespace)
+
+    def make_new(__class__):
+        """
+        Define a __new__() with a __class__ that is closure-bound, needed for super() to work
+        """
+
+        def __new__(cls, *a, **kw):
+            if cls is result and cls.__real_cls__ is not result:
+                return cls.__real_cls__(*a, **kw)
+            return super().__new__(cls)
+
+        __class__.__new__ = __new__
+
+    make_new(result)
     setattr(sys.modules[local_cls.__module__], local_cls.__name__, result)
     _KNOWN_DUALS[local_cls] = result
 
@@ -113,7 +122,7 @@ def make_wrapped_class(local_cls, rpyc_wrapper_name):
         if execution_engine.get() == "Cloudray":
             from . import rpyc_proxy
 
-            result.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)()
+            result.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)(result)
         else:
             result.__real_cls__ = result
 
