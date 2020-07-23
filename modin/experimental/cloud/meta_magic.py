@@ -15,7 +15,7 @@ import sys
 import inspect
 import types
 
-_SPECIAL = frozenset(("__new__", "__dict__"))
+_LOCAL_ATTRS = frozenset(("__new__", "__dict__"))
 _WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
 
 
@@ -60,7 +60,7 @@ class RemoteMeta(MetaComparer):
     """
 
     def __getattribute__(self, name):
-        if name in _SPECIAL:
+        if name in _LOCAL_ATTRS:
             # never proxy special attributes, always get them from the class type
             res = object.__getattribute__(self, name)
         else:

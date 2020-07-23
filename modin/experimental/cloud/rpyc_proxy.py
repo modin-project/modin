@@ -15,7 +15,7 @@ from rpyc.utils.classic import deliver
 import rpyc
 
 from . import get_connection
-from .meta_magic import _SPECIAL, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
+from .meta_magic import _LOCAL_ATTRS, _WRAP_ATTRS, RemoteMeta, _KNOWN_DUALS
 
 
 class WrappingConnection(rpyc.Connection):
@@ -58,9 +58,12 @@ class WrappingService(rpyc.ClassicService):
     _protocol = WrappingConnection
 
 
-_SPECIAL_ATTRS = frozenset(["__name__", "__remote_end__"])
+_PROXY_LOCAL_ATTRS = frozenset(["__name__", "__remote_end__"])
 _NO_OVERRIDE = (
-    _SPECIAL | _SPECIAL_ATTRS | frozenset(_WRAP_ATTRS) | rpyc.core.netref.LOCAL_ATTRS
+    _LOCAL_ATTRS
+    | _PROXY_LOCAL_ATTRS
+    | frozenset(_WRAP_ATTRS)
+    | rpyc.core.netref.LOCAL_ATTRS
 )
 
 
@@ -114,7 +117,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
         if override.__setattr__ == object.__setattr__:
             # no custom attribute setting, define our own relaying to remote end
             def __setattr__(self, name, value):
-                if name not in _SPECIAL_ATTRS:
+                if name not in _PROXY_LOCAL_ATTRS:
                     setattr(self.__remote_end__, name, value)
                 else:
                     object.__setattr__(self, name, value)
@@ -122,7 +125,7 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
         if override.__delattr__ == object.__delattr__:
             # no custom __delattr__, define our own
             def __delattr__(self, name):
-                if name not in _SPECIAL_ATTRS:
+                if name not in _PROXY_LOCAL_ATTRS:
                     delattr(self.__remote_end__, name)
 
     class Wrapped(origin_cls, metaclass=RemoteMeta):

@@ -24,9 +24,9 @@ from modin.experimental.cloud import create_cluster, get_connection
 from mortgage import run_benchmark
 from mortgage.mortgage_pandas import etl_pandas
 
-cl = create_cluster("aws", "aws_credentials", cluster_name="rayscale-test")
+test_cluster = create_cluster("aws", "aws_credentials", cluster_name="rayscale-test")
 
-with cl:
+with test_cluster:
     conn = get_connection()
     np = conn.modules["numpy"]
     etl_pandas.__globals__["np"] = np
