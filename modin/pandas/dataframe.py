@@ -1491,57 +1491,8 @@ class DataFrame(BasePandasDataset):
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
 
-        if how in ["left", "inner"] and left_index is False and right_index is False:
-            result = self.__constructor__(
-                query_compiler=self._query_compiler.merge(
-                    right._query_compiler,
-                    how=how,
-                    on=on,
-                    left_on=left_on,
-                    right_on=right_on,
-                    left_index=left_index,
-                    right_index=right_index,
-                    sort=sort,
-                    suffixes=suffixes,
-                    copy=copy,
-                    indicator=indicator,
-                    validate=validate,
-                )
-            )
-
-            is_reset_index = True
-            if left_on and right_on:
-                left_on = left_on if is_list_like(left_on) else [left_on]
-                right_on = right_on if is_list_like(right_on) else [right_on]
-                is_reset_index = (
-                    False
-                    if any(o in self.index.names for o in left_on)
-                    and any(o in right.index.names for o in right_on)
-                    else True
-                )
-                if sort:
-                    result = (
-                        result.sort_values(left_on.append(right_on))
-                        if is_reset_index
-                        else result.sort_index(axis=0, level=left_on.append(right_on))
-                    )
-            if on:
-                on = on if is_list_like(on) else [on]
-                is_reset_index = not any(
-                    o in self.index.names and o in right.index.names for o in on
-                )
-                if sort:
-                    result = (
-                        result.sort_values(on)
-                        if is_reset_index
-                        else result.sort_index(axis=0, level=on)
-                    )
-
-            return result.reset_index(drop=True) if is_reset_index else result
-
         return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.DataFrame.merge,
+            query_compiler=self._query_compiler.merge(
                 right._query_compiler,
                 how=how,
                 on=on,

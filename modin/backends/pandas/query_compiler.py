@@ -388,16 +388,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
         -----
         See pd.merge or pd.DataFrame.merge for more info on kwargs.
         """
-        right = right.to_pandas()
+        how = kwargs.get("how", "inner")
+        on = kwargs.get("on", None)
+        left_on = kwargs.get("left_on", None)
+        right_on = kwargs.get("right_on", None)
+        left_index = kwargs.get("left_index", False)
+        right_index = kwargs.get("right_index", False)
+        sort = kwargs.get("sort", False)
 
-        sort = kwargs.get("sort")
-        kwargs["sort"] = not sort if sort else sort
+        if how in ["left", "inner"] and left_index is False and right_index is False:
+            right = right.to_pandas()
 
-        def map_func(left, right=right, kwargs=kwargs):
-            return pandas.merge(left, right, **kwargs)
+            kwargs["sort"] = False
 
-        new_modin_frame = self._modin_frame._apply_full_axis(1, map_func)
-        return self.__constructor__(new_modin_frame)
+            def map_func(left, right=right, kwargs=kwargs):
+                return pandas.merge(left, right, **kwargs)
+
+            new_self = self.__constructor__(
+                self._modin_frame._apply_full_axis(1, map_func)
+            )
+            is_reset_index = True
+            if left_on and right_on:
+                left_on = left_on if is_list_like(left_on) else [left_on]
+                right_on = right_on if is_list_like(right_on) else [right_on]
+                is_reset_index = (
+                    False
+                    if any(o in new_self.index.names for o in left_on)
+                    and any(o in right.index.names for o in right_on)
+                    else True
+                )
+                if sort:
+                    new_self = (
+                        new_self.sort_rows_by_column_values(left_on.append(right_on))
+                        if is_reset_index
+                        else new_self.sort_index(axis=0, level=left_on.append(right_on))
+                    )
+            if on:
+                on = on if is_list_like(on) else [on]
+                is_reset_index = not any(
+                    o in new_self.index.names and o in right.index.names for o in on
+                )
+                if sort:
+                    new_self = (
+                        new_self.sort_rows_by_column_values(on)
+                        if is_reset_index
+                        else new_self.sort_index(axis=0, level=on)
+                    )
+            return new_self.reset_index(drop=True) if is_reset_index else new_self
+        else:
+            return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
     # END Inter-Data operations
 
@@ -1363,6 +1402,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             QueryCompiler containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
+        level = kwargs.pop("level", None)
+        sort_remaining = kwargs.pop("sort_remaining", True)
+        kwargs["inplace"] = False
+
+        if level is not None or (
+            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
+            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
+        ):
+            return self.default_to_pandas(
+                pandas.DataFrame.sort_index,
+                level=level,
+                sort_remaining=sort_remaining,
+                **kwargs
+            )
+
         # sort_index can have ascending be None and behaves as if it is False.
         # sort_values cannot have ascending be None. Thus, the following logic is to
         # convert the ascending argument to one that works with sort_values
@@ -1378,7 +1432,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = self.columns
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis,
-            lambda df: df.sort_index(axis=axis, **kwargs),
+            lambda df: df.sort_index(
+                axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
+            ),
             new_index,
             new_columns,
             dtypes="copy" if axis == 0 else None,
