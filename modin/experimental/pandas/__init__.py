@@ -15,7 +15,7 @@ import os
 
 os.environ["MODIN_EXPERIMENTAL"] = "True"
 
-from .numpy_wrap import _CAUGHT_NUMPY # noqa F401
+from .numpy_wrap import _CAUGHT_NUMPY  # noqa F401
 from modin.pandas import *  # noqa F401, F403
 from .io_exp import read_sql  # noqa F401
 import warnings
