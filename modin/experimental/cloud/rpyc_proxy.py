@@ -54,12 +54,12 @@ class WrappingConnection(rpyc.Connection):
 
         self.logLock = threading.RLock()
         self.timings = {}
-        with open('rpyc-trace.log', 'a') as out:
-            out.write(f'------------[new trace at {time.asctime()}]----------\n')
-        self.logfiles = set(['rpyc-trace.log'])
-
+        with open("rpyc-trace.log", "a") as out:
+            out.write(f"------------[new trace at {time.asctime()}]----------\n")
+        self.logfiles = set(["rpyc-trace.log"])
 
     def _send(self, msg, seq, args):
+        """tracing only"""
         str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
         if msg == consts.MSG_REQUEST:
             handler, _ = args
@@ -68,12 +68,15 @@ class WrappingConnection(rpyc.Connection):
             str_handler = ""
         with self.logLock:
             for logfile in self.logfiles:
-                with open(logfile, 'a') as out:
-                    out.write(f"send:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
+                with open(logfile, "a") as out:
+                    out.write(
+                        f"send:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n"
+                    )
         self.timings[seq] = time.time()
         return super()._send(msg, seq, args)
 
     def _dispatch(self, data):
+        """tracing only"""
         got1 = time.time()
         try:
             return super()._dispatch(data)
@@ -89,8 +92,10 @@ class WrappingConnection(rpyc.Connection):
             str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
             with self.logLock:
                 for logfile in self.logfiles:
-                    with open(logfile, 'a') as out:
-                        out.write(f"recv:timing={got1 - sent}+{got2 - got1}:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n")
+                    with open(logfile, "a") as out:
+                        out.write(
+                            f"recv:timing={got1 - sent}+{got2 - got1}:msg={_msg_to_name['MSG'][msg]}:seq={seq}{str_handler}:args={str_args}\n"
+                        )
 
     def __wrap(self, local_obj):
         while True:
@@ -274,15 +279,20 @@ class WrappingConnection(rpyc.Connection):
         def __init__(self, conn, logname):
             self.conn = conn
             self.logname = logname
+
         def __enter__(self):
             with self.conn.logLock:
                 self.conn.logfiles.add(self.logname)
-                with open(self.logname, 'a') as out:
-                    out.write(f'------------[new trace at {time.asctime()}]----------\n')
+                with open(self.logname, "a") as out:
+                    out.write(
+                        f"------------[new trace at {time.asctime()}]----------\n"
+                    )
             return self
+
         def __exit__(self, *a, **kw):
             with self.conn.logLock:
                 self.conn.logfiles.remove(self.logname)
+
     def _logmore(self, logname):
         return self._Logger(self, logname)
 
