@@ -1199,6 +1199,10 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def pivot(self, index, columns, values):
+        pass
+
+    @abc.abstractmethod
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
 

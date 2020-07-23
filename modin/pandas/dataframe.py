@@ -1712,8 +1712,27 @@ class DataFrame(BasePandasDataset):
             )
 
     def pivot(self, index=None, columns=None, values=None):
-        return self._default_to_pandas(
-            pandas.DataFrame.pivot, index=index, columns=columns, values=values
+        """
+        Return reshaped DataFrame organized by given index / column values.
+        Reshape data (produce a "pivot" table) based on column values. Uses
+        unique values from specified `index` / `columns` to form axes of the
+        resulting DataFrame.
+        Parameters
+        ----------
+        index : str or object, optional
+            Column to use to make new frame's index. If None, uses
+            existing index.
+        columns : str or object
+            Column to use to make new frame's columns.
+        values : str, object or a list of the previous, optional
+            Column(s) to use for populating new frame's values. If not
+            specified, all remaining columns will be used and the result will
+            have hierarchically indexed columns.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pivot(
+                index=index, columns=columns, values=values
+            )
         )
 
     def pivot_table(

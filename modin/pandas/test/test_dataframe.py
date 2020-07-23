@@ -2494,17 +2494,23 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).pct_change()
 
-    def test_pivot(self):
-        df = pd.DataFrame(
-            {
-                "foo": ["one", "one", "one", "two", "two", "two"],
-                "bar": ["A", "B", "C", "A", "B", "C"],
-                "baz": [1, 2, 3, 4, 5, 6],
-                "zoo": ["x", "y", "z", "q", "w", "t"],
-            }
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "index", [lambda df: df.columns[0], lambda df: df[df.columns[0]].values, None]
+    )
+    @pytest.mark.parametrize("columns", [lambda df: df.columns[len(df.columns) // 2]])
+    @pytest.mark.parametrize(
+        "values", [lambda df: df.columns[-1], lambda df: df.columns[-2:], None]
+    )
+    def test_pivot(self, data, index, columns, values):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
+            index=index,
+            columns=columns,
+            values=values,
+            check_exception_type=None,
         )
-        with pytest.warns(UserWarning):
-            df.pivot(index="foo", columns="bar", values="baz")
 
     def test_pivot_table(self):
         df = pd.DataFrame(

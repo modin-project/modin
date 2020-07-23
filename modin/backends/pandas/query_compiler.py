@@ -2236,6 +2236,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Manual Partitioning methods
 
+    def pivot(self, index, columns, values):
+        from pandas.core.reshape.pivot import _convert_by
+
+        def __convert_by(by):
+            if isinstance(by, pandas.Index):
+                by = list(by)
+            by = _convert_by(by)
+            if (
+                len(by) > 0
+                and (not is_list_like(by[0]) or isinstance(by[0], tuple))
+                and not all([key in self.columns for key in by])
+            ):
+                by = [by]
+            return by
+
+        index, columns, values = map(__convert_by, [index, columns, values])
+        is_custom_index = (
+            len(index) == 1
+            and is_list_like(index[0])
+            and not isinstance(index[0], tuple)
+        )
+
+        if is_custom_index or len(index) == 0:
+            to_reindex = columns
+        else:
+            to_reindex = index + columns
+
+        if len(values) != 0:
+            obj = self.getitem_column_array(to_reindex + values)
+        else:
+            obj = self
+
+        if is_custom_index:
+            obj.index = index
+
+        reindexed = self.__constructor__(
+            obj._modin_frame._apply_full_axis(
+                1,
+                lambda df: df.set_index(to_reindex, append=(len(to_reindex) == 1)),
+                new_columns=obj.columns.drop(to_reindex),
+            )
+        )
+
+        unstacked = reindexed.unstack(level=columns, fill_value=None)
+        if len(reindexed.columns) == 1 and unstacked.columns.nlevels > 1:
+            unstacked.columns = unstacked.columns.droplevel(0)
+
+        return unstacked
+
     # Get_dummies
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
