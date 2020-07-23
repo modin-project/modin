@@ -20,10 +20,20 @@ except ImportError:
     pass
 else:
     import types
-    import threading
     import collections
     import copyreg
     from modin import execution_engine
+    import modin
+    import pandas
+    import os
+    _EXCLUDE_MODULES = [modin, pandas]
+    try:
+        import rpyc
+    except ImportError:
+        pass
+    else:
+        _EXCLUDE_MODULES.append(rpyc)
+    _EXCLUDE_PATHS = tuple(os.path.dirname(mod.__file__) + os.sep for mod in _EXCLUDE_MODULES)
     class InterceptedNumpy(types.ModuleType):
         __own_attrs__ = set(['__own_attrs__'])
 
@@ -31,8 +41,6 @@ else:
         __current_numpy = real_numpy
         __prev_numpy = real_numpy
         __has_to_warn = not _CAUGHT_NUMPY
-        __recursive_guard = threading.local()
-        __recursive_guard.callers = collections.defaultdict(set)
         __reducers = {}
 
         def __init__(self):
@@ -51,16 +59,6 @@ else:
                 self.__swap_numpy(get_connection().modules['numpy'])
             else:
                 self.__swap_numpy()
-        def __guarded_call(self, func, name, *args):
-            guard = self.__recursive_guard.callers[func.__name__]
-            if name in guard:
-                # recursive call, call against the real numpy
-                return func(real_numpy, name, *args)
-            guard.add(name)
-            try:
-                return func(self.__current_numpy, name, *args)
-            finally:
-                guard.remove(name)
         def __make_reducer(self, name):
             try:
                 reducer = self.__reducers[name]
@@ -69,8 +67,19 @@ else:
                     return (getattr(self.__current_numpy, obj_name),) + real_obj_reducer(obj)[1:]
                 self.__reducers[name] = reducer
             return reducer
+        def __get_numpy(self):
+            frame = sys._getframe()
+            try:
+                caller_file = frame.f_back.f_back.f_code.co_filename
+            except AttributeError:
+                return self.__current_numpy
+            finally:
+                del frame
+            if any(caller_file.startswith(p) for p in _EXCLUDE_PATHS):
+                return real_numpy
+            return self.__current_numpy
         def __getattr__(self, name):
-            obj = self.__guarded_call(getattr, name)
+            obj = getattr(self.__get_numpy(), name)
             if isinstance(obj, type):
                 copyreg.pickle(obj, self.__make_reducer(name))
             return obj
@@ -78,10 +87,9 @@ else:
             if name in self.__own_attrs__:
                 super().__setattr__(name, value)
             else:
-                return self.__guarded_call(setattr, name, value)
+                setattr(self.__get_numpy(), name, value)
         def __delattr__(self, name):
             if name not in self.__own_attrs__:
-                return getattr(real_numpy, name)
-            return self.__guarded_call(delattr, name)
+                delattr(self.__get_numpy(), name)
     sys.modules['numpy'] = InterceptedNumpy()
     
