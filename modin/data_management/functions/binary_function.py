@@ -39,6 +39,7 @@ class BinaryFunction(Function):
                             axis,
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
+                            preserve_labels=call_kwds.get("preserve_labels", False),
                         )
                     )
                 else:

@@ -295,7 +295,7 @@ class DataFrameGroupBy(object):
                 and all(c in self._columns for c in self._by.columns)
                 and self._drop
             ):
-                key = [key] + list(self._by.columns)
+                key = list(self._by.columns) + [key]
             else:
                 key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):

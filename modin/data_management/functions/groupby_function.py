@@ -115,19 +115,9 @@ class GroupbyReduceFunction(MapReduceFunction):
                 except ValueError:
                     return compute_reduce(df.copy())
 
-            if axis == 0:
-                new_columns = qc.columns
-                new_index = None
-            else:
-                new_index = query_compiler.index
-                new_columns = None
+            # TODO: try to precompute `new_index` and `new_columns`
             new_modin_frame = qc._modin_frame.groupby_reduce(
-                axis,
-                by._modin_frame,
-                _map,
-                _reduce,
-                new_columns=new_columns,
-                new_index=new_index,
+                axis, by._modin_frame, _map, _reduce
             )
             return query_compiler.__constructor__(new_modin_frame)
 
