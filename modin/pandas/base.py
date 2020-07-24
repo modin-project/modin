@@ -3592,9 +3592,11 @@ class BasePandasDataset(object):
 
                 return default_handler
         return object.__getattribute__(self, item)
-    
-if os.environ.get('MODIN_EXPERIMENTAL', "").title() == 'True':
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
     from modin.experimental.cloud.meta_magic import make_wrapped_class
+
     make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
 
 

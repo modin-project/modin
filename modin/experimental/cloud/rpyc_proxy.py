@@ -105,7 +105,6 @@ _PROXY_LOCAL_ATTRS = frozenset(["__name__", "__remote_end__"])
 _NO_OVERRIDE = (
     _LOCAL_ATTRS
     | _PROXY_LOCAL_ATTRS
-
     | rpyc.core.netref.DELETED_ATTRS
     | frozenset(["__getattribute__"])
     | _EMPTY_CLASS_ATTRS
@@ -204,10 +203,10 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
             4) check if type(self).__dict__[name] exists
             5) pass through to remote end
             """
-            dct = object.__getattribute__(self, '__dict__')
-            if name == '__dict__':
+            dct = object.__getattribute__(self, "__dict__")
+            if name == "__dict__":
                 return dct
-            cls_dct = object.__getattribute__(type(self), '__dict__')
+            cls_dct = object.__getattribute__(type(self), "__dict__")
             try:
                 cls_attr, has_cls_attr = cls_dct[name], True
             except KeyError:
@@ -215,10 +214,10 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
             else:
                 oget = None
                 try:
-                    oget = object.__getattribute__(cls_attr, '__get__')
-                    object.__getattribute__(cls_attr, '__set__')
+                    oget = object.__getattribute__(cls_attr, "__get__")
+                    object.__getattribute__(cls_attr, "__set__")
                 except AttributeError:
-                    pass # not a get/set data descriptor, go next
+                    pass  # not a get/set data descriptor, go next
                 else:
                     return oget(self, type(self))
             # type(self).name is not a get/set data descriptor
@@ -231,10 +230,10 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
                     if oget:
                         # this attribute is a get data descriptor
                         return oget(self, type(self))
-                    return cls_attr # not a data descriptor whatsoever
+                    return cls_attr  # not a data descriptor whatsoever
 
             # this instance/class does not have this attribute, pass it through to remote end
-            return getattr(dct['__remote_end__'], name)
+            return getattr(dct["__remote_end__"], name)
 
         if override.__setattr__ == object.__setattr__:
             # no custom attribute setting, define our own relaying to remote end

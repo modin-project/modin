@@ -19,6 +19,7 @@ from modin import execution_engine
 
 _LOCAL_ATTRS = frozenset(("__new__", "__dict__", "__wrapper_remote__"))
 
+
 class RemoteMeta(type):
     """
     Metaclass that relays getting non-existing attributes from
@@ -26,6 +27,7 @@ class RemoteMeta(type):
 
     Attributes existing on a proxying object are retrieved locally.
     """
+
     @property
     def __signature__(self):
         """
@@ -40,20 +42,6 @@ class RemoteMeta(type):
         # So we make a method bound to class type (it would normally be bound to instance)
         # and pass that to .signature()
         return inspect.signature(types.MethodType(self.__init__, self))
-
-    '''
-    def __instancecheck__(self, instance):
-        # see if self is a type that has __real_cls__ defined,
-        # as if it's a dual-nature class we need to use its internal class to compare
-        my_cls = self.__dict__.get("__real_cls__", self)
-        try:
-            # see if it's a proxying wrapper, in which case
-            # use wrapped local class as a comparison base
-            my_cls = object.__getattribute__(my_cls, "__wrapper_local__")
-        except AttributeError:
-            pass
-        return issubclass(instance.__class__, my_cls)
-    '''
 
     def __getattribute__(self, name):
         if name in _LOCAL_ATTRS:
@@ -71,7 +59,10 @@ class RemoteMeta(type):
                     res = object.__getattribute__(self, name)
                 except AttributeError:
                     try:
-                        remote = object.__getattribute__(object.__getattribute__(self, '__real_cls__'), '__wrapper_remote__')
+                        remote = object.__getattribute__(
+                            object.__getattribute__(self, "__real_cls__"),
+                            "__wrapper_remote__",
+                        )
                     except AttributeError:
                         # running in local mode, fall back
                         res = super().__getattribute__(name)
