@@ -38,14 +38,9 @@ class ModinDistribution(Distribution):
 
 
 dask_deps = ["dask>=2.1.0", "distributed>=2.3.2"]
-ray_deps = ["ray==0.8.5", "pyarrow<0.17"]
-if "SETUP_PLAT_NAME" in os.environ:
-    if "win" in os.environ["SETUP_PLAT_NAME"]:
-        all_deps = dask_deps
-    else:
-        all_deps = dask_deps + ray_deps
-else:
-    all_deps = dask_deps if os.name == "nt" else dask_deps + ray_deps
+ray_deps = ["ray==0.8.6", "pyarrow<0.17"]
+
+all_deps = dask_deps + ray_deps
 
 setup(
     name="modin",
@@ -58,7 +53,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.0.3", "packaging"],
+    install_requires=["pandas==1.0.5", "packaging"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,

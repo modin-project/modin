@@ -11,20 +11,23 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from distributed.client import _get_global_client
+from .base import ClusterError, CannotSpawnCluster, CannotDestroyCluster
+from .cluster import Provider, create as create_cluster
+from .connection import Connection
 
 
-class DaskTask:
-    @classmethod
-    def deploy(cls, func, num_return_vals, kwargs):
-        client = _get_global_client()
-        remote_task_future = client.submit(func, **kwargs)
-        return [
-            client.submit(lambda l, i: l[i], remote_task_future, i)
-            for i in range(num_return_vals)
-        ]
+def get_connection():
+    """
+    Returns an RPyC connection object to execute Python code remotely on the active cluster.
+    """
+    return Connection.get()
 
-    @classmethod
-    def materialize(cls, future):
-        client = _get_global_client()
-        return client.gather(future)
+
+__all__ = [
+    "ClusterError",
+    "CannotSpawnCluster",
+    "CannotDestroyCluster",
+    "Provider",
+    "create_cluster",
+    "get_connection",
+]

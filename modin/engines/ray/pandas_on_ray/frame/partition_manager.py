@@ -20,28 +20,27 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
 
-if __execution_engine__ == "Ray":
-    import ray
+import ray
 
-    @ray.remote
-    def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
-        if call_queue_df is not None and len(call_queue_df) > 0:
-            for call, kwargs in call_queue_df:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                df = call(df, **kwargs)
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, ray.ObjectID):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectID):
-                    kwargs = ray.get(kwargs)
-                other = call(other, **kwargs)
-        return apply_func(df, other)
+
+@ray.remote
+def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, ray.ObjectID):
+                call = ray.get(call)
+            if isinstance(kwargs, ray.ObjectID):
+                kwargs = ray.get(kwargs)
+            df = call(df, **kwargs)
+    if call_queue_other is not None and len(call_queue_other) > 0:
+        for call, kwargs in call_queue_other:
+            if isinstance(call, ray.ObjectID):
+                call = ray.get(call)
+            if isinstance(kwargs, ray.ObjectID):
+                kwargs = ray.get(kwargs)
+            other = call(other, **kwargs)
+    return apply_func(df, other)
 
 
 from tqdm import tqdm_notebook
@@ -61,20 +60,28 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
-        """This gets the internal indices stored in the partitions.
+        """
+        This gets the internal indices stored in the partitions.
 
-        Note: These are the global indices of the object. This is mostly useful
-            when you have deleted rows/columns internally, but do not know
-            which ones were deleted.
+        Parameters
+        ----------
+            axis : 0 or 1
+                This axis to extract the labels (0 - index, 1 - columns).
+            partitions : NumPy array
+                The array of partitions from which need to extract the labels.
+            index_func : callable
+                The function to be used to extract the function.
 
-        Args:
-            axis: This axis to extract the labels. (0 - index, 1 - columns).
-            index_func: The function to be used to extract the function.
-            old_blocks: An optional previous object that this object was
-                created from. This is used to compute the correct offsets.
-
-        Returns:
+        Returns
+        -------
+        Index
             A Pandas Index object.
+
+        Notes
+        -----
+        These are the global indices of the object. This is mostly useful
+        when you have deleted rows/columns internally, but do not know
+        which ones were deleted.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)

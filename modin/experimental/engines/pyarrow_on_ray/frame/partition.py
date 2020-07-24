@@ -13,11 +13,9 @@
 
 import pandas
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
-from modin import __execution_engine__
 
-if __execution_engine__ == "Ray":
-    import ray
-    import pyarrow
+import ray
+import pyarrow
 
 
 class PyarrowOnRayFramePartition(PandasOnRayFramePartition):

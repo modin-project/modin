@@ -581,10 +581,7 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
-            if axis == 1:
-                kwds["axis"] = axis
-            result = self._string_function(func, *args, **kwds)
-            # Sometimes we can return a scalar here
+            result = self._query_compiler.apply(func, axis=axis, *args, **kwds)
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result
@@ -1477,17 +1474,20 @@ class BasePandasDataset(object):
         Returns:
             kurtosis : Series or DataFrame (if level specified)
         """
+        axis = self._get_axis_number(axis)
         if level is not None:
-            return self._default_to_pandas(
-                "kurt",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
+            func_kwargs = {
+                "skipna": skipna,
+                "level": level,
+                "numeric_only": numeric_only,
+            }
+
+            return self.__constructor__(
+                query_compiler=self._query_compiler._apply_text_func_elementwise(
+                    "kurt", axis, **func_kwargs
+                )
             )
 
-        axis = self._get_axis_number(axis)
         if numeric_only:
             self._validate_dtypes(numeric_only=True)
         return self._reduce_dimension(
@@ -2201,9 +2201,54 @@ class BasePandasDataset(object):
         on=None,
         level=None,
     ):
-        return self._default_to_pandas(
-            "resample",
-            rule,
+        """
+        Resample time-series data.
+        Convenience method for frequency conversion and resampling of time
+        series. Object must have a datetime-like index (`DatetimeIndex`,
+        `PeriodIndex`, or `TimedeltaIndex`), or pass datetime-like values
+        to the `on` or `level` keyword.
+        Parameters
+        ----------
+        rule : DateOffset, Timedelta or str
+            The offset string or object representing target conversion.
+        axis : {0 or 'index', 1 or 'columns'}, default 0
+            Which axis to use for up- or down-sampling. For `Series` this
+            will default to 0, i.e. along the rows. Must be
+            `DatetimeIndex`, `TimedeltaIndex` or `PeriodIndex`.
+        closed : {'right', 'left'}, default None
+            Which side of bin interval is closed. The default is 'left'
+            for all frequency offsets except for 'M', 'A', 'Q', 'BM',
+            'BA', 'BQ', and 'W' which all have a default of 'right'.
+        label : {'right', 'left'}, default None
+            Which bin edge label to label bucket with. The default is 'left'
+            for all frequency offsets except for 'M', 'A', 'Q', 'BM',
+            'BA', 'BQ', and 'W' which all have a default of 'right'.
+        convention : {'start', 'end', 's', 'e'}, default 'start'
+            For `PeriodIndex` only, controls whether to use the start or
+            end of `rule`.
+        kind : {'timestamp', 'period'}, optional, default None
+            Pass 'timestamp' to convert the resulting index to a
+            `DateTimeIndex` or 'period' to convert it to a `PeriodIndex`.
+            By default the input representation is retained.
+        loffset : timedelta, default None
+            Adjust the resampled time labels.
+        base : int, default 0
+            For frequencies that evenly subdivide 1 day, the "origin" of the
+            aggregated intervals. For example, for '5min' frequency, base could
+            range from 0 through 4. Defaults to 0.
+        on : str, optional
+            For a DataFrame, column to use instead of index for resampling.
+            Column must be datetime-like.
+        level : str or int, optional
+            For a MultiIndex, level (name or number) to use for
+            resampling. `level` must be datetime-like.
+        Returns
+        -------
+        Resampler object
+        """
+        return Resampler(
+            self,
+            rule=rule,
             axis=axis,
             closed=closed,
             label=label,
@@ -2295,9 +2340,62 @@ class BasePandasDataset(object):
         axis=0,
         closed=None,
     ):
-        return self._default_to_pandas(
-            "rolling",
-            window,
+        """
+        Provide rolling window calculations.
+
+        Parameters
+        ----------
+        window : int, offset, or BaseIndexer subclass
+            Size of the moving window. This is the number of observations used for
+            calculating the statistic. Each window will be a fixed size.
+            If its an offset then this will be the time period of each window. Each
+            window will be a variable sized based on the observations included in
+            the time-period. This is only valid for datetimelike indexes.
+            If a BaseIndexer subclass is passed, calculates the window boundaries
+            based on the defined ``get_window_bounds`` method. Additional rolling
+            keyword arguments, namely `min_periods`, `center`, and
+            `closed` will be passed to `get_window_bounds`.
+        min_periods : int, default None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). For a window that is specified by an offset,
+            `min_periods` will default to 1. Otherwise, `min_periods` will default
+            to the size of the window.
+        center : bool, default False
+            Set the labels at the center of the window.
+        win_type : str, default None
+            Provide a window type. If ``None``, all points are evenly weighted.
+            See the notes below for further information.
+        on : str, optional
+            For a DataFrame, a datetime-like column or MultiIndex level on which
+            to calculate the rolling window, rather than the DataFrame's index.
+            Provided integer column is ignored and excluded from result since
+            an integer index is not used to calculate the rolling window.
+        axis : int or str, default 0
+        closed : str, default None
+            Make the interval closed on the 'right', 'left', 'both' or
+            'neither' endpoints.
+            For offset-based windows, it defaults to 'right'.
+            For fixed windows, defaults to 'both'. Remaining cases not implemented
+            for fixed windows.
+        Returns
+        -------
+        a Window or Rolling sub-classed for the particular operation
+        """
+        if win_type is not None:
+            return Window(
+                self,
+                window=window,
+                min_periods=min_periods,
+                center=center,
+                win_type=win_type,
+                on=on,
+                axis=axis,
+                closed=closed,
+            )
+
+        return Rolling(
+            self,
+            window=window,
             min_periods=min_periods,
             center=center,
             win_type=win_type,
@@ -2487,7 +2585,7 @@ class BasePandasDataset(object):
             # random_state that is passed in
             if isinstance(random_state, int):
                 random_num_gen = np.random.RandomState(random_state)
-            elif isinstance(random_state, np.random.randomState):
+            elif isinstance(random_state, np.random.RandomState):
                 random_num_gen = random_state
             else:
                 # random_state must be an int or a numpy RandomState object
@@ -2679,9 +2777,6 @@ class BasePandasDataset(object):
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):
-        return self._default_to_pandas("slice_shift", periods=periods, axis=axis)
-
     def sort_index(
         self,
         axis=0,
@@ -2709,28 +2804,18 @@ class BasePandasDataset(object):
             A sorted DataFrame
         """
         axis = self._get_axis_number(axis)
-        if level is not None or (
-            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
-            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
-        ):
-            new_query_compiler = self._default_to_pandas(
-                "sort_index",
-                axis=axis,
-                level=level,
-                ascending=ascending,
-                inplace=False,
-                kind=kind,
-                na_position=na_position,
-                sort_remaining=sort_remaining,
-            )._query_compiler
-            return self._create_or_update_from_compiler(new_query_compiler, inplace)
+        inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.sort_index(
-            axis=axis, ascending=ascending, kind=kind, na_position=na_position
+            axis=axis,
+            level=level,
+            ascending=ascending,
+            inplace=inplace,
+            kind=kind,
+            na_position=na_position,
+            sort_remaining=sort_remaining,
+            ignore_index=ignore_index,
         )
-        if inplace:
-            self._update_inplace(new_query_compiler=new_query_compiler)
-        else:
-            return self.__constructor__(query_compiler=new_query_compiler)
+        return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def sort_values(
         self,
@@ -2756,38 +2841,24 @@ class BasePandasDataset(object):
              A sorted DataFrame.
         """
         axis = self._get_axis_number(axis)
-        if not is_list_like(by):
-            by = [by]
-        # Currently, sort_values will just reindex based on the sorted values.
-        # TODO create a more efficient way to sort
+        inplace = validate_bool_kwarg(inplace, "inplace")
         if axis == 0:
-            broadcast_value_dict = {col: self[col]._to_pandas() for col in by}
-            broadcast_values = pandas.DataFrame(broadcast_value_dict, index=self.index)
-            new_index = broadcast_values.sort_values(
-                by=by,
-                axis=axis,
+            result = self._query_compiler.sort_rows_by_column_values(
+                by,
                 ascending=ascending,
                 kind=kind,
                 na_position=na_position,
-            ).index
-            return self.reindex(index=new_index, copy=not inplace)
-        else:
-            broadcast_value_list = [
-                self[row :: len(self.index)]._to_pandas() for row in by
-            ]
-            index_builder = list(zip(broadcast_value_list, by))
-            broadcast_values = pandas.concat(
-                [row for row, idx in index_builder], copy=False
+                ignore_index=ignore_index,
             )
-            broadcast_values.columns = self.columns
-            new_columns = broadcast_values.sort_values(
-                by=by,
-                axis=axis,
+        else:
+            result = self._query_compiler.sort_columns_by_row_values(
+                by,
                 ascending=ascending,
                 kind=kind,
                 na_position=na_position,
-            ).columns
-            return self.reindex(columns=new_columns, copy=not inplace)
+                ignore_index=ignore_index,
+            )
+        return self._create_or_update_from_compiler(result, inplace)
 
     def std(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
@@ -3518,3 +3589,537 @@ class BasePandasDataset(object):
 
                 return default_handler
         return object.__getattribute__(self, item)
+
+
+class Resampler(object):
+    def __init__(
+        self,
+        dataframe,
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base=0,
+        on=None,
+        level=None,
+    ):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.resample_args = [
+            rule,
+            axis,
+            closed,
+            label,
+            convention,
+            kind,
+            loffset,
+            base,
+            on,
+            level,
+        ]
+
+        self.__groups = self.__get_groups(*self.resample_args)
+
+    def __get_groups(
+        self, rule, axis, closed, label, convention, kind, loffset, base, on, level
+    ):
+        if axis == 0 or axis == "index":
+            df = self._dataframe
+        else:
+            df = self._dataframe.T
+        groups = df.groupby(
+            pandas.Grouper(
+                key=on,
+                freq=rule,
+                closed=closed,
+                label=label,
+                convention=convention,
+                loffset=loffset,
+                base=base,
+                level=level,
+            )
+        )
+        return groups
+
+    @property
+    def groups(self):
+        return self._query_compiler.default_to_pandas(
+            lambda df: pandas.DataFrame.resample(df, *self.resample_args).groups
+        )
+
+    @property
+    def indices(self):
+        return self._query_compiler.default_to_pandas(
+            lambda df: pandas.DataFrame.resample(df, *self.resample_args).indices
+        )
+
+    def get_group(self, name, obj=None):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.get_group(name)
+        else:
+            result = self.__groups.get_group(name).T
+        return result
+
+    def apply(self, func, *args, **kwargs):
+        from .dataframe import DataFrame
+
+        if isinstance(self._dataframe, DataFrame):
+            query_comp_op = self._query_compiler.resample_app_df
+        else:
+            query_comp_op = self._query_compiler.resample_app_ser
+
+        dataframe = DataFrame(
+            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+        )
+        if is_list_like(func) or isinstance(self._dataframe, DataFrame):
+            return dataframe
+        else:
+            if len(dataframe.index) == 1:
+                return dataframe.iloc[0]
+            else:
+                return dataframe.squeeze()
+
+    def aggregate(self, func, *args, **kwargs):
+        from .dataframe import DataFrame
+
+        if isinstance(self._dataframe, DataFrame):
+            query_comp_op = self._query_compiler.resample_agg_df
+        else:
+            query_comp_op = self._query_compiler.resample_agg_ser
+
+        dataframe = DataFrame(
+            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+        )
+        if is_list_like(func) or isinstance(self._dataframe, DataFrame):
+            return dataframe
+        else:
+            if len(dataframe.index) == 1:
+                return dataframe.iloc[0]
+            else:
+                return dataframe.squeeze()
+
+    def transform(self, arg, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_transform(
+                self.resample_args, arg, *args, **kwargs
+            )
+        )
+
+    def pipe(self, func, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_pipe(
+                self.resample_args, func, *args, **kwargs
+            )
+        )
+
+    def ffill(self, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_ffill(
+                self.resample_args, limit
+            )
+        )
+
+    def backfill(self, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_backfill(
+                self.resample_args, limit
+            )
+        )
+
+    def bfill(self, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_bfill(
+                self.resample_args, limit
+            )
+        )
+
+    def pad(self, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_pad(self.resample_args, limit)
+        )
+
+    def nearest(self, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_nearest(
+                self.resample_args, limit
+            )
+        )
+
+    def fillna(self, method, limit=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_fillna(
+                self.resample_args, method, limit
+            )
+        )
+
+    def asfreq(self, fill_value=None):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_asfreq(
+                self.resample_args, fill_value
+            )
+        )
+
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction="forward",
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_interpolate(
+                self.resample_args,
+                method,
+                axis,
+                limit,
+                inplace,
+                limit_direction,
+                limit_area,
+                downcast,
+                **kwargs,
+            )
+        )
+
+    def count(self):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_count(self.resample_args)
+        )
+
+    def nunique(self, _method="nunique", *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.nunique(*args, **kwargs)
+        else:
+            result = self.__groups.nunique(*args, **kwargs).T
+        return result
+
+    def first(self, _method="first", *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_first(
+                self.resample_args, _method, *args, **kwargs,
+            )
+        )
+
+    def last(self, _method="last", *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_last(
+                self.resample_args, _method, *args, **kwargs,
+            )
+        )
+
+    def max(self, _method="max", *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_max(
+                self.resample_args, _method, *args, **kwargs,
+            )
+        )
+
+    def mean(self, _method="mean", *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.mean(*args, **kwargs)
+        else:
+            result = self.__groups.mean(*args, **kwargs).T
+        return result
+
+    def median(self, _method="median", *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.median(*args, **kwargs)
+        else:
+            result = self.__groups.median(*args, **kwargs).T
+        return result
+
+    def min(self, _method="min", *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_min(
+                self.resample_args, _method, *args, **kwargs,
+            )
+        )
+
+    def ohlc(self, _method="ohlc", *args, **kwargs):
+        from .dataframe import DataFrame
+
+        if isinstance(self._dataframe, DataFrame):
+            return DataFrame(
+                query_compiler=self._query_compiler.resample_ohlc_df(
+                    self.resample_args, _method, *args, **kwargs,
+                )
+            )
+        else:
+            return DataFrame(
+                query_compiler=self._query_compiler.resample_ohlc_ser(
+                    self.resample_args, _method, *args, **kwargs,
+                )
+            )
+
+    def prod(self, _method="prod", min_count=0, *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.prod(min_count=min_count, *args, **kwargs)
+        else:
+            result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
+        return result
+
+    def size(self):
+        from .series import Series
+
+        return Series(
+            query_compiler=self._query_compiler.resample_size(self.resample_args)
+        )
+
+    def sem(self, _method="sem", *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_sem(
+                self.resample_args, _method, *args, **kwargs,
+            )
+        )
+
+    def std(self, ddof=1, *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.std(ddof=ddof, *args, **kwargs)
+        else:
+            result = self.__groups.std(ddof=ddof, *args, **kwargs).T
+        return result
+
+    def sum(self, _method="sum", min_count=0, *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.sum(min_count=min_count, *args, **kwargs)
+        else:
+            result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
+        return result
+
+    def var(self, ddof=1, *args, **kwargs):
+        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+            result = self.__groups.var(ddof=ddof, *args, **kwargs)
+        else:
+            result = self.__groups.var(ddof=ddof, *args, **kwargs).T
+        return result
+
+    def quantile(self, q=0.5, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_quantile(
+                self.resample_args, q, **kwargs
+            )
+        )
+
+
+class Window(object):
+    def __init__(
+        self,
+        dataframe,
+        window,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+    ):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.window_args = [
+            window,
+            min_periods,
+            center,
+            win_type,
+            on,
+            axis,
+            closed,
+        ]
+
+    def mean(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.window_mean(
+                self.window_args, *args, **kwargs
+            )
+        )
+
+    def sum(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.window_sum(
+                self.window_args, *args, **kwargs
+            )
+        )
+
+    def var(self, ddof=1, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.window_var(
+                self.window_args, ddof, *args, **kwargs
+            )
+        )
+
+    def std(self, ddof=1, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.window_std(
+                self.window_args, ddof, *args, **kwargs
+            )
+        )
+
+
+class Rolling(object):
+    def __init__(
+        self,
+        dataframe,
+        window,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+    ):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.rolling_args = [
+            window,
+            min_periods,
+            center,
+            win_type,
+            on,
+            axis,
+            closed,
+        ]
+
+    def count(self):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_count(self.rolling_args)
+        )
+
+    def sum(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_sum(
+                self.rolling_args, *args, **kwargs
+            )
+        )
+
+    def mean(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_mean(
+                self.rolling_args, *args, **kwargs
+            )
+        )
+
+    def median(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_median(
+                self.rolling_args, **kwargs
+            )
+        )
+
+    def var(self, ddof=1, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_var(
+                self.rolling_args, ddof, *args, **kwargs
+            )
+        )
+
+    def std(self, ddof=1, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_std(
+                self.rolling_args, ddof, *args, **kwargs
+            )
+        )
+
+    def min(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_min(
+                self.rolling_args, *args, **kwargs
+            )
+        )
+
+    def max(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_max(
+                self.rolling_args, *args, **kwargs
+            )
+        )
+
+    def corr(self, other=None, pairwise=None, *args, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
+        if isinstance(other, DataFrame):
+            other = other._query_compiler.to_pandas()
+        elif isinstance(other, Series):
+            other = other._query_compiler.to_pandas().squeeze()
+
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_corr(
+                self.rolling_args, other, pairwise, *args, **kwargs
+            )
+        )
+
+    def cov(self, other=None, pairwise=None, ddof=1, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
+        if isinstance(other, DataFrame):
+            other = other._query_compiler.to_pandas()
+        elif isinstance(other, Series):
+            other = other._query_compiler.to_pandas().squeeze()
+
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_cov(
+                self.rolling_args, other, pairwise, ddof, **kwargs
+            )
+        )
+
+    def skew(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_skew(
+                self.rolling_args, **kwargs
+            )
+        )
+
+    def kurt(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_kurt(
+                self.rolling_args, **kwargs
+            )
+        )
+
+    def apply(
+        self,
+        func,
+        raw=False,
+        engine="cython",
+        engine_kwargs=None,
+        args=None,
+        kwargs=None,
+    ):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_apply(
+                self.rolling_args, func, raw, engine, engine_kwargs, args, kwargs,
+            )
+        )
+
+    def aggregate(
+        self, func, *args, **kwargs,
+    ):
+        from .dataframe import DataFrame
+
+        dataframe = DataFrame(
+            query_compiler=self._query_compiler.rolling_aggregate(
+                self.rolling_args, func, *args, **kwargs,
+            )
+        )
+        if isinstance(self._dataframe, DataFrame):
+            return dataframe
+        elif is_list_like(func):
+            dataframe.columns = dataframe.columns.droplevel()
+            return dataframe
+        else:
+            return dataframe.squeeze()
+
+    agg = aggregate
+
+    def quantile(self, quantile, interpolation="linear", **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_quantile(
+                self.rolling_args, quantile, interpolation, **kwargs
+            )
+        )

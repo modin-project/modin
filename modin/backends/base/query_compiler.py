@@ -271,18 +271,23 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def join(self, *args, **kwargs):
-        """Database-style join with another object.
+    def merge(self, right, **kwargs):
+        """
+        Merge DataFrame or named Series objects with a database-style join.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to merge with.
 
         Returns
         -------
         BaseQueryCompiler
-            The joined PandasQueryCompiler
+            A new query compiler that contains result of the merge.
 
-        Note
-        ----
-        This is not to be confused with `pandas.DataFrame.join` which does an
-        index-level join.
+        Notes
+        -----
+        See pd.merge or pd.DataFrame.merge for more info on kwargs.
         """
         pass
 
@@ -423,6 +428,16 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def conj(self, **kwargs):
+        """
+        Return the complex conjugate, element-wise.
+
+        The complex conjugate of a complex number is obtained
+        by changing the sign of its imaginary part.
+        """
+        pass
+
+    @abc.abstractmethod
     def isin(self, **kwargs):
         pass
 
@@ -447,10 +462,17 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def to_numeric(self, arg, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def unique(self, **kwargs):
         pass
 
     # END Abstract map partitions operations
+
+    def value_counts(self, **kwargs):
+        pass
 
     # Abstract map partitions across select indices
     @abc.abstractmethod
@@ -1109,6 +1131,28 @@ class BaseQueryCompiler(abc.ABC):
 
         Returns:
             A new QueryCompiler.
+        """
+        pass
+
+    @abc.abstractmethod
+    def repeat(self, repeats):
+        """
+        Repeat elements of a Series.
+
+        Returns a new Series where each element of the current Series
+        is repeated consecutively a given number of times.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element. This should be a
+            non-negative integer. Repeating 0 times will return an empty
+            Series.
+
+        Returns
+        -------
+        Series
+            Newly created Series with repeated elements.
         """
         pass
 

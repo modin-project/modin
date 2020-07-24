@@ -165,17 +165,29 @@ class BaseFrameManager(object):
 
     @classmethod
     def map_axis_partitions(cls, axis, partitions, map_func, keep_partitioning=False):
-        """Applies `map_func` to every partition.
+        """
+        Applies `map_func` to every partition.
 
-        Note: This method should be used in the case that `map_func` relies on
-            some global information about the axis.
+        Parameters
+        ----------
+            axis : 0 or 1
+                The axis to perform the map across (0 - index, 1 - columns).
+            partitions : NumPy array
+                The partitions of Modin Frame.
+            map_func : callable
+                The function to apply.
+            keep_partitioning : boolean. Default is False
+                The flag to keep partitions for Modin Frame.
 
-        Args:
-            axis: The axis to perform the map across (0 - index, 1 - columns).
-            map_func: The function to apply.
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for Modin Frame.
 
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
+        Notes
+        -----
+        This method should be used in the case that `map_func` relies on
+        some global information about the axis.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of

@@ -154,15 +154,38 @@ class _LocationIndexerBase(object):
             item: The new item needs to be set. It can be any shape that's
                 broadcast-able to the product of the lookup tables.
         """
-        if len(row_lookup) == len(self.qc.index) and len(col_lookup) == 1:
+        # Convert slices to indices for the purposes of application.
+        # TODO (devin-petersohn): Apply to slice without conversion to list
+        if isinstance(row_lookup, slice):
+            row_lookup = range(len(self.qc.index))[row_lookup]
+        if isinstance(col_lookup, slice):
+            col_lookup = range(len(self.qc.columns))[col_lookup]
+        # This is True when we dealing with assignment of a full column. This case
+        # should be handled in a fastpath with `df[col] = item`.
+        if (
+            len(row_lookup) == len(self.qc.index)
+            and len(col_lookup) == 1
+            and hasattr(self.df, "columns")
+        ):
             self.df[self.df.columns[col_lookup][0]] = item
+        # This is True when we are assigning to a full row. We want to reuse the setitem
+        # mechanism to operate along only one axis for performance reasons.
         elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
             if hasattr(item, "_query_compiler"):
                 item = item._query_compiler
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
+        # Assignment to both axes.
         else:
-            to_shape = (len(row_lookup), len(col_lookup))
+            if isinstance(row_lookup, slice):
+                new_row_len = len(self.df.index[row_lookup])
+            else:
+                new_row_len = len(row_lookup)
+            if isinstance(col_lookup, slice):
+                new_col_len = len(self.df.columns[col_lookup])
+            else:
+                new_col_len = len(col_lookup)
+            to_shape = new_row_len, new_col_len
             item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
             self._write_items(row_lookup, col_lookup, item)
 
@@ -233,6 +256,9 @@ class _LocIndexer(_LocationIndexerBase):
                 "supported, see https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike"
             )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+        if isinstance(result, Series):
+            result._parent = self.df
+            result._parent_axis = 0
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
             if (
@@ -247,6 +273,7 @@ class _LocIndexer(_LocationIndexerBase):
                 result.index = result.index.droplevel(list(range(len(row_loc))))
         if (
             hasattr(result, "columns")
+            and not isinstance(col_loc, slice)
             and isinstance(result.columns, pandas.MultiIndex)
             and all(col_loc[i] in result.columns.levels[i] for i in range(len(col_loc)))
         ):
@@ -340,6 +367,9 @@ class _iLocIndexer(_LocationIndexerBase):
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+        if isinstance(result, Series):
+            result._parent = self.df
+            result._parent_axis = 0
         return result
 
     def __setitem__(self, key, item):
@@ -351,12 +381,26 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc):
-        row_lookup = (
-            pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
-        )
-        col_lookup = (
-            pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
-        )
+        if (
+            not isinstance(row_loc, slice)
+            or isinstance(row_loc, slice)
+            and row_loc.step is not None
+        ):
+            row_lookup = (
+                pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
+            )
+        else:
+            row_lookup = row_loc
+        if (
+            not isinstance(col_loc, slice)
+            or isinstance(col_loc, slice)
+            and col_loc.step is not None
+        ):
+            col_lookup = (
+                pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
+            )
+        else:
+            col_lookup = col_loc
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):
