@@ -3564,6 +3564,13 @@ class TestDataFrameWindow:
             modin_result = modin_df.T.cummax(axis=axis, skipna=skipna)
             df_equals(modin_result, pandas_result)
 
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    def test_cummax_int_and_float(self, axis):
+        data = {"col1": list(range(1000)), "col2": [i * 0.1 for i in range(1000)]}
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        df_equals(modin_df.cummax(axis=axis), pandas_df.cummax(axis=axis))
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
@@ -3590,6 +3597,13 @@ class TestDataFrameWindow:
         else:
             modin_result = modin_df.T.cummin(axis=axis, skipna=skipna)
             df_equals(modin_result, pandas_result)
+
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    def test_cummin_int_and_float(self, axis):
+        data = {"col1": list(range(1000)), "col2": [i * 0.1 for i in range(1000)]}
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        df_equals(modin_df.cummin(axis=axis), pandas_df.cummin(axis=axis))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)

@@ -766,8 +766,8 @@ class BasePandasDataset(object):
             The cumulative maximum of the DataFrame.
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
-        if axis:
-            self._validate_dtypes()
+        if axis == 1:
+            self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             query_compiler=self._query_compiler.cummax(
                 axis=axis, skipna=skipna, **kwargs
@@ -785,8 +785,8 @@ class BasePandasDataset(object):
             The cumulative minimum of the DataFrame.
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
-        if axis:
-            self._validate_dtypes()
+        if axis == 1:
+            self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             query_compiler=self._query_compiler.cummin(
                 axis=axis, skipna=skipna, **kwargs
