@@ -1180,14 +1180,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A generator that iterates over the rows of the frame.
         """
-        index_iter = iter(self.index)
 
-        def iterrow_builder(df):
-            df.columns = self.columns
-            df.index = [next(index_iter)]
-            return df.iterrows()
+        def iterrow_builder(s):
+            return s.name, s
 
-        partition_iterator = PartitionIterator(self._query_compiler, 0, iterrow_builder)
+        partition_iterator = PartitionIterator(self, 0, iterrow_builder)
         for v in partition_iterator:
             yield v
 
@@ -1202,14 +1199,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A generator that iterates over the columns of the frame.
         """
-        col_iter = iter(self.columns)
 
-        def items_builder(df):
-            df.columns = [next(col_iter)]
-            df.index = self.index
-            return df.items()
+        def items_builder(s):
+            return s.name, s
 
-        partition_iterator = PartitionIterator(self._query_compiler, 1, items_builder)
+        partition_iterator = PartitionIterator(self, 1, items_builder)
         for v in partition_iterator:
             yield v
 
@@ -1240,16 +1234,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A tuple representing row data. See args for varying tuples.
         """
-        index_iter = iter(self.index)
 
-        def itertuples_builder(df):
-            df.columns = self.columns
-            df.index = [next(index_iter)]
-            return df.itertuples(index=index, name=name)
+        def itertuples_builder(s):
+            return next(s._to_pandas().to_frame().T.itertuples(index=index, name=name))
 
-        partition_iterator = PartitionIterator(
-            self._query_compiler, 0, itertuples_builder
-        )
+        partition_iterator = PartitionIterator(self, 0, itertuples_builder)
         for v in partition_iterator:
             yield v
 
