@@ -724,6 +724,10 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def melt(self, *args, **kwargs):
+        pass
+
     # END Abstract map across rows/columns
 
     # Map across rows/columns
