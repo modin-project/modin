@@ -934,15 +934,10 @@ class Series(BasePandasDataset):
         return self[0]
 
     def items(self):
-        index_iter = iter(self.index)
+        def item_builder(s):
+            return s.name, s.squeeze()
 
-        def item_builder(df):
-            s = df.iloc[:, 0]
-            s.index = [next(index_iter)]
-            s.name = self.name
-            return s.items()
-
-        partition_iterator = PartitionIterator(self._query_compiler, 0, item_builder)
+        partition_iterator = PartitionIterator(self.to_frame(), 0, item_builder)
         for v in partition_iterator:
             yield v
 

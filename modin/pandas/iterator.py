@@ -15,21 +15,27 @@ from collections import Iterator
 
 
 class PartitionIterator(Iterator):
-    def __init__(self, query_compiler, axis, func):
+    def __init__(self, df, axis, func):
         """PartitionIterator class to define a generator on partitioned data
 
         Args:
-            query_compiler: Data manager for the dataframe
+            df: The dataframe to iterate over
             axis: axis to iterate over
             func: The function to get inner iterables from
                 each partition
         """
-        self.query_compiler = query_compiler
+        self.df = df
         self.axis = axis
         self.index_iter = (
-            iter(self.query_compiler.columns)
+            zip(
+                iter(slice(None) for _ in range(len(self.df.columns))),
+                range(len(self.df.columns)),
+            )
             if axis
-            else iter(range(len(self.query_compiler.index)))
+            else zip(
+                range(len(self.df.index)),
+                iter(slice(None) for _ in range(len(self.df.index))),
+            )
         )
         self.func = func
 
@@ -41,8 +47,5 @@ class PartitionIterator(Iterator):
 
     def next(self):
         key = next(self.index_iter)
-        if self.axis:
-            df = self.query_compiler.getitem_column_array([key]).to_pandas()
-        else:
-            df = self.query_compiler.getitem_row_array([key]).to_pandas()
-        return next(self.func(df))
+        df = self.df.iloc[key]
+        return self.func(df)
