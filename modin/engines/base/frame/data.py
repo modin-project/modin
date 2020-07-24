@@ -489,7 +489,7 @@ class BasePandasFrame(object):
                 new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
                 new_columns = self.columns[sorted(col_numeric_idx)]
                 if self._dtypes is not None:
-                    new_dtypes = self.dtypes[sorted(col_numeric_idx)]
+                    new_dtypes = self.dtypes.iloc[sorted(col_numeric_idx)]
                 else:
                     new_dtypes = None
         else:

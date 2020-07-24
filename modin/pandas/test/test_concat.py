@@ -83,6 +83,17 @@ def test_concat_on_column():
         pandas.concat([df, df2], axis="columns"),
     )
 
+    modin_result = pd.concat(
+        [pd.Series(np.ones(10)), pd.Series(np.ones(10))], axis=1, ignore_index=True
+    )
+    pandas_result = pandas.concat(
+        [pandas.Series(np.ones(10)), pandas.Series(np.ones(10))],
+        axis=1,
+        ignore_index=True,
+    )
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
 
 def test_invalid_axis_errors():
     df, df2 = generate_dfs()
