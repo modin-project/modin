@@ -1582,6 +1582,80 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
+    def melt(
+        self,
+        id_vars=None,
+        value_vars=None,
+        var_name=None,
+        value_name="value",
+        col_level=None,
+    ):
+        ErrorMessage.missmatch_with_pandas(
+            operation="melt", message="Order of rows could be different from pandas"
+        )
+
+        if var_name is None:
+            var_name = "variable"
+
+        def _convert_to_list(x):
+            if is_list_like(x):
+                x = [*x]
+            elif x is not None:
+                x = [x]
+            else:
+                x = []
+            return x
+
+        id_vars, value_vars = map(_convert_to_list, [id_vars, value_vars])
+
+        if len(value_vars) == 0:
+            value_vars = self.columns.drop(id_vars)
+
+        if len(id_vars) != 0:
+            to_broadcast = self.getitem_column_array(id_vars)._modin_frame
+        else:
+            to_broadcast = None
+
+        def applyier(df, internal_indices, other=[], internal_other_indices=[]):
+            if len(other):
+                other = pandas.concat(other, axis=1)
+                columns_to_add = other.columns.difference(df.columns)
+                df = pandas.concat([df, other[columns_to_add]], axis=1)
+            return df.melt(
+                id_vars=id_vars,
+                value_vars=df.columns[internal_indices],
+                var_name=var_name,
+                value_name=value_name,
+                col_level=col_level,
+            )
+
+        # we have no able to calculate correct indices here, so making it `dummy_index`
+        inconsistent_frame = self._modin_frame.broadcast_apply_select_indices(
+            axis=0,
+            apply_indices=value_vars,
+            func=applyier,
+            other=to_broadcast,
+            new_index=["dummy_index"] * len(id_vars),
+            new_columns=["dummy_index"] * len(id_vars),
+        )
+        # after applying `melt` for selected indices we will get partitions like this:
+        #     id_vars   vars   value |     id_vars   vars   value
+        #  0      foo   col3       1 |  0      foo   col5       a    so stacking it into
+        #  1      fiz   col3       2 |  1      fiz   col5       b    `new_parts` to get
+        #  2      bar   col3       3 |  2      bar   col5       c    correct answer
+        #  3      zoo   col3       4 |  3      zoo   col5       d
+        new_parts = np.array(
+            [np.array([x]) for x in np.concatenate(inconsistent_frame._partitions.T)]
+        )
+        new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
+        new_modin_frame = self._modin_frame.__constructor__(
+            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
+        )
+        result = self.__constructor__(new_modin_frame)
+        # this assigment needs to propagate correct indices into partitions
+        result.index = new_index
+        return result
+
     # END Map across rows/columns
 
     # __getitem__ methods
