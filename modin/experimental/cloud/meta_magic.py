@@ -17,11 +17,15 @@ import types
 
 from modin import execution_engine
 
-_LOCAL_ATTRS = frozenset(("__new__", "__dict__"))
-_WRAP_ATTRS = ("__wrapper_local__", "__wrapper_remote__")
+_LOCAL_ATTRS = frozenset(("__new__", "__dict__", "__wrapper_remote__"))
 
+class RemoteMeta(type):
+    """
+    Metaclass that relays getting non-existing attributes from
+    a proxying object *CLASS* to a remote end transparently.
 
-class MetaComparer(type):
+    Attributes existing on a proxying object are retrieved locally.
+    """
     @property
     def __signature__(self):
         """
@@ -37,6 +41,7 @@ class MetaComparer(type):
         # and pass that to .signature()
         return inspect.signature(types.MethodType(self.__init__, self))
 
+    '''
     def __instancecheck__(self, instance):
         # see if self is a type that has __real_cls__ defined,
         # as if it's a dual-nature class we need to use its internal class to compare
@@ -48,15 +53,7 @@ class MetaComparer(type):
         except AttributeError:
             pass
         return issubclass(instance.__class__, my_cls)
-
-
-class RemoteMeta(MetaComparer):
-    """
-    Metaclass that relays getting non-existing attributes from
-    a proxying object *CLASS* to a remote end transparently.
-
-    Attributes existing on a proxying object are retrieved locally.
-    """
+    '''
 
     def __getattribute__(self, name):
         if name in _LOCAL_ATTRS:
@@ -70,25 +67,23 @@ class RemoteMeta(MetaComparer):
                 # Also note we use object.__getattribute__() to skip any potential class-level __getattr__
                 res = object.__getattribute__(self, "__dict__")[name]
             except KeyError:
-                attr_ex = None
-                for wrap_name in _WRAP_ATTRS:
-                    # now try getting an attribute from an overriding object first,
-                    # and only if it fails resort to getting from the remote end
+                try:
+                    res = object.__getattribute__(self, name)
+                except AttributeError:
                     try:
-                        res = getattr(object.__getattribute__(self, wrap_name), name)
-                        break
-                    except AttributeError as ex:
-                        attr_ex = ex
-                        continue
-                else:
-                    raise attr_ex
+                        remote = object.__getattribute__(object.__getattribute__(self, '__real_cls__'), '__wrapper_remote__')
+                    except AttributeError:
+                        # running in local mode, fall back
+                        res = super().__getattribute__(name)
+                    else:
+                        res = getattr(remote, name)
         try:
             # note that any attribute might be in fact a data descriptor,
             # account for that
             getter = res.__get__
         except AttributeError:
             return res
-        return getter(self)
+        return getter(None, self)
 
 
 _KNOWN_DUALS = {}
@@ -100,7 +95,7 @@ def make_wrapped_class(local_cls, rpyc_wrapper_name):
         "__new__": None,
         "__module__": local_cls.__module__,
     }
-    result = MetaComparer(local_cls.__name__, (local_cls,), namespace)
+    result = RemoteMeta(local_cls.__name__, (local_cls,), namespace)
 
     def make_new(__class__):
         """
