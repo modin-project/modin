@@ -132,6 +132,15 @@ class Series(BasePandasDataset):
     def _validate_dtypes(self, numeric_only=False):
         pass
 
+    def _update_inplace(self, new_query_compiler):
+        super(Series, self)._update_inplace(new_query_compiler=new_query_compiler)
+        # Propagate changes back to parent so that column in dataframe had the same contents
+        if self._parent is not None:
+            if self._parent_axis == 0:
+                self._parent.loc[self.name] = self
+            else:
+                self._parent[self.name] = self
+
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
         assert (
@@ -329,12 +338,6 @@ class Series(BasePandasDataset):
         self._create_or_update_from_compiler(
             self._query_compiler.setitem(1, key, value), inplace=True
         )
-        # Propagate changes back to parent so that column in dataframe had the same contents
-        if self._parent is not None:
-            if self._parent_axis == 0:
-                self._parent.loc[self.name] = self
-            else:
-                self._parent[self.name] = self
 
     def __sub__(self, right):
         return self.sub(right)
