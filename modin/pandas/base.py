@@ -3585,7 +3585,7 @@ class BasePandasDataset(object):
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.
-            if self.empty and is_callable:
+            if is_callable and self.empty:
 
                 def default_handler(*args, **kwargs):
                     return self._default_to_pandas(item, *args, **kwargs)
