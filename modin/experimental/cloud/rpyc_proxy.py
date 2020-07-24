@@ -11,14 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-
 import types
 
-from rpyc.utils.classic import deliver
 import rpyc
 from rpyc.lib.compat import pickle
-
-from rpyc.core import brine, consts, netref
+from rpyc.core import netref
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
