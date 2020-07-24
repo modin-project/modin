@@ -179,3 +179,14 @@ def test_concat_multiindex(axis, names):
         pd.concat([md_df1, md_df2], keys=keys, axis=axis, names=names),
         pandas.concat([pd_df1, pd_df2], keys=keys, axis=axis, names=names),
     )
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_concat_dictionary(axis):
+    pandas_df, pandas_df2 = generate_dfs()
+    modin_df, modin_df2 = from_pandas(pandas_df), from_pandas(pandas_df2)
+
+    df_equals(
+        pd.concat({"A": modin_df, "B": modin_df2}, axis=axis),
+        pandas.concat({"A": pandas_df, "B": pandas_df2}, axis=axis),
+    )
