@@ -250,8 +250,20 @@ class TracingWrappingConnection(WrappingConnection):
             out.write(f"------------[new trace at {time.asctime()}]----------\n")
         self.logfiles = set(["rpyc-trace.log"])
 
+    @classmethod
+    def __stringify(cls, args):
+        if isinstance(args, (tuple, list)):
+            return tuple(cls.__stringify(i) for i in args)
+        if isinstance(args, netref.BaseNetref):
+            return str(args.____id_pack__)
+        return args
+    
+    @classmethod
+    def __to_text(cls, args):
+        return str(cls.__stringify(args))
+
     def _send(self, msg, seq, args):
-        str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
+        str_args = self.__to_text(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
         if msg == consts.MSG_REQUEST:
             handler, _ = args
             str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
@@ -280,7 +292,7 @@ class TracingWrappingConnection(WrappingConnection):
                 str_handler = f":req={_msg_to_name['HANDLE'][handler]}"
             else:
                 str_handler = ""
-            str_args = str(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
+            str_args = self.__to_text(args).replace("\r", "").replace("\n", "\tNEWLINE\t")
             with self.logLock:
                 for logfile in self.logfiles:
                     with open(logfile, "a") as out:
