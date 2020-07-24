@@ -5597,6 +5597,18 @@ class TestDataFrameIter:
 
         assert repr(pandas_df) == repr(modin_df)
 
+        # From Issue #1705
+        string_data = """"time","device_id","lat","lng","accuracy","activity_1","activity_1_conf","activity_2","activity_2_conf","activity_3","activity_3_conf"
+"2016-08-26 09:00:00.206",2,60.186805,24.821049,33.6080017089844,"STILL",75,"IN_VEHICLE",5,"ON_BICYCLE",5
+"2016-08-26 09:00:05.428",5,60.192928,24.767222,5,"WALKING",62,"ON_BICYCLE",29,"RUNNING",6
+"2016-08-26 09:00:05.818",1,60.166382,24.700443,3,"WALKING",75,"IN_VEHICLE",5,"ON_BICYCLE",5
+"2016-08-26 09:00:15.816",1,60.166254,24.700671,3,"WALKING",75,"IN_VEHICLE",5,"ON_BICYCLE",5
+"2016-08-26 09:00:16.413",5,60.193055,24.767427,5,"WALKING",85,"ON_BICYCLE",15,"UNKNOWN",0
+"2016-08-26 09:00:20.578",3,60.152996,24.745216,3.90000009536743,"STILL",69,"IN_VEHICLE",31,"UNKNOWN",0"""
+        pandas_df = pandas.read_csv(io.StringIO(string_data))
+        modin_df = pd.read_csv(io.StringIO(string_data))
+        assert repr(pandas_df) == repr(modin_df)
+
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_reset_index_with_multi_index(self, data):
         modin_df = pd.DataFrame(data)
