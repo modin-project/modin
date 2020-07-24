@@ -1590,6 +1590,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         value_name="value",
         col_level=None,
     ):
+        ErrorMessage.missmatch_with_pandas(
+            operation="melt", message="Order of rows could be different from pandas"
+        )
+
         if var_name is None:
             var_name = "variable"
 
@@ -1608,18 +1612,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value_vars = self.columns.drop(id_vars)
 
         if len(id_vars) != 0:
-            ErrorMessage.default_to_pandas(
-                "Materializing `self[id_vars]`, that could take some time,"
-            )
-            id_vars_df = self.getitem_column_array(id_vars).to_pandas()
+            to_broadcast = self.getitem_column_array(id_vars)._modin_frame
+        else:
+            to_broadcast = None
 
-        def applyier(df, internal_indices):
-            if len(id_vars):
-                # doing dirty broadcasting of id_vars_df, since columns from `id_vars`
-                # could be located in a different partitions, but in every call of `applyier`
-                # we want to have whole `id_vars_df` is this the best option we can do?
-                columns_to_add = id_vars_df.columns.difference(df.columns)
-                df = pandas.concat([df, id_vars_df[columns_to_add]], axis="columns")
+        def applyier(df, internal_indices, other=[], internal_other_indices=[]):
+            if len(other):
+                other = pandas.concat(other, axis=1)
+                columns_to_add = other.columns.difference(df.columns)
+                df = pandas.concat([df, other[columns_to_add]], axis=1)
             return df.melt(
                 id_vars=id_vars,
                 value_vars=df.columns[internal_indices],
@@ -1629,12 +1630,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # we have no able to calculate correct indices here, so making it `dummy_index`
-        inconsistent_frame = self._modin_frame._apply_full_axis_select_indices(
+        inconsistent_frame = self._modin_frame.broadcast_apply_select_indices(
             axis=0,
             apply_indices=value_vars,
             func=applyier,
-            new_index=["dummy_index"],
-            new_columns=["dummy_index"],
+            other=to_broadcast,
+            new_index=["dummy_index"] * len(id_vars),
+            new_columns=["dummy_index"] * len(id_vars),
         )
         # after applying `melt` for selected indices we will get partitions like this:
         #     id_vars   vars   value |     id_vars   vars   value

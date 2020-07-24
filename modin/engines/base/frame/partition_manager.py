@@ -97,6 +97,76 @@ class BaseFrameManager(object):
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
+    def broadcast_apply_select_indices(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+        left_indices,
+        right_indices,
+        keep_remaining=False,
+    ):
+        """
+        Broadcast the right partitions to left and apply a function to selected indices
+
+        Note: Your internal function must take this kwargs:
+            [`internal_indices`, `other`, `internal_other_indices`] to work correctly
+
+        Parameters
+        ----------
+            axis : The axis to apply and broadcast over.
+            apply_func : The function to apply.
+            left : The left partitions.
+            right : The right partitions.
+            left_indices : indices to apply function.
+            right_indices : dictianary of indices of right partitions that
+                you want to bring at specified left partition, for example that dict
+                {key: {key1: [0, 1], key2: [5]}} means, that in left[key] you want to
+                broadcast [right[key1], right[key2]] partitions and internal indices
+                for `right` must be [[0, 1], [5]]
+            keep_remaining : Whether or not to keep the other partitions.
+                Some operations may want to drop the remaining partitions and
+                keep only the results.
+
+        Returns
+        -------
+            A new `np.array` of partition objects.
+        """
+        if not axis:
+            partitions_for_apply = left.T
+            right = right.T
+        else:
+            partitions_for_apply = left
+            right = right
+
+        [obj.drain_call_queue() for row in right for obj in row]
+
+        def get_partitions(index):
+            must_grab = right_indices[index]
+            partitions_list = np.array([right[i] for i in must_grab.keys()])
+            indices_list = list(must_grab.values())
+            return {"other": partitions_list, "internal_other_indices": indices_list}
+
+        new_partitions = np.array(
+            [
+                partitions_for_apply[i]
+                if i not in left_indices
+                else cls._apply_func_to_list_of_partitions_broadcast(
+                    apply_func,
+                    partitions_for_apply[i],
+                    internal_indices=left_indices[i],
+                    **get_partitions(i),
+                )
+                for i in range(len(partitions_for_apply))
+                if i in left_indices or keep_remaining
+            ]
+        )
+        if not axis:
+            new_partitions = new_partitions.T
+        return new_partitions
+
+    @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right):
         """Broadcast the right partitions to left and apply a function.
 
@@ -372,6 +442,16 @@ class BaseFrameManager(object):
         return DEFAULT_NPARTITIONS
 
     @classmethod
+    def _apply_func_to_list_of_partitions_broadcast(
+        cls, func, partitions, other, **kwargs
+    ):
+        preprocessed_func = cls.preprocess_func(func)
+        return [
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
+            for obj, broadcasted in zip(partitions, other.T)
+        ]
+
+    @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """Applies a function to a list of remote partitions.
 
@@ -439,7 +519,7 @@ class BaseFrameManager(object):
                                 if i_idx >= 0
                             },
                         )
-                        for o_idx, list_to_apply in indices
+                        for o_idx, list_to_apply in indices.items()
                     ]
                 )
             else:
@@ -470,7 +550,7 @@ class BaseFrameManager(object):
                             partitions_for_apply[idx],
                             internal_indices=list_to_apply,
                         )
-                        for idx, list_to_apply in indices
+                        for idx, list_to_apply in indices.items()
                     ]
                 )
             else:

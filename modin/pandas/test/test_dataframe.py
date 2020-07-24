@@ -2384,7 +2384,9 @@ class TestDataFrameDefault:
     def test_melt(self, data, id_vars, value_vars):
         eval_general(
             *create_test_dfs(data),
-            lambda df, *args, **kwargs: df.melt(*args, **kwargs),
+            lambda df, *args, **kwargs: df.melt(*args, **kwargs)
+            .sort_values(["variable", "value"])
+            .reset_index(drop=True),
             id_vars=id_vars,
             value_vars=value_vars,
         )
