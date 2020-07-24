@@ -236,6 +236,8 @@ class _LocIndexer(_LocationIndexerBase):
     """An indexer for modin_df.loc[] functionality"""
 
     def __getitem__(self, key):
+        if callable(key):
+            return self.__getitem__(key(self.df))
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         if isinstance(row_loc, slice) and row_loc == slice(None):
             # If we're only slicing columns, handle the case with `__getitem__`
@@ -361,6 +363,8 @@ class _iLocIndexer(_LocationIndexerBase):
     """An indexer for modin_df.iloc[] functionality"""
 
     def __getitem__(self, key):
+        if callable(key):
+            return self.__getitem__(key(self.df))
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
