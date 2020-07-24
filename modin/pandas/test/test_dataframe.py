@@ -4389,6 +4389,12 @@ class TestDataFrameIndexing:
             modin_df.iloc[:, 0] = modin_df.iloc[:, 1]
             pandas_df.iloc[:, 0] = pandas_df.iloc[:, 1]
             df_equals(modin_df, pandas_df)
+
+            # From issue #1775
+            df_equals(
+                modin_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5])],
+                pandas_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5])],
+            )
         else:
             with pytest.raises(IndexError):
                 modin_df.iloc[0, 1]
@@ -4483,6 +4489,12 @@ class TestDataFrameIndexing:
             modin_df_copy.loc[[1, 2]] = 42
             pandas_df_copy.loc[[1, 2]] = 42
             df_equals(modin_df_copy, pandas_df_copy)
+
+            # From issue #1775
+            df_equals(
+                modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+                pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+            )
 
         # From issue #1374
         with pytest.raises(KeyError):
