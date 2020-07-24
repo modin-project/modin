@@ -145,6 +145,7 @@ class DataFrame(BasePandasDataset):
             "display.expand_frame_repr"
         ):
             width, _ = console.get_console_size()
+            width = min(width, len(self.columns))
             col_counter = 0
             i = 0
             while col_counter < width:
