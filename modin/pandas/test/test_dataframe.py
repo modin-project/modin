@@ -4584,6 +4584,10 @@ class TestDataFrameIndexing:
             transposed_pandas.loc[transposed_pandas.index[:-2], :],
         )
 
+        # From issue #1610
+        df_equals(modin_df.loc[modin_df.index], pandas_df.loc[pandas_df.index])
+        df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
+
     def test_loc_assignment(self):
         modin_df = pd.DataFrame(
             index=["row1", "row2", "row3"], columns=["col1", "col2"]
