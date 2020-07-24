@@ -185,6 +185,19 @@ class TransformNode(DFAlgNode):
     def copy(self):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
+    def is_drop(self):
+        col_iter = iter(self.input[0]._table_cols)
+        try:
+            for col, expr in self.exprs.items():
+                if not isinstance(expr, InputRefExpr) or expr.column != col:
+                    return False
+                while next(col_iter) != col:
+                    pass
+        except StopIteration:
+            return False
+
+        return True
+
     def _prints(self, prefix):
         res = f"{prefix}TransformNode:\n"
         if self._original_refs is not None:

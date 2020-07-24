@@ -95,6 +95,21 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if partitions is not None:
             self._filter_empties()
 
+        # This frame uses encoding for column names to support exotic
+        # (e.g. non-string and reserved words) column names. Encoded
+        # names are used in OmniSci tables and corresponding Arrow tables.
+        # If we import Arrow table, we have to rename its columns for
+        # proper processing.
+        if self._has_arrow_table():
+            assert self._partitions.size == 1
+            table = self._partitions[0][0].get()
+            if table.column_names[0] != f"F_{self._table_cols[0]}":
+                new_names = [f"F_{col}" for col in table.column_names]
+                new_table = table.rename_columns(new_names)
+                self._partitions[0][0] = self._frame_mgr_cls._partition_class.put_arrow(
+                    new_table
+                )
+
         self._uses_rowid = uses_rowid
 
     def id_str(self):
@@ -142,6 +157,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
             )
 
         return base
+
+    def _has_arrow_table(self):
+        if not isinstance(self._op, FrameNode):
+            return False
+        return all(p.arrow_table for p in self._partitions.flatten())
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
@@ -738,9 +758,16 @@ class OmnisciOnRayFrame(BasePandasFrame):
         # require re-compute. So we just execute MaskNode's operands.
         self._run_sub_queries()
 
-        new_partitions = self._frame_mgr_cls.run_exec_plan(
-            self._op, self._index_cols, self._dtypes
-        )
+        if self._can_execute_arrow():
+            new_table = self._execute_arrow()
+            new_partitions = np.empty((1, 1), dtype=np.dtype(object))
+            new_partitions[0][0] = self._frame_mgr_cls._partition_class.put_arrow(
+                new_table
+            )
+        else:
+            new_partitions = self._frame_mgr_cls.run_exec_plan(
+                self._op, self._index_cols, self._dtypes
+            )
         self._partitions = new_partitions
         self._op = FrameNode(self)
 
@@ -759,6 +786,57 @@ class OmnisciOnRayFrame(BasePandasFrame):
         else:
             for frame in self._op.input:
                 frame._run_sub_queries()
+
+    def _can_execute_arrow(self):
+        if isinstance(self._op, FrameNode):
+            return self._has_arrow_table()
+        elif isinstance(self._op, MaskNode):
+            return (
+                self._op.row_indices is None and self._op.input[0]._can_execute_arrow()
+            )
+        elif isinstance(self._op, TransformNode):
+            return self._op.is_drop() and self._op.input[0]._can_execute_arrow()
+        else:
+            return False
+
+    def _execute_arrow(self):
+        if isinstance(self._op, FrameNode):
+            assert self._partitions.size == 1
+            return self._partitions[0][0].get()
+        elif isinstance(self._op, MaskNode):
+            return self._arrow_row_slice(
+                self._op.input[0]._execute_arrow(), self._op.row_numeric_idx
+            )
+        elif isinstance(self._op, TransformNode):
+            return self._arrow_col_slice(
+                self._op.input[0]._execute_arrow(), set(self._op.exprs.keys())
+            )
+        else:
+            raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
+
+    def _arrow_col_slice(self, table, new_columns):
+        return table.drop(
+            [f"F_{col}" for col in self._table_cols if col not in new_columns]
+        )
+
+    def _arrow_row_slice(self, table, row_numeric_idx):
+        start = None
+        end = None
+        parts = []
+        for idx in row_numeric_idx:
+            if start is None:
+                start = idx
+                end = idx
+            elif idx == end + 1:
+                end = idx
+            else:
+                if start:
+                    parts.append(table.slice(start, end - start + 1))
+                start = idx
+                end = idx
+        parts.append(table.slice(start, end - start + 1))
+
+        return pyarrow.concat_tables(parts)
 
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)
