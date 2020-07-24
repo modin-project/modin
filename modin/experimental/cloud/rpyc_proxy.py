@@ -12,8 +12,6 @@
 # governing permissions and limitations under the License.
 
 import types
-import time
-import threading
 import collections
 import os
 
@@ -37,9 +35,6 @@ def _tuplize(arg):
 
 
 _TRACE_RPYC = os.environ.get("MODIN_TRACE_RPYC", "").title() == "True"
-
-
-
 
 
 class WrappingConnection(rpyc.Connection):

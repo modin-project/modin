@@ -81,7 +81,7 @@ for i in items:
     if i["kind"] == "recv" and i["msg"] == "MSG_REPLY":
         try:
             pairs.append((sends[i["seq"]], i))
-            responses[i['seq']] = i
+            responses[i["seq"]] = i
         except KeyError:
             pass
 getattrs = [p for p in pairs if p[0].get("req", "") == "HANDLE_GETATTR"]
@@ -110,7 +110,7 @@ def from_getattr_send(i, s=True):
 
 def from_getattr_recv(i, s=True):
     if not i:
-        return ''
+        return ""
     args = eval(i["args"])
     return _unbox(args)
 
@@ -130,12 +130,14 @@ def _unwrap_obj(obj, remote):
         obj = f"{obj.replace('[local]', '[remote]')}.{attr}"
     return obj
 
+
 def _stringify(obj):
     if not isinstance(obj, str):
         return str(obj)
-    if '[local]' in obj or '[remote]' in obj:
+    if "[local]" in obj or "[remote]" in obj:
         return obj
     return repr(obj)
+
 
 def _format_args(args, kw):
     fargs = ", ".join(_stringify(x) for x in args)
@@ -143,6 +145,7 @@ def _format_args(args, kw):
     if fargs and fkw:
         fargs += ", "
     return f"({fargs}{fkw})"
+
 
 def from_callattr_send(i, s=True, remote=None):
     _, args = eval(i["args"])
@@ -162,25 +165,27 @@ def from_call_send(i, s=True, remote=None):
         return re.sub(r"\(cls=\d+:inst=", "(inst:", res)
     return obj, args, kw
 
+
 def _parse_msg(m, s=False, **kw):
-    if m['kind'] == 'send':
-        if m.get('req') == 'HANDLE_GETATTR':
+    if m["kind"] == "send":
+        if m.get("req") == "HANDLE_GETATTR":
             return from_getattr_send(m, s, **kw)
-        if m.get('req') in ('HANDLE_HASH', 'HANDLE_STR'):
+        if m.get("req") in ("HANDLE_HASH", "HANDLE_STR"):
             return from_hash_send(m, s, **kw)
-        if m.get('req') == 'HANDLE_CALLATTR':
+        if m.get("req") == "HANDLE_CALLATTR":
             return from_callattr_send(m, s, **kw)
-        if m.get('req') == 'HANDLE_CALL':
+        if m.get("req") == "HANDLE_CALL":
             return from_call_send(m, s, **kw)
         return str(m)
     return from_getattr_recv(m, s, **kw)
+
 
 remote = {}
 for gsend, grecv in pairs:
     got, sent = _parse_msg(grecv, False), _parse_msg(gsend, False)
     if isinstance(got, str):
         remote[got] = sent
-    #remote[from_getattr_recv(grecv, False)] = from_getattr_send(gsend, False)
+    # remote[from_getattr_recv(grecv, False)] = from_getattr_send(gsend, False)
 
 print(f"total time getattrs={sum(x[1]['timing'] for x in getattrs)}")
 
@@ -194,19 +199,27 @@ for gsend, grecv in getattrs:
 print("\n\n----[ hash ]----")
 for i in syncs:
     if i.get("req", "") == "HANDLE_HASH" and i["kind"] == "send":
-        print(from_hash_send(i), '-->', from_getattr_recv(responses.get(i['seq'])))
+        print(from_hash_send(i), "-->", from_getattr_recv(responses.get(i["seq"])))
 
 print("\n\n----[ str ]----")
 for i in syncs:
     if i.get("req", "") == "HANDLE_STR" and i["kind"] == "send":
-        print(from_hash_send(i), '-->', from_getattr_recv(responses.get(i['seq'])))
+        print(from_hash_send(i), "-->", from_getattr_recv(responses.get(i["seq"])))
 
 print("\n\n----[ callattr ]----")
 for i in syncs:
     if i.get("req", "") == "HANDLE_CALLATTR" and i["kind"] == "send":
-        print(from_callattr_send(i, remote=remote), '-->', from_getattr_recv(responses.get(i['seq'])))
+        print(
+            from_callattr_send(i, remote=remote),
+            "-->",
+            from_getattr_recv(responses.get(i["seq"])),
+        )
 
 print("\n\n----[ call ]----")
 for i in syncs:
     if i.get("req", "") == "HANDLE_CALL" and i["kind"] == "send":
-        print(from_call_send(i, remote=remote), '-->', from_getattr_recv(responses.get(i['seq'])))
+        print(
+            from_call_send(i, remote=remote),
+            "-->",
+            from_getattr_recv(responses.get(i["seq"])),
+        )
