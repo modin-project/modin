@@ -4593,6 +4593,21 @@ class TestDataFrameIndexing:
         pandas_df.loc["row3"]["col2"] = 32
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_loc_nested_assignment(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        key1 = modin_df.columns[0]
+        key2 = modin_df.columns[1]
+
+        modin_df[key1].loc[0] = 500
+        pandas_df[key1].loc[0] = 500
+        df_equals(modin_df, pandas_df)
+
+        modin_df[key2].loc[0] = None
+        pandas_df[key2].loc[0] = None
+        df_equals(modin_df, pandas_df)
+
     def test_iloc_assignment(self):
         modin_df = pd.DataFrame(
             index=["row1", "row2", "row3"], columns=["col1", "col2"]
@@ -4612,6 +4627,21 @@ class TestDataFrameIndexing:
         pandas_df.iloc[0]["col2"] = 12
         pandas_df.iloc[1]["col2"] = 22
         pandas_df.iloc[2]["col2"] = 32
+        df_equals(modin_df, pandas_df)
+
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_iloc_nested_assignment(self, data):
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+        key1 = modin_df.columns[0]
+        key2 = modin_df.columns[1]
+
+        modin_df[key1].iloc[0] = 500
+        pandas_df[key1].iloc[0] = 500
+        df_equals(modin_df, pandas_df)
+
+        modin_df[key2].iloc[0] = None
+        pandas_df[key2].iloc[0] = None
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
