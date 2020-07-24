@@ -64,36 +64,42 @@ class BasePandasDataset(object):
                 index=self.index,
                 columns=self.columns if hasattr(self, "columns") else None,
             )
-        # Add one here so that pandas automatically adds the dots
-        # It turns out to be faster to extract 2 extra rows and columns than to
-        # build the dots ourselves.
-        num_rows_for_head = num_rows // 2 + 1
-        num_rows_for_tail = (
-            num_rows_for_head
-            if len(self.index) > num_rows
-            else len(self.index) - num_rows_for_head
-            if len(self.index) - num_rows_for_head >= 0
-            else None
-        )
-        row_indexer = list(range(len(self.index))[:num_rows_for_head]) + (
-            list(range(len(self.index))[-num_rows_for_tail:])
-            if num_rows_for_tail is not None
-            else []
-        )
-        if hasattr(self, "columns"):
-            num_cols_for_front = num_cols // 2 + 1
-            num_cols_for_back = (
-                num_cols_for_front
-                if len(self.columns) > num_cols
-                else len(self.columns) - num_cols_for_front
-                if len(self.columns) - num_cols_for_front >= 0
+        if len(self.index) <= num_rows:
+            row_indexer = slice(None)
+        else:
+            # Add one here so that pandas automatically adds the dots
+            # It turns out to be faster to extract 2 extra rows and columns than to
+            # build the dots ourselves.
+            num_rows_for_head = num_rows // 2 + 1
+            num_rows_for_tail = (
+                num_rows_for_head
+                if len(self.index) > num_rows
+                else len(self.index) - num_rows_for_head
+                if len(self.index) - num_rows_for_head >= 0
                 else None
             )
-            col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
-                list(range(len(self.columns))[-num_cols_for_back:])
-                if num_cols_for_back is not None
+            row_indexer = list(range(len(self.index))[:num_rows_for_head]) + (
+                list(range(len(self.index))[-num_rows_for_tail:])
+                if num_rows_for_tail is not None
                 else []
             )
+        if hasattr(self, "columns"):
+            if len(self.columns) <= num_cols:
+                col_indexer = slice(None)
+            else:
+                num_cols_for_front = num_cols // 2 + 1
+                num_cols_for_back = (
+                    num_cols_for_front
+                    if len(self.columns) > num_cols
+                    else len(self.columns) - num_cols_for_front
+                    if len(self.columns) - num_cols_for_front >= 0
+                    else None
+                )
+                col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
+                    list(range(len(self.columns))[-num_cols_for_back:])
+                    if num_cols_for_back is not None
+                    else []
+                )
             indexer = row_indexer, col_indexer
         else:
             indexer = row_indexer
