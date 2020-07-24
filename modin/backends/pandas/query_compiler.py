@@ -252,11 +252,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frame = [o._modin_frame for o in other]
         new_modin_frame = self._modin_frame._concat(axis, other_modin_frame, join, sort)
+        result = self.__constructor__(new_modin_frame)
         if ignore_index:
-            new_modin_frame.index = pandas.RangeIndex(
-                len(self.index) + sum(len(o.index) for o in other)
-            )
-        return self.__constructor__(new_modin_frame)
+            if axis == 0:
+                return result.reset_index(drop=True)
+            else:
+                result.columns = pandas.RangeIndex(len(result.columns))
+                return result
+        return result
 
     # END Append/Concat/Join
 
