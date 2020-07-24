@@ -58,16 +58,27 @@ class RemoteMeta(type):
                 try:
                     res = object.__getattribute__(self, name)
                 except AttributeError:
+                    frame = sys._getframe()
                     try:
-                        remote = object.__getattribute__(
-                            object.__getattribute__(self, "__real_cls__"),
-                            "__wrapper_remote__",
-                        )
+                        is_inspect = frame.f_back.f_code.co_filename == inspect.__file__
                     except AttributeError:
-                        # running in local mode, fall back
+                        is_inspect = False
+                    finally:
+                        del frame
+                    if is_inspect:
+                        # be always-local for inspect.* functions
                         res = super().__getattribute__(name)
                     else:
-                        res = getattr(remote, name)
+                        try:
+                            remote = object.__getattribute__(
+                                object.__getattribute__(self, "__real_cls__"),
+                                "__wrapper_remote__",
+                            )
+                        except AttributeError:
+                            # running in local mode, fall back
+                            res = super().__getattribute__(name)
+                        else:
+                            res = getattr(remote, name)
         try:
             # note that any attribute might be in fact a data descriptor,
             # account for that
