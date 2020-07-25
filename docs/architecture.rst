@@ -202,8 +202,8 @@ documentation page on Contributing_.
 .. _Ray: https://github.com/ray-project/ray
 .. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
 .. _Contributing: contributing.html
-.. _Pandas on Ray: UsingPandasonRay/optimizations.html
-.. _Pandas on Dask: UsingPandasonDask/optimizations.html
+.. _Pandas on Ray: UsingPandasonRay/index.html
+.. _Pandas on Dask: UsingPandasonDask/index.html
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
