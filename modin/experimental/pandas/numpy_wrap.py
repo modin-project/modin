@@ -80,11 +80,26 @@ else:
                 def reducer(
                     obj,
                     obj_name=name,
+                    real_obj=getattr(real_numpy, name),
                     real_obj_reducer=getattr(real_numpy, name).__reduce__,
                 ):
-                    return (
-                        getattr(self.__current_numpy, obj_name),
-                    ) + real_obj_reducer(obj)[1:]
+                    # Ref: https://docs.python.org/3.6/library/pickle.html#object.__reduce__
+                    reduced = real_obj_reducer(obj)
+                    if not isinstance(reduced, tuple):
+                        return reduced
+                    if reduced[0] == real_obj:
+                        return (getattr(self.__current_numpy, obj_name),) + reduced[1:]
+                    assert isinstance(
+                        reduced[0], (types.FunctionType, types.BuiltinFunctionType)
+                    ), "Do not know how to support this"
+
+                    modobj = self.__current_numpy
+                    for submod in reduced[0].__module__.split(".")[1:]:
+                        modobj = getattr(modobj, submod)
+                    reconstruct = getattr(modobj, reduced[0].__name__)
+                    # FIXME: replace real numpy things in reduced[0] and all args in reduced[1:] with those from __current_numpy
+                    # TODO: see if all replacement is needed, maybe pickle calls __reduce__ recursievly?
+                    return (reconstruct,) + reduced[1:]
 
                 self.__reducers[name] = reducer
             return reducer
