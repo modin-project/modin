@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install black
+      - run: pip3 install black
       - run: black --check --diff modin/
   lint-flake8:
     name: lint (flake8)
@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install flake8 flake8-print
+      - run: pip3 install flake8 flake8-print
       - run: flake8 --enable=T modin
   test-api:
     runs-on: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
     runs-on: ubuntu-latest
@@ -70,7 +70,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
     runs-on: ubuntu-latest
@@ -83,7 +83,7 @@ jobs:
         with:
           python-version: "3.6.x"
           architecture: "x64"
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -107,7 +107,7 @@ jobs:
       - name: Install HDF5
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -146,7 +146,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -184,5 +184,5 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv

@@ -22,7 +22,7 @@ jobs:
       - name: Install HDF5
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -60,7 +60,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -97,5 +97,5 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
+      - run: pip3 install --no-cache-dir -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
