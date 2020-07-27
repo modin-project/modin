@@ -108,12 +108,64 @@ _NO_OVERRIDE = (
 )
 
 
-def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
+def make_proxy_cls(
+    remote_cls: netref.BaseNetref,
+    origin_cls: type,
+    override: type,
+    cls_name: str = None,
+):
+    """
+    Makes a new class type which inherits from <origin_cls> (for isinstance() and issubtype()),
+    takes methods from <override> as-is and proxy all requests for other members to <remote_cls>.
+    Note that origin_cls and remote_cls are assumed to be the same class types, but one is local
+    and other is obtained from RPyC.
+
+    Effectively implements subclassing, but without subclassing. This is needed because it is
+    impossible to subclass a remote-obtained class, something in the very internals of RPyC bugs out.
+
+    Parameters
+    ----------
+    remote_cls: netref.BaseNetref
+        Type obtained from RPyC connection, expected to mirror origin_cls
+    origin_cls: type
+        The class to prepare a proxying wrapping for
+    override: type
+        The mixin providing methods and attributes to overlay on top of remote values and methods.
+    cls_name: str, optional
+        The name to give to the resulting class.
+    
+    Returns
+    -------
+    type
+        New wrapper that takes attributes from override and relays requests to all other
+        attributes to remote_cls
+    """
+
     class ProxyMeta(RemoteMeta):
+        """
+        This metaclass deals with printing a telling repr() to assist in debugging,
+        and to actually implement the "subclass without subclassing" thing by
+        directly adding references to attributes of "override" and by making proxy methods
+        for other functions of origin_cls. Class-level attributes being proxied is managed
+        by RemoteMeta parent.
+
+        Do note that we cannot do the same for certain special members like __getitem__
+        because CPython for optimization doesn't do a lookup of "type(obj).__getitem__(foo)" when
+        "obj[foo]" is called, but it effectively does "type(obj).__dict__['__getitem__'](foo)"
+        (but even without checking for __dict__), so all present methods must be declared
+        beforehand.
+        """
+
         def __repr__(self):
             return f"<proxy for {origin_cls.__module__}.{origin_cls.__name__}:{cls_name or origin_cls.__name__}>"
 
         def __prepare__(*args, **kw):
+            """
+            Cooks the __dict__ of the type being constructed. Takes attributes from <override> as is
+            and adds proxying wrappers for other attributes of <origin_cls>.
+            This "manual inheritance" is needed for RemoteMeta.__getattribute__ which first looks into
+            type(obj).__dict__ (EXCLUDING parent classes) and then goes to proxy type.
+            """
             namespace = type.__prepare__(*args, **kw)
 
             # try computing overridden differently to allow subclassing one override from another
@@ -161,6 +213,11 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
             return namespace
 
     class Wrapper(override, origin_cls, metaclass=ProxyMeta):
+        """
+        Subclass origin_cls replacing attributes with what is defined in override while
+        relaying requests for all other attributes to remote_cls.
+        """
+
         __name__ = cls_name or origin_cls.__name__
         __wrapper_remote__ = remote_cls
 
@@ -249,7 +306,40 @@ def make_proxy_cls(remote_cls, origin_cls, override, cls_name=None):
     return Wrapper
 
 
-def _deliveringWrapper(origin_cls, methods=(), mixin=None, target_name=None):
+def _deliveringWrapper(
+    origin_cls: type, methods=(), mixin: type = None, target_name: str = None
+):
+    """
+    Prepare a proxying wrapper for origin_cls which overrides methods specified in
+    "methods" with "delivering" versions of methods.
+    A "delivering" method is a method which delivers its arguments to a remote end
+    before calling the remote method, effectively calling it with arguments passed
+    by value, not by reference.
+    This is mostly a workaround for RPyC bug when it translates a non-callable
+    type to a remote type which has __call__() method (which would raise TypeError
+    when called because local class is not callable).
+
+    Note: this could lead to some weird side-effects if any arguments passed
+    in are very funny, but this should never happen in a real data science life.
+
+    Parameters
+    ----------
+    origin_cls: type
+        Local class to make a "delivering wrapper" for.
+    methods: sequence of method names, optional
+        List of methods to override making "delivering wrappers" for.
+    mixin: type, optional
+        Parent mixin class to subclass (to inherit already prepared wrappers).
+        If not specified, a new mixin is created.
+    target_name: str, optional
+        Name to give to prepared wrapper class.
+        If not specified, take the name of local class being wrapped.
+
+    Returns
+    -------
+    type
+        The "delivering wrapper" mixin, to be used in conjunction with make_proxy_cls()
+    """
     conn = get_connection()
     remote_cls = getattr(conn.modules[origin_cls.__module__], origin_cls.__name__)
 
@@ -275,6 +365,10 @@ def _deliveringWrapper(origin_cls, methods=(), mixin=None, target_name=None):
 
 
 def _prepare_loc_mixin():
+    """
+    Prepare a mixin that overrides .loc and .iloc properties with versions
+    which return a special "delivering" instances of indexers.
+    """
     from modin.pandas.indexing import _LocIndexer, _iLocIndexer
 
     DeliveringLocIndexer = _deliveringWrapper(
@@ -297,6 +391,11 @@ def _prepare_loc_mixin():
 
 
 def make_dataframe_wrapper(DataFrame):
+    """
+    Prepares a "delivering wrapper" proxy class for DataFrame.
+    It makes DF.loc, DF.groupby() and other methods listed below deliver their
+    arguments to remote end by value.
+    """
     DeliveringDataFrame = _deliveringWrapper(
         DataFrame,
         ["groupby", "agg", "aggregate", "__getitem__", "astype", "drop", "merge"],
@@ -307,6 +406,10 @@ def make_dataframe_wrapper(DataFrame):
 
 
 def make_base_dataset_wrapper(BasePandasDataset):
+    """
+    Prepares a "delivering wrapper" proxy class for BasePandasDataset.
+    Look for deatils in make_dataframe_wrapper() and _deliveringWrapper().
+    """
     DeliveringBasePandasDataset = _deliveringWrapper(
         BasePandasDataset,
         ["agg", "aggregate"],
@@ -317,6 +420,10 @@ def make_base_dataset_wrapper(BasePandasDataset):
 
 
 def make_dataframe_groupby_wrapper(DataFrameGroupBy):
+    """
+    Prepares a "delivering wrapper" proxy class for DataFrameGroupBy.
+    Look for deatils in make_dataframe_wrapper() and _deliveringWrapper().
+    """
     DeliveringDataFrameGroupBy = _deliveringWrapper(
         DataFrameGroupBy, ["agg", "aggregate", "apply"], target_name="DataFrameGroupBy",
     )
@@ -324,4 +431,10 @@ def make_dataframe_groupby_wrapper(DataFrameGroupBy):
 
 
 def make_series_wrapper(Series):
+    """
+    Prepares a "delivering wrapper" proxy class for Series.
+    Note that for now _no_ methods that really deliver their arguments by value
+    are overridded here, so what it mostly does is it produces a wrapper class
+    inherited from normal Series but wrapping all access to remote end transparently.
+    """
     return _deliveringWrapper(Series, target_name="Series")

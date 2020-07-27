@@ -92,7 +92,28 @@ class RemoteMeta(type):
 _KNOWN_DUALS = {}
 
 
-def make_wrapped_class(local_cls, rpyc_wrapper_name):
+def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
+    """
+    Replaces given local class in its module with a descendant class
+    which has __new__ overridden (a dual-nature class).
+    This new class is instantiated differently depending o
+     whether this is done in remote context or local.
+
+    In local context we effectively get the same behaviour, but in remote
+    context the created class is actually of separate type which
+    proxies most requests to a remote end.
+
+    Parameters
+    ----------
+    local_cls: class
+        The class to replace with a dual-nature class
+    rpyc_wrapper_name: str
+        The function *name* to make a proxy class type.
+        Note that this is specifically taken as string to not import
+        "rpyc_proxy" module in top-level, as it requires RPyC to be
+        installed, and not all users of Modin (even in experimental mode)
+        need remote context.
+    """
     namespace = {
         "__real_cls__": None,
         "__new__": None,
