@@ -1235,7 +1235,6 @@ class Series(BasePandasDataset):
             else:
                 result = self.copy()
                 result.index = new_idx
-                result.name = name or self.name
                 return result
         elif not drop and inplace:
             raise TypeError(
@@ -1247,9 +1246,7 @@ class Series(BasePandasDataset):
                 obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(self.copy()).reset_index(
-                level=level, drop=drop, inplace=inplace
-            )
+            return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
