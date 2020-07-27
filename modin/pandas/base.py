@@ -3333,9 +3333,6 @@ class BasePandasDataset(object):
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
-    def unstack(self, level=-1, fill_value=None):
-        return self._default_to_pandas("unstack", level=level, fill_value=fill_value)
-
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):

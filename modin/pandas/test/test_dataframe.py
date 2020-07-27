@@ -2950,10 +2950,78 @@ class TestDataFrameDefault:
             pandas_df.tz_localize("America/Los_Angeles", axis=0),
         )
 
-    def test_unstack(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).unstack()
+    @pytest.mark.parametrize(
+        "is_multi_idx", [True, False], ids=["idx_multi", "idx_index"]
+    )
+    @pytest.mark.parametrize(
+        "is_multi_col", [True, False], ids=["col_multi", "col_index"]
+    )
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_unstack(self, data, is_multi_idx, is_multi_col):
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
+
+        if is_multi_idx:
+            if len(pandas_df.index) == 256:
+                index = pd.MultiIndex.from_product(
+                    [
+                        ["a", "b", "c", "d"],
+                        ["x", "y", "z", "last"],
+                        ["i", "j", "k", "index"],
+                        [1, 2, 3, 4],
+                    ]
+                )
+            elif len(pandas_df.index) == 100:
+                index = pd.MultiIndex.from_product(
+                    [
+                        ["x", "y", "z", "last"],
+                        ["a", "b", "c", "d", "f"],
+                        ["i", "j", "k", "l", "index"],
+                    ]
+                )
+        else:
+            index = pandas_df.index
+
+        if is_multi_col:
+            if len(pandas_df.columns) == 64:
+                columns = pd.MultiIndex.from_product(
+                    [
+                        ["A", "B", "C", "D"],
+                        ["xx", "yy", "zz", "LAST"],
+                        [10, 20, 30, 40],
+                    ]
+                )
+            elif len(pandas_df.columns) == 100:
+                columns = pd.MultiIndex.from_product(
+                    [
+                        ["xx", "yy", "zz", "LAST"],
+                        ["A", "B", "C", "D", "F"],
+                        ["I", "J", "K", "L", "INDEX"],
+                    ]
+                )
+        else:
+            columns = pandas_df.columns
+
+        pandas_df.columns = columns
+        pandas_df.index = index
+
+        modin_df.columns = columns
+        modin_df.index = index
+
+        df_equals(modin_df.unstack(), pandas_df.unstack())
+
+        if is_multi_idx:
+            df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
+            df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
+            df_equals(
+                modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2])
+            )
+
+            if len(pandas_df.index) == 256:
+                df_equals(
+                    modin_df.unstack(level=[0, 1, 2, 3]),
+                    pandas_df.unstack(level=[0, 1, 2, 3]),
+                )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test___array__(self, data):
