@@ -85,11 +85,11 @@ class Publisher(object):
     def __init__(self, name, value):
         self.name = name
         self.__value = value.title()
-        self.__subs = set()
-        self.__once = collections.defaultdict(set)
+        self.__subs = []
+        self.__once = collections.defaultdict(list)
 
     def subscribe(self, callback):
-        self.__subs.add(callback)
+        self.__subs.append(callback)
         callback(self)
 
     def once(self, onvalue, callback):
@@ -97,7 +97,7 @@ class Publisher(object):
         if onvalue == self.__value:
             callback(self)
         else:
-            self.__once[onvalue].add(callback)
+            self.__once[onvalue].append(callback)
 
     def get(self):
         return self.__value
