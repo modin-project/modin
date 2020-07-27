@@ -18,7 +18,7 @@ import rpyc
 from rpyc.lib.compat import pickle
 from rpyc.lib import get_methods
 
-from rpyc.core import netref, AsyncResult
+from rpyc.core import netref, AsyncResult, consts
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
