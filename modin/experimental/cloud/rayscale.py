@@ -59,6 +59,7 @@ class RayCluster(BaseCluster):
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
     )
     __instance_key = {Provider.AWS: "InstanceType"}
+    __image_key = {Provider.AWS: "ImageId"}
     __credentials_env = {Provider.AWS: "AWS_SHARED_CREDENTIALS_FILE"}
 
     def __init__(self, *a, **kw):
@@ -109,7 +110,7 @@ class RayCluster(BaseCluster):
         if self.provider.region:
             config["provider"]["region"] = self.provider.region
         if self.provider.zone:
-            config["provider"]["zone"] = self.provider.zone
+            config["provider"]["availability_zone"] = self.provider.zone
 
         # connection details
         config["auth"]["ssh_user"] = "ubuntu"
@@ -120,10 +121,14 @@ class RayCluster(BaseCluster):
         # instance types
         try:
             instance_key = self.__instance_key[self.provider.name]
+            image_key = self.__image_key[self.provider.name]
         except KeyError:
             raise ValueError(f"Unsupported provider: {self.provider.name}")
+
         config["head_node"][instance_key] = self.head_node_type
+        config["head_node"][image_key] = self.provider.image
         config["worker_nodes"][instance_key] = self.worker_node_type
+        config["worker_nodes"][image_key] = self.provider.image
 
         return _bootstrap_config(config)
 
