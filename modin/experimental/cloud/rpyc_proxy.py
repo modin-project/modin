@@ -133,7 +133,7 @@ def make_proxy_cls(
         The mixin providing methods and attributes to overlay on top of remote values and methods.
     cls_name: str, optional
         The name to give to the resulting class.
-    
+
     Returns
     -------
     type
