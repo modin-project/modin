@@ -34,6 +34,7 @@ class Provider:
     __KNOWN = {AWS: [_RegionZone(region="us-west-1", zone="us-west-1a")]}
     __DEFAULT_HEAD = {AWS: "m5.large"}
     __DEFAULT_WORKER = {AWS: "m5.large"}
+    __DEFAULT_IMAGE = {AWS: "ami-0f56279347d2fa43e"}
 
     def __init__(
         self,
@@ -41,12 +42,14 @@ class Provider:
         credentials_file: str = None,
         region: str = None,
         zone: str = None,
+        image: str = None,
     ):
         """
         Class that holds all information about particular connection to cluster provider, namely
             * provider name (must be one of known ones)
             * path to file with credentials (file format is provider-specific); omit to use global provider-default credentials
             * region and zone where cluster is to be spawned (optional, would be deduced if omitted)
+            * image to use (optional, would use default for provider if omitted)
         """
 
         if name not in self.__KNOWN:
@@ -77,6 +80,7 @@ class Provider:
         self.credentials_file = (
             os.path.abspath(credentials_file) if credentials_file is not None else None
         )
+        self.image = image or self.__DEFAULT_IMAGE[name]
 
     @property
     def default_head_type(self):
@@ -197,6 +201,7 @@ def create(
     credentials: str = None,
     region: str = None,
     zone: str = None,
+    image: str = None,
     project_name: str = None,
     cluster_name: str = "modin-cluster",
     workers: int = 4,
@@ -222,6 +227,9 @@ def create(
         If omitted a default for given provider will be taken.
     zone : str, optional
         Availability zone (part of region) where to spawn the cluster.
+        If omitted a default for given provider and region will be taken.
+    image: str, optional
+        Image to use for spawning head and worker nodes.
         If omitted a default for given provider will be taken.
     project_name : str, optional
         Project name to assign to the cluster in cloud, for easier manual tracking.
@@ -247,12 +255,16 @@ def create(
     """
     if not isinstance(provider, Provider):
         provider = Provider(
-            name=provider, credentials_file=credentials, region=region, zone=zone
+            name=provider,
+            credentials_file=credentials,
+            region=region,
+            zone=zone,
+            image=image,
         )
     else:
-        if any(p is not None for p in (credentials, region, zone)):
+        if any(p is not None for p in (credentials, region, zone, image)):
             warnings.warn(
-                "Ignoring credentials, region and zone parameters because provider is specified as Provider descriptor, not as name",
+                "Ignoring credentials, region, zone and image parameters because provider is specified as Provider descriptor, not as name",
                 UserWarning,
             )
     if __spawner__ == "rayscale":
