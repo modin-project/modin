@@ -87,6 +87,55 @@ import threading
 import os
 import multiprocessing
 
+from .. import execution_engine, Publisher
+
+DEFAULT_NPARTITIONS = 4
+num_cpus = 1
+
+
+_is_first_update = {}
+dask_client = None
+
+
+def _update_engine(publisher: Publisher):
+    global DEFAULT_NPARTITIONS, dask_client, num_cpus
+
+    if publisher.get() == "Ray":
+        import ray
+        from modin.engines.ray.utils import initialize_ray
+
+        if _is_first_update.get("Ray", True):
+            initialize_ray()
+        num_cpus = ray.cluster_resources()["CPU"]
+    elif publisher.get() == "Dask":  # pragma: no cover
+        from distributed.client import get_client
+
+        if threading.current_thread().name == "MainThread" and _is_first_update.get(
+            "Dask", True
+        ):
+            import warnings
+
+            warnings.warn("The Dask Engine for Modin is experimental.")
+
+            try:
+                dask_client = get_client()
+            except ValueError:
+                from distributed import Client
+
+                num_cpus = (
+                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
+                )
+                dask_client = Client(n_workers=int(num_cpus))
+
+    elif publisher.get() != "Python":
+        raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
+
+    _is_first_update[publisher.get()] = False
+    DEFAULT_NPARTITIONS = max(4, int(num_cpus))
+
+
+execution_engine.subscribe(_update_engine)
+
 from .. import __version__
 from .concat import concat
 from .dataframe import DataFrame
@@ -133,58 +182,9 @@ from .general import (
     value_counts,
 )
 from .plotting import Plotting as plotting
-from .. import execution_engine, Publisher
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
-num_cpus = 1
-
-
-DEFAULT_NPARTITIONS = 4
-_is_first_update = {}
-dask_client = None
-
-
-def _update_engine(publisher: Publisher):
-    global DEFAULT_NPARTITIONS, dask_client
-
-    num_cpus = DEFAULT_NPARTITIONS
-    if publisher.get() == "Ray":
-        import ray
-        from modin.engines.ray.utils import initialize_ray
-
-        if _is_first_update.get("Ray", True):
-            initialize_ray()
-        num_cpus = ray.cluster_resources()["CPU"]
-    elif publisher.get() == "Dask":  # pragma: no cover
-        from distributed.client import get_client
-
-        if threading.current_thread().name == "MainThread" and _is_first_update.get(
-            "Dask", True
-        ):
-            import warnings
-
-            warnings.warn("The Dask Engine for Modin is experimental.")
-
-            try:
-                dask_client = get_client()
-            except ValueError:
-                from distributed import Client
-
-                num_cpus = (
-                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-                )
-                dask_client = Client(n_workers=int(num_cpus))
-
-    elif publisher.get() != "Python":
-        raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
-
-    _is_first_update[publisher.get()] = False
-    DEFAULT_NPARTITIONS = max(4, int(num_cpus))
-
-
-execution_engine.subscribe(_update_engine)
-
 __all__ = [
     "DataFrame",
     "Series",
