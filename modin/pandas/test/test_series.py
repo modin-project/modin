@@ -28,6 +28,7 @@ from .utils import (
     df_equals,
     arg_keys,
     name_contains,
+    test_data,
     test_data_values,
     test_data_keys,
     test_string_data_values,
@@ -1800,6 +1801,24 @@ def test_last():
     pandas_series = pandas.Series(list(range(400)), index=pandas_index)
     df_equals(modin_series.last("3D"), pandas_series.last("3D"))
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
+
+
+def test_index_order():
+    # see #1708 for details
+    s_modin, s_pandas = create_test_series(test_data["dense_nan_data"])
+    rows_number = len(s_modin.index)
+    level_0 = np.random.choice([x for x in range(10)], rows_number)
+    level_1 = np.random.choice([x for x in range(10)], rows_number)
+    index = pandas.MultiIndex.from_arrays([level_0, level_1])
+
+    s_modin.index = index
+    s_pandas.index = index
+
+    for func in ["all", "any", "mad"]:
+        df_equals(
+            getattr(s_modin, func)(level=0).index,
+            getattr(s_pandas, func)(level=0).index,
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
