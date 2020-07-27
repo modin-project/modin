@@ -167,6 +167,18 @@ class TestCSV:
 
         df_equals(ref, exp)
 
+    def test_read_and_concat(self):
+        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        ref1 = pd.read_csv(csv_file)
+        ref2 = pd.read_csv(csv_file)
+        ref = pd.concat([ref1, ref2])
+
+        exp1 = pd.read_csv(csv_file)
+        exp2 = pd.read_csv(csv_file)
+        exp = mpd.concat([exp1, exp2])
+
+        df_equals(ref, exp)
+
 
 class TestMasks:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}

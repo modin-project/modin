@@ -796,6 +796,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
             )
         elif isinstance(self._op, TransformNode):
             return self._op.is_drop() and self._op.input[0]._can_execute_arrow()
+        elif isinstance(self._op, UnionNode):
+            return all(frame._can_execute_arrow() for frame in self._op.input)
         else:
             return False
 
@@ -811,6 +813,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return self._arrow_col_slice(
                 self._op.input[0]._execute_arrow(), set(self._op.exprs.keys())
             )
+        elif isinstance(self._op, UnionNode):
+            return self._arrow_concat(self._op.input)
         else:
             raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
 
@@ -837,6 +841,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         parts.append(table.slice(start, end - start + 1))
 
         return pyarrow.concat_tables(parts)
+
+    def _arrow_concat(self, frames):
+        return pyarrow.concat_tables(frame._execute_arrow() for frame in frames)
 
     def _build_index_cache(self):
         assert isinstance(self._op, FrameNode)
