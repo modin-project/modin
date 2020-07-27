@@ -19,9 +19,6 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - name: Install HDF5
-        if: matrix.part == 3
-        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip install -r requirements.txt
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
