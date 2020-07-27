@@ -557,10 +557,12 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
-def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs):
+def eval_general(
+    modin_df, pandas_df, operation, comparator=df_equals, __inplace__=False, **kwargs
+):
     md_kwargs, pd_kwargs = {}, {}
 
-    def execute_callable(fn, md_kwargs={}, pd_kwargs={}):
+    def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as e:
@@ -569,7 +571,7 @@ def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs)
                 repr(fn(modin_df, **md_kwargs))
         else:
             md_result = fn(modin_df, **md_kwargs)
-            return md_result, pd_result
+            return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
         if callable(value):
@@ -585,7 +587,9 @@ def eval_general(modin_df, pandas_df, operation, comparator=df_equals, **kwargs)
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
-    values = execute_callable(operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs)
+    values = execute_callable(
+        operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
+    )
     if values is not None:
         comparator(*values)
 
