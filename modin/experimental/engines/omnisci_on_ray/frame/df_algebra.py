@@ -186,6 +186,11 @@ class TransformNode(DFAlgNode):
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
     def is_drop(self):
+        """
+        Check if transform node is a simple drop of columns. Zero or more
+        columns may be dropped. Remaining columns should preserve original
+        columns order.
+        """
         col_iter = iter(self.input[0]._table_cols)
         try:
             for col, expr in self.exprs.items():
