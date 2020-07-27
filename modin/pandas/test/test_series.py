@@ -2409,20 +2409,17 @@ def test_resample(closed, label, level):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("drop", [True, False], ids=["True", "False"])
-def test_reset_index(data, drop):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.reset_index(drop=drop), pandas_series.reset_index(drop=drop))
-
-    modin_series_cp = modin_series.copy()
-    pandas_series_cp = pandas_series.copy()
-    try:
-        pandas_result = pandas_series_cp.reset_index(drop=drop, inplace=True)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series_cp.reset_index(drop=drop, inplace=True)
-    else:
-        modin_result = modin_series_cp.reset_index(drop=drop, inplace=True)
-        df_equals(pandas_result, modin_result)
+@pytest.mark.parametrize("name", [None, "Custom name"])
+@pytest.mark.parametrize("inplace", [True, False])
+def test_reset_index(data, drop, name, inplace):
+    eval_general(
+        *create_test_series(data),
+        lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
+        drop=drop,
+        name=name,
+        inplace=inplace,
+        __inplace__=inplace,
+    )
 
 
 @pytest.mark.skip(reason="Using pandas Series.")
