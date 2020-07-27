@@ -56,6 +56,8 @@ from .utils import (
     int_arg_values,
     eval_general,
     create_test_dfs,
+    test_data_small_values,
+    test_data_small_keys,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -3390,7 +3392,11 @@ class TestDataFrameReduction_B:
         os.name == "nt",
         reason="Windows has a memory issue for large numbers on this test",
     )
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    @pytest.mark.parametrize(
+        "data",
+        test_data_values + test_data_small_values,
+        ids=test_data_keys + test_data_small_keys,
+    )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
@@ -3401,51 +3407,48 @@ class TestDataFrameReduction_B:
     @pytest.mark.parametrize(
         "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
     )
-    def test_prod(self, request, data, axis, skipna, numeric_only, min_count):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.prod(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.prod(
-                    axis=axis,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                )
-        else:
-            modin_result = modin_df.prod(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.prod(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.prod(
-                    axis=axis,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                )
-        else:
-            modin_result = modin_df.T.prod(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.skipif(
-        os.name == "nt",
-        reason="Windows has a memory issue for large numbers on this test",
+    @pytest.mark.parametrize("is_transposed", [False, True])
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "prod",
+            pytest.param(
+                "product",
+                marks=pytest.mark.skipif(
+                    pandas.DataFrame.product == pandas.DataFrame.prod
+                    and pd.DataFrame.product == pd.DataFrame.prod,
+                    reason="That operation was already tested.",
+                ),
+            ),
+        ],
     )
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_prod(
+        self,
+        request,
+        data,
+        axis,
+        skipna,
+        numeric_only,
+        min_count,
+        is_transposed,
+        operation,
+    ):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: getattr(
+                df.T if is_transposed else df, operation
+            )(*args, **kwargs),
+            axis=axis,
+            skipna=skipna,
+            numeric_only=numeric_only,
+            min_count=min_count,
+        )
+
+    @pytest.mark.parametrize(
+        "data",
+        test_data_values + test_data_small_values,
+        ids=test_data_keys + test_data_small_keys,
+    )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
@@ -3456,77 +3459,20 @@ class TestDataFrameReduction_B:
     @pytest.mark.parametrize(
         "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
     )
-    def test_product(self, request, data, axis, skipna, numeric_only, min_count):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.product(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.product(
-                    axis=axis,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                )
-        else:
-            modin_result = modin_df.product(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
-    )
-    def test_sum(self, request, data, axis, skipna, numeric_only, min_count):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.sum(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.sum(
-                    axis=axis,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                )
-        else:
-            modin_result = modin_df.sum(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-            df_equals(modin_result, pandas_result)
-        try:
-            pandas_result = pandas_df.T.sum(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.sum(
-                    axis=axis,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                )
-        else:
-            modin_result = modin_df.T.sum(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, min_count=min_count
-            )
-            df_equals(modin_result, pandas_result)
+    @pytest.mark.parametrize("is_transposed", [False, True])
+    def test_sum(
+        self, request, data, axis, skipna, numeric_only, min_count, is_transposed
+    ):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: (df.T if is_transposed else df).sum(
+                *args, **kwargs
+            ),
+            axis=axis,
+            skipna=skipna,
+            numeric_only=numeric_only,
+            min_count=min_count,
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_sum_single_column(self, data):

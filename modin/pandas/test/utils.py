@@ -159,6 +159,17 @@ test_data_with_duplicates = {
     },
 }
 
+test_data_small = {
+    "small": {
+        "col0": [1, 2, 3, 4],
+        "col1": [8.0, 9.4, 10.1, 11.3],
+        "col2": [4, 5, 6, 7],
+    }
+}
+
+test_data_small_values = list(test_data_small.values())
+test_data_small_keys = list(test_data_small.keys())
+
 test_data_with_duplicates_values = list(test_data_with_duplicates.values())
 test_data_with_duplicates_keys = list(test_data_with_duplicates.keys())
 

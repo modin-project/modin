@@ -1738,8 +1738,13 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
-        new_index = self.columns if axis else self.index
-        if min_count > len(new_index):
+        axis_to_apply = self.columns if axis else self.index
+        if (
+            skipna is not False
+            and numeric_only is None
+            and min_count > len(axis_to_apply)
+        ):
+            new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
@@ -2063,8 +2068,13 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
-        new_index = self.columns if axis else self.index
-        if min_count > len(new_index):
+        axis_to_apply = self.columns if axis else self.index
+        if (
+            skipna is not False
+            and numeric_only is None
+            and min_count > len(axis_to_apply)
+        ):
+            new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
