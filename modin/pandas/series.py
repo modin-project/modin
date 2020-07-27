@@ -182,7 +182,7 @@ class Series(BasePandasDataset):
         return super(Series, new_self).__and__(new_other)
 
     def __array__(self, dtype=None):
-        return super().__array__(dtype).flatten()
+        return super(Series, self).__array__(dtype).flatten()
 
     @property
     def __array_priority__(self):  # pragma: no cover
@@ -365,7 +365,7 @@ class Series(BasePandasDataset):
         Returns:
             The NumPy representation of this object.
         """
-        return super().to_numpy().flatten()
+        return super(Series, self).to_numpy().flatten()
 
     def __xor__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
@@ -505,7 +505,7 @@ class Series(BasePandasDataset):
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
-            query_compiler = super().apply(func, *args, **kwds)
+            query_compiler = super(Series, self).apply(func, *args, **kwds)
         else:
             # handle ufuncs and lambdas
             if kwds or args and not isinstance(func, np.ufunc):
@@ -577,7 +577,7 @@ class Series(BasePandasDataset):
         )
 
     def combine(self, other, func, fill_value=None):
-        return super().combine(
+        return super(Series, self).combine(
             other, lambda s1, s2: s1.combine(s2, func, fill_value=fill_value)
         )
 
@@ -663,7 +663,7 @@ class Series(BasePandasDataset):
         )
 
     def count(self, level=None):
-        return super().count(level=level)
+        return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None):
         """
@@ -719,10 +719,10 @@ class Series(BasePandasDataset):
 
     def describe(self, percentiles=None, include=None, exclude=None):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
-        return super().describe(percentiles=percentiles)
+        return super(Series, self).describe(percentiles=percentiles)
 
     def diff(self, periods=1):
-        return super().diff(periods=periods, axis=0)
+        return super(Series, self).diff(periods=periods, axis=0)
 
     def divmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
@@ -797,10 +797,10 @@ class Series(BasePandasDataset):
         )
 
     def drop_duplicates(self, keep="first", inplace=False):
-        return super().drop_duplicates(keep=keep, inplace=inplace)
+        return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
 
     def dropna(self, axis=0, inplace=False, how=None):
-        return super().dropna(axis=axis, inplace=inplace)
+        return super(Series, self).dropna(axis=axis, inplace=inplace)
 
     def duplicated(self, keep="first"):
         return self.to_frame().duplicated(keep=keep)
@@ -904,12 +904,12 @@ class Series(BasePandasDataset):
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):
         if skipna is None:
             skipna = True
-        return super().idxmax(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def idxmin(self, axis=0, skipna=True, *args, **kwargs):
         if skipna is None:
             skipna = True
-        return super().idxmin(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def interpolate(
         self,
@@ -981,7 +981,7 @@ class Series(BasePandasDataset):
             )
             index_value = self.index.memory_usage(deep=deep)
             return result + index_value
-        return super().memory_usage(index=index, deep=deep)
+        return super(Series, self).memory_usage(index=index, deep=deep)
 
     def mod(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -990,7 +990,7 @@ class Series(BasePandasDataset):
         )
 
     def mode(self, dropna=True):
-        return super().mode(numeric_only=False, dropna=dropna)
+        return super(Series, self).mode(numeric_only=False, dropna=dropna)
 
     def mul(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -1117,7 +1117,7 @@ class Series(BasePandasDataset):
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
-        return super().prod(
+        return super(Series, self).prod(
             axis=axis,
             skipna=skipna,
             level=level,
@@ -1161,7 +1161,7 @@ class Series(BasePandasDataset):
                 "reindex() got an unexpected keyword "
                 'argument "{0}"'.format(list(kwargs.keys())[0])
             )
-        return super().reindex(
+        return super(Series, self).reindex(
             index=index,
             method=method,
             level=level,
@@ -1290,10 +1290,12 @@ class Series(BasePandasDataset):
     rdiv = rtruediv
 
     def quantile(self, q=0.5, interpolation="linear"):
-        return super().quantile(q=q, numeric_only=False, interpolation=interpolation)
+        return super(Series, self).quantile(
+            q=q, numeric_only=False, interpolation=interpolation
+        )
 
     def reorder_levels(self, order):
-        return super().reorder_levels(order)
+        return super(Series, self).reorder_levels(order)
 
     def searchsorted(self, value, side="left", sorter=None):
         return self._default_to_pandas(
@@ -1364,7 +1366,7 @@ class Series(BasePandasDataset):
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
-        return super().sum(
+        return super(Series, self).sum(
             axis=axis,
             skipna=skipna,
             level=level,
@@ -1377,7 +1379,7 @@ class Series(BasePandasDataset):
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):
-        return super().take(indices, axis=axis, is_copy=is_copy, **kwargs)
+        return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
 
     def _to_datetime(self, **kwargs):
         """
@@ -1430,7 +1432,7 @@ class Series(BasePandasDataset):
         Returns:
             A NumPy array.
         """
-        return super().to_numpy(dtype, copy).flatten()
+        return super(Series, self).to_numpy(dtype, copy).flatten()
 
     tolist = to_list
 
@@ -1684,7 +1686,7 @@ class Series(BasePandasDataset):
         return 1
 
     def nunique(self, dropna=True):
-        return super().nunique(dropna=dropna)
+        return super(Series, self).nunique(dropna=dropna)
 
     @property
     def shape(self):
