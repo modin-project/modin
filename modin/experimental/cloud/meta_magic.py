@@ -52,7 +52,8 @@ class RemoteMeta(type):
                 # Go for proxying class-level attributes first;
                 # make sure to check for attribute in self.__dict__ to get the class-level
                 # attribute from the class itself, not from some of its parent classes.
-                # Also note we use object.__getattribute__() to skip any potential class-level __getattr__
+                # Also note we use object.__getattribute__() to skip any potential
+                # class-level __getattr__
                 res = object.__getattribute__(self, "__dict__")[name]
             except KeyError:
                 try:

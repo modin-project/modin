@@ -215,13 +215,15 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
 class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
     @classmethod
     def prepare(cls):
-        # query_compiler import is needed so remote PandasQueryCompiler has an imported local counterpart;
-        # if there isn't such counterpart rpyc generates some bogus class type which raises TypeError()
+        # query_compiler import is needed so remote PandasQueryCompiler
+        # has an imported local counterpart;
+        # if there isn't such counterpart rpyc generates some bogus
+        # class type which raises TypeError()
         # upon checking its isinstance() or issubclass()
         import modin.backends.pandas.query_compiler  # noqa: F401
         from modin.experimental.cloud import get_connection
 
-        class WrappedIo:
+        class WrappedIO:
             def __init__(self, conn):
                 self.__conn = conn
                 self.__io_cls = conn.modules[
@@ -248,4 +250,4 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
                     wrap = getattr(self.__io_cls, name)
                 return wrap
 
-        cls.io_cls = WrappedIo(get_connection())
+        cls.io_cls = WrappedIO(get_connection())
