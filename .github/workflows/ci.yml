@@ -3,7 +3,7 @@ on: pull_request
 jobs:
   lint-commit:
     name: lint (commit)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
     steps:
@@ -21,7 +21,7 @@ jobs:
       - run: npx commitlint --from upstream/master --to HEAD --verbose
   lint-black:
     name: lint (black)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v1
         with:
@@ -34,7 +34,7 @@ jobs:
       - run: black --check --diff modin/
   lint-flake8:
     name: lint (flake8)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v1
         with:
@@ -46,7 +46,7 @@ jobs:
       - run: pip install flake8 flake8-print
       - run: flake8 --enable=T modin
   test-api:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: test api
     steps:
       - uses: actions/checkout@v1
@@ -60,7 +60,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: test-headers
     steps:
       - uses: actions/checkout@v1
@@ -73,7 +73,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: test-internals
     steps:
       - uses: actions/checkout@v1
@@ -87,7 +87,7 @@ jobs:
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
@@ -169,7 +169,7 @@ jobs:
       - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
