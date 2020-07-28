@@ -22,6 +22,7 @@ from .utils import (
     create_test_dfs,
     eval_general,
     df_categories_equals,
+    test_data_values,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1284,3 +1285,24 @@ def test_unknown_groupby(columns):
         pandas_df.groupby(by=get_columns(pandas_df))
     with pytest.raises(KeyError):
         modin_df.groupby(by=get_columns(modin_df))
+
+
+@pytest.mark.parametrize(
+    "func_to_apply",
+    [
+        lambda df: df.sum(),
+        lambda df: df.count(),
+        lambda df: df.size(),
+        lambda df: df.mean(),
+        lambda df: df.quantile(),
+    ],
+)
+def test_multi_column_groupby_different_partitions(func_to_apply):
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(data)
+
+    # columns that will be located in a different partitions
+    by = [pd_df.columns[0], pd_df.columns[-1]]
+
+    md_grp, pd_grp = md_df.groupby(by), pd_df.groupby(by)
+    eval_general(md_grp, pd_grp, func_to_apply)

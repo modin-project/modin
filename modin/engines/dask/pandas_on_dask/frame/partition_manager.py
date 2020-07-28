@@ -20,12 +20,13 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
+import pandas
 
 from distributed.client import _get_global_client
 import cloudpickle as pkl
 
 
-def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
             if isinstance(call, bytes):
@@ -33,16 +34,20 @@ def deploy_func(df, other, apply_func, call_queue_df=None, call_queue_other=None
             if isinstance(kwargs, bytes):
                 kwargs = pkl.loads(kwargs)
             df = call(df, **kwargs)
-    if call_queue_other is not None and len(call_queue_other) > 0:
-        for call, kwargs in call_queue_other:
-            if isinstance(call, bytes):
-                call = pkl.loads(call)
-            if isinstance(kwargs, bytes):
-                kwargs = pkl.loads(kwargs)
-            other = call(other, **kwargs)
+    new_others = np.empty(shape=len(others), dtype=object)
+    for i, call_queue_other in enumerate(call_queues_other):
+        other = others[i]
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, bytes):
+                    call = pkl.loads(call)
+                if isinstance(kwargs, bytes):
+                    kwargs = pkl.loads(kwargs)
+                other = call(other, **kwargs)
+        new_others[i] = other
     if isinstance(apply_func, bytes):
         apply_func = pkl.loads(apply_func)
-    return apply_func(df, other)
+    return apply_func(df, new_others)
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -98,16 +103,12 @@ class DaskFrameManager(BaseFrameManager):
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
-    def broadcast_apply(cls, axis, apply_func, left, right):
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+        def mapper(df, others):
+            other = pandas.concat(others, axis=axis ^ 1)
+            return apply_func(df, **{other_name: other})
+
         client = _get_global_client()
-        right_parts = np.squeeze(right)
-        if len(right_parts.shape) == 0:
-            right_parts = np.array([right_parts.item()])
-        assert (
-            len(right_parts.shape) == 1
-        ), "Invalid broadcast partitions shape {}\n{}".format(
-            right_parts.shape, [[i.get() for i in j] for j in right_parts]
-        )
         return np.array(
             [
                 [
@@ -115,14 +116,16 @@ class DaskFrameManager(BaseFrameManager):
                         client.submit(
                             deploy_func,
                             part.future,
-                            right_parts[col_idx].future
-                            if axis
-                            else right_parts[row_idx].future,
-                            apply_func,
+                            mapper,
                             part.call_queue,
-                            right_parts[col_idx].call_queue
+                            [obj[col_idx].call_queue for obj in right]
                             if axis
-                            else right_parts[row_idx].call_queue,
+                            else [obj.call_queue for obj in right[row_idx]],
+                            *(
+                                [obj[col_idx].future for obj in right]
+                                if axis
+                                else [obj.future for obj in right[row_idx]]
+                            ),
                             pure=False,
                         )
                     )
