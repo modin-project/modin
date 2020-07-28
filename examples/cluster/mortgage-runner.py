@@ -19,10 +19,9 @@
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
 import modin.experimental.pandas as pd  # noqa: F401
-from modin.experimental.cloud import create_cluster, get_connection
+from modin.experimental.cloud import create_cluster
 
 from mortgage import run_benchmark
-from mortgage.mortgage_pandas import etl_pandas
 
 test_cluster = create_cluster(
     "aws",
@@ -33,9 +32,6 @@ test_cluster = create_cluster(
     image="ami-00e1e82d7d4ca80d3",
 )
 with test_cluster:
-    conn = get_connection()
-    np = conn.modules["numpy"]
-    etl_pandas.__globals__["np"] = np
 
     parameters = {
         "data_file": "https://modin-datasets.s3.amazonaws.com/mortgage",

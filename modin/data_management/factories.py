@@ -223,6 +223,9 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
         import modin.backends.pandas.query_compiler  # noqa: F401
         from modin.experimental.cloud import get_connection
 
+        # import a numpy overrider if it wasn't already imported
+        import modin.experimental.pandas.numpy_wrap  # noqa: F401
+
         class WrappedIO:
             def __init__(self, conn):
                 self.__conn = conn
