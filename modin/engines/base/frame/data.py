@@ -1021,7 +1021,7 @@ class BasePandasFrame(object):
                 reduce_parts, new_index, new_columns, validate_axes="reduced"
             )
 
-    def _map(self, func, dtypes=None, validate_index=False):
+    def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
 
         Pamareters
@@ -1055,12 +1055,23 @@ class BasePandasFrame(object):
             new_row_lengths = None
         else:
             new_row_lengths = self._row_lengths
+
+        if validate_columns:
+            new_columns = self._frame_mgr_cls.get_indices(
+                1, new_partitions, lambda df: df.columns
+            )
+        else:
+            new_columns = self.columns
+        if len(new_columns) != len(self.columns):
+            new_column_widths = None
+        else:
+            new_column_widths = self._column_widths
         return self.__constructor__(
             new_partitions,
             new_index,
-            self.columns,
+            new_columns,
             new_row_lengths,
-            self._column_widths,
+            new_column_widths,
             dtypes=dtypes,
         )
 
