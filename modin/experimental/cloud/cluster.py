@@ -252,6 +252,14 @@ def create(
         The object that knows how to destroy the cluster and how to activate it as remote context.
         Note that by default spawning and destroying of the cluster happens in the background,
         as it's usually a rather lengthy process.
+
+    Notes
+    -----
+    Cluster computation actually can work when proxies are required to access the cloud.
+    You should set normal "http_proxy"/"https_proxy" variables for HTTP/HTTPS proxies and
+    set "MODIN_SOCKS_PROXY" variable for SOCKS proxy before calling the function.
+
+    Using SOCKS proxy requires Ray newer than 0.8.6, which might need to be installed manually.
     """
     if not isinstance(provider, Provider):
         provider = Provider(
