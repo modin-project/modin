@@ -15,6 +15,8 @@ import os
 
 os.environ["MODIN_EXPERIMENTAL"] = "True"
 
+# import numpy_wrap as early as possible to intercept all "import numpy" statements
+# in the user code
 from .numpy_wrap import _CAUGHT_NUMPY  # noqa F401
 from modin.pandas import *  # noqa F401, F403
 from .io_exp import read_sql  # noqa F401
