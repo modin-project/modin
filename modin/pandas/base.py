@@ -32,6 +32,7 @@ import warnings
 import pickle as pkl
 
 from modin.error_message import ErrorMessage
+from modin.pandas.utils import try_cast_to_pandas
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -241,11 +242,9 @@ class BasePandasDataset(object):
                 empty_self_str,
             )
         )
-        args = (a._to_pandas() if hasattr(a, "_to_pandas") else a for a in args)
-        kwargs = {
-            k: v._to_pandas() if hasattr(v, "_to_pandas") else v
-            for k, v in kwargs.items()
-        }
+
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
         pandas_obj = self._to_pandas()
         if callable(op):
             result = op(pandas_obj, *args, **kwargs)

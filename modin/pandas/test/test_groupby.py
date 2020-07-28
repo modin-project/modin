@@ -44,13 +44,17 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
         df_equals(g1[1], g2[1])
 
 
-def eval_aggregation(md_df, pd_df, operation, by=None, *args, **kwargs):
+def eval_aggregation(md_df, pd_df, operation=None, by=None, *args, **kwargs):
     if by is None:
         by = md_df.columns[0]
+    if operation is None:
+        operation = {}
     return eval_general(
         md_df,
         pd_df,
-        operation=lambda df: df.groupby(by=by).agg(operation),
+        operation=lambda df, *args, **kwargs: df.groupby(by=by).agg(
+            operation, *args, **kwargs
+        ),
         *args,
         **kwargs,
     )
@@ -1104,3 +1108,29 @@ def test_agg_exceptions(operation):
     data = {**data1, **data2}
 
     eval_aggregation(*create_test_dfs(data), operation=operation)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {
+            "Max": ("cnt", np.max),
+            "Sum": ("cnt", np.sum),
+            "Num": ("c", pd.Series.nunique),
+            "Num1": ("c", pandas.Series.nunique),
+        },
+        {
+            "func": {
+                "Max": ("cnt", np.max),
+                "Sum": ("cnt", np.sum),
+                "Num": ("c", pd.Series.nunique),
+                "Num1": ("c", pandas.Series.nunique),
+            }
+        },
+    ],
+)
+def test_to_pandas_convertion(kwargs):
+    data = {"a": [1, 2], "b": [3, 4], "c": [5, 6]}
+    by = ["a", "b"]
+
+    eval_aggregation(*create_test_dfs(data), by=by, **kwargs)

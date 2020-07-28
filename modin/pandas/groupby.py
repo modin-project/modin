@@ -346,7 +346,9 @@ class DataFrameGroupBy(object):
 
         if func is None or is_list_like(func):
             return self._default_to_pandas(
-                lambda df: df.aggregate(func, *args, **kwargs)
+                lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
+                *args,
+                **kwargs,
             )
 
         if isinstance(func, str):
@@ -355,7 +357,10 @@ class DataFrameGroupBy(object):
                 return agg_func(*args, **kwargs)
 
         return self._apply_agg_function(
-            lambda df: df.aggregate(func, *args, **kwargs), drop=self._as_index
+            lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
+            drop=self._as_index,
+            *args,
+            **kwargs,
         )
 
     agg = aggregate
@@ -622,7 +627,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _apply_agg_function(self, f, drop=True, **kwargs):
+    def _apply_agg_function(self, f, drop=True, *args, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
         Args:
@@ -634,7 +639,7 @@ class DataFrameGroupBy(object):
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
         if self._is_multi_by:
-            return self._default_to_pandas(f, **kwargs)
+            return self._default_to_pandas(f, *args, **kwargs)
 
         if isinstance(self._by, type(self._query_compiler)):
             by = self._by.to_pandas().squeeze()
@@ -658,7 +663,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _default_to_pandas(self, f, **kwargs):
+    def _default_to_pandas(self, f, *args, **kwargs):
         """Defailts the execution of this function to pandas.
 
         Args:
@@ -677,10 +682,12 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        def groupby_on_multiple_columns(df):
-            return f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
+        def groupby_on_multiple_columns(df, *args, **kwargs):
+            return f(
+                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+            )
 
-        return self._df._default_to_pandas(groupby_on_multiple_columns)
+        return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
 class SeriesGroupBy(DataFrameGroupBy):
