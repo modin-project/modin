@@ -58,6 +58,8 @@ from .utils import (
     create_test_dfs,
     test_data_small_values,
     test_data_small_keys,
+    udf_func_values,
+    udf_func_keys,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1811,6 +1813,16 @@ class TestDataFrameUDF:
             modin_result = modin_df.apply(lambda df: df.drop(key), axis=1)
             pandas_result = pandas_df.apply(lambda df: df.drop(key), axis=1)
             df_equals(modin_result, pandas_result)
+
+    @pytest.mark.parametrize("func", udf_func_values, ids=udf_func_keys)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_apply_udf(self, data, func):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: df.apply(*args, **kwargs),
+            func=func,
+            other=lambda df: df,
+        )
 
     def test_eval_df_use_case(self):
         frame_data = {"a": random_state.randn(10), "b": random_state.randn(10)}

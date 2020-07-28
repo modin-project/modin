@@ -22,6 +22,7 @@ from pandas.core.base import DataError
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.pandas.utils import try_cast_to_pandas, wrap_udf_function
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,
@@ -1895,6 +1896,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
+        # if any of args contain modin object, we should
+        # convert it to pandas
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
         if isinstance(func, str):
             return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
         elif callable(func):
@@ -1919,7 +1924,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(func, str)
         kwargs["axis"] = axis
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, lambda df: getattr(df, func)(**kwargs)
+            axis, lambda df: df.apply(func, *args, **kwargs)
         )
         return self.__constructor__(new_modin_frame)
 
@@ -1941,6 +1946,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
 
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
         return self.__constructor__(
             self._modin_frame._apply_full_axis_select_indices(
                 axis, dict_apply_builder, func, keep_remaining=False
@@ -1968,6 +1974,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis == 1
             else self.columns
         )
+        func = [wrap_udf_function(f) if callable(f) else f for f in func]
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)),
@@ -1986,14 +1993,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        if isinstance(pandas.DataFrame().apply(func), pandas.Series):
-            new_modin_frame = self._modin_frame._fold_reduce(
-                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-            )
-        else:
-            new_modin_frame = self._modin_frame._apply_full_axis(
-                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-            )
+        func = wrap_udf_function(func)
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+        )
         return self.__constructor__(new_modin_frame)
 
     # END UDF

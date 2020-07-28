@@ -259,6 +259,20 @@ agg_func_values = list(agg_func.values())
 
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 
+udf_func = {
+    "return self": lambda df: lambda x, *args, **kwargs: type(x)(x.values),
+    "change index": lambda df: lambda x, *args, **kwargs: pandas.Series(
+        x.values, index=np.arange(-1, len(x.index) - 1)
+    ),
+    "return none": lambda df: lambda x, *args, **kwargs: None,
+    "return empty": lambda df: lambda x, *args, **kwargs: pandas.Series(),
+    "access self": lambda df: lambda x, other, *args, **kwargs: pandas.Series(
+        x.values, index=other.index
+    ),
+}
+udf_func_keys = list(udf_func.keys())
+udf_func_values = list(udf_func.values())
+
 # Test q values for quantiles
 quantiles = {
     "0.25": 0.25,
