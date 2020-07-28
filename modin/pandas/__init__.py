@@ -89,6 +89,8 @@ import multiprocessing
 
 from .. import execution_engine, Publisher
 
+# Set this so that Pandas doesn't try to multithread by itself
+os.environ["OMP_NUM_THREADS"] = "1"
 DEFAULT_NPARTITIONS = 4
 num_cpus = 1
 
@@ -126,6 +128,34 @@ def _update_engine(publisher: Publisher):
                     os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
                 )
                 dask_client = Client(n_workers=int(num_cpus))
+
+    elif publisher.get() == "Cloudray":
+        from modin.experimental.cloud import get_connection
+        import rpyc
+
+        conn: rpyc.ClassicService = get_connection()
+        remote_ray = conn.modules["ray"]
+        if _is_first_update.get("Cloudray", True):
+
+            @conn.teleport
+            def init_remote_ray():
+                from ray import ray_constants
+                import modin
+                from modin.engines.ray.utils import initialize_ray
+
+                modin.set_backends("Ray")
+                initialize_ray(
+                    override_is_cluster=True,
+                    override_redis_address=f"localhost:{ray_constants.DEFAULT_PORT}",
+                    override_redis_password=ray_constants.REDIS_DEFAULT_PASSWORD,
+                )
+
+            init_remote_ray()
+            # import EngineDispatcher here to initialize IO class
+            # so it doesn't skew read_csv() timings later on
+            import modin.data_management.dispatcher  # noqa: F401
+
+        num_cpus = remote_ray.cluster_resources()["CPU"]
 
     elif publisher.get() != "Python":
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
@@ -183,8 +213,6 @@ from .general import (
 )
 from .plotting import Plotting as plotting
 
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ["OMP_NUM_THREADS"] = "1"
 __all__ = [
     "DataFrame",
     "Series",

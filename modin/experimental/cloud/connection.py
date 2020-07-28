@@ -103,14 +103,15 @@ class Connection:
 
     def __try_connect(self):
         import rpyc
+        from .rpyc_proxy import WrappingService
 
         try:
             self.__connection = rpyc.connect(
                 "127.0.0.1",
                 self.rpyc_port,
-                rpyc.ClassicService,
-                config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
+                WrappingService,
                 keepalive=True,
+                config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
             )
         except (ConnectionRefusedError, EOFError):
             if self.proc.poll() is not None:

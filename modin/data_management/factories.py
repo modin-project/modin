@@ -210,3 +210,44 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
+
+
+class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
+    @classmethod
+    def prepare(cls):
+        # query_compiler import is needed so remote PandasQueryCompiler
+        # has an imported local counterpart;
+        # if there isn't such counterpart rpyc generates some bogus
+        # class type which raises TypeError()
+        # upon checking its isinstance() or issubclass()
+        import modin.backends.pandas.query_compiler  # noqa: F401
+        from modin.experimental.cloud import get_connection
+
+        class WrappedIO:
+            def __init__(self, conn):
+                self.__conn = conn
+                self.__io_cls = conn.modules[
+                    "modin.engines.ray.pandas_on_ray.io"
+                ].PandasOnRayIO
+                self.__reads = {
+                    name for name in BaseIO.__dict__ if name.startswith("read_")
+                }
+                self.__wrappers = {}
+
+            def __getattr__(self, name):
+                if name in self.__reads:
+                    try:
+                        wrap = self.__wrappers[name]
+                    except KeyError:
+
+                        def wrap(*a, _original=getattr(self.__io_cls, name), **kw):
+                            a = tuple(self.__conn.deliver(x) for x in a)
+                            kw = {k: self.__conn.deliver(v) for k, v in kw.items()}
+                            return _original(*a, **kw)
+
+                        self.__wrappers[name] = wrap
+                else:
+                    wrap = getattr(self.__io_cls, name)
+                return wrap
+
+        cls.io_cls = WrappedIO(get_connection())

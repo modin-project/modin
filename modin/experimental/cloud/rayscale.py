@@ -55,6 +55,9 @@ class _Immediate:
 
 
 class RayCluster(BaseCluster):
+    target_engine = "Cloudray"
+    target_partition = "Pandas"
+
     __base_config = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), "ray-autoscaler.yml"
     )

@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import numpy as np
 from numpy import nan
 import pandas
@@ -3583,13 +3584,19 @@ class BasePandasDataset(object):
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.
-            if self.empty and is_callable:
+            if is_callable and self.empty:
 
                 def default_handler(*args, **kwargs):
                     return self._default_to_pandas(item, *args, **kwargs)
 
                 return default_handler
         return object.__getattribute__(self, item)
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
 
 
 class Resampler(object):
@@ -3621,7 +3628,6 @@ class Resampler(object):
             on,
             level,
         ]
-
         self.__groups = self.__get_groups(*self.resample_args)
 
     def __get_groups(

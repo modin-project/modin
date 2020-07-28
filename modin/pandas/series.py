@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import numpy as np
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -1698,6 +1699,12 @@ class Series(BasePandasDataset):
         if self._query_compiler.columns[0] == "__reduced__":
             series.name = None
         return series
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(Series, "make_series_wrapper")
 
 
 class DatetimeProperties(object):
