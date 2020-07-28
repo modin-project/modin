@@ -44,12 +44,14 @@ class WrappingConnection(rpyc.Connection):
 
     def __wrap(self, local_obj):
         while True:
-            # unwrap magic wrappers first
+            # unwrap magic wrappers first; keep unwrapping in case it's a wrapper-in-a-wrapper
+            # this shouldn't usually happen, so this is mostly a safety net
             try:
                 local_obj = object.__getattribute__(local_obj, "__remote_end__")
             except AttributeError:
                 break
-        # do not pickle netrefs
+        # do not pickle netrefs of our current connection, but do pickle those of other;
+        # example of this: an object made in _other_ remote context being pased to ours
         if isinstance(local_obj, netref.BaseNetref) and local_obj.____conn__ is self:
             return None
         return bytes(pickle.dumps(local_obj))
@@ -95,7 +97,15 @@ class WrappingConnection(rpyc.Connection):
         return self._remote_tuplize(remote)
 
     def sync_request(self, handler, *args):
+        """
+        Intercept outgoing synchronous requests from RPyC to add caching or
+        fulfilling them locally if possible to improve performance.
+        We should try to make as few remote calls as possible, because each
+        call adds up to latency.
+        """
         if handler == consts.HANDLE_INSPECT:
+            # always inspect classes from modin, pandas and numpy locally,
+            # do not go to network for those
             id_name = str(args[0][0])
             if id_name.split(".", 1)[0] in ("modin", "pandas", "numpy"):
                 try:
@@ -125,6 +135,10 @@ class WrappingConnection(rpyc.Connection):
                 key = handler
 
             if str(obj.____id_pack__[0]) in {"numpy", "numpy.dtype"}:
+                # always assume numpy attributes and numpy.dtype attributes are always the same;
+                # note that we're using RPyC id_pack as cache key, and it includes the name,
+                # class id and instance id, so this cache is unique to each instance of, say,
+                # numpy.dtype(), hence numpy.int16 and numpy.float64 got different caches.
                 cache = self._static_cache[obj.____id_pack__]
                 try:
                     result = cache[key]
@@ -138,15 +152,21 @@ class WrappingConnection(rpyc.Connection):
         return super().sync_request(handler, *args)
 
     def async_request(self, handler, *args, **kw):
+        """
+        Override async request handling to intercept outgoing deletion requests because we cache
+        certain things, and if we allow deletion of cached things our cache becomes stale.
+        We can clean the cache upon deletion, but it would increase cache misses a lot.
+
+        Also note that memory is not leaked forever, RPyC frees all of it upon disconnect.
+        """
         if handler == consts.HANDLE_DEL:
             obj, _ = args
-            if str(obj.____id_pack__[0]) in {"numpy", "numpy.dtype"}:
-                if obj.____id_pack__ in self._static_cache:
-                    # object is cached by us, so ignore the request or remote end dies and cache is suddenly stale;
-                    # we shouldn't remove item from cache as it would reduce performance
-                    res = AsyncResult(self)
-                    res._is_ready = True  # simulate finished async request
-                    return res
+            if obj.____id_pack__ in self._static_cache:
+                # object is cached by us, so ignore the request or remote end dies and cache is suddenly stale;
+                # we shouldn't remove item from cache as it would reduce performance
+                res = AsyncResult(self)
+                res._is_ready = True  # simulate finished async request
+                return res
         return super().async_request(handler, *args, **kw)
 
     def _netref_factory(self, id_pack):
@@ -494,7 +514,10 @@ def _deliveringWrapper(
             try:
                 remote = cache[__method_name__]
             except KeyError:
-                cache[__method_name__] = remote = getattr(remote_cls, __method_name__)
+                # see comments in ProxyMeta.__prepare__ on using remote_cls.__getattr__
+                cache[__method_name__] = remote = remote_cls.__getattr__(
+                    __method_name__
+                )
             return remote(self.__remote_end__, *args, **kw)
 
         wrapper.__name__ = method
