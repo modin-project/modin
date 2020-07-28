@@ -19,10 +19,9 @@
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
 import modin.experimental.pandas as pd  # noqa: F401
-from modin.experimental.cloud import create_cluster, get_connection
+from modin.experimental.cloud import create_cluster
 
 from mortgage import run_benchmark
-from mortgage.mortgage_pandas import etl_pandas
 
 test_cluster = create_cluster(
     "aws",
