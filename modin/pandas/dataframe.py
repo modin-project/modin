@@ -28,6 +28,7 @@ import itertools
 import functools
 import numpy as np
 import sys
+import os
 from typing import Tuple, Union
 import warnings
 
@@ -36,6 +37,7 @@ from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
+from .groupby import DataFrameGroupBy
 
 
 @_inherit_docstrings(
@@ -457,8 +459,6 @@ class DataFrame(BasePandasDataset):
                     pass
                 elif mismatch:
                     raise KeyError(next(x for x in by if x not in self))
-
-        from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
             self,
@@ -2795,3 +2795,9 @@ class DataFrame(BasePandasDataset):
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(DataFrame, "make_dataframe_wrapper")
