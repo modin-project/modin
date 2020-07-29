@@ -1562,6 +1562,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ):
             return self.default_to_pandas(
                 pandas.DataFrame.sort_index,
+                axis=axis,
                 level=level,
                 sort_remaining=sort_remaining,
                 **kwargs
