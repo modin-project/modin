@@ -13,6 +13,7 @@
 
 import types
 import collections
+import os
 
 import rpyc
 from rpyc.lib.compat import pickle
@@ -31,6 +32,9 @@ def _batch_loads(items):
 def _tuplize(arg):
     """turns any sequence or iterator into a flat tuple"""
     return tuple(arg)
+
+
+_TRACE_RPYC = os.environ.get("MODIN_TRACE_RPYC", "").title() == "True"
 
 
 class WrappingConnection(rpyc.Connection):
@@ -231,7 +235,10 @@ class WrappingConnection(rpyc.Connection):
 
 
 class WrappingService(rpyc.ClassicService):
-    _protocol = WrappingConnection
+    if _TRACE_RPYC:
+        from .tracing.tracing_connection import TracingWrappingConnection as _protocol
+    else:
+        _protocol = WrappingConnection
 
     def on_connect(self, conn):
         super().on_connect(conn)
