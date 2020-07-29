@@ -19,7 +19,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 
-from .utils import _inherit_docstrings
+from .utils import _inherit_docstrings, wrap_udf_function
 from .series import Series
 
 
@@ -644,6 +644,7 @@ class DataFrameGroupBy(object):
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
+        f = wrap_udf_function(f)
         if self._is_multi_by:
             return self._default_to_pandas(f, *args, **kwargs)
 
