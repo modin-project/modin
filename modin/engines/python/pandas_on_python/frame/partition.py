@@ -91,16 +91,10 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache = (
-            len(row_indices)
-            if not isinstance(row_indices, slice)
-            else self._length_cache
-        )
-        new_obj._width_cache = (
-            len(col_indices)
-            if not isinstance(col_indices, slice)
-            else self._width_cache
-        )
+        if not isinstance(row_indices, slice):
+            new_obj._length_cache = len(row_indices)
+        if not isinstance(col_indices, slice):
+            new_obj._width_cache = len(col_indices)
         return new_obj
 
     def to_pandas(self):

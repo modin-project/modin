@@ -23,6 +23,7 @@ import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
+import csv
 
 from .utils import (
     df_equals,
@@ -32,7 +33,7 @@ from .utils import (
     json_long_bytes,
 )
 
-from modin import __execution_engine__
+from modin import execution_engine
 
 if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
     import modin.pandas as pd
@@ -259,7 +260,10 @@ def setup_excel_file(row_size, force=False):
 
 def teardown_excel_file():
     if os.path.exists(TEST_EXCEL_FILENAME):
-        os.remove(TEST_EXCEL_FILENAME)
+        try:
+            os.remove(TEST_EXCEL_FILENAME)
+        except PermissionError:
+            pass
 
 
 def setup_feather_file(row_size, force=False):
@@ -555,11 +559,36 @@ def test_from_clipboard():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
 def test_from_excel():
     setup_excel_file(SMALL_ROW_SIZE)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
+def test_from_excel_engine():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
+
+    df_equals(modin_df, pandas_df)
+
+    teardown_excel_file()
+
+
+def test_from_excel_index_col():
+    setup_excel_file(SMALL_ROW_SIZE)
+
+    pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, index_col=0)
+    with pytest.warns(UserWarning):
+        modin_df = pd.read_excel(TEST_EXCEL_FILENAME, index_col=0)
 
     df_equals(modin_df, pandas_df)
 
@@ -719,6 +748,35 @@ def test_from_csv_sep_none(make_csv_file):
         pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None)
     with pytest.warns(ParserWarning):
         modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None)
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_bad_quotes():
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+
+    with open(TEST_CSV_FILENAME, "w") as f:
+        f.write(csv_bad_quotes)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_csv_quote_none():
+    csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+    with open(TEST_CSV_FILENAME, "w") as f:
+        f.write(csv_bad_quotes)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
+
     df_equals(modin_df, pandas_df)
 
 
@@ -938,7 +996,7 @@ def test_from_csv_with_usecols(usecols):
 
 
 @pytest.mark.skipif(
-    __execution_engine__.lower() == "python", reason="Using pandas implementation"
+    execution_engine.get().lower() == "python", reason="Using pandas implementation"
 )
 def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"

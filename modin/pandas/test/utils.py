@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pytest
 import copy
 import numpy as np
 import pandas
@@ -157,6 +158,17 @@ test_data_with_duplicates = {
         "col7": [100, 201, 200, 300],
     },
 }
+
+test_data_small = {
+    "small": {
+        "col0": [1, 2, 3, 4],
+        "col1": [8.0, 9.4, 10.1, 11.3],
+        "col2": [4, 5, 6, 7],
+    }
+}
+
+test_data_small_values = list(test_data_small.values())
+test_data_small_keys = list(test_data_small.keys())
 
 test_data_with_duplicates_values = list(test_data_with_duplicates.values())
 test_data_with_duplicates_keys = list(test_data_with_duplicates.keys())
@@ -373,9 +385,24 @@ encoding_types = [
 ]
 
 
-def df_categories_equals(df1, df2):
-    categories_columns = df1.select_dtypes(include="category").columns
+def categories_equals(left, right):
+    assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
+    is_category_ordered = left.ordered
+    assert_categorical_equal(left, right, check_category_order=is_category_ordered)
 
+
+def df_categories_equals(df1, df2):
+    if not hasattr(df1, "select_dtypes"):
+        if isinstance(df1, pandas.CategoricalDtype):
+            return categories_equals(df1, df2)
+        elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
+            getattr(df1, "dtype"), pandas.CategoricalDtype
+        ):
+            return categories_equals(df1.dtype, df2.dtype)
+        else:
+            return True
+
+    categories_columns = df1.select_dtypes(include="category").columns
     for column in categories_columns:
         is_category_ordered = df1[column].dtype.ordered
         assert_categorical_equal(
@@ -486,6 +513,9 @@ def df_equals(df1, df2):
     ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
+    elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
+        assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
+        assert df1 == df2
     else:
         if df1 != df2:
             np.testing.assert_almost_equal(df1, df2)
@@ -545,3 +575,113 @@ def check_df_columns_have_nans(df, cols):
         and cols in df.columns
         and df[cols].hasnans
     )
+
+
+def eval_general(
+    modin_df,
+    pandas_df,
+    operation,
+    comparator=df_equals,
+    __inplace__=False,
+    check_exception_type=True,
+    **kwargs,
+):
+    md_kwargs, pd_kwargs = {}, {}
+
+    def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
+        try:
+            pd_result = fn(pandas_df, **pd_kwargs)
+        except Exception as pd_e:
+            if check_exception_type is None:
+                return None
+            with pytest.raises(Exception) as md_e:
+                # repr to force materialization
+                repr(fn(modin_df, **md_kwargs))
+            if check_exception_type:
+                assert isinstance(md_e.value, type(pd_e))
+        else:
+            md_result = fn(modin_df, **md_kwargs)
+            return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
+
+    for key, value in kwargs.items():
+        if callable(value):
+            values = execute_callable(value)
+            # that means, that callable raised an exception
+            if values is None:
+                return
+            else:
+                md_value, pd_value = values
+        else:
+            md_value, pd_value = value, value
+
+        md_kwargs[key] = md_value
+        pd_kwargs[key] = pd_value
+
+    values = execute_callable(
+        operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
+    )
+    if values is not None:
+        comparator(*values)
+
+
+def create_test_dfs(*args, **kwargs):
+    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
+
+
+def generate_dfs():
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [0, 0, 0, 0],
+        }
+    )
+
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
+    return df, df2
+
+
+def generate_multiindex_dfs(axis=1):
+    def generate_multiindex(index):
+        return pandas.MultiIndex.from_tuples(
+            [("a", x) for x in index.values], names=["name1", "name2"]
+        )
+
+    df1, df2 = generate_dfs()
+    df1.axes[axis], df2.axes[axis] = map(
+        generate_multiindex, [df1.axes[axis], df2.axes[axis]]
+    )
+    return df1, df2
+
+
+def generate_none_dfs():
+    df = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, None, 7],
+            "col3": [8, 9, 10, 11],
+            "col4": [12, 13, 14, 15],
+            "col5": [None, None, None, None],
+        }
+    )
+
+    df2 = pandas.DataFrame(
+        {
+            "col1": [0, 1, 2, 3],
+            "col2": [4, 5, 6, 7],
+            "col3": [8, 9, 10, 11],
+            "col6": [12, 13, 14, 15],
+            "col7": [0, 0, 0, 0],
+        }
+    )
+    return df, df2

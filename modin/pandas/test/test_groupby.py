@@ -16,18 +16,33 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas, to_pandas
-from .utils import df_equals, check_df_columns_have_nans
+from .utils import (
+    df_equals,
+    check_df_columns_have_nans,
+    create_test_dfs,
+    eval_general,
+    df_categories_equals,
+)
 
 pd.DEFAULT_NPARTITIONS = 4
 
 
 def modin_df_almost_equals_pandas(modin_df, pandas_df):
-    difference = to_pandas(modin_df) - pandas_df
+    df_categories_equals(modin_df._to_pandas(), pandas_df)
+
+    modin_df = to_pandas(modin_df)
+
+    if hasattr(modin_df, "select_dtypes"):
+        modin_df = modin_df.select_dtypes(exclude=["category"])
+    if hasattr(pandas_df, "select_dtypes"):
+        pandas_df = pandas_df.select_dtypes(exclude=["category"])
+
+    difference = modin_df - pandas_df
     diff_max = difference.max()
     if isinstance(diff_max, pandas.Series):
         diff_max = diff_max.max()
     assert (
-        to_pandas(modin_df).equals(pandas_df)
+        modin_df.equals(pandas_df)
         or diff_max < 0.0001
         or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
     )
@@ -39,25 +54,20 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
         df_equals(g1[1], g2[1])
 
 
-def eval_general(
-    modin_groupby, pandas_groupby, fn, comparator=df_equals, is_default=False
-):
-    try:
-        pandas_result = fn(pandas_groupby)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            if is_default:
-                with pytest.warns(UserWarning):
-                    fn(modin_groupby)
-            else:
-                fn(modin_groupby)
-    else:
-        if is_default:
-            with pytest.warns(UserWarning):
-                modin_result = fn(modin_groupby)
-        else:
-            modin_result = fn(modin_groupby)
-        comparator(modin_result, pandas_result)
+def eval_aggregation(md_df, pd_df, operation=None, by=None, *args, **kwargs):
+    if by is None:
+        by = md_df.columns[0]
+    if operation is None:
+        operation = {}
+    return eval_general(
+        md_df,
+        pd_df,
+        operation=lambda df, *args, **kwargs: df.groupby(by=by).agg(
+            operation, *args, **kwargs
+        ),
+        *args,
+        **kwargs,
+    )
 
 
 @pytest.mark.parametrize("as_index", [True, False])
@@ -234,7 +244,8 @@ def test_mixed_dtypes_groupby(as_index):
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
-def test_simple_row_groupby(by, as_index):
+@pytest.mark.parametrize("col1_category", [True, False])
+def test_simple_row_groupby(by, as_index, col1_category):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
@@ -244,6 +255,9 @@ def test_simple_row_groupby(by, as_index):
             "col5": [-4, -5, -6, -7],
         }
     )
+
+    if col1_category:
+        pandas_df = pandas_df.astype({"col1": "category"})
 
     modin_df = from_pandas(pandas_df)
     n = 1
@@ -267,10 +281,10 @@ def test_simple_row_groupby(by, as_index):
     eval_ndim(modin_groupby, pandas_groupby)
     if not check_df_columns_have_nans(modin_df, by):
         # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
-        eval_cumsum(modin_groupby, pandas_groupby)
-        eval_cummax(modin_groupby, pandas_groupby)
-        eval_cummin(modin_groupby, pandas_groupby)
-        eval_cumprod(modin_groupby, pandas_groupby)
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumsum(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod(axis=0))
 
     eval_general(
         modin_groupby,
@@ -312,7 +326,7 @@ def test_simple_row_groupby(by, as_index):
         modin_df_almost_equals_pandas,
         is_default=True,
     )
-    eval_rank(modin_groupby, pandas_groupby)
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.rank())
     eval_max(modin_groupby, pandas_groupby)
     eval_len(modin_groupby, pandas_groupby)
     eval_sum(modin_groupby, pandas_groupby)
@@ -332,7 +346,12 @@ def test_simple_row_groupby(by, as_index):
         # Pandas groupby.transform does not work correctly with NaN values in grouping columns. See Pandas bug 17093.
         transform_functions = [lambda df: df + 4, lambda df: -df - 10]
         for func in transform_functions:
-            eval_transform(modin_groupby, pandas_groupby, func)
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda df: df.transform(func),
+                check_exception_type=None,
+            )
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
     for func in pipe_functions:
@@ -347,7 +366,9 @@ def test_simple_row_groupby(by, as_index):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    eval_size(modin_groupby, pandas_groupby)
+    eval_general(
+        modin_groupby, pandas_groupby, lambda df: df.size(), check_exception_type=None
+    )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
@@ -471,7 +492,8 @@ def test_single_group_row_groupby():
     eval_groups(modin_groupby, pandas_groupby)
 
 
-def test_large_row_groupby():
+@pytest.mark.parametrize("is_by_category", [True, False])
+def test_large_row_groupby(is_by_category):
     pandas_df = pandas.DataFrame(
         np.random.randint(0, 8, size=(100, 4)), columns=list("ABCD")
     )
@@ -479,6 +501,10 @@ def test_large_row_groupby():
     modin_df = from_pandas(pandas_df)
 
     by = [str(i) for i in pandas_df["A"].tolist()]
+
+    if is_by_category:
+        by = pandas.Categorical(by)
+
     n = 4
 
     modin_groupby = modin_df.groupby(by=by)
@@ -1052,3 +1078,113 @@ def test_groupby_multiindex():
 
     by = ["one", "two"]
     df_equals(modin_df.groupby(by=by).count(), pandas_df.groupby(by=by).count())
+
+
+def test_agg_func_None_rename():
+    pandas_df = pandas.DataFrame(
+        {
+            "col1": np.random.randint(0, 100, size=1000),
+            "col2": np.random.randint(0, 100, size=1000),
+            "col3": np.random.randint(0, 100, size=1000),
+            "col4": np.random.randint(0, 100, size=1000),
+        },
+        index=["row{}".format(i) for i in range(1000)],
+    )
+    modin_df = from_pandas(pandas_df)
+
+    modin_result = modin_df.groupby(["col1", "col2"]).agg(
+        max=("col3", np.max), min=("col3", np.min)
+    )
+    pandas_result = pandas_df.groupby(["col1", "col2"]).agg(
+        max=("col3", np.max), min=("col3", np.min)
+    )
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "operation", ["quantile", "mean", "sum", "median", "unique", "cumprod"]
+)
+def test_agg_exceptions(operation):
+    N = 256
+    fill_data = [
+        ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
+        (
+            "date_column",
+            [
+                np.datetime64("2010"),
+                np.datetime64("2011"),
+                np.datetime64("2011-06-15T00:00"),
+                np.datetime64("2009-01-01"),
+            ]
+            * (N // 4),
+        ),
+    ]
+
+    data1 = {
+        "column_to_by": ["foo", "bar", "baz", "bar"] * (N // 4),
+        "nan_column": [None] * N,
+    }
+
+    data2 = {
+        f"{key}{i}": value
+        for key, value in fill_data
+        for i in range(N // len(fill_data))
+    }
+
+    data = {**data1, **data2}
+
+    eval_aggregation(*create_test_dfs(data), operation=operation)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {
+            "Max": ("cnt", np.max),
+            "Sum": ("cnt", np.sum),
+            "Num": ("c", pd.Series.nunique),
+            "Num1": ("c", pandas.Series.nunique),
+        },
+        {
+            "func": {
+                "Max": ("cnt", np.max),
+                "Sum": ("cnt", np.sum),
+                "Num": ("c", pd.Series.nunique),
+                "Num1": ("c", pandas.Series.nunique),
+            }
+        },
+    ],
+)
+def test_to_pandas_convertion(kwargs):
+    data = {"a": [1, 2], "b": [3, 4], "c": [5, 6]}
+    by = ["a", "b"]
+
+    eval_aggregation(*create_test_dfs(data), by=by, **kwargs)
+
+
+@pytest.mark.parametrize(
+    # When True, do df[name], otherwise just use name
+    "columns",
+    [
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b")],
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+    ],
+)
+def test_mixed_columns(columns):
+    def get_columns(df):
+        return [df[name] if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    df1 = pandas.DataFrame(data)
+    df1 = pandas.concat([df1])
+    ref = df1.groupby(get_columns(df1)).size()
+
+    df2 = pd.DataFrame(data)
+    df2 = pd.concat([df2])
+    exp = df2.groupby(get_columns(df2)).size()
+    df_equals(ref, exp)

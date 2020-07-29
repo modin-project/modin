@@ -52,7 +52,7 @@ Outliers_to_drop = detect_outliers(train, 2, ["Age", "SibSp", "Parch", "Fare"])
 train.loc[Outliers_to_drop]  # Show the outliers rows
 train = train.drop(Outliers_to_drop, axis=0).reset_index(drop=True)
 train_len = len(train)
-dataset = pd.concat(objs=[train, test], axis=0).reset_index(drop=True)
+dataset = pd.concat(list_of_objs=[train, test], axis=0).reset_index(drop=True)
 dataset = dataset.fillna(np.nan)
 dataset.isnull().sum()
 train.info()

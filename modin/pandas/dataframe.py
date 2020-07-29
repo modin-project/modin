@@ -28,6 +28,7 @@ import itertools
 import functools
 import numpy as np
 import sys
+import os
 from typing import Tuple, Union
 import warnings
 
@@ -36,6 +37,7 @@ from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
+from .groupby import DataFrameGroupBy
 
 
 @_inherit_docstrings(
@@ -111,9 +113,17 @@ class DataFrame(BasePandasDataset):
                 "Distributing {} object. This may take some time.".format(type(data))
             )
             if is_list_like(data) and not is_dict_like(data):
-                data = [
+                old_dtype = getattr(data, "dtype", None)
+                values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
+                if isinstance(data, np.ndarray):
+                    data = np.array(values, dtype=old_dtype)
+                else:
+                    try:
+                        data = type(data)(values, dtype=old_dtype)
+                    except TypeError:
+                        data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
@@ -137,6 +147,7 @@ class DataFrame(BasePandasDataset):
             "display.expand_frame_repr"
         ):
             width, _ = console.get_console_size()
+            width = min(width, len(self.columns))
             col_counter = 0
             i = 0
             while col_counter < width:
@@ -352,7 +363,7 @@ class DataFrame(BasePandasDataset):
                 init_kwargs = {"columns": self.columns}
             return_type = type(
                 getattr(pandas, self.__name__)(**init_kwargs).apply(
-                    func, axis=axis, raw=raw, result_type=result_type,
+                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
                 )
             ).__name__
         except Exception:
@@ -364,9 +375,9 @@ class DataFrame(BasePandasDataset):
                 query_compiler=query_compiler
             )
             if isinstance(result, Series):
-                if axis == 0 and result.name == self.index[0]:
+                if axis == 0 and result.name == self.index[0] or result.name == 0:
                     result.name = None
-                elif axis == 1 and result.name == self.columns[0]:
+                elif axis == 1 and result.name == self.columns[0] or result.name == 0:
                     result.name = None
             return result
 
@@ -432,8 +443,18 @@ class DataFrame(BasePandasDataset):
             if (
                 not isinstance(by, Series)
                 and axis == 0
-                and all(not isinstance(o, Series) and o in self for o in by)
+                and all(
+                    (
+                        (isinstance(o, str) and (o in self))
+                        or (isinstance(o, Series) and (o._parent is self))
+                    )
+                    for o in by
+                )
             ):
+                # We can just revert Series back to names because the parent is
+                # this dataframe:
+                by = [o.name if isinstance(o, Series) else o for o in by]
+
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."
@@ -468,8 +489,6 @@ class DataFrame(BasePandasDataset):
                     if cols is None:
                         raise NotImplementedError("Unsupported groupby arguments")
                     by = cols.concat(1, series, ignore_index=True)
-
-        from .groupby import DataFrameGroupBy
 
         return DataFrameGroupBy(
             self,
@@ -630,7 +649,71 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(self, min_periods=None):
-        return self._default_to_pandas(pandas.DataFrame.cov, min_periods=min_periods)
+        """
+        Compute pairwise covariance of columns, excluding NA/null values.
+
+        Compute the pairwise covariance among the series of a DataFrame.
+        The returned data frame is the `covariance matrix
+        <https://en.wikipedia.org/wiki/Covariance_matrix>`__ of the columns
+        of the DataFrame.
+
+        Both NA and null values are automatically excluded from the
+        calculation. (See the note below about bias from missing values.)
+        A threshold can be set for the minimum number of
+        observations for each value created. Comparisons with observations
+        below this threshold will be returned as ``NaN``.
+
+        This method is generally used for the analysis of time series data to
+        understand the relationship between different measures
+        across time.
+
+        Parameters
+        ----------
+        min_periods : int, optional
+            Minimum number of observations required per pair of columns
+            to have a valid result.
+
+        Returns
+        -------
+        DataFrame
+            The covariance matrix of the series of the DataFrame.
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+
+        If DataFrame contains at least one NA/null value, then defaults to pandas.
+        """
+        numeric_df = self.drop(
+            columns=[
+                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+            ]
+        )
+
+        cols = numeric_df.columns
+        idx = cols.copy()
+        denom = None
+
+        if all(numeric_df.notna().all()):
+            if min_periods is not None and min_periods > len(numeric_df):
+                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
+                result.fill(np.nan)
+                return numeric_df.__constructor__(result)
+            else:
+                numeric_df = numeric_df.astype(dtype="float64")
+                denom = 1.0 / (len(numeric_df) - 1.0)
+                means = numeric_df.mean(axis=0)
+                result = numeric_df - means
+                result = result.T._query_compiler.conj().dot(result._query_compiler)
+        else:
+            result = numeric_df._query_compiler.default_to_pandas(
+                pandas.DataFrame.cov, min_periods=min_periods
+            )
+
+        result = numeric_df.__constructor__(
+            query_compiler=result, index=idx, columns=cols
+        )
+        return result if denom is None else result * denom
 
     def dot(self, other):
         """
@@ -674,10 +757,16 @@ class DataFrame(BasePandasDataset):
 
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, DataFrame):
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=False
+                    )
+                )
             else:
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=False, squeeze_other=True
+                    )
                 )
 
         other = np.asarray(other)
@@ -687,9 +776,13 @@ class DataFrame(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self.__constructor__(query_compiler=self._query_compiler.dot(other))
+            return self.__constructor__(
+                query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=False)
+        )
 
     def eq(self, other, axis="columns", level=None):
         return self._binary_op(
@@ -1125,14 +1218,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A generator that iterates over the rows of the frame.
         """
-        index_iter = iter(self.index)
 
-        def iterrow_builder(df):
-            df.columns = self.columns
-            df.index = [next(index_iter)]
-            return df.iterrows()
+        def iterrow_builder(s):
+            return s.name, s
 
-        partition_iterator = PartitionIterator(self._query_compiler, 0, iterrow_builder)
+        partition_iterator = PartitionIterator(self, 0, iterrow_builder)
         for v in partition_iterator:
             yield v
 
@@ -1147,14 +1237,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A generator that iterates over the columns of the frame.
         """
-        col_iter = iter(self.columns)
 
-        def items_builder(df):
-            df.columns = [next(col_iter)]
-            df.index = self.index
-            return df.items()
+        def items_builder(s):
+            return s.name, s
 
-        partition_iterator = PartitionIterator(self._query_compiler, 1, items_builder)
+        partition_iterator = PartitionIterator(self, 1, items_builder)
         for v in partition_iterator:
             yield v
 
@@ -1185,34 +1272,50 @@ class DataFrame(BasePandasDataset):
         Returns:
             A tuple representing row data. See args for varying tuples.
         """
-        index_iter = iter(self.index)
 
-        def itertuples_builder(df):
-            df.columns = self.columns
-            df.index = [next(index_iter)]
-            return df.itertuples(index=index, name=name)
+        def itertuples_builder(s):
+            return next(s._to_pandas().to_frame().T.itertuples(index=index, name=name))
 
-        partition_iterator = PartitionIterator(
-            self._query_compiler, 0, itertuples_builder
-        )
+        partition_iterator = PartitionIterator(self, 0, itertuples_builder)
         for v in partition_iterator:
             yield v
 
     def join(self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False):
-        """Join two or more DataFrames, or a DataFrame with a collection.
-
-        Args:
-            other: What to join this DataFrame with.
-            on: A column name to use from the left for the join.
-            how: What type of join to conduct.
-            lsuffix: The suffix to add to column names that match on left.
-            rsuffix: The suffix to add to column names that match on right.
-            sort: Whether or not to sort.
-
-        Returns:
-            The joined DataFrame.
         """
+        Join two or more DataFrames, or a DataFrame with a collection.
 
+        Parameters
+        ----------
+            other : DataFrame, Series, or list of DataFrame
+                Index should be similar to one of the columns in this one.
+                If a Series is passed, its name attribute must be set,
+                and that will be used as the column name in the resulting joined DataFrame.
+            on : str, list of str, or array-like, optional
+                Column or index level name(s) in the caller to join on the index in other,
+                otherwise joins index-on-index. If multiple values given,
+                the other DataFrame must have a MultiIndex. Can pass an array as the join key
+                if it is not already contained in the calling DataFrame.
+            how : {'left', 'right', 'outer', 'inner'}, Default is 'left'
+                How to handle the operation of the two objects.
+                - left: use calling frame's index (or column if on is specified)
+                - right: use other's index.
+                - outer: form union of calling frame's index (or column if on is specified)
+                with other's index, and sort it lexicographically.
+                - inner: form intersection of calling frame's index (or column if on is specified)
+                with other's index, preserving the order of the calling’s one.
+            lsuffix : str, default ''
+                Suffix to use from left frame's overlapping columns.
+            rsuffix : str, default ''
+                Suffix to use from right frame's overlapping columns.
+            sort : boolean. Default is False
+                Order result DataFrame lexicographically by the join key.
+                If False, the order of the join key depends on the join type (how keyword).
+
+        Returns
+        -------
+        DataFrame
+            A dataframe containing columns from both the caller and other.
+        """
         if on is not None:
             if isinstance(other, DataFrame):
                 other = other._query_compiler.to_pandas()
@@ -1287,13 +1390,36 @@ class DataFrame(BasePandasDataset):
         value_name="value",
         col_level=None,
     ):
-        return self._default_to_pandas(
-            pandas.DataFrame.melt,
-            id_vars=id_vars,
-            value_vars=value_vars,
-            var_name=var_name,
-            value_name=value_name,
-            col_level=col_level,
+        """
+        Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
+
+        Parameters
+        ----------
+        id_vars : tuple, list, or ndarray, optional
+            Column(s) to use as identifier variables.
+        value_vars : tuple, list, or ndarray, optional
+            Column(s) to unpivot. If not specified, uses all columns that
+            are not set as `id_vars`.
+        var_name : scalar
+            Name to use for the 'variable' column.
+        value_name : scalar, default 'value'
+            Name to use for the 'value' column.
+        col_level : int or str, optional
+            If columns are a MultiIndex then use this level to melt.
+
+        Returns
+        -------
+        DataFrame
+            Unpivoted DataFrame.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.melt(
+                id_vars=id_vars,
+                value_vars=value_vars,
+                var_name=var_name,
+                value_name=value_name,
+                col_level=col_level,
+            )
         )
 
     def memory_usage(self, index=True, deep=False):
@@ -1333,60 +1459,104 @@ class DataFrame(BasePandasDataset):
         indicator=False,
         validate=None,
     ):
-        """Database style join, where common columns in "on" are merged.
-
-        Args:
-            right: The DataFrame to merge against.
-            how: What type of join to use.
-            on: The common column name(s) to join on. If None, and left_on and
-                right_on  are also None, will default to all commonly named
-                columns.
-            left_on: The column(s) on the left to use for the join.
-            right_on: The column(s) on the right to use for the join.
-            left_index: Use the index from the left as the join keys.
-            right_index: Use the index from the right as the join keys.
-            sort: Sort the join keys lexicographically in the result.
-            suffixes: Add this suffix to the common names not in the "on".
-            copy: Does nothing in our implementation
-            indicator: Adds a column named _merge to the DataFrame with
-                metadata from the merge about each row.
-            validate: Checks if merge is a specific type.
-
-        Returns:
-             A merged Dataframe
         """
+        Merge DataFrame or named Series objects with a database-style join.
 
+        The join is done on columns or indexes. If joining columns on columns,
+        the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
+        indexes on a column or columns, the index will be passed on.
+
+        Parameters
+        ----------
+        right : DataFrame or named Series
+            Object to merge with.
+        how : {'left', 'right', 'outer', 'inner'}, default 'inner'
+            Type of merge to be performed.
+            - left: use only keys from left frame,
+              similar to a SQL left outer join; preserve key order.
+            - right: use only keys from right frame,
+              similar to a SQL right outer join; preserve key order.
+            - outer: use union of keys from both frames,
+              similar to a SQL full outer join; sort keys lexicographically.
+            - inner: use intersection of keys from both frames,
+              similar to a SQL inner join; preserve the order of the left keys.
+        on : label or list
+            Column or index level names to join on.
+            These must be found in both DataFrames. If on is None and not merging on indexes
+            then this defaults to the intersection of the columns in both DataFrames.
+        left_on : label or list, or array-like
+            Column or index level names to join on in the left DataFrame.
+            Can also be an array or list of arrays of the length of the left DataFrame.
+            These arrays are treated as if they are columns.
+        right_on : label or list, or array-like
+            Column or index level names to join on in the right DataFrame.
+            Can also be an array or list of arrays of the length of the right DataFrame.
+            These arrays are treated as if they are columns.
+        left_index : bool, default False
+            Use the index from the left DataFrame as the join key(s).
+            If it is a MultiIndex, the number of keys in the other DataFrame
+            (either the index or a number of columns) must match the number of levels.
+        right_index : bool, default False
+            Use the index from the right DataFrame as the join key. Same caveats as left_index.
+        sort : bool, default False
+            Sort the join keys lexicographically in the result DataFrame.
+            If False, the order of the join keys depends on the join type (how keyword).
+        suffixes : tuple of (str, str), default ('_x', '_y')
+            Suffix to apply to overlapping column names in the left and right side, respectively.
+            To raise an exception on overlapping columns use (False, False).
+        copy : bool, default True
+            If False, avoid copy if possible.
+        indicator : bool or str, default False
+            If True, adds a column to output DataFrame called "_merge" with information
+            on the source of each row. If string, column with information on source of each row
+            will be added to output DataFrame, and column will be named value of string.
+            Information column is Categorical-type and takes on a value of "left_only"
+            for observations whose merge key only appears in 'left' DataFrame,
+            "right_only" for observations whose merge key only appears in 'right' DataFrame,
+            and "both" if the observation’s merge key is found in both.
+        validate : str, optional
+            If specified, checks if merge is of specified type.
+            - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
+            - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
+            - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
+            - 'many_to_many' or 'm:m': allowed, but does not result in checks.
+
+        Returns
+        -------
+        DataFrame
+             A DataFrame of the two merged objects.
+        """
         if isinstance(right, Series):
             if right.name is None:
                 raise ValueError("Cannot merge a Series without a name")
             else:
                 right = right.to_frame()
         if not isinstance(right, DataFrame):
-            raise ValueError(
-                "can not merge DataFrame with instance of type "
-                "{}".format(type(right))
+            raise TypeError(
+                f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
-        if left_index is False or right_index is False:
-            return self._create_or_update_from_compiler(
-                self._query_compiler.join(
-                    right._query_compiler,
-                    how=how,
-                    on=on,
-                    left_on=left_on,
-                    right_on=right_on,
-                    left_index=left_index,
-                    right_index=right_index,
-                    sort=sort,
-                    suffixes=suffixes,
-                    copy=copy,
-                    indicator=indicator,
-                    validate=validate,
-                )
-            )
+
         if left_index and right_index:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.merge(
+                right._query_compiler,
+                how=how,
+                on=on,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                sort=sort,
+                suffixes=suffixes,
+                copy=copy,
+                indicator=indicator,
+                validate=validate,
+            )
+        )
 
     def mod(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(
@@ -1470,6 +1640,51 @@ class DataFrame(BasePandasDataset):
                 n=n, columns=columns, keep=keep
             )
         )
+
+    def slice_shift(self, periods=1, axis=0):
+        """
+        Equivalent to `shift` without copying data.
+        The shifted data will not include the dropped periods and the
+        shifted axis will be smaller than the original.
+        Parameters
+        ----------
+        periods : int
+            Number of periods to move, can be positive or negative.
+        axis : int or str
+            Shift direction.
+        Returns
+        -------
+        shifted : same type as caller
+        """
+        if periods == 0:
+            return self.copy()
+
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                return DataFrame(columns=self.columns)
+            else:
+                if periods > 0:
+                    new_index = self.index.drop(labels=self.index[:periods])
+                    new_df = self.drop(self.index[-periods:])
+                else:
+                    new_index = self.index.drop(labels=self.index[periods:])
+                    new_df = self.drop(self.index[:-periods])
+
+                new_df.index = new_index
+                return new_df
+        else:
+            if abs(periods) >= len(self.columns):
+                return DataFrame(index=self.index)
+            else:
+                if periods > 0:
+                    new_columns = self.columns.drop(labels=self.columns[:periods])
+                    new_df = self.drop(self.columns[-periods:], axis="columns")
+                else:
+                    new_columns = self.columns.drop(labels=self.columns[periods:])
+                    new_df = self.drop(self.columns[:-periods], axis="columns")
+
+                new_df.columns = new_columns
+                return new_df
 
     def pivot(self, index=None, columns=None, values=None):
         return self._default_to_pandas(
@@ -1560,8 +1775,13 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
-        new_index = self.columns if axis else self.index
-        if min_count > len(new_index):
+        axis_to_apply = self.columns if axis else self.index
+        if (
+            skipna is not False
+            and numeric_only is None
+            and min_count > len(axis_to_apply)
+        ):
+            new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
@@ -1885,8 +2105,13 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
-        new_index = self.columns if axis else self.index
-        if min_count > len(new_index):
+        axis_to_apply = self.columns if axis else self.index
+        if (
+            skipna is not False
+            and numeric_only is None
+            and min_count > len(axis_to_apply)
+        ):
+            new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
             )
@@ -2229,6 +2454,7 @@ class DataFrame(BasePandasDataset):
         ).squeeze(axis=1)
         if isinstance(s, Series):
             s._parent = self
+            s._parent_axis = 1
         return s
 
     def _getitem_array(self, key):
@@ -2616,3 +2842,9 @@ class DataFrame(BasePandasDataset):
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(DataFrame, "make_dataframe_wrapper")

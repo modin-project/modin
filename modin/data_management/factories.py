@@ -11,11 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import warnings
 
-from modin import __execution_engine__ as execution_engine
-from modin import __partition_format__ as partition_format
+from modin import execution_engine
+from modin.engines.base.io import BaseIO
 
 import pandas
 
@@ -27,7 +26,14 @@ class BaseFactory(object):
     Abstract factory which allows to override the io module easily.
     """
 
-    io_cls = None  # The module where the I/O functionality exists.
+    io_cls: BaseIO = None  # The module where the I/O functionality exists.
+
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
     @classmethod
     def _from_pandas(cls, df):
@@ -119,41 +125,42 @@ class BaseFactory(object):
 
 
 class PandasOnRayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
-    from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-
-    io_cls = PandasOnRayIO
+        cls.io_cls = PandasOnRayIO
 
 
 class PandasOnPythonFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
-    from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
-
-    io_cls = PandasOnPythonIO
+        cls.io_cls = PandasOnPythonIO
 
 
 class PandasOnDaskFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
-    from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
-
-    io_cls = PandasOnDaskIO
-
-
-class PyarrowOnRayFactory(BaseFactory):
-
-    if partition_format == "Pyarrow" and not os.environ.get(
-        "MODIN_EXPERIMENTAL", False
-    ):
-        raise ImportError(
-            "Pyarrow on Ray is only accessible through the experimental API.\nRun "
-            "`import modin.experimental.pandas as pd` to use Pyarrow on Ray."
-        )
+        cls.io_cls = PandasOnDaskIO
 
 
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     def _read_sql(cls, **kwargs):
-        if execution_engine != "Ray":
+        if execution_engine.get() != "Ray":
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(
@@ -182,20 +189,75 @@ class ExperimentalBaseFactory(BaseFactory):
 
 
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.pandas_on_ray.io_exp import (
+            ExperimentalPandasOnRayIO,
+        )
 
-    from modin.experimental.engines.pandas_on_ray.io_exp import (
-        ExperimentalPandasOnRayIO,
-    )
-
-    io_cls = ExperimentalPandasOnRayIO
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
-
     pass
 
 
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
+
+        cls.io_cls = PyarrowOnRayIO
+
+
+class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
+    @classmethod
+    def prepare(cls):
+        # query_compiler import is needed so remote PandasQueryCompiler
+        # has an imported local counterpart;
+        # if there isn't such counterpart rpyc generates some bogus
+        # class type which raises TypeError()
+        # upon checking its isinstance() or issubclass()
+        import modin.backends.pandas.query_compiler  # noqa: F401
+        from modin.experimental.cloud import get_connection
+
+        # import a numpy overrider if it wasn't already imported
+        import modin.experimental.pandas.numpy_wrap  # noqa: F401
+
+        class WrappedIO:
+            def __init__(self, conn):
+                self.__conn = conn
+                self.__io_cls = conn.modules[
+                    "modin.engines.ray.pandas_on_ray.io"
+                ].PandasOnRayIO
+                self.__reads = {
+                    name for name in BaseIO.__dict__ if name.startswith("read_")
+                }
+                self.__wrappers = {}
+
+            def __getattr__(self, name):
+                if name in self.__reads:
+                    try:
+                        wrap = self.__wrappers[name]
+                    except KeyError:
+
+                        def wrap(*a, _original=getattr(self.__io_cls, name), **kw):
+                            a, kw = self.__conn.deliver(a, kw)
+                            return _original(*a, **kw)
+
+                        self.__wrappers[name] = wrap
+                else:
+                    wrap = getattr(self.__io_cls, name)
+                return wrap
+
+        cls.io_cls = WrappedIO(get_connection())
+
 
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
@@ -203,7 +265,11 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
 
 
 class ExperimentalOmnisciOnRayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
-    from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
-
-    io_cls = OmnisciOnRayIO
+        io_cls = OmnisciOnRayIO

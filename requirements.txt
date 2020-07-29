@@ -1,9 +1,9 @@
-pandas==1.0.3
+pandas==1.0.5
 numpy
 pyarrow<0.17
-dask[complete]>=2.1.0
-distributed>=2.3.2
-ray==0.8.5
+dask[complete]>=2.1.0,<=2.19.0
+distributed>=2.3.2,<=2.19.0
+ray==0.8.6
 psutil==5.6.6
 xarray
 Jinja2
@@ -21,7 +21,7 @@ feather-format
 lxml
 openpyxl
 xlrd
-matplotlib
+matplotlib<=3.2.2
 sqlalchemy
 msgpack<1.0
 pandas_gbq
