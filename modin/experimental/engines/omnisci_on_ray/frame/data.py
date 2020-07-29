@@ -824,6 +824,24 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
     def _arrow_row_slice(self, table, row_numeric_idx):
+        if isinstance(row_numeric_idx, slice):
+            start = 0 if row_numeric_idx.start is None else row_numeric_idx.start
+            if start < 0:
+                start = table.num_rows - start
+            end = (
+                table.num_rows if row_numeric_idx.stop is None else row_numeric_idx.stop
+            )
+            if end < 0:
+                end = table.num_rows - end
+            if row_numeric_idx.step is None or row_numeric_idx.step == 1:
+                length = 0 if start >= end else end - start
+                return table.slice(start, length)
+            else:
+                parts = []
+                for i in range(start, end, row_numeric_idx.step):
+                    parts.append(table.slice(i, 1))
+                return pyarrow.concat_tables(parts)
+
         start = None
         end = None
         parts = []
