@@ -16,17 +16,17 @@ import pandas
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
-from modin import __execution_engine__
 from .omnisci_worker import OmnisciServer
 import pyarrow
 
-if __execution_engine__ == "Ray":
-    import ray
-    from ray.worker import RayTaskError
+import ray
+from ray.worker import RayTaskError
 
 
 class OmnisciOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None):
+    def __init__(
+        self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None
+    ):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id

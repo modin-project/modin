@@ -272,4 +272,4 @@ class ExperimentalOmnisciOnRayFactory(BaseFactory):
         """
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
-        io_cls = OmnisciOnRayIO
+        cls.io_cls = OmnisciOnRayIO

@@ -20,7 +20,6 @@ from .axis_partition import (
 )
 from .partition import OmnisciOnRayFramePartition
 from modin.error_message import ErrorMessage
-from modin import __execution_engine__
 from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
@@ -29,8 +28,7 @@ import pyarrow
 import json
 import pandas
 
-if __execution_engine__ == "Ray":
-    import ray
+import ray
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
