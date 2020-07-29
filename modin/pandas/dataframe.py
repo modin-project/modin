@@ -440,7 +440,21 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if not isinstance(by, Series) and axis == 0 and all(o in self for o in by):
+            if (
+                not isinstance(by, Series)
+                and axis == 0
+                and all(
+                    (
+                        (isinstance(o, str) and (o in self))
+                        or (isinstance(o, Series) and (o._parent is self))
+                    )
+                    for o in by
+                )
+            ):
+                # We can just revert Series back to names because the parent is
+                # this dataframe:
+                by = [o.name if isinstance(o, Series) else o for o in by]
+
                 warnings.warn(
                     "Multi-column groupby is a new feature. "
                     "Please report any bugs/issues to bug_reports@modin.org."

@@ -1134,3 +1134,31 @@ def test_to_pandas_convertion(kwargs):
     by = ["a", "b"]
 
     eval_aggregation(*create_test_dfs(data), by=by, **kwargs)
+
+
+@pytest.mark.parametrize(
+    # When True, do df[name], otherwise just use name
+    "columns",
+    [
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b")],
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+    ],
+)
+def test_mixed_columns(columns):
+    def get_columns(df):
+        return [df[name] if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    df1 = pandas.DataFrame(data)
+    df1 = pandas.concat([df1])
+    ref = df1.groupby(get_columns(df1)).size()
+
+    df2 = pd.DataFrame(data)
+    df2 = pd.concat([df2])
+    exp = df2.groupby(get_columns(df2)).size()
+    df_equals(ref, exp)
