@@ -27,9 +27,9 @@ class ClusterError(Exception):
         super().__init__(*args, **kw)
 
     def __str__(self):
-        if self.clause:
-            return f"clause: {self.cause}\n{super()}"
-        return str(super())
+        if self.cause:
+            return f"cause: {self.cause}\n{super().__str__()}"
+        return super().__str__()
 
 
 class CannotSpawnCluster(ClusterError):
