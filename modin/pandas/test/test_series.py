@@ -55,6 +55,8 @@ from .utils import (
     encoding_types,
     categories_equals,
     eval_general,
+    test_data_small_values,
+    test_data_small_keys,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -2102,19 +2104,53 @@ def test_pow(data):
     inter_df_math_helper(modin_series, pandas_series, "pow")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_prod(data):
-    modin_series, pandas_series = create_test_series(data)
-    # Wrap in Series to test almost_equal because of overflow
-    df_equals(pd.Series([modin_series.prod()]), pandas.Series([pandas_series.prod()]))
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_product(data):
-    modin_series, pandas_series = create_test_series(data)
-    # Wrap in Series to test almost_equal because of overflow
-    df_equals(
-        pd.Series([modin_series.product()]), pandas.Series([pandas_series.product()])
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_small_values,
+    ids=test_data_keys + test_data_small_keys,
+)
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "numeric_only",
+    [
+        None,
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="numeric_only not implemented for pandas.Series"
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
+)
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "prod",
+        pytest.param(
+            "product",
+            marks=pytest.mark.skipif(
+                pandas.Series.product == pandas.Series.prod
+                and pd.Series.product == pd.Series.prod,
+                reason="That operation was already tested.",
+            ),
+        ),
+    ],
+)
+def test_prod(data, axis, skipna, numeric_only, min_count, operation):
+    eval_general(
+        *create_test_series(data),
+        lambda df, *args, **kwargs: type(df)([getattr(df, operation)(*args, **kwargs)]),
+        axis=axis,
+        skipna=skipna,
+        numeric_only=numeric_only,
+        min_count=min_count,
     )
 
 
@@ -2698,23 +2734,40 @@ def test_subtract(data):
     inter_df_math_helper(modin_series, pandas_series, "subtract")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_small_values,
+    ids=test_data_keys + test_data_small_keys,
+)
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 @pytest.mark.parametrize(
+    "numeric_only",
+    [
+        None,
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="numeric_only not implemented for pandas.Series"
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
-def test_sum(data, skipna, min_count):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.sum(skipna=skipna, min_count=min_count)
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_series.sum(skipna=skipna, min_count=min_count)
-    else:
-        modin_result = modin_series.sum(skipna=skipna, min_count=min_count)
-        df_equals(modin_result, pandas_result)
+def test_sum(data, axis, skipna, numeric_only, min_count):
+    eval_general(
+        *create_test_series(data),
+        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+        axis=axis,
+        skipna=skipna,
+        numeric_only=numeric_only,
+        min_count=min_count,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
