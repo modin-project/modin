@@ -5970,11 +5970,19 @@ class TestDataFrameJoinSort:
         pandas_df.index = pandas.MultiIndex.from_tuples(
             [(i // 10, i // 5, i) for i in range(len(pandas_df))]
         )
+        modin_df.columns = pd.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(modin_df.columns))]
+        )
+        pandas_df.columns = pd.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(pandas_df.columns))]
+        )
 
         with pytest.warns(UserWarning):
             df_equals(modin_df.sort_index(level=0), pandas_df.sort_index(level=0))
         with pytest.warns(UserWarning):
             df_equals(modin_df.sort_index(axis=0), pandas_df.sort_index(axis=0))
+        with pytest.warns(UserWarning):
+            df_equals(modin_df.sort_index(axis=1), pandas_df.sort_index(axis=1))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
