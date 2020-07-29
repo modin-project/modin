@@ -3460,11 +3460,14 @@ class TestDataFrameReduction_B:
         "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
     )
     @pytest.mark.parametrize("is_transposed", [False, True])
+    @pytest.mark.parametrize("level", [1])
     def test_sum(
-        self, request, data, axis, skipna, numeric_only, min_count, is_transposed
+        self, request, data, axis, skipna, numeric_only, min_count, is_transposed, level
     ):
+        modin_df, pandas_df = create_test_dfs(data)
         eval_general(
-            *create_test_dfs(data),
+            modin_df,
+            pandas_df,
             lambda df, *args, **kwargs: (df.T if is_transposed else df).sum(
                 *args, **kwargs
             ),
@@ -3472,6 +3475,34 @@ class TestDataFrameReduction_B:
             skipna=skipna,
             numeric_only=numeric_only,
             min_count=min_count,
+            level=level,
+        )
+        # MultiIndex
+        if axis == 0:
+            modin_df.index = pd.MultiIndex.from_tuples(
+                [(i // 4, i // 3, i) for i in range(len(modin_df.index))]
+            )
+            pandas_df.index = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 3, i) for i in range(len(pandas_df.index))]
+            )
+        elif axis == 1:
+            modin_df.columns = pd.MultiIndex.from_tuples(
+                [(i // 4, i // 3, i) for i in range(len(modin_df.columns))]
+            )
+            pandas_df.columns = pandas.MultiIndex.from_tuples(
+                [(i // 4, i // 3, i) for i in range(len(pandas_df.columns))]
+            )
+        else:
+            return
+        eval_general(
+            modin_df,
+            pandas_df,
+            lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+            axis=axis,
+            skipna=skipna,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            level=level,
         )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

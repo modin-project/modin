@@ -743,10 +743,9 @@ class BasePandasDataset(object):
             self._validate_dtypes(numeric_only=numeric_only)
 
         if level is not None:
-            if not isinstance(self.axes[axis], pandas.MultiIndex):
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
                 # error thrown by pandas
-                raise TypeError("Can only count levels on hierarchical columns.")
-
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
             return self._handle_level_agg(axis, level, "count")
 
         return self._reduce_dimension(
@@ -1612,6 +1611,11 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
         data = self._validate_dtypes_min_max(axis, numeric_only)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return data._handle_level_agg(axis, level, "max")
         return data._reduce_dimension(
             data._query_compiler.max(
                 axis=axis,
@@ -1636,6 +1640,11 @@ class BasePandasDataset(object):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return data._handle_level_agg(axis, level, "mean")
         return data._reduce_dimension(
             data._query_compiler.mean(
                 axis=axis,
@@ -1659,6 +1668,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis) if axis is not None else 0
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self._handle_level_agg(axis, level, "median")
         return self._reduce_dimension(
             self._query_compiler.median(
                 axis=axis,
@@ -1699,6 +1713,11 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
         data = self._validate_dtypes_min_max(axis, numeric_only)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return data._handle_level_agg(axis, level, "min")
         return data._reduce_dimension(
             data._query_compiler.min(
                 axis=axis,
@@ -1876,6 +1895,11 @@ class BasePandasDataset(object):
         """
         axis = self._get_axis_number(axis) if axis is not None else 0
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return data._handle_level_agg(axis, level, "prod")
         if min_count > 1:
             return data._reduce_dimension(
                 query_compiler=data._query_compiler.prod_min_count(
@@ -2878,6 +2902,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis) if axis is not None else 0
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self._handle_level_agg(axis, level, "std")
         return self._reduce_dimension(
             self._query_compiler.std(
                 axis=axis,
@@ -2929,6 +2958,16 @@ class BasePandasDataset(object):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            # DataFrameGroupBy.sum does not support `numeric_only`. Additionally, when
+            # there is no MultiIndex, groupby happens on the index, and null values are
+            # handled with a special case. Default to pandas until we solve this case.
+            # if level == 0 or numeric_only is False:
+            return self._default_to_pandas("sum", axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, min_count=min_count, **kwargs)
+            return self._handle_level_agg(axis, level, "sum", numeric_only=numeric_only, min_count=min_count)
         if min_count > 1:
             return data._reduce_dimension(
                 query_compiler=data._query_compiler.sum_min_count(
@@ -3372,6 +3411,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis) if axis is not None else 0
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            if not isinstance(self.axes[axis], pandas.MultiIndex) and level != 0:
+                # error thrown by pandas
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self._handle_level_agg(axis, level, "var")
         return self._reduce_dimension(
             self._query_compiler.var(
                 axis=axis,

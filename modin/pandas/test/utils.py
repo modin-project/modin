@@ -517,6 +517,7 @@ def df_equals(df1, df2):
         assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
         assert df1 == df2
     else:
+        assert type(df1) == type(df2), "Mismatched type: {} != {}".format(type(df1), type(df2))
         if df1 != df2:
             np.testing.assert_almost_equal(df1, df2)
 

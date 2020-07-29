@@ -2073,6 +2073,7 @@ class DataFrame(BasePandasDataset):
             skipna is not False
             and numeric_only is None
             and min_count > len(axis_to_apply)
+            and level is None
         ):
             new_index = self.columns if not axis else self.index
             return Series(
