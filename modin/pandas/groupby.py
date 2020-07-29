@@ -128,7 +128,7 @@ class DataFrameGroupBy(object):
                 }
             else:
                 if isinstance(self._by, type(self._query_compiler)):
-                    by = self._by.to_pandas().squeeze()
+                    by = self._by.to_pandas().squeeze().values
                 else:
                     by = self._by
                 if self._axis == 0:
@@ -433,7 +433,7 @@ class DataFrameGroupBy(object):
             series_result = Series(query_compiler=result._query_compiler)
             # Pandas does not name size() output
             series_result.name = None
-            return series_result
+            return series_result.fillna(0)
         else:
             return DataFrameGroupBy(
                 self._df.T,
@@ -529,12 +529,16 @@ class DataFrameGroupBy(object):
         return result
 
     def count(self, **kwargs):
-        return self._wrap_aggregation(
+        result = self._wrap_aggregation(
             type(self._query_compiler).groupby_count,
             lambda df, **kwargs: df.count(**kwargs),
             numeric_only=False,
             **kwargs,
         )
+        # pandas do it in case of Series
+        if isinstance(result, Series):
+            result = result.fillna(0)
+        return result
 
     def pipe(self, func, *args, **kwargs):
         return com.pipe(self, func, *args, **kwargs)
