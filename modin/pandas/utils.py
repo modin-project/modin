@@ -116,3 +116,14 @@ def try_cast_to_pandas(obj):
                 else getattr(pandas.Series, fn_name, obj)
             )
     return obj
+
+
+def wrap_udf_function(func):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        # if user accidently returns modin DataFrame or Series
+        # casting it back to pandas to properly process
+        return try_cast_to_pandas(result)
+
+    wrapper.__name__ = func.__name__
+    return wrapper

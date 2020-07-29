@@ -583,7 +583,9 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
-            result = self._query_compiler.apply(func, axis=axis, *args, **kwds)
+            result = self._query_compiler.apply(
+                func, axis=axis, raw=raw, result_type=result_type, *args, **kwds,
+            )
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result
@@ -601,7 +603,9 @@ class BasePandasDataset(object):
                 )
         elif not callable(func) and not is_list_like(func):
             raise TypeError("{} object is not callable".format(type(func)))
-        query_compiler = self._query_compiler.apply(func, axis, args=args, **kwds)
+        query_compiler = self._query_compiler.apply(
+            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
+        )
         return query_compiler
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
