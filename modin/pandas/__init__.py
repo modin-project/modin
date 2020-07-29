@@ -97,6 +97,9 @@ num_cpus = 1
 
 _is_first_update = {}
 dask_client = None
+_NOINIT_ENGINES = {
+    "Python"
+}  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Publisher):
@@ -157,7 +160,7 @@ def _update_engine(publisher: Publisher):
 
         num_cpus = remote_ray.cluster_resources()["CPU"]
 
-    elif publisher.get() != "Python":
+    elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False

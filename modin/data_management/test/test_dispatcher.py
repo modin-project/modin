@@ -18,6 +18,8 @@ from modin import execution_engine, partition_format, set_backends
 from modin.data_management.dispatcher import EngineDispatcher, FactoryNotFoundError
 from modin.data_management import factories
 
+import modin.pandas as pd
+
 
 class PandasOnTestFactory(factories.BaseFactory):
     """
@@ -62,6 +64,9 @@ class FooOnBarFactory(factories.BaseFactory):
 factories.PandasOnTestFactory = PandasOnTestFactory
 factories.TestOnPythonFactory = TestOnPythonFactory
 factories.FooOnBarFactory = FooOnBarFactory
+
+# register them as known "no init" engines for modin.pandas
+pd._NOINIT_ENGINES |= {"Test", "Bar"}
 
 
 def test_default_engine():
