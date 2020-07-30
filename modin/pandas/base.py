@@ -227,7 +227,7 @@ class BasePandasDataset(object):
             # Broadcast is an internally used argument
             kwargs.pop("broadcast", None)
             return self._default_to_pandas(
-                getattr(getattr(pandas, self.__name__), op), other, **kwargs
+                getattr(getattr(pandas, type(self).__name__), op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
@@ -238,7 +238,7 @@ class BasePandasDataset(object):
         empty_self_str = "" if not self.empty else " for empty DataFrame"
         ErrorMessage.default_to_pandas(
             "`{}.{}`{}".format(
-                self.__name__,
+                type(self).__name__,
                 op if isinstance(op, str) else op.__name__,
                 empty_self_str,
             )
@@ -254,7 +254,7 @@ class BasePandasDataset(object):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(getattr(pandas, self.__name__), op)(
+            result = getattr(getattr(pandas, type(self).__name__), op)(
                 pandas_obj, *args, **kwargs
             )
         else:
@@ -307,7 +307,7 @@ class BasePandasDataset(object):
 
     def _get_axis_number(self, axis):
         return (
-            getattr(pandas, self.__name__)()._get_axis_number(axis)
+            getattr(pandas, type(self).__name__)()._get_axis_number(axis)
             if axis is not None
             else 0
         )
@@ -455,7 +455,7 @@ class BasePandasDataset(object):
                 if hasattr(self, "dtype"):
                     raise NotImplementedError(
                         "{}.{} does not implement numeric_only.".format(
-                            self.__name__, "all"
+                            type(self).__name__, "all"
                         )
                     )
                 data_for_compute = self[self.columns[self.dtypes == np.bool]]
@@ -512,7 +512,7 @@ class BasePandasDataset(object):
                 if hasattr(self, "dtype"):
                     raise NotImplementedError(
                         "{}.{} does not implement numeric_only.".format(
-                            self.__name__, "all"
+                            type(self).__name__, "all"
                         )
                     )
                 data_for_compute = self[self.columns[self.dtypes == np.bool]]
@@ -2117,9 +2117,9 @@ class BasePandasDataset(object):
             "copy": copy,
             "inplace": inplace,
         }
-        axes, kwargs = getattr(pandas, self.__name__)()._construct_axes_from_arguments(
-            (), kwargs, sentinel=sentinel
-        )
+        axes, kwargs = getattr(
+            pandas, type(self).__name__
+        )()._construct_axes_from_arguments((), kwargs, sentinel=sentinel)
         if axis is not None:
             axis = self._get_axis_number(axis)
         else:
@@ -3452,7 +3452,7 @@ class BasePandasDataset(object):
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
         indexer = convert_to_index_sliceable(
-            getattr(pandas, self.__name__)(index=self.index), key
+            getattr(pandas, type(self).__name__)(index=self.index), key
         )
         if indexer is not None:
             return self._getitem_slice(indexer)
@@ -3553,10 +3553,6 @@ class BasePandasDataset(object):
             The numpy representation of this object.
         """
         return self.to_numpy()
-
-    @property
-    def __name__(self):
-        return type(self).__name__
 
     def __getattribute__(self, item):
         default_behaviors = [
