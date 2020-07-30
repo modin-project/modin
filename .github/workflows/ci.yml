@@ -58,7 +58,6 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
@@ -73,7 +72,6 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
@@ -88,7 +86,6 @@ jobs:
           python-version: "3.6.x"
           architecture: "x64"
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
@@ -115,7 +112,6 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
@@ -157,7 +153,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
@@ -197,6 +192,5 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pip cache list
-      - run: pip cache purge
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
