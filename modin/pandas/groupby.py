@@ -65,7 +65,10 @@ class DataFrameGroupBy(object):
             ) or (
                 not isinstance(by, type(self._query_compiler))
                 and axis == 0
-                and all(obj in self._query_compiler.columns for obj in self._by)
+                and all(
+                    isinstance(obj, str) and obj in self._query_compiler.columns
+                    for obj in self._by
+                )
             )
         else:
             self._is_multi_by = False
@@ -412,6 +415,9 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
+        if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+            # We don't have good way to handle this right now, fall back to Pandas.
+            return self._default_to_pandas(lambda df: df.size())
         if self._axis == 0:
             # Size always works in as_index=True mode so it is necessary to make a
             #  copy of _kwargs and change as_index in it
@@ -671,7 +677,7 @@ class DataFrameGroupBy(object):
         return result
 
     def _default_to_pandas(self, f, *args, **kwargs):
-        """Defailts the execution of this function to pandas.
+        """Defaults the execution of this function to pandas.
 
         Args:
             f: The function to apply to each group.
@@ -688,6 +694,11 @@ class DataFrameGroupBy(object):
             by = list(self._by.columns)
         else:
             by = self._by
+
+        # is_list_like() will be True for Categorical, which we don't want to
+        # convert to a list, so use isinstance(by, list):
+        if isinstance(by, list):
+            by = [o._to_pandas() if isinstance(o, Series) else o for o in by]
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(

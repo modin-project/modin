@@ -1188,3 +1188,34 @@ def test_mixed_columns(columns):
     df2 = pd.concat([df2])
     exp = df2.groupby(get_columns(df2)).size()
     df_equals(ref, exp)
+
+
+@pytest.mark.parametrize(
+    # When True, use (df[name] + 1), otherwise just use name
+    "columns",
+    [
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+    ],
+)
+def test_mixed_columns_not_from_df(columns):
+    """
+    Unlike the previous test, in this case the Series is not just a column from
+    the original DataFrame, so you can't use a fasttrack.
+    """
+
+    def get_columns(df):
+        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    df1 = pandas.DataFrame(data)
+    df1 = pandas.concat([df1])
+    ref = df1.groupby(get_columns(df1)).size()
+
+    df2 = pd.DataFrame(data)
+    df2 = pd.concat([df2])
+    exp = df2.groupby(get_columns(df2)).size()
+    df_equals(ref, exp)
