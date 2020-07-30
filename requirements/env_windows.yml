@@ -37,3 +37,4 @@ dependencies:
     - matplotlib
     - sqlalchemy
     - msgpack<1.0
+    - cloudpickle
