@@ -1720,16 +1720,6 @@ class Series(BasePandasDataset):
             series.name = None
         return series
 
-    def _handle_level_agg(self, axis, level, op, **kwargs):
-        """Helper method to perform error checking for aggregation functions with a level parameter.
-        Args:
-            axis: The axis to apply the operation on
-            level: The level of the axis to apply the operation on
-            op: String representation of the operation to be performed on the level
-        """
-
-        return getattr(self.groupby(level=level, axis=axis, sort=False), op)(**kwargs)
-
 
 if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
     from modin.experimental.cloud.meta_magic import make_wrapped_class

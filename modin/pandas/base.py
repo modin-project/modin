@@ -127,7 +127,7 @@ class BasePandasDataset(object):
             op: String representation of the operation to be performed on the level
         """
 
-        return getattr(self.groupby(level=level, axis=axis), op)(**kwargs)
+        return getattr(self.groupby(level=level, axis=axis, sort=False), op)(**kwargs)
 
     def _validate_other(
         self,
