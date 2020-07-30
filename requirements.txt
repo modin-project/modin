@@ -25,3 +25,4 @@ matplotlib<=3.2.2
 sqlalchemy
 msgpack<1.0
 pandas_gbq
+cloudpickle

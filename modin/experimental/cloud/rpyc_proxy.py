@@ -16,7 +16,7 @@ import collections
 import os
 
 import rpyc
-from rpyc.lib.compat import pickle
+import cloudpickle as pickle
 from rpyc.lib import get_methods
 
 from rpyc.core import netref, AsyncResult, consts
