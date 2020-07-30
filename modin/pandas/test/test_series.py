@@ -1813,7 +1813,7 @@ def test_last():
 
 
 def test_index_order():
-    # see #1708 for details
+    # see #1708 and #1869 for details
     s_modin, s_pandas = create_test_series(test_data["dense_nan_data"])
     rows_number = len(s_modin.index)
     level_0 = np.random.choice([x for x in range(10)], rows_number)
@@ -1823,7 +1823,7 @@ def test_index_order():
     s_modin.index = index
     s_pandas.index = index
 
-    for func in ["all", "any", "mad"]:
+    for func in ["all", "any", "mad", "count"]:
         df_equals(
             getattr(s_modin, func)(level=0).index,
             getattr(s_pandas, func)(level=0).index,
