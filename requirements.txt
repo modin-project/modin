@@ -11,7 +11,7 @@ pathlib
 tables
 scipy
 s3fs
-pytest
+pytest<6 # version limitation for pytest-testmon
 coverage<5.0
 pytest-cov
 pytest-testmon
