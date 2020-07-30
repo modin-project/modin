@@ -94,10 +94,10 @@ _KNOWN_DUALS = {}
 
 def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     """
-    Replaces given local class in its module with a descendant class
-    which has __new__ overridden (a dual-nature class).
-    This new class is instantiated differently depending o
-     whether this is done in remote context or local.
+    Replaces given local class in its module with a replacement class
+    which has __new__ defined (a dual-nature class).
+    This new class is instantiated differently depending on
+    whether this is done in remote or local context.
 
     In local context we effectively get the same behaviour, but in remote
     context the created class is actually of separate type which
@@ -114,12 +114,12 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         installed, and not all users of Modin (even in experimental mode)
         need remote context.
     """
-    namespace = {
-        "__real_cls__": None,
-        "__new__": None,
-        "__module__": local_cls.__module__,
-    }
-    result = RemoteMeta(local_cls.__name__, (local_cls,), namespace)
+    namespace = dict(local_cls.__dict__)  # get a copy of local_cls attributes' dict
+    namespace["__real_cls__"] = None
+    namespace["__new__"] = None
+    # define a new class the same way original was defined but with replaced
+    # metaclass and a few more attributes in namespace
+    result = RemoteMeta(local_cls.__name__, local_cls.__bases__, namespace)
 
     def make_new(__class__):
         """
