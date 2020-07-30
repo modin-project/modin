@@ -38,3 +38,4 @@ dependencies:
     - sqlalchemy
     - msgpack<1.0
     - cloudpickle
+    - rpyc

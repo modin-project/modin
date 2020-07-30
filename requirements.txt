@@ -26,3 +26,4 @@ sqlalchemy
 msgpack<1.0
 pandas_gbq
 cloudpickle
+rpyc
