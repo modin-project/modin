@@ -384,9 +384,6 @@ def make_proxy_cls(
         __name__ = cls_name or origin_cls.__name__
         __wrapper_remote__ = remote_cls
 
-        def __new__(cls, *a, **kw):
-            return override.__new__(cls)
-
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
                 __remote_end__ = remote_cls(*a, **kw)
