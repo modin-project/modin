@@ -81,10 +81,7 @@ class RemoteMeta(type):
                     return super().__getattribute__(name)
                 else:
                     try:
-                        remote = object.__getattribute__(
-                            super().__getattribute__("__real_cls__"),
-                            "__wrapper_remote__",
-                        )
+                        remote = self.__real_cls__.__wrapper_remote__
                     except AttributeError:
                         # running in local mode, fall back
                         return super().__getattribute__(name)
