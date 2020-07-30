@@ -417,6 +417,8 @@ def make_proxy_cls(
             4) check if type(self).__dict__[name] exists
             5) pass through to remote end
             """
+            if name == "__class__":
+                return object.__getattribute__(self, "__class__")
             dct = object.__getattribute__(self, "__dict__")
             if name == "__dict__":
                 return dct

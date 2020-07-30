@@ -17,7 +17,7 @@ import types
 
 from modin import execution_engine
 
-_LOCAL_ATTRS = frozenset(("__new__", "__dict__", "__wrapper_remote__"))
+_LOCAL_ATTRS = frozenset(("__new__", "__dict__", "__wrapper_remote__", "__real_cls__"))
 
 
 class RemoteMeta(type):
