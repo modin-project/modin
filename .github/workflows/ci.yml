@@ -62,7 +62,7 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
     runs-on: ubuntu-latest
@@ -94,7 +94,7 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -122,7 +122,7 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -165,7 +165,7 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -206,5 +206,5 @@ jobs:
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: pip cache list
       - run: pip list
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt --use-feature=2020-resolver
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
