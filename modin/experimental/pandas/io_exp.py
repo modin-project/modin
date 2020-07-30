@@ -12,9 +12,10 @@
 # governing permissions and limitations under the License.
 
 import inspect
+import os
 
 from . import DataFrame
-from modin.data_management.factories import ExperimentalBaseFactory
+from modin.data_management.dispatcher import EngineDispatcher
 
 
 def read_sql(
@@ -62,5 +63,8 @@ def read_sql(
     Returns:
         Pandas Dataframe
     """
+    assert (
+        os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True"
+    ), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    return DataFrame(query_compiler=ExperimentalBaseFactory.read_sql(**kwargs))
+    return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))

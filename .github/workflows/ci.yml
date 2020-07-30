@@ -1,6 +1,24 @@
 name: ci
 on: pull_request
 jobs:
+  lint-commit:
+    name: lint (commit)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "10.x"
+      - run: npm install --save-dev @commitlint/{config-conventional,cli} commitlint-plugin-jira-rules commitlint-config-jira
+      - name: Add dependencies for commitlint action
+        run: echo "::set-env name=NODE_PATH::$GITHUB_WORKSPACE/node_modules"
+      - run: git remote add upstream https://github.com/modin-project/modin.git
+      - run: git fetch upstream
+      - run: npx commitlint --from upstream/master --to HEAD --verbose
   lint-black:
     name: lint (black)
     runs-on: ubuntu-latest
@@ -54,8 +72,21 @@ jobs:
           architecture: "x64"
       - run: pip install -r requirements.txt
       - run: python -m pytest modin/test/test_headers.py
+  test-internals:
+    runs-on: ubuntu-latest
+    name: test-internals
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6.x"
+          architecture: "x64"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -64,6 +95,7 @@ jobs:
         part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
+      MODIN_MEMORY: 1000000000
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v1
@@ -81,6 +113,8 @@ jobs:
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_rolling.py
+        if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_groupby.py
@@ -95,14 +129,16 @@ jobs:
         if: matrix.part == 3
       - run: bash <(curl -s https://codecov.io/bash)
   test-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
         python-version: ["3.6.x", "3.7.x"]
-        part: ["Reduction_A::test_all", "Reduction_A::test_any", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        engine: ["ray", "dask"]
+        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
-      MODIN_ENGINE: dask
+      MODIN_ENGINE: ${{matrix.engine}}
+      MODIN_MEMORY: 1000000000
     name: test-windows
     steps:
       - uses: actions/checkout@v1
@@ -112,10 +148,12 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install -r requirements/windows_test_requires.txt
+      - run: pip install -r requirements.txt
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
+        if: matrix.part == 3
+      - run: python -m pytest modin/pandas/test/test_rolling.py
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
@@ -130,7 +168,7 @@ jobs:
       - run: choco install codecov
       - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
   test-pyarrow:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:

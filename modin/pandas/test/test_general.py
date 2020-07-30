@@ -15,6 +15,7 @@ import pandas
 import pytest
 import modin.pandas as pd
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from .utils import test_data_values, test_data_keys, df_equals
 
@@ -150,8 +151,12 @@ def test_merge():
         )
         df_equals(modin_result, pandas_result)
 
-        with pytest.raises(ValueError):
-            pd.merge(modin_df["col1"], modin_df2)
+    s = pd.Series(frame_data.get("col1"))
+    with pytest.raises(ValueError):
+        pd.merge(s, modin_df2)
+
+    with pytest.raises(TypeError):
+        pd.merge("Non-valid type", modin_df2)
 
 
 def test_merge_ordered():
@@ -260,7 +265,127 @@ def test_pivot_table():
         )
 
 
+def test_unique():
+    modin_result = pd.unique([2, 1, 3, 3])
+    pandas_result = pandas.unique([2, 1, 3, 3])
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series([2] + [1] * 5))
+    pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series([pd.Timestamp("20160101"), pd.Timestamp("20160101")])
+    )
+    pandas_result = pandas.unique(
+        pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Series(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Series(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(
+        pd.Index(
+            [
+                pd.Timestamp("20160101", tz="US/Eastern"),
+                pd.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    pandas_result = pandas.unique(
+        pandas.Index(
+            [
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+                pandas.Timestamp("20160101", tz="US/Eastern"),
+            ]
+        )
+    )
+    assert_array_equal(modin_result, pandas_result)
+
+    modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
+    pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
+    assert_array_equal(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+def test_value_counts(normalize, bins, dropna):
+    def sort_index_for_equal_values(result, ascending):
+        is_range = False
+        is_end = False
+        i = 0
+        new_index = np.empty(len(result), dtype=type(result.index))
+        while i < len(result):
+            j = i
+            if i < len(result) - 1:
+                while result[result.index[i]] == result[result.index[i + 1]]:
+                    i += 1
+                    if is_range is False:
+                        is_range = True
+                    if i == len(result) - 1:
+                        is_end = True
+                        break
+            if is_range:
+                k = j
+                for val in sorted(result.index[j : i + 1], reverse=not ascending):
+                    new_index[k] = val
+                    k += 1
+                if is_end:
+                    break
+                is_range = False
+            else:
+                new_index[j] = result.index[j]
+            i += 1
+        return pandas.Series(result, index=new_index)
+
+    # We sort indices for pandas result because of issue #1650
+    values = np.array([3, 1, 2, 3, 4, np.nan])
+    modin_result = pd.value_counts(values, normalize=normalize, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, normalize=normalize, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, bins=bins, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, bins=bins, ascending=False), False
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = pd.value_counts(values, dropna=dropna, ascending=True)
+    pandas_result = sort_index_for_equal_values(
+        pandas.value_counts(values, dropna=dropna, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
+
+
 def test_to_datetime():
+    # DataFrame input for to_datetime
+    modin_df = pd.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
+    pandas_df = pandas.DataFrame({"year": [2015, 2016], "month": [2, 3], "day": [4, 5]})
+    df_equals(pd.to_datetime(modin_df), pandas.to_datetime(pandas_df))
+
+    # Series input for to_datetime
+    modin_s = pd.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
+    pandas_s = pandas.Series(["3/11/2000", "3/12/2000", "3/13/2000"] * 1000)
+    df_equals(pd.to_datetime(modin_s), pandas.to_datetime(pandas_s))
+
+    # Other inputs for to_datetime
     value = 1490195805
     assert pd.to_datetime(value, unit="s") == pandas.to_datetime(value, unit="s")
     value = 1490195805433502912
@@ -269,3 +394,46 @@ def test_to_datetime():
     assert pd.to_datetime(value, unit="D", origin=pd.Timestamp("2000-01-01")).equals(
         pandas.to_datetime(value, unit="D", origin=pandas.Timestamp("2000-01-01"))
     )
+
+
+@pytest.mark.parametrize(
+    "data, errors, downcast",
+    [
+        (["1.0", "2", -3], "raise", None),
+        (["1.0", "2", -3], "raise", "float"),
+        (["1.0", "2", -3], "raise", "signed"),
+        (["apple", "1.0", "2", -3], "ignore", None),
+        (["apple", "1.0", "2", -3], "coerce", None),
+    ],
+)
+def test_to_numeric(data, errors, downcast):
+    modin_series = pd.Series(data)
+    pandas_series = pandas.Series(data)
+    modin_result = pd.to_numeric(modin_series, errors=errors, downcast=downcast)
+    pandas_result = pandas.to_numeric(pandas_series, errors=errors, downcast=downcast)
+    df_equals(modin_result, pandas_result)
+
+
+def test_to_pandas_indices():
+    data = test_data_values[0]
+
+    md_df = pd.DataFrame(data)
+    index = pandas.MultiIndex.from_tuples(
+        [(i, i * 2) for i in np.arange(len(md_df) + 1)], names=["A", "B"]
+    ).drop(0)
+    columns = pandas.MultiIndex.from_tuples(
+        [(i, i * 2) for i in np.arange(len(md_df.columns) + 1)], names=["A", "B"]
+    ).drop(0)
+
+    md_df.index = index
+    md_df.columns = columns
+
+    pd_df = md_df._to_pandas()
+
+    for axis in [0, 1]:
+        assert md_df.axes[axis].equals(
+            pd_df.axes[axis]
+        ), f"Indices at axis {axis} are different!"
+        assert md_df.axes[axis].equal_levels(
+            pd_df.axes[axis]
+        ), f"Levels of indices at axis {axis} are different!"

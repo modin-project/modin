@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from collections import OrderedDict
 from io import BytesIO
 import numpy as np
 import pandas
@@ -76,6 +77,11 @@ class PandasParser(object):
                 pd_read(*args, **kwargs), cls.frame_cls
             )
             return pandas_frame
+        elif isinstance(pandas_frame, (OrderedDict, dict)):
+            return {
+                i: cls.query_compiler_cls.from_pandas(frame, cls.frame_cls)
+                for i, frame in pandas_frame.items()
+            }
         return cls.query_compiler_cls.from_pandas(pandas_frame, cls.frame_cls)
 
     infer_compression = infer_compression
@@ -135,6 +141,173 @@ class PandasFWFParser(PandasParser):
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_fwf(fname, **kwargs)
+        if index_col is not None:
+            index = pandas_df.index
+        else:
+            # The lengths will become the RangeIndex
+            index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
+
+
+class PandasExcelParser(PandasParser):
+    @classmethod
+    def get_sheet_data(cls, sheet, convert_float):
+        return [
+            [cls._convert_cell(cell, convert_float) for cell in row]
+            for row in sheet.rows
+        ]
+
+    @classmethod
+    def _convert_cell(cls, cell, convert_float):
+        if cell.is_date:
+            return cell.value
+        elif cell.data_type == "e":
+            return np.nan
+        elif cell.data_type == "b":
+            return bool(cell.value)
+        elif cell.value is None:
+            return ""
+        elif cell.data_type == "n":
+            if convert_float:
+                val = int(cell.value)
+                if val == cell.value:
+                    return val
+            else:
+                return float(cell.value)
+
+        return cell.value
+
+    @staticmethod
+    def parse(fname, **kwargs):
+        num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        _skiprows = kwargs.pop("skiprows")
+        excel_header = kwargs.get("_header")
+        sheet_name = kwargs.get("sheet_name", 0)
+        footer = b"</sheetData></worksheet>"
+
+        # Default to pandas case, where we are not splitting or partitioning
+        if start is None or end is None:
+            return pandas.read_excel(fname, **kwargs)
+
+        from zipfile import ZipFile
+        from openpyxl import load_workbook
+        from openpyxl.worksheet._reader import WorksheetReader
+        from openpyxl.reader.excel import ExcelReader
+        from openpyxl.worksheet.worksheet import Worksheet
+        from pandas.core.dtypes.common import is_list_like
+        from pandas.io.excel._util import (
+            _fill_mi_header,
+            _maybe_convert_usecols,
+        )
+        from pandas.io.parsers import TextParser
+        import re
+
+        wb = load_workbook(filename=fname, read_only=True)
+        # Get shared strings
+        ex = ExcelReader(fname, read_only=True)
+        ex.read_manifest()
+        ex.read_strings()
+        # Convert string name 0 to string
+        if sheet_name == 0:
+            sheet_name = wb.sheetnames[sheet_name]
+        # get the worksheet to use with the worksheet reader
+        ws = Worksheet(wb)
+        # Read the raw data
+        with ZipFile(fname) as z:
+            with z.open("xl/worksheets/{}.xml".format(sheet_name.lower())) as file:
+                file.seek(start)
+                bytes_data = file.read(end - start)
+
+        def update_row_nums(match):
+            """Update the row numbers to start at 1.
+
+            Note: This is needed because the parser we are using does not scale well if
+            the row numbers remain because empty rows are inserted for all "missing"
+            rows.
+
+            Parameters
+            ----------
+            match
+                The match from the origin `re.sub` looking for row number tags.
+
+            Returns
+            -------
+            string
+                The updated string with new row numbers.
+            """
+            b = match.group(0)
+            return re.sub(
+                b"\d+",  # noqa: W605
+                lambda c: str(int(c.group(0).decode("utf-8")) - _skiprows).encode(
+                    "utf-8"
+                ),
+                b,
+            )
+
+        bytes_data = re.sub(b'r="[A-Z]*\d+"', update_row_nums, bytes_data)  # noqa: W605
+        bytesio = BytesIO(excel_header + bytes_data + footer)
+        # Use openpyxl to read/parse sheet data
+        reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
+        # Attach cells to worksheet object
+        reader.bind_cells()
+        data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
+        usecols = _maybe_convert_usecols(kwargs.pop("usecols", None))
+        header = kwargs.pop("header", 0)
+        index_col = kwargs.pop("index_col", None)
+        # skiprows is handled externally
+        skiprows = None
+
+        # Handle header and create MultiIndex for columns if necessary
+        if is_list_like(header) and len(header) == 1:
+            header = header[0]
+        if header is not None and is_list_like(header):
+            control_row = [True] * len(data[0])
+
+            for row in header:
+                data[row], control_row = _fill_mi_header(data[row], control_row)
+        # Handle MultiIndex for row Index if necessary
+        if is_list_like(index_col):
+            # Forward fill values for MultiIndex index.
+            if not is_list_like(header):
+                offset = 1 + header
+            else:
+                offset = 1 + max(header)
+
+            # Check if dataset is empty
+            if offset < len(data):
+                for col in index_col:
+                    last = data[offset][col]
+                    for row in range(offset + 1, len(data)):
+                        if data[row][col] == "" or data[row][col] is None:
+                            data[row][col] = last
+                        else:
+                            last = data[row][col]
+
+        parser = TextParser(
+            data,
+            header=header,
+            index_col=index_col,
+            has_index_names=is_list_like(header) and len(header) > 1,
+            skiprows=skiprows,
+            usecols=usecols,
+            **kwargs
+        )
+
+        pandas_df = parser.read()
+        # Since we know the number of rows that occur before this partition, we can
+        # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
+        # the index is already correct because it came from the data.
+        if isinstance(pandas_df.index, pandas.RangeIndex):
+            pandas_df.index = pandas.RangeIndex(
+                start=_skiprows, stop=len(pandas_df.index) + _skiprows
+            )
+        # We return the length if it is a RangeIndex (common case) to reduce
+        # serialization cost.
         if index_col is not None:
             index = pandas_df.index
         else:

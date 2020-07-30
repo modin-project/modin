@@ -22,12 +22,14 @@ from pandas.core.base import DataError
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.pandas.utils import try_cast_to_pandas, wrap_udf_function
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,
     MapReduceFunction,
     ReductionFunction,
     BinaryFunction,
+    GroupbyReduceFunction,
 )
 
 
@@ -54,19 +56,81 @@ def _set_axis(axis):
 
 def _str_map(func_name):
     def str_op_builder(df, *args, **kwargs):
-        str_s = df.squeeze().str
+        str_s = df.squeeze(axis=1).str
         return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
 
     return str_op_builder
 
 
+def _dt_prop_map(property_name):
+    """
+    Create a function that call property of property `dt` of the series.
+
+    Parameters
+    ----------
+    property_name
+        The property of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies non-callable properties of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        prop_val = getattr(df.squeeze(axis=1).dt, property_name)
+        if isinstance(prop_val, pandas.Series):
+            return prop_val.to_frame()
+        elif isinstance(prop_val, pandas.DataFrame):
+            return prop_val
+        else:
+            return pandas.DataFrame([prop_val])
+
+    return dt_op_builder
+
+
+def _dt_func_map(func_name):
+    """
+    Create a function that call method of property `dt` of the series.
+
+    Parameters
+    ----------
+    func_name
+        The method of `dt`, which will be applied.
+
+    Returns
+    -------
+        A callable function to be applied in the partitions
+
+    Notes
+    -----
+    This applies callable methods of `Series.dt`.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        dt_s = df.squeeze(axis=1).dt
+        return pandas.DataFrame(
+            getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        )
+
+    return dt_op_builder
+
+
 def copy_df_for_func(func):
-    """Create a function that copies the dataframe, likely because `func` is inplace.
+    """
+    Create a function that copies the dataframe, likely because `func` is inplace.
 
-    Args:
-        func: The function, usually updates a dataframe inplace.
+    Parameters
+    ----------
+    func : callable
+        The function, usually updates a dataframe inplace.
 
-    Returns:
+    Returns
+    -------
+    callable
         A callable function to be applied in the partitions
     """
 
@@ -112,9 +176,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             k: v.to_pandas if isinstance(v, type(self)) else v
             for k, v in kwargs.items()
         }
-        return self.from_pandas(
-            pandas_op(self.to_pandas(), *args, **kwargs), type(self._modin_frame)
-        )
+
+        result = pandas_op(self.to_pandas(), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -184,11 +253,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frame = [o._modin_frame for o in other]
         new_modin_frame = self._modin_frame._concat(axis, other_modin_frame, join, sort)
+        result = self.__constructor__(new_modin_frame)
         if ignore_index:
-            new_modin_frame.index = pandas.RangeIndex(
-                len(self.index) + sum(len(o.index) for o in other)
-            )
-        return self.__constructor__(new_modin_frame)
+            if axis == 0:
+                return result.reset_index(drop=True)
+            else:
+                result.columns = pandas.RangeIndex(len(result.columns))
+                return result
+        return result
 
     # END Append/Concat/Join
 
@@ -248,7 +320,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
     __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
     __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
-    update = BinaryFunction.register(copy_df_for_func(pandas.DataFrame.update))
+    df_update = BinaryFunction.register(
+        copy_df_for_func(pandas.DataFrame.update), join_type="left"
+    )
+    series_update = BinaryFunction.register(
+        copy_df_for_func(
+            lambda x, y: pandas.Series.update(x.squeeze(axis=1), y.squeeze(axis=1))
+        ),
+        join_type="left",
+    )
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -294,20 +374,73 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(new_modin_frame)
 
-    def join(self, *args, **kwargs):
-        """Database-style join with another object.
+    def merge(self, right, **kwargs):
+        """
+        Merge DataFrame or named Series objects with a database-style join.
+
+        Parameters
+        ----------
+        right : PandasQueryCompiler
+            The query compiler of the right DataFrame to merge with.
 
         Returns
         -------
         PandasQueryCompiler
-            The joined PandasQueryCompiler
+            A new query compiler that contains result of the merge.
 
-        Note
-        ----
-        This is not to be confused with `pandas.DataFrame.join` which does an
-        index-level join.
+        Notes
+        -----
+        See pd.merge or pd.DataFrame.merge for more info on kwargs.
         """
-        return self.default_to_pandas(pandas.DataFrame.merge, *args, **kwargs)
+        how = kwargs.get("how", "inner")
+        on = kwargs.get("on", None)
+        left_on = kwargs.get("left_on", None)
+        right_on = kwargs.get("right_on", None)
+        left_index = kwargs.get("left_index", False)
+        right_index = kwargs.get("right_index", False)
+        sort = kwargs.get("sort", False)
+
+        if how in ["left", "inner"] and left_index is False and right_index is False:
+            right = right.to_pandas()
+
+            kwargs["sort"] = False
+
+            def map_func(left, right=right, kwargs=kwargs):
+                return pandas.merge(left, right, **kwargs)
+
+            new_self = self.__constructor__(
+                self._modin_frame._apply_full_axis(1, map_func)
+            )
+            is_reset_index = True
+            if left_on and right_on:
+                left_on = left_on if is_list_like(left_on) else [left_on]
+                right_on = right_on if is_list_like(right_on) else [right_on]
+                is_reset_index = (
+                    False
+                    if any(o in new_self.index.names for o in left_on)
+                    and any(o in right.index.names for o in right_on)
+                    else True
+                )
+                if sort:
+                    new_self = (
+                        new_self.sort_rows_by_column_values(left_on.append(right_on))
+                        if is_reset_index
+                        else new_self.sort_index(axis=0, level=left_on.append(right_on))
+                    )
+            if on:
+                on = on if is_list_like(on) else [on]
+                is_reset_index = not any(
+                    o in new_self.index.names and o in right.index.names for o in on
+                )
+                if sort:
+                    new_self = (
+                        new_self.sort_rows_by_column_values(on)
+                        if is_reset_index
+                        else new_self.sort_index(axis=0, level=on)
+                    )
+            return new_self.reset_index(drop=True) if is_reset_index else new_self
+        else:
+            return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
     # END Inter-Data operations
 
@@ -378,6 +511,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
+    def _is_monotonic(self, func_type=None):
+        funcs = {
+            "increasing": lambda df: df.is_monotonic_increasing,
+            "decreasing": lambda df: df.is_monotonic_decreasing,
+        }
+
+        monotonic_fn = funcs.get(func_type, funcs["increasing"])
+
+        def is_monotonic_map(df):
+            df = df.squeeze(axis=1)
+            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
+
+        def is_monotonic_reduce(df):
+            df = df.squeeze(axis=1)
+
+            common_case = df[0].all()
+            left_edges = df[1]
+            right_edges = df[2]
+
+            edges_list = []
+            for i in range(len(left_edges)):
+                edges_list.extend([left_edges.iloc[i], right_edges.iloc[i]])
+
+            edge_case = monotonic_fn(pandas.Series(edges_list))
+            return [common_case and edge_case]
+
+        return MapReduceFunction.register(
+            is_monotonic_map, is_monotonic_reduce, axis=0
+        )(self)
+
+    def is_monotonic_decreasing(self):
+        return self._is_monotonic(func_type="decreasing")
+
+    is_monotonic = _is_monotonic
+
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
     min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
@@ -390,6 +558,111 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
+    mean = MapReduceFunction.register(
+        lambda df, **kwargs: df.apply(
+            lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
+            axis=kwargs.get("axis", 0),
+        ),
+        lambda df, **kwargs: df.apply(
+            lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
+            / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
+            axis=kwargs.get("axis", 0),
+        ),
+    )
+
+    def value_counts(self, **kwargs):
+        """
+        Return a QueryCompiler of Series containing counts of unique values.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+        if kwargs.get("bins", None) is not None:
+            new_modin_frame = self._modin_frame._apply_full_axis(
+                0, lambda df: df.squeeze(axis=1).value_counts(**kwargs)
+            )
+            return self.__constructor__(new_modin_frame)
+
+        def map_func(df, *args, **kwargs):
+            return df.squeeze(axis=1).value_counts(**kwargs)
+
+        def reduce_func(df, *args, **kwargs):
+            normalize = kwargs.get("normalize", False)
+            sort = kwargs.get("sort", True)
+            ascending = kwargs.get("ascending", False)
+            dropna = kwargs.get("dropna", True)
+
+            try:
+                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except (ValueError):
+                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
+
+            if not dropna and np.nan in df.index:
+                result = result.append(
+                    pandas.Series(
+                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
+                    )
+                )
+            if normalize:
+                result = result / df.squeeze(axis=1).sum()
+
+            result = result.sort_values(ascending=ascending) if sort else result
+
+            # We want to sort both values and indices of the result object.
+            # This function will sort indices for equal values.
+            def sort_index_for_equal_values(result, ascending):
+                """
+                Sort indices for equal values of result object.
+
+                Parameters
+                ----------
+                result : pandas.Series or pandas.DataFrame with one column
+                    The object whose indices for equal values is needed to sort.
+                ascending : boolean
+                    Sort in ascending (if it is True) or descending (if it is False) order.
+
+                Returns
+                -------
+                pandas.DataFrame
+                    A new DataFrame with sorted indices.
+                """
+                is_range = False
+                is_end = False
+                i = 0
+                new_index = np.empty(len(result), dtype=type(result.index))
+                while i < len(result):
+                    j = i
+                    if i < len(result) - 1:
+                        while result[result.index[i]] == result[result.index[i + 1]]:
+                            i += 1
+                            if is_range is False:
+                                is_range = True
+                            if i == len(result) - 1:
+                                is_end = True
+                                break
+                    if is_range:
+                        k = j
+                        for val in sorted(
+                            result.index[j : i + 1], reverse=not ascending
+                        ):
+                            new_index[k] = val
+                            k += 1
+                        if is_end:
+                            break
+                        is_range = False
+                    else:
+                        new_index[j] = result.index[j]
+                    i += 1
+                return pandas.DataFrame(result, index=new_index)
+
+            return sort_index_for_equal_values(result, ascending)
+
+        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
+            self, **kwargs
+        )
 
     # END MapReduce operations
 
@@ -398,30 +671,376 @@ class PandasQueryCompiler(BaseQueryCompiler):
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
     median = ReductionFunction.register(pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    nsmallest = ReductionFunction.register(pandas.DataFrame.nsmallest)
-    nlargest = ReductionFunction.register(pandas.DataFrame.nlargest)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     kurt = ReductionFunction.register(pandas.DataFrame.kurt)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
-    mean = ReductionFunction.register(pandas.DataFrame.mean)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
+    to_datetime = ReductionFunction.register(
+        lambda df, *args, **kwargs: pandas.to_datetime(
+            df.squeeze(axis=1), *args, **kwargs
+        ),
+        axis=1,
+    )
 
     # END Reduction operations
+
+    def _resample_func(
+        self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs
+    ):
+        def map_func(df, resample_args=resample_args):
+            if df_op is not None:
+                df = df_op(df)
+            resampled_val = df.resample(*resample_args)
+            op = getattr(pandas.core.resample.Resampler, func_name)
+            if callable(op):
+                try:
+                    # This will happen with Arrow buffer read-only errors. We don't want to copy
+                    # all the time, so this will try to fast-path the code first.
+                    val = op(resampled_val, *args, **kwargs)
+                except (ValueError):
+                    resampled_val = df.copy().resample(*resample_args)
+                    val = op(resampled_val, *args, **kwargs)
+            else:
+                val = getattr(resampled_val, func_name)
+
+            if isinstance(val, pandas.Series):
+                return val.to_frame()
+            else:
+                return val
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis=0, func=map_func, new_columns=new_columns
+        )
+        return self.__constructor__(new_modin_frame)
+
+    def resample_get_group(self, resample_args, name, obj):
+        return self._resample_func(resample_args, "get_group", name=name, obj=obj)
+
+    def resample_app_ser(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "apply",
+            df_op=lambda df: df.squeeze(axis=1),
+            func=func,
+            *args,
+            **kwargs
+        )
+
+    def resample_app_df(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(resample_args, "apply", func=func, *args, **kwargs)
+
+    def resample_agg_ser(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "aggregate",
+            df_op=lambda df: df.squeeze(axis=1),
+            func=func,
+            *args,
+            **kwargs
+        )
+
+    def resample_agg_df(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "aggregate", func=func, *args, **kwargs
+        )
+
+    def resample_transform(self, resample_args, arg, *args, **kwargs):
+        return self._resample_func(resample_args, "transform", arg=arg, *args, **kwargs)
+
+    def resample_pipe(self, resample_args, func, *args, **kwargs):
+        return self._resample_func(resample_args, "pipe", func=func, *args, **kwargs)
+
+    def resample_ffill(self, resample_args, limit):
+        return self._resample_func(resample_args, "ffill", limit=limit)
+
+    def resample_backfill(self, resample_args, limit):
+        return self._resample_func(resample_args, "backfill", limit=limit)
+
+    def resample_bfill(self, resample_args, limit):
+        return self._resample_func(resample_args, "bfill", limit=limit)
+
+    def resample_pad(self, resample_args, limit):
+        return self._resample_func(resample_args, "pad", limit=limit)
+
+    def resample_nearest(self, resample_args, limit):
+        return self._resample_func(resample_args, "nearest", limit=limit)
+
+    def resample_fillna(self, resample_args, method, limit):
+        return self._resample_func(resample_args, "fillna", method=method, limit=limit)
+
+    def resample_asfreq(self, resample_args, fill_value):
+        return self._resample_func(resample_args, "asfreq", fill_value=fill_value)
+
+    def resample_interpolate(
+        self,
+        resample_args,
+        method,
+        axis,
+        limit,
+        inplace,
+        limit_direction,
+        limit_area,
+        downcast,
+        **kwargs
+    ):
+        return self._resample_func(
+            resample_args,
+            "interpolate",
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            downcast=downcast,
+            **kwargs
+        )
+
+    def resample_count(self, resample_args):
+        return self._resample_func(resample_args, "count")
+
+    def resample_nunique(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "nunique", _method=_method, *args, **kwargs
+        )
+
+    def resample_first(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "first", _method=_method, *args, **kwargs
+        )
+
+    def resample_last(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "last", _method=_method, *args, **kwargs
+        )
+
+    def resample_max(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "max", _method=_method, *args, **kwargs
+        )
+
+    def resample_mean(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "median", _method=_method, *args, **kwargs
+        )
+
+    def resample_median(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "median", _method=_method, *args, **kwargs
+        )
+
+    def resample_min(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "min", _method=_method, *args, **kwargs
+        )
+
+    def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args,
+            "ohlc",
+            df_op=lambda df: df.squeeze(axis=1),
+            _method=_method,
+            *args,
+            **kwargs
+        )
+
+    def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "ohlc", _method=_method, *args, **kwargs
+        )
+
+    def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "prod", _method=_method, min_count=min_count, *args, **kwargs
+        )
+
+    def resample_size(self, resample_args):
+        return self._resample_func(resample_args, "size", new_columns=["__reduced__"])
+
+    def resample_sem(self, resample_args, _method, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "sem", _method=_method, *args, **kwargs
+        )
+
+    def resample_std(self, resample_args, ddof, *args, **kwargs):
+        return self._resample_func(resample_args, "std", ddof=ddof, *args, **kwargs)
+
+    def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
+        return self._resample_func(
+            resample_args, "sum", _method=_method, min_count=min_count, *args, **kwargs
+        )
+
+    def resample_var(self, resample_args, ddof, *args, **kwargs):
+        return self._resample_func(resample_args, "var", ddof=ddof, *args, **kwargs)
+
+    def resample_quantile(self, resample_args, q, **kwargs):
+        return self._resample_func(resample_args, "quantile", q=q, **kwargs)
+
+    window_mean = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).mean(*args, **kwargs)
+        )
+    )
+    window_sum = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    window_var = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        )
+    )
+    window_std = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_count = FoldFunction.register(
+        lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
+    )
+    rolling_sum = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    rolling_mean = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).mean(*args, **kwargs)
+        )
+    )
+    rolling_median = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).median(**kwargs)
+        )
+    )
+    rolling_var = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_std = FoldFunction.register(
+        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        )
+    )
+    rolling_min = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).min(*args, **kwargs)
+        )
+    )
+    rolling_max = FoldFunction.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).max(*args, **kwargs)
+        )
+    )
+    rolling_skew = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).skew(**kwargs)
+        )
+    )
+    rolling_kurt = FoldFunction.register(
+        lambda df, rolling_args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).kurt(**kwargs)
+        )
+    )
+    rolling_apply = FoldFunction.register(
+        lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).apply(
+                func=func,
+                raw=raw,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
+                args=args,
+                kwargs=kwargs,
+            )
+        )
+    )
+    rolling_quantile = FoldFunction.register(
+        lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).quantile(
+                quantile=quantile, interpolation=interpolation, **kwargs
+            )
+        )
+    )
+
+    def rolling_corr(self, rolling_args, other, pairwise, *args, **kwargs):
+        if len(self.columns) > 1:
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.rolling(df, *rolling_args).corr(
+                    other=other, pairwise=pairwise, *args, **kwargs
+                )
+            )
+        else:
+            return FoldFunction.register(
+                lambda df: pandas.DataFrame(
+                    df.rolling(*rolling_args).corr(
+                        other=other, pairwise=pairwise, *args, **kwargs
+                    )
+                )
+            )(self)
+
+    def rolling_cov(self, rolling_args, other, pairwise, ddof, **kwargs):
+        if len(self.columns) > 1:
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.rolling(df, *rolling_args).cov(
+                    other=other, pairwise=pairwise, ddof=ddof, **kwargs
+                )
+            )
+        else:
+            return FoldFunction.register(
+                lambda df: pandas.DataFrame(
+                    df.rolling(*rolling_args).cov(
+                        other=other, pairwise=pairwise, ddof=ddof, **kwargs
+                    )
+                )
+            )(self)
+
+    def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            0,
+            lambda df: pandas.DataFrame(
+                df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+            ),
+            new_index=self.index,
+        )
+        return self.__constructor__(new_modin_frame)
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = MapFunction.register(pandas.DataFrame.applymap)
+    conj = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
+    )
     invert = MapFunction.register(pandas.DataFrame.__invert__)
     isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
     isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    series_view = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(
+            df.squeeze(axis=1).view(*args, **kwargs)
+        )
+    )
+    to_numeric = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(
+            pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
+        )
+    )
+
+    def repeat(self, repeats):
+        def map_fn(df):
+            return pandas.DataFrame(df.squeeze(axis=1).repeat(repeats))
+
+        if isinstance(repeats, int) or (is_list_like(repeats) and len(repeats) == 1):
+            return MapFunction.register(map_fn, validate_index=True)(self)
+        else:
+            return self.__constructor__(self._modin_frame._apply_full_axis(0, map_fn))
 
     # END Map partitions operations
 
@@ -485,9 +1104,70 @@ class PandasQueryCompiler(BaseQueryCompiler):
             The unique values returned as a NumPy array.
         """
         new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze().unique(), new_columns=self.columns,
+            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
+
+    # Dt map partitions operations
+
+    dt_date = MapFunction.register(_dt_prop_map("date"))
+    dt_time = MapFunction.register(_dt_prop_map("time"))
+    dt_timetz = MapFunction.register(_dt_prop_map("timetz"))
+    dt_year = MapFunction.register(_dt_prop_map("year"))
+    dt_month = MapFunction.register(_dt_prop_map("month"))
+    dt_day = MapFunction.register(_dt_prop_map("day"))
+    dt_hour = MapFunction.register(_dt_prop_map("hour"))
+    dt_minute = MapFunction.register(_dt_prop_map("minute"))
+    dt_second = MapFunction.register(_dt_prop_map("second"))
+    dt_microsecond = MapFunction.register(_dt_prop_map("microsecond"))
+    dt_nanosecond = MapFunction.register(_dt_prop_map("nanosecond"))
+    dt_week = MapFunction.register(_dt_prop_map("week"))
+    dt_weekofyear = MapFunction.register(_dt_prop_map("weekofyear"))
+    dt_dayofweek = MapFunction.register(_dt_prop_map("dayofweek"))
+    dt_weekday = MapFunction.register(_dt_prop_map("weekday"))
+    dt_dayofyear = MapFunction.register(_dt_prop_map("dayofyear"))
+    dt_quarter = MapFunction.register(_dt_prop_map("quarter"))
+    dt_is_month_start = MapFunction.register(_dt_prop_map("is_month_start"))
+    dt_is_month_end = MapFunction.register(_dt_prop_map("is_month_end"))
+    dt_is_quarter_start = MapFunction.register(_dt_prop_map("is_quarter_start"))
+    dt_is_quarter_end = MapFunction.register(_dt_prop_map("is_quarter_end"))
+    dt_is_year_start = MapFunction.register(_dt_prop_map("is_year_start"))
+    dt_is_year_end = MapFunction.register(_dt_prop_map("is_year_end"))
+    dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
+    dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
+    dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
+    dt_tz = MapReduceFunction.register(
+        _dt_prop_map("tz"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
+    )
+    dt_freq = MapReduceFunction.register(
+        _dt_prop_map("freq"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
+    )
+    dt_to_period = MapFunction.register(_dt_func_map("to_period"))
+    dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
+    dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
+    dt_tz_convert = MapFunction.register(_dt_func_map("tz_convert"))
+    dt_normalize = MapFunction.register(_dt_func_map("normalize"))
+    dt_strftime = MapFunction.register(_dt_func_map("strftime"))
+    dt_round = MapFunction.register(_dt_func_map("round"))
+    dt_floor = MapFunction.register(_dt_func_map("floor"))
+    dt_ceil = MapFunction.register(_dt_func_map("ceil"))
+    dt_month_name = MapFunction.register(_dt_func_map("month_name"))
+    dt_day_name = MapFunction.register(_dt_func_map("day_name"))
+    dt_to_pytimedelta = MapFunction.register(_dt_func_map("to_pytimedelta"))
+    dt_total_seconds = MapFunction.register(_dt_func_map("total_seconds"))
+    dt_seconds = MapFunction.register(_dt_prop_map("seconds"))
+    dt_days = MapFunction.register(_dt_prop_map("days"))
+    dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
+    dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
+    dt_components = MapFunction.register(
+        _dt_prop_map("components"), validate_columns=True
+    )
+    dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
+    dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
+    dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
+    dt_to_timestamp = MapFunction.register(_dt_func_map("to_timestamp"))
+
+    # END Dt map partitions operations
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
@@ -611,40 +1291,84 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def dot(self, other):
-        """Computes the matrix multiplication of self and other.
+    def dot(self, other, squeeze_self=None, squeeze_other=None):
+        """
+        Computes the matrix multiplication of self and other.
 
-        Args:
-            other: The other query compiler or other array-like to matrix
-            multiply with self.
+        Parameters
+        ----------
+            other : PandasQueryCompiler or NumPy array
+                The other query compiler or NumPy array to matrix multiply with self.
+            squeeze_self : boolean
+                The flag to squeeze self.
+            squeeze_other : boolean
+                The flag to squeeze other (this flag is applied if other is query compiler).
 
-        Returns:
-            Returns the result of the matrix multiply.
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the matrix multiply.
         """
         if isinstance(other, PandasQueryCompiler):
-            other = other.to_pandas().squeeze()
+            other = (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
 
-        def map_func(df, other=other):
-            result = df.squeeze().dot(other)
+        def map_func(df, other=other, squeeze_self=squeeze_self):
+            result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
             if is_list_like(result):
                 return pandas.DataFrame(result)
             else:
                 return pandas.DataFrame([result])
 
-        num_cols = other.shape[1] if len(other.shape) > 1 else None
+        num_cols = other.shape[1] if len(other.shape) > 1 else 1
         if len(self.columns) == 1:
-            new_index = ["__reduced__"] if num_cols is None else None
-            new_columns = ["__reduced__"] if num_cols is not None else None
+            new_index = (
+                ["__reduced__"]
+                if (len(self.index) == 1 or squeeze_self) and num_cols == 1
+                else None
+            )
+            new_columns = ["__reduced__"] if squeeze_self and num_cols == 1 else None
             axis = 0
         else:
-            new_index = None
-            new_columns = ["__reduced__"] if num_cols is None else None
+            new_index = self.index
+            new_columns = ["__reduced__"] if num_cols == 1 else None
             axis = 1
 
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, map_func, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
+
+    def nsort(self, n, columns=None, keep="first", sort_type="nsmallest"):
+        def map_func(df, n=n, keep=keep, columns=columns):
+            if columns is None:
+                return pandas.DataFrame(
+                    getattr(pandas.Series, sort_type)(
+                        df.squeeze(axis=1), n=n, keep=keep
+                    )
+                )
+            return getattr(pandas.DataFrame, sort_type)(
+                df, n=n, columns=columns, keep=keep
+            )
+
+        if columns is None:
+            new_columns = ["__reduced__"]
+        else:
+            new_columns = self.columns
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis=0, func=map_func, new_columns=new_columns
+        )
+        return self.__constructor__(new_modin_frame)
+
+    def nsmallest(self, *args, **kwargs):
+        return self.nsort(sort_type="nsmallest", *args, **kwargs)
+
+    def nlargest(self, *args, **kwargs):
+        return self.nsort(sort_type="nlargest", *args, **kwargs)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -829,6 +1553,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
             QueryCompiler containing the data sorted by columns or indices.
         """
         axis = kwargs.pop("axis", 0)
+        level = kwargs.pop("level", None)
+        sort_remaining = kwargs.pop("sort_remaining", True)
+        kwargs["inplace"] = False
+
+        if level is not None or (
+            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
+            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
+        ):
+            return self.default_to_pandas(
+                pandas.DataFrame.sort_index,
+                axis=axis,
+                level=level,
+                sort_remaining=sort_remaining,
+                **kwargs
+            )
+
         # sort_index can have ascending be None and behaves as if it is False.
         # sort_values cannot have ascending be None. Thus, the following logic is to
         # convert the ascending argument to one that works with sort_values
@@ -844,12 +1584,88 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = self.columns
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis,
-            lambda df: df.sort_index(axis=axis, **kwargs),
+            lambda df: df.sort_index(
+                axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
+            ),
             new_index,
             new_columns,
             dtypes="copy" if axis == 0 else None,
         )
         return self.__constructor__(new_modin_frame)
+
+    def melt(
+        self,
+        id_vars=None,
+        value_vars=None,
+        var_name=None,
+        value_name="value",
+        col_level=None,
+    ):
+        ErrorMessage.missmatch_with_pandas(
+            operation="melt", message="Order of rows could be different from pandas"
+        )
+
+        if var_name is None:
+            var_name = "variable"
+
+        def _convert_to_list(x):
+            if is_list_like(x):
+                x = [*x]
+            elif x is not None:
+                x = [x]
+            else:
+                x = []
+            return x
+
+        id_vars, value_vars = map(_convert_to_list, [id_vars, value_vars])
+
+        if len(value_vars) == 0:
+            value_vars = self.columns.drop(id_vars)
+
+        if len(id_vars) != 0:
+            to_broadcast = self.getitem_column_array(id_vars)._modin_frame
+        else:
+            to_broadcast = None
+
+        def applyier(df, internal_indices, other=[], internal_other_indices=[]):
+            if len(other):
+                other = pandas.concat(other, axis=1)
+                columns_to_add = other.columns.difference(df.columns)
+                df = pandas.concat([df, other[columns_to_add]], axis=1)
+            return df.melt(
+                id_vars=id_vars,
+                value_vars=df.columns[internal_indices],
+                var_name=var_name,
+                value_name=value_name,
+                col_level=col_level,
+            )
+
+        # we have no able to calculate correct indices here, so making it `dummy_index`
+        inconsistent_frame = self._modin_frame.broadcast_apply_select_indices(
+            axis=0,
+            apply_indices=value_vars,
+            func=applyier,
+            other=to_broadcast,
+            new_index=["dummy_index"] * len(id_vars),
+            new_columns=["dummy_index"] * len(id_vars),
+        )
+        # after applying `melt` for selected indices we will get partitions like this:
+        #     id_vars   vars   value |     id_vars   vars   value
+        #  0      foo   col3       1 |  0      foo   col5       a    so stacking it into
+        #  1      fiz   col3       2 |  1      fiz   col5       b    `new_parts` to get
+        #  2      bar   col3       3 |  2      bar   col5       c    correct answer
+        #  3      zoo   col3       4 |  3      zoo   col5       d
+        new_parts = np.array(
+            [np.array([x]) for x in np.concatenate(inconsistent_frame._partitions.T)]
+        )
+        new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
+        new_modin_frame = self._modin_frame.__constructor__(
+            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
+        )
+        result = self.__constructor__(new_modin_frame)
+        # this assigment needs to propagate correct indices into partitions
+        result.index = new_index
+        return result
 
     # END Map across rows/columns
 
@@ -989,6 +1805,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Return:
             a new QueryCompiler
         """
+
         return self.__constructor__(
             self._modin_frame.filter_full_axis(
                 kwargs.get("axis", 0) ^ 1,
@@ -1080,7 +1897,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        if callable(func):
+        # if any of args contain modin object, we should
+        # convert it to pandas
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+        if isinstance(func, str):
+            return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
+        elif callable(func):
             return self._callable_func(func, axis, *args, **kwargs)
         elif isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
@@ -1088,6 +1911,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
             pass
+
+    def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
+        """Apply func passed as str across given axis in elementwise manner.
+
+        Args:
+            func: The function to apply.
+            axis: Target axis to apply the function along.
+
+        Returns:
+            A new PandasQueryCompiler.
+        """
+        assert isinstance(func, str)
+        kwargs["axis"] = axis
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, lambda df: df.apply(func, *args, **kwargs)
+        )
+        return self.__constructor__(new_modin_frame)
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """Apply function to certain indices across given axis.
@@ -1107,6 +1947,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
 
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
         return self.__constructor__(
             self._modin_frame._apply_full_axis_select_indices(
                 axis, dict_apply_builder, func, keep_remaining=False
@@ -1134,6 +1975,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if axis == 1
             else self.columns
         )
+        func = [wrap_udf_function(f) if callable(f) else f for f in func]
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)),
@@ -1152,14 +1994,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler.
         """
-        if isinstance(pandas.DataFrame().apply(func), pandas.Series):
-            new_modin_frame = self._modin_frame._fold_reduce(
-                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-            )
-        else:
-            new_modin_frame = self._modin_frame._apply_full_axis(
-                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-            )
+        func = wrap_udf_function(func)
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+        )
         return self.__constructor__(new_modin_frame)
 
     # END UDF
@@ -1169,142 +2007,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    def groupby_reduce(
-        self,
-        by,
-        axis,
-        groupby_args,
-        map_func,
-        map_args,
-        reduce_func=None,
-        reduce_args=None,
-        numeric_only=True,
-        drop=False,
-    ):
-        """Apply a Groupby via MapReduce pattern.
-
-        Note: Result length will be the number of unique values in `by`.
-
-        Currently, here is how this is implemented:
-        - map phase:
-            During the map phase we set `as_index` to True to force the `by` into the
-            index for the next phase. We always do this so that the reduce phase has
-            complete access of the `by` data without having to shuffle it twice. The map
-            function is applied with the arguments provided. The `index` of the
-            partitions will become the new `by` column. Sometimes, the name of `by` is
-            the same as a data column. In these cases we add "_modin_groupby_" to the
-            name of the index. This does not happen when grouping by multiple columns
-            because those columns have already been dropped as a requirement.
-        - reduce phase:
-            During the reduce phase, the `by` data is moved from the `index` into the
-            data. The names of those inserted become the `by` for the reduce phase of
-            the groupby. Once applied, we drop the columns in all partitions after the
-            first so we do not insert the data multiple times. We also avoid inserting
-            data when the data from the `by` parameter did not come from this object.
-            The columns can be derived externally but the new index must be computed
-            post hoc.
-
-        Args:
-            by: The query compiler object to groupby.
-            axis: The axis to groupby. Must be 0 currently.
-            groupby_args: The arguments for the groupby component.
-            map_func: The function to perform during the map phase.
-            map_args: The arguments for the `map_func`.
-            reduce_func: The function to perform during the reduce phase.
-            reduce_args: The arguments for `reduce_func`.
-            numeric_only: Whether to drop non-numeric columns.
-            drop: Whether the data in `by` was dropped.
-
-        Returns:
-            A new Query Compiler
-        """
-        assert isinstance(
-            by, type(self)
-        ), "Can only use groupby reduce with another Query Compiler"
-        assert axis == 0, "Can only groupby reduce with axis=0"
-
-        if numeric_only:
-            qc = self.getitem_column_array(self._modin_frame._numeric_columns(True))
-        else:
-            qc = self
-        first_column = qc.columns[0]
-        as_index = groupby_args.get("as_index", True)
-        # When drop is False and as_index is False, we do not want to insert the `by`
-        # data as a new column in the dataframe. We will drop it.
-        drop_by = not drop
-
-        # For simplicity we allow only one function to be passed in if both are the
-        # same.
-        if reduce_func is None:
-            reduce_func = map_func
-            reduce_args = map_args
-
-        def _map(df, other):
-            # Set `as_index` to True to track the metadata of the grouping object
-            # It is used to make sure that between phases we are constructing the
-            # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
-            other = other.squeeze(axis=axis ^ 1)
-            if isinstance(other, pandas.DataFrame):
-                df = pandas.concat(
-                    [df] + [other[[o for o in other if o not in df]]], axis=1
-                )
-                other = list(other.columns)
-            result = map_func(
-                df.groupby(by=other, axis=axis, **groupby_args), **map_args
-            )
-            if (
-                not isinstance(result.index, pandas.MultiIndex)
-                and result.index.name is not None
-                and result.index.name in result.columns
-            ):
-                result.index.name = "{}{}".format("_modin_groupby_", result.index.name)
-            return result
-
-        def _reduce(df):
-            other_len = len(df.index.names)
-            df = df.reset_index(drop=False)
-            # See note above about setting `as_index`
-            groupby_args["as_index"] = as_index
-            if other_len > 1:
-                by_part = list(df.columns[0:other_len])
-            else:
-                by_part = df.columns[0]
-            result = reduce_func(
-                df.groupby(by=by_part, axis=axis, **groupby_args), **reduce_args
-            )
-            if (
-                not isinstance(result.index, pandas.MultiIndex)
-                and result.index.name is not None
-                and "_modin_groupby_" in result.index.name
-            ):
-                result.index.name = result.index.name[len("_modin_groupby_") :]
-            # Avoid inserting data after the first partition or if the data did not come
-            # from this query compiler.
-            if not as_index and (first_column not in df.columns or drop_by):
-                return result.drop(columns=by_part)
-            return result
-
-        if axis == 0:
-            if not as_index and drop:
-                new_columns = by.columns.append(qc.columns)
-            else:
-                new_columns = qc.columns
-            new_index = None
-        else:
-            new_index = self.index
-            new_columns = None
-        new_modin_frame = qc._modin_frame.groupby_reduce(
-            axis,
-            by._modin_frame,
-            _map,
-            _reduce,
-            new_columns=new_columns,
-            new_index=new_index,
-        )
-        return self.__constructor__(new_modin_frame)
+    groupby_count = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.count(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
+    )
+    groupby_any = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.any(**kwargs), lambda df, **kwargs: df.any(**kwargs)
+    )
+    groupby_min = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.min(**kwargs), lambda df, **kwargs: df.min(**kwargs)
+    )
+    groupby_prod = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.prod(**kwargs), lambda df, **kwargs: df.prod(**kwargs)
+    )
+    groupby_max = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.max(**kwargs), lambda df, **kwargs: df.max(**kwargs)
+    )
+    groupby_all = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.all(**kwargs), lambda df, **kwargs: df.all(**kwargs)
+    )
+    groupby_sum = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
+    )
+    groupby_size = GroupbyReduceFunction.register(
+        lambda df, **kwargs: pandas.DataFrame(df.size()), lambda df, **kwargs: df.sum()
+    )
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
+        # we want to copy it to not propagate these changes into source dict, in case
+        # of unsuccessful end of function
+        groupby_args = groupby_args.copy()
+
         as_index = groupby_args.get("as_index", True)
 
         def groupby_agg_builder(df):
@@ -1335,6 +2068,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis, lambda df: groupby_agg_builder(df)
         )
         result = self.__constructor__(new_modin_frame)
+
+        # that means that exception in `compute_groupby` was raised
+        # in every partition, so we also should raise it
+        if len(result.columns) == 0 and len(self.columns) != 0:
+            # determening type of raised exception by applying `aggfunc`
+            # to empty DataFrame
+            try:
+                agg_func(
+                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
+                    **agg_args
+                )
+            except Exception as e:
+                raise type(e)("No numeric types to aggregate.")
+
         # Reset `as_index` because it was edited inplace.
         groupby_args["as_index"] = as_index
         if as_index:
@@ -1416,3 +2163,80 @@ class PandasQueryCompiler(BaseQueryCompiler):
             item_to_distribute=broadcasted_items,
         )
         return self.__constructor__(new_modin_frame)
+
+    def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        """Reorder the rows based on the lexicographic order of the given columns.
+
+        Parameters
+        ----------
+        columns : scalar or list of scalar
+            The column or columns to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
+        if not is_list_like(columns):
+            columns = [columns]
+        # Currently, sort_values will just reindex based on the sorted values.
+        # TODO create a more efficient way to sort
+        ErrorMessage.default_to_pandas("sort_values")
+        broadcast_value_dict = {
+            col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
+            for col in columns
+        }
+        # Index may contain duplicates
+        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+        # Index without duplicates
+        broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
+        broadcast_values2 = broadcast_values2.reset_index(drop=True)
+        # Index may contain duplicates
+        new_index1 = broadcast_values1.sort_values(
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+        ).index
+        # Index without duplicates
+        new_index2 = broadcast_values2.sort_values(
+            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+        ).index
+
+        result = self.reset_index(drop=True).reindex(0, new_index2)
+        result.index = new_index1
+        return result
+
+    def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
+        """Reorder the columns based on the lexicographic order of the given rows.
+
+        Parameters
+        ----------
+        rows : scalar or list of scalar
+            The row or rows to sort by
+        ascending : bool
+            Sort in ascending order (True) or descending order (False)
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new query compiler that contains result of the sort
+        """
+        na_position = kwargs.get("na_position", "last")
+        kind = kwargs.get("kind", "quicksort")
+        if not is_list_like(rows):
+            rows = [rows]
+        ErrorMessage.default_to_pandas("sort_values")
+        broadcast_value_list = [
+            self.getitem_row_array([row]).to_pandas() for row in rows
+        ]
+        index_builder = list(zip(broadcast_value_list, rows))
+        broadcast_values = pandas.concat(
+            [row for row, idx in index_builder], copy=False
+        )
+        broadcast_values.columns = self.columns
+        new_columns = broadcast_values.sort_values(
+            by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
+        ).columns
+        return self.reindex(1, new_columns)

@@ -32,7 +32,7 @@ class ColumnStoreReader(FileReader):
                         fname=fname,
                         columns=cols,
                         num_splits=DEFAULT_NPARTITIONS,
-                        **kwargs
+                        **kwargs,
                     ),
                 )
                 for cols in col_partitions

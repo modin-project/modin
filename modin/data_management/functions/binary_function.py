@@ -39,13 +39,16 @@ class BinaryFunction(Function):
                             axis,
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
+                            preserve_labels=call_kwds.get("preserve_labels", False),
                         )
                     )
                 else:
+                    join_type = call_kwds.get("join_type", "outer")
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame._binary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             other._modin_frame,
+                            join_type=join_type,
                         )
                     )
             else:

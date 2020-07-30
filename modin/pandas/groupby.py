@@ -11,13 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
-from .utils import _inherit_docstrings
+
+from .utils import _inherit_docstrings, wrap_udf_function
+from .series import Series
 
 
 @_inherit_docstrings(
@@ -40,7 +43,7 @@ class DataFrameGroupBy(object):
         squeeze,
         idx_name,
         drop,
-        **kwargs
+        **kwargs,
     ):
         self._axis = axis
         self._idx_name = idx_name
@@ -125,7 +128,7 @@ class DataFrameGroupBy(object):
                 }
             else:
                 if isinstance(self._by, type(self._query_compiler)):
-                    by = self._by.to_pandas().squeeze()
+                    by = self._by.to_pandas().squeeze().values
                 else:
                     by = self._by
                 if self._axis == 0:
@@ -181,8 +184,11 @@ class DataFrameGroupBy(object):
         return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
 
     def any(self, **kwargs):
-        return self._groupby_reduce(
-            lambda df: df.any(**kwargs), None, numeric_only=False
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_any,
+            lambda df, **kwargs: df.any(**kwargs),
+            numeric_only=False,
+            **kwargs,
         )
 
     @property
@@ -204,8 +210,11 @@ class DataFrameGroupBy(object):
         return self._index_grouped
 
     def min(self, **kwargs):
-        return self._groupby_reduce(
-            lambda df: df.min(**kwargs), None, numeric_only=False
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_min,
+            lambda df, **kwargs: df.min(**kwargs),
+            numeric_only=False,
+            **kwargs,
         )
 
     def idxmax(self):
@@ -249,7 +258,9 @@ class DataFrameGroupBy(object):
 
     def apply(self, func, *args, **kwargs):
         return self._apply_agg_function(
-            lambda df: df.apply(func, *args, **kwargs), drop=self._as_index
+            # Grouping column in never dropped in groupby.apply, so drop=False
+            lambda df: df.apply(func, *args, **kwargs),
+            drop=False,
         )
 
     @property
@@ -270,7 +281,7 @@ class DataFrameGroupBy(object):
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
         make_dataframe = True
-        if self._drop:
+        if self._drop and self._as_index:
             if not isinstance(key, list):
                 key = [key]
                 kwargs["squeeze"] = True
@@ -278,7 +289,17 @@ class DataFrameGroupBy(object):
         # When `as_index` is False, pandas will always convert to a `DataFrame`, we
         # convert to a list here so that the result will be a `DataFrame`.
         elif not self._as_index and not isinstance(key, list):
-            key = [key]
+            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
+            # column. This logic is here to ensure that we also get the `by` data so
+            # that it is there for `as_index=False`.
+            if (
+                isinstance(self._by, type(self._query_compiler))
+                and all(c in self._columns for c in self._by.columns)
+                and self._drop
+            ):
+                key = list(self._by.columns) + [key]
+            else:
+                key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):
             return DataFrameGroupBy(
                 self._df[key],
@@ -286,7 +307,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 idx_name=self._idx_name,
                 drop=self._drop,
-                **kwargs
+                **kwargs,
             )
         return SeriesGroupBy(
             self._df[key],
@@ -294,7 +315,7 @@ class DataFrameGroupBy(object):
             self._axis,
             idx_name=self._idx_name,
             drop=False,
-            **kwargs
+            **kwargs,
         )
 
     def cummin(self, axis=0, **kwargs):
@@ -310,24 +331,41 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.idxmin())
 
     def prod(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.prod(**kwargs), None)
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_prod,
+            lambda df, **kwargs: df.prod(**kwargs),
+            **kwargs,
+        )
 
     def std(self, ddof=1, *args, **kwargs):
         return self._apply_agg_function(lambda df: df.std(ddof, *args, **kwargs))
 
-    def aggregate(self, arg, *args, **kwargs):
+    def aggregate(self, func=None, *args, **kwargs):
         if self._axis != 0:
             # This is not implemented in pandas,
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
 
-        if is_list_like(arg):
+        if func is None or is_list_like(func):
             return self._default_to_pandas(
-                lambda df: df.aggregate(arg, *args, **kwargs)
+                lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
+                *args,
+                **kwargs,
             )
+
+        if isinstance(func, str):
+            agg_func = getattr(self, func, None)
+            if callable(agg_func):
+                return agg_func(*args, **kwargs)
+
         return self._apply_agg_function(
-            lambda df: df.aggregate(arg, *args, **kwargs), drop=self._as_index
+            lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
+            drop=self._as_index,
+            *args,
+            **kwargs,
         )
+
+    agg = aggregate
 
     def last(self, **kwargs):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
@@ -349,8 +387,11 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.pad(limit=limit))
 
     def max(self, **kwargs):
-        return self._groupby_reduce(
-            lambda df: df.max(**kwargs), None, numeric_only=False
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_max,
+            lambda df, **kwargs: df.max(**kwargs),
+            numeric_only=False,
+            **kwargs,
         )
 
     def var(self, ddof=1, *args, **kwargs):
@@ -363,15 +404,52 @@ class DataFrameGroupBy(object):
         return len(self._index_grouped)
 
     def all(self, **kwargs):
-        return self._groupby_reduce(
-            lambda df: df.all(**kwargs), None, numeric_only=False
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_all,
+            lambda df, **kwargs: df.all(**kwargs),
+            numeric_only=False,
+            **kwargs,
         )
 
     def size(self):
-        return pandas.Series({k: len(v) for k, v in self._index_grouped.items()})
+        if self._axis == 0:
+            # Size always works in as_index=True mode so it is necessary to make a
+            #  copy of _kwargs and change as_index in it
+            kwargs = self._kwargs.copy()
+            kwargs["as_index"] = True
+            work_object = SeriesGroupBy(
+                self._df[self._df.columns[0]],
+                self._by,
+                self._axis,
+                drop=False,
+                idx_name=None,
+                **kwargs,
+            )
+            result = work_object._wrap_aggregation(
+                type(work_object._query_compiler).groupby_size,
+                lambda df: df.size(),
+                numeric_only=False,
+            )
+            series_result = Series(query_compiler=result._query_compiler)
+            # Pandas does not name size() output
+            series_result.name = None
+            return series_result.fillna(0)
+        else:
+            return DataFrameGroupBy(
+                self._df.T,
+                self._by,
+                0,
+                drop=self._drop,
+                idx_name=self._idx_name,
+                **self._kwargs,
+            ).size()
 
     def sum(self, **kwargs):
-        return self._groupby_reduce(lambda df: df.sum(**kwargs), None)
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_sum,
+            lambda df, **kwargs: df.sum(**kwargs),
+            **kwargs,
+        )
 
     def describe(self, **kwargs):
         return self._default_to_pandas(lambda df: df.describe(**kwargs))
@@ -387,7 +465,7 @@ class DataFrameGroupBy(object):
         ax=None,
         figsize=None,
         layout=None,
-        **kwargs
+        **kwargs,
     ):
         return self._default_to_pandas(
             lambda df: df.boxplot(
@@ -400,7 +478,7 @@ class DataFrameGroupBy(object):
                 ax=ax,
                 figsize=figsize,
                 layout=layout,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -428,9 +506,6 @@ class DataFrameGroupBy(object):
     def __iter__(self):
         return self._iter.__iter__()
 
-    def agg(self, arg, *args, **kwargs):
-        return self.aggregate(arg, *args, **kwargs)
-
     def cov(self):
         return self._default_to_pandas(lambda df: df.cov())
 
@@ -454,11 +529,16 @@ class DataFrameGroupBy(object):
         return result
 
     def count(self, **kwargs):
-        return self._groupby_reduce(
-            lambda df: df.count(**kwargs),
-            lambda df: df.sum(**kwargs),
+        result = self._wrap_aggregation(
+            type(self._query_compiler).groupby_count,
+            lambda df, **kwargs: df.count(**kwargs),
             numeric_only=False,
+            **kwargs,
         )
+        # pandas do it in case of Series
+        if isinstance(result, Series):
+            result = result.fillna(0)
+        return result
 
     def pipe(self, func, *args, **kwargs):
         return com.pipe(self, func, *args, **kwargs)
@@ -504,30 +584,46 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
-    def _groupby_reduce(
-        self, map_func, reduce_func, drop=True, numeric_only=True, **kwargs
+    def _wrap_aggregation(
+        self, qc_method, default_func, drop=True, numeric_only=True, **kwargs
     ):
-        if self._is_multi_by and not isinstance(self._by, type(self._query_compiler)):
-            return self._default_to_pandas(map_func, **kwargs)
-        if not isinstance(self._by, type(self._query_compiler)):
-            return self._apply_agg_function(map_func, drop=drop, **kwargs)
+        """Perform common metadata transformations and apply groupby functions.
 
+        Parameters
+        ----------
+        qc_method : callable
+            The query compiler method to call.
+        default_func : callable
+            The function to call if we need to default to pandas.
+        drop : bool
+            Whether or not to the grouping columns should be dropped on this operation.
+        numeric_only : bool
+            True for numeric only computations, False otherwise.
+        kwargs
+            The keyword arguments to be passed to the calling function.
+
+        Returns
+        -------
+        DataFrame or Series
+            Returns the same type as `self._df`.
+        """
+        if not isinstance(self._by, type(self._query_compiler)) or self._axis != 0:
+            return self._default_to_pandas(default_func, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        if drop and self._drop and self._as_index:
+            groupby_qc = self._query_compiler.drop(columns=self._by.columns)
         else:
             groupby_qc = self._query_compiler
 
         result = type(self._df)(
-            query_compiler=groupby_qc.groupby_reduce(
-                self._by,
-                self._axis,
-                self._kwargs,
-                map_func,
-                kwargs,
-                reduce_func=reduce_func,
+            query_compiler=qc_method(
+                query_compiler=groupby_qc,
+                by=self._by,
+                axis=self._axis,
+                groupby_args=self._kwargs,
+                map_args=kwargs,
                 reduce_args=kwargs,
                 numeric_only=numeric_only,
                 drop=self._drop,
@@ -537,7 +633,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _apply_agg_function(self, f, drop=True, **kwargs):
+    def _apply_agg_function(self, f, drop=True, *args, **kwargs):
         """Perform aggregation and combine stages based on a given function.
 
         Args:
@@ -548,8 +644,9 @@ class DataFrameGroupBy(object):
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
+        f = wrap_udf_function(f)
         if self._is_multi_by:
-            return self._default_to_pandas(f, **kwargs)
+            return self._default_to_pandas(f, *args, **kwargs)
 
         if isinstance(self._by, type(self._query_compiler)):
             by = self._by.to_pandas().squeeze()
@@ -573,7 +670,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _default_to_pandas(self, f, **kwargs):
+    def _default_to_pandas(self, f, *args, **kwargs):
         """Defailts the execution of this function to pandas.
 
         Args:
@@ -592,10 +689,18 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        def groupby_on_multiple_columns(df):
-            return f(df.groupby(by=by, axis=self._axis, **self._kwargs), **kwargs)
+        def groupby_on_multiple_columns(df, *args, **kwargs):
+            return f(
+                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+            )
 
-        return self._df._default_to_pandas(groupby_on_multiple_columns)
+        return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")
 
 
 class SeriesGroupBy(DataFrameGroupBy):
@@ -605,8 +710,6 @@ class SeriesGroupBy(DataFrameGroupBy):
 
     @property
     def _iter(self):
-        from .dataframe import Series
-
         group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (

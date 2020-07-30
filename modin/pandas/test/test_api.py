@@ -51,11 +51,13 @@ def test_top_level_api_equality():
         "base",
         "utils",
         "dataframe",
+        "groupby",
         "threading",
         "general",
         "datetimes",
         "reshape",
         "execution_engine",
+        "Publisher",
         "types",
         "sys",
         "initialize_ray",
@@ -66,7 +68,7 @@ def test_top_level_api_equality():
         "os",
         "multiprocessing",
         "Client",
-        "client",
+        "dask_client",
         "get_client",
     ]
 

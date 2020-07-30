@@ -97,6 +97,76 @@ class BaseFrameManager(object):
         return cls.map_axis_partitions(axis, new_partitions, reduce_func)
 
     @classmethod
+    def broadcast_apply_select_indices(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+        left_indices,
+        right_indices,
+        keep_remaining=False,
+    ):
+        """
+        Broadcast the right partitions to left and apply a function to selected indices
+
+        Note: Your internal function must take this kwargs:
+            [`internal_indices`, `other`, `internal_other_indices`] to work correctly
+
+        Parameters
+        ----------
+            axis : The axis to apply and broadcast over.
+            apply_func : The function to apply.
+            left : The left partitions.
+            right : The right partitions.
+            left_indices : indices to apply function.
+            right_indices : dictianary of indices of right partitions that
+                you want to bring at specified left partition, for example that dict
+                {key: {key1: [0, 1], key2: [5]}} means, that in left[key] you want to
+                broadcast [right[key1], right[key2]] partitions and internal indices
+                for `right` must be [[0, 1], [5]]
+            keep_remaining : Whether or not to keep the other partitions.
+                Some operations may want to drop the remaining partitions and
+                keep only the results.
+
+        Returns
+        -------
+            A new `np.array` of partition objects.
+        """
+        if not axis:
+            partitions_for_apply = left.T
+            right = right.T
+        else:
+            partitions_for_apply = left
+            right = right
+
+        [obj.drain_call_queue() for row in right for obj in row]
+
+        def get_partitions(index):
+            must_grab = right_indices[index]
+            partitions_list = np.array([right[i] for i in must_grab.keys()])
+            indices_list = list(must_grab.values())
+            return {"other": partitions_list, "internal_other_indices": indices_list}
+
+        new_partitions = np.array(
+            [
+                partitions_for_apply[i]
+                if i not in left_indices
+                else cls._apply_func_to_list_of_partitions_broadcast(
+                    apply_func,
+                    partitions_for_apply[i],
+                    internal_indices=left_indices[i],
+                    **get_partitions(i),
+                )
+                for i in range(len(partitions_for_apply))
+                if i in left_indices or keep_remaining
+            ]
+        )
+        if not axis:
+            new_partitions = new_partitions.T
+        return new_partitions
+
+    @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right):
         """Broadcast the right partitions to left and apply a function.
 
@@ -163,17 +233,29 @@ class BaseFrameManager(object):
 
     @classmethod
     def map_axis_partitions(cls, axis, partitions, map_func, keep_partitioning=False):
-        """Applies `map_func` to every partition.
+        """
+        Applies `map_func` to every partition.
 
-        Note: This method should be used in the case that `map_func` relies on
-            some global information about the axis.
+        Parameters
+        ----------
+            axis : 0 or 1
+                The axis to perform the map across (0 - index, 1 - columns).
+            partitions : NumPy array
+                The partitions of Modin Frame.
+            map_func : callable
+                The function to apply.
+            keep_partitioning : boolean. Default is False
+                The flag to keep partitions for Modin Frame.
 
-        Args:
-            axis: The axis to perform the map across (0 - index, 1 - columns).
-            map_func: The function to apply.
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for Modin Frame.
 
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
+        Notes
+        -----
+        This method should be used in the case that `map_func` relies on
+        some global information about the axis.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -360,6 +442,16 @@ class BaseFrameManager(object):
         return DEFAULT_NPARTITIONS
 
     @classmethod
+    def _apply_func_to_list_of_partitions_broadcast(
+        cls, func, partitions, other, **kwargs
+    ):
+        preprocessed_func = cls.preprocess_func(func)
+        return [
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
+            for obj, broadcasted in zip(partitions, other.T)
+        ]
+
+    @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """Applies a function to a list of remote partitions.
 
@@ -427,7 +519,7 @@ class BaseFrameManager(object):
                                 if i_idx >= 0
                             },
                         )
-                        for o_idx, list_to_apply in indices
+                        for o_idx, list_to_apply in indices.items()
                     ]
                 )
             else:
@@ -458,7 +550,7 @@ class BaseFrameManager(object):
                             partitions_for_apply[idx],
                             internal_indices=list_to_apply,
                         )
-                        for idx, list_to_apply in indices
+                        for idx, list_to_apply in indices.items()
                     ]
                 )
             else:
@@ -514,11 +606,19 @@ class BaseFrameManager(object):
         # Since we might be keeping the remaining blocks that are not modified,
         # we have to also keep the block_partitions object in the correct
         # direction (transpose for columns).
+        if not keep_remaining:
+            selected_partitions = partitions.T if not axis else partitions
+            selected_partitions = np.array([selected_partitions[i] for i in indices])
+            selected_partitions = (
+                selected_partitions.T if not axis else selected_partitions
+            )
+        else:
+            selected_partitions = partitions
         if not axis:
-            partitions_for_apply = cls.column_partitions(partitions)
+            partitions_for_apply = cls.column_partitions(selected_partitions)
             partitions_for_remaining = partitions.T
         else:
-            partitions_for_apply = cls.row_partitions(partitions)
+            partitions_for_apply = cls.row_partitions(selected_partitions)
             partitions_for_remaining = partitions
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
@@ -528,11 +628,11 @@ class BaseFrameManager(object):
             if not keep_remaining:
                 result = np.array(
                     [
-                        partitions_for_apply[i].apply(
+                        part.apply(
                             preprocessed_func,
                             func_dict={idx: dict_func[idx] for idx in indices[i]},
                         )
-                        for i in indices
+                        for i, part in zip(indices, partitions_for_apply)
                     ]
                 )
             else:
@@ -553,10 +653,8 @@ class BaseFrameManager(object):
                 # See notes in `apply_func_to_select_indices`
                 result = np.array(
                     [
-                        partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=indices[i]
-                        )
-                        for i in indices
+                        part.apply(preprocessed_func, internal_indices=indices[i])
+                        for i, part in zip(indices, partitions_for_apply)
                     ]
                 )
             else:
@@ -612,7 +710,7 @@ class BaseFrameManager(object):
                     func,
                     row_internal_indices=row_internal_idx,
                     col_internal_indices=col_internal_idx,
-                    **item
+                    **item,
                 )
                 partition_copy[row_blk_idx, col_blk_idx] = block_result
                 col_position_counter += len(col_internal_idx)
@@ -621,15 +719,24 @@ class BaseFrameManager(object):
 
     @classmethod
     def binary_operation(cls, axis, left, func, right):
-        """Apply a function that requires two BaseFrameManager objects.
+        """
+        Apply a function that requires two BasePandasFrame objects.
 
-        Args:
-            axis: The axis to apply the function over (0 - rows, 1 - columns)
-            func: The function to apply
-            other: The other BaseFrameManager object to apply func to.
+        Parameters
+        ----------
+            axis : int
+                The axis to apply the function over (0 - rows, 1 - columns)
+            left : NumPy array
+                The partitions of left Modin Frame
+            func : callable
+                The function to apply
+            right : NumPy array
+                The partitions of right Modin Frame.
 
-        Returns:
-            A new BaseFrameManager object, the type of object that called this.
+        Returns
+        -------
+        NumPy array
+            A new BasePandasFrame object, the type of object that called this.
         """
         if axis:
             left_partitions = cls.row_partitions(left)

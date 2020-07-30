@@ -18,6 +18,9 @@ from modin.backends.base.query_compiler import BaseQueryCompiler
 
 
 class BaseIO(object):
+    query_compiler_cls: BaseQueryCompiler = None
+    frame_cls = None
+
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
         return None
@@ -320,7 +323,7 @@ class BaseIO(object):
         skipfooter=0,
         convert_float=True,
         mangle_dupe_cols=True,
-        **kwds
+        **kwds,
     ):
         if skip_footer != 0:
             skipfooter = skip_footer
@@ -350,7 +353,7 @@ class BaseIO(object):
             skipfooter=skipfooter,
             convert_float=convert_float,
             mangle_dupe_cols=mangle_dupe_cols,
-            **kwds
+            **kwds,
         )
         if isinstance(intermediate, (OrderedDict, dict)):
             parsed = type(intermediate)()
@@ -373,7 +376,7 @@ class BaseIO(object):
         columns=None,
         iterator=False,
         chunksize=None,
-        **kwargs
+        **kwargs,
     ):
         ErrorMessage.default_to_pandas("`read_hdf`")
         return cls.from_pandas(
@@ -388,7 +391,7 @@ class BaseIO(object):
                 stop=stop,
                 iterator=iterator,
                 chunksize=chunksize,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -493,7 +496,7 @@ class BaseIO(object):
             colspecs=colspecs,
             widths=widths,
             infer_nrows=infer_nrows,
-            **kwds
+            **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
