@@ -114,7 +114,14 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         installed, and not all users of Modin (even in experimental mode)
         need remote context.
     """
-    namespace = dict(local_cls.__dict__)  # get a copy of local_cls attributes' dict
+    # get a copy of local_cls attributes' dict but skip _very_ special attributes,
+    # because copying them to a different type leads to them not working.
+    # Python should create new descriptors automatically for us instead.
+    namespace = {
+        name: value
+        for name, value in local_cls.__dict__.items()
+        if not isinstance(value, types.GetSetDescriptorType)
+    }
     namespace["__real_cls__"] = None
     namespace["__new__"] = None
     # define a new class the same way original was defined but with replaced
