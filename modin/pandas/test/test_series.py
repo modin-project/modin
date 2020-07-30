@@ -471,9 +471,8 @@ def test___pow__(data):
 
 
 def test___repr___empty():
-    modin_s = pd.Series()
-    pandas_s = pandas.Series()
-    assert repr(modin_s) == repr(pandas_s)
+    modin_series, pandas_series = pd.Series(), pandas.Series()
+    assert repr(modin_series) == repr(pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1362,9 +1361,8 @@ def test_dropna_inplace(data):
 
 
 def test_dtype_empty():
-    modin_s = pd.Series()
-    pandas_s = pandas.Series()
-    assert modin_s.dtype == pandas_s.dtype
+    modin_series, pandas_series = pd.Series(), pandas.Series()
+    assert modin_series.dtype == pandas_series.dtype
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
