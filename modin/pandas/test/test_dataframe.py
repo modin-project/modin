@@ -5365,7 +5365,6 @@ class TestDataFrameIndexing:
 
         assert len(modin_df) == len(pandas_df)
 
-    # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_index_order(self):
         # see #1708 and #1869 for details
         df_modin, df_pandas = (
