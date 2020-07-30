@@ -60,7 +60,8 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
     runs-on: ubuntu-latest
@@ -74,7 +75,8 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
     runs-on: ubuntu-latest
@@ -88,7 +90,8 @@ jobs:
           python-version: "3.6.x"
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -114,7 +117,8 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -155,7 +159,8 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -194,5 +199,6 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir
+      - run: pip install "pyarrow<0.17"
+      - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
