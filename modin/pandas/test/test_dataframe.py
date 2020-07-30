@@ -1742,8 +1742,13 @@ class TestDataFrameUDF:
     @pytest.mark.parametrize(
         "func",
         [
-            "count",
             "kurt",
+            pytest.param(
+                "count",
+                marks=pytest.mark.xfail(
+                    reason="count method handle level parameter incorrectly"
+                ),
+            ),
             pytest.param(
                 "sum",
                 marks=pytest.mark.xfail(
