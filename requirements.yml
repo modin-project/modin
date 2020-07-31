@@ -1,0 +1,33 @@
+name: modin
+channels:
+  - conda-forge
+dependencies:
+  - pandas==1.0.5
+  - numpy
+  - pyarrow<0.17
+  - dask[complete]>=2.1.0,<=2.19.0
+  - distributed>=2.3.2,<=2.19.0
+  - xarray
+  - Jinja2
+  - pathlib
+  - scipy
+  - pip
+  - s3fs
+  - feather-format
+  - lxml
+  - openpyxl
+  - xlrd
+  - matplotlib<=3.2.2
+  - sqlalchemy
+  - pandas-gbq
+  - pytables
+  - msgpack-python
+  - psutil
+  - pip:
+    - ray==0.8.6
+    - pytest
+    - coverage<5.0
+    - pytest-cov
+    - pytest-testmon
+    - pytest-custom_exit_code
+    - pytest-xdist
