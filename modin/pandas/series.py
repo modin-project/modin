@@ -492,7 +492,7 @@ class Series(BasePandasDataset):
         # in pandas that verify that some results are created. This is a challenge for
         # empty DataFrames, but fortunately they only happen when the `func` type is
         # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `self.__name__` for the return
+        # type(self), so we catch that error and use `type(self).__name__` for the return
         # type.
         # Because a `Series` cannot be empty in pandas, we create a "dummy" `Series` to
         # do the error checking and determining the return type.
@@ -503,7 +503,7 @@ class Series(BasePandasDataset):
                 )
             ).__name__
         except Exception:
-            return_type = self.__name__
+            return_type = type(self).__name__
         if (
             isinstance(func, str)
             or is_list_like(func)
