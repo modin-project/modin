@@ -86,7 +86,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if self._index_cols is not None:
             self._table_cols = self._index_cols + self._table_cols
 
-        assert len(dtypes) == len(self._table_cols)
+        assert len(dtypes) == len(
+            self._table_cols
+        ), f"unaligned dtypes ({dtypes}) and table columns ({self._table_cols})"
         if isinstance(dtypes, list):
             self._dtypes = pd.Series(dtypes, index=self._table_cols)
         else:
@@ -973,6 +975,49 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return None
         return col
 
-    # @classmethod
-    # def from_pandas(cls, df):
-    #    return super().from_pandas(df)
+    @classmethod
+    def from_pandas(cls, df):
+        new_index = df.index
+        new_columns = df.columns
+        # If there is non-trivial index, we put it into columns.
+        # That's what we usually have for arrow tables and execution
+        # result. Unnamed index is renamed to __index__. Also all
+        # columns get 'F_' prefix to handle names unsupported in
+        # OmniSci.
+        if cls._is_trivial_index(df.index):
+            index_cols = None
+        else:
+            orig_index_names = df.index.names
+            orig_df = df
+
+            index_cols = ["__index__" if n is None else n for n in df.index.names]
+            df.index.names = index_cols
+            df = df.reset_index()
+
+            orig_df.index.names = orig_index_names
+        new_dtypes = df.dtypes
+        df = df.add_prefix("F_")
+        new_parts, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
+        return cls(
+            new_parts,
+            new_index,
+            new_columns,
+            new_lengths,
+            new_widths,
+            dtypes=new_dtypes,
+            index_cols=index_cols,
+        )
+
+    @classmethod
+    def _is_trivial_index(cls, index):
+        """Return true if index is a range [0..N]"""
+        if isinstance(index, pd.RangeIndex):
+            return index.start == 0 and index.step == 1
+        if not isinstance(index, pd.Int64Index):
+            return False
+        return (
+            index.is_monotonic_increasing
+            and index.unique
+            and index.min == 0
+            and index.max == len(index) - 1
+        )
