@@ -66,7 +66,8 @@ class DataFrameGroupBy(object):
                 not isinstance(by, type(self._query_compiler))
                 and axis == 0
                 and all(
-                    isinstance(obj, str) and obj in self._query_compiler.columns
+                    (isinstance(obj, str) and obj in self._query_compiler.columns)
+                    or isinstance(obj, Series)
                     for obj in self._by
                 )
             )
@@ -123,12 +124,17 @@ class DataFrameGroupBy(object):
                 # aware.
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                self._index_grouped_cache = {
-                    k: v.index
-                    for k, v in self._df._query_compiler.getitem_column_array(by)
-                    .to_pandas()
-                    .groupby(by=by)
-                }
+                if isinstance(by, list) and all(isinstance(o, str) for o in by):
+                    self._index_grouped_cache = {
+                        k: v.index
+                        for k, v in self._df._query_compiler.getitem_column_array(by)
+                        .to_pandas()
+                        .groupby(by=by)
+                    }
+                else:
+                    by = [o._to_pandas() if isinstance(o, Series) else o for o in by]
+                    pandas_df = self._df._to_pandas().groupby(by=by)
+                    self._index_grouped_cache = {k: v.index for k, v in pandas_df}
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
@@ -311,6 +317,15 @@ class DataFrameGroupBy(object):
                 idx_name=self._idx_name,
                 drop=self._drop,
                 **kwargs,
+            )
+        if (
+            self._is_multi_by
+            and isinstance(self._by, list)
+            and not all(isinstance(o, str) for o in self._by)
+        ):
+            raise NotImplementedError(
+                "Column lookups on GroupBy with arbitrary Series in by"
+                " is not yet supported."
             )
         return SeriesGroupBy(
             self._df[key],

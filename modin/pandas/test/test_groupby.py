@@ -241,6 +241,15 @@ def test_mixed_dtypes_groupby(as_index):
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
+        ["col1", pd.Series([1, 5, 7, 8])],
+        [pd.Series([1, 5, 7, 8])],
+        [
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+        ],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -262,6 +271,8 @@ def test_simple_row_groupby(by, as_index, col1_category):
     modin_df = from_pandas(pandas_df)
     n = 1
     modin_groupby = modin_df.groupby(by=by, as_index=as_index)
+    if isinstance(by, list):
+        by = [o._to_pandas() if isinstance(o, pd.Series) else o for o in by]
     pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
@@ -372,7 +383,11 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
-    eval___getattr__(modin_groupby, pandas_groupby, "col3")
+    if isinstance(by, list) and not any(
+        isinstance(o, (pd.Series, pandas.Series)) for o in by
+    ):
+        # Not yet supported for non-original-column-from-dataframe Series in by:
+        eval___getattr__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
 
 
