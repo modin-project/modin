@@ -472,6 +472,11 @@ def test___pow__(data):
     inter_df_math_helper(modin_series, pandas_series, "__pow__")
 
 
+def test___repr___empty():
+    modin_series, pandas_series = pd.Series(), pandas.Series()
+    assert repr(modin_series) == repr(pandas_series)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___repr__(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1355,6 +1360,11 @@ def test_dropna_inplace(data):
     pandas_series.dropna(how="any", inplace=True)
     modin_series.dropna(how="any", inplace=True)
     df_equals(modin_series, pandas_series)
+
+
+def test_dtype_empty():
+    modin_series, pandas_series = pd.Series(), pandas.Series()
+    assert modin_series.dtype == pandas_series.dtype
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
