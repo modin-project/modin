@@ -236,7 +236,8 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
+      - shell: bash -l {0}
+        run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -305,8 +306,10 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: choco install codecov
-      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
+      - shell: bash -l {0}
+        run: choco install codecov
+      - shell: bash -l {0}
+        run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
 
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
