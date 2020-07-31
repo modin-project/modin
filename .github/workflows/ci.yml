@@ -58,9 +58,12 @@ jobs:
           environment-file: requirements.yml
           python-version: "3.7"
           auto-activate-base: false
-      - shell: bash -l {0}
+      - name: Conda environment
+        shell: bash -l {0}
         run: |
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/pandas/test/test_api.py
+      - name: api tests
+        shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_api.py
