@@ -52,14 +52,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: requirements.yml
+          python-version: "3.7"
           auto-activate-base: false
       - shell: bash -l {0}
         run: |
