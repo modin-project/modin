@@ -24,10 +24,9 @@ dependencies:
     - tables
     - scipy
     - s3fs
-    - pytest<6 # version limitation for pytest-testmon
+    - pytest
     - coverage<5.0
     - pytest-cov
-    - pytest-testmon
     - pytest-custom_exit_code
     - pytest-xdist
     - feather-format

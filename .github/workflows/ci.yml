@@ -210,7 +210,7 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
+        run: pytest modin/pandas/test/ -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
