@@ -69,6 +69,8 @@ jobs:
           environment-file: requirements.yml
           python-version: "3.7"
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -100,6 +102,8 @@ jobs:
           environment-file: requirements.yml
           python-version: "3.7"
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -130,6 +134,8 @@ jobs:
           environment-file: requirements.yml
           python-version: "3.6"
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -169,6 +175,8 @@ jobs:
           environment-file: requirements.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
         run: |
