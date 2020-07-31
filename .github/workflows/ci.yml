@@ -51,15 +51,15 @@ jobs:
   test-api:
     runs-on: ubuntu-latest
     name: test api
+    env:
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
@@ -90,15 +90,15 @@ jobs:
   test-headers:
     runs-on: ubuntu-latest
     name: test-headers
+    env:
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
@@ -128,15 +128,15 @@ jobs:
   test-internals:
     runs-on: ubuntu-latest
     name: test-internals
+    env:
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.6-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
@@ -174,16 +174,15 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-    name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
+      name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
@@ -250,6 +249,8 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
     name: test-windows
     steps:
       - uses: actions/checkout@v2
@@ -257,9 +258,6 @@ jobs:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
@@ -320,6 +318,8 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
+      # Increase this value to reset cache if requirements.yml has not changed
+      CACHE_NUMBER: 0
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -327,9 +327,6 @@ jobs:
           fetch-depth: 1
       - name: Cache conda
         uses: actions/cache@v1
-        env:
-          # Increase this value to reset cache if requirements.yml has not changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
