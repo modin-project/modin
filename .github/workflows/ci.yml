@@ -60,7 +60,7 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_api.py
   test-headers:
@@ -75,7 +75,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_headers.py
   test-internals:
@@ -90,7 +90,7 @@ jobs:
           python-version: "3.6.x"
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
   test-all:
@@ -117,7 +117,7 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
@@ -159,7 +159,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
@@ -199,6 +199,6 @@ jobs:
           architecture: "x64"
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pip install --upgrade pip setuptools wheel
-      - run: pip install "pyarrow<0.17"
+      - run: pip install "pyarrow<0.17" -v
       - run: pip install -r requirements.txt --no-cache-dir
       - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
