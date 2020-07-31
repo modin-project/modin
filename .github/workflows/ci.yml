@@ -58,11 +58,16 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          # Increase this value to reset cache if requirements.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
@@ -71,6 +76,7 @@ jobs:
           auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -91,11 +97,16 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          # Increase this value to reset cache if requirements.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
@@ -104,6 +115,7 @@ jobs:
           auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -123,11 +135,16 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          # Increase this value to reset cache if requirements.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-3.6-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.6-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
@@ -136,6 +153,7 @@ jobs:
           auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -164,11 +182,16 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          # Increase this value to reset cache if requirements.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
@@ -177,6 +200,7 @@ jobs:
           auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -230,12 +254,28 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          # Increase this value to reset cache if requirements.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: requirements.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -282,12 +322,28 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          # Increase this value to reset cache if requirements.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: requirements.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
