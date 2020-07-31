@@ -37,7 +37,7 @@ class ModinDistribution(Distribution):
         return False
 
 
-dask_deps = ["dask>=2.1.0", "distributed>=2.3.2"]
+dask_deps = ["dask>=2.12.0", "distributed>=2.12.0"]
 ray_deps = ["ray==0.8.6", "pyarrow<0.17"]
 
 all_deps = dask_deps + ray_deps
