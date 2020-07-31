@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     name: test api
     env:
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
@@ -62,16 +62,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: "3.7"
           auto-activate-base: false
           channel-priority: strict
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     name: test-headers
     env:
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
@@ -101,16 +101,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: "3.7"
           auto-activate-base: false
           channel-priority: strict
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     name: test-internals
     env:
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
@@ -139,16 +139,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-3.6-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.6-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-3.6-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: "3.6"
           auto-activate-base: false
           channel-priority: strict
@@ -174,7 +174,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
       name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
@@ -185,16 +185,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
           channel-priority: strict
@@ -249,7 +249,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
     name: test-windows
     steps:
@@ -260,16 +260,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
           channel-priority: strict
@@ -318,7 +318,7 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
-      # Increase this value to reset cache if requirements.yml has not changed
+      # Increase this value to reset cache if environment.yml has not changed
       CACHE_NUMBER: 0
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
@@ -329,16 +329,16 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('requirements.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
-          environment-file: requirements.yml
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
           auto-activate-base: false
           channel-priority: strict
