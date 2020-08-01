@@ -101,17 +101,17 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-3.7-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.8-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.7-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.8-pip-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: "3.7"
+          python-version: "3.8"
           auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7"]
+        python-version: ["3.6", "3.7", "3.8"]
         engine: ["python", "ray", "dask"]
         part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
@@ -243,7 +243,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7"]
+        python-version: ["3.6", "3.7", "3.8"]
         engine: ["ray", "dask"]
         part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
@@ -314,7 +314,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7"]
+        python-version: ["3.6", "3.7", "3.8"]
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
