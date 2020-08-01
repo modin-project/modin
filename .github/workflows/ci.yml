@@ -307,7 +307,7 @@ jobs:
       - shell: bash -l {0}
         run: choco install codecov
       - shell: bash -l {0}
-        run: codecov -f .\coverage.xml
+        run: codecov -f ./coverage.xml
 
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
