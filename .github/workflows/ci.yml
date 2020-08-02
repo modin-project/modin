@@ -318,10 +318,17 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - name: Cache pip
+      - name: Cache pip on Ubuntu
+        if: ${{ runner.os == 'Linux' }}
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: Cache pip on Windows
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
