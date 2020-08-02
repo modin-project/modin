@@ -51,9 +51,6 @@ jobs:
   test-api:
     runs-on: ubuntu-latest
     name: test api
-    env:
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
@@ -62,6 +59,8 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
+          # github.run_id using for create new cache entry for each run
+          # this allows us to use actual packages
           key: ${{ runner.os }}-python-3.7-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
@@ -78,6 +77,7 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
       - name: Conda environment
+        # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
         run: |
           conda info
@@ -90,9 +90,6 @@ jobs:
   test-headers:
     runs-on: ubuntu-latest
     name: test-headers
-    env:
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
@@ -128,9 +125,6 @@ jobs:
   test-internals:
     runs-on: ubuntu-latest
     name: test-internals
-    env:
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
     steps:
       - uses: actions/checkout@v2
         with:
@@ -174,9 +168,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
-      name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
+    name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
         with:
@@ -249,8 +241,6 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
     name: test-windows
     steps:
       - uses: actions/checkout@v2
@@ -318,8 +308,6 @@ jobs:
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
-      # Increase this value to reset cache if environment.yml has not changed
-      CACHE_NUMBER: 0
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
