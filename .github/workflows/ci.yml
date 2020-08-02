@@ -72,7 +72,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: "3.7"
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
@@ -109,7 +108,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: "3.8"
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
@@ -144,7 +142,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: "3.6"
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
@@ -188,7 +185,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
@@ -261,7 +257,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
@@ -328,7 +323,6 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          auto-activate-base: false
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
