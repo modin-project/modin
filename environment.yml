@@ -23,10 +23,9 @@ dependencies:
   - pytables
   - msgpack-python
   - psutil
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - coverage<5.0
   - pip:
     - ray==0.8.6
-    - pytest
-    - coverage<5.0
-    - pytest-cov
-    - pytest-custom_exit_code
-    - pytest-xdist
