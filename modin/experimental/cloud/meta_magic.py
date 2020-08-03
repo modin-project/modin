@@ -17,7 +17,18 @@ import types
 
 from modin import execution_engine
 
-_LOCAL_ATTRS = frozenset(("__new__", "__dict__", "__wrapper_remote__"))
+# the attributes that must be alwasy taken from a local part of dual-nature class,
+# never going to remote end
+_LOCAL_ATTRS = frozenset(
+    (
+        "__new__",
+        "__dict__",
+        "__wrapper_remote__",
+        "__real_cls__",
+        "__mro__",
+        "__class__",
+    )
+)
 
 
 class RemoteMeta(type):
@@ -46,47 +57,44 @@ class RemoteMeta(type):
     def __getattribute__(self, name):
         if name in _LOCAL_ATTRS:
             # never proxy special attributes, always get them from the class type
-            res = object.__getattribute__(self, name)
+            return super().__getattribute__(name)
         else:
             try:
                 # Go for proxying class-level attributes first;
                 # make sure to check for attribute in self.__dict__ to get the class-level
                 # attribute from the class itself, not from some of its parent classes.
-                # Also note we use object.__getattribute__() to skip any potential
-                # class-level __getattr__
-                res = object.__getattribute__(self, "__dict__")[name]
+                res = super().__getattribute__("__dict__")[name]
             except KeyError:
+                # Class-level attribute not found in the class itself; it might be present
+                # in its parents, but we must first see if we should go to a remote
+                # end, because in "remote context" local attributes are only those which
+                # are explicitly allowed by being defined in the class itself.
+                frame = sys._getframe()
                 try:
-                    res = object.__getattribute__(self, name)
+                    is_inspect = frame.f_back.f_code.co_filename == inspect.__file__
                 except AttributeError:
-                    frame = sys._getframe()
+                    is_inspect = False
+                finally:
+                    del frame
+                if is_inspect:
+                    # be always-local for inspect.* functions
+                    return super().__getattribute__(name)
+                else:
                     try:
-                        is_inspect = frame.f_back.f_code.co_filename == inspect.__file__
+                        remote = self.__real_cls__.__wrapper_remote__
                     except AttributeError:
-                        is_inspect = False
-                    finally:
-                        del frame
-                    if is_inspect:
-                        # be always-local for inspect.* functions
-                        res = super().__getattribute__(name)
-                    else:
-                        try:
-                            remote = object.__getattribute__(
-                                object.__getattribute__(self, "__real_cls__"),
-                                "__wrapper_remote__",
-                            )
-                        except AttributeError:
-                            # running in local mode, fall back
-                            res = super().__getattribute__(name)
-                        else:
-                            res = getattr(remote, name)
-        try:
-            # note that any attribute might be in fact a data descriptor,
-            # account for that
-            getter = res.__get__
-        except AttributeError:
-            return res
-        return getter(None, self)
+                        # running in local mode, fall back
+                        return super().__getattribute__(name)
+                    return getattr(remote, name)
+            else:
+                try:
+                    # note that any attribute might be in fact a data descriptor,
+                    # account for that; we only need it for attributes we get from __dict__[],
+                    # because other cases are handled by super().__getattribute__ for us
+                    getter = res.__get__
+                except AttributeError:
+                    return res
+                return getter(None, self)
 
 
 _KNOWN_DUALS = {}
@@ -94,10 +102,10 @@ _KNOWN_DUALS = {}
 
 def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     """
-    Replaces given local class in its module with a descendant class
-    which has __new__ overridden (a dual-nature class).
-    This new class is instantiated differently depending o
-     whether this is done in remote context or local.
+    Replaces given local class in its module with a replacement class
+    which has __new__ defined (a dual-nature class).
+    This new class is instantiated differently depending on
+    whether this is done in remote or local context.
 
     In local context we effectively get the same behaviour, but in remote
     context the created class is actually of separate type which
@@ -114,12 +122,19 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         installed, and not all users of Modin (even in experimental mode)
         need remote context.
     """
+    # get a copy of local_cls attributes' dict but skip _very_ special attributes,
+    # because copying them to a different type leads to them not working.
+    # Python should create new descriptors automatically for us instead.
     namespace = {
-        "__real_cls__": None,
-        "__new__": None,
-        "__module__": local_cls.__module__,
+        name: value
+        for name, value in local_cls.__dict__.items()
+        if not isinstance(value, types.GetSetDescriptorType)
     }
-    result = RemoteMeta(local_cls.__name__, (local_cls,), namespace)
+    namespace["__real_cls__"] = None
+    namespace["__new__"] = None
+    # define a new class the same way original was defined but with replaced
+    # metaclass and a few more attributes in namespace
+    result = RemoteMeta(local_cls.__name__, local_cls.__bases__, namespace)
 
     def make_new(__class__):
         """
