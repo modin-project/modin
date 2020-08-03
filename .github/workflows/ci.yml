@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ matrix.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip if Ubuntu
         if: startsWith(runner.os, 'Linux')
         uses: actions/cache@v1
