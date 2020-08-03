@@ -48,7 +48,49 @@ jobs:
       - run: pip install flake8 flake8-print
       - run: flake8 --enable=T modin
 
+  prepare-cache:
+    runs-on: ${{ matrix.os }
+    strategy:
+      matrix:
+        os: ["ubuntu-latest",  "windows-latest"]
+        python-version: ["3.6", "3.7", "3.8"]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v1
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ matrix.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: Cache pip if Ubuntu
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: Cache pip if Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
   test-api:
+    needs: [prepare-cache]
     runs-on: ubuntu-latest
     name: test api
     steps:
@@ -61,17 +103,17 @@ jobs:
           path: ~/conda_pkgs_dir
           # github.run_id using for create new cache entry for each run
           # this allows us to use actual packages
-          key: ${{ runner.os }}-python-3.7-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.6-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: "3.7"
+          python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -86,6 +128,7 @@ jobs:
         run: python -m pytest modin/pandas/test/test_api.py
 
   test-headers:
+    needs: [prepare-cache]
     runs-on: ubuntu-latest
     name: test-headers
     steps:
@@ -96,17 +139,17 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-3.8-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.6-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.8-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: "3.8"
+          python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -119,6 +162,7 @@ jobs:
         run: python -m pytest modin/test/test_headers.py
 
   test-internals:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     name: test-internals
     steps:
@@ -139,7 +183,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: "3.6"
+          python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
