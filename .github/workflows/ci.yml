@@ -90,7 +90,7 @@ jobs:
           conda list
 
   test-api:
-    needs: [prepare-cache]
+    needs: prepare-cache
     runs-on: ubuntu-latest
     name: test api
     steps:
@@ -128,7 +128,7 @@ jobs:
         run: python -m pytest modin/pandas/test/test_api.py
 
   test-headers:
-    needs: [prepare-cache]
+    needs: prepare-cache
     runs-on: ubuntu-latest
     name: test-headers
     steps:

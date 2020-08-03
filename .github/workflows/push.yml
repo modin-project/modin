@@ -43,7 +43,7 @@ jobs:
           conda list
 
   test-all:
-    needs: [prepare-cache]
+    needs: prepare-cache
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -114,7 +114,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: [prepare-cache]
+    needs: prepare-cache
     runs-on: windows-latest
     strategy:
       matrix:
@@ -182,7 +182,7 @@ jobs:
         run: codecov -f ./coverage.xml
 
   test-pyarrow:
-    needs: [prepare-cache]
+    needs: prepare-cache
     runs-on: ubuntu-latest
     strategy:
       matrix:
