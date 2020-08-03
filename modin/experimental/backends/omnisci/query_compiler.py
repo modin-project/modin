@@ -13,10 +13,8 @@
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.error_message import ErrorMessage
 
 import pandas
-import abc
 
 from pandas.core.dtypes.common import is_list_like
 
@@ -65,13 +63,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     # Merge
 
-    def join(self, *args, **kwargs):
+    def merge(self, right, **kwargs):
         on = kwargs.get("on", None)
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         """Only non-index joins with explicit 'on' are supported"""
         if left_index is False and right_index is False and on is not None:
-            right = args[0]
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
@@ -84,7 +81,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            return self.default_to_pandas(pandas.DataFrame.merge, *args, **kwargs)
+            return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
     def view(self, index=None, columns=None):
         return self.__constructor__(
@@ -279,7 +276,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        assert index == None, "Only column drop is supported"
+        assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.mask(
                 row_indices=index, col_indices=self.columns.drop(columns)
@@ -478,6 +475,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     clip = DFAlgNotSupported("clip")
     combine = DFAlgNotSupported("combine")
     combine_first = DFAlgNotSupported("combine_first")
+    conj = DFAlgNotSupported("conj")
     count = DFAlgNotSupported("count")
     cummax = DFAlgNotSupported("cummax")
     cummin = DFAlgNotSupported("cummin")
@@ -510,6 +508,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     max = DFAlgNotSupported("max")
     mean = DFAlgNotSupported("mean")
     median = DFAlgNotSupported("median")
+    melt = DFAlgNotSupported("melt")
     memory_usage = DFAlgNotSupported("memory_usage")
     min = DFAlgNotSupported("min")
     mod = DFAlgNotSupported("mod")
@@ -524,6 +523,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     query = DFAlgNotSupported("query")
     rank = DFAlgNotSupported("rank")
     reindex = DFAlgNotSupported("reindex")
+    repeat = DFAlgNotSupported("repeat")
     rfloordiv = DFAlgNotSupported("rfloordiv")
     rmod = DFAlgNotSupported("rmod")
     round = DFAlgNotSupported("round")

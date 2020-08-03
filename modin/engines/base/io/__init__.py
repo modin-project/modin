@@ -15,6 +15,7 @@ from modin.engines.base.io.io import BaseIO
 from modin.engines.base.io.text.csv_reader import CSVReader
 from modin.engines.base.io.text.fwf_reader import FWFReader
 from modin.engines.base.io.text.json_reader import JSONReader
+from modin.engines.base.io.text.excel_reader import ExcelReader
 from modin.engines.base.io.file_reader import FileReader
 from modin.engines.base.io.text.text_file_reader import TextFileReader
 from modin.engines.base.io.column_stores.parquet_reader import ParquetReader
@@ -33,4 +34,5 @@ __all__ = [
     "HDFReader",
     "FeatherReader",
     "SQLReader",
+    "ExcelReader",
 ]

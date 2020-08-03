@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import numpy as np
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -132,6 +133,12 @@ class Series(BasePandasDataset):
 
     name = property(_get_name, _set_name)
     _parent = None
+    # Parent axis denotes axis that was used to select series in a parent dataframe.
+    # If _parent_axis == 0, then it means that index axis was used via df.loc[row]
+    # indexing operations and assignments should be done to rows of parent.
+    # If _parent_axis == 1 it means that column axis was used via df[column] and assignments
+    # should be done to columns of parent.
+    _parent_axis = 0
 
     def _reduce_dimension(self, query_compiler):
         return query_compiler.to_pandas().squeeze()
@@ -144,6 +151,15 @@ class Series(BasePandasDataset):
 
     def _validate_dtypes(self, numeric_only=False):
         pass
+
+    def _update_inplace(self, new_query_compiler):
+        super(Series, self)._update_inplace(new_query_compiler=new_query_compiler)
+        # Propagate changes back to parent so that column in dataframe had the same contents
+        if self._parent is not None:
+            if self._parent_axis == 0:
+                self._parent.loc[self.name] = self
+            else:
+                self._parent[self.name] = self
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """Returns or updates a DataFrame given new query_compiler"""
@@ -315,7 +331,7 @@ class Series(BasePandasDataset):
         num_rows = pandas.get_option("max_rows") or 60
         num_cols = pandas.get_option("max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)
-        if isinstance(temp_df, pandas.DataFrame):
+        if isinstance(temp_df, pandas.DataFrame) and not temp_df.empty:
             temp_df = temp_df.iloc[:, 0]
         temp_str = repr(temp_df)
         if self.name is not None:
@@ -326,7 +342,11 @@ class Series(BasePandasDataset):
             len_str = "Length: {}, ".format(len(self.index))
         else:
             len_str = ""
-        dtype_str = "dtype: {}".format(temp_str.rsplit("dtype: ", 1)[-1])
+        dtype_str = "dtype: {}".format(
+            str(self.dtype) + ")"
+            if temp_df.empty
+            else temp_str.rsplit("dtype: ", 1)[-1]
+        )
         if len(self) == 0:
             return "Series([], {}{}".format(name_str, dtype_str)
         return temp_str.rsplit("\nName:", 1)[0] + "\n{}{}{}".format(
@@ -344,9 +364,6 @@ class Series(BasePandasDataset):
         self._create_or_update_from_compiler(
             self._query_compiler.setitem(1, key, value), inplace=True
         )
-        # Propagate changes back to parent so that column in dataframe had the same contents
-        if self._parent is not None:
-            self._parent[self.name] = self
 
     def __sub__(self, right):
         return self.sub(right)
@@ -496,7 +513,7 @@ class Series(BasePandasDataset):
         # in pandas that verify that some results are created. This is a challenge for
         # empty DataFrames, but fortunately they only happen when the `func` type is
         # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `self.__name__` for the return
+        # type(self), so we catch that error and use `type(self).__name__` for the return
         # type.
         # Because a `Series` cannot be empty in pandas, we create a "dummy" `Series` to
         # do the error checking and determining the return type.
@@ -507,16 +524,13 @@ class Series(BasePandasDataset):
                 )
             ).__name__
         except Exception:
-            return_type = self.__name__
+            return_type = type(self).__name__
         if (
             isinstance(func, str)
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
             query_compiler = super(Series, self).apply(func, *args, **kwds)
-            # Sometimes we can return a scalar here
-            if not isinstance(query_compiler, type(self._query_compiler)):
-                return query_compiler
         else:
             # handle ufuncs and lambdas
             if kwds or args and not isinstance(func, np.ufunc):
@@ -557,11 +571,30 @@ class Series(BasePandasDataset):
             pandas.Series.argsort, axis=axis, kind=kind, order=order
         )
 
-    def array(self):
-        return self._default_to_pandas(pandas.Series.array)
-
     def autocorr(self, lag=1):
-        return self._default_to_pandas(pandas.Series.autocorr, lag=lag)
+        """
+        Compute the lag-N autocorrelation.
+
+        This method computes the Pearson correlation between
+        the Series and its shifted self.
+
+        Parameters
+        ----------
+        lag : int, default 1
+            Number of lags to apply before performing autocorrelation.
+
+        Returns
+        -------
+        float
+            The Pearson correlation between self and self.shift(lag).
+
+        Notes
+        -----
+        If the Pearson correlation is not well defined return 'NaN'.
+
+        Autocorrelation floating point precision may slightly differ from pandas.
+        """
+        return self.corr(self.shift(lag))
 
     def between(self, left, right, inclusive=True):
         return self._default_to_pandas(
@@ -574,21 +607,140 @@ class Series(BasePandasDataset):
         )
 
     def corr(self, other, method="pearson", min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.corr, other, method=method, min_periods=min_periods
+        """
+        Compute correlation with `other` Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the correlation.
+        method : {'pearson', 'kendall', 'spearman'} or callable
+            Method used to compute correlation:
+
+            - pearson : Standard correlation coefficient
+            - kendall : Kendall Tau correlation coefficient
+            - spearman : Spearman rank correlation
+            - callable: Callable with input two 1d ndarrays and returning a float.
+
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Correlation with other.
+
+        Notes
+        -----
+        Correlation floating point precision may slightly differ from pandas.
+
+        For now pearson method is available only. For other methods defaults to pandas.
+        """
+        if method == "pearson":
+            this, other = self.align(other, join="inner", copy=False)
+            this = self.__constructor__(this)
+            other = self.__constructor__(other)
+
+            if len(this) == 0:
+                return np.nan
+            if len(this) != len(other):
+                raise ValueError("Operands must have same size")
+
+            if min_periods is None:
+                min_periods = 1
+
+            valid = this.notna() & other.notna()
+            if not valid.all():
+                this = this[valid]
+                other = other[valid]
+            if len(this) < min_periods:
+                return np.nan
+
+            this = this.astype(dtype="float64")
+            other = other.astype(dtype="float64")
+            this -= this.mean()
+            other -= other.mean()
+
+            other = other.__constructor__(query_compiler=other._query_compiler.conj())
+            result = this * other / (len(this) - 1)
+            result = np.array([result.sum()])
+
+            stddev_this = ((this * this) / (len(this) - 1)).sum()
+            stddev_other = ((other * other) / (len(other) - 1)).sum()
+
+            stddev_this = np.array([np.sqrt(stddev_this)])
+            stddev_other = np.array([np.sqrt(stddev_other)])
+
+            result /= stddev_this * stddev_other
+
+            np.clip(result.real, -1, 1, out=result.real)
+            if np.iscomplexobj(result):
+                np.clip(result.imag, -1, 1, out=result.imag)
+            return result[0]
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.default_to_pandas(
+                pandas.Series.corr,
+                other._query_compiler,
+                method=method,
+                min_periods=min_periods,
+            )
         )
 
     def count(self, level=None):
         return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None):
-        if isinstance(other, BasePandasDataset):
-            other = other._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.cov, other, min_periods=min_periods
-        )
+        """
+        Compute covariance with Series, excluding missing values.
+
+        Parameters
+        ----------
+        other : Series
+            Series with which to compute the covariance.
+        min_periods : int, optional
+            Minimum number of observations needed to have a valid result.
+
+        Returns
+        -------
+        float
+            Covariance between Series and other normalized by N-1
+            (unbiased estimator).
+
+        Notes
+        -----
+        Covariance floating point precision may slightly differ from pandas.
+        """
+        this, other = self.align(other, join="inner", copy=False)
+        this = self.__constructor__(this)
+        other = self.__constructor__(other)
+        if len(this) == 0:
+            return np.nan
+
+        if len(this) != len(other):
+            raise ValueError("Operands must have same size")
+
+        if min_periods is None:
+            min_periods = 1
+
+        valid = this.notna() & other.notna()
+        if not valid.all():
+            this = this[valid]
+            other = other[valid]
+
+        if len(this) < min_periods:
+            return np.nan
+
+        this = this.astype(dtype="float64")
+        other = other.astype(dtype="float64")
+
+        this -= this.mean()
+        other -= other.mean()
+
+        other = other.__constructor__(query_compiler=other._query_compiler.conj())
+        result = this * other / (len(this) - 1)
+        result = result.sum()
+        return result
 
     def describe(self, percentiles=None, include=None, exclude=None):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
@@ -643,10 +795,16 @@ class Series(BasePandasDataset):
             qc = other.reindex(index=common)._query_compiler
             if isinstance(other, Series):
                 return self._reduce_dimension(
-                    query_compiler=self._query_compiler.dot(qc)
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=True
+                    )
                 )
             else:
-                return self.__constructor__(query_compiler=self._query_compiler.dot(qc))
+                return self.__constructor__(
+                    query_compiler=self._query_compiler.dot(
+                        qc, squeeze_self=True, squeeze_other=False
+                    )
+                )
 
         other = np.asarray(other)
         if self.shape[0] != other.shape[0]:
@@ -655,9 +813,13 @@ class Series(BasePandasDataset):
             )
 
         if len(other.shape) > 1:
-            return self._query_compiler.dot(other).to_numpy().squeeze()
+            return (
+                self._query_compiler.dot(other, squeeze_self=True).to_numpy().squeeze()
+            )
 
-        return self._reduce_dimension(query_compiler=self._query_compiler.dot(other))
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.dot(other, squeeze_self=True)
+        )
 
     def drop_duplicates(self, keep="first", inplace=False):
         return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
@@ -801,15 +963,10 @@ class Series(BasePandasDataset):
         return self[0]
 
     def items(self):
-        index_iter = iter(self.index)
+        def item_builder(s):
+            return s.name, s.squeeze()
 
-        def item_builder(df):
-            s = df.iloc[:, 0]
-            s.index = [next(index_iter)]
-            s.name = self.name
-            return s.items()
-
-        partition_iterator = PartitionIterator(self._query_compiler, 0, item_builder)
+        partition_iterator = PartitionIterator(self.to_frame(), 0, item_builder)
         for v in partition_iterator:
             yield v
 
@@ -898,6 +1055,44 @@ class Series(BasePandasDataset):
         """
         return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
+    def slice_shift(self, periods=1, axis=0):
+        """
+        Equivalent to `shift` without copying data.
+        The shifted data will not include the dropped periods and the
+        shifted axis will be smaller than the original.
+        Parameters
+        ----------
+        periods : int
+            Number of periods to move, can be positive or negative.
+        axis : int or str
+            Shift direction.
+        Returns
+        -------
+        shifted : same type as caller
+        """
+        if periods == 0:
+            return self.copy()
+
+        if axis == "index" or axis == 0:
+            if abs(periods) >= len(self.index):
+                return Series(dtype=self.dtype)
+            else:
+                if periods > 0:
+                    new_index = self.index.drop(labels=self.index[:periods])
+                    new_df = self.drop(self.index[-periods:])
+                else:
+                    new_index = self.index.drop(labels=self.index[periods:])
+                    new_df = self.drop(self.index[:-periods])
+
+                new_df.index = new_index
+                return new_df
+        else:
+            raise ValueError(
+                "No axis named {axis} for object type {type}".format(
+                    axis=axis, type=type(self)
+                )
+            )
+
     @property
     def plot(
         self,
@@ -973,7 +1168,11 @@ class Series(BasePandasDataset):
             Flattened data of the Series.
 
         """
-        return self._query_compiler.to_numpy().flatten(order=order)
+        data = self._query_compiler.to_numpy().flatten(order=order)
+        if isinstance(self.dtype, pandas.CategoricalDtype):
+            data = pandas.Categorical(data, dtype=self.dtype)
+
+        return data
 
     def reindex(self, index=None, **kwargs):
         method = kwargs.pop("method", None)
@@ -1020,12 +1219,38 @@ class Series(BasePandasDataset):
         else:
             from .dataframe import DataFrame
 
-            result = DataFrame(self.copy()).rename(index=index).squeeze()
+            result = DataFrame(self.copy()).rename(index=index).squeeze(axis=1)
             result.name = self.name
             return result
 
     def repeat(self, repeats, axis=None):
-        return self._default_to_pandas(pandas.Series.repeat, repeats, axis=axis)
+        """
+        Repeat elements of a Series.
+
+        Returns a new Series where each element of the current Series
+        is repeated consecutively a given number of times.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element. This should be a
+            non-negative integer. Repeating 0 times will return an empty
+            Series.
+        axis : None
+            Must be ``None``. Has no effect but is accepted for compatibility
+            with numpy.
+
+        Returns
+        -------
+        Series
+            Newly created Series with repeated elements.
+        """
+        if (isinstance(repeats, int) and repeats == 0) or (
+            is_list_like(repeats) and len(repeats) == 1 and repeats[0] == 0
+        ):
+            return self.__constructor__()
+
+        return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(self, level=None, drop=False, name=None, inplace=False):
         if drop and level is None:
@@ -1036,7 +1261,6 @@ class Series(BasePandasDataset):
             else:
                 result = self.copy()
                 result.index = new_idx
-                result.name = name or self.name
                 return result
         elif not drop and inplace:
             raise TypeError(
@@ -1048,9 +1272,7 @@ class Series(BasePandasDataset):
                 obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(self.copy()).reset_index(
-                level=level, drop=drop, inplace=inplace
-            )
+            return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
 
     def rdivmod(self, other, level=None, fill_value=None, axis=0):
         return self._default_to_pandas(
@@ -1321,13 +1543,46 @@ class Series(BasePandasDataset):
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
     ):
-        return self._default_to_pandas(
-            pandas.Series.value_counts,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            bins=bins,
-            dropna=dropna,
+        """
+        Return a Series containing counts of unique values.
+
+        The resulting object will be in descending order so that the
+        first element is the most frequently-occurring element.
+        Excludes NA values by default.
+
+        Parameters
+        ----------
+        normalize : bool, default False
+            If True then the object returned will contain the relative
+            frequencies of the unique values.
+        sort : bool, default True
+            Sort by frequencies.
+        ascending : bool, default False
+            Sort in ascending order.
+        bins : int, optional
+            Rather than count values, group them into half-open bins,
+            a convenience for ``pd.cut``, only works with numeric data.
+        dropna : bool, default True
+            Don't include counts of NaN.
+
+        Returns
+        -------
+        Series
+
+        Notes
+        -----
+        The indices of resulting object will be in descending
+        (ascending, if ascending=True) order for equal values.
+        It slightly differ from pandas where indices are located in random order.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
         )
 
     def view(self, dtype=None):
@@ -1366,7 +1621,14 @@ class Series(BasePandasDataset):
         def attrs(df):
             return df.attrs
 
-        self._default_to_pandas(attrs)
+        return self._default_to_pandas(attrs)
+
+    @property
+    def array(self):
+        def array(df):
+            return df.array
+
+        return self._default_to_pandas(array)
 
     @property
     def axes(self):
@@ -1462,6 +1724,12 @@ class Series(BasePandasDataset):
         if self._query_compiler.columns[0] == "__reduced__":
             series.name = None
         return series
+
+
+if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(Series, "make_series_wrapper")
 
 
 class DatetimeProperties(object):
@@ -1631,7 +1899,7 @@ class DatetimeProperties(object):
 
     def to_pytimedelta(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze().dt)
+            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
         )
 
     @property

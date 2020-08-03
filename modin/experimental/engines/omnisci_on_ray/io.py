@@ -15,7 +15,6 @@ from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompile
 from modin.engines.ray.generic.io import RayIO
 from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFrame
 from modin.error_message import ErrorMessage
-from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
 from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
@@ -148,7 +147,7 @@ class OmnisciOnRayIO(RayIO):
                     column_types[c] = pa.timestamp("s")
 
             po = ParseOptions(
-                delimiter=sep if sep else "\s+" if delim_whitespace else delimiter,
+                delimiter=sep if sep else "\\s+" if delim_whitespace else delimiter,
                 quote_char=quotechar,
                 double_quote=doublequote,
                 escape_char=escapechar,

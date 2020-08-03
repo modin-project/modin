@@ -51,6 +51,7 @@ def test_top_level_api_equality():
         "base",
         "utils",
         "dataframe",
+        "groupby",
         "threading",
         "general",
         "datetimes",

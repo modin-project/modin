@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import uuid
-import os
 import sys
 
 import pyarrow as pa
@@ -31,8 +30,9 @@ class OmnisciServer:
     @classmethod
     def start_server(cls):
         if cls._server is None:
-            cls._server = PyDbEngine(enable_union=1, enable_columnar_output=1,
-            enable_lazy_fetch=0)
+            cls._server = PyDbEngine(
+                enable_union=1, enable_columnar_output=1, enable_lazy_fetch=0
+            )
 
     @classmethod
     def stop_server(cls):

@@ -11,14 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
-
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import OmnisciOnRayFramePartition
-from modin import __execution_engine__
 
-if __execution_engine__ == "Ray":
-    import ray
+import ray
 
 
 class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
@@ -29,8 +25,7 @@ class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     partition_type = OmnisciOnRayFramePartition
-    if __execution_engine__ == "Ray":
-        instance_type = ray.ObjectID
+    instance_type = ray.ObjectID
 
 
 class OmnisciOnRayFrameColumnPartition(OmnisciOnRayFrameAxisPartition):

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pandas
+
 
 def from_non_pandas(df, index, columns, dtype):
     from modin.data_management.dispatcher import EngineDispatcher
@@ -35,6 +37,7 @@ def from_pandas(df):
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=EngineDispatcher.from_pandas(df))
+
 
 def from_arrow(at):
     """Converts an arrow Table to a Modin DataFrame.
@@ -95,3 +98,46 @@ def _inherit_docstrings(parent, excluded=[]):
         return cls
 
     return decorator
+
+
+def try_cast_to_pandas(obj):
+    """
+    Converts obj and all nested objects from modin to pandas if it is possible,
+    otherwise returns obj
+
+    Parameters
+    ----------
+        obj : object,
+            object to convert from modin to pandas
+
+    Returns
+    -------
+        Converted object
+    """
+    if hasattr(obj, "_to_pandas"):
+        return obj._to_pandas()
+    if isinstance(obj, (list, tuple)):
+        return type(obj)([try_cast_to_pandas(o) for o in obj])
+    if isinstance(obj, dict):
+        return {k: try_cast_to_pandas(v) for k, v in obj.items()}
+    if callable(obj):
+        module_hierarchy = getattr(obj, "__module__", "").split(".")
+        fn_name = getattr(obj, "__name__", None)
+        if fn_name and module_hierarchy[0] == "modin":
+            return (
+                getattr(pandas.DataFrame, fn_name, obj)
+                if module_hierarchy[-1] == "dataframe"
+                else getattr(pandas.Series, fn_name, obj)
+            )
+    return obj
+
+
+def wrap_udf_function(func):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        # if user accidently returns modin DataFrame or Series
+        # casting it back to pandas to properly process
+        return try_cast_to_pandas(result)
+
+    wrapper.__name__ = func.__name__
+    return wrapper

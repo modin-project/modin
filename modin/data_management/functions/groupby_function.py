@@ -40,7 +40,13 @@ class GroupbyReduceFunction(MapReduceFunction):
                 )
             else:
                 qc = query_compiler
+            # since we're going to modify `groupby_args` dict in a `compute_map`,
+            # we want to copy it to not propagate these changes into source dict, in case
+            # of unsuccessful end of function
+            groupby_args = groupby_args.copy()
+
             as_index = groupby_args.get("as_index", True)
+            observed = groupby_args.get("observed", False)
 
             def _map(df, other):
                 def compute_map(df, other):
@@ -48,6 +54,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     # It is used to make sure that between phases we are constructing the
                     # right index and placing columns in the correct order.
                     groupby_args["as_index"] = True
+                    groupby_args["observed"] = True
                     other = other.squeeze(axis=axis ^ 1)
                     if isinstance(other, pandas.DataFrame):
                         df = pandas.concat(
@@ -57,6 +64,20 @@ class GroupbyReduceFunction(MapReduceFunction):
                     result = map_func(
                         df.groupby(by=other, axis=axis, **groupby_args), **map_args
                     )
+                    # if `other` has category dtype, then pandas will drop that
+                    # column after groupby, inserting it back to correctly process
+                    # reduce phase
+                    if (
+                        drop
+                        and not as_index
+                        and isinstance(other, pandas.Series)
+                        and isinstance(other.dtype, pandas.CategoricalDtype)
+                        and result.index.name is not None
+                        and result.index.name not in result.columns
+                    ):
+                        result.insert(
+                            loc=0, column=result.index.name, value=result.index
+                        )
                     # The _modin_groupby_ prefix indicates that this is the first partition,
                     # and since we may need to insert the grouping data in the reduce phase
                     if (
@@ -82,6 +103,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     df = df.reset_index(drop=False)
                     # See note above about setting `as_index`
                     groupby_args["as_index"] = as_index
+                    groupby_args["observed"] = observed
                     if other_len > 1:
                         by_part = list(df.columns[0:other_len])
                     else:
@@ -98,7 +120,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     if isinstance(by_part, str) and by_part in result.columns:
                         if "_modin_groupby_" in by_part and drop:
                             col_name = by_part[len("_modin_groupby_") :]
-                            new_result = result.drop(columns=col_name)
+                            new_result = result.drop(columns=col_name, errors="ignore")
                             new_result.columns = [
                                 col_name if "_modin_groupby_" in c else c
                                 for c in new_result.columns
@@ -115,19 +137,9 @@ class GroupbyReduceFunction(MapReduceFunction):
                 except ValueError:
                     return compute_reduce(df.copy())
 
-            if axis == 0:
-                new_columns = qc.columns
-                new_index = None
-            else:
-                new_index = query_compiler.index
-                new_columns = None
+            # TODO: try to precompute `new_index` and `new_columns`
             new_modin_frame = qc._modin_frame.groupby_reduce(
-                axis,
-                by._modin_frame,
-                _map,
-                _reduce,
-                new_columns=new_columns,
-                new_index=new_index,
+                axis, by._modin_frame, _map, _reduce
             )
             return query_compiler.__constructor__(new_modin_frame)
 

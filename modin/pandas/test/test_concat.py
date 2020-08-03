@@ -17,55 +17,9 @@ import pandas
 
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
-from .utils import df_equals
+from .utils import df_equals, generate_dfs, generate_multiindex_dfs, generate_none_dfs
 
 pd.DEFAULT_NPARTITIONS = 4
-
-
-def generate_dfs():
-    df = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col4": [12, 13, 14, 15],
-            "col5": [0, 0, 0, 0],
-        }
-    )
-
-    df2 = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col6": [12, 13, 14, 15],
-            "col7": [0, 0, 0, 0],
-        }
-    )
-    return df, df2
-
-
-def generate_none_dfs():
-    df = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, None, 7],
-            "col3": [8, 9, 10, 11],
-            "col4": [12, 13, 14, 15],
-            "col5": [None, None, None, None],
-        }
-    )
-
-    df2 = pandas.DataFrame(
-        {
-            "col1": [0, 1, 2, 3],
-            "col2": [4, 5, 6, 7],
-            "col3": [8, 9, 10, 11],
-            "col6": [12, 13, 14, 15],
-            "col7": [0, 0, 0, 0],
-        }
-    )
-    return df, df2
 
 
 def test_df_concat():
@@ -128,6 +82,17 @@ def test_concat_on_column():
         pd.concat([modin_df, modin_df2], axis="columns"),
         pandas.concat([df, df2], axis="columns"),
     )
+
+    modin_result = pd.concat(
+        [pd.Series(np.ones(10)), pd.Series(np.ones(10))], axis=1, ignore_index=True
+    )
+    pandas_result = pandas.concat(
+        [pandas.Series(np.ones(10)), pandas.Series(np.ones(10))],
+        axis=1,
+        ignore_index=True,
+    )
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
 def test_invalid_axis_errors():
@@ -206,4 +171,33 @@ def test_concat_with_empty_frame():
     df_equals(
         pd.concat([modin_empty_df, modin_row]),
         pandas.concat([pandas_empty_df, pandas_row]),
+    )
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("names", [False, True])
+def test_concat_multiindex(axis, names):
+    pd_df1, pd_df2 = generate_multiindex_dfs(axis=axis)
+    md_df1, md_df2 = map(from_pandas, [pd_df1, pd_df2])
+
+    keys = ["first", "second"]
+    if names:
+        names = [str(i) for i in np.arange(pd_df1.axes[axis].nlevels + 1)]
+    else:
+        names = None
+
+    df_equals(
+        pd.concat([md_df1, md_df2], keys=keys, axis=axis, names=names),
+        pandas.concat([pd_df1, pd_df2], keys=keys, axis=axis, names=names),
+    )
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_concat_dictionary(axis):
+    pandas_df, pandas_df2 = generate_dfs()
+    modin_df, modin_df2 = from_pandas(pandas_df), from_pandas(pandas_df2)
+
+    df_equals(
+        pd.concat({"A": modin_df, "B": modin_df2}, axis=axis),
+        pandas.concat({"A": pandas_df, "B": pandas_df2}, axis=axis),
     )

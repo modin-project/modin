@@ -16,11 +16,9 @@ import pandas
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
-from modin import __execution_engine__
 
-if __execution_engine__ == "Ray":
-    import ray
-    from ray.worker import RayTaskError
+import ray
+from ray.worker import RayTaskError
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
@@ -105,30 +103,29 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def mask(self, row_indices, col_indices):
         if (
-            isinstance(row_indices, slice)
+            (isinstance(row_indices, slice) and row_indices == slice(None))
             or (
-                self._length_cache is not None
+                not isinstance(row_indices, slice)
+                and self._length_cache is not None
                 and len(row_indices) == self._length_cache
             )
         ) and (
-            isinstance(col_indices, slice)
-            or (self._width_cache is not None and len(col_indices) == self._width_cache)
+            (isinstance(col_indices, slice) and col_indices == slice(None))
+            or (
+                not isinstance(col_indices, slice)
+                and self._width_cache is not None
+                and len(col_indices) == self._width_cache
+            )
         ):
             return self.__copy__()
 
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache = (
-            len(row_indices)
-            if not isinstance(row_indices, slice)
-            else self._length_cache
-        )
-        new_obj._width_cache = (
-            len(col_indices)
-            if not isinstance(col_indices, slice)
-            else self._width_cache
-        )
+        if not isinstance(row_indices, slice):
+            new_obj._length_cache = len(row_indices)
+        if not isinstance(col_indices, slice):
+            new_obj._width_cache = len(col_indices)
         return new_obj
 
     @classmethod
@@ -198,39 +195,38 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-if __execution_engine__ == "Ray":
+@ray.remote(num_return_vals=2)
+def get_index_and_columns(df):
+    return len(df.index), len(df.columns)
 
-    @ray.remote(num_return_vals=2)
-    def get_index_and_columns(df):
-        return len(df.index), len(df.columns)
 
-    @ray.remote(num_return_vals=3)
-    def deploy_ray_func(call_queue, partition):  # pragma: no cover
-        def deserialize(obj):
-            if isinstance(obj, ray.ObjectID):
-                return ray.get(obj)
-            return obj
+@ray.remote(num_return_vals=3)
+def deploy_ray_func(call_queue, partition):  # pragma: no cover
+    def deserialize(obj):
+        if isinstance(obj, ray.ObjectID):
+            return ray.get(obj)
+        return obj
 
-        if len(call_queue) > 1:
-            for func, kwargs in call_queue[:-1]:
-                func = deserialize(func)
-                kwargs = deserialize(kwargs)
-                try:
-                    partition = func(partition, **kwargs)
-                except ValueError:
-                    partition = func(partition.copy(), **kwargs)
-        func, kwargs = call_queue[-1]
-        func = deserialize(func)
-        kwargs = deserialize(kwargs)
-        try:
-            result = func(partition, **kwargs)
-        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-        # don't want the error to propagate to the user, and we want to avoid copying unless
-        # we absolutely have to.
-        except ValueError:
-            result = func(partition.copy(), **kwargs)
-        return (
-            result,
-            len(result) if hasattr(result, "__len__") else 0,
-            len(result.columns) if hasattr(result, "columns") else 0,
-        )
+    if len(call_queue) > 1:
+        for func, kwargs in call_queue[:-1]:
+            func = deserialize(func)
+            kwargs = deserialize(kwargs)
+            try:
+                partition = func(partition, **kwargs)
+            except ValueError:
+                partition = func(partition.copy(), **kwargs)
+    func, kwargs = call_queue[-1]
+    func = deserialize(func)
+    kwargs = deserialize(kwargs)
+    try:
+        result = func(partition, **kwargs)
+    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+    # don't want the error to propagate to the user, and we want to avoid copying unless
+    # we absolutely have to.
+    except ValueError:
+        result = func(partition.copy(), **kwargs)
+    return (
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+    )

@@ -15,11 +15,9 @@ import pandas
 
 from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin import __execution_engine__
 
-if __execution_engine__ == "Dask":
-    from distributed.client import get_client
-    import cloudpickle as pkl
+from distributed.client import get_client
+import cloudpickle as pkl
 
 
 def apply_list_of_funcs(funcs, df):
@@ -100,16 +98,10 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
-        new_obj._length_cache = (
-            len(row_indices)
-            if not isinstance(row_indices, slice)
-            else self._length_cache
-        )
-        new_obj._width_cache = (
-            len(col_indices)
-            if not isinstance(col_indices, slice)
-            else self._width_cache
-        )
+        if not isinstance(row_indices, slice):
+            new_obj._length_cache = len(row_indices)
+        if not isinstance(col_indices, slice):
+            new_obj._width_cache = len(col_indices)
         return new_obj
 
     def __copy__(self):
