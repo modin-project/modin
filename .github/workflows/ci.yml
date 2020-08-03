@@ -235,18 +235,40 @@ jobs:
       MODIN_MEMORY: 1000000000
     name: test experimental
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache conda
+        uses: actions/cache@v1
         with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrameMapMetadata
-      - run: python -m pytest modin/pandas/test/test_series.py
-      - run: python -m pytest modin/pandas/test/test_io.py
-      - run: bash <(curl -s https://codecov.io/bash)
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-python-3.7-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrameMapMetadata
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
+      - shell: bash -l {0}
+        run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
