@@ -16,7 +16,7 @@ from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompile
 from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex
-from pandas.core.dtypes.common import _get_dtype
+from pandas.core.dtypes.common import _get_dtype, is_list_like
 import pandas as pd
 
 from .df_algebra import (
@@ -183,14 +183,21 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return [expr._dtype for expr in exprs.values()]
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
-        # Currently we only expect by to be a projection of the same frame
+        # Currently we only expect by to be a projection of the same frame.
+        # If 'by' holds a list of columns, then we create such projection
+        # to re-use code.
         if not isinstance(by, DFAlgQueryCompiler):
-            raise NotImplementedError("unsupported groupby args")
+            if is_list_like(by):
+                by_cols = Index.__new__(Index, data=by, dtype=self.columns.dtype)
+                by_frame = self.mask(col_indices=by_cols)
+            else:
+                raise NotImplementedError("unsupported groupby args")
+        else:
+            by_frame = by._modin_frame
 
         if axis != 0:
             raise NotImplementedError("groupby is supported for axis = 0 only")
 
-        by_frame = by._modin_frame
         base = by_frame._find_common_projections_base(self)
         if base is None:
             raise NotImplementedError("unsupported groupby args")
@@ -198,8 +205,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if groupby_args["level"] is not None:
             raise NotImplementedError("levels are not supported for groupby")
 
-        groupby_cols = by.columns.tolist()
-        agg_cols = [col for col in self.columns if col not in by.columns]
+        groupby_cols = by_frame.columns.tolist()
+        agg_cols = [col for col in self.columns if col not in by_frame.columns]
 
         # Create new base where all required columns are computed. We don't allow
         # complex expressions to be a group key or an aggeregate operand.
