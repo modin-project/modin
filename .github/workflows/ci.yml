@@ -103,17 +103,17 @@ jobs:
           path: ~/conda_pkgs_dir
           # github.run_id using for create new cache entry for each run
           # this allows us to use actual packages
-          key: ${{ runner.os }}-python-3.6-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.7-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: 3.6
+          python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
