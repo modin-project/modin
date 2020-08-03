@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
-
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import OmnisciOnRayFramePartition
 

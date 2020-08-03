@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import uuid
-import os
 import sys
 
 import pyarrow as pa

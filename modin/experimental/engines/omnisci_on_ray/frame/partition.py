@@ -14,13 +14,10 @@
 import pandas
 
 from modin.engines.base.frame.partition import BaseFramePartition
-from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.ray.utils import handle_ray_task_error
 from .omnisci_worker import OmnisciServer
 import pyarrow
 
 import ray
-from ray.worker import RayTaskError
 
 
 class OmnisciOnRayFramePartition(BaseFramePartition):

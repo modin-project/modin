@@ -319,7 +319,6 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def dt_extract(self, obj):
         exprs = self._index_exprs()
         for col in self.columns:
-            col_expr = self.ref(col)
             exprs[col] = build_dt_expr(obj, self.ref(col))
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)
@@ -633,7 +632,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def sort_rows(self, columns, ascending, ignore_index, na_position):
         if na_position != "first" and na_position != "last":
-            raise ValurError(f"Unsupported na_position value '{na_position}'")
+            raise ValueError(f"Unsupported na_position value '{na_position}'")
 
         if not isinstance(columns, list):
             columns = [columns]

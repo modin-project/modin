@@ -13,10 +13,8 @@
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.error_message import ErrorMessage
 
 import pandas
-import abc
 
 from pandas.core.dtypes.common import is_list_like
 
@@ -278,7 +276,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        assert index == None, "Only column drop is supported"
+        assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.mask(
                 row_indices=index, col_indices=self.columns.drop(columns)

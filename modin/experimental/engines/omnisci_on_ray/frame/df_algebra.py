@@ -12,8 +12,7 @@
 # governing permissions and limitations under the License.
 
 import abc
-from .calcite_algebra import *
-from .expr import *
+from .expr import InputRefExpr
 from collections import OrderedDict
 
 

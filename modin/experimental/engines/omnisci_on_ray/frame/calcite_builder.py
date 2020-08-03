@@ -1,6 +1,33 @@
-from .expr import *
-from .calcite_algebra import *
-from .df_algebra import *
+from .expr import (
+    InputRefExpr,
+    LiteralExpr,
+    OpExpr,
+    AggregateExpr,
+    build_if_then_else,
+    build_row_idx_filter_expr,
+)
+from .calcite_algebra import (
+    CalciteBaseNode,
+    CalciteInputRefExpr,
+    CalciteInputIdxExpr,
+    CalciteScanNode,
+    CalciteProjectionNode,
+    CalciteFilterNode,
+    CalciteAggregateNode,
+    CalciteCollation,
+    CalciteSortNode,
+    CalciteJoinNode,
+    CalciteUnionNode,
+)
+from .df_algebra import (
+    FrameNode,
+    MaskNode,
+    GroupbyAggNode,
+    TransformNode,
+    JoinNode,
+    UnionNode,
+    SortNode,
+)
 
 from collections import abc
 from pandas.core.dtypes.common import _get_dtype
@@ -285,7 +312,6 @@ class CalciteBuilder:
 
         # Aggregation's input should always be a projection and
         # group key columns should always go first
-        base_node = self._input_node(0)
         proj_cols = op.by.copy()
         for col in frame._table_cols:
             if col not in op.by:

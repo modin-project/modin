@@ -19,16 +19,12 @@ from .axis_partition import (
     OmnisciOnRayFrameRowPartition,
 )
 from .partition import OmnisciOnRayFramePartition
-from modin.error_message import ErrorMessage
 from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
 
 import pyarrow
-import json
 import pandas
-
-import ray
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
