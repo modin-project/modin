@@ -258,7 +258,6 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
 
         cls.io_cls = WrappedIO(get_connection())
 
-
     from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
     io_cls = PyarrowOnRayIO
