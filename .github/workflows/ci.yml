@@ -49,7 +49,7 @@ jobs:
       - run: flake8 --enable=T modin
 
   prepare-cache:
-    runs-on: ${{ matrix.os }
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ["ubuntu-latest",  "windows-latest"]
