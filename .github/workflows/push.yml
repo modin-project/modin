@@ -75,7 +75,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -213,7 +212,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |

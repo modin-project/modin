@@ -74,7 +74,6 @@ jobs:
           python-version: "3.7"
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
@@ -110,7 +109,6 @@ jobs:
           python-version: "3.8"
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -144,7 +142,6 @@ jobs:
           python-version: "3.6"
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -187,7 +184,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -255,7 +251,6 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -303,7 +298,7 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
+          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -369,7 +364,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
       - name: Conda environment
         shell: bash -l {0}
         run: |
