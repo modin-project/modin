@@ -58,6 +58,8 @@ from .utils import (
     create_test_dfs,
     test_data_small_values,
     test_data_small_keys,
+    udf_func_values,
+    udf_func_keys,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1811,6 +1813,16 @@ class TestDataFrameUDF:
             modin_result = modin_df.apply(lambda df: df.drop(key), axis=1)
             pandas_result = pandas_df.apply(lambda df: df.drop(key), axis=1)
             df_equals(modin_result, pandas_result)
+
+    @pytest.mark.parametrize("func", udf_func_values, ids=udf_func_keys)
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_apply_udf(self, data, func):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: df.apply(*args, **kwargs),
+            func=func,
+            other=lambda df: df,
+        )
 
     def test_eval_df_use_case(self):
         frame_data = {"a": random_state.randn(10), "b": random_state.randn(10)}
@@ -5970,11 +5982,19 @@ class TestDataFrameJoinSort:
         pandas_df.index = pandas.MultiIndex.from_tuples(
             [(i // 10, i // 5, i) for i in range(len(pandas_df))]
         )
+        modin_df.columns = pd.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(modin_df.columns))]
+        )
+        pandas_df.columns = pd.MultiIndex.from_tuples(
+            [(i // 10, i // 5, i) for i in range(len(pandas_df.columns))]
+        )
 
         with pytest.warns(UserWarning):
             df_equals(modin_df.sort_index(level=0), pandas_df.sort_index(level=0))
         with pytest.warns(UserWarning):
             df_equals(modin_df.sort_index(axis=0), pandas_df.sort_index(axis=0))
+        with pytest.warns(UserWarning):
+            df_equals(modin_df.sort_index(axis=1), pandas_df.sort_index(axis=1))
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)

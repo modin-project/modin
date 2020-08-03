@@ -211,7 +211,7 @@ class BasePandasFrame(object):
                 self._dtypes.index = new_columns
         self._apply_index_objs(axis=1)
 
-    def _set_axis(self, axis, new_axis):
+    def _set_axis(self, axis, new_axis, cache_only=False):
         """Replaces the current labels at the specified axis with the new one
 
         Parameters
@@ -220,11 +220,20 @@ class BasePandasFrame(object):
                 Axis to set labels along
             new_axis : Index,
                 The replacement labels
+            cache_only : bool,
+                Whether to change only external indices, or propagate it
+                into partitions
         """
         if axis:
-            self._set_columns(new_axis)
+            if not cache_only:
+                self._set_columns(new_axis)
+            else:
+                self._columns_cache = ensure_index(new_axis)
         else:
-            self._set_index(new_axis)
+            if not cache_only:
+                self._set_index(new_axis)
+            else:
+                self._index_cache = ensure_index(new_axis)
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
@@ -256,7 +265,7 @@ class BasePandasFrame(object):
         self._column_widths_cache = [w for w in self._column_widths if w > 0]
         self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
 
-    def _validate_axis_equality(self, axis: int):
+    def _validate_axis_equality(self, axis: int, force: bool = False):
         """
         Validates internal and external indices of modin_frame at the specified axis.
 
@@ -264,22 +273,32 @@ class BasePandasFrame(object):
         ----------
             axis : int,
                 Axis to validate indices along
+            force : bool,
+                Whether to update external indices with internal if their lengths
+                do not match or raise an exception in that case.
         """
         internal_axis = self._frame_mgr_cls.get_indices(
             axis, self._partitions, lambda df: df.axes[axis]
         )
         is_equals = self.axes[axis].equals(internal_axis)
+        is_lenghts_matches = len(self.axes[axis]) == len(internal_axis)
         if not is_equals:
-            self._set_axis(axis, self.axes[axis])
+            if force:
+                new_axis = self.axes[axis] if is_lenghts_matches else internal_axis
+                self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
+            else:
+                self._set_axis(
+                    axis, self.axes[axis],
+                )
 
     def _validate_internal_indices(self, mode=None, **kwargs):
         """
         Validates and optionally updates internal and external indices
         of modin_frame in specified mode. There is 3 modes supported:
-            1. "reduced" - validates and updates indices on that axes
+            1. "reduced" - force validates on that axes
                 where external indices is ["__reduced__"]
-            2. "all" - validates indices at all axes, optionally updates
-                internal indices if `update` parameter specified in kwargs
+            2. "all" - validates indices at all axes, optionally force
+                if `force` parameter specified in kwargs
             3. "custom" - validation follows arguments specified in kwargs.
 
         Parameters
@@ -287,10 +306,16 @@ class BasePandasFrame(object):
             mode : str or bool, default None
             validate_index : bool, (optional, could be specified via `mode`)
             validate_columns : bool, (optional, could be specified via `mode`)
+            force : bool (optional, could be specified via `mode`)
+                Whether to update external indices with internal if their lengths
+                do not match or raise an exception in that case.
         """
 
         if isinstance(mode, bool):
+            is_force = mode
             mode = "all"
+        else:
+            is_force = kwargs.get("force", False)
 
         reduced_sample = pandas.Index(["__reduced__"])
         args_dict = {
@@ -298,8 +323,13 @@ class BasePandasFrame(object):
             "reduced": {
                 "validate_index": self.index.equals(reduced_sample),
                 "validate_columns": self.columns.equals(reduced_sample),
+                "force": True,
             },
-            "all": {"validate_index": True, "validate_columns": True},
+            "all": {
+                "validate_index": True,
+                "validate_columns": True,
+                "force": is_force,
+            },
         }
 
         args = args_dict.get(mode, args_dict["custom"])

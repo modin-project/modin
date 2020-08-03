@@ -16,7 +16,7 @@ import collections
 import os
 
 import rpyc
-from rpyc.lib.compat import pickle
+import cloudpickle as pickle
 from rpyc.lib import get_methods
 
 from rpyc.core import netref, AsyncResult, consts
@@ -384,9 +384,6 @@ def make_proxy_cls(
         __name__ = cls_name or origin_cls.__name__
         __wrapper_remote__ = remote_cls
 
-        def __new__(cls, *a, **kw):
-            return override.__new__(cls)
-
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
                 __remote_end__ = remote_cls(*a, **kw)
@@ -420,6 +417,8 @@ def make_proxy_cls(
             4) check if type(self).__dict__[name] exists
             5) pass through to remote end
             """
+            if name == "__class__":
+                return object.__getattribute__(self, "__class__")
             dct = object.__getattribute__(self, "__dict__")
             if name == "__dict__":
                 return dct
