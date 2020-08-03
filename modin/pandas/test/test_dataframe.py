@@ -2149,8 +2149,7 @@ class TestDataFrameDefault:
         df_equals(modin_result, pandas_result)
 
     @pytest.mark.skipif(
-        os.name == "nt",
-        reason="AssertionError: numpy array are different",
+        os.name == "nt", reason="AssertionError: numpy array are different",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dot(self, data):
@@ -2199,8 +2198,7 @@ class TestDataFrameDefault:
         df_equals(modin_result, pandas_result)
 
     @pytest.mark.skipif(
-        os.name == "nt",
-        reason="AssertionError: numpy array are different",
+        os.name == "nt", reason="AssertionError: numpy array are different",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_matmul(self, data):

@@ -11,11 +11,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v1
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip if Ubuntu
         if: startsWith(runner.os, 'Linux')
         uses: actions/cache@v1
@@ -30,12 +25,12 @@ jobs:
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
-          activate-environment: modin
-          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
+      - shell: bash -l {0}
+        run: pip install ray==0.8.6
       - name: Conda environment
         shell: bash -l {0}
         run: |
@@ -58,11 +53,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v1
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
@@ -129,11 +119,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v1
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
@@ -195,11 +180,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v1
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-conda-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Cache pip
         uses: actions/cache@v1
         with:
