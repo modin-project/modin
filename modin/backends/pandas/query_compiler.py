@@ -268,42 +268,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Append/Concat/Join
 
-    # Merge
-
-    def merge(
-        self,
-        left,
-        right,
-        how="inner",
-        on=None,
-        left_on=None,
-        right_on=None,
-        left_index=False,
-        right_index=False,
-        sort=False,
-        suffixes=("_x", "_y"),
-        copy=True,
-        indicator=False,
-        validate=None,
-    ):
-        return left._default_to_pandas(
-            pandas.DataFrame.merge,
-            right,
-            how=how,
-            on=on,
-            left_on=left_on,
-            right_on=right_on,
-            left_index=left_index,
-            right_index=right_index,
-            sort=sort,
-            suffixes=suffixes,
-            copy=copy,
-            indicator=indicator,
-            validate=validate,
-        )
-
-    # END Merge
-
     # Data Management Methods
     def free(self):
         """In the future, this will hopefully trigger a cleanup of this object.
