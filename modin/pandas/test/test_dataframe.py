@@ -2148,7 +2148,10 @@ class TestDataFrameDefault:
         pandas_result = pandas.DataFrame(data).cov()
         df_equals(modin_result, pandas_result)
 
-    @pytest.mark.skip(reason="AssertionError: numpy array are different")
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="AssertionError: numpy array are different",
+    )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dot(self, data):
         modin_df = pd.DataFrame(data)
@@ -2195,7 +2198,10 @@ class TestDataFrameDefault:
         pandas_result = pandas.DataFrame([1]).dot(pandas_df.T)
         df_equals(modin_result, pandas_result)
 
-    @pytest.mark.skip(reason="AssertionError: numpy array are different")
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="AssertionError: numpy array are different",
+    )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_matmul(self, data):
         modin_df = pd.DataFrame(data)
