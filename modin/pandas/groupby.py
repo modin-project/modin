@@ -19,7 +19,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 
-from .utils import _inherit_docstrings, wrap_udf_function
+from .utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
 from .series import Series
 
 
@@ -132,9 +132,10 @@ class DataFrameGroupBy(object):
                         .groupby(by=by)
                     }
                 else:
-                    by = [o._to_pandas() if isinstance(o, Series) else o for o in by]
-                    pandas_df = self._df._to_pandas().groupby(by=by)
-                    self._index_grouped_cache = {k: v.index for k, v in pandas_df}
+                    by = try_cast_to_pandas(by)
+                    self._index_grouped_cache = (
+                        self._df._to_pandas().groupby(by=by).groups
+                    )
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
