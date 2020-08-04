@@ -209,6 +209,16 @@ def test_mixed_dtypes_groupby(as_index):
         eval_groups(modin_groupby, pandas_groupby)
 
 
+class GetColumn:
+    """Indicate to the test that it should do gc(df)."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, df):
+        return df[self.name]
+
+
 @pytest.mark.parametrize(
     "by",
     [
@@ -250,6 +260,9 @@ def test_mixed_dtypes_groupby(as_index):
             pd.Series([1, 5, 7, 8]),
             pd.Series([1, 5, 7, 8]),
         ],
+        ["col1", GetColumn("col5")],
+        [GetColumn("col1"), GetColumn("col5")],
+        [GetColumn("col1")],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -270,9 +283,19 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     modin_df = from_pandas(pandas_df)
     n = 1
-    modin_groupby = modin_df.groupby(by=by, as_index=as_index)
-    by = try_cast_to_pandas(by)
-    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+
+    def maybe_get_columns(df, by):
+        if isinstance(by, list):
+            return [o(df) if isinstance(o, GetColumn) else o for o in by]
+        else:
+            return by
+
+    modin_groupby = modin_df.groupby(
+        by=maybe_get_columns(modin_df, by), as_index=as_index
+    )
+
+    pandas_by = maybe_get_columns(pandas_df, try_cast_to_pandas(by))
+    pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
@@ -305,7 +328,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
-    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+    pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
     apply_functions = [lambda df: df.sum(), min]
     for func in apply_functions:
         eval_apply(modin_groupby, pandas_groupby, func)
