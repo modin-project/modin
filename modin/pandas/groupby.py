@@ -710,16 +710,15 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        # is_list_like() will be True for Categorical, which we don't want to
-        # convert to a list, so use isinstance(by, list):
-        if isinstance(by, list):
-            by = [o._to_pandas() if isinstance(o, Series) else o for o in by]
-
         def groupby_on_multiple_columns(df, *args, **kwargs):
+            by = kwargs.pop("__by")
             return f(
-                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs,
             )
 
+        # Add by to kwargs, so it can get automatically converted to Pandas
+        # when necessary:
+        kwargs["__by"] = by
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 

@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.pandas.utils import from_pandas, to_pandas
+from modin.pandas.utils import from_pandas, to_pandas, try_cast_to_pandas
 from .utils import (
     df_equals,
     check_df_columns_have_nans,
@@ -271,8 +271,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     modin_df = from_pandas(pandas_df)
     n = 1
     modin_groupby = modin_df.groupby(by=by, as_index=as_index)
-    if isinstance(by, list):
-        by = [o._to_pandas() if isinstance(o, pd.Series) else o for o in by]
+    by = try_cast_to_pandas(by)
     pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
