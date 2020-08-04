@@ -510,7 +510,7 @@ class Series(BasePandasDataset):
                     )
                 ).__name__
             except Exception:
-                return_type = self.__name__
+                return_type = type(self).__name__
         if (
             isinstance(func, str)
             or is_list_like(func)
