@@ -914,7 +914,7 @@ class BasePandasFrame(object):
         """
 
         def merge_index(obj1, obj2):
-            if axis == 1 and how == "outer" and sort == False:
+            if axis == 1 and how == "outer" and not sort:
                 return obj1.union(obj2, sort=False)
             else:
                 return obj1.join(obj2, how=how, sort=sort)
