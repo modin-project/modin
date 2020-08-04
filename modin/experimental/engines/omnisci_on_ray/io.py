@@ -182,7 +182,7 @@ class OmnisciOnRayIO(RayIO):
             )
 
             return cls.from_arrow(at)
-        except:
+        except pa.ArrowNotImplementedError:
             if eng in ["arrow"]:
                 raise
 

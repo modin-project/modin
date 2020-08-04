@@ -51,10 +51,6 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         # For now OmniSci engine support only a single node cluster.
         # Therefore remote execution is not necessary and will be added
         # later.
-
-        print("Executing DF plan:")
-        plan.dump(">")
-
         omniSession = OmnisciServer()
 
         # First step is to make sure all partitions are in OmniSci.
@@ -81,19 +77,6 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         rb = curs.getArrowRecordBatch()
         assert rb
         at = pyarrow.Table.from_batches([rb])
-
-        # Currently boolean columns are loaded as integer
-        # series for some reason. Fix it here for now.
-        # Using Arrow should solve the problem later.
-        # for col in dtypes.index:
-        #    if dtypes[col] == "bool":
-        #        df[col] = df[col].astype("bool")
-        #    elif dtypes[col].name == "category":
-        #        df[col] = df[col].astype("category")
-
-        # if index_cols is not None:
-        #    df = df.set_index(index_cols)
-        #    df.index.rename(cls._names_from_index_cols(index_cols), inplace=True)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class.put_arrow(at)
