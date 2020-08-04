@@ -503,9 +503,6 @@ class Series(BasePandasDataset):
                 )
             ).__name__
         except Exception:
-<<<<<<< HEAD
-            return_type = type(self).__name__
-=======
             try:
                 return_type = type(
                     getattr(pandas.Series(0, index=self.index[:1]), apply_func)(
@@ -514,7 +511,6 @@ class Series(BasePandasDataset):
                 ).__name__
             except Exception:
                 return_type = self.__name__
->>>>>>> 85a8cad... FIX-#1674: rebase with master
         if (
             isinstance(func, str)
             or is_list_like(func)
