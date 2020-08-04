@@ -1419,11 +1419,12 @@ class Series(BasePandasDataset):
             A scalar or array of insertion points with the same shape as value.
         """
         value = np.array([value]) if is_scalar(value) else value
-        return (
-            self._query_compiler.searchsorted(value=value, side=side, sorter=sorter)
-            .to_numpy()
-            .squeeze()
-        )
+        # return (
+        #     self._query_compiler.searchsorted(value=value, side=side, sorter=sorter)
+        #     .to_numpy()
+        #     .squeeze()
+        # )
+        return self._query_compiler.searchsorted(value=value, side=side, sorter=sorter)
 
     def sort_values(
         self,

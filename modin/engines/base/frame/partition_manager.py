@@ -260,10 +260,10 @@ class BaseFrameManager(object):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        if clear_call_queue:
-            for col_partitions in partitions:
-                for row_partitions in col_partitions:
-                    row_partitions.call_queue = []
+        # if clear_call_queue:
+        #     for col_partitions in partitions:
+        #         for row_partitions in col_partitions:
+        #             row_partitions.call_queue = []
 
         if keep_partitioning:
             num_splits = len(partitions) if axis == 0 else len(partitions.T)
@@ -338,6 +338,11 @@ class BaseFrameManager(object):
                 df[col] = pandas.Categorical(df[col], categories=uc.categories)
 
         return pandas.concat(dfs)
+
+    @classmethod
+    def combine_partitions(cls, partitions):
+        # Works for Series only
+        return pandas.concat([part[0].get() for part in partitions], copy=False)
 
     @classmethod
     def to_pandas(cls, partitions):
