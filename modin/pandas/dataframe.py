@@ -354,7 +354,7 @@ class DataFrame(BasePandasDataset):
         # in pandas that verify that some results are created. This is a challenge for
         # empty DataFrames, but fortunately they only happen when the `func` type is
         # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `self.__name__` for the return
+        # type(self), so we catch that error and use `type(self).__name__` for the return
         # type.
         try:
             if axis == 0:
@@ -362,12 +362,12 @@ class DataFrame(BasePandasDataset):
             else:
                 init_kwargs = {"columns": self.columns}
             return_type = type(
-                getattr(pandas, self.__name__)(**init_kwargs).apply(
+                getattr(pandas, type(self).__name__)(**init_kwargs).apply(
                     func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
                 )
             ).__name__
         except Exception:
-            return_type = self.__name__
+            return_type = type(self).__name__
         if return_type not in ["DataFrame", "Series"]:
             return query_compiler.to_pandas().squeeze()
         else:
@@ -847,7 +847,7 @@ class DataFrame(BasePandasDataset):
             .astype(self.dtypes)
             .eval(expr, **kwargs)
         ).__name__
-        if return_type == self.__name__:
+        if return_type == type(self).__name__:
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         else:
             if inplace:

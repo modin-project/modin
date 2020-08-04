@@ -19,78 +19,166 @@ jobs:
       - run: git remote add upstream https://github.com/modin-project/modin.git
       - run: git fetch upstream
       - run: npx commitlint --from upstream/master --to HEAD --verbose
+
   lint-black:
     name: lint (black)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install black
       - run: black --check --diff modin/
+
   lint-flake8:
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
       - run: flake8 --enable=T modin
+
+  prepare-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest",  "windows-latest"]
+        python-version: ["3.6", "3.7", "3.8"]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache pip if Ubuntu
+        if: startsWith(runner.os, 'Linux')
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: Cache pip if Windows
+        if: startsWith(runner.os, 'Windows')
+        uses: actions/cache@v1
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
+      - shell: bash -l {0}
+        run: pip install ray==0.8.6
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
   test-api:
+    needs: prepare-cache
     runs-on: ubuntu-latest
     name: test api
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
-          python-version: "3.7.x"
-          architecture: "x64"
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        # `shell: bash -l {0}` - special way to activate modin environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_api.py
+      - name: Api tests
+        shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_api.py
+
   test-headers:
+    needs: prepare-cache
     runs-on: ubuntu-latest
     name: test-headers
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/test/test_headers.py
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Headers tests
+        shell: bash -l {0}
+        run: python -m pytest modin/test/test_headers.py
+
   test-internals:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     name: test-internals
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
-          python-version: "3.6.x"
-          architecture: "x64"
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Internals tests
+        shell: bash -l {0}
+        run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
+
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6.x", "3.7.x"]
+        python-version: ["3.6", "3.7", "3.8"]
         engine: ["python", "ray", "dask"]
         part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
@@ -98,42 +186,103 @@ jobs:
       MODIN_MEMORY: 1000000000
     name: test (${{matrix.engine}}, part ${{matrix.part}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          architecture: "x64"
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
       - name: Install HDF5
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: bash run-tests.sh ${{matrix.engine}} -k "TestDataFrame${{matrix.part}}"
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/ -k "TestDataFrame${{matrix.part}}"
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_rolling.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_rolling.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
         if: matrix.part == 3
-      - run: bash <(curl -s https://codecov.io/bash)
+      - shell: bash -l {0}
+        run: bash <(curl -s https://codecov.io/bash)
+
+  test-experimental:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    env:
+      MODIN_ENGINE: "python"
+      MODIN_EXPERIMENTAL: "True"
+      MODIN_MEMORY: 1000000000
+    name: test experimental
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrameMapMetadata
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
+      - shell: bash -l {0}
+        run: bash <(curl -s https://codecov.io/bash)
+
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.6.x", "3.7.x"]
+        python-version: ["3.6", "3.7", "3.8"]
         engine: ["ray", "dask"]
         part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
@@ -141,50 +290,87 @@ jobs:
       MODIN_MEMORY: 1000000000
     name: test-windows
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          architecture: "x64"
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_dataframe.py::TestDataFrame${{matrix.part}}
         if: matrix.part != 3
-      - run: python -m pytest modin/pandas/test/test_series.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_rolling.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_rolling.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_concat.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_groupby.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_reshape.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_general.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - run: choco install codecov
-      - run: codecov -f .\coverage.xml -t ${{secrets.CODECOV_TOKEN}}
+      - shell: bash -l {0}
+        run: choco install codecov
+      - shell: bash -l {0}
+        run: codecov -f ./coverage.xml
+
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6.x", "3.7.x"]
+        python-version: ["3.6", "3.7", "3.8"]
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v1
+      - name: Cache pip
+        uses: actions/cache@v1
         with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
           python-version: ${{matrix.python-version}}
-          architecture: "x64"
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pip install -r requirements.txt
-      - run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
