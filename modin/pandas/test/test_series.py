@@ -777,6 +777,28 @@ def test_apply_numeric(request, data, func):
             df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
+@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", ["count", "all", "kurt", "array", "searchsorted"])
+def test_apply_text_func(level, data, func, axis):
+    func_kwargs = {}
+    if level:
+        func_kwargs.update({"level": level})
+    if axis:
+        func_kwargs.update({"axis": axis})
+    rows_number = len(next(iter(data.values())))  # length of the first data column
+    level_0 = np.random.choice([0, 1, 2], rows_number)
+    level_1 = np.random.choice([3, 4, 5], rows_number)
+    index = pd.MultiIndex.from_arrays([level_0, level_1])
+
+    modin_series, pandas_series = create_test_series(data)
+    modin_series.index = index
+    pandas_series.index = index
+
+    eval_general(modin_series, pandas_series, lambda df: df.apply(func), **func_kwargs)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("skipna", [True, False])
 def test_argmax(data, skipna):

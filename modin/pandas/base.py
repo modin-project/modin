@@ -583,9 +583,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
-            result = self._query_compiler.apply(
-                func, axis=axis, raw=raw, result_type=result_type, *args, **kwds,
-            )
+            # if axis != 1 function can be bounded to the Series, which doesn't
+            # support axis parameter
+            if axis == 1:
+                kwds["axis"] = axis
+            result = self._string_function(func, *args, **kwds)
             if isinstance(result, BasePandasDataset):
                 return result._query_compiler
             return result
@@ -741,7 +743,6 @@ class BasePandasDataset(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
-
         axis = self._get_axis_number(axis) if axis is not None else 0
         if numeric_only is not None and numeric_only:
             self._validate_dtypes(numeric_only=numeric_only)
