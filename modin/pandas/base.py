@@ -3456,7 +3456,10 @@ class BasePandasDataset(object):
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
         indexer = None
-        if isinstance(key, slice) or (isinstance(key, str) and key not in self.columns):
+        if isinstance(key, slice) or (
+            isinstance(key, str)
+            and (not hasattr(self, "columns") or key not in self.columns)
+        ):
             indexer = convert_to_index_sliceable(
                 getattr(pandas, type(self).__name__)(index=self.index), key
             )
