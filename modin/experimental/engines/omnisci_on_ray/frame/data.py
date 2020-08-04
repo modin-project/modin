@@ -15,7 +15,7 @@ from modin.engines.base.frame.data import BasePandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from .partition_manager import OmnisciOnRayFrameManager
 
-from pandas.core.index import ensure_index, Index, MultiIndex
+from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import _get_dtype, is_list_like
 import pandas as pd
 
@@ -880,9 +880,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         else:
             assert isinstance(obj, pyarrow.Table)
             if self._index_cols is None:
-                self._index_cache = Index.__new__(
-                    Index, data=np.arange(0, obj.num_rows), dtype="int"
-                )
+                self._index_cache = Index.__new__(RangeIndex, data=range(obj.num_rows))
             else:
                 index_at = obj.drop([f"F_{col}" for col in self.columns])
                 index_df = index_at.to_pandas()
