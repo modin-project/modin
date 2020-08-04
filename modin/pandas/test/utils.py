@@ -478,14 +478,8 @@ def df_equals(df1, df2):
     # Convert to pandas
     if isinstance(df1, (pd.DataFrame, pd.Series)):
         df1 = to_pandas(df1)
-        # Get rid of implementation detail:
-        if df1.index.name == "__reduced__":
-            df1.index.name = None
     if isinstance(df2, (pd.DataFrame, pd.Series)):
         df2 = to_pandas(df2)
-        # Get rid of implementation detail:
-        if df2.index.name == "__reduced__":
-            df2.index.name = None
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
