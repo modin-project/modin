@@ -896,32 +896,39 @@ class BasePandasFrame(object):
         """
         Joins a pair of index objects (columns or rows) by a given strategy.
 
+        Unlike Index.join() in Pandas, if axis is 1, the sort is
+        False, and how is "outer", the result will _not_ be sorted.
+
         Parameters
         ----------
-            axis : 0 or 1
-                The axis index object to join (0 - rows, 1 - columns).
-            other_index : Index
-                The other_index to join on.
-            how : {'left', 'right', 'inner', 'outer'}
-                The type of join to join to make.
-            sort : boolean
-                Whether or not to sort the joined index
+
+        axis : 0 or 1 The axis index object to join (0 - rows, 1 - columns).
+        other_index : Index The other_index to join on.  how : {'left',
+        'right', 'inner', 'outer'} The type of join to join to make.  sort :
+        boolean Whether or not to sort the joined index
 
         Returns
         -------
-        Index
-            Joined indices.
+
+        Index Joined indices.
         """
+
+        def merge_index(obj1, obj2):
+            if axis == 1 and how == "outer" and sort == False:
+                return obj1.union(obj2, sort=False)
+            else:
+                return obj1.join(obj2, how=how, sort=sort)
+
         if isinstance(other_index, list):
             joined_obj = self.columns if axis else self.index
             # TODO: revisit for performance
             for obj in other_index:
-                joined_obj = joined_obj.join(obj, how=how, sort=sort)
+                joined_obj = merge_index(joined_obj, obj)
             return joined_obj
         if axis:
             return self.columns.join(other_index, how=how, sort=sort)
         else:
-            return self.index.join(other_index, how=how, sort=sort)
+            return merge_index(self.index, other_index)
 
     # Internal methods
     # These methods are for building the correct answer in a modular way.
