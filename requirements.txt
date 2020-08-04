@@ -14,8 +14,6 @@ s3fs
 pytest
 coverage<5.0
 pytest-cov
-pytest-testmon
-pytest-custom_exit_code
 pytest-xdist
 feather-format
 lxml
