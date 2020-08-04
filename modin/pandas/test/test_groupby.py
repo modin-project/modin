@@ -1233,3 +1233,31 @@ def test_mixed_columns_not_from_df(columns):
     df2 = pd.concat([df2])
     exp = df2.groupby(get_columns(df2)).size()
     df_equals(ref, exp)
+
+
+@pytest.mark.parametrize(
+    # When True, do df[obj], otherwise just use the obj
+    "columns",
+    [
+        [(False, "a")],
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b")],
+        [(False, "b"), (False, "a")],
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+        [(False, "a"), (False, pd.Series([5, 6, 7, 8]))],
+    ],
+)
+def test_unknown_groupby(columns):
+    def get_columns(df):
+        return [df[name] if lookup else name for (lookup, name) in columns]
+
+    data = {"b": [11, 11, 22, 200], "c": [111, 111, 222, 7000]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    with pytest.raises(KeyError):
+        pandas_df.groupby(by=get_columns(pandas_df))
+    with pytest.raises(KeyError):
+        modin_df.groupby(by=get_columns(modin_df))

@@ -474,8 +474,11 @@ class DataFrame(BasePandasDataset):
                     # In the future, we will need to add logic to handle this, but for now
                     # we default to pandas in this case.
                     pass
-                elif mismatch and all(isinstance(obj, str) for obj in by):
-                    raise KeyError(next(x for x in by if x not in self))
+                elif mismatch and any(
+                    isinstance(obj, str) and obj not in self.columns for obj in by
+                ):
+                    names = [o.name if isinstance(o, Series) else o for o in by]
+                    raise KeyError(next(x for x in names if x not in self))
         return DataFrameGroupBy(
             self,
             by,
