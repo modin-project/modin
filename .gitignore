@@ -173,7 +173,4 @@ cscope.out
 # Dask workspace
 dask-worker-space/
 
-# VS Code files
-.vscode
-
 node_modules
