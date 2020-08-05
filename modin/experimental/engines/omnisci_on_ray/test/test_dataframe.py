@@ -108,6 +108,8 @@ class TestCSV:
         ):
             rp = pd.read_csv(csv_file, **kwargs)
             rm = to_pandas(mpd.read_csv(csv_file, engine="arrow", **kwargs))
+            assert rp is not None
+            assert rm is not None
             # TODO: df_equals(rp, rm)  #  needs inexact comparison
 
     def test_time_parsing(self):
