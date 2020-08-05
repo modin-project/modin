@@ -1418,13 +1418,27 @@ class Series(BasePandasDataset):
         int or array of int
             A scalar or array of insertion points with the same shape as value.
         """
-        value = np.array([value]) if is_scalar(value) else value
-        # return (
-        #     self._query_compiler.searchsorted(value=value, side=side, sorter=sorter)
-        #     .to_numpy()
-        #     .squeeze()
-        # )
-        return self._query_compiler.searchsorted(value=value, side=side, sorter=sorter)
+        # searchsorted should return item number irrespective of Series index, so
+        # Series.index is always set to pandas.RangeIndex, which can be easily processed
+        # on the query_compiler level
+        if not isinstance(self.index, pandas.RangeIndex):
+            self.index = pandas.RangeIndex(start=0, stop=len(self.index))
+        if sorter is not None:
+            self = self.iloc[sorter].reset_index(drop=True)
+            sorter = None
+        result = self.__constructor__(
+            query_compiler=self._query_compiler.searchsorted(
+                value=value, side=side, sorter=sorter
+            )
+        ).squeeze()
+
+        # matching Pandas output
+        if not is_scalar(value) and not is_list_like(result):
+            result = np.array([result])
+        elif isinstance(result, type(self)):
+            result = result.to_numpy()
+
+        return result
 
     def sort_values(
         self,

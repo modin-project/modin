@@ -340,11 +340,6 @@ class BaseFrameManager(object):
         return pandas.concat(dfs)
 
     @classmethod
-    def combine_partitions(cls, partitions):
-        # Works for Series only
-        return pandas.concat([part[0].get() for part in partitions], copy=False)
-
-    @classmethod
     def to_pandas(cls, partitions):
         """Convert this object into a Pandas DataFrame from the partitions.
 
