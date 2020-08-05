@@ -29,3 +29,4 @@ dependencies:
   - coverage<5.0
   - pip:
     - ray==0.8.6
+    - rpyc
