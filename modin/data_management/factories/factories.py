@@ -300,3 +300,14 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
 
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
+
+
+class ExperimentalOmnisciOnRayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
+
+        cls.io_cls = OmnisciOnRayIO
