@@ -39,8 +39,9 @@ class ModinDistribution(Distribution):
 
 dask_deps = ["dask>=2.12.0", "distributed>=2.12.0"]
 ray_deps = ["ray==0.8.6", "pyarrow<0.17"]
+remote_deps = ["rpyc", "cloudpickle", "boto3"]
 
-all_deps = dask_deps + ray_deps
+all_deps = dask_deps + ray_deps + remote_deps
 
 setup(
     name="modin",
@@ -58,6 +59,7 @@ setup(
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
         "ray": ray_deps,
+        "remote": remote_deps,
         "all": all_deps,
     },
     python_requires=">=3.6.1",
