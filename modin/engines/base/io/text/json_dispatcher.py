@@ -17,7 +17,6 @@ from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from io import BytesIO
 import pandas
 import numpy as np
-from csv import QUOTE_NONE
 
 from modin.config import NPartitions
 
@@ -73,7 +72,6 @@ class JSONDispatcher(TextFileDispatcher):
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
-                is_quoting=(args.get("quoting", "") != QUOTE_NONE),
             )
             for start, end in splits:
                 args.update({"start": start, "end": end})

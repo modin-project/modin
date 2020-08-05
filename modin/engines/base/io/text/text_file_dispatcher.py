@@ -198,6 +198,8 @@ class TextFileDispatcher(FileDispatcher):
         skiprows: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
+        header_size: int = 0,
+        pre_reading: int = 0,
     ):
         """
         Compute chunk sizes in bytes for every partition.
@@ -211,33 +213,59 @@ class TextFileDispatcher(FileDispatcher):
             If not specified grabs the value from `modin.config.NPartitions.get()`.
         nrows : int, optional
             Number of rows of file to read.
-        skiprows : array or callable, optional
+        skiprows : int, optional
             Specifies rows to skip.
         quotechar : bytes, default: b'"'
             Indicate quote in a file.
         is_quoting : bool, default: True
             Whether or not to consider quotes.
+        header_size : int, default: 0
+            Number of rows, that occupied by header.
+        pre_reading : int, default: 0
+            Number of rows between header and skipped rows, that should be read.
 
         Returns
         -------
         list
-            An array, where each element of array is a tuple of two ints:
-            beginning and the end offsets of the current chunk.
+            List with the next elements:
+                int : partition start read byte
+                int : partition end read byte
         """
+        read_rows_counter = 0
+        outside_quotes = True
+
         if num_partitions is None:
-            num_partitions = NPartitions.get()
+            num_partitions = NPartitions.get() - 1 if pre_reading else NPartitions.get()
 
         rows_skipper = cls.rows_skipper_builder(f, quotechar, is_quoting=is_quoting)
         result = []
 
         file_size = cls.file_size(f)
 
+        rows_skipper(header_size)
+
+        if pre_reading:
+            pre_reading_start = f.tell()
+            outside_quotes, read_rows = cls._read_rows(
+                f,
+                nrows=pre_reading,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+                outside_quotes=outside_quotes,
+            )
+            read_rows_counter += read_rows
+
+            result.append((pre_reading_start, f.tell()))
+
+            # add outside_quotes
+            if is_quoting and not outside_quotes:
+                warnings.warn("File has mismatched quotes")
+
         rows_skipper(skiprows)
 
         start = f.tell()
 
         if nrows:
-            read_rows_counter = 0
             partition_size = max(1, num_partitions, nrows // num_partitions)
             while f.tell() < file_size and read_rows_counter < nrows:
                 if read_rows_counter + partition_size > nrows:

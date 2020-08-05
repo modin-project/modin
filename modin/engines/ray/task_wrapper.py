@@ -63,6 +63,7 @@ class RayTask:
             Ray identifier of the result being put to Plasma store.
         """
         return deploy_ray_func.options(num_returns=num_returns).remote(func, kwargs)
+        # return func(**kwargs)
 
     @classmethod
     def materialize(cls, obj_id):

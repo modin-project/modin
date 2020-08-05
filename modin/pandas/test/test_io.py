@@ -339,55 +339,116 @@ class TestCsv:
             skipfooter=skipfooter,
         )
 
-    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
-    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
-    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
-    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("header", ["infer", None, 0])
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            2,
+            lambda x: x % 2,
+            lambda x: x > 25,
+            lambda x: x > 128,
+            np.arange(10, 50),
+            np.arange(10, 50, 2),
+        ],
+    )
     @pytest.mark.parametrize("nrows", [35, None])
-    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    @pytest.mark.parametrize(
+        "names",
+        [
+            [f"c{col_number}" for col_number in range(4)],
+            [f"c{col_number}" for col_number in range(6)],
+            None,
+        ],
+    )
+    @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
     def test_read_csv_parsing_2(
         self,
-        true_values,
-        false_values,
+        make_csv_file,
+        header,
         skiprows,
-        skipfooter,
         nrows,
         names,
+        encoding,
     ):
-        xfail_case_1 = (
-            (false_values or true_values)
-            and Engine.get() != "Python"
-            and Backend.get() != "Omnisci"
-        )
-        xfail_case_2 = (
+        xfail_case = (
             Backend.get() == "Omnisci"
+            and header is not None
             and isinstance(skiprows, int)
             and names is None
-            and skipfooter == 0
             and nrows is None
-            and not true_values
-            and not false_values
         )
-        if xfail_case_1:
-            pytest.xfail("modin and pandas dataframes differs - issue #2446")
-        if xfail_case_2:
+        if xfail_case:
             pytest.xfail(
                 "read_csv fails because of duplicated columns names - issue #3080"
             )
+        if encoding:
+            unique_filename = get_unique_filename()
+            make_csv_file(
+                filename=unique_filename,
+                encoding=encoding,
+            )
+        kwargs = {
+            "filepath_or_buffer": unique_filename
+            if encoding
+            else pytest.csvs_names["test_read_csv_regular"],
+            "header": header,
+            "skiprows": skiprows,
+            "nrows": nrows,
+            "names": names,
+            "encoding": encoding,
+        }
 
+        if Engine.get() != "Python":
+            df = pandas.read_csv(**dict(kwargs, nrows=1))
+            # in that case first partition will contain str
+            if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
+                pytest.xfail("read_csv incorrect output with float data - issue #2634")
         eval_io(
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(skiprows),
             # read_csv kwargs
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("nrows", [35, None])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_csv_parsing_3(
+        self,
+        true_values,
+        false_values,
+        skipfooter,
+        nrows,
+    ):
+        xfail_case = (
+            (false_values or true_values)
+            and Engine.get() != "Python"
+            and Backend.get() != "Omnisci"
+        )
+        if xfail_case:
+            pytest.xfail("modin and pandas dataframes differs - issue #2446")
+
+        eval_io(
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             true_values=true_values,
             false_values=false_values,
-            skiprows=skiprows,
             skipfooter=skipfooter,
             nrows=nrows,
-            names=names,
         )
 
     def test_read_csv_skipinitialspace(self):
@@ -889,12 +950,6 @@ class TestCsv:
 
             pd.read_csv(
                 StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
-            )
-
-        with pytest.warns(UserWarning):
-            pd.read_csv(
-                pytest.csvs_names["test_read_csv_regular"],
-                skiprows=lambda x: x in [0, 2],
             )
 
     @pytest.mark.xfail(
