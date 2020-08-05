@@ -2614,11 +2614,12 @@ def test_sample(data):
         modin_series.sample(n=-3)
 
 
+@pytest.mark.parametrize("use_multiindex", [True, False])
 @pytest.mark.parametrize("sorter", [True, None])
 @pytest.mark.parametrize("values_number", [1, 2, 5])
 @pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_searchsorted(data, side, values_number, sorter):
+def test_searchsorted(data, side, values_number, sorter, use_multiindex):
     import random
 
     if not sorter:
@@ -2626,6 +2627,16 @@ def test_searchsorted(data, side, values_number, sorter):
     else:
         modin_series, pandas_series = create_test_series(vals=data)
         sorter = np.argsort(list(modin_series))
+
+    if use_multiindex:
+        rows_number = len(modin_series.index)
+        level_0_series = np.random.choice([0, 1], rows_number)
+        level_1_series = np.random.choice([2, 3], rows_number)
+        index_series = pd.MultiIndex.from_arrays(
+            [level_0_series, level_1_series], names=["first", "second"]
+        )
+        modin_series.index = index_series
+        pandas_series.index = index_series
 
     min_sammple = modin_series.min(skipna=True)
     max_sammple = modin_series.max(skipna=True)
