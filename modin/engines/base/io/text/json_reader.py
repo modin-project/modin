@@ -41,7 +41,7 @@ class JSONReader(TextFileReader):
 
             num_partitions = DEFAULT_NPARTITIONS
             num_splits = min(len(columns), num_partitions)
-            chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
+            part_size = max(1, total_bytes // num_partitions)
 
             partition_ids = []
             index_ids = []
@@ -63,7 +63,9 @@ class JSONReader(TextFileReader):
                 start = f.tell()
                 args = {"fname": path_or_buf, "num_splits": num_splits, "start": start}
                 args.update(kwargs)
-                partition_id = cls.call_deploy(f, chunk_size, num_splits + 3, args)
+                partition_id = cls.call_deploy(
+                    f, num_splits + 3, args, chunk_size_bytes=part_size
+                )
                 partition_ids.append(partition_id[:-3])
                 index_ids.append(partition_id[-3])
                 dtypes_ids.append(partition_id[-2])

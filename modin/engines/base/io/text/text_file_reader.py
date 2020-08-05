@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 from modin.engines.base.io.file_reader import FileReader
-import re
 import numpy as np
 import warnings
 import csv
@@ -20,24 +19,36 @@ import csv
 
 class TextFileReader(FileReader):
     @classmethod
-    def call_deploy(cls, f, chunk_size, num_return_vals, args, quotechar=b'"'):
+    def call_deploy(
+        cls, f, num_return_vals, args, quotechar=b'"', nrows=None, chunk_size_bytes=None
+    ):
+        assert nrows is not None or chunk_size_bytes is not None
+
         args["start"] = f.tell()
-        chunk = f.read(chunk_size)
-        line = f.readline()  # Ensure we read up to a newline
-        # We need to ensure that one row isn't being split across different partitions
+        is_quoting = args.get("quoting", "") != csv.QUOTE_NONE
+        outside_quotes = True
 
-        if args.get("quoting", "") != csv.QUOTE_NONE:
-            quote_count = (
-                re.subn(quotechar, b"", chunk)[1] + re.subn(quotechar, b"", line)[1]
-            )
-            while quote_count % 2 != 0:
-                line = f.readline()
-                quote_count += re.subn(quotechar, b"", line)[1]
-                if not line:
-                    break
+        # We want to avoid unnecessary overhead of counting amount
+        # of readed rows if we don't need that value
+        if nrows is None:
+            chunk = f.read(chunk_size_bytes)
+            line = f.readline()  # Ensure we read up to a newline
+            # We need to ensure that one row isn't being split across different partitions
 
-            if quote_count % 2 != 0:
-                warnings.warn("File has mismatched quotes")
+            if is_quoting:
+                outside_quotes = not (
+                    (chunk.count(quotechar) + line.count(quotechar)) % 2
+                )
+                while not outside_quotes:
+                    line = f.readline()
+                    outside_quotes = line.count(quotechar) % 2
+                    if not line:
+                        break
+        else:
+            outside_quotes = cls.read_rows(f, nrows, quotechar, is_quoting)
+
+        if is_quoting and not outside_quotes:
+            warnings.warn("File has mismatched quotes")
 
         # The workers return multiple objects for each part of the file read:
         # - The first n - 2 objects are partitions of data
@@ -81,3 +92,18 @@ class TextFileReader(FileReader):
         except ImportError:  # pragma: no cover
             pass
         return False
+
+    @classmethod
+    def read_rows(cls, f, nrows, quotechar=b'"', is_quoting=True):
+        if nrows <= 0:
+            return
+        rows_readed = 0
+        outside_quotes = True
+        for line in f:
+            if is_quoting and line.count(quotechar) % 2:
+                outside_quotes = not outside_quotes
+            if outside_quotes:
+                rows_readed += 1
+                if rows_readed >= nrows:
+                    break
+        return outside_quotes

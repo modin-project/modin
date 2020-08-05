@@ -117,6 +117,17 @@ class FileReader:
         return size
 
     @classmethod
+    def lines_amount(cls, f, from_begin=False):
+        cur_pos = f.tell()
+        if from_begin:
+            f.seek(0, os.SEEK_SET)
+        nlines = 0
+        for _ in f:
+            nlines += 1
+        f.seek(cur_pos, os.SEEK_SET)
+        return nlines
+
+    @classmethod
     def file_exists(cls, file_path):
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)

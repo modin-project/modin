@@ -11,7 +11,15 @@ reproduce the issue",2,3,4
 "H",2,3,4
 "I",2,3,4
 "J",2,3,4
-"H",2,3,4
+"And there is another
+string with several
+newline characters
+that will probably cause some
+problem for Modin
+and I suspect that
+we
+will hopefully
+reproduce the issue",2,3,4
 "I",2,3,4
 "J",2,3,4
 "H",2,3,4
@@ -19,4 +27,40 @@ reproduce the issue",2,3,4
 "J",2,3,4
 "H",2,3,4
 "I",2,3,4
+"And there is another
+string with several
+newline characters
+that will probably cause some
+problem for Modin
+and I suspect that
+we
+will hopefully
+reproduce the issue",2,3,4
+"H",2,3,4
+"I",2,3,4
 "J",2,3,4
+"And there is another
+string with several
+newline characters
+that will probably cause some
+problem for Modin
+and I suspect that
+we
+will hopefully
+reproduce the issue",2,3,4
+"I",2,3,4
+"J",2,3,4
+"H",2,3,4
+"I",2,3,4
+"J",2,3,4
+"H",2,3,4
+"I",2,3,4
+"And there is another
+string with several
+newline characters
+that will probably cause some
+problem for Modin
+and I suspect that
+we
+will hopefully
+reproduce the issue",2,3,4
