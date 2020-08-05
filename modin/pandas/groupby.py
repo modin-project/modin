@@ -125,17 +125,13 @@ class DataFrameGroupBy(object):
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
                 if isinstance(by, list) and all(isinstance(o, str) for o in by):
-                    self._index_grouped_cache = {
-                        k: v.index
-                        for k, v in self._df._query_compiler.getitem_column_array(by)
-                        .to_pandas()
-                        .groupby(by=by)
-                    }
+                    pandas_df = self._df._query_compiler.getitem_column_array(
+                        by
+                    ).to_pandas()
                 else:
                     by = try_cast_to_pandas(by)
-                    self._index_grouped_cache = (
-                        self._df._to_pandas().groupby(by=by).groups
-                    )
+                    pandas_df = self._df._to_pandas()
+                self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
