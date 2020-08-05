@@ -926,9 +926,9 @@ class BasePandasFrame(object):
                 joined_obj = merge_index(joined_obj, obj)
             return joined_obj
         if axis:
-            return self.columns.join(other_index, how=how, sort=sort)
+            return merge_index(self.columns, other_index)
         else:
-            return merge_index(self.index, other_index)
+            return self.index.join(other_index, how=how, sort=sort)
 
     # Internal methods
     # These methods are for building the correct answer in a modular way.
