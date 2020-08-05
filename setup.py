@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_WHEEL = False
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 if HAS_WHEEL:
@@ -50,6 +50,7 @@ setup(
     distclass=ModinDistribution,
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(),
+    include_package_data=True,
     license="Apache 2",
     url="https://github.com/modin-project/modin",
     long_description=long_description,
