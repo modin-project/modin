@@ -119,14 +119,14 @@ class BasePandasDataset(object):
             sib._query_compiler = new_query_compiler
         old_query_compiler.free()
 
-    def _handle_level_agg(self, axis, level, op, **kwargs):
+    def _handle_level_agg(self, axis, level, op, sort=False, **kwargs):
         """Helper method to perform error checking for aggregation functions with a level parameter.
         Args:
             axis: The axis to apply the operation on
             level: The level of the axis to apply the operation on
             op: String representation of the operation to be performed on the level
         """
-        return getattr(self.groupby(level=level, axis=axis, sort=False), op)(**kwargs)
+        return getattr(self.groupby(level=level, axis=axis, sort=sort), op)(**kwargs)
 
     def _validate_other(
         self,
@@ -752,7 +752,7 @@ class BasePandasDataset(object):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
-            return self._handle_level_agg(axis, level, "count")
+            return self._handle_level_agg(axis=axis, level=level, op="count", sort=True)
 
         return self._reduce_dimension(
             self._query_compiler.count(

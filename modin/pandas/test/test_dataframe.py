@@ -31,6 +31,7 @@ from .utils import (
     df_is_empty,
     arg_keys,
     name_contains,
+    test_data,
     test_data_values,
     test_data_keys,
     test_data_with_duplicates_values,
@@ -5392,6 +5393,26 @@ class TestDataFrameIndexing:
         pandas_df = pandas.DataFrame(data)
 
         assert len(modin_df) == len(pandas_df)
+
+    def test_index_order(self):
+        # see #1708 and #1869 for details
+        df_modin, df_pandas = (
+            pd.DataFrame(test_data["dense_nan_data"]),
+            pandas.DataFrame(test_data["dense_nan_data"]),
+        )
+        rows_number = len(df_modin.index)
+        level_0 = np.random.choice([x for x in range(10)], rows_number)
+        level_1 = np.random.choice([x for x in range(10)], rows_number)
+        index = pandas.MultiIndex.from_arrays([level_0, level_1])
+
+        df_modin.index = index
+        df_pandas.index = index
+
+        for func in ["all", "any", "mad", "count"]:
+            df_equals(
+                getattr(df_modin, func)(level=0).index,
+                getattr(df_pandas, func)(level=0).index,
+            )
 
 
 class TestDataFrameIter:
