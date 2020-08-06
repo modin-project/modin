@@ -5361,6 +5361,26 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
+    def test___setitem__mask(self):
+        data = test_data["int_data"]
+        modin_df = pd.DataFrame(data)
+        pandas_df = pandas.DataFrame(data)
+
+        mean = int((RAND_HIGH + RAND_LOW) / 2)
+        pandas_df[pandas_df > mean] = -50
+        modin_df[modin_df > mean] = -50
+
+        df_equals(modin_df, pandas_df)
+
+        pandas_df = pandas.DataFrame(data)
+        modin_df = pd.DataFrame(data)
+        array = (pandas_df > mean).to_numpy()
+
+        modin_df[array] = -50
+        pandas_df[array] = -50
+
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize(
         "data",
         [

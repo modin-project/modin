@@ -2505,7 +2505,7 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
-        if key not in self.columns:
+        if isinstance(key, str) and key not in self.columns:
             # Handle new column case first
             if isinstance(value, Series):
                 if len(self.columns) == 0:
@@ -2543,6 +2543,13 @@ class DataFrame(BasePandasDataset):
             return
 
         if not isinstance(key, str):
+
+            if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
+                if isinstance(key, np.ndarray):
+                    if key.shape != self.shape:
+                        raise ValueError("Array must be same shape as DataFrame")
+                    key = DataFrame(key, columns=self.columns)
+                return self.mask(key, value, inplace=True)
 
             def setitem_without_string_columns(df):
                 # Arrow makes memory-mapped objects immutable, so copy will allow them
