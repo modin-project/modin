@@ -64,7 +64,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         """
 
         def call_queue_closure(data, call_queues):
-            result = data
+            result = data.copy()
             for func, kwargs in call_queues:
                 try:
                     result = func(result, **kwargs)
@@ -75,7 +75,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data, **kwargs))
+        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnPythonFramePartition(
