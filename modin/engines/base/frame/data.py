@@ -901,16 +901,19 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-
-        axis : 0 or 1 The axis index object to join (0 - rows, 1 - columns).
-        other_index : Index The other_index to join on.  how : {'left',
-        'right', 'inner', 'outer'} The type of join to join to make.  sort :
-        boolean Whether or not to sort the joined index
+            axis : 0 or 1
+                The axis index object to join (0 - rows, 1 - columns).
+            other_index : Index
+                The other_index to join on.
+            how : {'left', 'right', 'inner', 'outer'}
+                The type of join to join to make.
+            sort : boolean
+                Whether or not to sort the joined index
 
         Returns
         -------
-
-        Index Joined indices.
+        Index
+            Joined indices.
         """
 
         def merge_index(obj1, obj2):
