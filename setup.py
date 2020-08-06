@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_WHEEL = False
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 if HAS_WHEEL:
@@ -39,8 +39,9 @@ class ModinDistribution(Distribution):
 
 dask_deps = ["dask>=2.12.0", "distributed>=2.12.0"]
 ray_deps = ["ray==0.8.6", "pyarrow<0.17"]
+remote_deps = ["rpyc", "cloudpickle", "boto3"]
 
-all_deps = dask_deps + ray_deps
+all_deps = dask_deps + ray_deps + remote_deps
 
 setup(
     name="modin",
@@ -49,6 +50,7 @@ setup(
     distclass=ModinDistribution,
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(),
+    include_package_data=True,
     license="Apache 2",
     url="https://github.com/modin-project/modin",
     long_description=long_description,
@@ -58,6 +60,7 @@ setup(
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
         "ray": ray_deps,
+        "remote": remote_deps,
         "all": all_deps,
     },
     python_requires=">=3.6.1",

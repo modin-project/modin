@@ -1,2 +1,3 @@
 include versioneer.py
 include modin/_version.py
+include modin/experimental/cloud/ray-autoscaler.yml
