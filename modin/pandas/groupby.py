@@ -707,15 +707,13 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
+        by = try_cast_to_pandas(by)
+
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            by = kwargs.pop("__by")
             return f(
-                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs,
+                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
             )
 
-        # Add by to kwargs, so it can get automatically converted to Pandas
-        # when necessary:
-        kwargs["__by"] = by
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
