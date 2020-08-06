@@ -127,3 +127,12 @@ def wrap_udf_function(func):
 
     wrapper.__name__ = func.__name__
     return wrapper
+
+
+def hashable(obj):
+    """Return whether the object is hashable."""
+    try:
+        hash(obj)
+    except TypeError:
+        return False
+    return True
