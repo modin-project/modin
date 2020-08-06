@@ -896,6 +896,9 @@ class BasePandasFrame(object):
         """
         Joins a pair of index objects (columns or rows) by a given strategy.
 
+        Unlike Index.join() in Pandas, if axis is 1, the sort is
+        False, and how is "outer", the result will _not_ be sorted.
+
         Parameters
         ----------
             axis : 0 or 1
@@ -912,14 +915,21 @@ class BasePandasFrame(object):
         Index
             Joined indices.
         """
+
+        def merge_index(obj1, obj2):
+            if axis == 1 and how == "outer" and not sort:
+                return obj1.union(obj2, sort=False)
+            else:
+                return obj1.join(obj2, how=how, sort=sort)
+
         if isinstance(other_index, list):
             joined_obj = self.columns if axis else self.index
             # TODO: revisit for performance
             for obj in other_index:
-                joined_obj = joined_obj.join(obj, how=how, sort=sort)
+                joined_obj = merge_index(joined_obj, obj)
             return joined_obj
         if axis:
-            return self.columns.join(other_index, how=how, sort=sort)
+            return merge_index(self.columns, other_index)
         else:
             return self.index.join(other_index, how=how, sort=sort)
 

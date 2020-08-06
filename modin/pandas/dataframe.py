@@ -530,6 +530,11 @@ class DataFrame(BasePandasDataset):
         Returns:
             A new DataFrame containing the concatenated values.
         """
+        if sort is False:
+            warnings.warn(
+                "Due to https://github.com/pandas-dev/pandas/issues/35092, "
+                "Pandas ignores sort=False; Modin correctly does not sort."
+            )
         if isinstance(other, (Series, dict)):
             if isinstance(other, dict):
                 other = Series(other)
