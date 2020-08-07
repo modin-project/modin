@@ -1742,12 +1742,6 @@ class BasePandasFrame(object):
             df.index = self.index
             df.columns = self.columns
 
-        # Don't expose the internal implementation detail of __reduced__ to
-        # Pandas:
-        if df.index.name == "__reduced__":
-            df.index = df.index.copy()
-            df.index.name = None
-
         return df
 
     def to_numpy(self):

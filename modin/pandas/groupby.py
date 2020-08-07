@@ -684,6 +684,8 @@ class DataFrameGroupBy(object):
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
         result = type(self._df)(query_compiler=new_manager)
+        if result.index.name == "__reduced__":
+            result.index.name = None
         if self._kwargs.get("squeeze", False):
             return result.squeeze()
         return result
