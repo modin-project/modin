@@ -2031,6 +2031,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_size = GroupbyReduceFunction.register(
         lambda df, **kwargs: pandas.DataFrame(df.size()), lambda df, **kwargs: df.sum()
     )
+    groupby_mean = GroupbyReduceFunction.register(
+        lambda df, **kwargs: df.agg(["sum", "count"]).swaplevel(axis=1),
+        lambda df, **kwargs: df.apply(
+            lambda x: x.loc[:, "sum"].sum() / x.loc[:, "count"].sum()
+        ),
+    )
 
     def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
         # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
