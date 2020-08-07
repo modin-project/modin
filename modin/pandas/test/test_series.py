@@ -2620,8 +2620,6 @@ def test_sample(data):
 @pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_searchsorted(data, side, values_number, sorter, use_multiindex):
-    import random
-
     if not sorter:
         modin_series, pandas_series = create_test_series(vals=data, sort=True)
     else:
@@ -2630,31 +2628,31 @@ def test_searchsorted(data, side, values_number, sorter, use_multiindex):
 
     if use_multiindex:
         rows_number = len(modin_series.index)
-        level_0_series = np.random.choice([0, 1], rows_number)
-        level_1_series = np.random.choice([2, 3], rows_number)
+        level_0_series = random_state.choice([0, 1], rows_number)
+        level_1_series = random_state.choice([2, 3], rows_number)
         index_series = pd.MultiIndex.from_arrays(
             [level_0_series, level_1_series], names=["first", "second"]
         )
         modin_series.index = index_series
         pandas_series.index = index_series
 
-    min_sammple = modin_series.min(skipna=True)
-    max_sammple = modin_series.max(skipna=True)
+    min_sample = modin_series.min(skipna=True)
+    max_sample = modin_series.max(skipna=True)
 
     values = []
-    values.append(pandas_series.sample(n=values_number))
+    values.append(pandas_series.sample(n=values_number, random_state=random_state))
     values.append(
-        np.random.uniform(low=min_sammple, high=max_sammple, size=values_number)
+        random_state.uniform(low=min_sample, high=max_sample, size=values_number)
     )
     values.append(
-        np.random.uniform(low=max_sammple, high=2 * max_sammple, size=values_number)
+        random_state.uniform(low=max_sample, high=2 * max_sample, size=values_number)
     )
     values.append(
-        np.random.uniform(
-            low=min_sammple - max_sammple, high=min_sammple, size=values_number
+        random_state.uniform(
+            low=min_sample - max_sample, high=min_sample, size=values_number
         )
     )
-    pure_float = random.uniform(float(min_sammple), float(max_sammple))
+    pure_float = random_state.uniform(float(min_sample), float(max_sample))
     pure_int = int(pure_float)
     values.append(pure_float)
     values.append(pure_int)
