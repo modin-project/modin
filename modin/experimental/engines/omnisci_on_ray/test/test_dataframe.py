@@ -28,19 +28,54 @@ from modin.pandas.test.utils import (
 )
 
 
-def run_and_compare(fn, data, data2=None, *args, **kwargs):
+def set_execution_mode(frame, mode, recursive=False):
+    if isinstance(frame, (mpd.Series, mpd.DataFrame)):
+        frame = frame._query_compiler._modin_frame
+    frame._force_execution_mode = mode
+    if recursive and hasattr(frame._op, "input"):
+        for child in frame._op.input:
+            set_execution_mode(child, mode, True)
+
+
+def run_and_compare(
+    fn,
+    data,
+    data2=None,
+    force_lazy=True,
+    force_arrow_execute=False,
+    allow_subqueries=False,
+    **kwargs
+):
     if data2 is None:
         pandas_df = pd.DataFrame(data, columns=list(data.keys()))
-        ref_res = fn(df=pandas_df, lib=pd, *args, **kwargs)
+        ref_res = fn(df=pandas_df, lib=pd, **kwargs)
         modin_df = mpd.DataFrame(data, columns=list(data.keys()))
-        exp_res = fn(df=modin_df, lib=mpd, *args, **kwargs)
+        if force_lazy:
+            set_execution_mode(modin_df, "lazy")
+        elif force_arrow_execute:
+            set_execution_mode(modin_df, "arrow")
+        exp_res = fn(df=modin_df, lib=mpd, **kwargs)
+        if force_arrow_execute:
+            set_execution_mode(exp_res, "arrow", allow_subqueries)
+        elif force_lazy:
+            set_execution_mode(exp_res, None, allow_subqueries)
     else:
         pandas_df1 = pd.DataFrame(data, columns=list(data.keys()))
         pandas_df2 = pd.DataFrame(data2, columns=list(data2.keys()))
-        ref_res = fn(df1=pandas_df1, df2=pandas_df2, lib=pd, *args, **kwargs)
+        ref_res = fn(df1=pandas_df1, df2=pandas_df2, lib=pd, **kwargs)
         modin_df1 = mpd.DataFrame(data, columns=list(data.keys()))
         modin_df2 = mpd.DataFrame(data2, columns=list(data2.keys()))
-        exp_res = fn(df1=modin_df1, df2=modin_df2, lib=mpd, *args, **kwargs)
+        if force_lazy:
+            set_execution_mode(modin_df1, "lazy")
+            set_execution_mode(modin_df2, "lazy")
+        elif force_arrow_execute:
+            set_execution_mode(modin_df1, "arrow")
+            set_execution_mode(modin_df2, "arrow")
+        exp_res = fn(df1=modin_df1, df2=modin_df2, lib=mpd, **kwargs)
+        if force_arrow_execute:
+            set_execution_mode(exp_res, "arrow", allow_subqueries)
+        elif force_lazy:
+            set_execution_mode(exp_res, None, allow_subqueries)
     df_equals(ref_res, exp_res)
 
 
@@ -217,7 +252,7 @@ class TestMasks:
         def mask(df, **kwargs):
             return df.iloc[[0, 1]]
 
-        run_and_compare(mask, data=self.data)
+        run_and_compare(mask, data=self.data, allow_subqueries=True)
 
 
 class TestFillna:
@@ -317,9 +352,7 @@ class TestConcat:
             )
             return lib.concat([df1, df2])
 
-        run_and_compare(
-            concat, data=self.data, data2=self.data2,
-        )
+        run_and_compare(concat, data=self.data, data2=self.data2, allow_subqueries=True)
 
 
 class TestGroupby:
@@ -352,7 +385,9 @@ class TestGroupby:
         def groupby_sum(df, cols, as_index, **kwargs):
             return df.groupby(cols, as_index=as_index).c.sum()
 
-        run_and_compare(groupby_sum, data=self.data, cols=cols, as_index=as_index)
+        run_and_compare(
+            groupby_sum, data=self.data, cols=cols, as_index=as_index, force_lazy=False
+        )
 
     def test_groupby_agg_count(self):
         df = pd.DataFrame(self.data)
@@ -649,7 +684,7 @@ class TestGroupby:
             df["c"] = df["c"].apply(lambda x: round(x, 10))
             return df
 
-        run_and_compare(std, data=self.std_data)
+        run_and_compare(std, data=self.std_data, force_lazy=False)
 
 
 class TestMerge:
