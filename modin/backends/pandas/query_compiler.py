@@ -1304,17 +1304,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 if value_result > part_index_start and value_result < part_index_stop:
                     processed_results[f"value{value_number}"] = {
-                        "allocation": 0,
+                        "relative_location": "current_partition",
                         "index": value_result,
                     }
                 elif value_result <= part_index_start:
                     processed_results[f"value{value_number}"] = {
-                        "allocation": -1,
+                        "relative_location": "previoius_partitions",
                         "index": part_index_start,
                     }
                 else:
                     processed_results[f"value{value_number}"] = {
-                        "allocation": 1,
+                        "relative_location": "next_partitions",
                         "index": part_index_stop,
                     }
 
@@ -1324,20 +1324,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def reduce_func(map_results, *args, **kwargs):
             def get_value_index(value_result):
-                alloc = value_result.groupby(level=0).get_group("allocation")
-                ind = value_result.groupby(level=0).get_group("index")
+                value_result_grouped = value_result.groupby(level=0)
+                rel_location = value_result_grouped.get_group("relative_location")
+                ind = value_result_grouped.get_group("index")
                 # executes if result is inside of the mapped part
-                if 0 in alloc.values:
+                if "current_partition" in rel_location.values:
                     assert (
-                        alloc[alloc == 0].count() == 1
+                        rel_location[rel_location == "current_partition"].count() == 1
                     ), "Each value should have single result"
-                    return ind[alloc.values == 0]
+                    return ind[rel_location.values == "current_partition"]
                 # executes if result is between mapped parts
-                elif alloc.nunique(dropna=False) > 1:
-                    return ind[alloc.values == -1][0]
+                elif rel_location.nunique(dropna=False) > 1:
+                    return ind[rel_location.values == "previoius_partitions"][0]
                 # executes if result is outside of the mapped part
                 else:
-                    if 1 in alloc.values:
+                    if "next_partitions" in rel_location.values:
                         return ind[-1]
                     else:
                         return ind[0]
