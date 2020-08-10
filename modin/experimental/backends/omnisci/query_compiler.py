@@ -34,9 +34,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     lazy_execution = True
 
-    def __init__(self, frame):
+    def __init__(self, frame, shape_hint=None):
         assert frame is not None
         self._modin_frame = frame
+        self._shape_hint = shape_hint
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -52,14 +53,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):
-        return self.__constructor__(self._modin_frame)
+        return self.__constructor__(self._modin_frame, self._shape_hint)
 
     def getitem_column_array(self, key, numeric=False):
+        shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
         else:
             new_modin_frame = self._modin_frame.mask(col_indices=key)
-        return self.__constructor__(new_modin_frame)
+        return self.__constructor__(new_modin_frame, shape_hint)
 
     # Merge
 
@@ -237,7 +239,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.fillna(
             value=value, method=method, axis=axis, limit=limit, downcast=downcast,
         )
-        return self.__constructor__(new_frame)
+        return self.__constructor__(new_frame, self._shape_hint)
 
     def concat(self, axis, other, **kwargs):
         """Concatenates two objects together.
@@ -289,7 +291,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(self._modin_frame.dt_extract("year"))
+        return self.__constructor__(
+            self._modin_frame.dt_extract("year"), self._shape_hint
+        )
 
     def dt_month(self):
         """Extract month from Datetime info
@@ -297,7 +301,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(self._modin_frame.dt_extract("month"))
+        return self.__constructor__(
+            self._modin_frame.dt_extract("month"), self._shape_hint
+        )
 
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
@@ -305,10 +311,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(f"{op_name} doesn't support levels")
 
         if isinstance(other, DFAlgQueryCompiler):
+            shape_hint = (
+                self._shape_hint if self._shape_hint == other._shape_hint else None
+            )
             other = other._modin_frame
+        else:
+            shape_hint = self._shape_hint
 
         new_modin_frame = self._modin_frame.bin_op(other, op_name, **kwargs)
-        return self.__constructor__(new_modin_frame)
+        return self.__constructor__(new_modin_frame, shape_hint)
 
     def add(self, other, **kwargs):
         return self._bin_op(other, "add", **kwargs)
@@ -349,8 +360,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError("reset_index doesn't support level arg yet")
 
         drop = kwargs.get("drop", False)
+        shape_hint = self._shape_hint if drop else None
 
-        return self.__constructor__(self._modin_frame.reset_index(drop))
+        return self.__constructor__(
+            self._modin_frame.reset_index(drop), shape_hint=shape_hint
+        )
 
     def astype(self, col_dtypes, **kwargs):
         """Converts columns dtypes to given dtypes.
@@ -362,7 +376,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             DataFrame with updated dtypes.
         """
-        return self.__constructor__(self._modin_frame.astype(col_dtypes))
+        return self.__constructor__(
+            self._modin_frame.astype(col_dtypes), self._shape_hint
+        )
 
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
@@ -420,7 +436,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         ignore_index = kwargs.get("ignore_index", False)
         na_position = kwargs.get("na_position", "last")
         return self.__constructor__(
-            self._modin_frame.sort_rows(columns, ascending, ignore_index, na_position)
+            self._modin_frame.sort_rows(columns, ascending, ignore_index, na_position),
+            self._shape_hint,
         )
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
@@ -442,8 +459,43 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             "column sorting is not yet suported in DFAlgQueryCompiler"
         )
 
+    def columnarize(self):
+        """
+        Transposes this QueryCompiler if it has a single row but multiple columns.
+
+        This method should be called for QueryCompilers representing a Series object,
+        i.e. self.is_series() should be True.
+
+        Returns:
+            Transposed new QueryCompiler or self.
+        """
+        if self._shape_hint == "column":
+            assert len(self.columns) == 1, "wrong shape hint"
+            return self
+
+        if self._shape_hint == "row":
+            # It is OK to trigger execution here because we cannot
+            # transpose in OmniSci anyway.
+            assert len(self.index) == 1, "wrong shape hint"
+            return self.transpose()
+
+        if len(self.columns) != 1 or (
+            len(self.index) == 1 and self.index[0] == "__reduced__"
+        ):
+            res = self.transpose()
+            res._shape_hint = "column"
+            return res
+
+        self._shape_hint = "column"
+        return self
+
+    def is_series(self):
+        if self._shape_hint is not None:
+            return True
+        return len(self.columns) == 1 or len(self.index) == 1
+
     def cat_codes(self):
-        return self.__constructor__(self._modin_frame.cat_codes())
+        return self.__constructor__(self._modin_frame.cat_codes(), self._shape_hint)
 
     def has_multiindex(self):
         return self._modin_frame.has_multiindex()
