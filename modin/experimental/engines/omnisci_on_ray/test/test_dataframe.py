@@ -28,19 +28,54 @@ from modin.pandas.test.utils import (
 )
 
 
-def run_and_compare(fn, data, data2=None, *args, **kwargs):
+def set_execution_mode(frame, mode, recursive=False):
+    if isinstance(frame, (mpd.Series, mpd.DataFrame)):
+        frame = frame._query_compiler._modin_frame
+    frame._force_execution_mode = mode
+    if recursive and hasattr(frame._op, "input"):
+        for child in frame._op.input:
+            set_execution_mode(child, mode, True)
+
+
+def run_and_compare(
+    fn,
+    data,
+    data2=None,
+    force_lazy=True,
+    force_arrow_execute=False,
+    allow_subqueries=False,
+    **kwargs
+):
     if data2 is None:
         pandas_df = pd.DataFrame(data, columns=list(data.keys()))
-        ref_res = fn(df=pandas_df, lib=pd, *args, **kwargs)
+        ref_res = fn(df=pandas_df, lib=pd, **kwargs)
         modin_df = mpd.DataFrame(data, columns=list(data.keys()))
-        exp_res = fn(df=modin_df, lib=mpd, *args, **kwargs)
+        if force_lazy:
+            set_execution_mode(modin_df, "lazy")
+        elif force_arrow_execute:
+            set_execution_mode(modin_df, "arrow")
+        exp_res = fn(df=modin_df, lib=mpd, **kwargs)
+        if force_arrow_execute:
+            set_execution_mode(exp_res, "arrow", allow_subqueries)
+        elif force_lazy:
+            set_execution_mode(exp_res, None, allow_subqueries)
     else:
         pandas_df1 = pd.DataFrame(data, columns=list(data.keys()))
         pandas_df2 = pd.DataFrame(data2, columns=list(data2.keys()))
-        ref_res = fn(df1=pandas_df1, df2=pandas_df2, lib=pd, *args, **kwargs)
+        ref_res = fn(df1=pandas_df1, df2=pandas_df2, lib=pd, **kwargs)
         modin_df1 = mpd.DataFrame(data, columns=list(data.keys()))
         modin_df2 = mpd.DataFrame(data2, columns=list(data2.keys()))
-        exp_res = fn(df1=modin_df1, df2=modin_df2, lib=mpd, *args, **kwargs)
+        if force_lazy:
+            set_execution_mode(modin_df1, "lazy")
+            set_execution_mode(modin_df2, "lazy")
+        elif force_arrow_execute:
+            set_execution_mode(modin_df1, "arrow")
+            set_execution_mode(modin_df2, "arrow")
+        exp_res = fn(df1=modin_df1, df2=modin_df2, lib=mpd, **kwargs)
+        if force_arrow_execute:
+            set_execution_mode(exp_res, "arrow", allow_subqueries)
+        elif force_lazy:
+            set_execution_mode(exp_res, None, allow_subqueries)
     df_equals(ref_res, exp_res)
 
 
@@ -206,18 +241,16 @@ class TestMasks:
         run_and_compare(projection, data=self.data, cols=cols)
 
     def test_drop(self):
-        pandas_df = pd.DataFrame(self.data)
-        modin_df = mpd.DataFrame(self.data)
+        def drop(df, **kwargs):
+            return df.drop(columns="a")
 
-        pandas_df = pandas_df.drop(columns="a")
-        modin_df = modin_df.drop(columns="a")
-        df_equals(pandas_df, modin_df)
+        run_and_compare(drop, data=self.data)
 
     def test_iloc(self):
         def mask(df, **kwargs):
             return df.iloc[[0, 1]]
 
-        run_and_compare(mask, data=self.data)
+        run_and_compare(mask, data=self.data, allow_subqueries=True)
 
 
 class TestFillna:
@@ -273,11 +306,11 @@ class TestConcat:
         )
 
     def test_concat_with_same_df(self):
-        pandas_df = pd.DataFrame(self.data)
-        modin_df = mpd.DataFrame(self.data)
-        pandas_df["f"] = pandas_df["a"]
-        modin_df["f"] = modin_df["a"]
-        df_equals(pandas_df, modin_df)
+        def concat(df, **kwargs):
+            df["f"] = df["a"]
+            return df
+
+        run_and_compare(concat, data=self.data)
 
     def test_insert(self):
         def insert(df, **kwargs):
@@ -293,19 +326,12 @@ class TestConcat:
         run_and_compare(insert, data=self.data)
 
     def test_concat_many(self):
-        df1 = pd.DataFrame(self.data)
-        df2 = pd.DataFrame(self.data2)
-        df3 = pd.DataFrame(self.data)
-        df4 = pd.DataFrame(self.data2)
-        ref = pd.concat([df1, df2, df3, df4])
+        def concat(df1, df2, lib, **kwargs):
+            df3 = df1.copy()
+            df4 = df2.copy()
+            return lib.concat([df1, df2, df3, df4])
 
-        df1 = mpd.DataFrame(self.data)
-        df2 = mpd.DataFrame(self.data2)
-        df3 = mpd.DataFrame(self.data)
-        df4 = mpd.DataFrame(self.data2)
-        exp = mpd.concat([df1, df2, df3, df4])
-
-        df_equals(ref, exp)
+        run_and_compare(concat, data=self.data, data2=self.data2)
 
     def test_concat_agg(self):
         def concat(lib, df1, df2):
@@ -317,9 +343,7 @@ class TestConcat:
             )
             return lib.concat([df1, df2])
 
-        run_and_compare(
-            concat, data=self.data, data2=self.data2,
-        )
+        run_and_compare(concat, data=self.data, data2=self.data2, allow_subqueries=True)
 
 
 class TestGroupby:
@@ -352,29 +376,21 @@ class TestGroupby:
         def groupby_sum(df, cols, as_index, **kwargs):
             return df.groupby(cols, as_index=as_index).c.sum()
 
-        run_and_compare(groupby_sum, data=self.data, cols=cols, as_index=as_index)
+        run_and_compare(
+            groupby_sum, data=self.data, cols=cols, as_index=as_index, force_lazy=False
+        )
 
     def test_groupby_agg_count(self):
-        df = pd.DataFrame(self.data)
-        ref = df.groupby("a").agg({"b": "count"})
+        def groupby(df, **kwargs):
+            return df.groupby("a").agg({"b": "count"})
 
-        modin_df = mpd.DataFrame(self.data)
-        modin_df = modin_df.groupby("a").agg({"b": "count"})
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(groupby, data=self.data)
 
     def test_groupby_agg_size(self):
-        df = pd.DataFrame(self.data)
-        ref = df.groupby("a").agg({"b": "size"})
+        def groupby(df, **kwargs):
+            return df.groupby("a").agg({"b": "size"})
 
-        modin_df = mpd.DataFrame(self.data)
-        modin_df = modin_df.groupby("a").agg({"b": "size"})
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(groupby, data=self.data)
 
     taxi_data = {
         "a": [1, 1, 2, 2],
@@ -390,45 +406,27 @@ class TestGroupby:
     #       Another way of doing taxi q1 is
     #       res = df.groupby("cab_type").size() - this should be tested later as well
     def test_taxi_q1(self):
-        df = pd.DataFrame(self.taxi_data)
-        # TODO: For now we can't do such groupby by first column since modin use that
-        #      column as aggregation one by default. We don't support such cases at
-        #      at the moment, this will be handled later
-        # ref = df.groupby("a").size()
-        ref = df.groupby("b").size()
+        def taxi_q1(df, **kwargs):
+            # TODO: For now we can't do such groupby by first column since modin use that
+            #      column as aggregation one by default. We don't support such cases at
+            #      at the moment, this will be handled later
+            # ref = df.groupby("a").size()
+            return df.groupby("b").size()
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        # modin_df = modin_df.groupby("a").size()
-        modin_df = modin_df.groupby("b").size()
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(taxi_q1, data=self.taxi_data)
 
     def test_taxi_q2(self):
-        df = pd.DataFrame(self.taxi_data)
-        ref = df.groupby("a").agg({"b": "mean"})
+        def taxi_q2(df, **kwargs):
+            return df.groupby("a").agg({"b": "mean"})
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df.groupby("a").agg({"b": "mean"})
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(taxi_q2, data=self.taxi_data)
 
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
-        df = pd.DataFrame(self.taxi_data)
-        ref = df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
+        def taxi_q3(df, as_index, **kwargs):
+            return df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df.groupby(
-            ["b", modin_df["c"].dt.year], as_index=as_index
-        ).size()
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(taxi_q3, data=self.taxi_data, as_index=as_index)
 
     def test_groupby_expr_col(self):
         def groupby(df, **kwargs):
@@ -443,50 +441,32 @@ class TestGroupby:
         run_and_compare(groupby, data=self.taxi_data)
 
     def test_series_astype(self):
-        df = pd.DataFrame(self.taxi_data)
-        ref = df["d"].astype("int")
+        def series_astype(df, **kwargs):
+            return df["d"].astype("int")
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df["d"].astype("int")
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(series_astype, data=self.taxi_data)
 
     def test_df_astype(self):
-        df = pd.DataFrame(self.taxi_data)
-        ref = df.astype({"b": "float", "d": "int"})
+        def df_astype(df, **kwargs):
+            return df.astype({"b": "float", "d": "int"})
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df = modin_df.astype({"b": "float", "d": "int"})
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(df_astype, data=self.taxi_data)
 
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q4(self, as_index):
-        df = pd.DataFrame(self.taxi_data)
-        df["c"] = df["c"].dt.year
-        df["d"] = df["d"].astype("int64")
-        ref = (
-            df.groupby(["b", "c", "d"], sort=True, as_index=as_index)
-            .size()
-            .reset_index()
-            .sort_values(by=["c", 0], ignore_index=True, ascending=[True, False])
-        )
+        def taxi_q4(df, **kwargs):
+            df["c"] = df["c"].dt.year
+            df["d"] = df["d"].astype("int64")
+            return (
+                df.groupby(["b", "c", "d"], sort=True, as_index=as_index)
+                .size()
+                .reset_index()
+                .sort_values(by=["c", 0], ignore_index=True, ascending=[True, False])
+            )
 
-        modin_df = mpd.DataFrame(self.taxi_data)
-        modin_df["c"] = modin_df["c"].dt.year
-        modin_df["d"] = modin_df["d"].astype("int64")
-        exp = (
-            modin_df.groupby(["b", "c", "d"], sort=True, as_index=as_index)
-            .size()
-            .reset_index()
-            .sort_values(by=["c", 0], ignore_index=True, ascending=[True, False])
-        )
-
-        df_equals(ref, exp)
+        # Currently reset_index for dataframe with multi-index is defaulting to pandas.
+        # This breaks lazy execution.
+        run_and_compare(taxi_q4, data=self.taxi_data, force_lazy=False)
 
     h2o_data = {
         "id1": ["id1", "id2", "id3", "id1", "id2", "id3", "id1", "id2", "id3", "id1"],
@@ -514,9 +494,11 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id1"], observed=True, as_index=False).agg(
             {"v1": "sum"}
         )
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
         exp["id1"] = exp["id1"].astype("category")
@@ -530,9 +512,11 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id1", "id2"], observed=True, as_index=False).agg(
             {"v1": "sum"}
         )
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
         exp["id1"] = exp["id1"].astype("category")
@@ -547,9 +531,11 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id3"], observed=True, as_index=False).agg(
             {"v1": "sum", "v3": "mean"}
         )
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
         exp["id3"] = exp["id3"].astype("category")
@@ -565,9 +551,11 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id4"], observed=True, as_index=False).agg(
             {"v1": "mean", "v2": "mean", "v3": "mean"}
         )
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
 
@@ -582,9 +570,11 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id6"], observed=True, as_index=False).agg(
             {"v1": "sum", "v2": "sum", "v3": "sum"}
         )
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
 
@@ -601,12 +591,14 @@ class TestGroupby:
         ref.reset_index(inplace=True)
 
         modin_df = mpd.DataFrame(df)
+        set_execution_mode(modin_df, "lazy")
         modin_df = modin_df.groupby(["id3"], observed=True).agg(
             {"v1": "max", "v2": "min"}
         )
         modin_df["range_v1_v2"] = modin_df["v1"] - modin_df["v2"]
         modin_df = modin_df[["range_v1_v2"]]
         modin_df.reset_index(inplace=True)
+        set_execution_mode(modin_df, None)
 
         exp = to_pandas(modin_df)
         exp["id3"] = exp["id3"].astype("category")
@@ -649,7 +641,7 @@ class TestGroupby:
             df["c"] = df["c"].apply(lambda x: round(x, 10))
             return df
 
-        run_and_compare(std, data=self.std_data)
+        run_and_compare(std, data=self.std_data, force_lazy=False)
 
 
 class TestMerge:
@@ -1060,26 +1052,16 @@ class TestDateTime:
     }
 
     def test_dt_year(self):
-        df = pd.DataFrame(self.datetime_data)
-        ref = df["c"].dt.year
+        def dt_year(df, **kwargs):
+            return df["c"].dt.year
 
-        modin_df = mpd.DataFrame(self.datetime_data)
-        modin_df = modin_df["c"].dt.year
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(dt_year, data=self.datetime_data)
 
     def test_dt_month(self):
-        df = pd.DataFrame(self.datetime_data)
-        ref = df["c"].dt.month
+        def dt_month(df, **kwargs):
+            return df["c"].dt.month
 
-        modin_df = mpd.DataFrame(self.datetime_data)
-        modin_df = modin_df["c"].dt.month
-
-        exp = to_pandas(modin_df)
-
-        df_equals(ref, exp)
+        run_and_compare(dt_month, data=self.datetime_data)
 
 
 class TestCategory:

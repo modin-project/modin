@@ -63,6 +63,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         op=None,
         index_cols=None,
         uses_rowid=False,
+        force_execution_mode=None,
     ):
         assert dtypes is not None
 
@@ -113,6 +114,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 )
 
         self._uses_rowid = uses_rowid
+        # Tests use forced execution mode to take control over frame
+        # execution process. Supported values:
+        #  "lazy" - RuntimeError is raised if execution is triggered for the frame
+        #  "arrow" - RuntimeError is raised if execution is triggered, but we cannot
+        #  execute it using Arrow API (have to use OmniSci for execution)
+        self._force_execution_mode = force_execution_mode
 
     def id_str(self):
         return f"frame${self.id}"
@@ -145,6 +152,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=dtypes,
                 op=TransformNode(base, exprs),
                 index_cols=self._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
 
         if row_indices is not None or row_numeric_idx is not None:
@@ -156,6 +164,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=base._dtypes,
                 op=op,
                 index_cols=self._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
 
         return base
@@ -222,6 +231,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(base, exprs, fold=True),
             index_cols=None,
+            force_execution_mode=self._force_execution_mode,
         )
 
         new_columns = []
@@ -253,7 +263,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         new_op = GroupbyAggNode(base, groupby_cols, agg_exprs, groupby_args)
         new_frame = self.__constructor__(
-            columns=new_columns, dtypes=new_dtypes, op=new_op, index_cols=index_cols
+            columns=new_columns,
+            dtypes=new_dtypes,
+            op=new_op,
+            index_cols=index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
         # When 'by' columns do not become a new index, we need to filter out those
@@ -311,7 +325,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)
         new_frame = self.__constructor__(
-            columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
+            columns=self.columns,
+            dtypes=dtypes,
+            op=new_op,
+            index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
         return new_frame
@@ -323,7 +341,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)
         return self.__constructor__(
-            columns=self.columns, dtypes=dtypes, op=new_op, index_cols=self._index_cols
+            columns=self.columns,
+            dtypes=dtypes,
+            op=new_op,
+            index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
     def astype(self, col_dtypes, **kwargs):
@@ -364,6 +386,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=new_dtypes,
             op=new_op,
             index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
     def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
@@ -393,7 +416,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
         op = JoinNode(self, other, how=how, on=on, sort=sort, suffixes=suffixes,)
 
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
-        return self.__constructor__(dtypes=new_dtypes, columns=new_columns, op=op)
+        return self.__constructor__(
+            dtypes=new_dtypes,
+            columns=new_columns,
+            op=op,
+            force_execution_mode=self._force_execution_mode,
+        )
 
     def _index_width(self):
         if self._index_cols is None:
@@ -472,6 +500,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     op=aligned_frame_op,
                     index_cols=aligned_index,
                     uses_rowid=uses_rowid,
+                    force_execution_mode=self._force_execution_mode,
                 )
             )
 
@@ -482,6 +511,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=new_frame._dtypes,
                 op=UnionNode([new_frame, frame]),
                 index_cols=new_frame._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
 
         return new_frame
@@ -518,6 +548,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(base, exprs),
             index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
         return new_frame
 
@@ -532,6 +563,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(self, exprs),
                 index_cols=self._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
         elif isinstance(other, list):
             if len(other) != len(self.columns):
@@ -546,6 +578,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(self, exprs),
                 index_cols=self._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
         elif isinstance(other, type(self)):
             # For now we only support binary operations on
@@ -586,6 +619,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(base, exprs),
                 index_cols=self._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
 
     def insert(self, loc, column, value):
@@ -608,6 +642,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(self, exprs),
             index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
     def cat_codes(self):
@@ -628,6 +663,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=self._dtypes,
             op=TransformNode(self, exprs),
             index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
     def sort_rows(self, columns, ascending, ignore_index, na_position):
@@ -679,6 +715,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                         dtypes=self._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=index_cols,
+                        force_execution_mode=self._force_execution_mode,
                     )
 
                 base = self.__constructor__(
@@ -686,6 +723,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     dtypes=base._dtypes,
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=base._index_cols,
+                    force_execution_mode=self._force_execution_mode,
                 )
 
                 if drop_index_cols_after:
@@ -697,6 +735,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                         dtypes=self._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=None,
+                        force_execution_mode=self._force_execution_mode,
                     )
 
                 return base
@@ -706,6 +745,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     dtypes=self._dtypes,
                     op=SortNode(self, columns, ascending, na_position),
                     index_cols=None,
+                    force_execution_mode=self._force_execution_mode,
                 )
         else:
             base = self
@@ -723,6 +763,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     op=TransformNode(base, exprs),
                     index_cols=["__index__"],
                     uses_rowid=True,
+                    force_execution_mode=self._force_execution_mode,
                 )
 
             return self.__constructor__(
@@ -730,6 +771,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=base._dtypes,
                 op=SortNode(base, columns, ascending, na_position),
                 index_cols=base._index_cols,
+                force_execution_mode=self._force_execution_mode,
             )
 
     def _index_exprs(self):
@@ -760,6 +802,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if isinstance(self._op, FrameNode):
             return
 
+        if self._force_execution_mode == "lazy":
+            raise RuntimeError("unexpected execution triggered on lazy frame")
+
         # Some frames require rowid which is available for executed frames only.
         # Also there is a common pattern when MaskNode is executed to print
         # frame. If we run the whole tree then any following frame usage will
@@ -773,6 +818,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 new_table
             )
         else:
+            if self._force_execution_mode == "arrow":
+                raise RuntimeError("forced arrow execution failed")
+
             new_partitions = self._frame_mgr_cls.run_exec_plan(
                 self._op, self._index_cols, self._dtypes
             )
@@ -908,6 +956,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=self._dtypes_for_exprs(exprs),
                 op=TransformNode(self, exprs),
                 index_cols=None,
+                force_execution_mode=self._force_execution_mode,
             )
         else:
             if self._index_cols is None:
@@ -922,6 +971,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 dtypes=self._dtypes_for_cols(None, new_columns),
                 op=self._op,
                 index_cols=None,
+                force_execution_mode=self._force_execution_mode,
             )
 
     def _set_columns(self, new_columns):
@@ -933,6 +983,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             dtypes=self._dtypes.tolist(),
             op=TransformNode(self, exprs),
             index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
         )
 
     def _get_columns(self):
