@@ -124,6 +124,9 @@ jobs:
         with:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - name: conda clean
+        shell: bash -l {0}
+        run: conda clean --packages
       - uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: modin
