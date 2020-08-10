@@ -2072,7 +2072,7 @@ class DataFrame(BasePandasDataset):
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and len(self.columns) == 1:
-            return Series(query_compiler=self._query_compiler, shape_hint="column")
+            return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
             return Series(query_compiler=self.T._query_compiler)
         else:

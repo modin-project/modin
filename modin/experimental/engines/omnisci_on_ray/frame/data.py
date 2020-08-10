@@ -814,24 +814,22 @@ class OmnisciOnRayFrame(BasePandasFrame):
             assert self._partitions.size == 1
             return self._partitions[0][0].get()
         elif isinstance(self._op, MaskNode):
-            return self._arrow_row_slice(
-                self._op.input[0]._execute_arrow(), self._op.row_numeric_idx
-            )
+            return self._op.input[0]._arrow_row_slice(self._op.row_numeric_idx)
         elif isinstance(self._op, TransformNode):
-            return self._arrow_col_slice(
-                self._op.input[0]._execute_arrow(), set(self._op.exprs.keys())
-            )
+            return self._op.input[0]._arrow_col_slice(set(self._op.exprs.keys()))
         elif isinstance(self._op, UnionNode):
             return self._arrow_concat(self._op.input)
         else:
             raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
 
-    def _arrow_col_slice(self, table, new_columns):
+    def _arrow_col_slice(self, new_columns):
+        table = self._execute_arrow()
         return table.drop(
             [f"F_{col}" for col in self._table_cols if col not in new_columns]
         )
 
-    def _arrow_row_slice(self, table, row_numeric_idx):
+    def _arrow_row_slice(self, row_numeric_idx):
+        table = self._execute_arrow()
         if isinstance(row_numeric_idx, slice):
             start = 0 if row_numeric_idx.start is None else row_numeric_idx.start
             if start < 0:
@@ -868,7 +866,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return pyarrow.concat_tables(parts)
 
-    def _arrow_concat(self, frames):
+    @classmethod
+    def _arrow_concat(cls, frames):
         return pyarrow.concat_tables(frame._execute_arrow() for frame in frames)
 
     def _build_index_cache(self):
