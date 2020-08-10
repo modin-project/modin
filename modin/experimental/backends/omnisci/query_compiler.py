@@ -119,7 +119,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = query_compiler._modin_frame.groupby_agg(
             by, axis, "size", groupby_args, **kwargs
         )
-        new_qc = query_compiler.__constructor__(new_frame)
+        # The result is always series (as_index is always True).
+        new_qc = query_compiler.__constructor__(new_frame, shape_hint="column")
         if groupby_args["squeeze"]:
             new_qc = new_qc.squeeze()
         return new_qc
