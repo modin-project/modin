@@ -1418,16 +1418,23 @@ class Series(BasePandasDataset):
         int or array of int
             A scalar or array of insertion points with the same shape as value.
         """
+        searchsorted_qc = self._query_compiler
+        if sorter is not None:
+            # `iloc` method works slowly (https://github.com/modin-project/modin/issues/1903),
+            # so _default_to_pandas is used for now
+            # searchsorted_qc = self.iloc[sorter].reset_index(drop=True)._query_compiler
+            # sorter = None
+            return self._default_to_pandas(
+                pandas.Series.searchsorted, value, side=side, sorter=sorter
+            )
         # searchsorted should return item number irrespective of Series index, so
         # Series.index is always set to pandas.RangeIndex, which can be easily processed
         # on the query_compiler level
-        if not isinstance(self.index, pandas.RangeIndex):
-            self.index = pandas.RangeIndex(start=0, stop=len(self.index))
-        if sorter is not None:
-            self = self.iloc[sorter].reset_index(drop=True)
-            sorter = None
+        if not isinstance(searchsorted_qc.index, pandas.RangeIndex):
+            searchsorted_qc = searchsorted_qc.reset_index(drop=True)
+
         result = self.__constructor__(
-            query_compiler=self._query_compiler.searchsorted(
+            query_compiler=searchsorted_qc.searchsorted(
                 value=value, side=side, sorter=sorter
             )
         ).squeeze()
