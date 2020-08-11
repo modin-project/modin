@@ -16,7 +16,7 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
-from modin.pandas.utils import to_pandas
+from modin.pandas.utils import to_pandas, from_arrow
 from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -1643,3 +1643,9 @@ def test_cleanup():
                 os.remove(f)
             except PermissionError:
                 pass
+
+
+def test_from_arrow():
+    pandas_df = create_test_pandas_dataframe()
+    modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
+    df_equals(modin_df, pandas_df)
