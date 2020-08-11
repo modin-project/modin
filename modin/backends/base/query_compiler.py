@@ -303,6 +303,26 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def columnarize(self):
+        """
+        Transposes this QueryCompiler if it has a single row but multiple columns.
+
+        This method should be called for QueryCompilers representing a Series object,
+        i.e. self.is_series_like() should be True.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Transposed new QueryCompiler or self.
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_series_like(self):
+        """Return True if QueryCompiler has a single column or row"""
+        pass
+
     # END Abstract Transpose
 
     # Abstract reindex/reset_index (may shuffle data)
