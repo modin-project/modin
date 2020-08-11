@@ -1,7 +1,27 @@
 name: master
 on: push
 jobs:
+  test_runner:
+    name: test_runner
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["windows-latest"]
+        python-version: ["3.7"]
+    steps:
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: Conda info
+        shell: bash -l {0}
+        run: conda info
+      - name: Conda list
+        shell: pwsh
+        run: conda list
   prepare-cache:
+    needs: test_runner
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
