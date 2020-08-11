@@ -179,6 +179,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = pandas_op(self.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = "__reduced__"
             result = result.to_frame()
         if isinstance(result, pandas.DataFrame):
             return self.from_pandas(result, type(self._modin_frame))
@@ -2240,3 +2242,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
         ).columns
         return self.reindex(1, new_columns)
+
+    # Cat operations
+    def cat_codes(self):
+        return self.default_to_pandas(lambda df: df[df.columns[0]].cat.codes)
+
+    # END Cat operations
