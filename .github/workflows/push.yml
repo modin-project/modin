@@ -13,6 +13,7 @@ jobs:
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: modin
+          environment-file: environment.yml
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Conda info
