@@ -1751,6 +1751,7 @@ class BasePandasFrame(object):
             )
             df.index = self.index
             df.columns = self.columns
+
         return df
 
     def to_numpy(self):

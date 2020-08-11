@@ -464,16 +464,21 @@ class DataFrame(BasePandasDataset):
             else:
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(
-                    obj in self
-                    or (hasattr(self.index, "names") and obj in self.index.names)
+                    isinstance(obj, str)
+                    and (
+                        obj in self
+                        or (hasattr(self.index, "names") and obj in self.index.names)
+                    )
                     for obj in by
                 ):
                     # In the future, we will need to add logic to handle this, but for now
                     # we default to pandas in this case.
                     pass
-                elif mismatch:
-                    raise KeyError(next(x for x in by if x not in self))
-
+                elif mismatch and any(
+                    isinstance(obj, str) and obj not in self.columns for obj in by
+                ):
+                    names = [o.name if isinstance(o, Series) else o for o in by]
+                    raise KeyError(next(x for x in names if x not in self))
         return DataFrameGroupBy(
             self,
             by,
