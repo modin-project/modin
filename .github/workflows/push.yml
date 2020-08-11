@@ -20,6 +20,7 @@ jobs:
           shell: bash -l {0}
           run: conda clean --packages
       - name: Conda environment
+        uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: modin
           environment-file: environment.yml
