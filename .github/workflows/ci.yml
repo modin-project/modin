@@ -21,7 +21,6 @@ jobs:
           run: conda clean --packages
   lint-commit:
     name: lint (commit)
-    needs: test_runner
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -41,7 +40,6 @@ jobs:
 
   lint-black:
     name: lint (black)
-    needs: test_runner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -56,7 +54,6 @@ jobs:
 
   lint-flake8:
     name: lint (flake8)
-    needs: test_runner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -70,7 +67,6 @@ jobs:
       - run: flake8 --enable=T modin
 
   prepare-cache:
-    needs: test_runner
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -300,7 +296,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers, prepare_conda_windows]
     runs-on: windows-latest
     strategy:
       matrix:
