@@ -584,8 +584,14 @@ def check_df_columns_have_nans(df, cols):
     """
     return (
         pandas.api.types.is_list_like(cols)
-        and any(x in df.columns and df[x].hasnans for x in cols)
-        or not pandas.api.types.is_list_like(cols)
+        and (
+            any(isinstance(x, str) and x in df.columns and df[x].hasnans for x in cols)
+            or any(
+                isinstance(x, pd.Series) and x._parent is df and x.hasnans for x in cols
+            )
+        )
+    ) or (
+        not pandas.api.types.is_list_like(cols)
         and cols in df.columns
         and df[cols].hasnans
     )

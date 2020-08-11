@@ -141,6 +141,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             new_modin_frame = qc._modin_frame.groupby_reduce(
                 axis, by._modin_frame, _map, _reduce
             )
-            return query_compiler.__constructor__(new_modin_frame)
+            result = query_compiler.__constructor__(new_modin_frame)
+            if result.index.name == "__reduced__":
+                result.index.name = None
+            return result
 
         return caller
