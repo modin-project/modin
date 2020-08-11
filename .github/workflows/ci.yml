@@ -13,7 +13,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-          path: '..'
       - uses: goanpeca/setup-miniconda@v1
         with:
           auto-update-conda: true
@@ -26,12 +25,10 @@ jobs:
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
-      - name: Conda info
-        shell: bash -l {0}
-        run: conda info
-      - name: Conda list
-        shell: pwsh
-        run: conda list
+          shell: bash -l {0}
+          run: |
+            conda info
+            conda list
   lint-commit:
     name: lint (commit)
     needs: test_runner
