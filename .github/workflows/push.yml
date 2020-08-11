@@ -1,5 +1,5 @@
-name: master
-on: push
+name: ci
+on: pull_request
 jobs:
   test_runner:
     name: test_runner
@@ -17,9 +17,8 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-      - name: Conda clean
-        shell: bash -l {0}
-        run: conda clean --packages
+          shell: bash -l {0}
+          run: conda clean --packages
       - name: Conda environment
         with:
           activate-environment: modin
