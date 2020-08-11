@@ -399,6 +399,10 @@ class BaseFrameManager(object):
             return np.array(parts), row_lengths, col_widths
 
     @classmethod
+    def from_arrow(cls, at, return_dims=False):
+        return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """This gets the internal indices stored in the partitions.
 

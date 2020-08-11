@@ -192,6 +192,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def from_pandas(cls, df, data_cls):
         return cls(data_cls.from_pandas(df))
 
+    @classmethod
+    def from_arrow(cls, at, data_cls):
+        return cls(data_cls.from_arrow(at))
+
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
