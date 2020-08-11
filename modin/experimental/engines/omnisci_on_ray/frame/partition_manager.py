@@ -46,6 +46,19 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         return 1
 
     @classmethod
+    def from_arrow(cls, at, return_dims=False):
+        put_func = cls._partition_class.put_arrow
+
+        parts = [[put_func(at)]]
+
+        if not return_dims:
+            return np.array(parts)
+        else:
+            row_lengths = [at.num_rows]
+            col_widths = [at.num_columns]
+            return np.array(parts), row_lengths, col_widths
+
+    @classmethod
     def run_exec_plan(cls, plan, index_cols, dtypes):
         # TODO: this plan is supposed to be executed remotely using Ray.
         # For now OmniSci engine support only a single node cluster.

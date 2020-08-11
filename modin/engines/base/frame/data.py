@@ -14,7 +14,7 @@
 from collections import OrderedDict
 import numpy as np
 import pandas
-from pandas.core.indexes.api import ensure_index, Index
+from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
 from typing import Union
 
@@ -1752,9 +1752,7 @@ class BasePandasFrame(object):
         """
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(at, True)
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
-        # OmniSci backend can handle None index, others might require
-        # explicit index construction.
-        new_index = None
+        new_index = Index.__new__(RangeIndex, data=range(at.num_rows))
         new_dtypes = pandas.Series(
             [cls._arrow_type_to_dtype(i.type) for i in at.columns],
             index=at.column_names,

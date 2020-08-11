@@ -127,7 +127,7 @@ class BaseQueryCompiler(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def from_arrow(cls, at, data_cls):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
 
         Parameters
         ----------
