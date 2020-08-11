@@ -12,6 +12,7 @@ jobs:
     steps:
       - uses: goanpeca/setup-miniconda@v1
         with:
+          activate-environment: modin
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Conda info
