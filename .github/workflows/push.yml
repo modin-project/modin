@@ -10,6 +10,9 @@ jobs:
         os: ["windows-latest"]
         python-version: ["3.7"]
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: modin
