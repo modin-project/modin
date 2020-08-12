@@ -291,6 +291,27 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def join(self, right, **kwargs):
+        """
+        Join columns of another DataFrame.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to join with.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler that contains result of the join.
+
+        Notes
+        -----
+        See pd.DataFrame.join for more info on kwargs.
+        """
+        pass
+
     # END Abstract inter-data operations
 
     # Abstract Transpose
