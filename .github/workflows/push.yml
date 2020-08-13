@@ -104,7 +104,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: ["prepare-cache"]
+    needs: prepare-cache
     runs-on: windows-latest
     strategy:
       matrix:
