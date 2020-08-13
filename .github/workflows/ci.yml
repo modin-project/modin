@@ -1,24 +1,6 @@
 name: ci
 on: pull_request
 jobs:
-  prepare_conda_windows: # job is added in order to fix #1908
-    name: prepare_conda_windows
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["windows-latest"]
-        python-version: ["3.6"]
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: goanpeca/setup-miniconda@v1
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-          shell: bash -l {0}
-          run: conda clean --packages
   lint-commit:
     name: lint (commit)
     runs-on: ubuntu-latest
@@ -296,7 +278,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers, prepare_conda_windows]
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     strategy:
       matrix:
