@@ -124,6 +124,28 @@ class BaseQueryCompiler(abc.ABC):
 
     # END To/From Pandas
 
+    # From Arrow
+    @classmethod
+    @abc.abstractmethod
+    def from_arrow(cls, at, data_cls):
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+        at : Arrow Table
+            The Arrow Table to convert from.
+        data_cls :
+            Modin DataFrame object to convert to.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Pandas DataFrame.
+        """
+        pass
+
+    # END From Arrow
+
     # To NumPy
     @abc.abstractmethod
     def to_numpy(self):

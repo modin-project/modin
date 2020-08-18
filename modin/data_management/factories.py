@@ -40,6 +40,10 @@ class BaseFactory(object):
         return cls.io_cls.from_pandas(df)
 
     @classmethod
+    def _from_arrow(cls, at):
+        return cls.io_cls.from_arrow(at)
+
+    @classmethod
     def _from_non_pandas(cls, *args, **kwargs):
         return cls.io_cls.from_non_pandas(*args, **kwargs)
 
