@@ -19,7 +19,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 
-from .utils import _inherit_docstrings, wrap_udf_function
+from .utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
 from .series import Series
 
 
@@ -65,7 +65,11 @@ class DataFrameGroupBy(object):
             ) or (
                 not isinstance(by, type(self._query_compiler))
                 and axis == 0
-                and all(obj in self._query_compiler.columns for obj in self._by)
+                and all(
+                    (isinstance(obj, str) and obj in self._query_compiler.columns)
+                    or isinstance(obj, Series)
+                    for obj in self._by
+                )
             )
         else:
             self._is_multi_by = False
@@ -120,12 +124,14 @@ class DataFrameGroupBy(object):
                 # aware.
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                self._index_grouped_cache = {
-                    k: v.index
-                    for k, v in self._df._query_compiler.getitem_column_array(by)
-                    .to_pandas()
-                    .groupby(by=by)
-                }
+                if isinstance(by, list) and all(isinstance(o, str) for o in by):
+                    pandas_df = self._df._query_compiler.getitem_column_array(
+                        by
+                    ).to_pandas()
+                else:
+                    by = try_cast_to_pandas(by)
+                    pandas_df = self._df._to_pandas()
+                self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
@@ -309,6 +315,15 @@ class DataFrameGroupBy(object):
                 drop=self._drop,
                 **kwargs,
             )
+        if (
+            self._is_multi_by
+            and isinstance(self._by, list)
+            and not all(isinstance(o, str) for o in self._by)
+        ):
+            raise NotImplementedError(
+                "Column lookups on GroupBy with arbitrary Series in by"
+                " is not yet supported."
+            )
         return SeriesGroupBy(
             self._df[key],
             self._by,
@@ -412,6 +427,9 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
+        if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+            # We don't have good way to handle this right now, fall back to Pandas.
+            return self._default_to_pandas(lambda df: df.size())
         if self._axis == 0:
             # Size always works in as_index=True mode so it is necessary to make a
             #  copy of _kwargs and change as_index in it
@@ -666,12 +684,14 @@ class DataFrameGroupBy(object):
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
         result = type(self._df)(query_compiler=new_manager)
+        if result.index.name == "__reduced__":
+            result.index.name = None
         if self._kwargs.get("squeeze", False):
             return result.squeeze()
         return result
 
     def _default_to_pandas(self, f, *args, **kwargs):
-        """Defailts the execution of this function to pandas.
+        """Defaults the execution of this function to pandas.
 
         Args:
             f: The function to apply to each group.
@@ -688,6 +708,8 @@ class DataFrameGroupBy(object):
             by = list(self._by.columns)
         else:
             by = self._by
+
+        by = try_cast_to_pandas(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(

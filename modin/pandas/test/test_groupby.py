@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.pandas.utils import from_pandas, to_pandas
+from modin.pandas.utils import from_pandas, to_pandas, try_cast_to_pandas
 from .utils import (
     df_equals,
     check_df_columns_have_nans,
@@ -209,6 +209,16 @@ def test_mixed_dtypes_groupby(as_index):
         eval_groups(modin_groupby, pandas_groupby)
 
 
+class GetColumn:
+    """Indicate to the test that it should do gc(df)."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, df):
+        return df[self.name]
+
+
 @pytest.mark.parametrize(
     "by",
     [
@@ -241,6 +251,18 @@ def test_mixed_dtypes_groupby(as_index):
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
+        ["col1", pd.Series([1, 5, 7, 8])],
+        [pd.Series([1, 5, 7, 8])],
+        [
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+        ],
+        ["col1", GetColumn("col5")],
+        [GetColumn("col1"), GetColumn("col5")],
+        [GetColumn("col1")],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -261,8 +283,19 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     modin_df = from_pandas(pandas_df)
     n = 1
-    modin_groupby = modin_df.groupby(by=by, as_index=as_index)
-    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+
+    def maybe_get_columns(df, by):
+        if isinstance(by, list):
+            return [o(df) if isinstance(o, GetColumn) else o for o in by]
+        else:
+            return by
+
+    modin_groupby = modin_df.groupby(
+        by=maybe_get_columns(modin_df, by), as_index=as_index
+    )
+
+    pandas_by = maybe_get_columns(pandas_df, try_cast_to_pandas(by))
+    pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
@@ -295,7 +328,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
-    pandas_groupby = pandas_df.groupby(by=by, as_index=as_index)
+    pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
     apply_functions = [lambda df: df.sum(), min]
     for func in apply_functions:
         eval_apply(modin_groupby, pandas_groupby, func)
@@ -372,7 +405,11 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
-    eval___getattr__(modin_groupby, pandas_groupby, "col3")
+    if isinstance(by, list) and not any(
+        isinstance(o, (pd.Series, pandas.Series)) for o in by
+    ):
+        # Not yet supported for non-original-column-from-dataframe Series in by:
+        eval___getattr__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -1188,3 +1225,62 @@ def test_mixed_columns(columns):
     df2 = pd.concat([df2])
     exp = df2.groupby(get_columns(df2)).size()
     df_equals(ref, exp)
+
+
+@pytest.mark.parametrize(
+    # When True, use (df[name] + 1), otherwise just use name
+    "columns",
+    [
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+    ],
+)
+def test_mixed_columns_not_from_df(columns):
+    """
+    Unlike the previous test, in this case the Series is not just a column from
+    the original DataFrame, so you can't use a fasttrack.
+    """
+
+    def get_columns(df):
+        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    df1 = pandas.DataFrame(data)
+    df1 = pandas.concat([df1])
+    ref = df1.groupby(get_columns(df1)).size()
+
+    df2 = pd.DataFrame(data)
+    df2 = pd.concat([df2])
+    exp = df2.groupby(get_columns(df2)).size()
+    df_equals(ref, exp)
+
+
+@pytest.mark.parametrize(
+    # When True, do df[obj], otherwise just use the obj
+    "columns",
+    [
+        [(False, "a")],
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b")],
+        [(False, "b"), (False, "a")],
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+        [(False, "a"), (False, pd.Series([5, 6, 7, 8]))],
+    ],
+)
+def test_unknown_groupby(columns):
+    def get_columns(df):
+        return [df[name] if lookup else name for (lookup, name) in columns]
+
+    data = {"b": [11, 11, 22, 200], "c": [111, 111, 222, 7000]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    with pytest.raises(KeyError):
+        pandas_df.groupby(by=get_columns(pandas_df))
+    with pytest.raises(KeyError):
+        modin_df.groupby(by=get_columns(modin_df))
