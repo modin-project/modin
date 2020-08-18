@@ -515,6 +515,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
 
+    def columnarize(self):
+        """
+        Transposes this QueryCompiler if it has a single row but multiple columns.
+
+        This method should be called for QueryCompilers representing a Series object,
+        i.e. self.is_series_like() should be True.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            Transposed new QueryCompiler or self.
+        """
+        if len(self.columns) != 1 or (
+            len(self.index) == 1 and self.index[0] == "__reduced__"
+        ):
+            return self.transpose()
+        return self
+
+    def is_series_like(self):
+        """Return True if QueryCompiler has a single column or row"""
+        return len(self.columns) == 1 or len(self.index) == 1
+
     # END Transpose
 
     # MapReduce operations
