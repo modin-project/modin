@@ -115,7 +115,7 @@ class FWFReader(TextFileReader):
                     skiprows += header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
                     skiprows += max(header) + 1
-                cls.read_rows(
+                cls.read_nrows(
                     f,
                     skiprows,
                     quotechar,
@@ -170,7 +170,7 @@ class FWFReader(TextFileReader):
                 }
                 if (readed + part_size) > read_limit:
                     deploy_kwargs[list(deploy_kwargs.keys())[0]] = read_limit - readed
-                partition_id = cls.call_deploy(
+                partition_id, _, _ = cls.call_deploy(
                     f, num_splits + 2, args, quotechar=quotechar, **deploy_kwargs
                 )
                 partition_ids.append(partition_id[:-2])

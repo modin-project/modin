@@ -742,6 +742,49 @@ def test_from_csv(make_csv_file, nrows):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize(
+    "skiprows", [None, 10, lambda x: x % 2, lambda x: x > 25, np.arange(2, 50)]
+)
+@pytest.mark.parametrize("nrows", [None, 30])
+@pytest.mark.parametrize(
+    "names",
+    [
+        None,
+        pytest.param(
+            ["c1", "c2", "c3", "c4"],
+            marks=pytest.mark.xfail(
+                reason="Incorrect Modin index, see #1930 for details"
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "header",
+    [
+        pytest.param(
+            None,
+            marks=pytest.mark.xfail(
+                reason="In that case we will get string and int values at the same column. Modin have problems with it, see #1931 for details."
+            ),
+        ),
+        "infer",
+        0,
+        1,
+    ],
+)
+def test_from_csv_skiprows(make_csv_file, skiprows, nrows, names, header):
+    make_csv_file()
+
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME, names=names, header=header, skiprows=skiprows, nrows=nrows
+    )
+    modin_df = pd.read_csv(
+        TEST_CSV_FILENAME, names=names, header=header, skiprows=skiprows, nrows=nrows
+    )
+
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("nrows", [123, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
@@ -1061,37 +1104,6 @@ def test_from_csv_chunksize(make_csv_file):
     df_equals(modin_df, pd_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv_skiprows(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-
 @pytest.mark.parametrize(
     "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
 )
@@ -1112,9 +1124,6 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
         from io import StringIO
 
         pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
-
-    with pytest.warns(UserWarning):
-        pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
 
 
 @pytest.mark.parametrize("nrows", [123, None])

@@ -63,7 +63,7 @@ class JSONReader(TextFileReader):
                 start = f.tell()
                 args = {"fname": path_or_buf, "num_splits": num_splits, "start": start}
                 args.update(kwargs)
-                partition_id = cls.call_deploy(
+                partition_id, _, _ = cls.call_deploy(
                     f, num_splits + 3, args, chunk_size_bytes=part_size
                 )
                 partition_ids.append(partition_id[:-3])
