@@ -14,7 +14,7 @@
 from collections import OrderedDict
 import numpy as np
 import pandas
-from pandas.core.indexes.api import ensure_index
+from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
 from typing import Union
 
@@ -1731,6 +1731,45 @@ class BasePandasFrame(object):
             new_widths,
             dtypes=new_dtypes,
         )
+
+    @classmethod
+    def from_arrow(cls, at):
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+            at : Arrow Table
+                The Arrow Table to convert from.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new dataframe.
+        """
+        new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(
+            at, return_dims=True
+        )
+        new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
+        new_index = Index.__new__(RangeIndex, data=range(at.num_rows))
+        new_dtypes = pandas.Series(
+            [cls._arrow_type_to_dtype(col.type) for col in at.columns],
+            index=at.column_names,
+        )
+        return cls(
+            partitions=new_frame,
+            index=new_index,
+            columns=new_columns,
+            row_lengths=new_lengths,
+            column_widths=new_widths,
+            dtypes=new_dtypes,
+        )
+
+    @classmethod
+    def _arrow_type_to_dtype(cls, arrow_type):
+        res = arrow_type.to_pandas_dtype()
+        if not isinstance(res, (np.dtype, str)):
+            return np.dtype(res)
+        return res
 
     def to_pandas(self):
         """Converts Modin DataFrame to Pandas DataFrame.
