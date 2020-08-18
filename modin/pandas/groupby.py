@@ -49,7 +49,6 @@ class DataFrameGroupBy(object):
         self._idx_name = idx_name
         self._df = df
         self._query_compiler = self._df._query_compiler
-        self._index = self._query_compiler.index
         self._columns = self._query_compiler.columns
         self._by = by
         self._drop = drop
@@ -82,6 +81,10 @@ class DataFrameGroupBy(object):
             "squeeze": squeeze,
         }
         self._kwargs.update(kwargs)
+
+    @property
+    def _index(self):
+        return self._query_compiler.index
 
     @property
     def _sort(self):
