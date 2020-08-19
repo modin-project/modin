@@ -30,12 +30,6 @@ class CSVReader(TextFileReader):
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
-        if kwargs.get("nrows", None) is not None and (
-            not isinstance(kwargs.get("skiprows", None), int)
-            and kwargs.get("skiprows", None) is not None
-        ):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
-
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
@@ -123,7 +117,7 @@ class CSVReader(TextFileReader):
                 instant_skiprows += header + 1
             elif hasattr(header, "__iter__") and not isinstance(header, str):
                 instant_skiprows += max(header) + 1
-            _, rows_skipped = cls.read_nrows(
+            _, rows_skipped, _ = cls.read_nrows(
                 f,
                 instant_skiprows,
                 quotechar,
@@ -154,7 +148,7 @@ class CSVReader(TextFileReader):
             if nrows is None:
                 part_size = max(1, total_bytes // num_partitions)
             else:
-                part_size = max(1, nrows // num_partitions)
+                part_size = max(nrows, nrows // num_partitions)
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -185,8 +179,7 @@ class CSVReader(TextFileReader):
             readed = f.tell() if nrows is None else 0
             rows_behind = rows_skipped
             read_limit = total_bytes if nrows is None else nrows
-            # breakpoint()
-            while readed < read_limit:
+            while f.tell() < total_bytes and readed < read_limit:
                 args = {
                     "fname": filepath_or_buffer,
                     "num_splits": num_splits,
@@ -215,7 +208,6 @@ class CSVReader(TextFileReader):
         # or based on the column(s) that were requested.
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
-            # breakpoint()
             new_index = pandas.RangeIndex(sum(row_lengths))
             # pandas has a really weird edge case here.
             if kwargs.get("names", None) is not None and instant_skiprows > 1:

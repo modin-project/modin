@@ -41,6 +41,25 @@ class TextFileReader(FileReader):
         skiprows = args.get("skiprows", None)
         should_handle_skiprows = skiprows is not None and not isinstance(skiprows, int)
 
+        if should_handle_skiprows:
+            # slow path, hopefully never getting this way
+            if rows_behind is None:
+                _, rows_behind = cls.read_nrows(
+                    f,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                    max_bytes=args["start"],
+                    from_begin=True,
+                    save_position=True,
+                )
+
+            args = args.copy()
+            args["skiprows"] = cls.handle_skiprows(
+                args["skiprows"], rows_behind, **kwargs,
+            )
+        else:
+            rows_considered = rows_readed
+
         # We want to avoid unnecessary overhead of counting amount
         # of readed rows if we don't need that value
         if not should_handle_skiprows and nrows is None:
@@ -59,31 +78,17 @@ class TextFileReader(FileReader):
                         break
         else:
             chunk_size_bytes = None if chunk_size_bytes < 0 else chunk_size_bytes
-            outside_quotes, rows_readed = cls.read_nrows(
-                f, nrows, quotechar, is_quoting, max_bytes=chunk_size_bytes
+            outside_quotes, rows_readed, rows_considered = cls.read_nrows(
+                f,
+                nrows,
+                quotechar,
+                is_quoting,
+                max_bytes=chunk_size_bytes,
+                skiprows=(args["skiprows"] if should_handle_skiprows else None),
             )
 
         if is_quoting and not outside_quotes:
             warnings.warn("File has mismatched quotes")
-
-        if should_handle_skiprows:
-            # slow path, hopefully never getting this way
-            if rows_behind is None:
-                _, rows_behind = cls.read_nrows(
-                    f,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
-                    max_bytes=args["start"],
-                    from_begin=True,
-                    save_position=True,
-                )
-
-            args = args.copy()
-            args["skiprows"], rows_considered = cls.handle_skiprows(
-                args["skiprows"], rows_behind, rows_behind + rows_readed, **kwargs,
-            )
-        else:
-            rows_considered = rows_readed
 
         # The workers return multiple objects for each part of the file read:
         # - The first n - 2 objects are partitions of data
@@ -149,7 +154,7 @@ class TextFileReader(FileReader):
             max_bytes = float("inf")
 
         if nrows is not None and nrows <= 0:
-            return True, 0
+            return True, 0, 0
 
         # we need this condition to avoid unnecessary checks in `stop_condition`
         # which executes in a huge for loop
@@ -172,15 +177,50 @@ class TextFileReader(FileReader):
         rows_considered = 0
         rows_readed = 0
         outside_quotes = True
+
+        should_handle_skiprows = skiprows is not None and not isinstance(skiprows, int)
+
+        def skiprows_handler_builder(skiprows):
+            if callable(skiprows):
+
+                def stepper():
+                    row_number = 0
+                    while True:
+                        yield not skiprows(row_number)
+                        row_number += 1
+
+            elif is_list_like(skiprows):
+
+                def stepper():
+                    row_number = 0
+                    index_to_compare = 0
+                    while index_to_compare < len(skiprows):
+                        if skiprows[index_to_compare] == row_number:
+                            index_to_compare += 1
+                            yield 0
+                        else:
+                            yield 1
+                        row_number += 1
+                    while True:
+                        yield 1
+
+            else:
+
+                def stepper():
+                    while True:
+                        yield 1
+
+            return stepper()
+
+        if should_handle_skiprows:
+            skiprows_handler = skiprows_handler_builder(skiprows)
+
         for line in f:
             if is_quoting and line.count(quotechar) % 2:
                 outside_quotes = not outside_quotes
             if outside_quotes:
-                if skiprows is not None and not isinstance(skiprows, int):
-                    if callable(skiprows):
-                        rows_considered += not skiprows(rows_readed)
-                    elif is_list_like(skiprows):
-                        rows_considered += rows_readed not in skiprows
+                if should_handle_skiprows:
+                    rows_considered += next(skiprows_handler)
                 else:
                     rows_considered += 1
                 rows_readed += 1
@@ -192,12 +232,10 @@ class TextFileReader(FileReader):
         if save_position:
             f.seek(start_position, os.SEEK_SET)
 
-        return outside_quotes, rows_readed
+        return outside_quotes, rows_readed, rows_considered
 
     @classmethod
-    def handle_skiprows(
-        cls, skiprows, chunk_start_row, chunk_end_row, extra_skiprows=None
-    ):
+    def handle_skiprows(cls, skiprows, chunk_start_row, extra_skiprows=None):
         """
         Desrtiption
 
@@ -217,20 +255,16 @@ class TextFileReader(FileReader):
         def skiprows_wrapper(n):
             return n in extra_skiprows or skiprows(n + chunk_start_row)
 
-        # breakpoint()
         if callable(skiprows):
             new_skiprows = skiprows_wrapper
-            rows_range = np.arange(chunk_start_row, chunk_end_row)
-            not_skipped_rows = np.vectorize(
-                lambda *args, **kwargs: not new_skiprows(*args, **kwargs)
-            )(rows_range).sum()
         elif is_list_like(skiprows):
-            start, stop = np.searchsorted(skiprows, [chunk_start_row, chunk_end_row])
+            start = np.searchsorted(skiprows, chunk_start_row)
             new_skiprows = np.concatenate(
-                [extra_skiprows, skiprows[start:stop] - chunk_start_row]
+                [extra_skiprows, skiprows[start:] - chunk_start_row]
             )
-            not_skipped_rows = (chunk_end_row - chunk_start_row) - len(new_skiprows)
+            if len(extra_skiprows) > 0:
+                new_skiprows = np.sort(new_skiprows)
         else:
-            new_skiprows, not_skipped_rows = skiprows, skiprows
+            new_skiprows = skiprows
 
-        return new_skiprows, not_skipped_rows
+        return new_skiprows

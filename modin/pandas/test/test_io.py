@@ -764,7 +764,8 @@ def test_from_csv(make_csv_file, nrows):
         pytest.param(
             None,
             marks=pytest.mark.xfail(
-                reason="In that case we will get string and int values at the same column. Modin have problems with it, see #1931 for details."
+                reason="In that case we will get string and int values at the same column. \
+                    Modin have problems with it, see #1931 for details."
             ),
         ),
         "infer",
