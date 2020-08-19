@@ -1226,3 +1226,20 @@ class BaseQueryCompiler(abc.ABC):
         return self.drop(columns=[key])
 
     # END __delitem__
+
+    @abc.abstractmethod
+    def has_multiindex(self, axis=0):
+        """
+        Check if specified axis is indexed by MultiIndex.
+
+        Parameters
+        ----------
+        axis : 0 or 1, default 0
+            The axis to check (0 - index, 1 - columns).
+
+        Returns
+        -------
+        bool
+            True if index at specified axis is MultiIndex and False otherwise.
+        """
+        pass

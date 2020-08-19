@@ -748,7 +748,7 @@ class BasePandasDataset(object):
             self._validate_dtypes(numeric_only=numeric_only)
 
         if level is not None:
-            if not isinstance(self.axes[axis], pandas.MultiIndex):
+            if not self._query_compiler.has_multiindex(axis=axis):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
@@ -2042,11 +2042,11 @@ class BasePandasDataset(object):
             level is not None
             or (
                 (columns is not None or axis == 1)
-                and isinstance(self.columns, pandas.MultiIndex)
+                and self._query_compiler.has_multiindex(axis=1)
             )
             or (
                 (index is not None or axis == 0)
-                and isinstance(self.index, pandas.MultiIndex)
+                and self._query_compiler.has_multiindex()
             )
         ):
             return self._default_to_pandas(
@@ -2294,7 +2294,7 @@ class BasePandasDataset(object):
         # exist.
         if (
             not drop
-            and not isinstance(self.index, pandas.MultiIndex)
+            and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")

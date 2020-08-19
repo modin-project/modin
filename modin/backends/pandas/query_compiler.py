@@ -480,7 +480,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop = kwargs.get("drop", False)
         level = kwargs.get("level", None)
         # TODO Implement level
-        if level is not None or isinstance(self.index, pandas.MultiIndex):
+        if level is not None or self.has_multiindex():
             return self.default_to_pandas(pandas.DataFrame.reset_index, **kwargs)
         if not drop:
             new_column_name = (
@@ -1589,10 +1589,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort_remaining = kwargs.pop("sort_remaining", True)
         kwargs["inplace"] = False
 
-        if level is not None or (
-            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
-            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
-        ):
+        if level is not None or self.has_multiindex(axis=axis):
             return self.default_to_pandas(
                 pandas.DataFrame.sort_index,
                 axis=axis,
@@ -2278,3 +2275,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(lambda df: df[df.columns[0]].cat.codes)
 
     # END Cat operations
+
+    def has_multiindex(self, axis=0):
+        """
+        Check if specified axis is indexed by MultiIndex.
+
+        Parameters
+        ----------
+        axis : 0 or 1, default 0
+            The axis to check (0 - index, 1 - columns).
+
+        Returns
+        -------
+        bool
+            True if index at specified axis is MultiIndex and False otherwise.
+        """
+        if axis == 0:
+            return isinstance(self.index, pandas.MultiIndex)
+        assert axis == 1
+        return isinstance(self.columns, pandas.MultiIndex)

@@ -432,7 +432,7 @@ class DataFrame(BasePandasDataset):
             drop = by in self.columns
             idx_name = by
             if (
-                isinstance(self.axes[axis], pandas.MultiIndex)
+                self._query_compiler.has_multiindex(axis=axis)
                 and by in self.axes[axis].names
             ):
                 # In this case we pass the string value of the name through to the
@@ -2011,7 +2011,7 @@ class DataFrame(BasePandasDataset):
         names = []
         if append:
             names = [x for x in self.index.names]
-            if isinstance(self.index, pandas.MultiIndex):
+            if self._query_compiler.has_multiindex():
                 for i in range(self.index.nlevels):
                     arrays.append(self.index._get_level_values(i))
             else:
@@ -2423,7 +2423,7 @@ class DataFrame(BasePandasDataset):
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
-        is_mi_columns = isinstance(self.columns, pandas.MultiIndex)
+        is_mi_columns = self._query_compiler.has_multiindex(axis=1)
         try:
             if key in self.columns and not is_mi_columns:
                 return self._getitem_column(key)
