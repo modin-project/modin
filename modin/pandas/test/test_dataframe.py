@@ -5370,6 +5370,7 @@ class TestDataFrameIndexing:
         df_equals(modin_df, pandas_df)
 
     def test___setitem__mask(self):
+        # DataFrame mask:
         data = test_data["int_data"]
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
@@ -5380,6 +5381,7 @@ class TestDataFrameIndexing:
 
         df_equals(modin_df, pandas_df)
 
+        # Array mask:
         pandas_df = pandas.DataFrame(data)
         modin_df = pd.DataFrame(data)
         array = (pandas_df > mean).to_numpy()
@@ -5388,6 +5390,11 @@ class TestDataFrameIndexing:
         pandas_df[array] = -50
 
         df_equals(modin_df, pandas_df)
+
+        # Array mask of wrong size:
+        with pytest.raises(ValueError):
+            array = np.array([[1, 2], [3, 4]])
+            modin_df[array] = 20
 
     @pytest.mark.parametrize(
         "data",
