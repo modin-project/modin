@@ -173,6 +173,14 @@ test_data_small_keys = list(test_data_small.keys())
 test_data_with_duplicates_values = list(test_data_with_duplicates.values())
 test_data_with_duplicates_keys = list(test_data_with_duplicates.keys())
 
+test_data_categorical = {
+    "ordered": pandas.Categorical(list("testdata"), ordered=True),
+    "unordered": pandas.Categorical(list("testdata"), ordered=False),
+}
+
+test_data_categorical_values = list(test_data_categorical.values())
+test_data_categorical_keys = list(test_data_categorical.keys())
+
 numeric_dfs = [
     "empty_data",
     "columns_only",

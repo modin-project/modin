@@ -57,6 +57,8 @@ from .utils import (
     eval_general,
     test_data_small_values,
     test_data_small_keys,
+    test_data_categorical_values,
+    test_data_categorical_keys,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -4100,3 +4102,141 @@ def test_hasattr_sparse(data):
     else:
         modin_result = hasattr(modin_series, "sparse")
         assert modin_result == pandas_result
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+def test_cat_categories(data):
+    modin_series, pandas_series = create_test_series(data.copy())
+    df_equals(modin_series.cat.categories, pandas_series.cat.categories)
+    pandas_series.cat.categories = list("qwert")
+    modin_series.cat.categories = list("qwert")
+    df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+def test_cat_ordered(data):
+    modin_series, pandas_series = create_test_series(data.copy())
+    assert modin_series.cat.ordered == pandas_series.cat.ordered
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+def test_cat_codes(data):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.codes
+    modin_result = modin_series.cat.codes
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_rename_categories(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.rename_categories(list("qwert"), inplace=inplace)
+    modin_result = modin_series.cat.rename_categories(list("qwert"), inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("ordered", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_reorder_categories(data, ordered, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.reorder_categories(
+        list("tades"), ordered=ordered, inplace=inplace
+    )
+    modin_result = modin_series.cat.reorder_categories(
+        list("tades"), ordered=ordered, inplace=inplace
+    )
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_add_categories(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.add_categories(list("qw"), inplace=inplace)
+    modin_result = modin_series.cat.add_categories(list("qw"), inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_remove_categories(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.remove_categories(list("at"), inplace=inplace)
+    modin_result = modin_series.cat.remove_categories(list("at"), inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_remove_unused_categories(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_series[1] = np.nan
+    pandas_result = pandas_series.cat.remove_unused_categories(inplace=inplace)
+    modin_series[1] = np.nan
+    modin_result = modin_series.cat.remove_unused_categories(inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("ordered", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("rename", [True, False])
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_set_categories(data, ordered, rename, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.set_categories(
+        list("qwert"), ordered=ordered, rename=rename, inplace=inplace
+    )
+    modin_result = modin_series.cat.set_categories(
+        list("qwert"), ordered=ordered, rename=rename, inplace=inplace
+    )
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_as_ordered(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.as_ordered(inplace=inplace)
+    modin_result = modin_series.cat.as_ordered(inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", test_data_categorical_values, ids=test_data_categorical_keys
+)
+@pytest.mark.parametrize("inplace", [True, False])
+def test_cat_as_unordered(data, inplace):
+    modin_series, pandas_series = create_test_series(data.copy())
+    pandas_result = pandas_series.cat.as_unordered(inplace=inplace)
+    modin_result = modin_series.cat.as_unordered(inplace=inplace)
+    df_equals(modin_series, pandas_series)
+    df_equals(modin_result, pandas_result)

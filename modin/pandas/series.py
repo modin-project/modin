@@ -1621,7 +1621,7 @@ class Series(BasePandasDataset):
 
     @property
     def cat(self):
-        return self._default_to_pandas(pandas.Series.cat)
+        return CategoryMethods(self)
 
     @property
     def dt(self):
@@ -2233,4 +2233,77 @@ class StringMethods(object):
     def _default_to_pandas(self, op, *args, **kwargs):
         return self._series._default_to_pandas(
             lambda series: op(series.str, *args, **kwargs)
+        )
+
+
+class CategoryMethods(object):
+    def __init__(self, series):
+        self._series = series
+        self._query_compiler = series._query_compiler
+
+    @property
+    def categories(self):
+        return self._series._default_to_pandas(pandas.Series.cat).categories
+
+    @categories.setter
+    def categories(self, categories):
+        def set_categories(series, categories):
+            series.cat.categories = categories
+
+        self._series._default_to_pandas(set_categories, categories=categories)
+
+    @property
+    def ordered(self):
+        return self._series._default_to_pandas(pandas.Series.cat).ordered
+
+    @property
+    def codes(self):
+        return Series(query_compiler=self._query_compiler.cat_codes())
+
+    def rename_categories(self, new_categories, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.rename_categories, new_categories, inplace=inplace
+        )
+
+    def reorder_categories(self, new_categories, ordered=None, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.reorder_categories,
+            new_categories,
+            ordered=ordered,
+            inplace=inplace,
+        )
+
+    def add_categories(self, new_categories, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.add_categories, new_categories, inplace=inplace
+        )
+
+    def remove_categories(self, removals, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.remove_categories, removals, inplace=inplace
+        )
+
+    def remove_unused_categories(self, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.remove_unused_categories, inplace=inplace
+        )
+
+    def set_categories(self, new_categories, ordered=None, rename=False, inplace=False):
+        return self._default_to_pandas(
+            pandas.Series.cat.set_categories,
+            new_categories,
+            ordered=ordered,
+            rename=rename,
+            inplace=inplace,
+        )
+
+    def as_ordered(self, inplace=False):
+        return self._default_to_pandas(pandas.Series.cat.as_ordered, inplace=inplace)
+
+    def as_unordered(self, inplace=False):
+        return self._default_to_pandas(pandas.Series.cat.as_unordered, inplace=inplace)
+
+    def _default_to_pandas(self, op, *args, **kwargs):
+        return self._series._default_to_pandas(
+            lambda series: op(series.cat, *args, **kwargs)
         )
