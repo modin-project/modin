@@ -81,13 +81,13 @@ class PandasOnRayFrameManager(RayFrameManager):
         if axis == 0:
             # We grab the first column of blocks and extract the indices
             new_idx = (
-                [idx.apply(func).oid for idx in partitions.T[0]]
+                [idx.add_to_apply_calls(func).oid for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).oid for idx in partitions[0]]
+                [idx.add_to_apply_calls(func).oid for idx in partitions[0]]
                 if len(partitions)
                 else []
             )
