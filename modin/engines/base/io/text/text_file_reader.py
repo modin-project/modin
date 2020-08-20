@@ -106,6 +106,7 @@ class TextFileReader(FileReader):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        # breakpoint()
         return np.array(
             [
                 [
@@ -268,3 +269,19 @@ class TextFileReader(FileReader):
             new_skiprows = skiprows
 
         return new_skiprows
+
+    @classmethod
+    def rows_skipper_builder(cls, f, quotechar, is_quoting, skiprows=None):
+        _skiprows = skiprows
+
+        def skipper(n, skiprows=None):
+            skiprows = skiprows if skiprows is not None else _skiprows
+            return cls.read_nrows(
+                f,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+                nrows=n,
+                skiprows=skiprows,
+            )[1]
+
+        return skipper

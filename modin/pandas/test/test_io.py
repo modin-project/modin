@@ -743,7 +743,15 @@ def test_from_csv(make_csv_file, nrows):
 
 
 @pytest.mark.parametrize(
-    "skiprows", [None, 10, lambda x: x % 2, lambda x: x > 25, np.arange(2, 50)]
+    "skiprows",
+    [
+        None,
+        10,
+        lambda x: x % 2,
+        lambda x: x > 25,
+        np.arange(1, 50),
+        np.arange(0, 50, 2),
+    ],
 )
 @pytest.mark.parametrize("nrows", [None, 30])
 @pytest.mark.parametrize(
@@ -759,19 +767,7 @@ def test_from_csv(make_csv_file, nrows):
     ],
 )
 @pytest.mark.parametrize(
-    "header",
-    [
-        pytest.param(
-            None,
-            marks=pytest.mark.xfail(
-                reason="In that case we will get string and int values at the same column. \
-                    Modin have problems with it, see #1931 for details."
-            ),
-        ),
-        "infer",
-        0,
-        1,
-    ],
+    "header", [None, "infer", 0, 1],
 )
 def test_from_csv_skiprows(make_csv_file, skiprows, nrows, names, header):
     make_csv_file()
@@ -782,6 +778,16 @@ def test_from_csv_skiprows(make_csv_file, skiprows, nrows, names, header):
     modin_df = pd.read_csv(
         TEST_CSV_FILENAME, names=names, header=header, skiprows=skiprows, nrows=nrows
     )
+
+    # we need to cast both dataframes to 'str' to compare
+    # see issue #1931 for details
+    if header is None:
+        for name, col in modin_df.items():
+            if col.dtype == float:
+                col = col.astype(float)
+            modin_df[name] = col
+        modin_df = modin_df.astype(str)
+        pandas_df = pandas_df.astype(str)
 
     df_equals(modin_df, pandas_df)
 

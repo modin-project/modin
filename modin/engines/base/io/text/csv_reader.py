@@ -95,41 +95,39 @@ class CSVReader(TextFileReader):
             encoding if encoding is not None else "UTF-8"
         )
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
+            rows_behind = 0
+            pre_reading = 0
+            rows_skipper = cls.rows_skipper_builder(
+                f, quotechar, is_quoting=(kwargs.get("quoting", "") != csv.QUOTE_NONE)
+            )
+
+            # Skip the header since we already have the header information
+            header = kwargs.get("header", "infer")
+            header_skip = 0
+            if header == "infer" and kwargs.get("names", None) is None:
+                header_skip += 1
+            elif isinstance(header, int):
+                header_skip += header + 1
+            elif hasattr(header, "__iter__") and not isinstance(header, str):
+                header_skip += max(header) + 1
+
             if is_list_like(skiprows):
                 skiprows = np.sort(skiprows)
 
-            # if `skiprows` is monotonic range that starts from 0
-            # then we can do that fastpath here
-            if (
-                is_list_like(skiprows)
-                and skiprows[0] == 0
-                and np.all(np.diff(skiprows) == 1)
-            ):
+            # if `skiprows` is monotonic range we can do a fastpath here
+            if is_list_like(skiprows) and np.all(np.diff(skiprows) == 1):
+                pre_reading = max(0, skiprows[0] - header_skip)
                 skiprows = len(skiprows)
             elif skiprows is None:
                 skiprows = 0
-            instant_skiprows = skiprows if isinstance(skiprows, int) else 0
-            # Skip the header since we already have the header information
-            header = kwargs.get("header", "infer")
-            if header == "infer" and kwargs.get("names", None) is None:
-                instant_skiprows += 1
-            elif isinstance(header, int):
-                instant_skiprows += header + 1
-            elif hasattr(header, "__iter__") and not isinstance(header, str):
-                instant_skiprows += max(header) + 1
-            _, rows_skipped, _ = cls.read_nrows(
-                f,
-                instant_skiprows,
-                quotechar,
-                is_quoting=(kwargs.get("quoting", "") != csv.QUOTE_NONE),
-                skiprows=skiprows,
-            )
 
-            if not isinstance(skiprows, int):
+            should_handle_skiprows = not isinstance(skiprows, int)
+            if should_handle_skiprows:
                 partition_kwargs["skiprows"] = skiprows
-                should_handle_skiprows = True
-            else:
-                should_handle_skiprows = False
+
+            rows_behind += rows_skipper(
+                header_skip, skiprows=(skiprows if should_handle_skiprows else None)
+            )
 
             skip_encoding = kwargs.get("encoding", None) is not None
 
@@ -137,18 +135,14 @@ class CSVReader(TextFileReader):
             partition_ids = []
             index_ids = []
             dtypes_ids = []
-            total_bytes = cls.file_size(f)
+
             # Max number of partitions available
             from modin.pandas import DEFAULT_NPARTITIONS
 
             num_partitions = DEFAULT_NPARTITIONS
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_partitions)
-            # This is the chunksize each partition will read
-            if nrows is None:
-                part_size = max(1, total_bytes // num_partitions)
-            else:
-                part_size = max(nrows, nrows // num_partitions)
+
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -166,43 +160,58 @@ class CSVReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
+            args = {
+                "fname": filepath_or_buffer,
+                "num_splits": num_splits,
+                **partition_kwargs,
+            }
+
+            data_reader = cls.chunk_reader_builder(
+                f,
+                args=args,
+                quotechar=quotechar,
+                partition_ids=partition_ids,
+                index_ids=index_ids,
+                dtypes_ids=dtypes_ids,
+            )
+
+            if pre_reading:
+                data_reader(nrows=pre_reading)
+                rows_behind += pre_reading
+
+            instant_skiprows = skiprows if isinstance(skiprows, int) else 0
+            rows_behind += rows_skipper(instant_skiprows)
+
+            total_bytes = cls.file_size(f)
+            # This is the chunksize each partition will read
+            if nrows is None:
+                part_size = max(1, total_bytes // num_partitions)
+            else:
+                part_size = max(num_partitions, nrows // num_partitions)
+
             deploy_kwargs = {
                 "chunk_size_bytes" if nrows is None else "nrows": part_size,
             }
 
             if skip_encoding:
-                if isinstance(skiprows, int):
-                    partition_kwargs["skiprows"] = 1
+                if not should_handle_skiprows:
+                    args["skiprows"] = 1
                 else:
                     deploy_kwargs["extra_skiprows"] = 0
 
-            readed = f.tell() if nrows is None else 0
-            rows_behind = rows_skipped
+            readed = f.tell() if nrows is None else pre_reading
             read_limit = total_bytes if nrows is None else nrows
             while f.tell() < total_bytes and readed < read_limit:
-                args = {
-                    "fname": filepath_or_buffer,
-                    "num_splits": num_splits,
-                    **partition_kwargs,
-                }
 
                 if (readed + part_size) > read_limit:
                     deploy_kwargs[list(deploy_kwargs.keys())[0]] = read_limit - readed
 
-                if should_handle_skiprows:
-                    deploy_kwargs["rows_behind"] = rows_behind
-
-                partition_id, rows_readed, rows_considered = cls.call_deploy(
-                    f, num_splits + 2, args, quotechar=quotechar, **deploy_kwargs
+                chunk_readed, rows_considered = data_reader(
+                    rows_behind, **deploy_kwargs
                 )
-                if rows_considered is None or rows_considered > 0:
-                    partition_ids.append(partition_id[:-2])
-                    index_ids.append(partition_id[-2])
-                    dtypes_ids.append(partition_id[-1])
                 readed = f.tell() if nrows is None else readed + rows_considered
-
                 if should_handle_skiprows:
-                    rows_behind += rows_readed
+                    rows_behind += chunk_readed
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.
@@ -269,3 +278,26 @@ class CSVReader(TextFileReader):
         if index_col is None:
             new_query_compiler._modin_frame._apply_index_objs(axis=0)
         return new_query_compiler
+
+    @classmethod
+    def chunk_reader_builder(
+        cls, f, args, quotechar, partition_ids, index_ids, dtypes_ids,
+    ):
+        def _read_chunk(rows_behind=None, nrows=None, chunk_size_bytes=-1):
+            partition_id, rows_readed, rows_considered = cls.call_deploy(
+                f,
+                args["num_splits"] + 2,
+                args,
+                quotechar=quotechar,
+                nrows=nrows,
+                chunk_size_bytes=chunk_size_bytes,
+                rows_behind=rows_behind,
+            )
+            if rows_considered is None or rows_considered > 0:
+                partition_ids.append(partition_id[:-2])
+                index_ids.append(partition_id[-2])
+                dtypes_ids.append(partition_id[-1])
+
+            return rows_readed, rows_considered
+
+        return _read_chunk
