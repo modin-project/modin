@@ -3438,7 +3438,7 @@ class BasePandasDataset(object):
         return self.ge(right)
 
     def __getitem__(self, key):
-        if len(self) == 0:
+        if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
@@ -3569,7 +3569,7 @@ class BasePandasDataset(object):
             "_create_or_update_from_compiler",
             "_update_inplace",
         ]
-        if item not in default_behaviors:
+        if item not in default_behaviors and not self._query_compiler.lazy_execution:
             method = object.__getattribute__(self, item)
             is_callable = callable(method)
             # We default to pandas on empty DataFrames. This avoids a large amount of

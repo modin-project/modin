@@ -45,6 +45,8 @@ class BaseQueryCompiler(abc.ABC):
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
 
+    lazy_execution = False
+
     # Metadata modification abstract methods
     @abc.abstractmethod
     def add_prefix(self, prefix, axis=1):
