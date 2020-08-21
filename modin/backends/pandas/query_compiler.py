@@ -1898,6 +1898,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 value = value.reindex(self.index)
             else:
                 value = list(value)
+        else:
+            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
