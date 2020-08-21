@@ -1054,6 +1054,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    replace = MapFunction.register(pandas.DataFrame.replace)
     series_view = MapFunction.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             df.squeeze(axis=1).view(*args, **kwargs)

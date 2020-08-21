@@ -2176,25 +2176,6 @@ class BasePandasDataset(object):
         new_labels = self.axes[axis].reorder_levels(order)
         return self.set_axis(new_labels, axis=axis, inplace=False)
 
-    def replace(
-        self,
-        to_replace=None,
-        value=None,
-        inplace=False,
-        limit=None,
-        regex=False,
-        method="pad",
-    ):
-        return self._default_to_pandas(
-            "replace",
-            to_replace=to_replace,
-            value=value,
-            inplace=inplace,
-            limit=limit,
-            regex=regex,
-            method=method,
-        )
-
     def resample(
         self,
         rule,
