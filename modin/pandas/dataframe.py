@@ -1134,7 +1134,7 @@ class DataFrame(BasePandasDataset):
             # TODO: Remove broadcast of Series
             value = value._to_pandas()
 
-        if len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
@@ -2577,7 +2577,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, Series):
                 value = list(value)
 
-        if len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
