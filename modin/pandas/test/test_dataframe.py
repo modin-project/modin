@@ -5424,10 +5424,9 @@ class TestDataFrameIndexing:
 
 
 class TestDataFrameIter:
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_items(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    def test_items(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
 
         modin_items = modin_df.items()
         pandas_items = pandas_df.items()
@@ -5437,10 +5436,9 @@ class TestDataFrameIter:
             df_equals(pandas_series, modin_series)
             assert pandas_index == modin_index
 
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_iteritems(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    def test_iteritems(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
 
         modin_items = modin_df.iteritems()
         pandas_items = pandas_df.iteritems()
@@ -5450,10 +5448,9 @@ class TestDataFrameIter:
             df_equals(pandas_series, modin_series)
             assert pandas_index == modin_index
 
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_iterrows(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    def test_iterrows(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
 
         modin_iterrows = modin_df.iterrows()
         pandas_iterrows = pandas_df.iterrows()
@@ -5465,7 +5462,6 @@ class TestDataFrameIter:
 
     @pytest.mark.parametrize("name", [None, "NotPandas", "Pandas"])
     @pytest.mark.parametrize("index", [True, False])
-    # @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_itertuples(self, name, index):
         modin_df = pd.DataFrame(test_data_values[0])
         pandas_df = pandas.DataFrame(test_data_values[0])
@@ -5488,10 +5484,9 @@ class TestDataFrameIter:
         for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
             np.testing.assert_equal(modin_row, pandas_row)
 
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test___iter__(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+    def test___iter__(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        pandas_df = pandas.DataFrame(test_data_values[0])
 
         modin_iterator = modin_df.__iter__()
 
