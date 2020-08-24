@@ -302,6 +302,8 @@ class BaseFrameManager(object):
             A new BaseFrameManager object, the type of object that called this.
         """
         if type(right_parts) is list:
+            # filtering empty frames
+            right_parts = [o for o in right_parts if o.size != 0]
             return np.concatenate([left_parts] + right_parts, axis=axis)
         else:
             return np.append(left_parts, right_parts, axis=axis)
