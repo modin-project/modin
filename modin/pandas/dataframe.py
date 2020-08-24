@@ -33,7 +33,13 @@ from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
-from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
+from .utils import (
+    from_pandas,
+    from_non_pandas,
+    to_pandas,
+    _inherit_docstrings,
+    hashable,
+)
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
@@ -2515,7 +2521,7 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
-        if key not in self.columns:
+        if hashable(key) and key not in self.columns:
             # Handle new column case first
             if isinstance(value, Series):
                 if len(self.columns) == 0:
@@ -2553,6 +2559,13 @@ class DataFrame(BasePandasDataset):
             return
 
         if not isinstance(key, str):
+
+            if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
+                if isinstance(key, np.ndarray):
+                    if key.shape != self.shape:
+                        raise ValueError("Array must be same shape as DataFrame")
+                    key = DataFrame(key, columns=self.columns)
+                return self.mask(key, value, inplace=True)
 
             def setitem_without_string_columns(df):
                 # Arrow makes memory-mapped objects immutable, so copy will allow them
