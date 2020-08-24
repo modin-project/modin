@@ -72,8 +72,8 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
 class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 0
@@ -81,8 +81,8 @@ class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
 
 class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 1

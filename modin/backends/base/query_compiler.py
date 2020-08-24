@@ -45,6 +45,8 @@ class BaseQueryCompiler(abc.ABC):
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
 
+    lazy_execution = False
+
     # Metadata modification abstract methods
     @abc.abstractmethod
     def add_prefix(self, prefix, axis=1):
@@ -86,8 +88,7 @@ class BaseQueryCompiler(abc.ABC):
     # Data Management Methods
     @abc.abstractmethod
     def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
+        """In the future, this will hopefully trigger a cleanup of this object."""
         # TODO create a way to clean up this object.
         pass
 
@@ -123,6 +124,28 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     # END To/From Pandas
+
+    # From Arrow
+    @classmethod
+    @abc.abstractmethod
+    def from_arrow(cls, at, data_cls):
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+        at : Arrow Table
+            The Arrow Table to convert from.
+        data_cls :
+            Modin DataFrame object to convert to.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Pandas DataFrame.
+        """
+        pass
+
+    # END From Arrow
 
     # To NumPy
     @abc.abstractmethod
@@ -291,6 +314,27 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def join(self, right, **kwargs):
+        """
+        Join columns of another DataFrame.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to join with.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler that contains result of the join.
+
+        Notes
+        -----
+        See pd.DataFrame.join for more info on kwargs.
+        """
+        pass
+
     # END Abstract inter-data operations
 
     # Abstract Transpose
@@ -301,6 +345,26 @@ class BaseQueryCompiler(abc.ABC):
         Returns:
             Transposed new QueryCompiler.
         """
+        pass
+
+    @abc.abstractmethod
+    def columnarize(self):
+        """
+        Transposes this QueryCompiler if it has a single row but multiple columns.
+
+        This method should be called for QueryCompilers representing a Series object,
+        i.e. self.is_series_like() should be True.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Transposed new QueryCompiler or self.
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_series_like(self):
+        """Return True if QueryCompiler has a single column or row"""
         pass
 
     # END Abstract Transpose
@@ -458,6 +522,10 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def replace(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def series_view(self, **kwargs):
         pass
 
@@ -472,6 +540,9 @@ class BaseQueryCompiler(abc.ABC):
     # END Abstract map partitions operations
 
     def value_counts(self, **kwargs):
+        pass
+
+    def stack(self, level, dropna):
         pass
 
     # Abstract map partitions across select indices
@@ -1127,6 +1198,14 @@ class BaseQueryCompiler(abc.ABC):
     # END Manual Partitioning methods
 
     @abc.abstractmethod
+    def unstack(self, level, fill_value):
+        pass
+
+    @abc.abstractmethod
+    def pivot(self, index, columns, values):
+        pass
+
+    @abc.abstractmethod
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
 
@@ -1182,3 +1261,20 @@ class BaseQueryCompiler(abc.ABC):
         return self.drop(columns=[key])
 
     # END __delitem__
+
+    @abc.abstractmethod
+    def has_multiindex(self, axis=0):
+        """
+        Check if specified axis is indexed by MultiIndex.
+
+        Parameters
+        ----------
+        axis : 0 or 1, default 0
+            The axis to check (0 - index, 1 - columns).
+
+        Returns
+        -------
+        bool
+            True if index at specified axis is MultiIndex and False otherwise.
+        """
+        pass

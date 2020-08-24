@@ -33,7 +33,13 @@ from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
-from .utils import from_pandas, from_non_pandas, to_pandas, _inherit_docstrings
+from .utils import (
+    from_pandas,
+    from_non_pandas,
+    to_pandas,
+    _inherit_docstrings,
+    hashable,
+)
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset
@@ -426,7 +432,7 @@ class DataFrame(BasePandasDataset):
             drop = by in self.columns
             idx_name = by
             if (
-                isinstance(self.axes[axis], pandas.MultiIndex)
+                self._query_compiler.has_multiindex(axis=axis)
                 and by in self.axes[axis].names
             ):
                 # In this case we pass the string value of the name through to the
@@ -1134,7 +1140,7 @@ class DataFrame(BasePandasDataset):
             # TODO: Remove broadcast of Series
             value = value._to_pandas()
 
-        if len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
@@ -1153,9 +1159,11 @@ class DataFrame(BasePandasDataset):
                 data=value, columns=[column], index=self.index
             )._query_compiler
         else:
-            if not is_list_like(value):
-                value = np.full(len(self.index), value)
-            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
+            if (
+                is_list_like(value)
+                and not isinstance(value, pandas.Series)
+                and len(value) != len(self.index)
+            ):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
@@ -1303,22 +1311,21 @@ class DataFrame(BasePandasDataset):
         DataFrame
             A dataframe containing columns from both the caller and other.
         """
-        if on is not None:
-            if isinstance(other, DataFrame):
-                other = other._query_compiler.to_pandas()
-            return self._default_to_pandas(
-                pandas.DataFrame.join,
-                other,
-                on=on,
-                how=how,
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-                sort=sort,
-            )
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = DataFrame({other.name: other})
+        if on is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.join(
+                    other._query_compiler,
+                    on=on,
+                    how=how,
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                    sort=sort,
+                )
+            )
         if isinstance(other, DataFrame):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
@@ -1673,9 +1680,61 @@ class DataFrame(BasePandasDataset):
                 new_df.columns = new_columns
                 return new_df
 
+    def unstack(self, level=-1, fill_value=None):
+        """
+        Pivot a level of the (necessarily hierarchical) index labels.
+        Returns a DataFrame having a new level of column labels whose inner-most level
+        consists of the pivoted index labels.
+        If the index is not a MultiIndex, the output will be a Series
+        (the analogue of stack when the columns are not a MultiIndex).
+        The level involved will automatically get sorted.
+
+        Parameters
+        ----------
+        level : int, str, or list of these, default -1 (last level)
+            Level(s) of index to unstack, can pass level name.
+        fill_value : int, str or dict
+            Replace NaN with this value if the unstack produces missing values.
+
+        Returns
+        -------
+        Series or DataFrame
+        """
+        if not isinstance(self.index, pandas.MultiIndex) or (
+            isinstance(self.index, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            return self._reduce_dimension(
+                query_compiler=self._query_compiler.unstack(level, fill_value)
+            )
+        else:
+            return DataFrame(
+                query_compiler=self._query_compiler.unstack(level, fill_value)
+            )
+
     def pivot(self, index=None, columns=None, values=None):
-        return self._default_to_pandas(
-            pandas.DataFrame.pivot, index=index, columns=columns, values=values
+        """
+        Return reshaped DataFrame organized by given index / column values.
+        Reshape data (produce a "pivot" table) based on column values. Uses
+        unique values from specified `index` / `columns` to form axes of the
+        resulting DataFrame.
+        Parameters
+        ----------
+        index : str or object, optional
+            Column to use to make new frame's index. If None, uses
+            existing index.
+        columns : str or object
+            Column to use to make new frame's columns.
+        values : str, object or a list of the previous, optional
+            Column(s) to use for populating new frame's values. If not
+            specified, all remaining columns will be used and the result will
+            have hierarchically indexed columns.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pivot(
+                index=index, columns=columns, values=values
+            )
         )
 
     def pivot_table(
@@ -1864,6 +1923,64 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return obj
 
+    def replace(
+        self,
+        to_replace=None,
+        value=None,
+        inplace=False,
+        limit=None,
+        regex=False,
+        method="pad",
+    ):
+        """
+        Replace values given in `to_replace` with `value`.
+
+        Values of the DaraFrame are replaced with other values dynamically.
+        This differs from updating with .loc or .iloc, which require
+        you to specify a location to update with some value.
+
+        Parameters
+        ----------
+        to_replace : str, regex, list, dict, Series, int, float, or None
+            How to find the values that will be replaced.
+        value : scalar, dict, list, str, regex, default None
+            Value to replace any values matching `to_replace` with.
+            For a DataFrame a dict of values can be used to specify which
+            value to use for each column (columns not in the dict will not be
+            filled). Regular expressions, strings and lists or dicts of such
+            objects are also allowed.
+        inplace : bool, default False
+            If True, in place. Note: this will modify any
+            other views on this object (e.g. a column from a DataFrame).
+            Returns the caller if this is True.
+        limit : int, default None
+            Maximum size gap to forward or backward fill.
+        regex : bool or same types as `to_replace`, default False
+            Whether to interpret `to_replace` and/or `value` as regular
+            expressions. If this is ``True`` then `to_replace` *must* be a
+            string. Alternatively, this could be a regular expression or a
+            list, dict, or array of regular expressions in which case
+            `to_replace` must be ``None``.
+        method : {{'pad', 'ffill', 'bfill', `None`}}
+            The method to use when for replacement, when `to_replace` is a
+            scalar, list or tuple and `value` is ``None``.
+
+        Returns
+        -------
+        DataFrame
+            Object after replacement.
+        """
+        inplace = validate_bool_kwarg(inplace, "inplace")
+        new_query_compiler = self._query_compiler.replace(
+            to_replace=to_replace,
+            value=value,
+            inplace=False,
+            limit=limit,
+            regex=regex,
+            method=method,
+        )
+        return self._create_or_update_from_compiler(new_query_compiler, inplace)
+
     def _set_axis_name(self, name, axis=0, inplace=False):
         """Alter the name or names of the axis.
 
@@ -2005,7 +2122,7 @@ class DataFrame(BasePandasDataset):
         names = []
         if append:
             names = [x for x in self.index.names]
-            if isinstance(self.index, pandas.MultiIndex):
+            if self._query_compiler.has_multiindex():
                 for i in range(self.index.nlevels):
                     arrays.append(self.index._get_level_values(i))
             else:
@@ -2066,9 +2183,45 @@ class DataFrame(BasePandasDataset):
             return self.copy()
 
     def stack(self, level=-1, dropna=True):
-        return self._default_to_pandas(
-            pandas.DataFrame.stack, level=level, dropna=dropna
-        )
+        """
+        Stack the prescribed level(s) from columns to index.
+        Return a reshaped DataFrame or Series having a multi-level
+        index with one or more new inner-most levels compared to the current
+        DataFrame. The new inner-most levels are created by pivoting the
+        columns of the current dataframe:
+          - if the columns have a single level, the output is a Series;
+          - if the columns have multiple levels, the new index
+            level(s) is (are) taken from the prescribed level(s) and
+            the output is a DataFrame.
+
+        Parameters
+        ----------
+        level : int, str, list, default -1
+            Level(s) to stack from the column axis onto the index
+            axis, defined as one index or label, or a list of indices
+            or labels.
+        dropna : bool, default True
+            Whether to drop rows in the resulting Frame/Series with
+            missing values. Stacking a column level onto the index
+            axis can create combinations of index and column values
+            that are missing from the original dataframe. See Examples
+            section.
+
+        Returns
+        -------
+        DataFrame or Series
+            Stacked dataframe or series.
+        """
+        if not isinstance(self.columns, pandas.MultiIndex) or (
+            isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.columns.nlevels
+        ):
+            return self._reduce_dimension(
+                query_compiler=self._query_compiler.stack(level, dropna)
+            )
+        else:
+            return DataFrame(query_compiler=self._query_compiler.stack(level, dropna))
 
     def sub(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(
@@ -2417,7 +2570,7 @@ class DataFrame(BasePandasDataset):
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
-        is_mi_columns = isinstance(self.columns, pandas.MultiIndex)
+        is_mi_columns = self._query_compiler.has_multiindex(axis=1)
         try:
             if key in self.columns and not is_mi_columns:
                 return self._getitem_column(key)
@@ -2515,7 +2668,7 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
-        if key not in self.columns:
+        if hashable(key) and key not in self.columns:
             # Handle new column case first
             if isinstance(value, Series):
                 if len(self.columns) == 0:
@@ -2554,6 +2707,13 @@ class DataFrame(BasePandasDataset):
 
         if not isinstance(key, str):
 
+            if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
+                if isinstance(key, np.ndarray):
+                    if key.shape != self.shape:
+                        raise ValueError("Array must be same shape as DataFrame")
+                    key = DataFrame(key, columns=self.columns)
+                return self.mask(key, value, inplace=True)
+
             def setitem_without_string_columns(df):
                 # Arrow makes memory-mapped objects immutable, so copy will allow them
                 # to be mutable again.
@@ -2577,7 +2737,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, Series):
                 value = list(value)
 
-        if len(self.index) == 0:
+        if not self._query_compiler.lazy_execution and len(self.index) == 0:
             new_self = DataFrame({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:

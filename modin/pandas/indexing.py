@@ -101,8 +101,7 @@ def _parse_tuple(tup):
 
 
 def _compute_ndim(row_loc, col_loc):
-    """Compute the ndim of result from locators
-    """
+    """Compute the ndim of result from locators"""
     row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
     col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
 
@@ -117,8 +116,7 @@ def _compute_ndim(row_loc, col_loc):
 
 
 class _LocationIndexerBase(object):
-    """Base class for location indexer like loc and iloc
-    """
+    """Base class for location indexer like loc and iloc"""
 
     def __init__(self, modin_df):
         self.df = modin_df
@@ -226,8 +224,7 @@ class _LocationIndexerBase(object):
             )
 
     def _write_items(self, row_lookup, col_lookup, item):
-        """Perform remote write and replace blocks.
-        """
+        """Perform remote write and replace blocks."""
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
 
@@ -338,7 +335,7 @@ class _LocIndexer(_LocationIndexerBase):
             row_lookup = self.qc.index.get_indexer_for(
                 self.qc.index.to_series().loc[row_loc]
             )
-        elif isinstance(self.qc.index, pandas.MultiIndex):
+        elif self.qc.has_multiindex():
             if isinstance(row_loc, pandas.MultiIndex):
                 row_lookup = self.qc.index.get_indexer_for(row_loc)
             else:
@@ -352,7 +349,7 @@ class _LocIndexer(_LocationIndexerBase):
             col_lookup = self.qc.columns.get_indexer_for(
                 self.qc.columns.to_series().loc[col_loc]
             )
-        elif isinstance(self.qc.columns, pandas.MultiIndex):
+        elif self.qc.has_multiindex(axis=1):
             if isinstance(col_loc, pandas.MultiIndex):
                 col_lookup = self.qc.columns.get_indexer_for(col_loc)
             else:

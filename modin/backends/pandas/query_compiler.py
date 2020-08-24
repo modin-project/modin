@@ -144,7 +144,7 @@ def copy_df_for_func(func):
 
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
-        with a Pandas backend. This logic is specific to Pandas."""
+    with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
@@ -179,6 +179,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = pandas_op(self.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = "__reduced__"
             result = result.to_frame()
         if isinstance(result, pandas.DataFrame):
             return self.from_pandas(result, type(self._modin_frame))
@@ -191,6 +193,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     @classmethod
     def from_pandas(cls, df, data_cls):
         return cls(data_cls.from_pandas(df))
+
+    @classmethod
+    def from_arrow(cls, at, data_cls):
+        return cls(data_cls.from_arrow(at))
 
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
@@ -266,8 +272,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Data Management Methods
     def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
+        """In the future, this will hopefully trigger a cleanup of this object."""
         # TODO create a way to clean up this object.
         return
 
@@ -442,6 +447,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
+    def join(self, right, **kwargs):
+        """
+        Join columns of another DataFrame.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to join with.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler that contains result of the join.
+
+        Notes
+        -----
+        See pd.DataFrame.join for more info on kwargs.
+        """
+        on = kwargs.get("on", None)
+        how = kwargs.get("how", "left")
+        sort = kwargs.get("sort", False)
+
+        if how in ["left", "inner"]:
+            right = right.to_pandas()
+
+            def map_func(left, right=right, kwargs=kwargs):
+                return pandas.DataFrame.join(left, right, **kwargs)
+
+            new_self = self.__constructor__(
+                self._modin_frame._apply_full_axis(1, map_func)
+            )
+            return new_self.sort_rows_by_column_values(on) if sort else new_self
+        else:
+            return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
+
     # END Inter-Data operations
 
     # Reindex/reset_index (may shuffle data)
@@ -472,6 +512,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             A new QueryCompiler with updated data and reset index.
         """
         drop = kwargs.get("drop", False)
+        level = kwargs.get("level", None)
+        # TODO Implement level
+        if level is not None or self.has_multiindex():
+            return self.default_to_pandas(pandas.DataFrame.reset_index, **kwargs)
         if not drop:
             new_column_name = (
                 self.index.name
@@ -506,6 +550,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
+
+    def columnarize(self):
+        """
+        Transposes this QueryCompiler if it has a single row but multiple columns.
+
+        This method should be called for QueryCompilers representing a Series object,
+        i.e. self.is_series_like() should be True.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            Transposed new QueryCompiler or self.
+        """
+        if len(self.columns) != 1 or (
+            len(self.index) == 1 and self.index[0] == "__reduced__"
+        ):
+            return self.transpose()
+        return self
+
+    def is_series_like(self):
+        """Return True if QueryCompiler has a single column or row"""
+        return len(self.columns) == 1 or len(self.index) == 1
 
     # END Transpose
 
@@ -727,7 +793,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_app_df(self, resample_args, func, *args, **kwargs):
@@ -740,7 +806,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_agg_df(self, resample_args, func, *args, **kwargs):
@@ -785,7 +851,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit_direction,
         limit_area,
         downcast,
-        **kwargs
+        **kwargs,
     ):
         return self._resample_func(
             resample_args,
@@ -796,7 +862,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def resample_count(self, resample_args):
@@ -844,7 +910,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             _method=_method,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
@@ -1009,6 +1075,96 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
+    def unstack(self, level, fill_value):
+        if not isinstance(self.index, pandas.MultiIndex) or (
+            isinstance(self.index, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            axis = 1
+            new_columns = ["__reduced__"]
+            need_reindex = True
+        else:
+            axis = 0
+            new_columns = None
+            need_reindex = False
+
+        def map_func(df):
+            return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
+
+        is_all_multi_list = False
+        if (
+            isinstance(self.index, pandas.MultiIndex)
+            and isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            is_all_multi_list = True
+            real_cols_bkp = self.columns
+            obj = self.copy()
+            obj.columns = np.arange(len(obj.columns))
+        else:
+            obj = self
+
+        new_modin_frame = obj._modin_frame._apply_full_axis(
+            axis, map_func, new_columns=new_columns
+        )
+        result = self.__constructor__(new_modin_frame)
+
+        if is_all_multi_list:
+            result = result.sort_index()
+            index_level_values = [lvl for lvl in obj.index.levels]
+            columns_level_values = [
+                real_cols_bkp.get_level_values(lvl).unique()
+                for lvl in np.arange(real_cols_bkp.nlevels)
+            ]
+            result.index = pandas.MultiIndex.from_product(
+                [*columns_level_values, *index_level_values]
+            )
+            return result
+
+        if need_reindex:
+            if isinstance(self.index, pandas.MultiIndex):
+                index_level_values = [
+                    self.index.get_level_values(lvl).unique()
+                    for lvl in np.arange(self.index.nlevels)
+                ]
+                new_index = pandas.MultiIndex.from_product(
+                    [self.columns, *index_level_values]
+                )
+            else:
+                if isinstance(self.columns, pandas.MultiIndex):
+                    columns_level_values = [
+                        self.columns.get_level_values(lvl).unique()
+                        for lvl in np.arange(self.columns.nlevels)
+                    ]
+                    new_index = pandas.MultiIndex.from_product(
+                        [*columns_level_values, self.index]
+                    )
+                else:
+                    new_index = pandas.MultiIndex.from_product(
+                        [self.columns, self.index]
+                    )
+            result = result.reindex(0, new_index)
+        return result
+
+    def stack(self, level, dropna):
+        if not isinstance(self.columns, pandas.MultiIndex) or (
+            isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.columns.nlevels
+        ):
+            new_columns = ["__reduced__"]
+        else:
+            new_columns = None
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            1,
+            lambda df: pandas.DataFrame(df.stack(level=level, dropna=dropna)),
+            new_columns=new_columns,
+        )
+        return self.__constructor__(new_modin_frame)
+
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
@@ -1022,6 +1178,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
+    replace = MapFunction.register(pandas.DataFrame.replace)
     series_view = MapFunction.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             df.squeeze(axis=1).view(*args, **kwargs)
@@ -1104,7 +1261,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             The unique values returned as a NumPy array.
         """
         new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
+            0,
+            lambda x: x.squeeze(axis=1).unique(),
+            new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -1557,16 +1716,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort_remaining = kwargs.pop("sort_remaining", True)
         kwargs["inplace"] = False
 
-        if level is not None or (
-            (axis == 0 and isinstance(self.index, pandas.MultiIndex))
-            or (axis == 1 and isinstance(self.columns, pandas.MultiIndex))
-        ):
+        if level is not None or self.has_multiindex(axis=axis):
             return self.default_to_pandas(
                 pandas.DataFrame.sort_index,
                 axis=axis,
                 level=level,
                 sort_remaining=sort_remaining,
-                **kwargs
+                **kwargs,
             )
 
         # sort_index can have ascending be None and behaves as if it is False.
@@ -1660,7 +1816,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
         new_modin_frame = self._modin_frame.__constructor__(
-            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
+            new_parts,
+            index=new_index,
+            columns=id_vars + [var_name, value_name],
         )
         result = self.__constructor__(new_modin_frame)
         # this assigment needs to propagate correct indices into partitions
@@ -1866,6 +2024,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 value = value.reindex(self.index)
             else:
                 value = list(value)
+        else:
+            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
@@ -2077,7 +2237,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             try:
                 agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args
+                    **agg_args,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
@@ -2092,6 +2252,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result.reset_index(drop=not drop)
 
     # END Manual Partitioning methods
+
+    def pivot(self, index, columns, values):
+        from pandas.core.reshape.pivot import _convert_by
+
+        def __convert_by(by):
+            if isinstance(by, pandas.Index):
+                by = list(by)
+            by = _convert_by(by)
+            if (
+                len(by) > 0
+                and (not is_list_like(by[0]) or isinstance(by[0], tuple))
+                and not all([key in self.columns for key in by])
+            ):
+                by = [by]
+            return by
+
+        index, columns, values = map(__convert_by, [index, columns, values])
+        is_custom_index = (
+            len(index) == 1
+            and is_list_like(index[0])
+            and not isinstance(index[0], tuple)
+        )
+
+        if is_custom_index or len(index) == 0:
+            to_reindex = columns
+        else:
+            to_reindex = index + columns
+
+        if len(values) != 0:
+            obj = self.getitem_column_array(to_reindex + values)
+        else:
+            obj = self
+
+        if is_custom_index:
+            obj.index = index
+
+        reindexed = self.__constructor__(
+            obj._modin_frame._apply_full_axis(
+                1,
+                lambda df: df.set_index(to_reindex, append=(len(to_reindex) == 1)),
+                new_columns=obj.columns.drop(to_reindex),
+            )
+        )
+
+        unstacked = reindexed.unstack(level=columns, fill_value=None)
+        if len(reindexed.columns) == 1 and unstacked.columns.nlevels > 1:
+            unstacked.columns = unstacked.columns.droplevel(0)
+
+        return unstacked
 
     # Get_dummies
     def get_dummies(self, columns, **kwargs):
@@ -2197,11 +2406,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         broadcast_values2 = broadcast_values2.reset_index(drop=True)
         # Index may contain duplicates
         new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+            by=columns,
+            axis=0,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).index
         # Index without duplicates
         new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+            by=columns,
+            axis=0,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).index
 
         result = self.reset_index(drop=True).reindex(0, new_index2)
@@ -2237,6 +2454,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         broadcast_values.columns = self.columns
         new_columns = broadcast_values.sort_values(
-            by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
+            by=rows,
+            axis=1,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).columns
         return self.reindex(1, new_columns)
+
+    # Cat operations
+    def cat_codes(self):
+        return self.default_to_pandas(lambda df: df[df.columns[0]].cat.codes)
+
+    # END Cat operations
+
+    def has_multiindex(self, axis=0):
+        """
+        Check if specified axis is indexed by MultiIndex.
+
+        Parameters
+        ----------
+        axis : 0 or 1, default 0
+            The axis to check (0 - index, 1 - columns).
+
+        Returns
+        -------
+        bool
+            True if index at specified axis is MultiIndex and False otherwise.
+        """
+        if axis == 0:
+            return isinstance(self.index, pandas.MultiIndex)
+        assert axis == 1
+        return isinstance(self.columns, pandas.MultiIndex)

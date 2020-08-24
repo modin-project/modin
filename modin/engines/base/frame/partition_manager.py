@@ -83,7 +83,7 @@ class BaseFrameManager(object):
         new_partitions = np.array(
             [
                 [
-                    part.apply(
+                    part.add_to_apply_calls(
                         map_func,
                         other=by_parts[col_idx].get()
                         if axis
@@ -191,7 +191,7 @@ class BaseFrameManager(object):
         return np.array(
             [
                 [
-                    part.apply(
+                    part.add_to_apply_calls(
                         apply_func,
                         r=right_parts[col_idx].get()
                         if axis
@@ -302,6 +302,10 @@ class BaseFrameManager(object):
             A new BaseFrameManager object, the type of object that called this.
         """
         if type(right_parts) is list:
+            # `np.array` with partitions of empty ModinFrame has a shape (0,)
+            # but `np.concatenate` can concatenate arrays only if its shapes at
+            # specified axis are equals, so filtering empty frames to avoid concat error
+            right_parts = [o for o in right_parts if o.size != 0]
             return np.concatenate([left_parts] + right_parts, axis=axis)
         else:
             return np.append(left_parts, right_parts, axis=axis)
@@ -399,6 +403,10 @@ class BaseFrameManager(object):
             return np.array(parts), row_lengths, col_widths
 
     @classmethod
+    def from_arrow(cls, at, return_dims=False):
+        return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """This gets the internal indices stored in the partitions.
 
@@ -447,7 +455,9 @@ class BaseFrameManager(object):
     ):
         preprocessed_func = cls.preprocess_func(func)
         return [
-            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
+            obj.add_to_apply_calls(
+                preprocessed_func, other=[o.get() for o in broadcasted], **kwargs
+            )
             for obj, broadcasted in zip(partitions, other.T)
         ]
 
@@ -465,7 +475,9 @@ class BaseFrameManager(object):
             A list of BaseFramePartition objects.
         """
         preprocessed_func = cls.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+        return [
+            obj.add_to_apply_calls(preprocessed_func, **kwargs) for obj in partitions
+        ]
 
     @classmethod
     def apply_func_to_select_indices(

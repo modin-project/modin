@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import copy
 import numpy as np
 import pandas
 from pandas.util.testing import (
@@ -45,24 +44,11 @@ test_data = {
         )
         for i in range(NCOLS)
     },
-    "float_data": {
-        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)
-        )
-        for i in range(NCOLS)
-    },
-    "sparse_nan_data": {
+    "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x if j != i else np.NaN
-            for j, x in enumerate(
-                random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
-            )
-        ]
-        for i in range(NCOLS)
-    },
-    "dense_nan_data": {
-        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x if j % 4 == 0 else np.NaN
+            x
+            if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
+            else np.NaN
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
             )
@@ -108,24 +94,22 @@ test_data = {
     #     "col1": "foo",
     #     "col2": True,
     # },
-    "100x100": {
-        "col{}".format((i - 50) % 100 + 1): random_state.randint(
-            RAND_LOW, RAND_HIGH, size=(100)
-        )
-        for i in range(100)
-    },
 }
 
-# Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
-# created in normal way and has to be copied from dataset that works.
-# TODO(gshimansky): when bug #1481 is fixed replace this dataframe initialization with ordinary one.
-test_data["with_index_column"] = copy.copy(test_data["int_data"])
-test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
+# See details in #1403
+test_data["int_data"]["index"] = test_data["int_data"].pop(
     "col{}".format(int(NCOLS / 2))
 )
 
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
+
+test_bool_data = {
+    "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.choice(
+        [True, False], size=(NROWS)
+    )
+    for i in range(NCOLS)
+}
 
 test_data_with_duplicates = {
     "no_duplicates": {
@@ -167,21 +151,33 @@ test_data_small = {
     }
 }
 
+test_data_diff_dtype = {
+    "int_col": [-5, 2, 7, 16],
+    "float_col": [np.NaN, -9.4, 10.1, np.NaN],
+    "str_col": ["a", np.NaN, "c", "d"],
+    "bool_col": [False, True, True, False],
+}
+
 test_data_small_values = list(test_data_small.values())
 test_data_small_keys = list(test_data_small.keys())
 
 test_data_with_duplicates_values = list(test_data_with_duplicates.values())
 test_data_with_duplicates_keys = list(test_data_with_duplicates.keys())
 
+test_data_categorical = {
+    "ordered": pandas.Categorical(list("testdata"), ordered=True),
+    "unordered": pandas.Categorical(list("testdata"), ordered=False),
+}
+
+test_data_categorical_values = list(test_data_categorical.values())
+test_data_categorical_keys = list(test_data_categorical.keys())
+
 numeric_dfs = [
     "empty_data",
     "columns_only",
     "int_data",
-    "float_data",
-    "sparse_nan_data",
-    "dense_nan_data",
+    "float_nan_data",
     "with_index_column",
-    "100x100",
 ]
 
 no_numeric_dfs = ["datetime_timedelta_data"]
@@ -440,6 +436,7 @@ def df_equals(df1, df2):
     types_for_almost_equals = (
         pandas.core.indexes.range.RangeIndex,
         pandas.core.indexes.base.Index,
+        np.recarray,
     )
 
     # Gets AttributError if modin's groupby object is not import like this
@@ -488,26 +485,15 @@ def df_equals(df1, df2):
             return False
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
-        try:
-            assert_frame_equal(
-                df1.sort_index(axis=1),
-                df2.sort_index(axis=1),
-                check_dtype=False,
-                check_datetimelike_compat=True,
-                check_index_type=False,
-                check_column_type=False,
-                check_categorical=False,
-            )
-        except Exception:
-            assert_frame_equal(
-                df1,
-                df2,
-                check_dtype=False,
-                check_datetimelike_compat=True,
-                check_index_type=False,
-                check_column_type=False,
-                check_categorical=False,
-            )
+        assert_frame_equal(
+            df1,
+            df2,
+            check_dtype=False,
+            check_datetimelike_compat=True,
+            check_index_type=False,
+            check_column_type=False,
+            check_categorical=False,
+        )
         df_categories_equals(df1, df2)
     elif isinstance(df1, types_for_almost_equals) and isinstance(
         df2, types_for_almost_equals
@@ -682,6 +668,14 @@ def generate_multiindex_dfs(axis=1):
         generate_multiindex, [df1.axes[axis], df2.axes[axis]]
     )
     return df1, df2
+
+
+def generate_multiindex(elements_number):
+    arrays = [
+        random_state.choice(["bar", "baz", "foo", "qux"], elements_number),
+        random_state.choice(["one", "two"], elements_number),
+    ]
+    return pd.MultiIndex.from_tuples(list(zip(*arrays)), names=["first", "second"])
 
 
 def generate_none_dfs():

@@ -80,8 +80,8 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
 
 class PyarrowOnRayFrameColumnPartition(PyarrowOnRayFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 0
@@ -89,8 +89,8 @@ class PyarrowOnRayFrameColumnPartition(PyarrowOnRayFrameAxisPartition):
 
 class PyarrowOnRayFrameRowPartition(PyarrowOnRayFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 1

@@ -42,9 +42,9 @@ sentinel = object()
 
 class BasePandasDataset(object):
     """This object is the base for most of the common code that exists in
-        DataFrame/Series. Since both objects share the same underlying representation,
-        and the algorithms are the same, we use this object to define the general
-        behavior of those objects and then use those objects to define the output type.
+    DataFrame/Series. Since both objects share the same underlying representation,
+    and the algorithms are the same, we use this object to define the general
+    behavior of those objects and then use those objects to define the output type.
     """
 
     # Siblings are other objects that share the same query compiler. We use this list
@@ -606,7 +606,12 @@ class BasePandasDataset(object):
         elif not callable(func) and not is_list_like(func):
             raise TypeError("{} object is not callable".format(type(func)))
         query_compiler = self._query_compiler.apply(
-            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
+            func,
+            axis,
+            args=args,
+            raw=raw,
+            result_type=result_type,
+            **kwds,
         )
         return query_compiler
 
@@ -748,7 +753,7 @@ class BasePandasDataset(object):
             self._validate_dtypes(numeric_only=numeric_only)
 
         if level is not None:
-            if not isinstance(self.axes[axis], pandas.MultiIndex):
+            if not self._query_compiler.has_multiindex(axis=axis):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
@@ -1077,19 +1082,19 @@ class BasePandasDataset(object):
     def drop_duplicates(self, keep="first", inplace=False, **kwargs):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns
 
-            Args:
-                subset : column label or sequence of labels, optional
-                    Only consider certain columns for identifying duplicates, by
-                    default use all of the columns
-                keep : {'first', 'last', False}, default 'first'
-                    - ``first`` : Drop duplicates except for the first occurrence.
-                    - ``last`` : Drop duplicates except for the last occurrence.
-                    - False : Drop all duplicates.
-                inplace : boolean, default False
-                    Whether to drop duplicates in place or to return a copy
+        Args:
+            subset : column label or sequence of labels, optional
+                Only consider certain columns for identifying duplicates, by
+                default use all of the columns
+            keep : {'first', 'last', False}, default 'first'
+                - ``first`` : Drop duplicates except for the first occurrence.
+                - ``last`` : Drop duplicates except for the last occurrence.
+                - False : Drop all duplicates.
+            inplace : boolean, default False
+                Whether to drop duplicates in place or to return a copy
 
-            Returns:
-                deduplicated : DataFrame
+        Returns:
+            deduplicated : DataFrame
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
@@ -1147,8 +1152,7 @@ class BasePandasDataset(object):
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
-        """Synonym for fillna(method='ffill')
-        """
+        """Synonym for fillna(method='ffill')"""
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -2042,11 +2046,11 @@ class BasePandasDataset(object):
             level is not None
             or (
                 (columns is not None or axis == 1)
-                and isinstance(self.columns, pandas.MultiIndex)
+                and self._query_compiler.has_multiindex(axis=1)
             )
             or (
                 (index is not None or axis == 0)
-                and isinstance(self.index, pandas.MultiIndex)
+                and self._query_compiler.has_multiindex()
             )
         ):
             return self._default_to_pandas(
@@ -2176,25 +2180,6 @@ class BasePandasDataset(object):
         new_labels = self.axes[axis].reorder_levels(order)
         return self.set_axis(new_labels, axis=axis, inplace=False)
 
-    def replace(
-        self,
-        to_replace=None,
-        value=None,
-        inplace=False,
-        limit=None,
-        regex=False,
-        method="pad",
-    ):
-        return self._default_to_pandas(
-            "replace",
-            to_replace=to_replace,
-            value=value,
-            inplace=inplace,
-            limit=limit,
-            regex=regex,
-            method=method,
-        )
-
     def resample(
         self,
         rule,
@@ -2289,22 +2274,12 @@ class BasePandasDataset(object):
             A new DataFrame if inplace is False, None otherwise.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        # TODO Implement level
-        if level is not None or isinstance(self.index, pandas.MultiIndex):
-            new_query_compiler = self._default_to_pandas(
-                "reset_index",
-                level=level,
-                drop=drop,
-                inplace=False,
-                col_level=col_level,
-                col_fill=col_fill,
-            )._query_compiler
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
-        elif (
+        if (
             not drop
-            and not isinstance(self.index, pandas.MultiIndex)
+            and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
@@ -3358,9 +3333,6 @@ class BasePandasDataset(object):
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
-    def unstack(self, level=-1, fill_value=None):
-        return self._default_to_pandas("unstack", level=level, fill_value=fill_value)
-
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
@@ -3448,13 +3420,18 @@ class BasePandasDataset(object):
         return self.ge(right)
 
     def __getitem__(self, key):
-        if len(self) == 0:
+        if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in Pandas to error check
-        indexer = convert_to_index_sliceable(
-            getattr(pandas, type(self).__name__)(index=self.index), key
-        )
+        indexer = None
+        if isinstance(key, slice) or (
+            isinstance(key, str)
+            and (not hasattr(self, "columns") or key not in self.columns)
+        ):
+            indexer = convert_to_index_sliceable(
+                getattr(pandas, type(self).__name__)(index=self.index), key
+            )
         if indexer is not None:
             return self._getitem_slice(indexer)
         else:
@@ -3579,7 +3556,7 @@ class BasePandasDataset(object):
             "_create_or_update_from_compiler",
             "_update_inplace",
         ]
-        if item not in default_behaviors:
+        if item not in default_behaviors and not self._query_compiler.lazy_execution:
             method = object.__getattribute__(self, item)
             is_callable = callable(method)
             # We default to pandas on empty DataFrames. This avoids a large amount of
@@ -3680,7 +3657,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_app_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3699,7 +3681,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_agg_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3810,21 +3797,30 @@ class Resampler(object):
     def first(self, _method="first", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def last(self, _method="last", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def max(self, _method="max", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3845,7 +3841,10 @@ class Resampler(object):
     def min(self, _method="min", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3855,13 +3854,19 @@ class Resampler(object):
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
         else:
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
 
@@ -3882,7 +3887,10 @@ class Resampler(object):
     def sem(self, _method="sem", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -4101,18 +4109,30 @@ class Rolling(object):
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_apply(
-                self.rolling_args, func, raw, engine, engine_kwargs, args, kwargs,
+                self.rolling_args,
+                func,
+                raw,
+                engine,
+                engine_kwargs,
+                args,
+                kwargs,
             )
         )
 
     def aggregate(
-        self, func, *args, **kwargs,
+        self,
+        func,
+        *args,
+        **kwargs,
     ):
         from .dataframe import DataFrame
 
         dataframe = DataFrame(
             query_compiler=self._query_compiler.rolling_aggregate(
-                self.rolling_args, func, *args, **kwargs,
+                self.rolling_args,
+                func,
+                *args,
+                **kwargs,
             )
         )
         if isinstance(self._dataframe, DataFrame):

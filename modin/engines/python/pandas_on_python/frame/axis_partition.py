@@ -30,8 +30,8 @@ class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):
 
 class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 0
@@ -39,8 +39,8 @@ class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
 
 class PandasOnPythonFrameRowPartition(PandasOnPythonFrameAxisPartition):
     """The row partition implementation for Ray. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 1
