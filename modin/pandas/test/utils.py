@@ -496,26 +496,15 @@ def df_equals(df1, df2):
             return False
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
-        try:
-            assert_frame_equal(
-                df1.sort_index(axis=1),
-                df2.sort_index(axis=1),
-                check_dtype=False,
-                check_datetimelike_compat=True,
-                check_index_type=False,
-                check_column_type=False,
-                check_categorical=False,
-            )
-        except Exception:
-            assert_frame_equal(
-                df1,
-                df2,
-                check_dtype=False,
-                check_datetimelike_compat=True,
-                check_index_type=False,
-                check_column_type=False,
-                check_categorical=False,
-            )
+        assert_frame_equal(
+            df1,
+            df2,
+            check_dtype=False,
+            check_datetimelike_compat=True,
+            check_index_type=False,
+            check_column_type=False,
+            check_categorical=False,
+        )
         df_categories_equals(df1, df2)
     elif isinstance(df1, types_for_almost_equals) and isinstance(
         df2, types_for_almost_equals
