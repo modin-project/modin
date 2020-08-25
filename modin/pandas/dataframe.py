@@ -1159,9 +1159,11 @@ class DataFrame(BasePandasDataset):
                 data=value, columns=[column], index=self.index
             )._query_compiler
         else:
-            if not is_list_like(value):
-                value = np.full(len(self.index), value)
-            if not isinstance(value, pandas.Series) and len(value) != len(self.index):
+            if (
+                is_list_like(value)
+                and not isinstance(value, pandas.Series)
+                and len(value) != len(self.index)
+            ):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
                 raise ValueError("cannot insert {0}, already exists".format(column))
