@@ -692,6 +692,14 @@ def generate_multiindex_dfs(axis=1):
     return df1, df2
 
 
+def generate_multiindex(cols_number):
+    arrays = [
+        np.random.choice(["bar", "baz", "foo", "qux"], cols_number),
+        np.random.choice(["one", "two"], cols_number),
+    ]
+    return pd.MultiIndex.from_tuples(list(zip(*arrays)), names=["first", "second"])
+
+
 def generate_none_dfs():
     df = pandas.DataFrame(
         {
