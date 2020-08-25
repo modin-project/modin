@@ -308,6 +308,11 @@ class Series(BasePandasDataset):
         if isinstance(temp_df, pandas.DataFrame) and not temp_df.empty:
             temp_df = temp_df.iloc[:, 0]
         temp_str = repr(temp_df)
+        freq_str = (
+            "Freq: {}, ".format(self.index.freqstr)
+            if isinstance(self.index, pandas.DatetimeIndex)
+            else ""
+        )
         if self.name is not None:
             name_str = "Name: {}, ".format(str(self.name))
         else:
@@ -322,9 +327,9 @@ class Series(BasePandasDataset):
             else temp_str.rsplit("dtype: ", 1)[-1]
         )
         if len(self) == 0:
-            return "Series([], {}{}".format(name_str, dtype_str)
-        return temp_str.rsplit("\nName:", 1)[0] + "\n{}{}{}".format(
-            name_str, len_str, dtype_str
+            return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
+        return temp_str.rsplit("\n", 1)[0] + "\n{}{}{}{}".format(
+            freq_str, name_str, len_str, dtype_str
         )
 
     def __round__(self, decimals=0):
