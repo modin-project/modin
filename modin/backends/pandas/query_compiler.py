@@ -448,6 +448,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
+    def join(self, right, **kwargs):
+        """
+        Join columns of another DataFrame.
+
+        Parameters
+        ----------
+        right : BaseQueryCompiler
+            The query compiler of the right DataFrame to join with.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler that contains result of the join.
+
+        Notes
+        -----
+        See pd.DataFrame.join for more info on kwargs.
+        """
+        on = kwargs.get("on", None)
+        how = kwargs.get("how", "left")
+        sort = kwargs.get("sort", False)
+
+        if how in ["left", "inner"]:
+            right = right.to_pandas()
+
+            def map_func(left, right=right, kwargs=kwargs):
+                return pandas.DataFrame.join(left, right, **kwargs)
+
+            new_self = self.__constructor__(
+                self._modin_frame._apply_full_axis(1, map_func)
+            )
+            return new_self.sort_rows_by_column_values(on) if sort else new_self
+        else:
+            return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
+
     # END Inter-Data operations
 
     # Reindex/reset_index (may shuffle data)
