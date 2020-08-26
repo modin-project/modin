@@ -61,6 +61,7 @@ from .utils import (
     test_data_small_keys,
     udf_func_values,
     udf_func_keys,
+    generate_multiindex,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -2333,11 +2334,31 @@ class TestDataFrameDefault:
             pd.DataFrame(data).infer_objects()
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("verbose", [None, True, False])
-    @pytest.mark.parametrize("max_cols", [None, 10, 99999999])
-    @pytest.mark.parametrize("memory_usage", [None, True, False, "deep"])
-    @pytest.mark.parametrize("null_counts", [None, True, False])
-    def test_info(self, data, verbose, max_cols, memory_usage, null_counts):
+    def test_info_default_param(self, data):
+        with io.StringIO() as first, io.StringIO() as second:
+            eval_general(
+                pd.DataFrame(data),
+                pandas.DataFrame(data),
+                verbose=None,
+                max_cols=None,
+                memory_usage=None,
+                null_counts=None,
+                operation=lambda df, **kwargs: df.info(**kwargs),
+                buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
+            )
+            modin_info = first.getvalue().splitlines()
+            pandas_info = second.getvalue().splitlines()
+
+            assert modin_info[0] == str(pd.DataFrame)
+            assert pandas_info[0] == str(pandas.DataFrame)
+            assert modin_info[1:] == pandas_info[1:]
+
+    @pytest.mark.parametrize("verbose", [True, False])
+    @pytest.mark.parametrize("max_cols", [10, 99999999])
+    @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
+    @pytest.mark.parametrize("null_counts", [True, False])
+    def test_info(self, verbose, max_cols, memory_usage, null_counts):
+        data = test_data_values[0]
         with io.StringIO() as first, io.StringIO() as second:
             eval_general(
                 pd.DataFrame(data),
@@ -2361,39 +2382,41 @@ class TestDataFrameDefault:
         with pytest.warns(UserWarning):
             pd.DataFrame(data).interpolate()
 
+    def test_kurt_kurtosis_equals(self):
+        # It's optimization. If failed, df.kurt should be tested explicitly
+        # in tests: `test_kurt_kurtosis`, `test_kurt_kurtosis_level`.
+        data = test_data_values[0]
+        df_modin = pd.DataFrame(data)
+        assert df_modin.kurt == df_modin.kurtosis
+
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-    @pytest.mark.parametrize("level", [None, -1, 0, 1])
     @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-    def test_kurt_kurtosis(self, axis, skipna, level, numeric_only):
-        func_kwargs = {
-            "axis": axis,
-            "skipna": skipna,
-            "level": level,
-            "numeric_only": numeric_only,
-        }
+    def test_kurt_kurtosis(self, axis, skipna, numeric_only):
         data = test_data_values[0]
         df_modin = pd.DataFrame(data)
         df_pandas = pandas.DataFrame(data)
 
         eval_general(
-            df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
+            df_modin,
+            df_pandas,
+            lambda df: df.kurtosis(
+                axis=axis, skipna=skipna, level=None, numeric_only=numeric_only
+            ),
         )
 
-        if level is not None:
-            cols_number = len(data.keys())
-            arrays = [
-                np.random.choice(["bar", "baz", "foo", "qux"], cols_number),
-                np.random.choice(["one", "two"], cols_number),
-            ]
-            index = pd.MultiIndex.from_tuples(
-                list(zip(*arrays)), names=["first", "second"]
-            )
-            df_modin.columns = index
-            df_pandas.columns = index
-            eval_general(
-                df_modin, df_pandas, lambda df: df.kurtosis(**func_kwargs),
-            )
+    @pytest.mark.parametrize("level", [-1, 0, 1])
+    def test_kurt_kurtosis_level(self, level):
+        data = test_data_values[0]
+        df_modin = pd.DataFrame(data)
+        df_pandas = pandas.DataFrame(data)
+
+        index = generate_multiindex(len(data.keys()))
+        df_modin.columns = index
+        df_pandas.columns = index
+        eval_general(
+            df_modin, df_pandas, lambda df: df.kurtosis(axis=1, level=level),
+        )
 
     def test_last(self):
         modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
@@ -2415,12 +2438,23 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("data", test_data_values)
     @pytest.mark.parametrize("axis", [None, 0, 1])
     @pytest.mark.parametrize("skipna", [None, True, False])
-    @pytest.mark.parametrize("level", [0, -1, None])
-    def test_mad(self, level, data, axis, skipna):
+    def test_mad(self, data, axis, skipna):
         modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
         df_equals(
-            modin_df.mad(axis=axis, skipna=skipna, level=level),
-            pandas_df.mad(axis=axis, skipna=skipna, level=level),
+            modin_df.mad(axis=axis, skipna=skipna, level=None),
+            pandas_df.mad(axis=axis, skipna=skipna, level=None),
+        )
+
+    @pytest.mark.parametrize("level", [-1, 0, 1])
+    def test_mad_level(self, level):
+        data = test_data_values[0]
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+        index = generate_multiindex(len(data.keys()))
+        modin_df.columns = index
+        pandas_df.columns = index
+        eval_general(
+            modin_df, pandas_df, lambda df: df.mad(axis=1, level=level),
         )
 
     def test_mask(self):
@@ -2677,19 +2711,21 @@ class TestDataFrameDefault:
             pd.DataFrame(data).style
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis1", [0, 1, "columns", "index"])
-    @pytest.mark.parametrize("axis2", [0, 1, "columns", "index"])
+    @pytest.mark.parametrize("axis1", [0, 1])
+    @pytest.mark.parametrize("axis2", [0, 1])
     def test_swapaxes(self, data, axis1, axis2):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-        try:
-            pandas_result = pandas_df.swapaxes(axis1, axis2)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.swapaxes(axis1, axis2)
-        else:
-            modin_result = modin_df.swapaxes(axis1, axis2)
-            df_equals(modin_result, pandas_result)
+
+        pandas_result = pandas_df.swapaxes(axis1, axis2)
+        modin_result = modin_df.swapaxes(axis1, axis2)
+        df_equals(modin_result, pandas_result)
+
+    def test_swapaxes_axes_names(self):
+        modin_df = pd.DataFrame(test_data_values[0])
+        modin_result1 = modin_df.swapaxes(0, 1)
+        modin_result2 = modin_df.swapaxes("columns", "index")
+        df_equals(modin_result1, modin_result2)
 
     def test_swaplevel(self):
         data = np.random.randint(1, 100, 12)
