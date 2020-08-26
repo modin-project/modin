@@ -127,6 +127,13 @@ test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
 
+test_bool_data = {
+    "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.choice(
+        [True, False], size=(NROWS)
+    )
+    for i in range(NCOLS)
+}
+
 test_data_with_duplicates = {
     "no_duplicates": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): range(NROWS)
@@ -681,10 +688,10 @@ def generate_multiindex_dfs(axis=1):
     return df1, df2
 
 
-def generate_multiindex(cols_number):
+def generate_multiindex(elements_number):
     arrays = [
-        random_state.choice(["bar", "baz", "foo", "qux"], cols_number),
-        random_state.choice(["one", "two"], cols_number),
+        random_state.choice(["bar", "baz", "foo", "qux"], elements_number),
+        random_state.choice(["one", "two"], elements_number),
     ]
     return pd.MultiIndex.from_tuples(list(zip(*arrays)), names=["first", "second"])
 
