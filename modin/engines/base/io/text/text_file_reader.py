@@ -95,6 +95,21 @@ class TextFileReader(FileReader):
 
     @classmethod
     def read_rows(cls, f, nrows, quotechar=b'"', is_quoting=True):
+        """
+        Moves the file offset at the specified amount of rows
+
+        Parameters
+        ----------
+            f: file object
+            nrows: int, number of rows to read
+            quotechar: char that indicates quote in a file (optional, by default is '\"')
+            is_quoting: bool, Whether or not to consider quotes
+
+        Returns
+        -------
+            bool, If file pointer reached the end of the file, but did not find
+            closing quote returns `False`. `True` in any other case.
+        """
         if nrows <= 0:
             return
         rows_readed = 0
