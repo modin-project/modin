@@ -694,8 +694,8 @@ def generate_multiindex_dfs(axis=1):
 
 def generate_multiindex(cols_number):
     arrays = [
-        np.random.choice(["bar", "baz", "foo", "qux"], cols_number),
-        np.random.choice(["one", "two"], cols_number),
+        random_state.choice(["bar", "baz", "foo", "qux"], cols_number),
+        random_state.choice(["one", "two"], cols_number),
     ]
     return pd.MultiIndex.from_tuples(list(zip(*arrays)), names=["first", "second"])
 

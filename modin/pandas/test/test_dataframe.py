@@ -2557,7 +2557,6 @@ class TestDataFrameDefault:
     @pytest.mark.parametrize("on", [None, "DateColumn"])
     @pytest.mark.parametrize("level", [None, 1])
     def test_resample(self, rule, axis, closed, label, on, level):
-        # Try to optimize
         freq = "H"
         base = 2
         index = pandas.date_range("31/12/2000", periods=12, freq=freq)
