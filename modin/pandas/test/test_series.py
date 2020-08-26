@@ -2400,11 +2400,16 @@ def test_repeat_lists(data, repeats):
     )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_replace(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.replace(0, 5)
+def test_replace():
+    modin_series = pd.Series([0, 1, 2, 3, 4])
+    pandas_series = pandas.Series([0, 1, 2, 3, 4])
+    modin_result = modin_series.replace(0, 5)
+    pandas_result = pandas_series.replace(0, 5)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.replace([1, 2], method="bfill")
+    pandas_result = pandas_series.replace([1, 2], method="bfill")
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("closed", ["left", "right"])
