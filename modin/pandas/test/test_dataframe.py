@@ -2546,9 +2546,37 @@ class TestDataFrameDefault:
                     assert np.array_equal(left.get_xdata(), right.get_xdata())
 
     def test_replace(self):
-        data = test_data_values[0]
-        with pytest.warns(UserWarning):
-            pd.DataFrame(data).replace()
+        modin_df = pd.DataFrame(
+            {"A": [0, 1, 2, 3, 4], "B": [5, 6, 7, 8, 9], "C": ["a", "b", "c", "d", "e"]}
+        )
+        pandas_df = pandas.DataFrame(
+            {"A": [0, 1, 2, 3, 4], "B": [5, 6, 7, 8, 9], "C": ["a", "b", "c", "d", "e"]}
+        )
+        modin_result = modin_df.replace({"A": 0, "B": 5}, 100)
+        pandas_result = pandas_df.replace({"A": 0, "B": 5}, 100)
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.replace({"A": {0: 100, 4: 400}})
+        pandas_result = pandas_df.replace({"A": {0: 100, 4: 400}})
+        df_equals(modin_result, pandas_result)
+
+        modin_df = pd.DataFrame(
+            {"A": ["bat", "foo", "bait"], "B": ["abc", "bar", "xyz"]}
+        )
+        pandas_df = pandas.DataFrame(
+            {"A": ["bat", "foo", "bait"], "B": ["abc", "bar", "xyz"]}
+        )
+        modin_result = modin_df.replace(regex={r"^ba.$": "new", "foo": "xyz"})
+        pandas_result = pandas_df.replace(regex={r"^ba.$": "new", "foo": "xyz"})
+        df_equals(modin_result, pandas_result)
+
+        modin_result = modin_df.replace(regex=[r"^ba.$", "foo"], value="new")
+        pandas_result = pandas_df.replace(regex=[r"^ba.$", "foo"], value="new")
+        df_equals(modin_result, pandas_result)
+
+        modin_df.replace(regex=[r"^ba.$", "foo"], value="new", inplace=True)
+        pandas_df.replace(regex=[r"^ba.$", "foo"], value="new", inplace=True)
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
     @pytest.mark.parametrize("axis", [0, "columns"])
