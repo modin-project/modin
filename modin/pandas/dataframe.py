@@ -1311,22 +1311,21 @@ class DataFrame(BasePandasDataset):
         DataFrame
             A dataframe containing columns from both the caller and other.
         """
-        if on is not None:
-            if isinstance(other, DataFrame):
-                other = other._query_compiler.to_pandas()
-            return self._default_to_pandas(
-                pandas.DataFrame.join,
-                other,
-                on=on,
-                how=how,
-                lsuffix=lsuffix,
-                rsuffix=rsuffix,
-                sort=sort,
-            )
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = DataFrame({other.name: other})
+        if on is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.join(
+                    other._query_compiler,
+                    on=on,
+                    how=how,
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix,
+                    sort=sort,
+                )
+            )
         if isinstance(other, DataFrame):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that
