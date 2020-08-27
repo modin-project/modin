@@ -103,6 +103,7 @@ def initialize_ray(
             # We only start ray in a cluster setting for the head node.
             ray.init(
                 address=redis_address or "auto",
+                include_dashboard=False,
                 ignore_reinit_error=True,
                 redis_password=redis_password,
                 logging_level=100,
@@ -135,6 +136,7 @@ def initialize_ray(
                 object_store_memory = int(object_store_memory)
             ray.init(
                 num_cpus=int(num_cpus),
+                include_dashboard=False,
                 ignore_reinit_error=True,
                 plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
