@@ -22,7 +22,8 @@ class TextFileReader(FileReader):
     def call_deploy(
         cls, f, num_return_vals, args, quotechar=b'"', nrows=None, chunk_size_bytes=None
     ):
-        assert nrows is not None or chunk_size_bytes is not None
+        if chunk_size_bytes is None:
+            chunk_size_bytes = -1
 
         args["start"] = f.tell()
         is_quoting = args.get("quoting", "") != csv.QUOTE_NONE
@@ -45,7 +46,11 @@ class TextFileReader(FileReader):
                     if not line:
                         break
         else:
-            outside_quotes = cls.read_rows(f, nrows, quotechar, is_quoting)
+            if chunk_size_bytes < 0:
+                chunk_size_bytes = None
+            outside_quotes, _ = cls.read_rows(
+                f, nrows, quotechar, is_quoting, max_bytes=chunk_size_bytes
+            )
 
         if is_quoting and not outside_quotes:
             warnings.warn("File has mismatched quotes")
@@ -94,24 +99,51 @@ class TextFileReader(FileReader):
         return False
 
     @classmethod
-    def read_rows(cls, f, nrows, quotechar=b'"', is_quoting=True):
+    def read_rows(cls, f, nrows=None, quotechar=b'"', is_quoting=True, max_bytes=None):
         """
         Moves the file offset at the specified amount of rows
 
         Parameters
         ----------
             f: file object
-            nrows: int, number of rows to read
-            quotechar: char that indicates quote in a file (optional, by default is '\"')
+            nrows: int, number of rows to read. Optional, if not specified will only
+                consider `max_bytes` parameter.
+            quotechar: char that indicates quote in a file
+                (optional, by default it's '\"')
             is_quoting: bool, Whether or not to consider quotes
+                (optional, by default it's `True`)
+            max_bytes: int, Will read new rows while file pointer
+                is less than `max_bytes`. Optional, if not specified will only
+                consider `nrows` parameter, if both not specified will read till
+                the end of the file.
 
         Returns
         -------
-            bool, If file pointer reached the end of the file, but did not find
-            closing quote returns `False`. `True` in any other case.
+            tuple of bool and int,
+                bool: If file pointer reached the end of the file, but did not find
+                closing quote returns `False`. `True` in any other case.
+                int: Number of rows that was readed.
         """
-        if nrows <= 0:
-            return
+        if nrows is None and max_bytes is None:
+            max_bytes = float("inf")
+
+        if nrows is not None and nrows <= 0:
+            return True, 0
+
+        # we need this condition to avoid unnecessary checks in `stop_condition`
+        # which executes in a huge for loop
+        if nrows is not None and max_bytes is None:
+            stop_condition = lambda rows_readed: rows_readed >= nrows  # noqa (E731)
+        elif nrows is not None and max_bytes is not None:
+            stop_condition = (
+                lambda rows_readed: f.tell() >= max_bytes or rows_readed >= nrows
+            )  # noqa (E731)
+        else:
+            stop_condition = lambda rows_readed: f.tell() >= max_bytes  # noqa (E731)
+
+        if max_bytes is not None:
+            max_bytes = max_bytes + f.tell()
+
         rows_readed = 0
         outside_quotes = True
         for line in f:
@@ -119,6 +151,10 @@ class TextFileReader(FileReader):
                 outside_quotes = not outside_quotes
             if outside_quotes:
                 rows_readed += 1
-                if rows_readed >= nrows:
+                if stop_condition(rows_readed):
                     break
-        return outside_quotes
+
+        if not outside_quotes:
+            rows_readed += 1
+
+        return outside_quotes, rows_readed

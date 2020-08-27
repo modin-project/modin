@@ -130,9 +130,11 @@ class CSVReader(TextFileReader):
             num_splits = min(len(column_names), num_partitions)
             # This is the chunksize each partition will read
             if nrows is None:
-                part_size = max(1, total_bytes // num_partitions)
+                chunk_size_bytes = max(1, num_partitions, total_bytes // num_partitions)
+                rows_per_part = None
             else:
-                part_size = max(1, (nrows - skiprows) // num_partitions)
+                chunk_size_bytes = None
+                rows_per_part = max(1, num_partitions, nrows // num_partitions)
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -150,27 +152,32 @@ class CSVReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
-            deploy_kwargs = {
-                "chunk_size_bytes" if nrows is None else "nrows": part_size
-            }
-
-            readed = f.tell() if nrows is None else 0
-            read_limit = total_bytes if nrows is None else nrows
-            while readed < read_limit:
+            rows_readed = 0
+            rows_limit = float("inf") if nrows is None else nrows
+            while f.tell() < total_bytes and rows_readed < rows_limit:
                 args = {
                     "fname": filepath_or_buffer,
                     "num_splits": num_splits,
                     **partition_kwargs,
                 }
-                if (readed + part_size) > read_limit:
-                    deploy_kwargs[list(deploy_kwargs.keys())[0]] = read_limit - readed
+                if (
+                    rows_per_part is not None
+                    and rows_readed + rows_per_part > rows_limit
+                ):
+                    rows_per_part = rows_limit - rows_readed
                 partition_id = cls.call_deploy(
-                    f, num_splits + 2, args, quotechar=quotechar, **deploy_kwargs
+                    f,
+                    num_splits + 2,
+                    args,
+                    quotechar=quotechar,
+                    chunk_size_bytes=chunk_size_bytes,
+                    nrows=rows_per_part,
                 )
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])
-                readed = f.tell() if nrows is None else readed + part_size
+                if nrows is not None:
+                    rows_readed += rows_per_part
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.
