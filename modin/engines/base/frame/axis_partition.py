@@ -19,23 +19,23 @@ NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
     """This abstract class represents the Parent class for any
-        `ColumnPartition` or `RowPartition` class. This class is intended to
-        simplify the way that operations are performed
+    `ColumnPartition` or `RowPartition` class. This class is intended to
+    simplify the way that operations are performed
 
-        Note 0: The procedures that use this class and its methods assume that
-            they have some global knowledge about the entire axis. This may
-            require the implementation to use concatenation or append on the
-            list of block partitions in this object.
+    Note 0: The procedures that use this class and its methods assume that
+        they have some global knowledge about the entire axis. This may
+        require the implementation to use concatenation or append on the
+        list of block partitions in this object.
 
-        Note 1: The `BaseFrameManager` object that controls these objects
-            (through the API exposed here) has an invariant that requires that
-            this object is never returned from a function. It assumes that
-            there will always be `BaseFramePartition` object stored and structures
-            itself accordingly.
+    Note 1: The `BaseFrameManager` object that controls these objects
+        (through the API exposed here) has an invariant that requires that
+        this object is never returned from a function. It assumes that
+        there will always be `BaseFramePartition` object stored and structures
+        itself accordingly.
 
-        The abstract methods that need implemented are `apply` and `shuffle`.
-        The children classes must also implement `instance_type` and `partition_type`
-        (see below).
+    The abstract methods that need implemented are `apply` and `shuffle`.
+    The children classes must also implement `instance_type` and `partition_type`
+    (see below).
     """
 
     def apply(
@@ -99,15 +99,15 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
     """This abstract class is created to simplify and consolidate the code for
-        AxisPartitions that run pandas. Because much of the code is similar, this allows
-        us to reuse this code.
+    AxisPartitions that run pandas. Because much of the code is similar, this allows
+    us to reuse this code.
 
-        Subclasses must implement `list_of_blocks` which unwraps the `RemotePartition`
-        objects and creates something interpretable as a pandas DataFrame.
+    Subclasses must implement `list_of_blocks` which unwraps the `RemotePartition`
+    objects and creates something interpretable as a pandas DataFrame.
 
-        See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition`
-        for an example on how to override/use this class when the implementation needs
-        to be augmented.
+    See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition`
+    for an example on how to override/use this class when the implementation needs
+    to be augmented.
     """
 
     def apply(
@@ -181,19 +181,19 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
     ):
         """Deploy a function along a full axis in Ray.
 
-            Args:
-                axis: The axis to perform the function along.
-                func: The function to perform.
-                num_splits: The number of splits to return
-                    (see `split_result_of_axis_func_pandas`)
-                kwargs: A dictionary of keyword arguments.
-                maintain_partitioning: If True, keep the old partitioning if possible.
-                    If False, create a new partition layout.
-                partitions: All partitions that make up the full axis (row or column)
+        Args:
+            axis: The axis to perform the function along.
+            func: The function to perform.
+            num_splits: The number of splits to return
+                (see `split_result_of_axis_func_pandas`)
+            kwargs: A dictionary of keyword arguments.
+            maintain_partitioning: If True, keep the old partitioning if possible.
+                If False, create a new partition layout.
+            partitions: All partitions that make up the full axis (row or column)
 
-            Returns:
-                A list of Pandas DataFrames.
-            """
+        Returns:
+            A list of Pandas DataFrames.
+        """
         # Pop these off first because they aren't expected by the function.
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)

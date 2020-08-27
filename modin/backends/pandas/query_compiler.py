@@ -144,7 +144,7 @@ def copy_df_for_func(func):
 
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
-        with a Pandas backend. This logic is specific to Pandas."""
+    with a Pandas backend. This logic is specific to Pandas."""
 
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
@@ -272,8 +272,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Data Management Methods
     def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
+        """In the future, this will hopefully trigger a cleanup of this object."""
         # TODO create a way to clean up this object.
         return
 
@@ -1172,7 +1171,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             The unique values returned as a NumPy array.
         """
         new_modin_frame = self._modin_frame._apply_full_axis(
-            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
+            0,
+            lambda x: x.squeeze(axis=1).unique(),
+            new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -1728,7 +1729,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
         new_modin_frame = self._modin_frame.__constructor__(
-            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
+            new_parts,
+            index=new_index,
+            columns=id_vars + [var_name, value_name],
         )
         result = self.__constructor__(new_modin_frame)
         # this assigment needs to propagate correct indices into partitions
@@ -2267,11 +2270,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         broadcast_values2 = broadcast_values2.reset_index(drop=True)
         # Index may contain duplicates
         new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+            by=columns,
+            axis=0,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).index
         # Index without duplicates
         new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, kind=kind, na_position=na_position,
+            by=columns,
+            axis=0,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).index
 
         result = self.reset_index(drop=True).reindex(0, new_index2)
@@ -2307,7 +2318,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         broadcast_values.columns = self.columns
         new_columns = broadcast_values.sort_values(
-            by=rows, axis=1, ascending=ascending, kind=kind, na_position=na_position,
+            by=rows,
+            axis=1,
+            ascending=ascending,
+            kind=kind,
+            na_position=na_position,
         ).columns
         return self.reindex(1, new_columns)
 

@@ -34,7 +34,7 @@ class Plotting(object):
 
     def __getattribute__(self, item):
         """This method will override the parameters passed and convert any Modin
-            DataFrames to pandas so that they can be plotted normally
+        DataFrames to pandas so that they can be plotted normally
         """
         if hasattr(pdplot, item):
             func = getattr(pdplot, item)

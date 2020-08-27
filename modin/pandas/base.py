@@ -42,9 +42,9 @@ sentinel = object()
 
 class BasePandasDataset(object):
     """This object is the base for most of the common code that exists in
-        DataFrame/Series. Since both objects share the same underlying representation,
-        and the algorithms are the same, we use this object to define the general
-        behavior of those objects and then use those objects to define the output type.
+    DataFrame/Series. Since both objects share the same underlying representation,
+    and the algorithms are the same, we use this object to define the general
+    behavior of those objects and then use those objects to define the output type.
     """
 
     # Siblings are other objects that share the same query compiler. We use this list
@@ -606,7 +606,12 @@ class BasePandasDataset(object):
         elif not callable(func) and not is_list_like(func):
             raise TypeError("{} object is not callable".format(type(func)))
         query_compiler = self._query_compiler.apply(
-            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
+            func,
+            axis,
+            args=args,
+            raw=raw,
+            result_type=result_type,
+            **kwds,
         )
         return query_compiler
 
@@ -1077,19 +1082,19 @@ class BasePandasDataset(object):
     def drop_duplicates(self, keep="first", inplace=False, **kwargs):
         """Return DataFrame with duplicate rows removed, optionally only considering certain columns
 
-            Args:
-                subset : column label or sequence of labels, optional
-                    Only consider certain columns for identifying duplicates, by
-                    default use all of the columns
-                keep : {'first', 'last', False}, default 'first'
-                    - ``first`` : Drop duplicates except for the first occurrence.
-                    - ``last`` : Drop duplicates except for the last occurrence.
-                    - False : Drop all duplicates.
-                inplace : boolean, default False
-                    Whether to drop duplicates in place or to return a copy
+        Args:
+            subset : column label or sequence of labels, optional
+                Only consider certain columns for identifying duplicates, by
+                default use all of the columns
+            keep : {'first', 'last', False}, default 'first'
+                - ``first`` : Drop duplicates except for the first occurrence.
+                - ``last`` : Drop duplicates except for the last occurrence.
+                - False : Drop all duplicates.
+            inplace : boolean, default False
+                Whether to drop duplicates in place or to return a copy
 
-            Returns:
-                deduplicated : DataFrame
+        Returns:
+            deduplicated : DataFrame
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
@@ -1147,8 +1152,7 @@ class BasePandasDataset(object):
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
-        """Synonym for fillna(method='ffill')
-        """
+        """Synonym for fillna(method='ffill')"""
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -3656,7 +3660,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_app_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3675,7 +3684,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_agg_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3786,21 +3800,30 @@ class Resampler(object):
     def first(self, _method="first", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def last(self, _method="last", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def max(self, _method="max", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3821,7 +3844,10 @@ class Resampler(object):
     def min(self, _method="min", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3831,13 +3857,19 @@ class Resampler(object):
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
         else:
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
 
@@ -3858,7 +3890,10 @@ class Resampler(object):
     def sem(self, _method="sem", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -4077,18 +4112,30 @@ class Rolling(object):
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_apply(
-                self.rolling_args, func, raw, engine, engine_kwargs, args, kwargs,
+                self.rolling_args,
+                func,
+                raw,
+                engine,
+                engine_kwargs,
+                args,
+                kwargs,
             )
         )
 
     def aggregate(
-        self, func, *args, **kwargs,
+        self,
+        func,
+        *args,
+        **kwargs,
     ):
         from .dataframe import DataFrame
 
         dataframe = DataFrame(
             query_compiler=self._query_compiler.rolling_aggregate(
-                self.rolling_args, func, *args, **kwargs,
+                self.rolling_args,
+                func,
+                *args,
+                **kwargs,
             )
         )
         if isinstance(self._dataframe, DataFrame):
