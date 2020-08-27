@@ -3004,7 +3004,7 @@ class TestDataFrameDefault:
             assert modin_result == pandas_result
 
 
-class TestDataFrameReduction_A:
+class TestDataFrameReduction:
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", [None, 0, 1])
     @pytest.mark.parametrize("method", ["all", "any"])
@@ -3058,13 +3058,11 @@ class TestDataFrameReduction_A:
             modin_df, pandas_df, lambda df: getattr(df, method)(axis=axis, level=level),
         )
 
-
-class TestDataFrameReduction_B:
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize(
         "numeric_only",
         [
-            pytest.param(True, marks=pytest.mark.xfail(reason="See #1965")),
+            pytest.param(True, marks=pytest.mark.xfail(reason="See #1965 for details")),
             False,
             None,
         ],
@@ -3085,7 +3083,7 @@ class TestDataFrameReduction_B:
             lambda df: df.count(axis=axis, numeric_only=numeric_only),
         )
 
-        '''
+        """
             @pytest.mark.parametrize(
         "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
     )
@@ -3137,7 +3135,7 @@ class TestDataFrameReduction_B:
                     axis=axis, numeric_only=numeric_only, level=level
                 )
                 df_equals(modin_multi_level_result, pandas_multi_level_result)
-        '''
+        """
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_describe(self, data):
