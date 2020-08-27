@@ -288,7 +288,8 @@ class BasePandasFrame(object):
                 self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
             else:
                 self._set_axis(
-                    axis, self.axes[axis],
+                    axis,
+                    self.axes[axis],
                 )
 
     def _validate_internal_indices(self, mode=None, **kwargs):
@@ -1176,7 +1177,12 @@ class BasePandasFrame(object):
         )
 
     def _apply_full_axis(
-        self, axis, func, new_index=None, new_columns=None, dtypes=None,
+        self,
+        axis,
+        func,
+        new_index=None,
+        new_columns=None,
+        dtypes=None,
     ):
         """
         Perform a function across an entire axis.
@@ -1272,8 +1278,14 @@ class BasePandasFrame(object):
         # Get the indices for the axis being applied to (it is the opposite of axis
         # being applied over)
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
-        new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
-            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
+        new_partitions = (
+            self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
+                axis,
+                self._partitions,
+                func,
+                dict_indices,
+                keep_remaining=keep_remaining,
+            )
         )
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:

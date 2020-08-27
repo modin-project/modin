@@ -30,14 +30,14 @@ def apply_list_of_funcs(funcs, df):
 
 class PandasOnDaskFramePartition(BaseFramePartition):
     """This abstract class holds the data and metadata for a single partition.
-        The methods required for implementing this abstract class are listed in
-        the section immediately following this.
+    The methods required for implementing this abstract class are listed in
+    the section immediately following this.
 
-        The API exposed by the children of this object is used in
-        `BaseFrameManager`.
+    The API exposed by the children of this object is used in
+    `BaseFrameManager`.
 
-        Note: These objects are treated as immutable by `BaseFrameManager`
-        subclasses. There is no logic for updating inplace.
+    Note: These objects are treated as immutable by `BaseFrameManager`
+    subclasses. There is no logic for updating inplace.
     """
 
     def __init__(self, future, length=None, width=None, call_queue=None):

@@ -527,7 +527,8 @@ def test_from_json_lines():
 
 
 @pytest.mark.parametrize(
-    "data", [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
+    "data",
+    [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
 )
 def test_read_json_string_bytes(data):
     with pytest.warns(UserWarning):

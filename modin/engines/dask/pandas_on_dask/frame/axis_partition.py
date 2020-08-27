@@ -79,8 +79,8 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
 class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
     """The column partition implementation for Multiprocess. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 0
@@ -88,8 +88,8 @@ class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
 
 class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     """The row partition implementation for Multiprocess. All of the implementation
-        for this class is in the parent class, and this class defines the axis
-        to perform the computation over.
+    for this class is in the parent class, and this class defines the axis
+    to perform the computation over.
     """
 
     axis = 1

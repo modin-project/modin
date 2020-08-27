@@ -101,8 +101,7 @@ def _parse_tuple(tup):
 
 
 def _compute_ndim(row_loc, col_loc):
-    """Compute the ndim of result from locators
-    """
+    """Compute the ndim of result from locators"""
     row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
     col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
 
@@ -117,8 +116,7 @@ def _compute_ndim(row_loc, col_loc):
 
 
 class _LocationIndexerBase(object):
-    """Base class for location indexer like loc and iloc
-    """
+    """Base class for location indexer like loc and iloc"""
 
     def __init__(self, modin_df):
         self.df = modin_df
@@ -226,8 +224,7 @@ class _LocationIndexerBase(object):
             )
 
     def _write_items(self, row_lookup, col_lookup, item):
-        """Perform remote write and replace blocks.
-        """
+        """Perform remote write and replace blocks."""
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
 

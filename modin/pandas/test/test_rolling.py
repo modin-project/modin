@@ -39,10 +39,16 @@ def test_dataframe(data, window, min_periods, win_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     pandas_rolled = pandas_df.rolling(
-        window=window, min_periods=min_periods, win_type=win_type, center=True,
+        window=window,
+        min_periods=min_periods,
+        win_type=win_type,
+        center=True,
     )
     modin_rolled = modin_df.rolling(
-        window=window, min_periods=min_periods, win_type=win_type, center=True,
+        window=window,
+        min_periods=min_periods,
+        win_type=win_type,
+        center=True,
     )
     # Testing of Window class
     if win_type is not None:
@@ -115,7 +121,8 @@ def test_dataframe_dt_index(axis, on, closed, window):
         df_equals(modin_rolled.count(), pandas_rolled.count())
         df_equals(modin_rolled.skew(), pandas_rolled.skew())
         df_equals(
-            modin_rolled.apply(np.sum, raw=True), pandas_rolled.apply(np.sum, raw=True),
+            modin_rolled.apply(np.sum, raw=True),
+            pandas_rolled.apply(np.sum, raw=True),
         )
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
@@ -129,10 +136,16 @@ def test_series(data, window, min_periods, win_type):
     modin_series, pandas_series = create_test_series(data)
 
     pandas_rolled = pandas_series.rolling(
-        window=window, min_periods=min_periods, win_type=win_type, center=True,
+        window=window,
+        min_periods=min_periods,
+        win_type=win_type,
+        center=True,
     )
     modin_rolled = modin_series.rolling(
-        window=window, min_periods=min_periods, win_type=win_type, center=True,
+        window=window,
+        min_periods=min_periods,
+        win_type=win_type,
+        center=True,
     )
     # Testing of Window class
     if win_type is not None:
@@ -151,7 +164,8 @@ def test_series(data, window, min_periods, win_type):
         df_equals(modin_rolled.min(), pandas_rolled.min())
         df_equals(modin_rolled.max(), pandas_rolled.max())
         df_equals(
-            modin_rolled.corr(modin_series), pandas_rolled.corr(pandas_series),
+            modin_rolled.corr(modin_series),
+            pandas_rolled.corr(pandas_series),
         )
         df_equals(
             modin_rolled.cov(modin_series, True), pandas_rolled.cov(pandas_series, True)
@@ -165,7 +179,8 @@ def test_series(data, window, min_periods, win_type):
         df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         df_equals(
-            modin_rolled.agg([np.sum, np.mean]), pandas_rolled.agg([np.sum, np.mean]),
+            modin_rolled.agg([np.sum, np.mean]),
+            pandas_rolled.agg([np.sum, np.mean]),
         )
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
 

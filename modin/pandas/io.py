@@ -345,7 +345,7 @@ def read_sql(
     columns=None,
     chunksize=None,
 ):
-    """ Read SQL query or database table into a DataFrame.
+    """Read SQL query or database table into a DataFrame.
 
     Args:
         sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
