@@ -3321,34 +3321,39 @@ class TestDataFrameReduction:
             min_count=min_count,
         )
 
-    @pytest.mark.parametrize(
-        "data",
-        test_data_values + test_data_small_values,
-        ids=test_data_keys + test_data_small_keys,
-    )
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
-    )
-    @pytest.mark.parametrize("is_transposed", [False, True])
-    def test_sum(
-        self, request, data, axis, skipna, numeric_only, min_count, is_transposed
-    ):
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_sum(self, data, axis, skipna, is_transposed):
         eval_general(
             *create_test_dfs(data),
-            lambda df, *args, **kwargs: (df.T if is_transposed else df).sum(
-                *args, **kwargs
+            lambda df: (df.T if is_transposed else df).sum(
+                axis=axis,
+                skipna=skipna,
             ),
-            axis=axis,
-            skipna=skipna,
-            numeric_only=numeric_only,
-            min_count=min_count,
+        )
+
+    @pytest.mark.parametrize(
+        "numeric_only",
+        [
+            pytest.param(None, marks=pytest.mark.xfail(reason="See #1976 for details")),
+            False,
+            True,
+        ],
+    )
+    @pytest.mark.parametrize("min_count", int_arg_values)
+    def test_sum_specific(self, min_count, numeric_only):
+        data = {
+            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
+            "str_col": ["a", np.NaN, "c", "d"],
+            "bool_col": [False, True, True, False],
+        }
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: df.sum(min_count=min_count, numeric_only=numeric_only),
         )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
