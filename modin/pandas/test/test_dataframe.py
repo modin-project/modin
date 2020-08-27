@@ -3055,7 +3055,9 @@ class TestDataFrameReduction:
             pandas_df.columns = new_col
 
         eval_general(
-            modin_df, pandas_df, lambda df: getattr(df, method)(axis=axis, level=level),
+            modin_df,
+            pandas_df,
+            lambda df: getattr(df, method)(axis=axis, level=level),
         )
 
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -3213,180 +3215,55 @@ class TestDataFrameReduction:
             "col3": list("abc"),
             "col4": [1, 2, 3],
         }
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        eval_general(modin_df, pandas_df, lambda df: df.describe())
 
-        modin_result = modin_df.describe()
-        pandas_result = pandas_df.describe()
-
-        df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
-    def test_idxmax(self, data, axis, skipna):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        pandas_result = pandas_df.idxmax(axis=axis, skipna=skipna)
-        modin_result = modin_df.idxmax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-        pandas_result = pandas_df.T.idxmax(axis=axis, skipna=skipna)
-        modin_result = modin_df.T.idxmax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    def test_idxmin(self, data, axis, skipna):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = modin_df.idxmin(axis=axis, skipna=skipna)
-        pandas_result = pandas_df.idxmin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-        modin_result = modin_df.T.idxmin(axis=axis, skipna=skipna)
-        pandas_result = pandas_df.T.idxmin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
+    @pytest.mark.parametrize("method", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_idxmin_idxmax(self, data, method, axis, skipna, is_transposed):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr((df.T if is_transposed else df), method)(
+                axis=axis, skipna=skipna
+            ),
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_last_valid_index(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        assert modin_df.last_valid_index() == pandas_df.last_valid_index()
 
-        assert modin_df.last_valid_index() == (pandas_df.last_valid_index())
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    def test_max(self, request, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    def test_mean(self, request, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.mean(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.mean(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize(
         "index", bool_arg_values, ids=arg_keys("index", bool_arg_keys)
     )
-    def test_memory_usage(self, data, index):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)  # noqa F841
-
-        modin_result = modin_df.memory_usage(index=index)
-        pandas_result = pandas_df.memory_usage(index=index)
-        df_equals(modin_result, pandas_result)
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
+    def test_memory_usage(self, data, index):
+        eval_general(*create_test_dfs(data), lambda df: df.memory_usage(index=index))
+
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
     )
-    def test_min(self, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.min(
+    @pytest.mark.parametrize(
+        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+    )
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("method", ["min", "max", "mean"])
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_min_max_mean(
+        self, data, method, axis, skipna, numeric_only, is_transposed
+    ):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr((df.T if is_transposed else df), method)(
                 axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
+            ),
+        )
 
     @pytest.mark.skipif(
         os.name == "nt",
