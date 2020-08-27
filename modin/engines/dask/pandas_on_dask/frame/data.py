@@ -31,10 +31,7 @@ class PandasOnDaskFrame(BasePandasFrame):
         client = _get_global_client()
         if self._row_lengths_cache is None:
             self._row_lengths_cache = client.gather(
-                [
-                    obj.add_to_apply_calls(lambda df: len(df)).future
-                    for obj in self._partitions.T[0]
-                ]
+                [obj.apply(lambda df: len(df)).future for obj in self._partitions.T[0]]
             )
         return self._row_lengths_cache
 
@@ -49,7 +46,7 @@ class PandasOnDaskFrame(BasePandasFrame):
         if self._column_widths_cache is None:
             self._column_widths_cache = client.gather(
                 [
-                    obj.add_to_apply_calls(lambda df: len(df.columns)).future
+                    obj.apply(lambda df: len(df.columns)).future
                     for obj in self._partitions[0]
                 ]
             )

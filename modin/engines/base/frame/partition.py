@@ -157,7 +157,7 @@ class BaseFramePartition(object):  # pragma: no cover
             cls = type(self)
             func = cls.length_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
-            self._length_cache = self.add_to_apply_calls(preprocessed_func)
+            self._length_cache = self.apply(preprocessed_func)
         return self._length_cache
 
     def width(self):
@@ -165,7 +165,7 @@ class BaseFramePartition(object):  # pragma: no cover
             cls = type(self)
             func = cls.width_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
-            self._width_cache = self.add_to_apply_calls(preprocessed_func)
+            self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
 
     @classmethod
