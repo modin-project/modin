@@ -51,17 +51,17 @@ class Series(BasePandasDataset):
         query_compiler=None,
     ):
         """
-    One-dimensional ndarray with axis labels (including time series).
+        One-dimensional ndarray with axis labels (including time series).
 
-    Args:
-        data: Contains data stored in Series.
-        index: Values must be hashable and have the same length as `data`.
-        dtype: Data type for the output Series. If not specified, this will be
-            inferred from `data`.
-        name: The name to give to the Series.
-        copy: Copy input data.
-        query_compiler: A query compiler object to create the Series from.
-    """
+        Args:
+            data: Contains data stored in Series.
+            index: Values must be hashable and have the same length as `data`.
+            dtype: Data type for the output Series. If not specified, this will be
+                inferred from `data`.
+            name: The name to give to the Series.
+            copy: Copy input data.
+            query_compiler: A query compiler object to create the Series from.
+        """
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:

@@ -372,5 +372,9 @@ def value_counts(
     It slightly differ from pandas where indices are located in random order.
     """
     return Series(values).value_counts(
-        sort=sort, ascending=ascending, normalize=normalize, bins=bins, dropna=dropna,
+        sort=sort,
+        ascending=ascending,
+        normalize=normalize,
+        bins=bins,
+        dropna=dropna,
     )

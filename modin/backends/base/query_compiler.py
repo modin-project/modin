@@ -88,8 +88,7 @@ class BaseQueryCompiler(abc.ABC):
     # Data Management Methods
     @abc.abstractmethod
     def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object.
-        """
+        """In the future, this will hopefully trigger a cleanup of this object."""
         # TODO create a way to clean up this object.
         pass
 

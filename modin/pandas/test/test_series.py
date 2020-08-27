@@ -1437,7 +1437,8 @@ def test_dt():
         modin_series.dt.to_pydatetime(), pandas_series.dt.to_pydatetime()
     )
     df_equals(
-        modin_series.dt.tz_localize(None), pandas_series.dt.tz_localize(None),
+        modin_series.dt.tz_localize(None),
+        pandas_series.dt.tz_localize(None),
     )
     df_equals(
         modin_series.dt.tz_convert(tz="Europe/Berlin"),
@@ -1823,7 +1824,9 @@ def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
     modin_series, pandas_series = create_test_series(data)
 
     eval_general(
-        modin_series, pandas_series, lambda df: df.kurtosis(**func_kwargs),
+        modin_series,
+        pandas_series,
+        lambda df: df.kurtosis(**func_kwargs),
     )
 
 
@@ -2396,7 +2399,9 @@ def test_repeat(data, repeats):
 )
 def test_repeat_lists(data, repeats):
     eval_general(
-        pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats),
+        pd.Series(data),
+        pandas.Series(data),
+        lambda df: df.repeat(repeats),
     )
 
 
@@ -2461,10 +2466,12 @@ def test_resample(closed, label, level):
         pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
     )
     df_equals(
-        pandas_resampler.aggregate("max"), modin_resampler.aggregate("max"),
+        pandas_resampler.aggregate("max"),
+        modin_resampler.aggregate("max"),
     )
     df_equals(
-        modin_resampler.apply("sum"), pandas_resampler.apply("sum"),
+        modin_resampler.apply("sum"),
+        pandas_resampler.apply("sum"),
     )
     df_equals(
         modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
@@ -2476,7 +2483,8 @@ def test_resample(closed, label, level):
     # Upsampling from level= or on= selection is not supported
     if level is None:
         df_equals(
-            modin_resampler.interpolate(), pandas_resampler.interpolate(),
+            modin_resampler.interpolate(),
+            pandas_resampler.interpolate(),
         )
         df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
         df_equals(
@@ -3022,7 +3030,8 @@ def test_tz_localize():
         pandas_series.tz_localize("America/Los_Angeles"),
     )
     df_equals(
-        modin_series.tz_localize("UTC"), pandas_series.tz_localize("UTC"),
+        modin_series.tz_localize("UTC"),
+        pandas_series.tz_localize("UTC"),
     )
 
 

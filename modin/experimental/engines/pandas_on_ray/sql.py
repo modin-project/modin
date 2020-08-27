@@ -16,7 +16,7 @@ from sqlalchemy import MetaData, Table, create_engine
 
 
 def is_distributed(partition_column, lower_bound, upper_bound):
-    """ Check if is possible distribute a query given that args
+    """Check if is possible distribute a query given that args
 
     Args:
         partition_column: column used to share the data between the workers
@@ -45,7 +45,7 @@ def is_distributed(partition_column, lower_bound, upper_bound):
 
 
 def is_table(engine, sql):
-    """ Check with the given sql arg is query or table
+    """Check with the given sql arg is query or table
 
     Args:
         engine: SQLAlchemy connection engine
@@ -60,7 +60,7 @@ def is_table(engine, sql):
 
 
 def get_table_metadata(engine, table):
-    """ Extract all useful infos from the given table
+    """Extract all useful infos from the given table
 
     Args:
         engine: SQLAlchemy connection engine
@@ -76,7 +76,7 @@ def get_table_metadata(engine, table):
 
 
 def get_table_columns(metadata):
-    """ Extract columns names and python typos from metadata
+    """Extract columns names and python typos from metadata
 
     Args:
         metadata: Table metadata
@@ -92,7 +92,7 @@ def get_table_columns(metadata):
 
 
 def build_query_from_table(name):
-    """ Create a query given the table name
+    """Create a query given the table name
 
     Args:
         name: Table name
@@ -104,7 +104,7 @@ def build_query_from_table(name):
 
 
 def check_query(query):
-    """ Check query sanity
+    """Check query sanity
 
     Args:
         query: query string
@@ -120,7 +120,7 @@ def check_query(query):
 
 
 def get_query_columns(engine, query):
-    """ Extract columns names and python typos from query
+    """Extract columns names and python typos from query
 
     Args:
         engine: SQLAlchemy connection engine
@@ -140,7 +140,7 @@ def get_query_columns(engine, query):
 
 
 def check_partition_column(partition_column, cols):
-    """ Check partition_column existence and type
+    """Check partition_column existence and type
 
     Args:
         partition_column: partition_column name
@@ -163,7 +163,7 @@ def check_partition_column(partition_column, cols):
 
 
 def get_query_info(sql, con, partition_column):
-    """ Return a columns name list and the query string
+    """Return a columns name list and the query string
 
     Args:
         sql: SQL query or table name
@@ -189,7 +189,7 @@ def get_query_info(sql, con, partition_column):
 
 
 def query_put_bounders(query, partition_column, start, end):
-    """ Put bounders in the query
+    """Put bounders in the query
 
     Args:
         query: SQL query string
