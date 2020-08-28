@@ -335,7 +335,7 @@ class _LocIndexer(_LocationIndexerBase):
             row_lookup = self.qc.index.get_indexer_for(
                 self.qc.index.to_series().loc[row_loc]
             )
-        elif isinstance(self.qc.index, pandas.MultiIndex):
+        elif self.qc.has_multiindex():
             if isinstance(row_loc, pandas.MultiIndex):
                 row_lookup = self.qc.index.get_indexer_for(row_loc)
             else:
@@ -349,7 +349,7 @@ class _LocIndexer(_LocationIndexerBase):
             col_lookup = self.qc.columns.get_indexer_for(
                 self.qc.columns.to_series().loc[col_loc]
             )
-        elif isinstance(self.qc.columns, pandas.MultiIndex):
+        elif self.qc.has_multiindex(axis=1):
             if isinstance(col_loc, pandas.MultiIndex):
                 col_lookup = self.qc.columns.get_indexer_for(col_loc)
             else:
