@@ -36,12 +36,12 @@ def simulate_cloud(request):
 
     with create_cluster("local", __spawner__="local"):
 
-        def set_env():
+        def set_env(mode):
             import os
 
             os.environ["MODIN_EXPERIMENTAL"] = (
                 "True" if mode == "experimental" else "False"
             )
 
-        get_connection().teleport(set_env)()
+        get_connection().teleport(set_env)(mode)
         yield

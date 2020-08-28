@@ -21,15 +21,18 @@ from .rpyc_proxy import WrappingConnection, WrappingService
 
 class LocalWrappingConnection(WrappingConnection):
     def _init_deliver(self):
-        def ensure_modin(this_file):
+        def ensure_modin(modin_init):
             import sys
             import os
 
-            modin_dir = os.path.normpath(os.path.join(os.path.dirname(this_file), '..', '..'))
+            modin_dir = os.path.abspath(os.path.join(os.path.dirname(modin_init), '..'))
+            with open(r'c:\tmp\modin.log', 'w') as out:
+                out.write(f'modin_init={modin_init}\nmodin={modin_dir}\nsys.path={sys.path}\n')
             # make sure "import modin" will be taken from current modin, not something potentially installed in the system
             if modin_dir not in sys.path:
                 sys.path.insert(0, modin_dir)
-        self.teleport(ensure_modin)(__file__)
+        import modin
+        self.teleport(ensure_modin)(modin.__file__)
         super()._init_deliver()
 
 class LocalWrappingService(WrappingService):
