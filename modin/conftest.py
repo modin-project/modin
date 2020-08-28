@@ -27,6 +27,7 @@ def pytest_addoption(parser):
 def simulate_cloud(request):
     mode = request.config.getoption("--simulate-cloud").lower()
     if mode == "off":
+        yield
         return
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")

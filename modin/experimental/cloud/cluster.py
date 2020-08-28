@@ -99,6 +99,7 @@ class BaseCluster:
 
     target_engine = None
     target_partition = None
+    Connector = Connection
 
     def __init__(
         self,
@@ -140,7 +141,7 @@ class BaseCluster:
         if wait:
             # cluster is ready now
             if self.connection is None:
-                self.connection = Connection(
+                self.connection = self.Connector(
                     self._get_connection_details(), self._get_main_python()
                 )
 
@@ -261,7 +262,7 @@ def create(
 
     Using SOCKS proxy requires Ray newer than 0.8.6, which might need to be installed manually.
     """
-    if not isinstance(provider, Provider):
+    if not isinstance(provider, Provider) and __spawner__ != 'local':
         provider = Provider(
             name=provider,
             credentials_file=credentials,
@@ -277,6 +278,8 @@ def create(
             )
     if __spawner__ == "rayscale":
         from .rayscale import RayCluster as Spawner
+    elif __spawner__ == 'local':
+        from .local_cluster import LocalCluster as Spawner
     else:
         raise ValueError(f"Unknown spawner: {__spawner__}")
     instance = Spawner(
