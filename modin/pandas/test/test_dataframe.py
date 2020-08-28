@@ -4677,26 +4677,16 @@ class TestDataFrameIndexing:
         df_equals(modin_df.loc[modin_df.index], pandas_df.loc[pandas_df.index])
         df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
-    def test_loc_assignment(self):
-        modin_df = pd.DataFrame(
-            index=["row1", "row2", "row3"], columns=["col1", "col2"]
-        )
-        pandas_df = pandas.DataFrame(
-            index=["row1", "row2", "row3"], columns=["col1", "col2"]
-        )
-        modin_df.loc["row1"]["col1"] = 11
-        modin_df.loc["row2"]["col1"] = 21
-        modin_df.loc["row3"]["col1"] = 31
-        modin_df.loc["row1"]["col2"] = 12
-        modin_df.loc["row2"]["col2"] = 22
-        modin_df.loc["row3"]["col2"] = 32
-        pandas_df.loc["row1"]["col1"] = 11
-        pandas_df.loc["row2"]["col1"] = 21
-        pandas_df.loc["row3"]["col1"] = 31
-        pandas_df.loc["row1"]["col2"] = 12
-        pandas_df.loc["row2"]["col2"] = 22
-        pandas_df.loc["row3"]["col2"] = 32
-        df_equals(modin_df, pandas_df)
+    @pytest.mark.parametrize("index", [["row1", "row2", "row3"], ["row1"]])
+    @pytest.mark.parametrize("columns", [["col1", "col2"], ["col1"]])
+    def test_loc_assignment(self, index, columns):
+        md_df, pd_df = create_test_dfs(index=index, columns=columns)
+        for i, ind in enumerate(index):
+            for j, col in enumerate(columns):
+                value_to_assign = int(str(i) + str(j))
+                md_df.loc[ind][col] = value_to_assign
+                pd_df.loc[ind][col] = value_to_assign
+        df_equals(md_df, pd_df)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_loc_nested_assignment(self, data):

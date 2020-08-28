@@ -302,6 +302,10 @@ class BaseFrameManager(object):
             A new BaseFrameManager object, the type of object that called this.
         """
         if type(right_parts) is list:
+            # `np.array` with partitions of empty ModinFrame has a shape (0,)
+            # but `np.concatenate` can concatenate arrays only if its shapes at
+            # specified axis are equals, so filtering empty frames to avoid concat error
+            right_parts = [o for o in right_parts if o.size != 0]
             return np.concatenate([left_parts] + right_parts, axis=axis)
         else:
             return np.append(left_parts, right_parts, axis=axis)
