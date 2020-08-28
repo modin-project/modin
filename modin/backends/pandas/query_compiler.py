@@ -793,7 +793,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_app_df(self, resample_args, func, *args, **kwargs):
@@ -806,7 +806,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_agg_df(self, resample_args, func, *args, **kwargs):
@@ -851,7 +851,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit_direction,
         limit_area,
         downcast,
-        **kwargs
+        **kwargs,
     ):
         return self._resample_func(
             resample_args,
@@ -862,7 +862,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            **kwargs
+            **kwargs,
         )
 
     def resample_count(self, resample_args):
@@ -910,7 +910,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df_op=lambda df: df.squeeze(axis=1),
             _method=_method,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
@@ -1074,6 +1074,79 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self.index,
         )
         return self.__constructor__(new_modin_frame)
+
+    def unstack(self, level, fill_value):
+        if not isinstance(self.index, pandas.MultiIndex) or (
+            isinstance(self.index, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            axis = 1
+            new_columns = ["__reduced__"]
+            need_reindex = True
+        else:
+            axis = 0
+            new_columns = None
+            need_reindex = False
+
+        def map_func(df):
+            return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
+
+        is_all_multi_list = False
+        if (
+            isinstance(self.index, pandas.MultiIndex)
+            and isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            is_all_multi_list = True
+            real_cols_bkp = self.columns
+            obj = self.copy()
+            obj.columns = np.arange(len(obj.columns))
+        else:
+            obj = self
+
+        new_modin_frame = obj._modin_frame._apply_full_axis(
+            axis, map_func, new_columns=new_columns
+        )
+        result = self.__constructor__(new_modin_frame)
+
+        if is_all_multi_list:
+            result = result.sort_index()
+            index_level_values = [lvl for lvl in obj.index.levels]
+            columns_level_values = [
+                real_cols_bkp.get_level_values(lvl).unique()
+                for lvl in np.arange(real_cols_bkp.nlevels)
+            ]
+            result.index = pandas.MultiIndex.from_product(
+                [*columns_level_values, *index_level_values]
+            )
+            return result
+
+        if need_reindex:
+            if isinstance(self.index, pandas.MultiIndex):
+                index_level_values = [
+                    self.index.get_level_values(lvl).unique()
+                    for lvl in np.arange(self.index.nlevels)
+                ]
+                new_index = pandas.MultiIndex.from_product(
+                    [self.columns, *index_level_values]
+                )
+            else:
+                if isinstance(self.columns, pandas.MultiIndex):
+                    columns_level_values = [
+                        self.columns.get_level_values(lvl).unique()
+                        for lvl in np.arange(self.columns.nlevels)
+                    ]
+                    new_index = pandas.MultiIndex.from_product(
+                        [*columns_level_values, self.index]
+                    )
+                else:
+                    new_index = pandas.MultiIndex.from_product(
+                        [self.columns, self.index]
+                    )
+            result = result.reindex(0, new_index)
+        return result
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
@@ -1632,7 +1705,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 axis=axis,
                 level=level,
                 sort_remaining=sort_remaining,
-                **kwargs
+                **kwargs,
             )
 
         # sort_index can have ascending be None and behaves as if it is False.
@@ -2147,7 +2220,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             try:
                 agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args
+                    **agg_args,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")

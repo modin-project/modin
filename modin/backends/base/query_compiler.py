@@ -1195,6 +1195,10 @@ class BaseQueryCompiler(abc.ABC):
     # END Manual Partitioning methods
 
     @abc.abstractmethod
+    def unstack(self, level, fill_value):
+        pass
+
+    @abc.abstractmethod
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
 
