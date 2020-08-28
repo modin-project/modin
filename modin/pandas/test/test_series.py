@@ -474,14 +474,24 @@ def test___pow__(data):
     inter_df_math_helper(modin_series, pandas_series, "__pow__")
 
 
-def test___repr___empty():
-    modin_series, pandas_series = pd.Series(), pandas.Series()
-    assert repr(modin_series) == repr(pandas_series)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___repr__(data):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("name", ["Dates", None])
+@pytest.mark.parametrize(
+    "dt_index", [True, False], ids=["dt_index_true", "dt_index_false"]
+)
+@pytest.mark.parametrize(
+    "data", [*test_data_values, "empty"], ids=[*test_data_keys, "empty"]
+)
+def test___repr__(name, dt_index, data):
+    if data == "empty":
+        modin_series, pandas_series = pd.Series(), pandas.Series()
+    else:
+        modin_series, pandas_series = create_test_series(data)
+    pandas_series.name = modin_series.name = name
+    if dt_index:
+        index = pandas.date_range(
+            "1/1/2000", periods=len(pandas_series.index), freq="T"
+        )
+        pandas_series.index = modin_series.index = index
     assert repr(modin_series) == repr(pandas_series)
 
 
