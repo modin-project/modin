@@ -1680,6 +1680,37 @@ class DataFrame(BasePandasDataset):
                 new_df.columns = new_columns
                 return new_df
 
+    def unstack(self, level=-1, fill_value=None):
+        """
+        Pivot a level of the (necessarily hierarchical) index labels.
+        Returns a DataFrame having a new level of column labels whose inner-most level
+        consists of the pivoted index labels.
+        If the index is not a MultiIndex, the output will be a Series
+        (the analogue of stack when the columns are not a MultiIndex).
+        The level involved will automatically get sorted.
+        Parameters
+        ----------
+        level : int, str, or list of these, default -1 (last level)
+            Level(s) of index to unstack, can pass level name.
+        fill_value : int, str or dict
+            Replace NaN with this value if the unstack produces missing values.
+        Returns
+        -------
+        Series or DataFrame
+        """
+        if not isinstance(self.index, pandas.MultiIndex) or (
+            isinstance(self.index, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.index.nlevels
+        ):
+            return self._reduce_dimension(
+                query_compiler=self._query_compiler.unstack(level, fill_value)
+            )
+        else:
+            return DataFrame(
+                query_compiler=self._query_compiler.unstack(level, fill_value)
+            )
+
     def pivot(self, index=None, columns=None, values=None):
         return self._default_to_pandas(
             pandas.DataFrame.pivot, index=index, columns=columns, values=values

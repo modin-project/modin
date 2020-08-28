@@ -1079,6 +1079,29 @@ class Series(BasePandasDataset):
                 )
             )
 
+    def unstack(self, level=-1, fill_value=None):
+        """
+        Unstack, a.k.a. pivot, Series with MultiIndex to produce DataFrame.
+        The level involved will automatically get sorted.
+        Parameters
+        ----------
+        level : int, str, or list of these, default last level
+            Level(s) to unstack, can pass level name.
+        fill_value : scalar value, default None
+            Value to use when replacing NaN values.
+        Returns
+        -------
+        DataFrame
+            Unstacked Series.
+        """
+        from .dataframe import DataFrame
+
+        result = DataFrame(
+            query_compiler=self._query_compiler.unstack(level, fill_value)
+        )
+
+        return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
+
     @property
     def plot(
         self,
