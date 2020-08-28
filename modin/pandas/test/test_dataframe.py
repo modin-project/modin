@@ -60,6 +60,7 @@ from .utils import (
     udf_func_values,
     udf_func_keys,
     generate_multiindex,
+    test_data_diff_dtype,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -3022,13 +3023,9 @@ class TestDataFrameReduction:
         "bool_only", bool_arg_values, ids=arg_keys("bool_only", bool_arg_keys)
     )
     def test_all_any_specific(self, bool_only, method):
-        data = {
-            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
-            "str_col": ["a", np.NaN, "c", "d"],
-            "bool_col": [False, True, True, False],
-        }
         eval_general(
-            *create_test_dfs(data), lambda df: getattr(df, method)(bool_only=bool_only)
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: getattr(df, method)(bool_only=bool_only),
         )
 
     @pytest.mark.parametrize("method", ["all", "any"])
@@ -3070,13 +3067,8 @@ class TestDataFrameReduction:
         ],
     )
     def test_count_specific(self, numeric_only):
-        data = {
-            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
-            "str_col": ["a", np.NaN, "c", "d"],
-            "bool_col": [False, True, True, False],
-        }
         eval_general(
-            *create_test_dfs(data),
+            *create_test_dfs(test_data_diff_dtype),
             lambda df: df.count(numeric_only=numeric_only),
         )
 
@@ -3120,13 +3112,11 @@ class TestDataFrameReduction:
         ],
     )
     def test_describe_specific(self, exclude, include):
-        data = {
-            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
-            "bool_col": [False, True, True, False],
-        }
         eval_general(
-            *create_test_dfs(data),
-            lambda df: df.describe(exclude=exclude, include=include),
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: df.drop("str_col", axis=1).describe(
+                exclude=exclude, include=include
+            ),
         )
 
     @pytest.mark.parametrize("data", [test_data["int_data"]])
@@ -3251,14 +3241,8 @@ class TestDataFrameReduction:
     def test_prod_specific(self, min_count, numeric_only):
         if min_count == 5 and numeric_only:
             pytest.xfail("see #1953 for details")
-
-        data = {
-            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
-            "str_col": ["a", np.NaN, "c", "d"],
-            "bool_col": [False, True, True, False],
-        }
         eval_general(
-            *create_test_dfs(data),
+            *create_test_dfs(test_data_diff_dtype),
             lambda df: df.prod(min_count=min_count, numeric_only=numeric_only),
         )
 
@@ -3287,13 +3271,8 @@ class TestDataFrameReduction:
     )
     @pytest.mark.parametrize("min_count", int_arg_values)
     def test_sum_specific(self, min_count, numeric_only):
-        data = {
-            "float_col": [np.NaN, 9.4, 10.1, np.NaN],
-            "str_col": ["a", np.NaN, "c", "d"],
-            "bool_col": [False, True, True, False],
-        }
         eval_general(
-            *create_test_dfs(data),
+            *create_test_dfs(test_data_diff_dtype),
             lambda df: df.sum(min_count=min_count, numeric_only=numeric_only),
         )
 
@@ -4111,7 +4090,6 @@ class TestDataFrameWindow:
             modin_result = modin_df.T.var(
                 axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
             )
-            df_equals(modin_result, pandas_result)
 
 
 class TestDataFrameIndexing:
