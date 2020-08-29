@@ -98,7 +98,8 @@ num_cpus = 1
 _is_first_update = {}
 dask_client = None
 _NOINIT_ENGINES = {
-    "Python"
+    "Python",
+    "Cloudpython",
 }  # engines that don't require initialization, useful for unit tests
 
 

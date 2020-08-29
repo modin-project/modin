@@ -65,6 +65,9 @@ class LocalConnection(Connection):
 
 
 class LocalCluster(BaseCluster):
+    target_engine = "Cloudpython"
+    target_partition = "Pandas"
+
     Connector = LocalConnection
 
     def __init__(

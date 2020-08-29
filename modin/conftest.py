@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pytest
+import os
 
 
 def pytest_addoption(parser):
@@ -31,6 +32,7 @@ def simulate_cloud(request):
         return
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
+    os.environ["MODIN_EXPERIMENTAL"] = "True"
 
     from modin.experimental.cloud import create_cluster, get_connection
 

@@ -296,3 +296,7 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
 
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnRayFactory
+
+
+class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
+    wrapped_factory = PandasOnPythonFactory
