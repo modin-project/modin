@@ -74,7 +74,9 @@ class Connection:
             cmd.extend(["--logfile", f"{tempfile.gettempdir()}/rpyc.log"])
         for _ in range(self.tries):
             proc = self._run(
-                self._build_sshcmd(details, forward_port=port), cmd + ["--port", str(port)], capture_out=False
+                self._build_sshcmd(details, forward_port=port),
+                cmd + ["--port", str(port)],
+                capture_out=False,
             )
             if self.__wait_noexc(proc, 1) is None:
                 # started successfully
@@ -104,6 +106,7 @@ class Connection:
     @staticmethod
     def _get_service():
         from .rpyc_proxy import WrappingService
+
         return WrappingService
 
     def __try_connect(self):
@@ -142,7 +145,7 @@ class Connection:
         if Connection.__current is self:
             Connection.__current = None
 
-    def stop(self, sigint=signal.SIGINT if sys.platform != 'win32' else signal.SIGTERM):
+    def stop(self, sigint=signal.SIGINT if sys.platform != "win32" else signal.SIGTERM):
         # capture signal.SIGINT in closure so it won't get removed before __del__ is called
         self.deactivate()
         if self.proc and self.proc.poll() is None:
@@ -177,9 +180,7 @@ class Connection:
         for oname, ovalue in opts:
             cmdline.extend(["-o", f"{oname}={ovalue}"])
         if forward_port:
-            cmdline.extend(
-                ["-L", f"127.0.0.1:{forward_port}:127.0.0.1:{forward_port}"]
-            )
+            cmdline.extend(["-L", f"127.0.0.1:{forward_port}:127.0.0.1:{forward_port}"])
         cmdline.append(f"{details.user_name}@{details.address}")
 
         return cmdline

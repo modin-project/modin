@@ -19,24 +19,31 @@ from .cluster import BaseCluster
 from .connection import Connection
 from .rpyc_proxy import WrappingConnection, WrappingService
 
+
 class LocalWrappingConnection(WrappingConnection):
     def _init_deliver(self):
         def ensure_modin(modin_init):
             import sys
             import os
 
-            modin_dir = os.path.abspath(os.path.join(os.path.dirname(modin_init), '..'))
-            with open(r'c:\tmp\modin.log', 'w') as out:
-                out.write(f'modin_init={modin_init}\nmodin={modin_dir}\nsys.path={sys.path}\n')
+            modin_dir = os.path.abspath(os.path.join(os.path.dirname(modin_init), ".."))
+            with open(r"c:\tmp\modin.log", "w") as out:
+                out.write(
+                    f"modin_init={modin_init}\nmodin={modin_dir}\nsys.path={sys.path}\n"
+                )
             # make sure "import modin" will be taken from current modin, not something potentially installed in the system
             if modin_dir not in sys.path:
                 sys.path.insert(0, modin_dir)
+
         import modin
+
         self.teleport(ensure_modin)(modin.__file__)
         super()._init_deliver()
 
+
 class LocalWrappingService(WrappingService):
     _protocol = LocalWrappingConnection
+
 
 class LocalConnection(Connection):
     def _build_sshcmd(self, details: ConnectionDetails, forward_port: int = None):
@@ -51,17 +58,26 @@ class LocalConnection(Connection):
             stdout=redirect,
             stderr=redirect,
         )
-    
+
     @staticmethod
     def _get_service():
         return LocalWrappingService
 
+
 class LocalCluster(BaseCluster):
     Connector = LocalConnection
 
-    def __init__(self, provider, project_name, cluster_name="modin-cluster", worker_count=4, head_node_type=None, worker_node_type=None):
-        assert provider == 'local'
-        super().__init__(provider, 'test-project', 'test-cluster', 1, 'head', 'worker')
+    def __init__(
+        self,
+        provider,
+        project_name,
+        cluster_name="modin-cluster",
+        worker_count=4,
+        head_node_type=None,
+        worker_node_type=None,
+    ):
+        assert provider == "local"
+        super().__init__(provider, "test-project", "test-cluster", 1, "head", "worker")
 
     def _spawn(self, wait=False):
         pass

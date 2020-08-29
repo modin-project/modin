@@ -262,7 +262,7 @@ def create(
 
     Using SOCKS proxy requires Ray newer than 0.8.6, which might need to be installed manually.
     """
-    if not isinstance(provider, Provider) and __spawner__ != 'local':
+    if not isinstance(provider, Provider) and __spawner__ != "local":
         provider = Provider(
             name=provider,
             credentials_file=credentials,
@@ -278,7 +278,7 @@ def create(
             )
     if __spawner__ == "rayscale":
         from .rayscale import RayCluster as Spawner
-    elif __spawner__ == 'local':
+    elif __spawner__ == "local":
         from .local_cluster import LocalCluster as Spawner
     else:
         raise ValueError(f"Unknown spawner: {__spawner__}")
