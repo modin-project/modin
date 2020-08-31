@@ -17,20 +17,19 @@ import sys
 from .base import ConnectionDetails
 from .cluster import BaseCluster
 from .connection import Connection
-from .rpyc_proxy import WrappingConnection, WrappingService
+from .rpyc_proxy import WrappingConnection, WrappingService, _TRACE_RPYC
+from .tracing.tracing_connection import TracingWrappingConnection
 
 
-class LocalWrappingConnection(WrappingConnection):
+class LocalWrappingConnection(
+    TracingWrappingConnection if _TRACE_RPYC else WrappingConnection
+):
     def _init_deliver(self):
         def ensure_modin(modin_init):
             import sys
             import os
 
             modin_dir = os.path.abspath(os.path.join(os.path.dirname(modin_init), ".."))
-            with open(r"c:\tmp\modin.log", "w") as out:
-                out.write(
-                    f"modin_init={modin_init}\nmodin={modin_dir}\nsys.path={sys.path}\n"
-                )
             # make sure "import modin" will be taken from current modin, not something potentially installed in the system
             if modin_dir not in sys.path:
                 sys.path.insert(0, modin_dir)
