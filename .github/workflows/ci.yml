@@ -180,7 +180,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
         engine: ["python", "ray", "dask"]
-        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -284,7 +284,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
         engine: ["ray", "dask"]
-        part: ["Reduction_A", "Reduction_B", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
+        part: ["Reduction", "Binary", "MapMetadata", "UDF", "Default", "Window", "Indexing", "Iter", "JoinSort", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
