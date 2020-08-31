@@ -110,7 +110,7 @@ class CSVReader(TextFileReader):
                     skiprows += header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
                     skiprows += max(header) + 1
-                cls.read_rows(
+                cls.offset(
                     f,
                     nrows=skiprows,
                     quotechar=quotechar,

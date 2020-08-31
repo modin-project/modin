@@ -50,7 +50,6 @@ class TextFileReader(FileReader):
                 return True
         except ImportError:  # pragma: no cover
             pass
-
         return False
 
     @classmethod
@@ -63,8 +62,31 @@ class TextFileReader(FileReader):
         quotechar=b'"',
         is_quoting=True,
     ):
+        """
+        Moves the file offset at the specified amount of bytes/rows.
+
+        Parameters
+        ----------
+            f: file object
+            nrows: int, number of rows to read. Optional, if not specified will only
+                consider `chunk_size_bytes` parameter.
+            chunk_size_bytes: int, Will read new rows while file pointer
+                is less than `chunk_size_bytes`. Optional, if not specified will only
+                consider `nrows` parameter, if both not specified will read till
+                the end of the file.
+            skiprows: array or callable (optional), specifies rows to skip
+            quotechar: char that indicates quote in a file
+                (optional, by default it's '\"')
+            is_quoting: bool, Whether or not to consider quotes
+                (optional, by default it's `True`)
+
+        Returns
+        -------
+            bool: If file pointer reached the end of the file, but did not find
+            closing quote returns `False`. `True` in any other case.
+        """
         if nrows is not None or skiprows is not None:
-            return cls.read_rows(
+            return cls._read_rows(
                 f,
                 nrows=nrows,
                 skiprows=skiprows,
@@ -102,8 +124,28 @@ class TextFileReader(FileReader):
         quotechar=b'"',
         is_quoting=True,
         from_begin=False,
-        save_position=False,
     ):
+        """Computes chunk sizes in bytes for every partition.
+
+        Parameters
+        ----------
+            f: file to be partitioned
+            nrows: int (optional), number of rows of file to read
+            skiprows: array or callable (optional), specifies rows to skip
+            num_partitions: int, for what number of partitions split a file.
+                Optional, if not specified grabs the value from `modin.pandas.DEFAULT_NPARTITIONS`
+            quotechar: char that indicates quote in a file
+                (optional, by default it's '\"')
+            is_quoting: bool, Whether or not to consider quotes
+                (optional, by default it's `True`)
+            from_begin: bool, Whether or not to set the file pointer to the begining of the file
+                (optional, by default it's `False`)
+
+        Returns
+        -------
+            An array, where each element of array is a tuple of two ints:
+            beginning and the end offsets of the current chunk.
+        """
         if num_partitions is None:
             from modin.pandas import DEFAULT_NPARTITIONS
 
@@ -149,13 +191,12 @@ class TextFileReader(FileReader):
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
 
-        if save_position:
-            f.seek(old_position, os.SEEK_SET)
+        f.seek(old_position, os.SEEK_SET)
 
         return result
 
     @classmethod
-    def read_rows(
+    def _read_rows(
         cls,
         f,
         nrows=None,
@@ -166,12 +207,16 @@ class TextFileReader(FileReader):
     ):
         """
         Moves the file offset at the specified amount of rows
+        Note: the difference between `offset` is that `_read_rows` is more
+            specific version of `offset` which is focused of reading **rows**.
+            In common case it's better to use `offset`.
 
         Parameters
         ----------
             f: file object
             nrows: int, number of rows to read. Optional, if not specified will only
                 consider `max_bytes` parameter.
+            skiprows: array or callable (optional), specifies rows to skip
             quotechar: char that indicates quote in a file
                 (optional, by default it's '\"')
             is_quoting: bool, Whether or not to consider quotes
