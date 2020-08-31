@@ -375,10 +375,7 @@ class TestDataFrameBinary:
     def test_rpow(self, request, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-        # TODO: Revert to others once we have an efficient way of preprocessing for positive values
-        # We need to check that negative integers are not used efficiently
-        if "100x100" not in request.node.name:
-            self.inter_df_math_right_ops_helper(modin_df, pandas_df, "rpow")
+        self.inter_df_math_right_ops_helper(modin_df, pandas_df, "rpow")
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_rsub(self, data):

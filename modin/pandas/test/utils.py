@@ -95,12 +95,6 @@ test_data = {
     #     "col1": "foo",
     #     "col2": True,
     # },
-    "100x100": {
-        "col{}".format((i - 50) % 100 + 1): random_state.randint(
-            RAND_LOW, RAND_HIGH, size=(100)
-        )
-        for i in range(100)
-    },
 }
 
 # Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
@@ -188,7 +182,6 @@ numeric_dfs = [
     "int_data",
     "float_nan_data",
     "with_index_column",
-    "100x100",
 ]
 
 no_numeric_dfs = ["datetime_timedelta_data"]
