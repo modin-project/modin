@@ -225,9 +225,9 @@ def test_pivot():
             "zoo": ["x", "y", "z", "q", "w", "t"],
         }
     )
-    with pytest.warns(UserWarning):
-        df = pd.pivot(test_df, index="foo", columns="bar", values="baz")
-        assert isinstance(df, pd.DataFrame)
+
+    df = pd.pivot(test_df, index="foo", columns="bar", values="baz")
+    assert isinstance(df, pd.DataFrame)
 
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
