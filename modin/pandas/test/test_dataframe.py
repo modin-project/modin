@@ -57,11 +57,10 @@ from .utils import (
     int_arg_values,
     eval_general,
     create_test_dfs,
-    test_data_small_values,
-    test_data_small_keys,
     udf_func_values,
     udf_func_keys,
     generate_multiindex,
+    test_data_diff_dtype,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -3071,316 +3070,125 @@ class TestDataFrameDefault:
             assert modin_result == pandas_result
 
 
-class TestDataFrameReduction_A:
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+class TestDataFrameReduction:
+    @pytest.mark.parametrize("method", ["all", "any"])
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
-    @pytest.mark.parametrize(
-        "bool_only", bool_arg_values, ids=arg_keys("bool_only", bool_arg_keys)
-    )
-    def test_all(self, data, axis, skipna, bool_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.all(axis=axis, skipna=skipna, bool_only=bool_only)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.all(axis=axis, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.all(axis=axis, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        # Test when axis is None. This will get repeated but easier than using list in parameterize decorator
-        try:
-            pandas_result = pandas_df.all(axis=None, skipna=skipna, bool_only=bool_only)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.all(axis=None, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.all(axis=None, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.all(
-                axis=axis, skipna=skipna, bool_only=bool_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.T.all(axis=axis, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        # Test when axis is None. This will get repeated but easier than using list in parameterize decorator
-        try:
-            pandas_result = pandas_df.T.all(
-                axis=None, skipna=skipna, bool_only=bool_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.T.all(axis=None, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        # test level
-        modin_df_multi_level = modin_df.copy()
-        pandas_df_multi_level = pandas_df.copy()
-        axis = modin_df._get_axis_number(axis) if axis is not None else 0
-        levels = 3
-        axis_names_list = [["a", "b", "c"], None]
-        for axis_names in axis_names_list:
-            if axis == 0:
-                new_idx = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.index = new_idx
-                pandas_df_multi_level.index = new_idx
-            else:
-                new_col = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.columns = new_col
-                pandas_df_multi_level.columns = new_col
-
-            for level in list(range(levels)) + (axis_names if axis_names else []):
-                try:
-                    pandas_multi_level_result = pandas_df_multi_level.all(
-                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                    )
-
-                except Exception as e:
-                    with pytest.raises(type(e)):
-                        modin_df_multi_level.all(
-                            axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                        )
-                else:
-                    modin_multi_level_result = modin_df_multi_level.all(
-                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                    )
-
-                    df_equals(modin_multi_level_result, pandas_multi_level_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "bool_only", bool_arg_values, ids=arg_keys("bool_only", bool_arg_keys)
-    )
-    def test_any(self, data, axis, skipna, bool_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.any(axis=axis, skipna=skipna, bool_only=bool_only)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.any(axis=axis, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.any(axis=axis, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.any(axis=None, skipna=skipna, bool_only=bool_only)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.any(axis=None, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.any(axis=None, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.any(
-                axis=axis, skipna=skipna, bool_only=bool_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.T.any(axis=axis, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.any(
-                axis=None, skipna=skipna, bool_only=bool_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
-        else:
-            modin_result = modin_df.T.any(axis=None, skipna=skipna, bool_only=bool_only)
-            df_equals(modin_result, pandas_result)
-
-        # test level
-        modin_df_multi_level = modin_df.copy()
-        pandas_df_multi_level = pandas_df.copy()
-        axis = modin_df._get_axis_number(axis) if axis is not None else 0
-        levels = 3
-        axis_names_list = [["a", "b", "c"], None]
-        for axis_names in axis_names_list:
-            if axis == 0:
-                new_idx = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.index = new_idx
-                pandas_df_multi_level.index = new_idx
-            else:
-                new_col = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.columns = new_col
-                pandas_df_multi_level.columns = new_col
-
-            for level in list(range(levels)) + (axis_names if axis_names else []):
-                try:
-                    pandas_multi_level_result = pandas_df_multi_level.any(
-                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                    )
-
-                except Exception as e:
-                    with pytest.raises(type(e)):
-                        modin_df_multi_level.any(
-                            axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                        )
-                else:
-                    modin_multi_level_result = modin_df_multi_level.any(
-                        axis=axis, bool_only=bool_only, level=level, skipna=skipna
-                    )
-
-                    df_equals(modin_multi_level_result, pandas_multi_level_result)
-
-
-class TestDataFrameReduction_B:
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    def test_count(self, request, data, axis, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = modin_df.count(axis=axis, numeric_only=numeric_only)
-        pandas_result = pandas_df.count(axis=axis, numeric_only=numeric_only)
-        df_equals(modin_result, pandas_result)
-
-        modin_result = modin_df.T.count(axis=axis, numeric_only=numeric_only)
-        pandas_result = pandas_df.T.count(axis=axis, numeric_only=numeric_only)
-        df_equals(modin_result, pandas_result)
-
-        # test level
-        modin_df_multi_level = modin_df.copy()
-        pandas_df_multi_level = pandas_df.copy()
-        axis = modin_df._get_axis_number(axis) if axis is not None else 0
-        levels = 3
-        axis_names_list = [["a", "b", "c"], None]
-        for axis_names in axis_names_list:
-            if axis == 0:
-                new_idx = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.index))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.index = new_idx
-                pandas_df_multi_level.index = new_idx
-                try:  # test error
-                    pandas_df_multi_level.count(
-                        axis=1, numeric_only=numeric_only, level=0
-                    )
-                except Exception as e:
-                    with pytest.raises(type(e)):
-                        modin_df_multi_level.count(
-                            axis=1, numeric_only=numeric_only, level=0
-                        )
-            else:
-                new_col = pandas.MultiIndex.from_tuples(
-                    [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
-                    names=axis_names,
-                )
-                modin_df_multi_level.columns = new_col
-                pandas_df_multi_level.columns = new_col
-                try:  # test error
-                    pandas_df_multi_level.count(
-                        axis=0, numeric_only=numeric_only, level=0
-                    )
-                except Exception as e:
-                    with pytest.raises(type(e)):
-                        modin_df_multi_level.count(
-                            axis=0, numeric_only=numeric_only, level=0
-                        )
-
-            for level in list(range(levels)) + (axis_names if axis_names else []):
-                modin_multi_level_result = modin_df_multi_level.count(
-                    axis=axis, numeric_only=numeric_only, level=level
-                )
-                pandas_multi_level_result = pandas_df_multi_level.count(
-                    axis=axis, numeric_only=numeric_only, level=level
-                )
-                df_equals(modin_multi_level_result, pandas_multi_level_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_describe(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        df_equals(modin_df.describe(), pandas_df.describe())
-        percentiles = [0.10, 0.11, 0.44, 0.78, 0.99]
-        df_equals(
-            modin_df.describe(percentiles=percentiles),
-            pandas_df.describe(percentiles=percentiles),
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_all_any(self, data, axis, skipna, is_transposed, method):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr((df.T if is_transposed else df), method)(
+                axis=axis, skipna=skipna, bool_only=None
+            ),
         )
 
-        try:
-            pandas_result = pandas_df.describe(exclude=[np.float64])
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.describe(exclude=[np.float64])
+    @pytest.mark.parametrize("method", ["all", "any"])
+    @pytest.mark.parametrize(
+        "bool_only", bool_arg_values, ids=arg_keys("bool_only", bool_arg_keys)
+    )
+    def test_all_any_specific(self, bool_only, method):
+        eval_general(
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: getattr(df, method)(bool_only=bool_only),
+        )
+
+    @pytest.mark.parametrize("method", ["all", "any"])
+    @pytest.mark.parametrize("level", [-1, 0, 1])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("data", [test_data["int_data"]])
+    def test_all_any_level(self, data, axis, level, method):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+        if axis == 0:
+            new_idx = generate_multiindex(len(modin_df.index))
+            modin_df.index = new_idx
+            pandas_df.index = new_idx
         else:
-            modin_result = modin_df.describe(exclude=[np.float64])
-            df_equals(modin_result, pandas_result)
+            new_col = generate_multiindex(len(modin_df.columns))
+            modin_df.columns = new_col
+            pandas_df.columns = new_col
 
-        try:
-            pandas_result = pandas_df.describe(exclude=np.float64)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.describe(exclude=np.float64)
+        eval_general(
+            modin_df,
+            pandas_df,
+            lambda df: getattr(df, method)(axis=axis, level=level),
+        )
+
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_count(self, data, axis):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: df.count(axis=axis),
+        )
+
+    @pytest.mark.parametrize(
+        "numeric_only",
+        [
+            pytest.param(True, marks=pytest.mark.xfail(reason="See #1965 for details")),
+            False,
+            None,
+        ],
+    )
+    def test_count_specific(self, numeric_only):
+        eval_general(
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: df.count(numeric_only=numeric_only),
+        )
+
+    @pytest.mark.parametrize("level", [-1, 0, 1])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("data", [test_data["int_data"]])
+    def test_count_level(self, data, axis, level):
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+        if axis == 0:
+            new_idx = generate_multiindex(len(modin_df.index))
+            modin_df.index = new_idx
+            pandas_df.index = new_idx
         else:
-            modin_result = modin_df.describe(exclude=np.float64)
-            df_equals(modin_result, pandas_result)
+            new_col = generate_multiindex(len(modin_df.columns))
+            modin_df.columns = new_col
+            pandas_df.columns = new_col
 
-        try:
-            pandas_result = pandas_df.describe(
-                include=[np.timedelta64, np.datetime64, np.object, np.bool]
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.describe(
-                    include=[np.timedelta64, np.datetime64, np.object, np.bool]
-                )
-        else:
-            modin_result = modin_df.describe(
-                include=[np.timedelta64, np.datetime64, np.object, np.bool]
-            )
-            df_equals(modin_result, pandas_result)
+        eval_general(
+            modin_df,
+            pandas_df,
+            lambda df: df.count(axis=axis, level=level),
+        )
 
-        modin_result = modin_df.describe(include=str(modin_df.dtypes.values[0]))
-        pandas_result = pandas_df.describe(include=str(pandas_df.dtypes.values[0]))
-        df_equals(modin_result, pandas_result)
+    @pytest.mark.parametrize("percentiles", [None, 0.10, 0.11, 0.44, 0.78, 0.99])
+    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+    def test_describe(self, data, percentiles):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: df.describe(percentiles=percentiles),
+        )
 
-        modin_result = modin_df.describe(include=[np.number])
-        pandas_result = pandas_df.describe(include=[np.number])
-        df_equals(modin_result, pandas_result)
+    @pytest.mark.parametrize(
+        "exclude,include",
+        [
+            ([np.float64], None),
+            (np.float64, None),
+            (None, [np.timedelta64, np.datetime64, np.object, np.bool]),
+            (None, "all"),
+            (None, np.number),
+        ],
+    )
+    def test_describe_specific(self, exclude, include):
+        eval_general(
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: df.drop("str_col", axis=1).describe(
+                exclude=exclude, include=include
+            ),
+        )
 
-        df_equals(modin_df.describe(include="all"), pandas_df.describe(include="all"))
-
+    @pytest.mark.parametrize("data", [test_data["int_data"]])
+    def test_describe_str(self, data):
         modin_df = pd.DataFrame(data).applymap(str)
         pandas_df = pandas.DataFrame(data).applymap(str)
 
@@ -3396,217 +3204,67 @@ class TestDataFrameReduction_B:
             )
 
     def test_describe_dtypes(self):
-        modin_df = pd.DataFrame(
-            {
-                "col1": list("abc"),
-                "col2": list("abc"),
-                "col3": list("abc"),
-                "col4": [1, 2, 3],
-            }
-        )
-        pandas_df = pandas.DataFrame(
-            {
-                "col1": list("abc"),
-                "col2": list("abc"),
-                "col3": list("abc"),
-                "col4": [1, 2, 3],
-            }
-        )
+        data = {
+            "col1": list("abc"),
+            "col2": list("abc"),
+            "col3": list("abc"),
+            "col4": [1, 2, 3],
+        }
+        eval_general(*create_test_dfs(data), lambda df: df.describe())
 
-        modin_result = modin_df.describe()
-        pandas_result = pandas_df.describe()
-
-        df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("method", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
-    def test_idxmax(self, data, axis, skipna):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        pandas_result = pandas_df.idxmax(axis=axis, skipna=skipna)
-        modin_result = modin_df.idxmax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-        pandas_result = pandas_df.T.idxmax(axis=axis, skipna=skipna)
-        modin_result = modin_df.T.idxmax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    def test_idxmin(self, data, axis, skipna):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        modin_result = modin_df.idxmin(axis=axis, skipna=skipna)
-        pandas_result = pandas_df.idxmin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-        modin_result = modin_df.T.idxmin(axis=axis, skipna=skipna)
-        pandas_result = pandas_df.T.idxmin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_idxmin_idxmax(self, data, axis, skipna, is_transposed, method):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr((df.T if is_transposed else df), method)(
+                axis=axis, skipna=skipna
+            ),
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_last_valid_index(self, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+        assert modin_df.last_valid_index() == pandas_df.last_valid_index()
 
-        assert modin_df.last_valid_index() == (pandas_df.last_valid_index())
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    def test_max(self, request, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.max(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.max(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    def test_mean(self, request, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.mean(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.mean(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.mean(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-    @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     @pytest.mark.parametrize(
         "index", bool_arg_values, ids=arg_keys("index", bool_arg_keys)
     )
-    def test_memory_usage(self, data, index):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)  # noqa F841
-
-        modin_result = modin_df.memory_usage(index=index)
-        pandas_result = pandas_df.memory_usage(index=index)
-        df_equals(modin_result, pandas_result)
-
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
+    def test_memory_usage(self, data, index):
+        eval_general(*create_test_dfs(data), lambda df: df.memory_usage(index=index))
+
+    @pytest.mark.parametrize("method", ["min", "max", "mean"])
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
     )
-    def test_min(self, data, axis, skipna, numeric_only):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.min(
+    @pytest.mark.parametrize(
+        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+    )
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_min_max_mean(
+        self, data, axis, skipna, numeric_only, is_transposed, method
+    ):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr((df.T if is_transposed else df), method)(
                 axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.T.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-        except Exception:
-            with pytest.raises(TypeError):
-                modin_df.T.min(axis=axis, skipna=skipna, numeric_only=numeric_only)
-        else:
-            modin_result = modin_df.T.min(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
-            )
-            df_equals(modin_result, pandas_result)
+            ),
+        )
 
     @pytest.mark.skipif(
         os.name == "nt",
         reason="Windows has a memory issue for large numbers on this test",
     )
     @pytest.mark.parametrize(
-        "data",
-        test_data_values + test_data_small_values,
-        ids=test_data_keys + test_data_small_keys,
-    )
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize(
-        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-    )
-    @pytest.mark.parametrize(
-        "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
-    )
-    @pytest.mark.parametrize("is_transposed", [False, True])
-    @pytest.mark.parametrize(
-        "operation",
+        "method",
         [
             "prod",
             pytest.param(
@@ -3614,61 +3272,80 @@ class TestDataFrameReduction_B:
                 marks=pytest.mark.skipif(
                     pandas.DataFrame.product == pandas.DataFrame.prod
                     and pd.DataFrame.product == pd.DataFrame.prod,
-                    reason="That operation was already tested.",
+                    reason="That method was already tested.",
                 ),
             ),
         ],
     )
-    def test_prod(
-        self,
-        request,
-        data,
-        axis,
-        skipna,
-        numeric_only,
-        min_count,
-        is_transposed,
-        operation,
-    ):
-        eval_general(
-            *create_test_dfs(data),
-            lambda df, *args, **kwargs: getattr(
-                df.T if is_transposed else df, operation
-            )(*args, **kwargs),
-            axis=axis,
-            skipna=skipna,
-            numeric_only=numeric_only,
-            min_count=min_count,
-        )
-
-    @pytest.mark.parametrize(
-        "data",
-        test_data_values + test_data_small_values,
-        ids=test_data_keys + test_data_small_keys,
-    )
-    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("is_transposed", [False, True])
     @pytest.mark.parametrize(
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_prod(
+        self,
+        data,
+        axis,
+        skipna,
+        is_transposed,
+        method,
+    ):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df, *args, **kwargs: getattr(df.T if is_transposed else df, method)(
+                axis=axis,
+                skipna=skipna,
+            ),
+        )
+
     @pytest.mark.parametrize(
-        "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
+        "numeric_only",
+        [
+            pytest.param(None, marks=pytest.mark.xfail(reason="See #1976 for details")),
+            False,
+            True,
+        ],
     )
     @pytest.mark.parametrize(
         "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
     )
+    def test_prod_specific(self, min_count, numeric_only):
+        if min_count == 5 and numeric_only:
+            pytest.xfail("see #1953 for details")
+        eval_general(
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: df.prod(min_count=min_count, numeric_only=numeric_only),
+        )
+
     @pytest.mark.parametrize("is_transposed", [False, True])
-    def test_sum(
-        self, request, data, axis, skipna, numeric_only, min_count, is_transposed
-    ):
+    @pytest.mark.parametrize(
+        "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+    )
+    @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    def test_sum(self, data, axis, skipna, is_transposed):
         eval_general(
             *create_test_dfs(data),
-            lambda df, *args, **kwargs: (df.T if is_transposed else df).sum(
-                *args, **kwargs
+            lambda df: (df.T if is_transposed else df).sum(
+                axis=axis,
+                skipna=skipna,
             ),
-            axis=axis,
-            skipna=skipna,
-            numeric_only=numeric_only,
-            min_count=min_count,
+        )
+
+    @pytest.mark.parametrize(
+        "numeric_only",
+        [
+            pytest.param(None, marks=pytest.mark.xfail(reason="See #1976 for details")),
+            False,
+            True,
+        ],
+    )
+    @pytest.mark.parametrize("min_count", int_arg_values)
+    def test_sum_specific(self, min_count, numeric_only):
+        eval_general(
+            *create_test_dfs(test_data_diff_dtype),
+            lambda df: df.sum(min_count=min_count, numeric_only=numeric_only),
         )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -4485,7 +4162,6 @@ class TestDataFrameWindow:
             modin_result = modin_df.T.var(
                 axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
             )
-            df_equals(modin_result, pandas_result)
 
 
 class TestDataFrameIndexing:
