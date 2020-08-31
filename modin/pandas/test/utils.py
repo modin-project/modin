@@ -436,6 +436,7 @@ def df_equals(df1, df2):
     types_for_almost_equals = (
         pandas.core.indexes.range.RangeIndex,
         pandas.core.indexes.base.Index,
+        np.recarray,
     )
 
     # Gets AttributError if modin's groupby object is not import like this

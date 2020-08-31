@@ -594,25 +594,23 @@ class TestDataFrameMapMetadata:
         df_equals(new_modin_df.columns, new_pandas_df.columns)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_at(self, request, data):
+    def test_at(self, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        # We skip nan datasets because nan != nan
-        if "nan" not in request.node.name:
-            key1 = modin_df.columns[0]
-            # Scaler
-            assert modin_df.at[0, key1] == pandas_df.at[0, key1]
+        key1 = modin_df.columns[0]
+        # Scaler
+        df_equals(modin_df.at[0, key1], pandas_df.at[0, key1])
 
-            # Series
-            df_equals(modin_df.loc[0].at[key1], pandas_df.loc[0].at[key1])
+        # Series
+        df_equals(modin_df.loc[0].at[key1], pandas_df.loc[0].at[key1])
 
-            # Write Item
-            modin_df_copy = modin_df.copy()
-            pandas_df_copy = pandas_df.copy()
-            modin_df_copy.at[1, key1] = modin_df.at[0, key1]
-            pandas_df_copy.at[1, key1] = pandas_df.at[0, key1]
-            df_equals(modin_df_copy, pandas_df_copy)
+        # Write Item
+        modin_df_copy = modin_df.copy()
+        pandas_df_copy = pandas_df.copy()
+        modin_df_copy.at[1, key1] = modin_df.at[0, key1]
+        pandas_df_copy.at[1, key1] = pandas_df.at[0, key1]
+        df_equals(modin_df_copy, pandas_df_copy)
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_axes(self, data):
@@ -2819,28 +2817,17 @@ class TestDataFrameDefault:
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_to_records(self, request, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        # Skips nan because only difference is nan instead of NaN
-        if not name_contains(request.node.name, ["nan"]):
-            try:
-                pandas_result = pandas_df.to_records()
-            except Exception as e:
-                with pytest.raises(type(e)):
-                    modin_df.to_records()
-            else:
-                modin_result = modin_df.to_records()
-                assert np.array_equal(modin_result, pandas_result)
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: df.dropna().to_records(),
+        )
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_to_string(self, request, data):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)  # noqa F841
-
-        # Skips nan because only difference is nan instead of NaN
-        if not name_contains(request.node.name, ["nan"]):
-            assert modin_df.to_string() == to_pandas(modin_df).to_string()
+    def test_to_string(self, data):
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: df.to_string(),
+        )
 
     def test_to_timestamp(self):
         idx = pd.date_range("1/1/2012", periods=5, freq="M")
@@ -4278,65 +4265,63 @@ class TestDataFrameIndexing:
         df_equals(modin_df.keys(), pandas_df.keys())
 
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-    def test_loc(self, request, data):
+    def test_loc(self, data):
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
-        # We skip nan datasets because nan != nan
-        if "nan" not in request.node.name:
-            key1 = modin_df.columns[0]
-            key2 = modin_df.columns[1]
-            # Scaler
-            assert modin_df.loc[0, key1] == pandas_df.loc[0, key1]
+        key1 = modin_df.columns[0]
+        key2 = modin_df.columns[1]
+        # Scaler
+        df_equals(modin_df.loc[0, key1], pandas_df.loc[0, key1])
 
-            # Series
-            df_equals(modin_df.loc[0], pandas_df.loc[0])
-            df_equals(modin_df.loc[1:, key1], pandas_df.loc[1:, key1])
-            df_equals(modin_df.loc[1:2, key1], pandas_df.loc[1:2, key1])
+        # Series
+        df_equals(modin_df.loc[0], pandas_df.loc[0])
+        df_equals(modin_df.loc[1:, key1], pandas_df.loc[1:, key1])
+        df_equals(modin_df.loc[1:2, key1], pandas_df.loc[1:2, key1])
 
-            # DataFrame
-            df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
+        # DataFrame
+        df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
-            # List-like of booleans
-            indices = [i % 3 == 0 for i in range(len(modin_df.index))]
-            columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
-            modin_result = modin_df.loc[indices, columns]
-            pandas_result = pandas_df.loc[indices, columns]
-            df_equals(modin_result, pandas_result)
+        # List-like of booleans
+        indices = [i % 3 == 0 for i in range(len(modin_df.index))]
+        columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
+        modin_result = modin_df.loc[indices, columns]
+        pandas_result = pandas_df.loc[indices, columns]
+        df_equals(modin_result, pandas_result)
 
-            modin_result = modin_df.loc[:, columns]
-            pandas_result = pandas_df.loc[:, columns]
-            df_equals(modin_result, pandas_result)
+        modin_result = modin_df.loc[:, columns]
+        pandas_result = pandas_df.loc[:, columns]
+        df_equals(modin_result, pandas_result)
 
-            modin_result = modin_df.loc[indices]
-            pandas_result = pandas_df.loc[indices]
-            df_equals(modin_result, pandas_result)
+        modin_result = modin_df.loc[indices]
+        pandas_result = pandas_df.loc[indices]
+        df_equals(modin_result, pandas_result)
 
-            # See issue #80
-            # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
-            df_equals(modin_df.loc[1:2, key1:key2], pandas_df.loc[1:2, key1:key2])
+        # See issue #80
+        # df_equals(modin_df.loc[[1, 2], ['col1']], pandas_df.loc[[1, 2], ['col1']])
+        df_equals(modin_df.loc[1:2, key1:key2], pandas_df.loc[1:2, key1:key2])
 
-            # From issue #421
-            df_equals(modin_df.loc[:, [key2, key1]], pandas_df.loc[:, [key2, key1]])
-            df_equals(modin_df.loc[[2, 1], :], pandas_df.loc[[2, 1], :])
+        # From issue #421
+        df_equals(modin_df.loc[:, [key2, key1]], pandas_df.loc[:, [key2, key1]])
+        df_equals(modin_df.loc[[2, 1], :], pandas_df.loc[[2, 1], :])
 
-            # From issue #1023
-            key1 = modin_df.columns[0]
-            key2 = modin_df.columns[-2]
-            df_equals(modin_df.loc[:, key1:key2], pandas_df.loc[:, key1:key2])
+        # From issue #1023
+        key1 = modin_df.columns[0]
+        key2 = modin_df.columns[-2]
+        df_equals(modin_df.loc[:, key1:key2], pandas_df.loc[:, key1:key2])
 
-            # Write Item
-            modin_df_copy = modin_df.copy()
-            pandas_df_copy = pandas_df.copy()
-            modin_df_copy.loc[[1, 2]] = 42
-            pandas_df_copy.loc[[1, 2]] = 42
-            df_equals(modin_df_copy, pandas_df_copy)
+        # Write Item
+        modin_df_copy = modin_df.copy()
+        pandas_df_copy = pandas_df.copy()
+        modin_df_copy.loc[[1, 2]] = 42
+        pandas_df_copy.loc[[1, 2]] = 42
+        df_equals(modin_df_copy, pandas_df_copy)
 
-            # From issue #1775
-            df_equals(
-                modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-                pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-            )
+        # From issue #1775
+        df_equals(
+            modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+            pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+        )
 
         # From issue #1374
         with pytest.raises(KeyError):

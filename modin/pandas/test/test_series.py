@@ -2921,10 +2921,10 @@ def test_to_numpy(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_string(request, data):
-    modin_series, pandas_series = create_test_series(data)
-    # Skips nan because only difference is nan instead of NaN
-    if not name_contains(request.node.name, ["nan"]):
-        assert modin_series.to_string() == pandas_series.to_string()
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.to_string(),
+    )
 
 
 def test_to_timestamp():
