@@ -16,6 +16,7 @@ from modin.data_management.utils import compute_chunksize
 from io import BytesIO
 import pandas
 import numpy as np
+from csv import QUOTE_NONE
 
 
 class JSONReader(TextFileReader):
@@ -36,12 +37,10 @@ class JSONReader(TextFileReader):
         empty_pd_df = pandas.DataFrame(columns=columns)
 
         with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            total_bytes = cls.file_size(f)
             from modin.pandas import DEFAULT_NPARTITIONS
 
             num_partitions = DEFAULT_NPARTITIONS
             num_splits = min(len(columns), num_partitions)
-            part_size = max(1, total_bytes // num_partitions)
 
             partition_ids = []
             index_ids = []
@@ -59,13 +58,16 @@ class JSONReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
-            while f.tell() < total_bytes:
-                start = f.tell()
-                args = {"fname": path_or_buf, "num_splits": num_splits, "start": start}
-                args.update(kwargs)
-                partition_id = cls.call_deploy(
-                    f, num_splits + 3, args, chunk_size_bytes=part_size
-                )
+            args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
+
+            splits = cls.partitioned_file(
+                f,
+                num_partitions=num_partitions,
+                is_quoting=(args.get("quoting", "") != QUOTE_NONE),
+            )
+            for start, end in splits:
+                args.update({"start": start, "end": end})
+                partition_id = cls.deploy(cls.parse, num_splits + 3, args)
                 partition_ids.append(partition_id[:-3])
                 index_ids.append(partition_id[-3])
                 dtypes_ids.append(partition_id[-2])

@@ -14,56 +14,10 @@
 from modin.engines.base.io.file_reader import FileReader
 import numpy as np
 import warnings
-import csv
+import os
 
 
 class TextFileReader(FileReader):
-    @classmethod
-    def call_deploy(
-        cls, f, num_return_vals, args, quotechar=b'"', nrows=None, chunk_size_bytes=None
-    ):
-        if chunk_size_bytes is None:
-            chunk_size_bytes = -1
-
-        args["start"] = f.tell()
-        is_quoting = args.get("quoting", "") != csv.QUOTE_NONE
-        outside_quotes = True
-
-        # We want to avoid unnecessary overhead of counting amount
-        # of readed rows if we don't need that value
-        if nrows is None:
-            chunk = f.read(chunk_size_bytes)
-            line = f.readline()  # Ensure we read up to a newline
-            # We need to ensure that one row isn't being split across different partitions
-
-            if is_quoting:
-                outside_quotes = not (
-                    (chunk.count(quotechar) + line.count(quotechar)) % 2
-                )
-                while not outside_quotes:
-                    line = f.readline()
-                    outside_quotes = line.count(quotechar) % 2
-                    if not line:
-                        break
-        else:
-            if chunk_size_bytes < 0:
-                chunk_size_bytes = None
-            outside_quotes, _ = cls.read_rows(
-                f, nrows, quotechar, is_quoting, max_bytes=chunk_size_bytes
-            )
-
-        if is_quoting and not outside_quotes:
-            warnings.warn("File has mismatched quotes")
-
-        # The workers return multiple objects for each part of the file read:
-        # - The first n - 2 objects are partitions of data
-        # - The n - 1 object is the length of the partition or the index if
-        #   `index_col` is specified. We compute the index below.
-        # - The nth object is the dtypes of the partition. We combine these to
-        #   form the final dtypes below.
-        args["end"] = f.tell()
-        return cls.deploy(cls.parse, num_return_vals, args)
-
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
         return np.array(
@@ -96,10 +50,120 @@ class TextFileReader(FileReader):
                 return True
         except ImportError:  # pragma: no cover
             pass
+
         return False
 
     @classmethod
-    def read_rows(cls, f, nrows=None, quotechar=b'"', is_quoting=True, max_bytes=None):
+    def offset(
+        cls,
+        f,
+        nrows=None,
+        skiprows=None,
+        chunk_size_bytes=None,
+        quotechar=b'"',
+        is_quoting=True,
+    ):
+        if nrows is not None or skiprows is not None:
+            return cls.read_rows(
+                f,
+                nrows=nrows,
+                skiprows=skiprows,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+                max_bytes=chunk_size_bytes,
+            )[0]
+
+        if chunk_size_bytes is None:
+            chunk_size_bytes = -1
+
+        outside_quotes = True
+
+        chunk = f.read(chunk_size_bytes)
+        line = f.readline()  # Ensure we read up to a newline
+        # We need to ensure that one row isn't being split across different partitions
+
+        if is_quoting:
+            outside_quotes = not ((chunk.count(quotechar) + line.count(quotechar)) % 2)
+            while not outside_quotes:
+                line = f.readline()
+                outside_quotes = line.count(quotechar) % 2
+                if not line:
+                    break
+
+        return outside_quotes
+
+    @classmethod
+    def partitioned_file(
+        cls,
+        f,
+        nrows=None,
+        skiprows=None,
+        num_partitions=None,
+        quotechar=b'"',
+        is_quoting=True,
+        from_begin=False,
+        save_position=False,
+    ):
+        if num_partitions is None:
+            from modin.pandas import DEFAULT_NPARTITIONS
+
+            num_partitions = DEFAULT_NPARTITIONS
+
+        result = []
+
+        old_position = f.tell()
+        if from_begin:
+            f.seek(0, os.SEEK_SET)
+
+        current_start = f.tell()
+        total_bytes = cls.file_size(f)
+
+        # if `nrows` are specified we want to use rows as a part measure
+        if nrows is not None:
+            chunk_size_bytes = None
+            rows_per_part = max(1, num_partitions, nrows // num_partitions)
+        else:
+            chunk_size_bytes = max(1, num_partitions, total_bytes // num_partitions)
+            rows_per_part = None
+            nrows = float("inf")
+
+        rows_readed = 0
+        while f.tell() < total_bytes and rows_readed < nrows:
+            if rows_per_part is not None and rows_readed + rows_per_part > nrows:
+                rows_per_part = nrows - rows_readed
+
+            outside_quotes = cls.offset(
+                f,
+                nrows=rows_per_part,
+                skiprows=skiprows,
+                chunk_size_bytes=chunk_size_bytes,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+
+            result.append((current_start, f.tell()))
+            current_start = f.tell()
+            if rows_per_part is not None:
+                rows_readed += rows_per_part
+
+            if is_quoting and not outside_quotes:
+                warnings.warn("File has mismatched quotes")
+
+        if save_position:
+            f.seek(old_position, os.SEEK_SET)
+
+        return result
+
+    @classmethod
+    def read_rows(
+        cls,
+        f,
+        nrows=None,
+        skiprows=None,
+        quotechar=b'"',
+        is_quoting=True,
+        max_bytes=None,
+    ):
         """
         Moves the file offset at the specified amount of rows
 
@@ -124,6 +188,10 @@ class TextFileReader(FileReader):
                 closing quote returns `False`. `True` in any other case.
                 int: Number of rows that was readed.
         """
+        assert skiprows is None or isinstance(
+            skiprows, int
+        ), f"Skiprows as a {type(skiprows)} is not supported yet."
+
         if nrows is None and max_bytes is None:
             max_bytes = float("inf")
 

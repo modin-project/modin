@@ -96,6 +96,7 @@ class CSVReader(TextFileReader):
         quotechar = kwargs.get("quotechar", '"').encode(
             encoding if encoding is not None else "UTF-8"
         )
+        is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -111,9 +112,9 @@ class CSVReader(TextFileReader):
                     skiprows += max(header) + 1
                 cls.read_rows(
                     f,
-                    skiprows,
-                    quotechar,
-                    is_quoting=(kwargs.get("quoting", "") != csv.QUOTE_NONE),
+                    nrows=skiprows,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
                 )
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
@@ -121,20 +122,12 @@ class CSVReader(TextFileReader):
             partition_ids = []
             index_ids = []
             dtypes_ids = []
-            total_bytes = cls.file_size(f)
             # Max number of partitions available
             from modin.pandas import DEFAULT_NPARTITIONS
 
             num_partitions = DEFAULT_NPARTITIONS
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_partitions)
-            # This is the chunksize each partition will read
-            if nrows is None:
-                chunk_size_bytes = max(1, num_partitions, total_bytes // num_partitions)
-                rows_per_part = None
-            else:
-                chunk_size_bytes = None
-                rows_per_part = max(1, num_partitions, nrows // num_partitions)
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -152,32 +145,26 @@ class CSVReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
-            rows_readed = 0
-            rows_limit = float("inf") if nrows is None else nrows
-            while f.tell() < total_bytes and rows_readed < rows_limit:
-                args = {
-                    "fname": filepath_or_buffer,
-                    "num_splits": num_splits,
-                    **partition_kwargs,
-                }
-                if (
-                    rows_per_part is not None
-                    and rows_readed + rows_per_part > rows_limit
-                ):
-                    rows_per_part = rows_limit - rows_readed
-                partition_id = cls.call_deploy(
-                    f,
-                    num_splits + 2,
-                    args,
-                    quotechar=quotechar,
-                    chunk_size_bytes=chunk_size_bytes,
-                    nrows=rows_per_part,
-                )
+            args = {
+                "fname": filepath_or_buffer,
+                "num_splits": num_splits,
+                **partition_kwargs,
+            }
+
+            splits = cls.partitioned_file(
+                f,
+                nrows=nrows,
+                skiprows=skiprows,
+                num_partitions=num_partitions,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+            for start, end in splits:
+                args.update({"start": start, "end": end})
+                partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])
-                if nrows is not None:
-                    rows_readed += rows_per_part
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.

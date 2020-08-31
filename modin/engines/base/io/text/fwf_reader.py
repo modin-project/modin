@@ -15,7 +15,7 @@ from modin.engines.base.io.text.text_file_reader import TextFileReader
 from modin.data_management.utils import compute_chunksize
 from pandas.io.parsers import _validate_usecols_arg
 import pandas
-import csv
+from csv import QUOTE_NONE
 import sys
 
 
@@ -102,6 +102,7 @@ class FWFReader(TextFileReader):
         quotechar = kwargs.get("quotechar", '"').encode(
             encoding if encoding is not None else "UTF-8"
         )
+        is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -117,9 +118,9 @@ class FWFReader(TextFileReader):
                     skiprows += max(header) + 1
                 cls.read_rows(
                     f,
-                    skiprows,
-                    quotechar,
-                    is_quoting=(kwargs.get("quoting", "") != csv.QUOTE_NONE),
+                    nrows=skiprows,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
                 )
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
@@ -127,18 +128,12 @@ class FWFReader(TextFileReader):
             partition_ids = []
             index_ids = []
             dtypes_ids = []
-            total_bytes = cls.file_size(f)
             # Max number of partitions available
             from modin.pandas import DEFAULT_NPARTITIONS
 
             num_partitions = DEFAULT_NPARTITIONS
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_partitions)
-            # This is the chunksize each partition will read
-            if nrows is None:
-                part_size = max(1, total_bytes // num_partitions)
-            else:
-                part_size = max(1, (nrows - skiprows) // num_partitions)
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -156,27 +151,26 @@ class FWFReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
-            deploy_kwargs = {
-                "chunk_size_bytes" if nrows is None else "nrows": part_size
+            args = {
+                "fname": filepath_or_buffer,
+                "num_splits": num_splits,
+                **partition_kwargs,
             }
 
-            readed = f.tell() if nrows is None else 0
-            read_limit = total_bytes if nrows is None else nrows
-            while readed < read_limit:
-                args = {
-                    "fname": filepath_or_buffer,
-                    "num_splits": num_splits,
-                    **partition_kwargs,
-                }
-                if (readed + part_size) > read_limit:
-                    deploy_kwargs[list(deploy_kwargs.keys())[0]] = read_limit - readed
-                partition_id = cls.call_deploy(
-                    f, num_splits + 2, args, quotechar=quotechar, **deploy_kwargs
-                )
+            splits = cls.partitioned_file(
+                f,
+                nrows=nrows,
+                skiprows=skiprows,
+                num_partitions=num_partitions,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+            for start, end in splits:
+                args.update({"start": start, "end": end})
+                partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])
-                readed = f.tell() if nrows is None else readed + part_size
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.

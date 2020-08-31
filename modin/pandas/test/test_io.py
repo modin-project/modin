@@ -31,6 +31,7 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
+    eval_general,
 )
 
 from modin import execution_engine
@@ -57,6 +58,17 @@ TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
 TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
+
+
+def eval_io(path, fn_name, comparator=df_equals, *args, **kwargs):
+    eval_general(
+        pd,
+        pandas,
+        lambda module, *args, **kwargs: getattr(module, fn_name)(*args, **kwargs),
+        path=path,
+        *args,
+        **kwargs,
+    )
 
 
 @pytest.fixture
@@ -1150,16 +1162,15 @@ def test_from_csv_parse_dates(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("nrows", [14, None])
-@pytest.mark.parametrize("skiprows", [3, None])
+@pytest.mark.parametrize("nrows", [21, 5, None])
+@pytest.mark.parametrize("skiprows", [4, 1, 500, None])
 def test_from_csv_newlines_in_quotes(nrows, skiprows):
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/newlines.csv", nrows=nrows, skiprows=skiprows
+    eval_io(
+        path="modin/pandas/test/data/newlines.csv",
+        fn_name="read_csv",
+        nrows=nrows,
+        skiprows=skiprows,
     )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/newlines.csv", nrows=nrows, skiprows=skiprows
-    )
-    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
