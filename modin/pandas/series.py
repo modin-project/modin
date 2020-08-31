@@ -1088,12 +1088,14 @@ class Series(BasePandasDataset):
         """
         Unstack, a.k.a. pivot, Series with MultiIndex to produce DataFrame.
         The level involved will automatically get sorted.
+
         Parameters
         ----------
         level : int, str, or list of these, default last level
             Level(s) to unstack, can pass level name.
         fill_value : scalar value, default None
             Value to use when replacing NaN values.
+
         Returns
         -------
         DataFrame
