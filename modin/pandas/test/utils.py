@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import copy
 import numpy as np
 import pandas
 from pandas.util.testing import (
@@ -97,11 +96,8 @@ test_data = {
     # },
 }
 
-# Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
-# created in normal way and has to be copied from dataset that works.
-# TODO(gshimansky): when bug #1481 is fixed replace this dataframe initialization with ordinary one.
-test_data["with_index_column"] = copy.copy(test_data["int_data"])
-test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
+# See details in #1403
+test_data["int_data"]["index"] = test_data["int_data"].pop(
     "col{}".format(int(NCOLS / 2))
 )
 
