@@ -45,12 +45,6 @@ test_data = {
         )
         for i in range(NCOLS)
     },
-    "float_data": {
-        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)
-        )
-        for i in range(NCOLS)
-    },
     "sparse_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
             x if j != i else np.NaN
@@ -199,7 +193,6 @@ numeric_dfs = [
     "empty_data",
     "columns_only",
     "int_data",
-    "float_data",
     "sparse_nan_data",
     "dense_nan_data",
     "with_index_column",
