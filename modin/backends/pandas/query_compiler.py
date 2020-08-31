@@ -1148,6 +1148,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result = result.reindex(0, new_index)
         return result
 
+    def stack(self, level, dropna):
+        if not isinstance(self.columns, pandas.MultiIndex) or (
+            isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.columns.nlevels
+        ):
+            new_columns = ["__reduced__"]
+        else:
+            new_columns = None
+
+        new_modin_frame = self._modin_frame._apply_full_axis(
+            1,
+            lambda df: pandas.DataFrame(df.stack(level=level, dropna=dropna)),
+            new_columns=new_columns,
+        )
+        return self.__constructor__(new_modin_frame)
+
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
     abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")

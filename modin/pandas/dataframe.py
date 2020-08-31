@@ -1688,12 +1688,14 @@ class DataFrame(BasePandasDataset):
         If the index is not a MultiIndex, the output will be a Series
         (the analogue of stack when the columns are not a MultiIndex).
         The level involved will automatically get sorted.
+
         Parameters
         ----------
         level : int, str, or list of these, default -1 (last level)
             Level(s) of index to unstack, can pass level name.
         fill_value : int, str or dict
             Replace NaN with this value if the unstack produces missing values.
+
         Returns
         -------
         Series or DataFrame
@@ -2162,9 +2164,45 @@ class DataFrame(BasePandasDataset):
             return self.copy()
 
     def stack(self, level=-1, dropna=True):
-        return self._default_to_pandas(
-            pandas.DataFrame.stack, level=level, dropna=dropna
-        )
+        """
+        Stack the prescribed level(s) from columns to index.
+        Return a reshaped DataFrame or Series having a multi-level
+        index with one or more new inner-most levels compared to the current
+        DataFrame. The new inner-most levels are created by pivoting the
+        columns of the current dataframe:
+          - if the columns have a single level, the output is a Series;
+          - if the columns have multiple levels, the new index
+            level(s) is (are) taken from the prescribed level(s) and
+            the output is a DataFrame.
+
+        Parameters
+        ----------
+        level : int, str, list, default -1
+            Level(s) to stack from the column axis onto the index
+            axis, defined as one index or label, or a list of indices
+            or labels.
+        dropna : bool, default True
+            Whether to drop rows in the resulting Frame/Series with
+            missing values. Stacking a column level onto the index
+            axis can create combinations of index and column values
+            that are missing from the original dataframe. See Examples
+            section.
+
+        Returns
+        -------
+        DataFrame or Series
+            Stacked dataframe or series.
+        """
+        if not isinstance(self.columns, pandas.MultiIndex) or (
+            isinstance(self.columns, pandas.MultiIndex)
+            and is_list_like(level)
+            and len(level) == self.columns.nlevels
+        ):
+            return self._reduce_dimension(
+                query_compiler=self._query_compiler.stack(level, dropna)
+            )
+        else:
+            return DataFrame(query_compiler=self._query_compiler.stack(level, dropna))
 
     def sub(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(
