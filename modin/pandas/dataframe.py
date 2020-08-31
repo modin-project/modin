@@ -594,6 +594,29 @@ class DataFrame(BasePandasDataset):
         )
         return DataFrame(query_compiler=query_compiler)
 
+    def asof(self, where, subset=None):
+        scalar = not is_list_like(where)
+        if isinstance(where, pandas.Index):
+            # Prevent accidental mutation of original:
+            where = where.copy()
+        else:
+            if scalar:
+                where = [where]
+            where = pandas.Index(where)
+
+        df = self
+        if subset is not None:
+            df = self[subset]
+        no_na_index = df.dropna().index
+        new_index = pandas.Index([no_na_index.asof(i) for i in where])
+        result = self.reindex(new_index)
+        result.index = where
+
+        if scalar:
+            # Need to return a Series:
+            result = result.transpose().squeeze()
+        return result
+
     def assign(self, **kwargs):
         df = self.copy()
         for k, v in kwargs.items():
