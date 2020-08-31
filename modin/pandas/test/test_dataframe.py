@@ -2061,20 +2061,36 @@ class TestDataFrameDefault:
             df.asfreq(freq="30S")
 
     def test_asof(self):
-        df = pd.DataFrame(
-            {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]},
-            index=pd.DatetimeIndex(
-                [
-                    "2018-02-27 09:01:00",
-                    "2018-02-27 09:02:00",
-                    "2018-02-27 09:03:00",
-                    "2018-02-27 09:04:00",
-                    "2018-02-27 09:05:00",
-                ]
-            ),
+        data = {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]}
+        index = pd.DatetimeIndex(
+            [
+                "2018-02-27 09:01:00",
+                "2018-02-27 09:02:00",
+                "2018-02-27 09:03:00",
+                "2018-02-27 09:04:00",
+                "2018-02-27 09:05:00",
+            ]
         )
-        with pytest.warns(UserWarning):
-            df.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
+        modin_df = pd.DataFrame(data, index=index)
+        pandas_df = pandas.DataFrame(data, index=index)
+        dates = ["2018-02-27 09:03:30", "2018-02-27 09:04:30"]
+        modin_dates = pd.DatetimeIndex(dates)
+        pandas_dates = pandas.DatetimeIndex(dates)
+        df_equals(modin_df.asof(modin_dates), pandas_df.asof(pandas_dates))
+        df_equals(
+            modin_df.asof(modin_dates, subset=["a"]),
+            pandas_df.asof(pandas_dates, subset=["a"]),
+        )
+        df_equals(
+            modin_df.asof(modin_dates, subset=["b"]),
+            pandas_df.asof(pandas_dates, subset=["b"]),
+        )
+
+        date = pd.to_datetime(dates[0])
+        df_equals(modin_df.asof(date), pandas_df.asof(date))
+        df_equals(
+            modin_df.asof(date, subset=["a"]), pandas_df.asof(date, subset=["a"]),
+        )
 
     def test_assign(self):
         data = test_data_values[0]
@@ -2187,8 +2203,7 @@ class TestDataFrameDefault:
         df_equals(modin_result, pandas_result)
 
     @pytest.mark.skipif(
-        os.name == "nt",
-        reason="AssertionError: numpy array are different",
+        os.name == "nt", reason="AssertionError: numpy array are different",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_dot(self, data):
@@ -2237,8 +2252,7 @@ class TestDataFrameDefault:
         df_equals(modin_result, pandas_result)
 
     @pytest.mark.skipif(
-        os.name == "nt",
-        reason="AssertionError: numpy array are different",
+        os.name == "nt", reason="AssertionError: numpy array are different",
     )
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_matmul(self, data):
@@ -2416,9 +2430,7 @@ class TestDataFrameDefault:
         df_modin.columns = index
         df_pandas.columns = index
         eval_general(
-            df_modin,
-            df_pandas,
-            lambda df: df.kurtosis(axis=1, level=level),
+            df_modin, df_pandas, lambda df: df.kurtosis(axis=1, level=level),
         )
 
     def test_last(self):
@@ -2457,9 +2469,7 @@ class TestDataFrameDefault:
         modin_df.columns = index
         pandas_df.columns = index
         eval_general(
-            modin_df,
-            pandas_df,
-            lambda df: df.mad(axis=1, level=level),
+            modin_df, pandas_df, lambda df: df.mad(axis=1, level=level),
         )
 
     def test_mask(self):
@@ -2655,12 +2665,10 @@ class TestDataFrameDefault:
             pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
         )
         df_equals(
-            pandas_resampler.aggregate("max"),
-            modin_resampler.aggregate("max"),
+            pandas_resampler.aggregate("max"), modin_resampler.aggregate("max"),
         )
         df_equals(
-            modin_resampler.apply("sum"),
-            pandas_resampler.apply("sum"),
+            modin_resampler.apply("sum"), pandas_resampler.apply("sum"),
         )
         df_equals(
             modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
@@ -2673,8 +2681,7 @@ class TestDataFrameDefault:
             # Upsampling from level= or on= selection is not supported
             if on is None and level is None:
                 df_equals(
-                    modin_resampler.interpolate(),
-                    pandas_resampler.interpolate(),
+                    modin_resampler.interpolate(), pandas_resampler.interpolate(),
                 )
                 df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
                 df_equals(
@@ -3179,17 +3186,14 @@ class TestDataFrameReduction:
             pandas_df.columns = new_col
 
         eval_general(
-            modin_df,
-            pandas_df,
-            lambda df: getattr(df, method)(axis=axis, level=level),
+            modin_df, pandas_df, lambda df: getattr(df, method)(axis=axis, level=level),
         )
 
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
     def test_count(self, data, axis):
         eval_general(
-            *create_test_dfs(data),
-            lambda df: df.count(axis=axis),
+            *create_test_dfs(data), lambda df: df.count(axis=axis),
         )
 
     @pytest.mark.parametrize(
@@ -3222,17 +3226,14 @@ class TestDataFrameReduction:
             pandas_df.columns = new_col
 
         eval_general(
-            modin_df,
-            pandas_df,
-            lambda df: df.count(axis=axis, level=level),
+            modin_df, pandas_df, lambda df: df.count(axis=axis, level=level),
         )
 
     @pytest.mark.parametrize("percentiles", [None, 0.10, 0.11, 0.44, 0.78, 0.99])
     @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
     def test_describe(self, data, percentiles):
         eval_general(
-            *create_test_dfs(data),
-            lambda df: df.describe(percentiles=percentiles),
+            *create_test_dfs(data), lambda df: df.describe(percentiles=percentiles),
         )
 
     @pytest.mark.parametrize(
@@ -3350,18 +3351,12 @@ class TestDataFrameReduction:
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
     @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
     def test_prod(
-        self,
-        data,
-        axis,
-        skipna,
-        is_transposed,
-        method,
+        self, data, axis, skipna, is_transposed, method,
     ):
         eval_general(
             *create_test_dfs(data),
             lambda df, *args, **kwargs: getattr(df.T if is_transposed else df, method)(
-                axis=axis,
-                skipna=skipna,
+                axis=axis, skipna=skipna,
             ),
         )
 
@@ -3393,10 +3388,7 @@ class TestDataFrameReduction:
     def test_sum(self, data, axis, skipna, is_transposed):
         eval_general(
             *create_test_dfs(data),
-            lambda df: (df.T if is_transposed else df).sum(
-                axis=axis,
-                skipna=skipna,
-            ),
+            lambda df: (df.T if is_transposed else df).sum(axis=axis, skipna=skipna,),
         )
 
     @pytest.mark.parametrize(
@@ -5283,9 +5275,7 @@ class TestDataFrameIndexing:
         ids=["empty", "empty_columns"],
     )
     @pytest.mark.parametrize(
-        "value",
-        [np.array(["one", "two"]), [11, 22]],
-        ids=["ndarray", "list"],
+        "value", [np.array(["one", "two"]), [11, 22]], ids=["ndarray", "list"],
     )
     @pytest.mark.parametrize("convert_to_series", [False, True])
     @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
@@ -5577,9 +5567,7 @@ class TestDataFrameIter:
             modin_df[col0].fillna(0, inplace=True)
             df_equals(modin_df, pandas_df)
 
-    def test___setattr__(
-        self,
-    ):
+    def test___setattr__(self,):
         pandas_df = pandas.DataFrame([1, 2, 3])
         modin_df = pd.DataFrame([1, 2, 3])
 
