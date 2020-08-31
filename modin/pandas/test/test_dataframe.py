@@ -3191,6 +3191,10 @@ class TestDataFrameReduction:
             ),
         )
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="Windows has a memory issue for large numbers on this test",
+    )
     @pytest.mark.parametrize(
         "method",
         [
