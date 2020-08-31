@@ -3077,7 +3077,7 @@ class TestDataFrameReduction:
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_all_any(self, data, axis, skipna, is_transposed, method):
         eval_general(
             *create_test_dfs(data),
@@ -3119,7 +3119,7 @@ class TestDataFrameReduction:
         )
 
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_count(self, data, axis):
         eval_general(
             *create_test_dfs(data),
@@ -3218,7 +3218,7 @@ class TestDataFrameReduction:
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_idxmin_idxmax(self, data, axis, skipna, is_transposed, method):
         eval_general(
             *create_test_dfs(data),
@@ -3248,7 +3248,7 @@ class TestDataFrameReduction:
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_min_max_mean(
         self, data, axis, skipna, numeric_only, is_transposed, method
     ):
@@ -3282,7 +3282,7 @@ class TestDataFrameReduction:
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_prod(
         self,
         data,
@@ -3323,7 +3323,7 @@ class TestDataFrameReduction:
         "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
     )
     @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-    @pytest.mark.parametrize("data", [test_data["dense_nan_data"]])
+    @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
     def test_sum(self, data, axis, skipna, is_transposed):
         eval_general(
             *create_test_dfs(data),
@@ -5241,8 +5241,8 @@ class TestDataFrameIndexing:
     def test_index_order(self):
         # see #1708 and #1869 for details
         df_modin, df_pandas = (
-            pd.DataFrame(test_data["dense_nan_data"]),
-            pandas.DataFrame(test_data["dense_nan_data"]),
+            pd.DataFrame(test_data["float_nan_data"]),
+            pandas.DataFrame(test_data["float_nan_data"]),
         )
         rows_number = len(df_modin.index)
         level_0 = np.random.choice([x for x in range(10)], rows_number)

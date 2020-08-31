@@ -1851,7 +1851,7 @@ def test_last():
 
 def test_index_order():
     # see #1708 and #1869 for details
-    s_modin, s_pandas = create_test_series(test_data["dense_nan_data"])
+    s_modin, s_pandas = create_test_series(test_data["float_nan_data"])
     rows_number = len(s_modin.index)
     level_0 = np.random.choice([x for x in range(10)], rows_number)
     level_1 = np.random.choice([x for x in range(10)], rows_number)
