@@ -216,7 +216,7 @@ class TextFileReader(FileReader):
             f: file object
             nrows: int, number of rows to read. Optional, if not specified will only
                 consider `max_bytes` parameter.
-            skiprows: array or callable (optional), specifies rows to skip
+            skiprows: int, array or callable (optional), specifies rows to skip
             quotechar: char that indicates quote in a file
                 (optional, by default it's '\"')
             is_quoting: bool, Whether or not to consider quotes

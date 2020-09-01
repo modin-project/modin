@@ -60,11 +60,20 @@ TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
 
-def eval_io(path, fn_name, comparator=df_equals, *args, **kwargs):
+def eval_io(path, fn_name, comparator=df_equals, cast_to_str=False, *args, **kwargs):
+    def applyier(module, *args, **kwargs):
+        result = getattr(module, fn_name)(*args, **kwargs)
+        # There could be some missmatches in dtypes, so we're
+        # casting the whole frame to `str` before comparison.
+        # See issue #1931 for details.
+        if cast_to_str:
+            result = result.astype(str)
+        return result
+
     eval_general(
         pd,
         pandas,
-        lambda module, *args, **kwargs: getattr(module, fn_name)(*args, **kwargs),
+        applyier,
         path=path,
         *args,
         **kwargs,
@@ -1170,6 +1179,7 @@ def test_from_csv_newlines_in_quotes(nrows, skiprows):
         fn_name="read_csv",
         nrows=nrows,
         skiprows=skiprows,
+        cast_to_str=True,
     )
 
 
