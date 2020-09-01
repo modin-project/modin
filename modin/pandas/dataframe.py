@@ -614,7 +614,7 @@ class DataFrame(BasePandasDataset):
 
         if scalar:
             # Need to return a Series:
-            result = result.transpose().squeeze()
+            result = result.squeeze()
         return result
 
     def assign(self, **kwargs):
