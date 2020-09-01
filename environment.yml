@@ -28,5 +28,5 @@ dependencies:
   - pytest-xdist
   - coverage<5.0
   - pip:
-    - ray==0.8.6
+    - ray==0.8.7
     - rpyc
