@@ -24,6 +24,8 @@ from modin.pandas.test.utils import (
     name_contains,
     test_data_values,
     test_data_keys,
+    test_data_with_duplicates_values,
+    test_data_with_duplicates_keys,
     no_numeric_dfs,
     quantiles_keys,
     quantiles_values,
@@ -211,7 +213,9 @@ def test_diff(request, data, axis, periods):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
+)
 @pytest.mark.parametrize(
     "keep", ["last", "first", False], ids=["last", "first", "False"]
 )

@@ -101,6 +101,11 @@ test_data["int_data"]["index"] = test_data["int_data"].pop(
     "col{}".format(int(NCOLS / 2))
 )
 
+for col in test_data["float_nan_data"]:
+    for row in range(NROWS // 2):
+        if row % 16 == 0:
+            test_data["float_nan_data"][col][row] = np.NaN
+
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
 
@@ -128,20 +133,21 @@ test_data_with_duplicates = {
         ]
         for i in range(NCOLS)
     },
-    "subset_duplicates": {
-        "col{}".format(i): [
-            i if j % 7 == 0 and i in [1, 3, 7] else x
-            for j, x in enumerate(range(NROWS))
-        ]
-        for i in range(NCOLS)
-    },
     "has_name_column": {
         "name": ["one", "two", "two", "three"],
         "col1": [1, 2, 2, 3],
         "col3": [10, 20, 20, 3],
         "col7": [100, 201, 200, 300],
     },
+    "str_columns": {
+        "col_str{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            "s" + str(x % 5) for x in range(NROWS)
+        ]
+        for i in range(NCOLS)
+    },
 }
+
+test_data_with_duplicates["float_nan"] = test_data["float_nan_data"]
 
 test_data_small = {
     "small": {

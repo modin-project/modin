@@ -31,6 +31,8 @@ from .utils import (
     test_data,
     test_data_values,
     test_data_keys,
+    test_data_with_duplicates_values,
+    test_data_with_duplicates_keys,
     test_string_data_values,
     test_string_data_keys,
     test_string_list_data_values,
@@ -1391,7 +1393,9 @@ def test_drop():
         modin_series.drop(None, None, None, None)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
+)
 @pytest.mark.parametrize(
     "keep", ["last", "first", False], ids=["last", "first", "False"]
 )
@@ -1527,7 +1531,9 @@ def test_dt():
     df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
+)
 @pytest.mark.parametrize(
     "keep", ["last", "first", False], ids=["last", "first", "False"]
 )
