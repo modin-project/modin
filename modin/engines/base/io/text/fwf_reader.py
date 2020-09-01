@@ -160,7 +160,6 @@ class FWFReader(TextFileReader):
             splits = cls.partitioned_file(
                 f,
                 nrows=nrows,
-                skiprows=skiprows,
                 num_partitions=num_partitions,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
