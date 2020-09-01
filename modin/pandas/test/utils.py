@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import copy
 import numpy as np
 import pandas
 from pandas.util.testing import (
@@ -45,24 +44,11 @@ test_data = {
         )
         for i in range(NCOLS)
     },
-    "float_data": {
-        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.uniform(
-            RAND_LOW, RAND_HIGH, size=(NROWS)
-        )
-        for i in range(NCOLS)
-    },
-    "sparse_nan_data": {
+    "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x if j != i else np.NaN
-            for j, x in enumerate(
-                random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
-            )
-        ]
-        for i in range(NCOLS)
-    },
-    "dense_nan_data": {
-        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x if j % 4 == 0 else np.NaN
+            x
+            if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
+            else np.NaN
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
             )
@@ -108,19 +94,10 @@ test_data = {
     #     "col1": "foo",
     #     "col2": True,
     # },
-    "100x100": {
-        "col{}".format((i - 50) % 100 + 1): random_state.randint(
-            RAND_LOW, RAND_HIGH, size=(100)
-        )
-        for i in range(100)
-    },
 }
 
-# Create a dataframe based on integer dataframe but with one column called "index". Because of bug #1481 it cannot be
-# created in normal way and has to be copied from dataset that works.
-# TODO(gshimansky): when bug #1481 is fixed replace this dataframe initialization with ordinary one.
-test_data["with_index_column"] = copy.copy(test_data["int_data"])
-test_data["with_index_column"]["index"] = test_data["with_index_column"].pop(
+# See details in #1403
+test_data["int_data"]["index"] = test_data["int_data"].pop(
     "col{}".format(int(NCOLS / 2))
 )
 
@@ -199,11 +176,8 @@ numeric_dfs = [
     "empty_data",
     "columns_only",
     "int_data",
-    "float_data",
-    "sparse_nan_data",
-    "dense_nan_data",
+    "float_nan_data",
     "with_index_column",
-    "100x100",
 ]
 
 no_numeric_dfs = ["datetime_timedelta_data"]
@@ -462,6 +436,7 @@ def df_equals(df1, df2):
     types_for_almost_equals = (
         pandas.core.indexes.range.RangeIndex,
         pandas.core.indexes.base.Index,
+        np.recarray,
     )
 
     # Gets AttributError if modin's groupby object is not import like this
