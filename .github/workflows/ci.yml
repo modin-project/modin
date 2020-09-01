@@ -210,7 +210,28 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/test_dataframe.py
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameReduction
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameBinary
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameMapMetadata
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameUDF
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameWindow
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameIndexing
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameIter
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameJoinSort
         if: matrix.part != 3
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
@@ -312,7 +333,28 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_dataframe.py
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameReduction
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameBinary
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameMapMetadata
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameUDF
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameWindow
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameIndexing
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameIter
+        if: matrix.part != 3
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_dataframe.py::TestDataFrameJoinSort
         if: matrix.part != 3
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
