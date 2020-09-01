@@ -158,13 +158,17 @@ class BaseFrameManager(object):
         Note: This will often be overridden by implementations. It materializes the
             entire partitions of the right and applies them to the left through `apply`.
 
-        Args:
+        Parameters
+        ----------
             axis: The axis to apply and broadcast over.
             apply_func: The function to apply.
             left: The left partitions.
             right: The right partitions.
+            other_name: Name of key-value argument for `apply_func` that
+                obtains `right`. (optional, by default it's `"r"`)
 
-        Returns:
+        Returns
+        -------
             A new `np.array` of partition objects.
         """
         [obj.drain_call_queue() for row in right for obj in row]
