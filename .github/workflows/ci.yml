@@ -180,7 +180,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
         engine: ["python", "ray", "dask"]
-        part: ["reduction", "binary", "map_metadata", "udf", "default", "window", "indexing", "iter", "join_sort", 3]
+        part: ["DataFrame", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -210,7 +210,7 @@ jobs:
         if: matrix.part == 3
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_${{matrix.part}}.py
+        run: pytest modin/pandas/test/test_dataframe.py
         if: matrix.part != 3
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
@@ -284,7 +284,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
         engine: ["ray", "dask"]
-        part: ["reduction", "binary", "map_metadata", "udf", "default", "window", "indexing", "iter", "join_sort", 3]
+        part: ["DataFrame", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -312,7 +312,7 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/dataframe/test_${{matrix.part}}.py
+        run: python -m pytest modin/pandas/test/test_dataframe.py
         if: matrix.part != 3
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
