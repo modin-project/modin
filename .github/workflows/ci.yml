@@ -77,7 +77,7 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
       - shell: bash -l {0}
-        run: pip install ray==0.8.6
+        run: pip install ray==0.8.7
       - name: Conda environment
         shell: bash -l {0}
         run: |
