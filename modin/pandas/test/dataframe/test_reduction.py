@@ -279,6 +279,18 @@ def test_prod(
         ),
     )
 
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.prod(level=0)
+    pandas_result = pandas_df.prod(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize(
     "numeric_only",
@@ -314,6 +326,18 @@ def test_sum(data, axis, skipna, is_transposed):
             skipna=skipna,
         ),
     )
+
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.sum(level=0)
+    pandas_result = pandas_df.sum(level=0)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize(

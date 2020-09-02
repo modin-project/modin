@@ -1971,6 +1971,17 @@ def test_median(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna))
 
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.median(level=0)
+    pandas_result = pandas_series.median(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", [True, False], ids=["True", "False"])
@@ -2199,6 +2210,17 @@ def test_prod(data, axis, skipna, numeric_only, min_count, operation):
         numeric_only=numeric_only,
         min_count=min_count,
     )
+
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.prod(level=0)
+    pandas_result = pandas_series.prod(level=0)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2660,6 +2682,17 @@ def test_skew(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.skew(skipna=skipna), pandas_series.skew(skipna=skipna))
 
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.skew(level=0)
+    pandas_result = pandas_series.skew(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray"])
@@ -2778,6 +2811,17 @@ def test_std(request, data, skipna, ddof):
         modin_result = modin_series.std(skipna=skipna, ddof=ddof)
         df_equals(modin_result, pandas_result)
 
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.std(level=0)
+    pandas_result = pandas_series.std(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sub(data):
@@ -2825,6 +2869,17 @@ def test_sum(data, axis, skipna, numeric_only, min_count):
         numeric_only=numeric_only,
         min_count=min_count,
     )
+
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.sum(level=0)
+    pandas_result = pandas_series.sum(level=0)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3203,6 +3258,17 @@ def test_var(data, skipna, ddof):
     else:
         modin_result = modin_series.var(skipna=skipna, ddof=ddof)
         df_equals(modin_result, pandas_result)
+
+    # test for issue #1953
+    arrays = [
+        ["1", "1", "1", "2", "2", "2", "3", "3", "3"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ]
+    modin_series = pd.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    pandas_series = pandas.Series([3, 3, 3, 3, 3, 3, 3, 3, 3], index=arrays)
+    modin_result = modin_series.var(level=0)
+    pandas_result = pandas_series.var(level=0)
+    df_equals(modin_result, pandas_result)
 
 
 def test_view():

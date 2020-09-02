@@ -570,6 +570,18 @@ def test_median(request, data, axis, skipna, numeric_only):
         )
         df_equals(modin_result, pandas_result)
 
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.median(level=0)
+    pandas_result = pandas_df.median(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -782,6 +794,18 @@ def test_skew(request, data, axis, skipna, numeric_only):
         )
         df_equals(modin_result, pandas_result)
 
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.skew(level=0)
+    pandas_result = pandas_df.skew(level=0)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -823,6 +847,18 @@ def test_std(request, data, axis, skipna, numeric_only, ddof):
             axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
         )
         df_equals(modin_result, pandas_result)
+
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.std(level=0)
+    pandas_result = pandas_df.std(level=0)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -872,3 +908,15 @@ def test_var(request, data, axis, skipna, numeric_only, ddof):
         modin_result = modin_df.T.var(
             axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
         )
+
+    # test for issue #1953
+    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
+    modin_df = pd.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    )
+    modin_result = modin_df.var(level=0)
+    pandas_result = pandas_df.var(level=0)
+    df_equals(modin_result, pandas_result)
