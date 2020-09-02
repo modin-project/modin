@@ -110,8 +110,43 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
 
+  test-pyarrow:
+    needs: [lint-commit, lint-flake8, lint-black, prepare-cache]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8"]
+    env:
+      MODIN_BACKEND: pyarrow
+      MODIN_EXPERIMENTAL: "True"
+    name: test (pyarrow, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
+
   test-all:
-    needs: fast-test
+    needs: [fast-test, test-pyarrow]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -201,7 +236,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-experimental:
-    needs: fast-test
+    needs: [fast-test, test-pyarrow]
     runs-on: ubuntu-latest
     env:
       MODIN_ENGINE: "python"
@@ -239,7 +274,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: fast-test
+    needs: [fast-test, test-pyarrow]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -324,38 +359,3 @@ jobs:
         run: choco install codecov
       - shell: bash -l {0}
         run: codecov -f ./coverage.xml
-
-  test-pyarrow:
-    needs: fast-test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.6", "3.7", "3.8"]
-    env:
-      MODIN_BACKEND: pyarrow
-      MODIN_EXPERIMENTAL: "True"
-    name: test (pyarrow, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
-        with:
-          activate-environment: modin
-          environment-file: environment.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
