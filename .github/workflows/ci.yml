@@ -76,10 +76,10 @@ jobs:
           architecture: "x64"
       - run: pip install ray==0.8.7
 
-  test-api:
-    needs: prepare-cache
+  fast-test:
+    needs: [lint-commit, lint-flake8, lint-black, prepare-cache]
     runs-on: ubuntu-latest
-    name: test api
+    name: "fast test: api, headers, internals"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -103,70 +103,15 @@ jobs:
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Api tests
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_api.py
-
-  test-headers:
-    needs: prepare-cache
-    runs-on: ubuntu-latest
-    name: test-headers
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
-        with:
-          activate-environment: modin
-          environment-file: environment.yml
-          python-version: 3.6
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - name: Headers tests
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/test/test_headers.py
-
-  test-internals:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
-    name: test-internals
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
-        with:
-          activate-environment: modin
-          environment-file: environment.yml
-          python-version: 3.6
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - name: Internals tests
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/test/test_publisher.py modin/data_management/test/test_dispatcher.py
 
   test-all:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: fast-test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -256,7 +201,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-experimental:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: fast-test
     runs-on: ubuntu-latest
     env:
       MODIN_ENGINE: "python"
@@ -294,7 +239,7 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: fast-test
     runs-on: windows-latest
     strategy:
       matrix:
@@ -381,7 +326,7 @@ jobs:
         run: codecov -f ./coverage.xml
 
   test-pyarrow:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: fast-test
     runs-on: ubuntu-latest
     strategy:
       matrix:
