@@ -72,8 +72,7 @@ class TextFileReader(FileReader):
                 consider `chunk_size_bytes` parameter.
             chunk_size_bytes: int, Will read new rows while file pointer
                 is less than `chunk_size_bytes`. Optional, if not specified will only
-                consider `nrows` parameter, if both not specified will read till
-                the end of the file.
+                consider `nrows` parameter.
             skiprows: array or callable (optional), specifies rows to skip
             quotechar: char that indicates quote in a file
                 (optional, by default it's '\"')
@@ -85,6 +84,10 @@ class TextFileReader(FileReader):
             bool: If file pointer reached the end of the file, but did not find
             closing quote returns `False`. `True` in any other case.
         """
+        assert (
+            nrows is not None or chunk_size_bytes is not None
+        ), "`nrows` and `chunk_size_bytes` can't be None at the same time"
+
         if nrows is not None or skiprows is not None:
             return cls._read_rows(
                 f,
@@ -94,9 +97,6 @@ class TextFileReader(FileReader):
                 is_quoting=is_quoting,
                 max_bytes=chunk_size_bytes,
             )[0]
-
-        if chunk_size_bytes is None:
-            chunk_size_bytes = -1
 
         outside_quotes = True
 
