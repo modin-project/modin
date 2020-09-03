@@ -35,6 +35,6 @@ dependencies:
     - xlrd
     - matplotlib
     - sqlalchemy
-    - msgpack<1.0
+    - msgpack
     - cloudpickle
     - rpyc
