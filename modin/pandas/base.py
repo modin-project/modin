@@ -1655,29 +1655,6 @@ class BasePandasDataset(object):
             )
         )
 
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Computes median across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the median on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The median of the DataFrame. (Pandas series)
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        return self._reduce_dimension(
-            self._query_compiler.median(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def memory_usage(self, index=True, deep=False):
         """Returns the memory usage of each column in bytes
 
@@ -1862,52 +1839,6 @@ class BasePandasDataset(object):
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def prod(
-        self,
-        axis=None,
-        skipna=None,
-        level=None,
-        numeric_only=None,
-        min_count=0,
-        **kwargs,
-    ):
-        """Return the product of the values for the requested axis
-
-        Args:
-            axis : {index (0), columns (1)}
-            skipna : boolean, default True
-            level : int or level name, default None
-            numeric_only : boolean, default None
-            min_count : int, default 0
-
-        Returns:
-            prod : Series or DataFrame (if level specified)
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
-        if min_count > 1:
-            return data._reduce_dimension(
-                query_compiler=data._query_compiler.prod_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
-        return data._reduce_dimension(
-            data._query_compiler.prod(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
-            )
-        )
-
-    product = prod
     radd = add
 
     def quantile(self, q=0.5, axis=0, numeric_only=True, interpolation="linear"):
@@ -2733,32 +2664,6 @@ class BasePandasDataset(object):
         else:
             return self.tshift(periods, freq)
 
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Return unbiased skew over requested axis Normalized by N-1
-
-        Args:
-            axis : {index (0), columns (1)}
-            skipna : boolean, default True
-            Exclude NA/null values when computing the result.
-            level : int or level name, default None
-            numeric_only : boolean, default None
-
-        Returns:
-            skew : Series or DataFrame (if level specified)
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        return self._reduce_dimension(
-            self._query_compiler.skew(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def sort_index(
         self,
         axis=0,
@@ -2842,33 +2747,6 @@ class BasePandasDataset(object):
             )
         return self._create_or_update_from_compiler(result, inplace)
 
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        """Computes standard deviation across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the std on.
-            skipna (bool): True to skip NA values, false otherwise.
-            ddof (int): degrees of freedom
-
-        Returns:
-            The std of the DataFrame (Pandas Series)
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        return self._reduce_dimension(
-            self._query_compiler.std(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def sub(self, other, axis="columns", level=None, fill_value=None):
         """Subtract a DataFrame/Series/scalar from this DataFrame.
 
@@ -2886,50 +2764,6 @@ class BasePandasDataset(object):
         )
 
     subtract = sub
-
-    def sum(
-        self,
-        axis=None,
-        skipna=None,
-        level=None,
-        numeric_only=None,
-        min_count=0,
-        **kwargs,
-    ):
-        """Perform a sum across the DataFrame.
-
-        Args:
-            axis (int): The axis to sum on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The sum of the DataFrame.
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        data = self._validate_dtypes_sum_prod_mean(
-            axis, numeric_only, ignore_axis=False
-        )
-        if min_count > 1:
-            return data._reduce_dimension(
-                query_compiler=data._query_compiler.sum_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
-        return data._reduce_dimension(
-            data._query_compiler.sum(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
-            )
-        )
 
     def swapaxes(self, axis1, axis2, copy=True):
         axis1 = self._get_axis_number(axis1)
@@ -3332,33 +3166,6 @@ class BasePandasDataset(object):
             .index
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
-
-    def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        """Computes variance across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the variance on.
-            skipna (bool): True to skip NA values, false otherwise.
-            ddof (int): degrees of freedom
-
-        Returns:
-            The variance of the DataFrame.
-        """
-        axis = self._get_axis_number(axis) if axis is not None else 0
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        return self._reduce_dimension(
-            self._query_compiler.var(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
 
     def __abs__(self):
         """Creates a modified DataFrame by taking the absolute value.

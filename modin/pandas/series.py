@@ -990,6 +990,53 @@ class Series(BasePandasDataset):
             )
         )
 
+    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        """
+        Return the median of the values for the requested axis.
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                Axis for the function to be applied on.
+            skipna : bool, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a scalar.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            The median of the values for the requested axis
+        """
+        axis = self._get_axis_number(axis)
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.median(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return self._reduce_dimension(
+            self._query_compiler.median(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
     def memory_usage(self, index=True, deep=False):
         if index:
             result = self._reduce_dimension(
@@ -1109,6 +1156,109 @@ class Series(BasePandasDataset):
 
         return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
 
+    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        """
+        Return unbiased skew over requested axis. Normalized by N-1
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                Axis for the function to be applied on.
+            skipna : boolean, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical),
+                count along a particular level, collapsing into a scalar.
+            numeric_only : boolean, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            Unbiased skew over requested axis.
+        """
+        axis = self._get_axis_number(axis)
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.skew(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return self._reduce_dimension(
+            self._query_compiler.skew(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
+    def std(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        """
+        Return sample standard deviation over requested axis.
+
+        Normalized by N-1 by default. This can be changed using the ddof argument.
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                The axis to take the std on.
+            skipna : bool, default True
+                Exclude NA/null values. If an entire row/column is NA, the result will be NA.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a scalar.
+            ddof : int, default 1
+                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
+                where N represents the number of elements.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            The sample standard deviation.
+        """
+        axis = self._get_axis_number(axis)
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.std(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return self._reduce_dimension(
+            self._query_compiler.std(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
     @property
     def plot(
         self,
@@ -1154,17 +1304,69 @@ class Series(BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
+        """
+        Return the product of the values for the requested axis.
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                Axis for the function to be applied on.
+            skipna : bool, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a scalar.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            min_count : int, default 0
+                The required number of valid values to perform the operation.
+                If fewer than min_count non-NA values are present the result will be NA.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            The product of the values for the requested axis.
+        """
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
-        return super(Series, self).prod(
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            min_count=min_count,
-            **kwargs,
+
+        data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        if level is not None:
+            return data.__constructor__(
+                query_compiler=data._query_compiler.prod_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs,
+                )
+            )
+        if min_count > 1:
+            return data._reduce_dimension(
+                data._query_compiler.prod_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs,
+                )
+            )
+        return data._reduce_dimension(
+            data._query_compiler.prod(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
         )
 
     product = prod
@@ -1458,17 +1660,71 @@ class Series(BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
+        """
+        Return the sum of the values for the requested axis.
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                Axis for the function to be applied on.
+            skipna : bool, default True
+                Exclude NA/null values when computing the result.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a scalar.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            min_count : int, default 0
+                The required number of valid values to perform the operation.
+                If fewer than min_count non-NA values are present the result will be NA.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            The sum of the values for the requested axis
+        """
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
-        return super(Series, self).sum(
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            min_count=min_count,
-            **kwargs,
+
+        data = self._validate_dtypes_sum_prod_mean(
+            axis, numeric_only, ignore_axis=False
+        )
+        if level is not None:
+            return data.__constructor__(
+                query_compiler=data._query_compiler.sum_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs,
+                )
+            )
+        if min_count > 1:
+            return data._reduce_dimension(
+                data._query_compiler.sum_min_count(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    **kwargs,
+                )
+            )
+        return data._reduce_dimension(
+            data._query_compiler.sum(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
         )
 
     def swaplevel(self, i=-2, j=-1, copy=True):
@@ -1656,6 +1912,62 @@ class Series(BasePandasDataset):
                 ascending=ascending,
                 bins=bins,
                 dropna=dropna,
+            )
+        )
+
+    def var(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        """
+        Return unbiased variance over requested axis.
+
+        Normalized by N-1 by default. This can be changed using the ddof argument
+
+        Parameters
+        ----------
+            axis : {index (0)}
+                The axis to take the variance on.
+            skipna : bool, default True
+                Exclude NA/null values. If an entire row/column is NA, the result will be NA.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a scalar.
+            ddof : int, default 1
+                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
+                where N represents the number of elements.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+            **kwargs
+                Additional keyword arguments to be passed to the function.
+
+        Returns
+        -------
+        scalar or Series (if level specified)
+            The unbiased variance.
+        """
+        axis = self._get_axis_number(axis)
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.var(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return self._reduce_dimension(
+            self._query_compiler.var(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
             )
         )
 
