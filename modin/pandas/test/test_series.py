@@ -2614,12 +2614,16 @@ def test_sample(data):
         modin_series.sample(n=-3)
 
 
+@pytest.mark.parametrize("single_value_data", [True, False])
 @pytest.mark.parametrize("use_multiindex", [True, False])
 @pytest.mark.parametrize("sorter", [True, None])
 @pytest.mark.parametrize("values_number", [1, 2, 5])
 @pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_searchsorted(data, side, values_number, sorter, use_multiindex):
+def test_searchsorted(
+    data, side, values_number, sorter, use_multiindex, single_value_data
+):
+    data = data if not single_value_data else data[next(iter(data.keys()))][0]
     if not sorter:
         modin_series, pandas_series = create_test_series(vals=data, sort=True)
     else:
@@ -2639,23 +2643,28 @@ def test_searchsorted(data, side, values_number, sorter, use_multiindex):
     min_sample = modin_series.min(skipna=True)
     max_sample = modin_series.max(skipna=True)
 
-    values = []
-    values.append(pandas_series.sample(n=values_number, random_state=random_state))
-    values.append(
-        random_state.uniform(low=min_sample, high=max_sample, size=values_number)
-    )
-    values.append(
-        random_state.uniform(low=max_sample, high=2 * max_sample, size=values_number)
-    )
-    values.append(
-        random_state.uniform(
-            low=min_sample - max_sample, high=min_sample, size=values_number
+    if single_value_data:
+        values = [data]
+    else:
+        values = []
+        values.append(pandas_series.sample(n=values_number, random_state=random_state))
+        values.append(
+            random_state.uniform(low=min_sample, high=max_sample, size=values_number)
         )
-    )
-    pure_float = random_state.uniform(float(min_sample), float(max_sample))
-    pure_int = int(pure_float)
-    values.append(pure_float)
-    values.append(pure_int)
+        values.append(
+            random_state.uniform(
+                low=max_sample, high=2 * max_sample, size=values_number
+            )
+        )
+        values.append(
+            random_state.uniform(
+                low=min_sample - max_sample, high=min_sample, size=values_number
+            )
+        )
+        pure_float = random_state.uniform(float(min_sample), float(max_sample))
+        pure_int = int(pure_float)
+        values.append(pure_float)
+        values.append(pure_int)
 
     test_cases = [
         modin_series.searchsorted(value=value, side=side, sorter=sorter)
