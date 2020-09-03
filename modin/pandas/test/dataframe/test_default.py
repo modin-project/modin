@@ -35,6 +35,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     generate_multiindex,
     test_data_resample,
+    test_data,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -412,40 +413,43 @@ def test_interpolate():
         pd.DataFrame(data).interpolate()
 
 
-def test_kurt_kurtosis_equals():
-    # It's optimization. If failed, df.kurt should be tested explicitly
-    # in tests: `test_kurt_kurtosis`, `test_kurt_kurtosis_level`.
-    data = test_data_values[0]
-    df_modin = pd.DataFrame(data)
-    assert df_modin.kurt == df_modin.kurtosis
-
-
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-def test_kurt_kurtosis(axis, skipna, numeric_only):
-    data = test_data_values[0]
-    df_modin = pd.DataFrame(data)
-    df_pandas = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "method",
+    [
+        "kurtosis",
+        pytest.param(
+            "kurt",
+            marks=pytest.mark.skipif(
+                pandas.DataFrame.kurt == pandas.DataFrame.kurtosis
+                and pd.DataFrame.kurt == pd.DataFrame.kurtosis,
+                reason="That method was already tested.",
+            ),
+        ),
+    ],
+)
+def test_kurt_kurtosis(axis, skipna, numeric_only, method):
+    data = test_data["float_nan_data"]
 
     eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(
-            axis=axis, skipna=skipna, level=None, numeric_only=numeric_only
+        *create_test_dfs(data),
+        lambda df: getattr(df, method)(
+            axis=axis, skipna=skipna, numeric_only=numeric_only
         ),
     )
 
 
 @pytest.mark.parametrize("level", [-1, 0, 1])
 def test_kurt_kurtosis_level(level):
-    data = test_data_values[0]
-    df_modin = pd.DataFrame(data)
-    df_pandas = pandas.DataFrame(data)
+    data = test_data["int_data"]
+    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
 
     index = generate_multiindex(len(data.keys()))
     df_modin.columns = index
     df_pandas.columns = index
+
     eval_general(
         df_modin,
         df_pandas,
