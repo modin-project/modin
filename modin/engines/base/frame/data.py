@@ -78,9 +78,9 @@ class BasePandasFrame(object):
             )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
-        self._filter_empties()
         if validate_axes is not False:
             self._validate_internal_indices(mode=validate_axes)
+        self._filter_empties()
 
     @property
     def _row_lengths(self):
@@ -284,6 +284,11 @@ class BasePandasFrame(object):
         is_lenghts_matches = len(self.axes[axis]) == len(internal_axis)
         if not is_equals:
             if force:
+                if not is_lenghts_matches:
+                    if axis:
+                        self._column_widths_cache = None
+                    else:
+                        self._row_lengths_cache = None
                 new_axis = self.axes[axis] if is_lenghts_matches else internal_axis
                 self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
             else:
@@ -336,9 +341,9 @@ class BasePandasFrame(object):
         args = args_dict.get(mode, args_dict["custom"])
 
         if args.get("validate_index", True):
-            self._validate_axis_equality(axis=0)
+            self._validate_axis_equality(axis=0, force=args.get("force"))
         if args.get("validate_columns", True):
-            self._validate_axis_equality(axis=1)
+            self._validate_axis_equality(axis=1, force=args.get("force"))
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
@@ -1000,13 +1005,19 @@ class BasePandasFrame(object):
         )
 
     def _fold_reduce(self, axis, func):
-        """Applies map that reduce Manager to series but require knowledge of full axis.
+        """
+        Apply function that reduce Manager to series but require knowledge of full axis.
 
-        Args:
-            func: Function to reduce the Manager by. This function takes in a Manager.
-            axis: axis to apply the function to.
+        Parameters
+        ----------
+            axis : 0 or 1
+                The axis to apply the function to (0 - index, 1 - columns).
+            func : callable
+                The function to reduce the Manager by. This function takes in a Manager.
 
-        Return:
+        Returns
+        -------
+        BasePandasFrame
             Pandas series containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
