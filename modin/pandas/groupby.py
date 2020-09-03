@@ -363,19 +363,44 @@ class DataFrameGroupBy(object):
             # This is not implemented in pandas,
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
+        if isinstance(func, dict) or func is None:
+            if func is None:
+                func = {}
+            else:
+                if any(i not in self._df.columns for i in func.keys()):
+                    from pandas.core.base import SpecificationError
 
-        if func is None or is_list_like(func):
+                    raise SpecificationError("nested renamer is not supported")
+            if isinstance(self._by, type(self._query_compiler)):
+                by = list(self._by.columns)
+            else:
+                by = self._by
+            # We convert to the string version of the function for simplicity.
+            func_dict = {
+                k: v if not callable(v) or v.__name__ not in dir(self) else v.__name__
+                for k, v in func.items()
+            }
+            subset_cols = list(func_dict.keys()) + (
+                list(self._by.columns)
+                if isinstance(self._by, type(self._query_compiler))
+                and all(c in self._df.columns for c in self._by.columns)
+                else []
+            )
+            return type(self._df)(
+                query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
+                    by, func_dict, self._kwargs, kwargs, drop=self._drop
+                )
+            )
+        if is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
             )
-
         if isinstance(func, str):
             agg_func = getattr(self, func, None)
             if callable(agg_func):
                 return agg_func(*args, **kwargs)
-
         return self._apply_agg_function(
             lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
             drop=self._as_index,
