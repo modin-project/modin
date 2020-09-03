@@ -155,3 +155,30 @@ def hashable(obj):
     except TypeError:
         return False
     return True
+
+
+def is_scalar(obj):
+    """
+    Return True if given object is scalar.
+
+    This method wrks the same as is_scalar method from Pandas but
+    it is optimized for Modin frames. For BasePandasDataset objects
+    Pandas version of is_scalar tries to access missing attribute
+    causing index scan. This tiggers execution for lazy frames and
+    we avoid it by handling BasePandasDataset objects separately.
+
+    Parameters
+    ----------
+    val : object
+        Object to check.
+
+    Returns
+    -------
+    bool
+        True if given object is scalar and False otherwise.
+    """
+
+    from pandas.api.types import is_scalar as pandas_is_scalar
+    from .base import BasePandasDataset
+
+    return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
