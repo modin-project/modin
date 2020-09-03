@@ -842,7 +842,31 @@ def test_asfreq():
         series.asfreq(freq="30S")
 
 
-def test_asof():
+@pytest.mark.parametrize(
+    "where",
+    [
+        20,
+        30,
+        [10, 40],
+        [20, 30],
+        [20],
+        25,
+        [25, 45],
+        [25, 30],
+        pandas.Index([20, 30]),
+        pandas.Index([10]),
+    ],
+)
+def test_asof(where):
+    values = [1, 2, np.nan, 4]
+    index = [10, 20, 30, 40]
+    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
+        values, index=index
+    )
+    df_equals(modin_series.asof(where), pandas_series.asof(where))
+
+
+def test_asof_dates():
     series = pd.Series(
         [10, 20, 30, 40, 50],
         index=pd.DatetimeIndex(
