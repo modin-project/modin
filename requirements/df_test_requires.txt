@@ -8,5 +8,5 @@ matplotlib
 xarray
 scipy
 Jinja2
-msgpack<1.0
+msgpack
 pandas_gbq
