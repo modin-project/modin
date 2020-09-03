@@ -858,6 +858,7 @@ def test_asfreq():
     ],
 )
 def test_asof(where):
+    # With NaN:
     values = [1, 2, np.nan, 4]
     index = [10, 20, 30, 40]
     modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
@@ -865,22 +866,32 @@ def test_asof(where):
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
-
-def test_asof_dates():
-    series = pd.Series(
-        [10, 20, 30, 40, 50],
-        index=pd.DatetimeIndex(
-            [
-                "2018-02-27 09:01:00",
-                "2018-02-27 09:02:00",
-                "2018-02-27 09:03:00",
-                "2018-02-27 09:04:00",
-                "2018-02-27 09:05:00",
-            ]
-        ),
+    # No NaN:
+    values = [1, 2, 7, 4]
+    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
+        values, index=index
     )
-    with pytest.warns(UserWarning):
-        series.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
+    df_equals(modin_series.asof(where), pandas_series.asof(where))
+
+
+@pytest.mark.parametrize(
+    "where",
+    [
+        20,
+        30,
+        [10.5, 40.5],
+        [10],
+        pandas.Index([20, 30]),
+        pandas.Index([10.5]),
+    ],
+)
+def test_asof_large(where):
+    values = test_data["float_nan_data"]["col1"]
+    index = list(range(len(values)))
+    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
+        values, index=index
+    )
+    df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
