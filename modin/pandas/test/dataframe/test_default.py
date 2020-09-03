@@ -34,6 +34,7 @@ from modin.pandas.test.utils import (
     eval_general,
     create_test_dfs,
     generate_multiindex,
+    test_data_resample,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -50,9 +51,8 @@ def test_align():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_numpy(data):
-    modin_frame = pd.DataFrame(data)
-    pandas_frame = pandas.DataFrame(data)
-    assert_array_equal(modin_frame.values, pandas_frame.values)
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    assert_array_equal(modin_df.values, pandas_df.values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -632,108 +632,104 @@ def test_replace():
 
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0, "columns"])
-@pytest.mark.parametrize("closed", ["left", "right"])
-@pytest.mark.parametrize("label", ["right", "left"])
-@pytest.mark.parametrize("on", [None, "DateColumn"])
-@pytest.mark.parametrize("level", [None, 1])
-def test_resample(rule, axis, closed, label, on, level):
-    freq = "H"
-    base = 2
-    index = pandas.date_range("31/12/2000", periods=12, freq=freq)
-    data = {"A": range(12), "B": range(12)}
-
-    pandas_df = pandas.DataFrame(data, index=index)
+def test_resample(rule, axis):
+    data, index, = (
+        test_data_resample["data"],
+        test_data_resample["index"],
+    )
     modin_df = pd.DataFrame(data, index=index)
-
-    if on is not None and axis == 0:
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-    else:
-        on = None
+    pandas_df = pandas.DataFrame(data, index=index)
 
     if axis == "columns":
         pandas_df = pandas_df.T
         modin_df = modin_df.T
 
-    if level is not None and axis == 0 and on is None:
+    pandas_resampler = pandas_df.resample(
+        rule,
+        axis=axis,
+        base=2,
+    )
+    modin_resampler = modin_df.resample(
+        rule,
+        axis=axis,
+        base=2,
+    )
+
+    for group in [
+        ("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
+        ("min", "median", "mean", "max", "last", "first", "nunique", "var"),
+        ("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
+    ]:
+        for method in group:
+            eval_general(
+                modin_resampler, pandas_resampler, lambda df: getattr(df, method)()
+            )
+
+    for method_arg in [
+        ("pipe", lambda x: x.max() - x.min()),
+        ("transform", lambda x: (x - x.mean()) / x.std()),
+        ("apply", ["sum", "mean", "max"]),
+        ("aggregate", ["sum", "mean", "max"]),
+    ]:
+        method, arg = method_arg[0], method_arg[1]
+        eval_general(
+            modin_resampler, pandas_resampler, lambda df: getattr(df, method)(arg)
+        )
+
+    df_equals(
+        modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
+        pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
+    )
+
+    assert pandas_resampler.indices == modin_resampler.indices
+    assert pandas_resampler.groups == modin_resampler.groups
+
+
+@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("closed", ["left", "right"])
+@pytest.mark.parametrize("label", ["right", "left"])
+@pytest.mark.parametrize("on", [None, "DateColumn"])
+@pytest.mark.parametrize("level", [None, 1])
+def test_resample_specific(rule, closed, label, on, level):
+    data, index, = (
+        test_data_resample["data"],
+        test_data_resample["index"],
+    )
+    modin_df = pd.DataFrame(data, index=index)
+    pandas_df = pandas.DataFrame(data, index=index)
+
+    if on is None and level is not None:
         index = pandas.MultiIndex.from_product(
-            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq=freq)]
+            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="H")]
         )
         pandas_df.index = index
         modin_df.index = index
     else:
         level = None
 
+    if on is not None:
+        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+
     pandas_resampler = pandas_df.resample(
-        rule, axis=axis, closed=closed, label=label, base=base, on=on, level=level
+        rule,
+        closed=closed,
+        label=label,
+        on=on,
+        level=level,
     )
     modin_resampler = modin_df.resample(
-        rule, axis=axis, closed=closed, label=label, base=base, on=on, level=level
+        rule,
+        closed=closed,
+        label=label,
+        on=on,
+        level=level,
     )
-
-    df_equals(modin_resampler.count(), pandas_resampler.count())
     df_equals(modin_resampler.var(0), pandas_resampler.var(0))
-    df_equals(modin_resampler.sum(), pandas_resampler.sum())
-    df_equals(modin_resampler.std(), pandas_resampler.std())
-    df_equals(modin_resampler.sem(), pandas_resampler.sem())
-    df_equals(modin_resampler.size(), pandas_resampler.size())
-    df_equals(modin_resampler.prod(), pandas_resampler.prod())
-    if on is None:
-        df_equals(modin_resampler.ohlc(), pandas_resampler.ohlc())
-    df_equals(modin_resampler.min(), pandas_resampler.min())
-    df_equals(modin_resampler.median(), pandas_resampler.median())
-    df_equals(modin_resampler.mean(), pandas_resampler.mean())
-    df_equals(modin_resampler.max(), pandas_resampler.max())
-    df_equals(modin_resampler.last(), pandas_resampler.last())
-    df_equals(modin_resampler.first(), pandas_resampler.first())
-    df_equals(modin_resampler.nunique(), pandas_resampler.nunique())
-    df_equals(
-        modin_resampler.pipe(lambda x: x.max() - x.min()),
-        pandas_resampler.pipe(lambda x: x.max() - x.min()),
-    )
-    df_equals(
-        modin_resampler.transform(lambda x: (x - x.mean()) / x.std()),
-        pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
-    )
-    df_equals(
-        pandas_resampler.aggregate("max"),
-        modin_resampler.aggregate("max"),
-    )
-    df_equals(
-        modin_resampler.apply("sum"),
-        pandas_resampler.apply("sum"),
-    )
-    df_equals(
-        modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
-        pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
-    )
-    assert pandas_resampler.indices == modin_resampler.indices
-    assert pandas_resampler.groups == modin_resampler.groups
-    df_equals(modin_resampler.quantile(), pandas_resampler.quantile())
-    if axis == 0:
-        # Upsampling from level= or on= selection is not supported
-        if on is None and level is None:
-            df_equals(
-                modin_resampler.interpolate(),
-                pandas_resampler.interpolate(),
-            )
-            df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
-            df_equals(
-                modin_resampler.fillna(method="nearest"),
-                pandas_resampler.fillna(method="nearest"),
-            )
-            df_equals(modin_resampler.pad(), pandas_resampler.pad())
-            df_equals(modin_resampler.nearest(), pandas_resampler.nearest())
-            df_equals(modin_resampler.bfill(), pandas_resampler.bfill())
-            df_equals(modin_resampler.backfill(), pandas_resampler.backfill())
-            df_equals(modin_resampler.ffill(), pandas_resampler.ffill())
+    if on is None and level is None:
         df_equals(
-            pandas_resampler.apply(["sum", "mean", "max"]),
-            modin_resampler.apply(["sum", "mean", "max"]),
-        )
-        df_equals(
-            modin_resampler.aggregate(["sum", "mean", "max"]),
-            pandas_resampler.aggregate(["sum", "mean", "max"]),
+            modin_resampler.fillna(method="nearest"),
+            pandas_resampler.fillna(method="nearest"),
         )
 
 
@@ -1125,25 +1121,13 @@ def test_unstack(data, is_multi_idx, is_multi_col):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___array__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.__array__(), pandas_df.__array__())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___bool__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.__bool__()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.__bool__()
-    else:
-        modin_result = modin_df.__bool__()
-        df_equals(modin_result, pandas_result)
+    eval_general(*create_test_dfs(data), lambda df: df.__bool__())
 
 
 def test___getstate__():
@@ -1163,13 +1147,4 @@ def test___setstate__():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_hasattr_sparse(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    try:
-        pandas_result = hasattr(pandas_df, "sparse")
-    except Exception as e:
-        with pytest.raises(type(e)):
-            hasattr(modin_df, "sparse")
-    else:
-        modin_result = hasattr(modin_df, "sparse")
-        assert modin_result == pandas_result
+    eval_general(*create_test_dfs(data), lambda df: hasattr(df, "sparse"))

@@ -111,6 +111,11 @@ test_bool_data = {
     for i in range(NCOLS)
 }
 
+test_data_resample = {
+    "data": {"A": range(12), "B": range(12)},
+    "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
+}
+
 test_data_with_duplicates = {
     "no_duplicates": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): range(NROWS)
