@@ -99,7 +99,6 @@ _is_first_update = {}
 dask_client = None
 _NOINIT_ENGINES = {
     "Python",
-    "Cloudpython",
 }  # engines that don't require initialization, useful for unit tests
 
 
@@ -159,6 +158,11 @@ def _update_engine(publisher: Publisher):
             import modin.data_management.factories.dispatcher  # noqa: F401
 
         num_cpus = remote_ray.cluster_resources()["CPU"]
+    elif publisher.get() == "Cloudpython":
+        from modin.experimental.cloud import get_connection
+
+        get_connection().modules["modin"].set_backends("Python")
+
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
