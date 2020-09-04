@@ -549,7 +549,7 @@ def arg_keys(arg_name, keys):
     Returns:
         List of strings with arg_name append to front of keys.
     """
-    return ["{0} {1}".format(arg_name, key) for key in keys]
+    return ["{0}_{1}".format(arg_name, key) for key in keys]
 
 
 def name_contains(test_name, vals):
