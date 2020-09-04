@@ -20,12 +20,13 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
+import pandas
 
 import ray
 
 
 @ray.remote
-def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
+def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
             if isinstance(call, ray.ObjectID):
@@ -33,14 +34,18 @@ def func(df, other, apply_func, call_queue_df=None, call_queue_other=None):
             if isinstance(kwargs, ray.ObjectID):
                 kwargs = ray.get(kwargs)
             df = call(df, **kwargs)
-    if call_queue_other is not None and len(call_queue_other) > 0:
-        for call, kwargs in call_queue_other:
-            if isinstance(call, ray.ObjectID):
-                call = ray.get(call)
-            if isinstance(kwargs, ray.ObjectID):
-                kwargs = ray.get(kwargs)
-            other = call(other, **kwargs)
-    return apply_func(df, other)
+    new_others = np.empty(shape=len(others), dtype=object)
+    for i, call_queue_other in enumerate(call_queues_other):
+        other = others[i]
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, ray.ObjectID):
+                    call = ray.get(call)
+                if isinstance(kwargs, ray.ObjectID):
+                    kwargs = ray.get(kwargs)
+                other = call(other, **kwargs)
+        new_others[i] = other
+    return apply_func(df, new_others)
 
 
 class PandasOnRayFrameManager(RayFrameManager):
@@ -95,59 +100,28 @@ class PandasOnRayFrameManager(RayFrameManager):
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
-    def groupby_reduce(
-        cls, axis, partitions, by, map_func, reduce_func
-    ):  # pragma: no cover
-        map_func = ray.put(map_func)
-        by_parts = np.squeeze(by)
-        if len(by_parts.shape) == 0:
-            by_parts = np.array([by_parts.item()])
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+        def mapper(df, others):
+            other = pandas.concat(others, axis=axis ^ 1)
+            return apply_func(df, **{other_name: other})
+
+        mapper = ray.put(mapper)
         new_partitions = np.array(
             [
                 [
                     PandasOnRayFramePartition(
                         func.remote(
                             part.oid,
-                            by_parts[col_idx].oid if axis else by_parts[row_idx].oid,
-                            map_func,
+                            mapper,
                             part.call_queue,
-                            by_parts[col_idx].call_queue
+                            [obj[col_idx].call_queue for obj in right]
                             if axis
-                            else by_parts[row_idx].call_queue,
-                        )
-                    )
-                    for col_idx, part in enumerate(partitions[row_idx])
-                ]
-                for row_idx in range(len(partitions))
-            ]
-        )
-        return cls.map_axis_partitions(axis, new_partitions, reduce_func)
-
-    @classmethod
-    def broadcast_apply(cls, axis, apply_func, left, right):
-        map_func = ray.put(apply_func)
-        right_parts = np.squeeze(right)
-        if len(right_parts.shape) == 0:
-            right_parts = np.array([right_parts.item()])
-        assert (
-            len(right_parts.shape) == 1
-        ), "Invalid broadcast partitions shape {}\n{}".format(
-            right_parts.shape, [[i.get() for i in j] for j in right_parts]
-        )
-        return np.array(
-            [
-                [
-                    PandasOnRayFramePartition(
-                        func.remote(
-                            part.oid,
-                            right_parts[col_idx].oid
-                            if axis
-                            else right_parts[row_idx].oid,
-                            map_func,
-                            part.call_queue,
-                            right_parts[col_idx].call_queue
-                            if axis
-                            else right_parts[row_idx].call_queue,
+                            else [obj.call_queue for obj in right[row_idx]],
+                            *(
+                                [obj[col_idx].oid for obj in right]
+                                if axis
+                                else [obj.oid for obj in right[row_idx]]
+                            ),
                         )
                     )
                     for col_idx, part in enumerate(left[row_idx])
@@ -155,3 +129,5 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(left))
             ]
         )
+
+        return new_partitions

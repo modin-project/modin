@@ -460,11 +460,6 @@ class DataFrame(BasePandasDataset):
                 # We can just revert Series back to names because the parent is
                 # this dataframe:
                 by = [o.name if isinstance(o, Series) else o for o in by]
-
-                warnings.warn(
-                    "Multi-column groupby is a new feature. "
-                    "Please report any bugs/issues to bug_reports@modin.org."
-                )
                 by = self.__getitem__(by)._query_compiler
                 drop = True
             else:

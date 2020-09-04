@@ -76,25 +76,10 @@ class BaseFrameManager(object):
 
     @classmethod
     def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):
-        by_parts = np.squeeze(by)
-        if len(by_parts.shape) == 0:
-            by_parts = np.array([by_parts.item()])
-        [obj.drain_call_queue() for obj in by_parts]
-        new_partitions = np.array(
-            [
-                [
-                    part.add_to_apply_calls(
-                        map_func,
-                        other=by_parts[col_idx].get()
-                        if axis
-                        else by_parts[row_idx].get(),
-                    )
-                    for col_idx, part in enumerate(partitions[row_idx])
-                ]
-                for row_idx in range(len(partitions))
-            ]
+        mapped_partitions = cls.broadcast_apply(
+            axis, map_func, left=partitions, right=by, other_name="other"
         )
-        return cls.map_axis_partitions(axis, new_partitions, reduce_func)
+        return cls.map_axis_partitions(axis, mapped_partitions, reduce_func)
 
     @classmethod
     def broadcast_apply_select_indices(
@@ -167,41 +152,51 @@ class BaseFrameManager(object):
         return new_partitions
 
     @classmethod
-    def broadcast_apply(cls, axis, apply_func, left, right):
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
         """Broadcast the right partitions to left and apply a function.
 
         Note: This will often be overridden by implementations. It materializes the
             entire partitions of the right and applies them to the left through `apply`.
 
-        Args:
+        Parameters
+        ----------
             axis: The axis to apply and broadcast over.
             apply_func: The function to apply.
             left: The left partitions.
             right: The right partitions.
+            other_name: Name of key-value argument for `apply_func` that
+                obtains `right`. (optional, by default it's `"r"`)
 
-        Returns:
+        Returns
+        -------
             A new `np.array` of partition objects.
         """
-        if right.shape == (1, 1):
-            right_parts = right[0]
-        else:
-            right_parts = np.squeeze(right)
+        [obj.drain_call_queue() for row in right for obj in row]
+        new_right = np.empty(shape=right.shape[axis], dtype=object)
 
-        [obj.drain_call_queue() for obj in right_parts]
-        return np.array(
+        if axis:
+            right = right.T
+
+        for i in range(len(right)):
+            new_right[i] = pandas.concat(
+                [right[i][j].get() for j in range(len(right[i]))], axis=axis ^ 1
+            )
+        right = new_right.T if axis else new_right
+
+        new_partitions = np.array(
             [
                 [
                     part.add_to_apply_calls(
                         apply_func,
-                        r=right_parts[col_idx].get()
-                        if axis
-                        else right_parts[row_idx].get(),
+                        **{other_name: right[col_idx] if axis else right[row_idx]},
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
                 for row_idx in range(len(left))
             ]
         )
+
+        return new_partitions
 
     @classmethod
     def map_partitions(cls, partitions, map_func):
