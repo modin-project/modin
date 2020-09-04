@@ -419,18 +419,20 @@ def test_fillna_datetime_columns():
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-def test_median(axis, skipna):
+@pytest.mark.parametrize("method", ["median", "skew"])
+def test_median_skew(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: df.median(axis=axis, skipna=skipna)
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
     )
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
-def test_median_transposed(axis):
+@pytest.mark.parametrize("method", ["median", "skew"])
+def test_median_skew_transposed(axis, method):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
-        lambda df: df.median(axis=axis)
+        lambda df: getattr(df.T, method)(axis=axis)
     )
 
 
@@ -452,23 +454,27 @@ def test_median_transposed(axis):
         ),
     ],
 )
-def test_median_specific(numeric_only):
+@pytest.mark.parametrize("method", ["median", "skew"])
+def test_median_skew_specific(numeric_only, method):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
-        lambda df: df.median(numeric_only=numeric_only)
+        lambda df: getattr(df, method)(numeric_only=numeric_only)
     )
 
-    # test for issue #1953
+
+@pytest.mark.parametrize("method", ["median", "skew", "var", "std"])
+def test_median_skew_var_std_1953(method):
+    # See #1953 for details
     arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
-    modin_df = pd.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
+    data = [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
+    modin_df = pd.DataFrame(data, index=arrays)
+    pandas_df = pandas.DataFrame(data, index=arrays)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df, method)(level=0)
     )
-    pandas_df = pandas.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    modin_result = modin_df.median(level=0)
-    pandas_result = pandas_df.median(level=0)
-    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -652,57 +658,6 @@ def test_rank(data, axis, numeric_only, na_option):
 @pytest.mark.parametrize(
     "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
-def test_skew(request, data, axis, skipna, numeric_only):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.skew(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.skew(axis=axis, skipna=skipna, numeric_only=numeric_only)
-    else:
-        modin_result = modin_df.skew(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.skew(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.T.skew(axis=axis, skipna=skipna, numeric_only=numeric_only)
-    else:
-        modin_result = modin_df.T.skew(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-        df_equals(modin_result, pandas_result)
-
-    # test for issue #1953
-    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
-    modin_df = pd.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    pandas_df = pandas.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    modin_result = modin_df.skew(level=0)
-    pandas_result = pandas_df.skew(level=0)
-    df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_std(request, data, axis, skipna, numeric_only, ddof):
     modin_df = pd.DataFrame(data)
@@ -735,18 +690,6 @@ def test_std(request, data, axis, skipna, numeric_only, ddof):
             axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
         )
         df_equals(modin_result, pandas_result)
-
-    # test for issue #1953
-    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
-    modin_df = pd.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    pandas_df = pandas.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    modin_result = modin_df.std(level=0)
-    pandas_result = pandas_df.std(level=0)
-    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -796,15 +739,3 @@ def test_var(request, data, axis, skipna, numeric_only, ddof):
         modin_result = modin_df.T.var(
             axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
         )
-
-    # test for issue #1953
-    arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
-    modin_df = pd.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    pandas_df = pandas.DataFrame(
-        [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
-    )
-    modin_result = modin_df.var(level=0)
-    pandas_result = pandas_df.var(level=0)
-    df_equals(modin_result, pandas_result)
