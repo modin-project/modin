@@ -72,23 +72,6 @@ def test_asfreq():
         df.asfreq(freq="30S")
 
 
-def test_asof():
-    df = pd.DataFrame(
-        {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]},
-        index=pd.DatetimeIndex(
-            [
-                "2018-02-27 09:01:00",
-                "2018-02-27 09:02:00",
-                "2018-02-27 09:03:00",
-                "2018-02-27 09:04:00",
-                "2018-02-27 09:05:00",
-            ]
-        ),
-    )
-    with pytest.warns(UserWarning):
-        df.asof(pd.DatetimeIndex(["2018-02-27 09:03:30", "2018-02-27 09:04:30"]))
-
-
 def test_assign():
     data = test_data_values[0]
     modin_df = pd.DataFrame(data)

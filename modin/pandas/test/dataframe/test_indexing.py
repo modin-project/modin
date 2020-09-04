@@ -20,6 +20,7 @@ import modin.pandas as pd
 import sys
 
 from modin.pandas.test.utils import (
+    NROWS,
     RAND_LOW,
     RAND_HIGH,
     df_equals,
@@ -39,6 +40,93 @@ pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+@pytest.mark.parametrize(
+    "dates",
+    [
+        ["2018-02-27 09:03:30", "2018-02-27 09:04:30"],
+        ["2018-02-27 09:03:00", "2018-02-27 09:05:00"],
+    ],
+)
+@pytest.mark.parametrize("subset", ["a", "b", ["a", "b"], None])
+def test_asof_with_nan(dates, subset):
+    data = {"a": [10, 20, 30, 40, 50], "b": [None, None, None, None, 500]}
+    index = pd.DatetimeIndex(
+        [
+            "2018-02-27 09:01:00",
+            "2018-02-27 09:02:00",
+            "2018-02-27 09:03:00",
+            "2018-02-27 09:04:00",
+            "2018-02-27 09:05:00",
+        ]
+    )
+    modin_where = pd.DatetimeIndex(dates)
+    pandas_where = pandas.DatetimeIndex(dates)
+    compare_asof(data, index, modin_where, pandas_where, subset)
+
+
+@pytest.mark.parametrize(
+    "dates",
+    [
+        ["2018-02-27 09:03:30", "2018-02-27 09:04:30"],
+        ["2018-02-27 09:03:00", "2018-02-27 09:05:00"],
+    ],
+)
+@pytest.mark.parametrize("subset", ["a", "b", ["a", "b"], None])
+def test_asof_without_nan(dates, subset):
+    data = {"a": [10, 20, 30, 40, 50], "b": [70, 600, 30, -200, 500]}
+    index = pd.DatetimeIndex(
+        [
+            "2018-02-27 09:01:00",
+            "2018-02-27 09:02:00",
+            "2018-02-27 09:03:00",
+            "2018-02-27 09:04:00",
+            "2018-02-27 09:05:00",
+        ]
+    )
+    modin_where = pd.DatetimeIndex(dates)
+    pandas_where = pandas.DatetimeIndex(dates)
+    compare_asof(data, index, modin_where, pandas_where, subset)
+
+
+@pytest.mark.parametrize(
+    "lookup",
+    [
+        [60, 70, 90],
+        [60.5, 70.5, 100],
+    ],
+)
+@pytest.mark.parametrize("subset", ["col2", "col1", ["col1", "col2"], None])
+def test_asof_large(lookup, subset):
+    data = test_data["float_nan_data"]
+    index = list(range(NROWS))
+    modin_where = pd.Index(lookup)
+    pandas_where = pandas.Index(lookup)
+    compare_asof(data, index, modin_where, pandas_where, subset)
+
+
+def compare_asof(
+    data, index, modin_where: pd.Index, pandas_where: pandas.Index, subset
+):
+    modin_df = pd.DataFrame(data, index=index)
+    pandas_df = pandas.DataFrame(data, index=index)
+    df_equals(
+        modin_df.asof(modin_where, subset=subset),
+        pandas_df.asof(pandas_where, subset=subset),
+    )
+    df_equals(
+        modin_df.asof(modin_where.values, subset=subset),
+        pandas_df.asof(pandas_where.values, subset=subset),
+    )
+    df_equals(
+        modin_df.asof(list(modin_where.values), subset=subset),
+        pandas_df.asof(list(pandas_where.values), subset=subset),
+    )
+    df_equals(
+        modin_df.asof(modin_where.values[0], subset=subset),
+        pandas_df.asof(pandas_where.values[0], subset=subset),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
