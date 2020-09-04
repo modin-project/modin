@@ -53,7 +53,7 @@ matplotlib.use("Agg")
 def test_cumprod_cummin_cummax_cumsum(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna),
     )
 
 
@@ -62,7 +62,7 @@ def test_cumprod_cummin_cummax_cumsum(axis, skipna, method):
 def test_cumprod_cummin_cummax_cumsum_transposed(axis, method):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
-        lambda df: getattr(df.T, method)(axis=axis)
+        lambda df: getattr(df.T, method)(axis=axis),
     )
 
 
@@ -70,10 +70,7 @@ def test_cumprod_cummin_cummax_cumsum_transposed(axis, method):
 @pytest.mark.parametrize("method", ["cummin", "cummax"])
 def test_cummin_cummax_int_and_float(axis, method):
     data = {"col1": list(range(1000)), "col2": [i * 0.1 for i in range(1000)]}
-    eval_general(
-        *create_test_dfs(data),
-        lambda df: getattr(df, method)(axis=axis)
-    )
+    eval_general(*create_test_dfs(data), lambda df: getattr(df, method)(axis=axis))
 
 
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -85,6 +82,7 @@ def test_diff(axis, periods):
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.diff(axis=axis, periods=periods),
     )
+
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 def test_diff_transposed(axis):
@@ -423,7 +421,7 @@ def test_fillna_datetime_columns():
 def test_median_skew(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna),
     )
 
 
@@ -432,7 +430,7 @@ def test_median_skew(axis, skipna, method):
 def test_median_skew_transposed(axis, method):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
-        lambda df: getattr(df.T, method)(axis=axis)
+        lambda df: getattr(df.T, method)(axis=axis),
     )
 
 
@@ -454,27 +452,23 @@ def test_median_skew_transposed(axis, method):
         ),
     ],
 )
-@pytest.mark.parametrize("method", ["median", "skew", "std", "var"])
-def test_median_skew_specific(numeric_only, method):
+@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank"])
+def test_median_skew_std_var_rank_specific(numeric_only, method):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
-        lambda df: getattr(df, method)(numeric_only=numeric_only)
+        lambda df: getattr(df, method)(numeric_only=numeric_only),
     )
 
 
-@pytest.mark.parametrize("method", ["median", "skew", "var", "std"])
-def test_median_skew_var_std_1953(method):
+@pytest.mark.parametrize("method", ["median", "skew", "std", "var"])
+def test_median_skew_std_var_1953(method):
     # See #1953 for details
     arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
     data = [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
     modin_df = pd.DataFrame(data, index=arrays)
     pandas_df = pandas.DataFrame(data, index=arrays)
 
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: getattr(df, method)(level=0)
-    )
+    eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -624,41 +618,26 @@ def test_quantile(request, data, q):
             modin_df.T.quantile(q)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize(
     "na_option", ["keep", "top", "bottom"], ids=["keep", "top", "bottom"]
 )
-def test_rank(data, axis, numeric_only, na_option):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.rank(
-            axis=axis, numeric_only=numeric_only, na_option=na_option
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.rank(axis=axis, numeric_only=numeric_only, na_option=na_option)
-    else:
-        modin_result = modin_df.rank(
-            axis=axis, numeric_only=numeric_only, na_option=na_option
-        )
-        df_equals(modin_result, pandas_result)
+def test_rank_transposed(axis, na_option):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.rank(axis=axis, na_option=na_option),
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize("method", ["str", "var"])
-def test_std_var(axis, skipna, method):
+@pytest.mark.parametrize("method", ["str", "var", "rank"])
+def test_std_var_rank(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna),
     )
 
 
@@ -668,7 +647,7 @@ def test_std_var(axis, skipna, method):
 def test_std_var_transposed(axis, ddof, method):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
-        lambda df: getattr(df.T, method)(axis=axis, ddof=ddof)
+        lambda df: getattr(df.T, method)(axis=axis, ddof=ddof),
     )
 
 
