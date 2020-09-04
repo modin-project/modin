@@ -31,6 +31,7 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
+    eval_general,
 )
 
 from modin import execution_engine
@@ -57,6 +58,26 @@ TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
 TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
+
+
+def eval_io(path, fn_name, comparator=df_equals, cast_to_str=False, *args, **kwargs):
+    def applyier(module, *args, **kwargs):
+        result = getattr(module, fn_name)(*args, **kwargs)
+        # There could be some missmatches in dtypes, so we're
+        # casting the whole frame to `str` before comparison.
+        # See issue #1931 for details.
+        if cast_to_str:
+            result = result.astype(str)
+        return result
+
+    eval_general(
+        pd,
+        pandas,
+        applyier,
+        path=path,
+        *args,
+        **kwargs,
+    )
 
 
 @pytest.fixture
@@ -728,31 +749,34 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv(make_csv_file):
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv(make_csv_file, nrows):
     make_csv_file()
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
 
     df_equals(modin_df, pandas_df)
 
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME))
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME))
+    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
+    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
 
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_sep_none(make_csv_file):
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
 
     with pytest.warns(ParserWarning):
-        pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None)
+        pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None, nrows=nrows)
     with pytest.warns(ParserWarning):
-        modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None)
+        modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None, nrows=nrows)
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_bad_quotes():
+@pytest.mark.parametrize("nrows", [2, None])
+def test_from_csv_bad_quotes(nrows):
     csv_bad_quotes = """1, 2, 3, 4
 one, two, three, four
 five, "six", seven, "eight
@@ -761,13 +785,14 @@ five, "six", seven, "eight
     with open(TEST_CSV_FILENAME, "w") as f:
         f.write(csv_bad_quotes)
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME)
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
 
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_quote_none():
+@pytest.mark.parametrize("nrows", [2, None])
+def test_from_csv_quote_none(nrows):
     csv_bad_quotes = """1, 2, 3, 4
 one, two, three, four
 five, "six", seven, "eight
@@ -775,8 +800,8 @@ five, "six", seven, "eight
     with open(TEST_CSV_FILENAME, "w") as f:
         f.write(csv_bad_quotes)
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE)
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE, nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE, nrows=nrows)
 
     df_equals(modin_df, pandas_df)
 
@@ -1058,26 +1083,33 @@ def test_from_csv_chunksize(make_csv_file):
     df_equals(modin_df, pd_df)
 
 
-def test_from_csv_skiprows(make_csv_file):
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv_skiprows(make_csv_file, nrows):
     make_csv_file()
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2)
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
     df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
     )
     modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2
+        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
     )
     df_equals(modin_df, pandas_df)
 
     pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=lambda x: x % 2
+        TEST_CSV_FILENAME,
+        names=["c1", "c2", "c3", "c4"],
+        skiprows=lambda x: x % 2,
+        nrows=nrows,
     )
     modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=lambda x: x % 2
+        TEST_CSV_FILENAME,
+        names=["c1", "c2", "c3", "c4"],
+        skiprows=lambda x: x % 2,
+        nrows=nrows,
     )
     df_equals(modin_df, pandas_df)
 
@@ -1098,10 +1130,6 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
     make_csv_file()
 
     with pytest.warns(UserWarning):
-        # Test nrows
-        pd.read_csv(TEST_CSV_FILENAME, nrows=10)
-
-    with pytest.warns(UserWarning):
         # This tests that we default to pandas on a buffer
         from io import StringIO
 
@@ -1111,11 +1139,12 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
 
 
-def test_from_csv_index_col(make_csv_file):
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv_index_col(make_csv_file, nrows):
     make_csv_file()
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1")
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1")
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
     df_equals(modin_df, pandas_df)
 
 
@@ -1142,10 +1171,16 @@ def test_from_csv_parse_dates(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_newlines_in_quotes():
-    pandas_df = pandas.read_csv("modin/pandas/test/data/newlines.csv")
-    modin_df = pd.read_csv("modin/pandas/test/data/newlines.csv")
-    df_equals(modin_df, pandas_df)
+@pytest.mark.parametrize("nrows", [21, 5, None])
+@pytest.mark.parametrize("skiprows", [4, 1, 500, None])
+def test_from_csv_newlines_in_quotes(nrows, skiprows):
+    eval_io(
+        path="modin/pandas/test/data/newlines.csv",
+        fn_name="read_csv",
+        nrows=nrows,
+        skiprows=skiprows,
+        cast_to_str=True,
+    )
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
@@ -1537,15 +1572,20 @@ def test_fwf_file_chunksize():
     df_equals(modin_df, pd_df)
 
 
-def test_fwf_file_skiprows():
+@pytest.mark.parametrize("nrows", [13, None])
+def test_fwf_file_skiprows(nrows):
     setup_fwf_file(overwrite=True)
 
-    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, skiprows=2)
-    modin_df = pd.read_fwf(TEST_FWF_FILENAME, skiprows=2)
+    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, skiprows=2, nrows=nrows)
+    modin_df = pd.read_fwf(TEST_FWF_FILENAME, skiprows=2, nrows=nrows)
     df_equals(modin_df, pandas_df)
 
-    pandas_df = pandas.read_fwf(TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5])
-    modin_df = pd.read_fwf(TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5])
+    pandas_df = pandas.read_fwf(
+        TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5], nrows=nrows
+    )
+    modin_df = pd.read_fwf(
+        TEST_FWF_FILENAME, usecols=[0, 4, 7], skiprows=[2, 5], nrows=nrows
+    )
     df_equals(modin_df, pandas_df)
 
 
