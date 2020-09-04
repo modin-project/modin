@@ -15,7 +15,6 @@ import os
 import numpy as np
 from numpy import nan
 import pandas
-from pandas.api.types import is_scalar
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
 from pandas.core.dtypes.common import (
@@ -33,7 +32,7 @@ import warnings
 import pickle as pkl
 
 from modin.error_message import ErrorMessage
-from modin.pandas.utils import try_cast_to_pandas
+from modin.pandas.utils import try_cast_to_pandas, is_scalar
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.

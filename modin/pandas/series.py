@@ -20,7 +20,6 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
-    is_scalar,
 )
 import sys
 import warnings
@@ -28,7 +27,7 @@ import warnings
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
 from .utils import _inherit_docstrings
-from .utils import from_pandas, to_pandas
+from .utils import from_pandas, to_pandas, is_scalar
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     # Python >= 3.7

@@ -13,12 +13,13 @@
 
 import numpy as np
 import pandas
-from pandas.api.types import is_scalar, is_list_like, is_bool
+from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer
 from pandas.core.indexing import IndexingError
 
 from .dataframe import DataFrame
 from .series import Series
+from .utils import is_scalar
 
 """Indexing Helper Class works as follows:
 
