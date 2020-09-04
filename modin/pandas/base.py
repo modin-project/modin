@@ -625,7 +625,29 @@ class BasePandasDataset(object):
         )
 
     def asof(self, where, subset=None):
-        return self._default_to_pandas("asof", where, subset=subset)
+        scalar = not is_list_like(where)
+        if isinstance(where, pandas.Index):
+            # Prevent accidental mutation of original:
+            where = where.copy()
+        else:
+            if scalar:
+                where = [where]
+            where = pandas.Index(where)
+
+        if subset is None:
+            data = self
+        else:
+            # Only relevant for DataFrames:
+            data = self[subset]
+        no_na_index = data.dropna().index
+        new_index = pandas.Index([no_na_index.asof(i) for i in where])
+        result = self.reindex(new_index)
+        result.index = where
+
+        if scalar:
+            # Need to return a Series:
+            result = result.squeeze()
+        return result
 
     def astype(self, dtype, copy=True, errors="raise"):
         col_dtypes = {}
