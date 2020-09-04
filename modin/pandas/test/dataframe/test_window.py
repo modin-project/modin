@@ -33,6 +33,10 @@ from modin.pandas.test.utils import (
     bool_arg_values,
     int_arg_keys,
     int_arg_values,
+    test_data,
+    eval_general,
+    create_test_dfs,
+    test_data_diff_dtype,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -41,174 +45,53 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-def test_cummax(request, data, axis, skipna):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.cummax(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.cummax(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.cummax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.cummax(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.T.cummax(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.T.cummax(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
+@pytest.mark.parametrize("method", ["cumprod", "cummin", "cummax", "cumsum"])
+def test_cumprod_cummin_cummax_cumsum(axis, skipna, method):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
+    )
 
 
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-def test_cummax_int_and_float(axis):
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+@pytest.mark.parametrize("method", ["cumprod", "cummin", "cummax", "cumsum"])
+def test_cumprod_cummin_cummax_cumsum_transposed(axis, method):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: getattr(df.T, method)(axis=axis)
+    )
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("method", ["cummin", "cummax"])
+def test_cummin_cummax_int_and_float(axis, method):
     data = {"col1": list(range(1000)), "col2": [i * 0.1 for i in range(1000)]}
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    df_equals(modin_df.cummax(axis=axis), pandas_df.cummax(axis=axis))
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: getattr(df, method)(axis=axis)
+    )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-def test_cummin(request, data, axis, skipna):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.cummin(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.cummin(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.cummin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.cummin(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.T.cummin(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.T.cummin(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-def test_cummin_int_and_float(axis):
-    data = {"col1": list(range(1000)), "col2": [i * 0.1 for i in range(1000)]}
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    df_equals(modin_df.cummin(axis=axis), pandas_df.cummin(axis=axis))
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-def test_cumprod(request, data, axis, skipna):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.cumprod(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.cumprod(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.cumprod(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.cumprod(axis=axis, skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.T.cumprod(axis=axis, skipna=skipna)
-    else:
-        modin_result = modin_df.T.cumprod(axis=axis, skipna=skipna)
-        df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-def test_cumsum(request, data, axis, skipna):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    # pandas exhibits weird behavior for this case
-    # Remove this case when we can pull the error messages from backend
-    if name_contains(request.node.name, ["datetime_timedelta_data"]) and (
-        axis == 0 or axis == "rows"
-    ):
-        with pytest.raises(TypeError):
-            modin_df.cumsum(axis=axis, skipna=skipna)
-    else:
-        try:
-            pandas_result = pandas_df.cumsum(axis=axis, skipna=skipna)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.cumsum(axis=axis, skipna=skipna)
-        else:
-            modin_result = modin_df.cumsum(axis=axis, skipna=skipna)
-            df_equals(modin_result, pandas_result)
-
-    if name_contains(request.node.name, ["datetime_timedelta_data"]) and (
-        axis == 0 or axis == "rows"
-    ):
-        with pytest.raises(TypeError):
-            modin_df.T.cumsum(axis=axis, skipna=skipna)
-    else:
-        try:
-            pandas_result = pandas_df.T.cumsum(axis=axis, skipna=skipna)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.cumsum(axis=axis, skipna=skipna)
-        else:
-            modin_result = modin_df.T.cumsum(axis=axis, skipna=skipna)
-            df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "periods", int_arg_values, ids=arg_keys("periods", int_arg_keys)
 )
-def test_diff(request, data, axis, periods):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+def test_diff(axis, periods):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.diff(axis=axis, periods=periods),
+    )
 
-    try:
-        pandas_result = pandas_df.diff(axis=axis, periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.diff(axis=axis, periods=periods)
-    else:
-        modin_result = modin_df.diff(axis=axis, periods=periods)
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.diff(axis=axis, periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.T.diff(axis=axis, periods=periods)
-    else:
-        modin_result = modin_df.T.diff(axis=axis, periods=periods)
-        df_equals(modin_result, pandas_result)
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+def test_diff_transposed(axis):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.T.diff(axis=axis),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -532,43 +415,48 @@ def test_fillna_datetime_columns():
     df_equals(modin_df.fillna("?"), df.fillna("?"))
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
+def test_median(axis, skipna):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.median(axis=axis, skipna=skipna)
+    )
+
+
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+def test_median_transposed(axis):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.median(axis=axis)
+    )
+
+
 @pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
+    "numeric_only",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="Internal and external indices do not match."
+            ),
+        ),
+        False,
+        pytest.param(
+            None,
+            marks=pytest.mark.xfail(
+                reason="Internal and external indices do not match."
+            ),
+        ),
+    ],
 )
-def test_median(request, data, axis, skipna, numeric_only):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.median(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.median(axis=axis, skipna=skipna, numeric_only=numeric_only)
-    else:
-        modin_result = modin_df.median(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.median(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.T.median(axis=axis, skipna=skipna, numeric_only=numeric_only)
-    else:
-        modin_result = modin_df.T.median(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        )
-        df_equals(modin_result, pandas_result)
+def test_median_specific(numeric_only):
+    eval_general(
+        *create_test_dfs(test_data_diff_dtype),
+        lambda df: df.median(numeric_only=numeric_only)
+    )
 
     # test for issue #1953
     arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
