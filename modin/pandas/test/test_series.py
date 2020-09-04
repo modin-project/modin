@@ -172,13 +172,16 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(vals):
+def create_test_series(vals, sort=False):
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))])
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
     else:
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
+    if sort:
+        modin_series = modin_series.sort_values().reset_index(drop=True)
+        pandas_series = pandas_series.sort_values().reset_index(drop=True)
     return modin_series, pandas_series
 
 
@@ -2633,11 +2636,69 @@ def test_sample(data):
         modin_series.sample(n=-3)
 
 
+@pytest.mark.parametrize("single_value_data", [True, False])
+@pytest.mark.parametrize("use_multiindex", [True, False])
+@pytest.mark.parametrize("sorter", [True, None])
+@pytest.mark.parametrize("values_number", [1, 2, 5])
+@pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_searchsorted(data):
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_series.searchsorted(3)
+def test_searchsorted(
+    data, side, values_number, sorter, use_multiindex, single_value_data
+):
+    data = data if not single_value_data else data[next(iter(data.keys()))][0]
+    if not sorter:
+        modin_series, pandas_series = create_test_series(vals=data, sort=True)
+    else:
+        modin_series, pandas_series = create_test_series(vals=data)
+        sorter = np.argsort(list(modin_series))
+
+    if use_multiindex:
+        rows_number = len(modin_series.index)
+        level_0_series = random_state.choice([0, 1], rows_number)
+        level_1_series = random_state.choice([2, 3], rows_number)
+        index_series = pd.MultiIndex.from_arrays(
+            [level_0_series, level_1_series], names=["first", "second"]
+        )
+        modin_series.index = index_series
+        pandas_series.index = index_series
+
+    min_sample = modin_series.min(skipna=True)
+    max_sample = modin_series.max(skipna=True)
+
+    if single_value_data:
+        values = [data]
+    else:
+        values = []
+        values.append(pandas_series.sample(n=values_number, random_state=random_state))
+        values.append(
+            random_state.uniform(low=min_sample, high=max_sample, size=values_number)
+        )
+        values.append(
+            random_state.uniform(
+                low=max_sample, high=2 * max_sample, size=values_number
+            )
+        )
+        values.append(
+            random_state.uniform(
+                low=min_sample - max_sample, high=min_sample, size=values_number
+            )
+        )
+        pure_float = random_state.uniform(float(min_sample), float(max_sample))
+        pure_int = int(pure_float)
+        values.append(pure_float)
+        values.append(pure_int)
+
+    test_cases = [
+        modin_series.searchsorted(value=value, side=side, sorter=sorter)
+        == pandas_series.searchsorted(value=value, side=side, sorter=sorter)
+        for value in values
+    ]
+    test_cases = [
+        case.all() if not isinstance(case, bool) else case for case in test_cases
+    ]
+
+    for case in test_cases:
+        assert case
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
