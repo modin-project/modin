@@ -15,6 +15,7 @@ from modin.engines.base.io.text.text_file_reader import TextFileReader
 from modin.data_management.utils import compute_chunksize
 from pandas.io.parsers import _validate_usecols_arg
 import pandas
+import csv
 import sys
 
 
@@ -54,9 +55,7 @@ class CSVReader(TextFileReader):
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
-        # TODO: replace this by reading lines from file.
-        if kwargs.get("nrows") is not None:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+        nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
         if names is None:
@@ -97,6 +96,7 @@ class CSVReader(TextFileReader):
         quotechar = kwargs.get("quotechar", '"').encode(
             encoding if encoding is not None else "UTF-8"
         )
+        is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -110,24 +110,24 @@ class CSVReader(TextFileReader):
                     skiprows += header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
                     skiprows += max(header) + 1
-                for _ in range(skiprows):
-                    f.readline()
+                cls.offset(
+                    f,
+                    nrows=skiprows,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
             partition_ids = []
             index_ids = []
             dtypes_ids = []
-            total_bytes = cls.file_size(f)
             # Max number of partitions available
             from modin.pandas import DEFAULT_NPARTITIONS
 
             num_partitions = DEFAULT_NPARTITIONS
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_partitions)
-            # This is the chunksize each partition will read
-            chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
-
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):
@@ -145,15 +145,22 @@ class CSVReader(TextFileReader):
                     for i in range(num_splits)
                 ]
 
-            while f.tell() < total_bytes:
-                args = {
-                    "fname": filepath_or_buffer,
-                    "num_splits": num_splits,
-                    **partition_kwargs,
-                }
-                partition_id = cls.call_deploy(
-                    f, chunk_size, num_splits + 2, args, quotechar=quotechar
-                )
+            args = {
+                "fname": filepath_or_buffer,
+                "num_splits": num_splits,
+                **partition_kwargs,
+            }
+
+            splits = cls.partitioned_file(
+                f,
+                nrows=nrows,
+                num_partitions=num_partitions,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+            for start, end in splits:
+                args.update({"start": start, "end": end})
+                partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])
