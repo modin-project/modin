@@ -17,13 +17,12 @@ import matplotlib
 import modin.pandas as pd
 
 from modin.pandas.test.utils import (
-    random_state,
-    RAND_LOW,
-    RAND_HIGH,
     df_equals,
     test_data_values,
     test_data_keys,
     eval_general,
+    test_data,
+    create_test_dfs,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -32,204 +31,108 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
-def inter_df_math_helper(modin_df, pandas_df, op):
-    # Test dataframe to dataframe
-    try:
-        pandas_result = getattr(pandas_df, op)(pandas_df)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(modin_df)
-    else:
-        modin_result = getattr(modin_df, op)(modin_df)
-        df_equals(modin_result, pandas_result)
+@pytest.mark.parametrize(
+    "other",
+    [
+        lambda df: 4,
+        lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
+    ],
+    ids=["scalar", "series_or_list"],
+)
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+@pytest.mark.parametrize(
+    "op",
+    [
+        *("add", "radd", "sub", "rsub", "mod", "rmod", "pow", "rpow"),
+        *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
+    ],
+)
+def test_math_functions(other, axis, op):
+    data = test_data["float_nan_data"]
+    if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
+        # lambda == "series_or_list"
+        pytest.xfail(reason="different behaviour")
 
-    # Test dataframe to int
-    try:
-        pandas_result = getattr(pandas_df, op)(4)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(4)
-    else:
-        modin_result = getattr(modin_df, op)(4)
-        df_equals(modin_result, pandas_result)
+    if op == "rmod" and axis == "rows":
+        # lambda == "series_or_list"
+        pytest.xfail(reason="different behaviour")
 
-    # Test dataframe to float
-    try:
-        pandas_result = getattr(pandas_df, op)(4.0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(4.0)
-    else:
-        modin_result = getattr(modin_df, op)(4.0)
-        df_equals(modin_result, pandas_result)
-
-    # Test transposed dataframes to float
-    try:
-        pandas_result = getattr(pandas_df.T, op)(4.0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df.T, op)(4.0)
-    else:
-        modin_result = getattr(modin_df.T, op)(4.0)
-        df_equals(modin_result, pandas_result)
-
-    frame_data = {
-        "{}_other".format(modin_df.columns[0]): [0, 2],
-        modin_df.columns[0]: [0, 19],
-        modin_df.columns[1]: [1, 1],
-    }
-    modin_df2 = pd.DataFrame(frame_data)
-    pandas_df2 = pandas.DataFrame(frame_data)
-
-    # Test dataframe to different dataframe shape
-    try:
-        pandas_result = getattr(pandas_df, op)(pandas_df2)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(modin_df2)
-    else:
-        modin_result = getattr(modin_df, op)(modin_df2)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe fill value
-    try:
-        pandas_result = getattr(pandas_df, op)(pandas_df2, fill_value=0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(modin_df2, fill_value=0)
-    else:
-        modin_result = getattr(modin_df, op)(modin_df2, fill_value=0)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to list
-    list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_df.shape[1]))
-    try:
-        pandas_result = getattr(pandas_df, op)(list_test, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(list_test, axis=1)
-    else:
-        modin_result = getattr(modin_df, op)(list_test, axis=1)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to series axis=0
-    series_test_modin = modin_df[modin_df.columns[0]]
-    series_test_pandas = pandas_df[pandas_df.columns[0]]
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=0)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to series axis=1
-    series_test_modin = modin_df.iloc[0]
-    series_test_pandas = pandas_df.iloc[0]
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=1)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=1)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to list axis=1
-    series_test_modin = series_test_pandas = list(pandas_df.iloc[0])
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=1)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=1)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to list axis=0
-    series_test_modin = series_test_pandas = list(pandas_df[pandas_df.columns[0]])
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=0)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to series missing values
-    series_test_modin = modin_df.iloc[0, :-2]
-    series_test_pandas = pandas_df.iloc[0, :-2]
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=1)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=1)
-        df_equals(modin_result, pandas_result)
-
-    # Test dataframe to series with different index
-    series_test_modin = modin_df[modin_df.columns[0]].reset_index(drop=True)
-    series_test_pandas = pandas_df[pandas_df.columns[0]].reset_index(drop=True)
-    try:
-        pandas_result = getattr(pandas_df, op)(series_test_pandas, axis=0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(series_test_modin, axis=0)
-    else:
-        modin_result = getattr(modin_df, op)(series_test_modin, axis=0)
-        df_equals(modin_result, pandas_result)
-
-    # Level test
-    new_idx = pandas.MultiIndex.from_tuples(
-        [(i // 4, i // 2, i) for i in modin_df.index]
+    eval_general(
+        *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
     )
-    modin_df_multi_level = modin_df.copy()
-    modin_df_multi_level.index = new_idx
-    # Defaults to pandas
-    with pytest.warns(UserWarning):
-        # Operation against self for sanity check
-        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 
 
 @pytest.mark.parametrize(
-    "function",
+    "other",
+    [lambda df: df[: -(2 ** 4)], lambda df: df[df.columns[0]].reset_index(drop=True)],
+    ids=["check_missing_value", "check_different_index"],
+)
+@pytest.mark.parametrize("fill_value", [None, 3.0])
+@pytest.mark.parametrize(
+    "op",
     [
-        "add",
-        "div",
-        "divide",
-        "floordiv",
-        "mod",
-        "mul",
-        "multiply",
-        "pow",
-        "sub",
-        "subtract",
-        "truediv",
-        "__div__",
-        "__add__",
-        "__radd__",
-        "__mul__",
-        "__rmul__",
-        "__pow__",
-        "__rpow__",
-        "__sub__",
-        "__floordiv__",
-        "__rfloordiv__",
-        "__truediv__",
-        "__rtruediv__",
-        "__mod__",
-        "__rmod__",
-        "__rdiv__",
+        *("add", "radd", "sub", "rsub", "mod", "rmod", "pow", "rpow"),
+        *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_math_functions(data, function):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_helper(modin_df, pandas_df, function)
+def test_math_functions_fill_value(other, fill_value, op):
+    data = test_data["int_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+    )
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        *("add", "radd", "sub", "rsub", "mod", "rmod", "pow", "rpow"),
+        *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
+    ],
+)
+def test_math_functions_level(op):
+    modin_df = pd.DataFrame(test_data["int_data"])
+    modin_df.index = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.index]
+    )
+
+    # Defaults to pandas
+    with pytest.warns(UserWarning):
+        # Operation against self for sanity check
+        getattr(modin_df, op)(modin_df, axis=0, level=1)
+
+
+@pytest.mark.parametrize(
+    "math_op, alias",
+    [
+        ("truediv", "divide"),
+        ("truediv", "div"),
+        ("rtruediv", "rdiv"),
+        ("mul", "multiply"),
+        ("sub", "subtract"),
+        ("add", "__add__"),
+        ("radd", "__radd__"),
+        ("div", "__div__"),
+        ("rdiv", "__rdiv__"),
+        ("truediv", "__truediv__"),
+        ("rtruediv", "__rtruediv__"),
+        ("floordiv", "__floordiv__"),
+        ("rfloordiv", "__rfloordiv__"),
+        ("mod", "__mod__"),
+        ("rmod", "__rmod__"),
+        ("mul", "__mul__"),
+        ("rmul", "__rmul__"),
+        ("pow", "__pow__"),
+        ("rpow", "__rpow__"),
+        ("sub", "__sub__"),
+        ("rsub", "__rsub__"),
+    ],
+)
+def test_math_alias(math_op, alias):
+    assert getattr(pd.DataFrame, math_op) == getattr(pd.DataFrame, alias)
 
 
 @pytest.mark.parametrize("other", ["as_left", 4, 4.0, "a"])
@@ -262,104 +165,6 @@ def test_multi_level_comparison(data, op):
     with pytest.warns(UserWarning):
         # Operation against self for sanity check
         getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
-
-
-# Test dataframe right operations
-def inter_df_math_right_ops_helper(modin_df, pandas_df, op):
-    try:
-        pandas_result = getattr(pandas_df, op)(4)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(4)
-    else:
-        modin_result = getattr(modin_df, op)(4)
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = getattr(pandas_df, op)(4.0)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            getattr(modin_df, op)(4.0)
-    else:
-        modin_result = getattr(modin_df, op)(4.0)
-        df_equals(modin_result, pandas_result)
-
-    new_idx = pandas.MultiIndex.from_tuples(
-        [(i // 4, i // 2, i) for i in modin_df.index]
-    )
-    modin_df_multi_level = modin_df.copy()
-    modin_df_multi_level.index = new_idx
-
-    # Defaults to pandas
-    with pytest.warns(UserWarning):
-        # Operation against self for sanity check
-        getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_radd(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "radd")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rdiv(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rdiv")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rfloordiv(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rfloordiv")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rmod(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rmod")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rmul(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rmul")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rpow(request, data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rpow")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rsub(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rsub")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_rtruediv(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "rtruediv")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___rsub__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    inter_df_math_right_ops_helper(modin_df, pandas_df, "__rsub__")
-
-
-# END test dataframe right operations
 
 
 def test_equals():
