@@ -17,6 +17,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_scalar,
 )
 from pandas.core.base import DataError
 
@@ -1266,6 +1267,94 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
+
+    def searchsorted(self, **kwargs):
+        """
+        Return a QueryCompiler with value/values indicies, which they should be inserted
+        to maintain order of the passed Series.
+
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+
+        def map_func(part, *args, **kwargs):
+
+            elements_number = len(part.index)
+            assert elements_number > 0, "Wrong mapping behaviour of MapReduce"
+
+            # unify value type
+            value = kwargs.pop("value")
+            value = np.array([value]) if is_scalar(value) else value
+
+            if elements_number == 1:
+                part = part[part.columns[0]]
+            else:
+                part = part.squeeze()
+
+            part_index_start = part.index.start
+            part_index_stop = part.index.stop
+
+            result = part.searchsorted(value=value, *args, **kwargs)
+
+            processed_results = {}
+            value_number = 0
+            for value_result in result:
+                value_result += part_index_start
+
+                if value_result > part_index_start and value_result < part_index_stop:
+                    processed_results[f"value{value_number}"] = {
+                        "relative_location": "current_partition",
+                        "index": value_result,
+                    }
+                elif value_result <= part_index_start:
+                    processed_results[f"value{value_number}"] = {
+                        "relative_location": "previoius_partitions",
+                        "index": part_index_start,
+                    }
+                else:
+                    processed_results[f"value{value_number}"] = {
+                        "relative_location": "next_partitions",
+                        "index": part_index_stop,
+                    }
+
+                value_number += 1
+
+            return pandas.DataFrame(processed_results)
+
+        def reduce_func(map_results, *args, **kwargs):
+            def get_value_index(value_result):
+                value_result_grouped = value_result.groupby(level=0)
+                rel_location = value_result_grouped.get_group("relative_location")
+                ind = value_result_grouped.get_group("index")
+                # executes if result is inside of the mapped part
+                if "current_partition" in rel_location.values:
+                    assert (
+                        rel_location[rel_location == "current_partition"].count() == 1
+                    ), "Each value should have single result"
+                    return ind[rel_location.values == "current_partition"]
+                # executes if result is between mapped parts
+                elif rel_location.nunique(dropna=False) > 1:
+                    return ind[rel_location.values == "previoius_partitions"][0]
+                # executes if result is outside of the mapped part
+                else:
+                    if "next_partitions" in rel_location.values:
+                        return ind[-1]
+                    else:
+                        return ind[0]
+
+            map_results_parsed = map_results.apply(
+                lambda ser: get_value_index(ser)
+            ).squeeze()
+
+            if isinstance(map_results_parsed, pandas.Series):
+                map_results_parsed = map_results_parsed.to_list()
+
+            return pandas.Series(map_results_parsed)
+
+        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
+            self, **kwargs
+        )
 
     # Dt map partitions operations
 

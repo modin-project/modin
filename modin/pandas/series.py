@@ -1595,9 +1595,58 @@ class Series(BasePandasDataset):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def searchsorted(self, value, side="left", sorter=None):
-        return self._default_to_pandas(
-            pandas.Series.searchsorted, value, side=side, sorter=sorter
-        )
+        """
+        Find indices where elements should be inserted to maintain order.
+
+        Find the indices into a sorted Series self such that, if the
+        corresponding elements in value were inserted before the indices,
+        the order of self would be preserved.
+
+        Parameters
+        ----------
+        value: array_like
+            Values to insert into self.
+        side: {"left", "right"}, optional
+            If "left", the index of the first suitable location found is
+            given. If "right", return the last such index. If there is no
+            suitable index, return either 0 or N (where N is the length of self).
+        sorter: 1-D array_like, optional
+            Optional array of integer indices that sort self into ascending order.
+            They are typically the result of np.argsort.
+
+        Returns
+        -------
+        int or array of int
+            A scalar or array of insertion points with the same shape as value.
+        """
+        searchsorted_qc = self._query_compiler
+        if sorter is not None:
+            # `iloc` method works slowly (https://github.com/modin-project/modin/issues/1903),
+            # so _default_to_pandas is used for now
+            # searchsorted_qc = self.iloc[sorter].reset_index(drop=True)._query_compiler
+            # sorter = None
+            return self._default_to_pandas(
+                pandas.Series.searchsorted, value, side=side, sorter=sorter
+            )
+        # searchsorted should return item number irrespective of Series index, so
+        # Series.index is always set to pandas.RangeIndex, which can be easily processed
+        # on the query_compiler level
+        if not isinstance(searchsorted_qc.index, pandas.RangeIndex):
+            searchsorted_qc = searchsorted_qc.reset_index(drop=True)
+
+        result = self.__constructor__(
+            query_compiler=searchsorted_qc.searchsorted(
+                value=value, side=side, sorter=sorter
+            )
+        ).squeeze()
+
+        # matching Pandas output
+        if not is_scalar(value) and not is_list_like(result):
+            result = np.array([result])
+        elif isinstance(result, type(self)):
+            result = result.to_numpy()
+
+        return result
 
     def sort_values(
         self,

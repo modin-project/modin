@@ -537,6 +537,10 @@ class BaseQueryCompiler(abc.ABC):
     def unique(self, **kwargs):
         pass
 
+    @abc.abstractmethod
+    def searchsorted(self, **kwargs):
+        pass
+
     # END Abstract map partitions operations
 
     def value_counts(self, **kwargs):
