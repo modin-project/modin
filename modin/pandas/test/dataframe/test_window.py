@@ -454,7 +454,7 @@ def test_median_skew_transposed(axis, method):
         ),
     ],
 )
-@pytest.mark.parametrize("method", ["median", "skew"])
+@pytest.mark.parametrize("method", ["median", "skew", "std", "var"])
 def test_median_skew_specific(numeric_only, method):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
@@ -650,46 +650,26 @@ def test_rank(data, axis, numeric_only, na_option):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("method", ["str", "var"])
+def test_std_var(axis, skipna, method):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: getattr(df, method)(axis=axis, skipna=skipna)
+    )
+
+
+@pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
-def test_std(request, data, axis, skipna, numeric_only, ddof):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.std(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.std(axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof)
-    else:
-        modin_result = modin_df.std(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.std(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.T.std(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-            )
-    else:
-        modin_result = modin_df.T.std(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-        df_equals(modin_result, pandas_result)
+@pytest.mark.parametrize("method", ["std", "var"])
+def test_std_var_transposed(axis, ddof, method):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: getattr(df.T, method)(axis=axis, ddof=ddof)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -698,44 +678,3 @@ def test_values(data):
     pandas_df = pandas.DataFrame(data)
 
     np.testing.assert_equal(modin_df.values, pandas_df.values)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
-@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
-def test_var(request, data, axis, skipna, numeric_only, ddof):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    try:
-        pandas_result = pandas_df.var(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.var(axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof)
-    else:
-        modin_result = modin_df.var(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.T.var(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
-    except Exception:
-        with pytest.raises(TypeError):
-            modin_df.T.var(
-                axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-            )
-    else:
-        modin_result = modin_df.T.var(
-            axis=axis, skipna=skipna, numeric_only=numeric_only, ddof=ddof
-        )
