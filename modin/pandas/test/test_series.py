@@ -3218,23 +3218,14 @@ def test_unique(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unstack(data):
     modin_series, pandas_series = create_test_series(data)
-    if len(pandas_series.index) == 256:
-        index = pd.MultiIndex.from_product(
-            [
-                ["a", "b", "c", "d"],
-                ["x", "y", "z", "last"],
-                ["i", "j", "k", "index"],
-                [1, 2, 3, 4],
-            ]
-        )
-    elif len(pandas_series.index) == 100:
-        index = pd.MultiIndex.from_product(
-            [
-                ["x", "y", "z", "last"],
-                ["a", "b", "c", "d", "f"],
-                ["i", "j", "k", "l", "index"],
-            ]
-        )
+    index = pd.MultiIndex.from_product(
+        [
+            ["a", "b", "c", "d"],
+            ["x", "y", "z", "last"],
+            ["i", "j", "k", "index"],
+            [1, 2, 3, 4],
+        ]
+    )
 
     modin_series = pd.Series(data[next(iter(data.keys()))], index=index)
     pandas_series = pandas.Series(data[next(iter(data.keys()))], index=index)
@@ -3242,12 +3233,9 @@ def test_unstack(data):
     df_equals(modin_series.unstack(), pandas_series.unstack())
     df_equals(modin_series.unstack(level=0), pandas_series.unstack(level=0))
     df_equals(modin_series.unstack(level=[0, 1]), pandas_series.unstack(level=[0, 1]))
-
-    if len(pandas_series.index) == 256:
-        df_equals(
-            modin_series.unstack(level=[0, 1, 2]),
-            pandas_series.unstack(level=[0, 1, 2]),
-        )
+    df_equals(
+        modin_series.unstack(level=[0, 1, 2]), pandas_series.unstack(level=[0, 1, 2])
+    )
 
 
 @pytest.mark.parametrize(

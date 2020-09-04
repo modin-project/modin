@@ -1097,12 +1097,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def map_func(df):
             return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
 
+        is_correct_len = True
+        if isinstance(self.index, pandas.MultiIndex):
+            actual_len = 1
+            for lvl in self.index.levels:
+                actual_len *= len(lvl)
+            if len(self.index) * len(self.columns) != actual_len * len(self.columns):
+                is_correct_len = False
+
         is_all_multi_list = False
         if (
             isinstance(self.index, pandas.MultiIndex)
             and isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
             and len(level) == self.index.nlevels
+            and is_correct_len
         ):
             is_all_multi_list = True
             real_cols_bkp = self.columns
@@ -1116,40 +1125,56 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         result = self.__constructor__(new_modin_frame)
 
-        if is_all_multi_list:
+        def compute_index(index, columns, consider_index=True, consider_columns=True):
+            def get_unique_level_values(index):
+                return [
+                    index.get_level_values(lvl).unique()
+                    for lvl in np.arange(index.nlevels)
+                ]
+
+            new_index = (
+                get_unique_level_values(index)
+                if consider_index
+                else index
+                if isinstance(index, list)
+                else [index]
+            )
+
+            new_columns = (
+                get_unique_level_values(columns) if consider_columns else [columns]
+            )
+            return pandas.MultiIndex.from_product([*new_columns, *new_index])
+
+        if is_all_multi_list and is_correct_len:
             result = result.sort_index()
             index_level_values = [lvl for lvl in obj.index.levels]
-            columns_level_values = [
-                real_cols_bkp.get_level_values(lvl).unique()
-                for lvl in np.arange(real_cols_bkp.nlevels)
-            ]
-            result.index = pandas.MultiIndex.from_product(
-                [*columns_level_values, *index_level_values]
+
+            result.index = compute_index(
+                index_level_values, real_cols_bkp, consider_index=False
             )
             return result
 
         if need_reindex:
-            if isinstance(self.index, pandas.MultiIndex):
-                index_level_values = [
-                    self.index.get_level_values(lvl).unique()
-                    for lvl in np.arange(self.index.nlevels)
-                ]
-                new_index = pandas.MultiIndex.from_product(
-                    [self.columns, *index_level_values]
+            if is_correct_len:
+                is_recompute_index = isinstance(self.index, pandas.MultiIndex)
+                is_recompute_columns = not is_recompute_index and isinstance(
+                    self.columns, pandas.MultiIndex
+                )
+                new_index = compute_index(
+                    self.index, self.columns, is_recompute_index, is_recompute_columns
                 )
             else:
                 if isinstance(self.columns, pandas.MultiIndex):
-                    columns_level_values = [
-                        self.columns.get_level_values(lvl).unique()
-                        for lvl in np.arange(self.columns.nlevels)
-                    ]
-                    new_index = pandas.MultiIndex.from_product(
-                        [*columns_level_values, self.index]
-                    )
+                    new_index = compute_index(self.index, self.columns)
                 else:
-                    new_index = pandas.MultiIndex.from_product(
-                        [self.columns, self.index]
+                    index = pandas.MultiIndex.from_tuples(
+                        list(self.index) * len(self.columns)
                     )
+                    columns = self.columns.repeat(len(self.index))
+                    index_levels = [
+                        index.get_level_values(i) for i in range(index.nlevels)
+                    ]
+                    new_index = pandas.MultiIndex.from_arrays([columns] + index_levels)
             result = result.reindex(0, new_index)
         return result
 
