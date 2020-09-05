@@ -11,8 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+from .series_default import SeriesDefault
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+import re
+import pandas
+
+
+class CatDefault(SeriesDefault):
+    @classmethod
+    def register(cls, func, **kwargs):
+        func = re.findall(r"cat_(.*)", func)[0]
+        return cls.call(func, obj_type=pandas.Series.cat, **kwargs)
+
+    @classmethod
+    def frame_wrapper(cls, df):
+        return df.squeeze(axis=1).cat

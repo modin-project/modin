@@ -106,6 +106,9 @@ jobs:
       - name: Api tests
         shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_api.py
+      - name: Backends Api tests
+        shell: bash -l {0}
+        run: python -m pytest modin/test/test_backends_api.py
 
   test-headers:
     needs: prepare-cache

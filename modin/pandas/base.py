@@ -1515,9 +1515,7 @@ class BasePandasDataset(object):
             }
 
             return self.__constructor__(
-                query_compiler=self._query_compiler._apply_text_func_elementwise(
-                    "kurt", axis, **func_kwargs
-                )
+                query_compiler=self._query_compiler.apply("kurt", axis, **func_kwargs)
             )
 
         if numeric_only:
@@ -2028,8 +2026,8 @@ class BasePandasDataset(object):
                 index = pandas.Index(index)
             if not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
-                    0,
-                    index,
+                    axis=0,
+                    labels=index,
                     method=method,
                     fill_value=fill_value,
                     limit=limit,
@@ -2043,8 +2041,8 @@ class BasePandasDataset(object):
                 columns = pandas.Index(columns)
             if not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
-                    1,
-                    columns,
+                    axis=1,
+                    labels=columns,
                     method=method,
                     fill_value=fill_value,
                     limit=limit,

@@ -11,8 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+import modin.pandas as pd  # noqa
+from modin.backends import BaseQueryCompiler, PandasQueryCompiler, PyarrowQueryCompiler
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+import pytest
+
+BASE_BACKEND = BaseQueryCompiler
+BACKENDS = [PandasQueryCompiler, PyarrowQueryCompiler]
+
+
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_api_consistent(backend):
+    base_methods = set(BASE_BACKEND.__dict__)
+    custom_methods = set(
+        [key for key in backend.__dict__.keys() if not key.startswith("_")]
+    )
+
+    extra_methods = custom_methods.difference(base_methods)
+    # checking that custom backend do not implements extra api methods
+    assert (
+        len(extra_methods) == 0
+    ), f"{backend} implement these extra methods: {extra_methods}"

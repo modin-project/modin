@@ -387,7 +387,11 @@ class DataFrameGroupBy(object):
             )
             return type(self._df)(
                 query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
-                    by, func_dict, self._kwargs, kwargs, drop=self._drop
+                    by=by,
+                    func_dict=func_dict,
+                    groupby_args=self._kwargs,
+                    agg_args=kwargs,
+                    drop=self._drop,
                 )
             )
         if is_list_like(func):
@@ -710,7 +714,12 @@ class DataFrameGroupBy(object):
         else:
             groupby_qc = self._query_compiler
         new_manager = groupby_qc.groupby_agg(
-            by, self._axis, f, self._kwargs, kwargs, drop=self._drop
+            by=by,
+            axis=self._axis,
+            agg_func=f,
+            groupby_args=self._kwargs,
+            agg_args=kwargs,
+            drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:
             new_manager.index.name = self._idx_name
