@@ -28,7 +28,6 @@ from modin.pandas.test.utils import (
     query_func_values,
     agg_func_keys,
     agg_func_values,
-    numeric_agg_funcs,
     axis_keys,
     axis_values,
     eval_general,
@@ -63,26 +62,6 @@ def test_agg(data, axis, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_agg_numeric(request, data, axis, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.agg(func, axis)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.agg(func, axis)
-        else:
-            modin_result = modin_df.agg(func, axis)
-            df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(request, data, func, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
@@ -95,26 +74,6 @@ def test_aggregate(request, data, func, axis):
     else:
         modin_result = modin_df.aggregate(func, axis)
         df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_aggregate_numeric(request, data, axis, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.agg(func, axis)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.agg(func, axis)
-        else:
-            modin_result = modin_df.agg(func, axis)
-            df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -422,22 +381,3 @@ def test_transform(request, data, func):
     else:
         modin_result = modin_df.transform(func)
         df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_transform_numeric(request, data, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.transform(func)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.transform(func)
-        else:
-            modin_result = modin_df.transform(func)
-            df_equals(modin_result, pandas_result)
