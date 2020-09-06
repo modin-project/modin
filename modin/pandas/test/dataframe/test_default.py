@@ -36,6 +36,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     test_data_resample,
     test_data,
+    test_data_diff_dtype,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -44,10 +45,60 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
-def test_align():
+@pytest.mark.parametrize(
+    "op, make_args",
+    [
+        ("align", lambda df: {"other": df}),
+        ("corr", None),
+        ("expanding", None),
+        ("corrwith", lambda df: {"other": df}),
+        ("explode", lambda df: {"column": df.columns[0]}),
+        ("ewm", lambda df: {"com": 0.5}),
+        ("from_dict", lambda df: {"data": None}),
+        ("from_records", lambda df: {"data": to_pandas(df)}),
+        ("hist", lambda df: {"column": "int_col"}),
+        ("infer_objects", None),
+        ("interpolate", None),
+        ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
+        ("mask", lambda df: {"cond": df != 0}),
+        ("pct_change", None),
+        ("sem", None),
+        ("__getstate__", None),
+        ("to_xarray", None),
+        ("pivot_table", lambda df: {"values": "int_col", "index": ["float_col"]}),
+    ],
+)
+def test_ops_defaulting_to_pandas(op, make_args):
+    modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
+    with pytest.warns(UserWarning):
+        operation = getattr(modin_df, op)
+        if make_args is not None:
+            operation(**make_args(modin_df))
+        else:
+            operation()
+
+
+def test_style():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
-        pd.DataFrame(data).align(pd.DataFrame(data))
+        pd.DataFrame(data).style
+
+
+def test___setstate__():
+    data = test_data_values[0]
+    with pytest.warns(UserWarning):
+        try:
+            pd.DataFrame(data).__setstate__(None)
+        except TypeError:
+            pass
+
+
+def test_to_timestamp():
+    idx = pd.date_range("1/1/2012", periods=5, freq="M")
+    df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
+
+    with pytest.warns(UserWarning):
+        df.to_period().to_timestamp()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -183,18 +234,6 @@ def test_combine_first():
     df_equals(modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2))
 
 
-def test_corr():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).corr()
-
-
-def test_corrwith():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).corrwith(pd.DataFrame(data))
-
-
 def test_cov():
     data = test_data_values[0]
     modin_result = pd.DataFrame(data).cov()
@@ -290,25 +329,6 @@ def test_matmul(data):
         modin_result = modin_df @ pd.Series(np.arange(col_len))
 
 
-def test_ewm():
-    df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
-    with pytest.warns(UserWarning):
-        df.ewm(com=0.5).mean()
-
-
-def test_expanding():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).expanding()
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_explode(data):
-    modin_df = pd.DataFrame(data)
-    with pytest.warns(UserWarning):
-        modin_df.explode(modin_df.columns[0])
-
-
 def test_first():
     i = pd.date_range("2010-04-09", periods=400, freq="2D")
     modin_df = pd.DataFrame({"A": list(range(400)), "B": list(range(400))}, index=i)
@@ -317,48 +337,6 @@ def test_first():
     )
     df_equals(modin_df.first("3D"), pandas_df.first("3D"))
     df_equals(modin_df.first("20D"), pandas_df.first("20D"))
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_from_dict(data):
-    modin_df = pd.DataFrame(data)  # noqa F841
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_dict(None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_from_items(data):
-    modin_df = pd.DataFrame(data)  # noqa F841
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_items(None)
-
-
-@pytest.mark.skip(reason="Defaulting to Pandas")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_from_records(data):
-    modin_df = pd.DataFrame(data)  # noqa F841
-    pandas_df = pandas.DataFrame(data)  # noqa F841
-
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame.from_records(None)
-
-
-def test_hist():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).hist(None)
-
-
-def test_infer_objects():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).infer_objects()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -405,12 +383,6 @@ def test_info(verbose, max_cols, memory_usage, null_counts):
         assert modin_info[0] == str(pd.DataFrame)
         assert pandas_info[0] == str(pandas.DataFrame)
         assert modin_info[1:] == pandas_info[1:]
-
-
-def test_interpolate():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).interpolate()
 
 
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -470,12 +442,6 @@ def test_last():
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 
-def test_lookup():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).lookup([0, 1], ["col1", "col2"])
-
-
 @pytest.mark.parametrize("data", test_data_values)
 @pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("skipna", [None, True, False])
@@ -502,16 +468,6 @@ def test_mad_level(level):
     )
 
 
-def test_mask():
-    df = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["A", "B"])
-    m = df % 3 == 0
-    with pytest.warns(UserWarning):
-        try:
-            df.mask(~m, -df)
-        except ValueError:
-            pass
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "id_vars", [lambda df: df.columns[0], lambda df: df.columns[:4], None]
@@ -528,12 +484,6 @@ def test_melt(data, id_vars, value_vars):
         id_vars=id_vars,
         value_vars=value_vars,
     )
-
-
-def test_pct_change():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).pct_change()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -553,30 +503,6 @@ def test_pivot(data, index, columns, values):
         values=values,
         check_exception_type=None,
     )
-
-
-def test_pivot_table():
-    df = pd.DataFrame(
-        {
-            "A": ["foo", "foo", "foo", "foo", "foo", "bar", "bar", "bar", "bar"],
-            "B": ["one", "one", "one", "two", "two", "one", "one", "two", "two"],
-            "C": [
-                "small",
-                "large",
-                "large",
-                "small",
-                "small",
-                "large",
-                "small",
-                "small",
-                "large",
-            ],
-            "D": [1, 2, 2, 3, 3, 4, 5, 6, 7],
-            "E": [2, 4, 5, 5, 6, 6, 8, 9, 9],
-        }
-    )
-    with pytest.warns(UserWarning):
-        df.pivot_table(values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -737,12 +663,6 @@ def test_resample_specific(rule, closed, label, on, level):
         )
 
 
-def test_sem():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).sem()
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray"])
 @pytest.mark.parametrize("axis", [0, 1])
@@ -849,12 +769,6 @@ def test_stack(data, is_multi_idx, is_multi_col):
         df_equals(modin_df.stack(level=[0, 1, 2]), pandas_df.stack(level=[0, 1, 2]))
 
 
-def test_style():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).style
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis1", [0, 1])
 @pytest.mark.parametrize("axis2", [0, 1])
@@ -947,20 +861,6 @@ def test_to_string(data):
         *create_test_dfs(data),
         lambda df: df.to_string(),
     )
-
-
-def test_to_timestamp():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
-
-    with pytest.warns(UserWarning):
-        df.to_period().to_timestamp()
-
-
-def test_to_xarray():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).to_xarray()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1132,21 +1032,6 @@ def test___array__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___bool__(data):
     eval_general(*create_test_dfs(data), lambda df: df.__bool__())
-
-
-def test___getstate__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        pd.DataFrame(data).__getstate__()
-
-
-def test___setstate__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        try:
-            pd.DataFrame(data).__setstate__(None)
-        except TypeError:
-            pass
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
