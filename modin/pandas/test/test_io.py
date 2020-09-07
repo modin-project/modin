@@ -25,6 +25,7 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
+from string import ascii_uppercase, ascii_lowercase, digits
 
 from .utils import (
     df_equals,
@@ -33,6 +34,7 @@ from .utils import (
     json_long_string,
     json_long_bytes,
     eval_general,
+    random_state,
 )
 
 from modin.config import Engine, Backend
@@ -60,8 +62,25 @@ TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
+test_csv_dialect_params = {
+    "delimiter": "_",
+    "doublequote": False,
+    "escapechar": "d",
+    "quotechar": "d",
+    "quoting": csv.QUOTE_ALL,
+}
+csv.register_dialect("test_csv_dialect", **test_csv_dialect_params)
 
-def eval_io(path, fn_name, comparator=df_equals, cast_to_str=False, *args, **kwargs):
+
+def eval_io(
+    fn_name,
+    comparator=df_equals,
+    cast_to_str=False,
+    check_exception_type=True,
+    nonacceptable_exception_types=(TypeError),
+    *args,
+    **kwargs,
+):
     def applyier(module, *args, **kwargs):
         result = getattr(module, fn_name)(*args, **kwargs)
         # There could be some missmatches in dtypes, so we're
@@ -75,10 +94,26 @@ def eval_io(path, fn_name, comparator=df_equals, cast_to_str=False, *args, **kwa
         pd,
         pandas,
         applyier,
-        path=path,
+        check_exception_type=check_exception_type,
+        nonacceptable_exception_types=nonacceptable_exception_types,
         *args,
         **kwargs,
     )
+
+
+def eval_io_from_str(csv_str, unique_filename, **kwargs):
+    try:
+        with open(unique_filename, "w") as f:
+            f.write(csv_str)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    finally:
+        os.remove(unique_filename)
 
 
 @pytest.fixture
@@ -173,8 +208,70 @@ def teardown_test_file(test_path):
         os.remove(test_path)
 
 
+def get_random_string():
+    random_string = "".join(
+        random_state.choice(
+            [x for x in ascii_uppercase + ascii_lowercase + digits], size=10
+        ).tolist()
+    )
+    return random_string
+
+
+def insert_lines_to_csv(
+    csv_name: str,
+    lines_positions: list,
+    lines_type: str = "blank",
+    encoding: str = None,
+    **csv_reader_writer_params,
+):
+    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
+    if lines_type == "blank":
+        # empty lines
+        lines_data = []
+    elif lines_type == "bad":
+        # lines with len(lines_data) > cols_number
+        cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
+        lines_data = [x for x in range(cols_number + 1)]
+    else:
+        raise ValueError(
+            f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
+        )
+    lines = []
+    dialect = "excel"
+    with open(csv_name, "r", encoding=encoding, newline="") as read_file:
+        try:
+            dialect = csv.Sniffer().sniff(read_file.read())
+            read_file.seek(0)
+        except Exception:
+            dialect = None
+
+        reader = csv.reader(
+            read_file,
+            dialect=dialect if dialect is not None else "excel",
+            **csv_reader_writer_params,
+        )
+        counter = 0
+        for row in reader:
+            if counter in lines_positions:
+                lines.append(lines_data)
+            else:
+                lines.append(row)
+            counter += 1
+    with open(csv_name, "w", encoding=encoding, newline="") as write_file:
+        writer = csv.writer(
+            write_file,
+            dialect=dialect if dialect is not None else "excel",
+            **csv_reader_writer_params,
+        )
+        writer.writerows(lines)
+
+
 @pytest.fixture
-def make_csv_file(delimiter=",", compression="infer"):
+def make_csv_file(
+    filename=TEST_CSV_FILENAME,
+    additional_col_values=None,
+    add_blank_lines=False,
+):
     """Pytest fixture factory that makes temp csv files for testing.
 
     Yields:
@@ -183,33 +280,117 @@ def make_csv_file(delimiter=",", compression="infer"):
     filenames = []
 
     def _make_csv_file(
-        filename=TEST_CSV_FILENAME,
+        filename=filename,
         row_size=SMALL_ROW_SIZE,
         force=True,
-        delimiter=delimiter,
+        delimiter=",",
         encoding=None,
-        compression=compression,
+        compression="infer",
+        additional_col_values=additional_col_values,
+        add_blank_lines=add_blank_lines,
+        add_bad_lines=False,
+        add_nan_lines=False,
+        thousands_separator=None,
+        decimal_separator=None,
+        lineterminator=None,
+        comment_col_char=None,
+        quoting=csv.QUOTE_MINIMAL,
+        quotechar='"',
+        doublequote=True,
+        escapechar=None,
+        line_terminator=os.linesep,
     ):
         if os.path.exists(filename) and not force:
             pass
         else:
             dates = pandas.date_range("2000", freq="h", periods=row_size)
-            df = pandas.DataFrame(
-                {
-                    "col1": np.arange(row_size),
-                    "col2": [str(x.date()) for x in dates],
-                    "col3": np.arange(row_size),
-                    "col4": [str(x.time()) for x in dates],
-                }
-            )
+            data = {
+                "col1": np.arange(row_size) * 10,
+                "col2": [str(x.date()) for x in dates],
+                "col3": np.arange(row_size) * 10,
+                "col4": [str(x.time()) for x in dates],
+                "col5": [get_random_string() for _ in range(row_size)],
+                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+            }
+
+            if additional_col_values is not None:
+                assert isinstance(additional_col_values, (list, tuple))
+                data.update(
+                    {
+                        "col10": random_state.choice(
+                            additional_col_values, size=row_size
+                        ),
+                    }
+                )
+            df = pandas.DataFrame(data)
+            if add_nan_lines:
+                for i in range(0, row_size, row_size // (row_size // 10)):
+                    df.loc[i] = pandas.Series()
+            if comment_col_char:
+                char = comment_col_char if isinstance(comment_col_char, str) else "#"
+                df.insert(
+                    loc=0,
+                    column="col_with_comments",
+                    value=[char if (x + 2) == 0 else x for x in range(row_size)],
+                )
+
+            if thousands_separator:
+                df["col1"] = df["col1"].apply(
+                    lambda x: f"{x:,d}".replace(",", thousands_separator)
+                )
+                df["col3"] = df["col3"].apply(
+                    lambda x: f"{x:,d}".replace(",", thousands_separator)
+                )
+                df["col6"] = df["col6"].apply(
+                    lambda x: f"{x:,f}".replace(",", thousands_separator)
+                )
+
             if compression == "gzip":
                 filename = "{}.gz".format(filename)
             elif compression == "zip" or compression == "xz" or compression == "bz2":
                 filename = "{fname}.{comp}".format(fname=filename, comp=compression)
 
             df.to_csv(
-                filename, sep=delimiter, encoding=encoding, compression=compression
+                filename,
+                sep=delimiter,
+                encoding=encoding,
+                compression=compression,
+                index=False,
+                decimal=decimal_separator if decimal_separator else ".",
+                line_terminator=line_terminator,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
             )
+            csv_reader_writer_params = {
+                "delimiter": delimiter,
+                "doublequote": doublequote,
+                "escapechar": escapechar,
+                "lineterminator": line_terminator,
+                "quotechar": quotechar,
+                "quoting": quoting,
+            }
+            if add_blank_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(5, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="blank",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            if add_bad_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(6, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="bad",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
             filenames.append(filename)
             return df
 
@@ -421,6 +602,784 @@ def teardown_fwf_file():
             os.remove(TEST_FWF_FILENAME)
         except PermissionError:
             pass
+
+
+def get_unique_filename(
+    test_name: str, kwargs: dict = {}, extension: str = "csv", suffix: str = None
+):
+    assert "." not in extension, "please provide pure extenxion name without '.'"
+    prohibited_chars = ['"']
+    non_prohibited_char = "np_char"
+    char_counter = 0
+    kwargs_name = dict(kwargs)
+    for key, value in kwargs_name.items():
+        for char in prohibited_chars:
+            if isinstance(value, str) and char in value:
+                kwargs_name[key] = kwargs_name[key].replace(
+                    char, non_prohibited_char + str(char_counter)
+                )
+                char_counter += 1
+    return (
+        test_name
+        + "_".join(
+            [
+                str(value)
+                if not isinstance(value, (list, tuple))
+                else "_".join([str(x) for x in value])
+                for value in kwargs_name.values()
+            ]
+        )
+        + f"_{suffix}"
+        + f".{extension}"
+    )
+
+
+class TestReadCSV:
+    @pytest.mark.parametrize("skip_blank_lines", [True, False])
+    @pytest.mark.parametrize("na_filter", [True, False])
+    @pytest.mark.parametrize("index_col", [None, "col1"])
+    @pytest.mark.parametrize("prefix", [None, "_", ".", "col", "COL"])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("nrows", [123, None])
+    def test_from_csv(
+        self,
+        make_csv_file,
+        nrows,
+        engine,
+        prefix,
+        index_col,
+        na_filter,
+        skip_blank_lines,
+    ):
+        kwargs = {
+            "nrows": nrows,
+            "engine": engine,
+            "prefix": prefix,
+            "index_col": index_col,
+            "na_filter": na_filter,
+            "skip_blank_lines": skip_blank_lines,
+        }
+        unique_filename = get_unique_filename("test_from_csv", kwargs)
+        make_csv_file(filename=unique_filename, add_blank_lines=True)
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    # pytest.param({"foo": ["col2", "col4"]}, marks=pytest.mark.xfail(reason="Exception: Internal Error - issue #2073"))
+
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+            ["col2", "col4"],
+            [1, 3],
+            pytest.param(
+                {"foo": ["col2", "col4"]},
+                marks=pytest.mark.xfail(
+                    reason="Exception: Internal Error - issue #2073"
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("infer_datetime_format", [True, False])
+    @pytest.mark.parametrize("keep_date_col", [True, False])
+    @pytest.mark.parametrize(
+        "date_parser", [None, lambda x: pd.datetime.strptime(x, "%Y-%m-%d")]
+    )
+    @pytest.mark.parametrize("dayfirst", [True, False])
+    @pytest.mark.parametrize("cache_dates", [True, False])
+    def test_from_csv_datetime(
+        self,
+        make_csv_file,
+        parse_dates,
+        infer_datetime_format,
+        keep_date_col,
+        date_parser,
+        dayfirst,
+        cache_dates,
+    ):
+        if date_parser and parse_dates is not ["col2"]:
+            pytest.skip(
+                "date_parser parameter should be used with parse_dates==['col2'] only"
+            )
+
+        kwargs = {
+            "parse_dates": parse_dates,
+            "infer_datetime_format": infer_datetime_format,
+            "keep_date_col": keep_date_col,
+            "date_parser": date_parser,
+            "dayfirst": dayfirst,
+            "cache_dates": cache_dates,
+        }
+        unique_filename = get_unique_filename("test_from_csv_datetime", kwargs)
+        make_csv_file(filename=unique_filename, add_blank_lines=False)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("header", ["infer", None, 0])
+    @pytest.mark.parametrize("index_col", [None, "col1"])
+    @pytest.mark.parametrize("prefix", [None, "_", "col"])
+    @pytest.mark.parametrize("decimal", [".", "_"])
+    @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
+    def test_from_csv_col_handling(
+        self,
+        make_csv_file,
+        header,
+        index_col,
+        prefix,
+        decimal,
+        thousands,
+    ):
+        kwargs = {
+            "header": header,
+            "index_col": index_col,
+            "prefix": prefix,
+            "decimal": decimal,
+            "thousands": thousands,
+        }
+        unique_filename = get_unique_filename("test_from_csv_col_handling", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            thousands_separator=thousands,
+            decimal_separator=decimal,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("skip_blank_lines", [True, False])
+    @pytest.mark.parametrize("na_filter", [True, False])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("lineterminator", [None, "x", "\n"])
+    def test_from_csv_misc(
+        self,
+        make_csv_file,
+        skip_blank_lines,
+        na_filter,
+        engine,
+        lineterminator,
+    ):
+        kwargs = {
+            "skip_blank_lines": skip_blank_lines,
+            "na_filter": na_filter,
+            "engine": engine,
+            "lineterminator": lineterminator,
+        }
+        unique_filename = get_unique_filename("test_from_csv_misc", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            add_blank_lines=skip_blank_lines,
+            lineterminator=lineterminator,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize(
+        "quoting",
+        [csv.QUOTE_ALL, csv.QUOTE_MINIMAL, csv.QUOTE_NONNUMERIC, csv.QUOTE_NONE],
+    )
+    @pytest.mark.parametrize("quotechar", ['"', "_", "d"])
+    @pytest.mark.parametrize("doublequote", [True, False])
+    @pytest.mark.parametrize("escapechar", [None, "d", "x"])
+    @pytest.mark.parametrize("comment", [None, "#", "x"])
+    @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
+    def test_from_csv_quotes(
+        self,
+        make_csv_file,
+        quoting,
+        quotechar,
+        doublequote,
+        escapechar,
+        comment,
+        dialect,
+    ):
+        if escapechar is None and (quotechar == "d" or comment is not None):
+            pytest.skip(
+                "can't create such file because of error: _csv.Error: need to escape, but no escapechar set"
+            )
+        kwargs = {
+            "quoting": quoting,
+            "quotechar": quotechar,
+            "doublequote": doublequote,
+            "escapechar": escapechar,
+            "comment": comment,
+            "dialect": dialect,
+        }
+        unique_filename = get_unique_filename("test_from_csv_quotes", kwargs)
+        if dialect:
+            make_csv_file(filename=unique_filename, **test_csv_dialect_params)
+        else:
+            make_csv_file(
+                filename=unique_filename,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
+                comment_col_char=comment,
+            )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("warn_bad_lines", [True, False])
+    @pytest.mark.parametrize("error_bad_lines", [True, False])
+    def test_from_csv_errors(
+        self,
+        make_csv_file,
+        warn_bad_lines,
+        error_bad_lines,
+    ):
+        kwargs = {
+            "warn_bad_lines": warn_bad_lines,
+            "error_bad_lines": error_bad_lines,
+        }
+        unique_filename = get_unique_filename("test_from_csv_col_errors", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            add_bad_lines=True,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("delimiter", [",", " "])
+    @pytest.mark.parametrize("delim_whitespace", [True, False])
+    @pytest.mark.parametrize("low_memory", [True, False])
+    @pytest.mark.parametrize("memory_map", [True, False])
+    @pytest.mark.parametrize("float_precision", [None, "high", "round_trip"])
+    def test_from_csv_internal(
+        self,
+        make_csv_file,
+        engine,
+        delimiter,
+        delim_whitespace,
+        low_memory,
+        memory_map,
+        float_precision,
+    ):
+        case_with_TypeError_exc = (
+            engine == "python"
+            and delimiter == ","
+            and delim_whitespace
+            and low_memory
+            and memory_map
+            and float_precision is None
+        )
+        csv_delim_whitespaces = """col1 col2  col3   col4
+5 6   7  8
+9  10    11 12
+"""
+
+        kwargs = {
+            "engine": engine,
+            "delimiter": delimiter,
+            "delim_whitespace": delim_whitespace,
+            "low_memory": low_memory,
+            "memory_map": memory_map,
+            "float_precision": float_precision,
+        }
+
+        unique_filename_1 = get_unique_filename("test_from_csv_internal", kwargs)
+        unique_filename_2 = get_unique_filename(
+            "test_from_csv_internal", kwargs, suffix="from_csv"
+        )
+
+        make_csv_file(
+            filename=unique_filename_1,
+            delimiter=delimiter,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename_1,
+            fn_name="read_csv",
+            nonacceptable_exception_types=None
+            if case_with_TypeError_exc
+            else TypeError,
+            **kwargs,
+        )
+
+        eval_io_from_str(
+            csv_delim_whitespaces,
+            unique_filename_2,
+            nonacceptable_exception_types=None
+            if case_with_TypeError_exc
+            else TypeError,
+            **kwargs,
+        )
+
+    def test_from_csv_chunksize(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_chunksize")
+        make_csv_file(filename=unique_filename)
+
+        # Tests __next__ and correctness of reader as an iterator
+        # Use larger chunksize to read through file quicker
+        rdf_reader = pd.read_csv(unique_filename, chunksize=500)
+        pd_reader = pandas.read_csv(unique_filename, chunksize=500)
+
+        for modin_df, pd_df in zip(rdf_reader, pd_reader):
+            df_equals(modin_df, pd_df)
+
+        # Tests that get_chunk works correctly
+        rdf_reader = pd.read_csv(unique_filename, chunksize=1)
+        pd_reader = pandas.read_csv(unique_filename, chunksize=1)
+
+        modin_df = rdf_reader.get_chunk(1)
+        pd_df = pd_reader.get_chunk(1)
+
+        df_equals(modin_df, pd_df)
+
+        # Tests that read works correctly
+        rdf_reader = pd.read_csv(unique_filename, chunksize=1)
+        pd_reader = pandas.read_csv(unique_filename, chunksize=1)
+
+        modin_df = rdf_reader.read()
+        pd_df = pd_reader.read()
+
+        df_equals(modin_df, pd_df)
+
+    @pytest.mark.xfail(
+        reason="read_csv works incorrectly here for now, see modin-project/modin #2074 for details"
+    )
+    @pytest.mark.parametrize("nrows", [123, None])
+    def test_from_csv_skiprows(self, make_csv_file, nrows):
+        unique_filename = get_unique_filename(
+            "test_from_csv_skiprows", {"nrows": nrows}
+        )
+        make_csv_file(filename=unique_filename)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            skiprows=2,
+            nrows=nrows,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            names=["c1", "c2", "c3", "c4"],
+            skiprows=2,
+            nrows=nrows,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            names=["c1", "c2", "c3", "c4"],
+            skiprows=lambda x: x % 2,
+            nrows=nrows,
+        )
+
+    @pytest.mark.parametrize(
+        "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
+    )
+    def test_from_csv_encoding(self, make_csv_file, encoding):
+        unique_filename = get_unique_filename(
+            "test_from_csv_encoding", {"encoding": encoding}
+        )
+        make_csv_file(filename=unique_filename, encoding=encoding)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            encoding=encoding,
+        )
+
+    def test_from_csv_default_to_pandas_behavior(self, make_csv_file):
+        unique_filename = get_unique_filename(
+            "test_from_csv_default_to_pandas_behavior"
+        )
+        make_csv_file(filename=unique_filename)
+
+        with pytest.warns(UserWarning):
+            # This tests that we default to pandas on a buffer
+            from io import StringIO
+
+            pd.read_csv(StringIO(open(unique_filename, "r").read()))
+
+        with pytest.warns(UserWarning):
+            pd.read_csv(unique_filename, skiprows=lambda x: x in [0, 2])
+
+    def test_from_csv_skipfooter(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_skipfooter")
+        make_csv_file(filename=unique_filename)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            skipfooter=13,
+        )
+
+    def test_from_csv_parse_dates(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_parse_dates")
+        make_csv_file(filename=unique_filename)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            parse_dates=[["col2", "col4"]],
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            parse_dates={"time": ["col2", "col4"]},
+        )
+
+    @pytest.mark.parametrize("nrows", [21, 5, None])
+    @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
+    def test_from_csv_newlines_in_quotes(self, nrows, skiprows):
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/newlines.csv",
+            fn_name="read_csv",
+            nrows=nrows,
+            skiprows=skiprows,
+            cast_to_str=True,
+        )
+
+    @pytest.mark.parametrize(
+        "delimiter",
+        [
+            "_",
+            ":",
+            ";",
+            ",",
+            ".",
+            pytest.param(
+                "\n",
+                marks=pytest.mark.xfail(
+                    reason="DataFrame shape mismatch - issue #2049"
+                ),
+            ),
+        ],
+    )
+    def test_from_csv_delimeter(self, make_csv_file, delimiter):
+        unique_filename = get_unique_filename(
+            "test_from_csv_delimeter",
+            {"delimiter": delimiter if delimiter != "\n" else "n"},
+        )
+        make_csv_file(filename=unique_filename, delimiter=delimiter)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            delimiter=delimiter,
+        )
+
+    @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
+    def test_from_csv_squeeze(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_squeeze")
+        # make_csv_file(filename=unique_filename)
+        csv_single_element = "1"
+
+        csv_single_col = """1
+2
+3
+    """
+        csv_bad_quotes = """1, 2, 3, 4
+5, 6, 7, 8
+9, 10, 11, 12
+"""
+
+        for csv_str in [csv_single_element, csv_single_col, csv_bad_quotes]:
+            eval_io_from_str(csv_str, unique_filename, squeeze=True)
+            eval_io_from_str(csv_str, unique_filename, header=None, squeeze=True)
+
+    # @pytest.mark.xfail(reason="pyarrow.lib.ArrowInvalid: CSV parse error: Expected 4 columns, got 1")
+    def test_from_csv_mangle_dupe_cols(self):
+        unique_filename = get_unique_filename("test_from_csv_mangle_dupe_cols")
+        csv_non_unique_cols = """col,col,col,col
+5,6,7,8
+9,10,11,12
+"""
+        eval_io_from_str(csv_non_unique_cols, unique_filename, mangle_dupe_cols=True)
+
+    @pytest.mark.parametrize("nrows", [123, None])
+    def test_from_csv_sep_none(self, make_csv_file, nrows):
+        unique_filename = get_unique_filename(
+            "test_from_csv_sep_none", {"nrows": nrows}
+        )
+        make_csv_file(filename=unique_filename)
+
+        with pytest.warns(ParserWarning):
+            pandas_df = pandas.read_csv(unique_filename, sep=None, nrows=nrows)
+        with pytest.warns(ParserWarning):
+            modin_df = pd.read_csv(unique_filename, sep=None, nrows=nrows)
+        df_equals(modin_df, pandas_df)
+
+    def test_from_csv_converters(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_converters")
+        make_csv_file(filename=unique_filename)
+        converters = {
+            "col1": lambda x: np.int64(x) * 10,
+            "col2": pd.to_datetime,
+            "col4": lambda x: x.replace(":", ";"),
+        }
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            converters=converters,
+        )
+
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    def test_from_csv_true_false_values(self, make_csv_file, true_values, false_values):
+        kwargs = {"true_values": true_values, "false_values": false_values}
+        unique_filename = get_unique_filename("test_from_csv_true_false_values", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            additional_col_values=["Yes", "true", "No", "false"],
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    def test_from_csv_skipinitialspace(self, make_csv_file):
+        test_csv_content = """col1,col2,col3,col4
+  five,  six,  seven,  eight
+    five,    six,    seven,    eight
+five, six,  seven,   eight
+"""
+        unique_filename = get_unique_filename("test_from_csv_skipinitialspace")
+
+        eval_io_from_str(test_csv_content, unique_filename, skipinitialspace=True)
+
+    @pytest.mark.parametrize("na_filter", [True, False])
+    @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
+    @pytest.mark.parametrize("keep_default_na", [True, False])
+    def test_from_csv_nans(self, make_csv_file, na_values, keep_default_na, na_filter):
+        kwargs = {
+            "na_filter": na_filter,
+            "na_values": na_values,
+            "keep_default_na": keep_default_na,
+        }
+        unique_filename = get_unique_filename("test_from_csv_nans", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("nrows", [2, None])
+    def test_from_csv_bad_quotes(self, nrows):
+        unique_filename = get_unique_filename(
+            "test_from_csv_bad_quotes", {"nrows": nrows}
+        )
+        csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+
+        eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
+
+    @pytest.mark.parametrize("nrows", [2, None])
+    def test_from_csv_quote_none(self, nrows):
+        unique_filename = get_unique_filename(
+            "test_from_csv_quote_none", {"nrows": nrows}
+        )
+        csv_bad_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
+
+        eval_io_from_str(
+            csv_bad_quotes, unique_filename, quoting=csv.QUOTE_NONE, nrows=nrows
+        )
+
+    def test_from_csv_categories(self):
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_categories.csv",
+            fn_name="read_csv",
+            names=["one", "two"],
+            dtype={"one": "int64", "two": "category"},
+        )
+
+    @pytest.mark.parametrize("compression", ["gzip", "bz2", "xz", "zip"])
+    def test_from_csv_compressed(self, make_csv_file, compression):
+        make_csv_file(compression=compression)
+        compressed_file_path = (
+            f"{TEST_CSV_FILENAME}.gz"
+            if compression == "gzip"
+            else f"{TEST_CSV_FILENAME}.{compression}"
+        )
+
+        eval_io(
+            filepath_or_buffer=compressed_file_path,
+            fn_name="read_csv",
+        )
+
+        eval_io(
+            filepath_or_buffer=compressed_file_path,
+            fn_name="read_csv",
+            compression=compression,
+        )
+
+    def test_parse_dates_read_csv(self):
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            fn_name="read_csv",
+        )
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            fn_name="read_csv",
+            names=[
+                "timestamp",
+                "symbol",
+                "high",
+                "low",
+                "open",
+                "close",
+                "spread",
+                "volume",
+            ],
+            header=0,
+            index_col=0,
+            encoding="utf-8",
+        )
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            fn_name="read_csv",
+            names=[
+                "timestamp",
+                "symbol",
+                "high",
+                "low",
+                "open",
+                "close",
+                "spread",
+                "volume",
+            ],
+            header=0,
+            index_col=0,
+            parse_dates=["timestamp"],
+            encoding="utf-8",
+        )
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            fn_name="read_csv",
+            names=[
+                "timestamp",
+                "symbol",
+                "high",
+                "low",
+                "open",
+                "close",
+                "spread",
+                "volume",
+            ],
+            header=0,
+            index_col=2,
+            parse_dates=["timestamp"],
+            encoding="utf-8",
+        )
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"header": None, "usecols": [0, 7]},
+            {"usecols": [0, 7]},
+            {"names": [0, 7], "usecols": [0, 7]},
+        ],
+    )
+    def test_from_csv_with_args(self, kwargs):
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/issue_621.csv",
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
+    def test_from_csv_with_usecols(self, usecols):
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_usecols.csv",
+            fn_name="read_csv",
+            usecols=usecols,
+        )
+
+    @pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
+    def test_from_csv_s3(self, make_csv_file):
+        dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
+        pandas_df = pandas.read_csv(dataset_url)
+
+        # This first load is to trigger all the import deprecation warnings
+        modin_df = pd.read_csv(dataset_url)
+
+        # This will warn if it defaults to pandas behavior, but it shouldn't
+        with pytest.warns(None) as record:
+            modin_df = pd.read_csv(dataset_url)
+
+        assert not any(
+            "defaulting to pandas implementation" in str(err) for err in record.list
+        )
+
+        df_equals(modin_df, pandas_df)
+
+    def test_from_csv_default(self, make_csv_file):
+        # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+        dataset_url = "https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv"
+        pandas_df = pandas.read_csv(dataset_url)
+
+        with pytest.warns(UserWarning):
+            modin_df = pd.read_csv(dataset_url)
+
+        df_equals(modin_df, pandas_df)
+
+    def test_read_csv_incorrect_data(self):
+
+        eval_io(
+            filepath_or_buffer="modin/pandas/test/data/test_categories.json",
+            fn_name="read_csv",
+        )
+
+
+def test_from_table(make_csv_file):
+    make_csv_file(delimiter="\t")
+
+    pandas_df = pandas.read_table(TEST_CSV_FILENAME)
+    modin_df = pd.read_table(TEST_CSV_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
+    modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
+
+    df_equals(modin_df, pandas_df)
 
 
 def test_from_parquet(make_parquet_file):
@@ -761,297 +1720,6 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv_sep_none(make_csv_file, nrows):
-    make_csv_file()
-
-    with pytest.warns(ParserWarning):
-        pandas_df = pandas.read_csv(TEST_CSV_FILENAME, sep=None, nrows=nrows)
-    with pytest.warns(ParserWarning):
-        modin_df = pd.read_csv(TEST_CSV_FILENAME, sep=None, nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [2, None])
-def test_from_csv_bad_quotes(nrows):
-    csv_bad_quotes = """1, 2, 3, 4
-one, two, three, four
-five, "six", seven, "eight
-"""
-
-    with open(TEST_CSV_FILENAME, "w") as f:
-        f.write(csv_bad_quotes)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [2, None])
-def test_from_csv_quote_none(nrows):
-    csv_bad_quotes = """1, 2, 3, 4
-one, two, three, four
-five, "six", seven, "eight
-"""
-    with open(TEST_CSV_FILENAME, "w") as f:
-        f.write(csv_bad_quotes)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, quoting=csv.QUOTE_NONE, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_categories():
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/test_categories.csv",
-        names=["one", "two"],
-        dtype={"one": "int64", "two": "category"},
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/test_categories.csv",
-        names=["one", "two"],
-        dtype={"one": "int64", "two": "category"},
-    )
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_gzip(make_csv_file):
-    make_csv_file(compression="gzip")
-    gzip_path = "{}.gz".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(gzip_path)
-    modin_df = pd.read_csv(gzip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
-    modin_df = pd.read_csv(gzip_path, compression="gzip")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_bz2(make_csv_file):
-    make_csv_file(compression="bz2")
-    bz2_path = "{}.bz2".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(bz2_path)
-    modin_df = pd.read_csv(bz2_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(bz2_path, compression="bz2")
-    modin_df = pd.read_csv(bz2_path, compression="bz2")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_xz(make_csv_file):
-    make_csv_file(compression="xz")
-    xz_path = "{}.xz".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(xz_path)
-    modin_df = pd.read_csv(xz_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(xz_path, compression="xz")
-    modin_df = pd.read_csv(xz_path, compression="xz")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_zip(make_csv_file):
-    make_csv_file(compression="zip")
-    zip_path = "{}.zip".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(zip_path)
-    modin_df = pd.read_csv(zip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(zip_path, compression="zip")
-    modin_df = pd.read_csv(zip_path, compression="zip")
-    df_equals(modin_df, pandas_df)
-
-
-def test_parse_dates_read_csv():
-    pandas_df = pandas.read_csv("modin/pandas/test/data/test_time_parsing.csv")
-    modin_df = pd.read_csv("modin/pandas/test/data/test_time_parsing.csv")
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=0,
-        encoding="utf-8",
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=0,
-        encoding="utf-8",
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=0,
-        parse_dates=["timestamp"],
-        encoding="utf-8",
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=0,
-        parse_dates=["timestamp"],
-        encoding="utf-8",
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=2,
-        parse_dates=["timestamp"],
-        encoding="utf-8",
-    )
-    modin_df = pd.read_csv(
-        "modin/pandas/test/data/test_time_parsing.csv",
-        names=[
-            "timestamp",
-            "symbol",
-            "high",
-            "low",
-            "open",
-            "close",
-            "spread",
-            "volume",
-        ],
-        header=0,
-        index_col=2,
-        parse_dates=["timestamp"],
-        encoding="utf-8",
-    )
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        {"header": None, "usecols": [0, 7]},
-        {"usecols": [0, 7]},
-        {"names": [0, 7], "usecols": [0, 7]},
-    ],
-)
-def test_from_csv_with_args(kwargs):
-    file_name = "modin/pandas/test/data/issue_621.csv"
-    pandas_df = pandas.read_csv(file_name, **kwargs)
-    modin_df = pd.read_csv(file_name, **kwargs)
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_table(make_csv_file):
-    make_csv_file(delimiter="\t")
-
-    pandas_df = pandas.read_table(TEST_CSV_FILENAME)
-    modin_df = pd.read_table(TEST_CSV_FILENAME)
-
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
-    modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
-
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
-def test_from_csv_with_usecols(usecols):
-    fname = "modin/pandas/test/data/test_usecols.csv"
-    pandas_df = pandas.read_csv(fname, usecols=usecols)
-    modin_df = pd.read_csv(fname, usecols=usecols)
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
-def test_from_csv_s3(make_csv_file):
-    dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
-    pandas_df = pandas.read_csv(dataset_url)
-
-    # This first load is to trigger all the import deprecation warnings
-    modin_df = pd.read_csv(dataset_url)
-
-    # This will warn if it defaults to pandas behavior, but it shouldn't
-    with pytest.warns(None) as record:
-        modin_df = pd.read_csv(dataset_url)
-
-    assert not any(
-        "defaulting to pandas implementation" in str(err) for err in record.list
-    )
-
-    df_equals(modin_df, pandas_df)
-
-
 @pytest.mark.skipif(
     Engine.get() == "Python",
     reason="S3-like path doesn't support in pandas with anonymous credentials. See issue #2301.",
@@ -1070,154 +1738,6 @@ def test_read_parquet_s3():
     # Modin supports default and anonymous credentials and resolves this internally.
     modin_df_s3 = pd.read_parquet(dataset_url)
     df_equals(pandas_df, modin_df_s3)
-
-
-def test_from_csv_default(make_csv_file):
-    # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
-    dataset_url = "https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv"
-    pandas_df = pandas.read_csv(dataset_url)
-
-    with pytest.warns(UserWarning):
-        modin_df = pd.read_csv(dataset_url)
-
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_chunksize(make_csv_file):
-    make_csv_file()
-
-    # Tests __next__ and correctness of reader as an iterator
-    # Use larger chunksize to read through file quicker
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
-
-    for modin_df, pd_df in zip(rdf_reader, pd_reader):
-        df_equals(modin_df, pd_df)
-
-    # Tests that get_chunk works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.get_chunk(1)
-    pd_df = pd_reader.get_chunk(1)
-
-    df_equals(modin_df, pd_df)
-
-    # Tests that read works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.read()
-    pd_df = pd_reader.read()
-
-    df_equals(modin_df, pd_df)
-
-
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv_skiprows(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize(
-    "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
-)
-def test_from_csv_encoding(make_csv_file, encoding):
-    make_csv_file(encoding=encoding)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding=encoding)
-
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_default_to_pandas_behavior(make_csv_file):
-    make_csv_file()
-
-    with pytest.warns(UserWarning):
-        # This tests that we default to pandas on a buffer
-        from io import StringIO
-
-        pd.read_csv(StringIO(open(TEST_CSV_FILENAME, "r").read()))
-
-    with pytest.warns(UserWarning):
-        pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
-
-
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv_index_col(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_skipfooter(make_csv_file):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_parse_dates(make_csv_file):
-    make_csv_file(force=True)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates=[["col2", "col4"]])
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]}
-    )
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, parse_dates={"time": ["col2", "col4"]})
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [21, 5, None])
-@pytest.mark.parametrize("skiprows", [4, 1, 500, None])
-def test_from_csv_newlines_in_quotes(nrows, skiprows):
-    eval_io(
-        path="modin/pandas/test/data/newlines.csv",
-        fn_name="read_csv",
-        nrows=nrows,
-        skiprows=skiprows,
-        cast_to_str=True,
-    )
-
-
-def test_read_csv_incorrect_data():
-    name = "modin/pandas/test/data/test_categories.json"
-    pandas_df, modin_df = pandas.read_csv(name), pd.read_csv(name)
-
-    df_equals(pandas_df, modin_df)
 
 
 @pytest.mark.skip(reason="No clipboard on Travis")
