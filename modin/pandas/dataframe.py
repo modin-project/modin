@@ -282,11 +282,15 @@ class DataFrame(BasePandasDataset):
         Returns:
             Series
         """
+        import hashlib
+
         df = self[subset] if subset is not None else self
         # if the number of columns we are checking for duplicates is larger than 1, we must
         # hash them to generate a single value that can be compared across rows.
         if len(df.columns) > 1:
-            hashed = df.apply(lambda s: hash(tuple(s)), axis=1).to_frame()
+            hashed = df.apply(
+                lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
+            ).to_frame()
         else:
             hashed = df
         duplicates = hashed.apply(lambda s: s.duplicated(keep=keep)).squeeze(axis=1)
