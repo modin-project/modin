@@ -116,6 +116,11 @@ test_bool_data = {
     for i in range(NCOLS)
 }
 
+test_data_resample = {
+    "data": {"A": range(12), "B": range(12)},
+    "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
+}
+
 test_data_with_duplicates = {
     "no_duplicates": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): range(NROWS)
@@ -550,7 +555,7 @@ def arg_keys(arg_name, keys):
     Returns:
         List of strings with arg_name append to front of keys.
     """
-    return ["{0} {1}".format(arg_name, key) for key in keys]
+    return ["{0}_{1}".format(arg_name, key) for key in keys]
 
 
 def name_contains(test_name, vals):
