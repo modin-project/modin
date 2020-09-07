@@ -30,6 +30,9 @@ from modin.pandas.test.utils import (
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    test_data,
+    generate_multiindex,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -306,82 +309,67 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_index(axis, ascending, na_position):
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    # Change index value so sorting will actually make a difference
+    if axis == 0:
+        length = len(modin_df.index)
+        for df in [modin_df, pandas_df]:
+            df.index = [(i - length / 2) % length for i in range(length)]
+
+    # Add NaNs to sorted index
+    for df in [modin_df, pandas_df]:
+        sort_index = df.axes[axis]
+        df.set_axis(
+            [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
+            axis=axis,
+            inplace=True,
+        )
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_index(
+            axis=axis, ascending=ascending, na_position=na_position
+        ),
+    )
+
+
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+def test_sort_index_inplace(axis):
+    data = test_data["int_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    for df in [modin_df, pandas_df]:
+        df.sort_index(axis=axis, inplace=True)
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize(
     "sort_remaining", bool_arg_values, ids=arg_keys("sort_remaining", bool_arg_keys)
 )
-def test_sort_index(data, axis, ascending, na_position, sort_remaining):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+def test_sort_multiindex(sort_remaining):
+    data = test_data["int_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    # Change index value so sorting will actually make a difference
-    if axis == "rows" or axis == 0:
-        length = len(modin_df.index)
-        modin_df.index = [(i - length / 2) % length for i in range(length)]
-        pandas_df.index = [(i - length / 2) % length for i in range(length)]
-    # Add NaNs to sorted index
-    if axis == "rows" or axis == 0:
-        length = len(modin_df.index)
-        modin_df.index = [
-            np.nan if i % 2 == 0 else modin_df.index[i] for i in range(length)
-        ]
-        pandas_df.index = [
-            np.nan if i % 2 == 0 else pandas_df.index[i] for i in range(length)
-        ]
-    else:
-        length = len(modin_df.columns)
-        modin_df.columns = [
-            np.nan if i % 2 == 0 else modin_df.columns[i] for i in range(length)
-        ]
-        pandas_df.columns = [
-            np.nan if i % 2 == 0 else pandas_df.columns[i] for i in range(length)
-        ]
+    for index in ["index", "columns"]:
+        new_index = generate_multiindex(len(getattr(modin_df, index)))
+        for df in [modin_df, pandas_df]:
+            setattr(df, index, new_index)
 
-    modin_result = modin_df.sort_index(
-        axis=axis, ascending=ascending, na_position=na_position, inplace=False
-    )
-    pandas_result = pandas_df.sort_index(
-        axis=axis, ascending=ascending, na_position=na_position, inplace=False
-    )
-    df_equals(modin_result, pandas_result)
-
-    modin_df_cp = modin_df.copy()
-    pandas_df_cp = pandas_df.copy()
-    modin_df_cp.sort_index(
-        axis=axis, ascending=ascending, na_position=na_position, inplace=True
-    )
-    pandas_df_cp.sort_index(
-        axis=axis, ascending=ascending, na_position=na_position, inplace=True
-    )
-    df_equals(modin_df_cp, pandas_df_cp)
-
-    # MultiIndex
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    modin_df.index = pd.MultiIndex.from_tuples(
-        [(i // 10, i // 5, i) for i in range(len(modin_df))]
-    )
-    pandas_df.index = pandas.MultiIndex.from_tuples(
-        [(i // 10, i // 5, i) for i in range(len(pandas_df))]
-    )
-    modin_df.columns = pd.MultiIndex.from_tuples(
-        [(i // 10, i // 5, i) for i in range(len(modin_df.columns))]
-    )
-    pandas_df.columns = pd.MultiIndex.from_tuples(
-        [(i // 10, i // 5, i) for i in range(len(pandas_df.columns))]
-    )
-
-    with pytest.warns(UserWarning):
-        df_equals(modin_df.sort_index(level=0), pandas_df.sort_index(level=0))
-    with pytest.warns(UserWarning):
-        df_equals(modin_df.sort_index(axis=0), pandas_df.sort_index(axis=0))
-    with pytest.warns(UserWarning):
-        df_equals(modin_df.sort_index(axis=1), pandas_df.sort_index(axis=1))
+    for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
+        with pytest.warns(UserWarning):
+            df_equals(
+                modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+                pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+            )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
