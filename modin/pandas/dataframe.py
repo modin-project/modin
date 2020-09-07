@@ -3086,88 +3086,29 @@ class DataFrame(BasePandasDataset):
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
 
-    def __add__(self, other, axis=None, level=None, fill_value=None):
-        return self.add(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __iadd__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.add(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __radd__(self, other, axis=None, level=None, fill_value=None):
-        return self.radd(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __mul__(self, other, axis=None, level=None, fill_value=None):
-        return self.mul(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __imul__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.mul(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rmul__(self, other, axis=None, level=None, fill_value=None):
-        return self.rmul(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __pow__(self, other, axis=None, level=None, fill_value=None):
-        return self.pow(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __ipow__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.pow(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rpow__(self, other, axis=None, level=None, fill_value=None):
-        return self.rpow(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __sub__(self, other, axis=None, level=None, fill_value=None):
-        return self.sub(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __isub__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.sub(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rsub__(self, other, axis=None, level=None, fill_value=None):
-        return self.rsub(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __floordiv__(self, other, axis=None, level=None, fill_value=None):
-        return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __ifloordiv__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.floordiv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rfloordiv__(self, other, axis=None, level=None, fill_value=None):
-        return self.rfloordiv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __truediv__(self, other, axis=None, level=None, fill_value=None):
-        return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __itruediv__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.truediv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rtruediv__(self, other, axis=None, level=None, fill_value=None):
-        return self.rtruediv(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __mod__(self, other, axis=None, level=None, fill_value=None):
-        return self.mod(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __imod__(
-        self, other, axis=None, level=None, fill_value=None
-    ):  # pragma: no cover
-        return self.mod(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rmod__(self, other, axis=None, level=None, fill_value=None):
-        return self.rmod(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __div__(self, other, axis=None, level=None, fill_value=None):
-        return self.div(other, axis=axis, level=level, fill_value=fill_value)
-
-    def __rdiv__(self, other, axis=None, level=None, fill_value=None):
-        return self.rdiv(other, axis=axis, level=level, fill_value=fill_value)
+    __add__ = add
+    __iadd__ = add  # pragma: no cover
+    __radd__ = radd
+    __mul__ = mul
+    __imul__ = mul  # pragma: no cover
+    __rmul__ = rmul
+    __pow__ = pow
+    __ipow__ = pow  # pragma: no cover
+    __rpow__ = rpow
+    __sub__ = sub
+    __isub__ = sub  # pragma: no cover
+    __rsub__ = rsub
+    __floordiv__ = floordiv
+    __ifloordiv__ = floordiv  # pragma: no cover
+    __rfloordiv__ = rfloordiv
+    __truediv__ = truediv
+    __itruediv__ = truediv  # pragma: no cover
+    __rtruediv__ = rtruediv
+    __mod__ = mod
+    __imod__ = mod  # pragma: no cover
+    __rmod__ = rmod
+    __div__ = div
+    __rdiv__ = rdiv
 
     @property
     def attrs(self):
