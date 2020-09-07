@@ -455,17 +455,21 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
-            # We don't have good way to handle this right now, fall back to Pandas.
-            return self._default_to_pandas(lambda df: df.size())
         if self._axis == 0:
             # Size always works in as_index=True mode so it is necessary to make a
             #  copy of _kwargs and change as_index in it
             kwargs = self._kwargs.copy()
             kwargs["as_index"] = True
+            # Series objects in 'by' mean we couldn't handle the case and transform
+            # 'by' to a query compiler. In this case we replace column names with
+            # actual columns to be able to apply goupby to a Series.
+            if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+                by = [self._df[o] if isinstance(o, str) else o for o in self._by]
+            else:
+                by = self._by
             work_object = SeriesGroupBy(
                 self._df[self._df.columns[0]],
-                self._by,
+                by,
                 self._axis,
                 drop=False,
                 idx_name=None,
@@ -653,7 +657,7 @@ class DataFrameGroupBy(object):
         DataFrame or Series
             Returns the same type as `self._df`.
         """
-        if not isinstance(self._by, type(self._query_compiler)) or self._axis != 0:
+        if self._axis != 0:
             return self._default_to_pandas(default_func, **kwargs)
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
