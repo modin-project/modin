@@ -27,6 +27,7 @@ from modin.pandas.test.utils import (
     test_data_values,
     test_data_keys,
     create_test_dfs,
+    test_data,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -35,66 +36,42 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
-def test_items():
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
+@pytest.mark.parametrize("method", ["items", "iteritems", "iterrows"])
+def test_items_iteritems_iterrows(method):
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    modin_items = modin_df.items()
-    pandas_items = pandas_df.items()
-    for modin_item, pandas_item in zip(modin_items, pandas_items):
+    for modin_item, pandas_item in zip(
+        getattr(modin_df, method)(), getattr(pandas_df, method)()
+    ):
         modin_index, modin_series = modin_item
         pandas_index, pandas_series = pandas_item
         df_equals(pandas_series, modin_series)
         assert pandas_index == modin_index
 
 
-def test_iteritems():
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
+@pytest.mark.parametrize("name", [None, "NotPandas"])
+def test_itertuples_name(name):
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    modin_items = modin_df.iteritems()
-    pandas_items = pandas_df.iteritems()
-    for modin_item, pandas_item in zip(modin_items, pandas_items):
-        modin_index, modin_series = modin_item
-        pandas_index, pandas_series = pandas_item
-        df_equals(pandas_series, modin_series)
-        assert pandas_index == modin_index
-
-
-def test_iterrows():
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-
-    modin_iterrows = modin_df.iterrows()
-    pandas_iterrows = pandas_df.iterrows()
-    for modin_row, pandas_row in zip(modin_iterrows, pandas_iterrows):
-        modin_index, modin_series = modin_row
-        pandas_index, pandas_series = pandas_row
-        df_equals(pandas_series, modin_series)
-        assert pandas_index == modin_index
-
-
-@pytest.mark.parametrize("name", [None, "NotPandas", "Pandas"])
-@pytest.mark.parametrize("index", [True, False])
-def test_itertuples(name, index):
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-
-    modin_it_custom = modin_df.itertuples(index=index, name=name)
-    pandas_it_custom = pandas_df.itertuples(index=index, name=name)
+    modin_it_custom = modin_df.itertuples(name=name)
+    pandas_it_custom = pandas_df.itertuples(name=name)
     for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
         np.testing.assert_equal(modin_row, pandas_row)
 
-    mi_index_modin = pd.MultiIndex.from_tuples(
+
+def test_itertuples_multiindex():
+    data = test_data["int_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    new_idx = pd.MultiIndex.from_tuples(
         [(i // 4, i // 2, i) for i in range(len(modin_df.columns))]
     )
-    mi_index_pandas = pandas.MultiIndex.from_tuples(
-        [(i // 4, i // 2, i) for i in range(len(pandas_df.columns))]
-    )
-    modin_df.columns = mi_index_modin
-    pandas_df.columns = mi_index_pandas
-    modin_it_custom = modin_df.itertuples(index=index, name=name)
-    pandas_it_custom = pandas_df.itertuples(index=index, name=name)
+    modin_df.columns = new_idx
+    pandas_df.columns = new_idx
+    modin_it_custom = modin_df.itertuples()
+    pandas_it_custom = pandas_df.itertuples()
     for modin_row, pandas_row in zip(modin_it_custom, pandas_it_custom):
         np.testing.assert_equal(modin_row, pandas_row)
 
