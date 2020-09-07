@@ -59,6 +59,8 @@ from .utils import (
     test_data_small_keys,
     test_data_categorical_values,
     test_data_categorical_keys,
+    generate_multiindex,
+    test_data_diff_dtype,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1844,10 +1846,8 @@ def test_keys(data):
     df_equals(modin_series.keys(), pandas_series.keys())
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
 @pytest.mark.parametrize(
     "numeric_only",
     [
@@ -1861,20 +1861,44 @@ def test_keys(data):
         None,
     ],
 )
-@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
-def test_kurt_kurtosis(data, axis, skipna, level, numeric_only, method):
-    func_kwargs = {
-        "axis": axis,
-        "skipna": skipna,
-        "level": level,
-        "numeric_only": numeric_only,
-    }
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize(
+    "method",
+    [
+        "kurtosis",
+        pytest.param(
+            "kurt",
+            marks=pytest.mark.skipif(
+                pandas.Series.kurt == pandas.Series.kurtosis
+                and pd.Series.kurt == pd.Series.kurtosis,
+                reason="That method was already tested.",
+            ),
+        ),
+    ],
+)
+def test_kurt_kurtosis(axis, skipna, numeric_only, method):
+    data = test_data["float_nan_data"]
 
     eval_general(
-        modin_series,
-        pandas_series,
-        lambda df: df.kurtosis(**func_kwargs),
+        *create_test_series(data),
+        lambda df: getattr(df, method)(
+            axis=axis, skipna=skipna, numeric_only=numeric_only
+        ),
+    )
+
+
+@pytest.mark.parametrize("level", [-1, 0, 1])
+def test_kurt_kurtosis_level(level):
+    data = test_data["int_data"]
+    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
+
+    index = generate_multiindex(len(data.keys()))
+    df_modin.columns = index
+    df_pandas.columns = index
+
+    eval_general(
+        df_modin,
+        df_pandas,
+        lambda df: df.kurtosis(axis=1, level=level),
     )
 
 
@@ -2200,33 +2224,12 @@ def test_pow(data):
     inter_df_math_helper(modin_series, pandas_series, "pow")
 
 
-@pytest.mark.parametrize(
-    "data",
-    test_data_values + test_data_small_values,
-    ids=test_data_keys + test_data_small_keys,
-)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 @pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        False,
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="numeric_only not implemented for pandas.Series"
-            ),
-        ),
-    ],
-)
-@pytest.mark.parametrize(
-    "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
-)
-@pytest.mark.parametrize(
-    "operation",
+    "method",
     [
         "prod",
         pytest.param(
@@ -2234,19 +2237,37 @@ def test_pow(data):
             marks=pytest.mark.skipif(
                 pandas.Series.product == pandas.Series.prod
                 and pd.Series.product == pd.Series.prod,
-                reason="That operation was already tested.",
+                reason="That method was already tested.",
             ),
         ),
     ],
 )
-def test_prod(data, axis, skipna, numeric_only, min_count, operation):
+def test_prod(axis, skipna, method):
+    data = test_data["float_nan_data"]
     eval_general(
         *create_test_series(data),
-        lambda df, *args, **kwargs: type(df)([getattr(df, operation)(*args, **kwargs)]),
-        axis=axis,
-        skipna=skipna,
-        numeric_only=numeric_only,
-        min_count=min_count,
+        lambda df, *args, **kwargs: getattr(df, method)(
+            axis=axis,
+            skipna=skipna,
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    "numeric_only",
+    [
+        None,
+        False,
+        pytest.param(True, marks=pytest.mark.xfail(reason="didn't raise Exception")),
+    ],
+)
+@pytest.mark.parametrize(
+    "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
+)
+def test_prod_specific(min_count, numeric_only):
+    eval_general(
+        *create_test_series(test_data_diff_dtype),
+        lambda df: df.prod(min_count=min_count, numeric_only=numeric_only),
     )
 
     # test for issue #1953
