@@ -1846,8 +1846,22 @@ def test_keys(data):
     df_equals(modin_series.keys(), pandas_series.keys())
 
 
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+def test_kurtosis_alias():
+    # It's optimization. If failed, Series.kurt should be tested explicitly
+    # in tests: `test_kurt_kurtosis`, `test_kurt_kurtosis_level`.
+    assert pd.Series.kurt == pd.Series.kurtosis
+
+
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+def test_kurtosis(axis, skipna):
+    eval_general(
+        *create_test_series(test_data["float_nan_data"]),
+        lambda df: df.kurtosis(axis=axis, skipna=skipna),
+    )
+
+
+@pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize(
     "numeric_only",
     [
@@ -1861,44 +1875,26 @@ def test_keys(data):
         None,
     ],
 )
-@pytest.mark.parametrize(
-    "method",
-    [
-        "kurtosis",
-        pytest.param(
-            "kurt",
-            marks=pytest.mark.skipif(
-                pandas.Series.kurt == pandas.Series.kurtosis
-                and pd.Series.kurt == pd.Series.kurtosis,
-                reason="That method was already tested.",
-            ),
-        ),
-    ],
-)
-def test_kurt_kurtosis(axis, skipna, numeric_only, method):
-    data = test_data["float_nan_data"]
-
+def test_kurtosis_numeric_only(axis, numeric_only):
     eval_general(
-        *create_test_series(data),
-        lambda df: getattr(df, method)(
-            axis=axis, skipna=skipna, numeric_only=numeric_only
-        ),
+        *create_test_series(test_data_diff_dtype),
+        lambda df: df.kurtosis(axis=axis, numeric_only=numeric_only),
     )
 
 
 @pytest.mark.parametrize("level", [-1, 0, 1])
-def test_kurt_kurtosis_level(level):
+def test_kurtosis_level(level):
     data = test_data["int_data"]
-    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_s, pandas_s = *create_test_series(data)
 
     index = generate_multiindex(len(data.keys()))
-    df_modin.columns = index
-    df_pandas.columns = index
+    modin_s.columns = index
+    pandas_s.columns = index
 
     eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(axis=1, level=level),
+        modin_s,
+        pandas_s,
+        lambda s: s.kurtosis(axis=1, level=level),
     )
 
 
