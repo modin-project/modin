@@ -70,19 +70,11 @@ jobs:
         with:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: actions/setup-python@v2
         with:
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
-      - shell: bash -l {0}
-        run: pip install ray==0.8.7
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
+          architecture: "x64"
+      - run: pip install ray==0.8.7
 
   test-api:
     needs: prepare-cache
