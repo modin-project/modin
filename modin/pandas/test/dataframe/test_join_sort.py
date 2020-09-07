@@ -325,13 +325,12 @@ def test_sort_index(axis, ascending, na_position):
             df.index = [(i - length / 2) % length for i in range(length)]
 
     # Add NaNs to sorted index
-    meta = {0: "index", 1: "columns"}
     for df in [modin_df, pandas_df]:
-        sort_index = getattr(df, meta[axis])
-        setattr(
-            df,
-            meta[axis],
+        sort_index = df.axes[axis]
+        df.set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
+            axis=axis,
+            inplace=True,
         )
 
     eval_general(
