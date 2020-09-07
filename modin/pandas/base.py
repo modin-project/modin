@@ -358,9 +358,6 @@ class BasePandasDataset(object):
             "add", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def agg(self, func, axis=0, *args, **kwargs):
-        return self.aggregate(func, axis=axis, *args, **kwargs)
-
     def aggregate(self, func, axis=0, *args, **kwargs):
         axis = self._get_axis_number(axis)
         result = None
@@ -374,6 +371,8 @@ class BasePandasDataset(object):
             kwargs.pop("is_transform", None)
             return self.apply(func, axis=axis, args=args, **kwargs)
         return result
+
+    agg = aggregate
 
     def _aggregate(self, arg, *args, **kwargs):
         _axis = kwargs.pop("_axis", 0)
