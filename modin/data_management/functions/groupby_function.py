@@ -14,6 +14,7 @@
 import pandas
 
 from .mapreducefunction import MapReduceFunction
+from modin.pandas.utils import try_cast_to_pandas
 
 
 class GroupbyReduceFunction(MapReduceFunction):
@@ -29,9 +30,13 @@ class GroupbyReduceFunction(MapReduceFunction):
             numeric_only=True,
             drop=False,
         ):
-            assert isinstance(
-                by, type(query_compiler)
-            ), "Can only use groupby reduce with another Query Compiler"
+            if not isinstance(by, type(query_compiler)):
+                by = try_cast_to_pandas(by)
+                return query_compiler.default_to_pandas(
+                    lambda df: map_func(
+                        df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                    )
+                )
             assert axis == 0, "Can only groupby reduce with axis=0"
 
             if numeric_only:
