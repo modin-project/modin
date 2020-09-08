@@ -544,8 +544,37 @@ def test_replace():
 
 
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
-@pytest.mark.parametrize("axis", [0, "columns"])
-def test_resample(rule, axis):
+@pytest.mark.parametrize("axis", [0, 1])
+def test_resampler(rule, axis):
+    data, index, = (
+        test_data_resample["data"],
+        test_data_resample["index"],
+    )
+    modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis, base=2)
+    pandas_resampler = pandas.DataFrame(data, index=index).resample(
+        rule, axis=axis, base=2
+    )
+
+    assert pandas_resampler.indices == modin_resampler.indices
+    assert pandas_resampler.groups == modin_resampler.groups
+
+    df_equals(
+        modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
+        pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
+    )
+
+
+@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("axis", ["index", "columns"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        *("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
+        *("min", "median", "mean", "max", "last", "first", "nunique", "var"),
+        *("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
+    ],
+)
+def test_resampler_functions(rule, axis, method):
     data, index, = (
         test_data_resample["data"],
         test_data_resample["index"],
@@ -557,45 +586,39 @@ def test_resample(rule, axis):
         pandas_df = pandas_df.T
         modin_df = modin_df.T
 
-    pandas_resampler = pandas_df.resample(
-        rule,
-        axis=axis,
-        base=2,
-    )
-    modin_resampler = modin_df.resample(
-        rule,
-        axis=axis,
-        base=2,
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(),
     )
 
-    for group in [
-        ("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
-        ("min", "median", "mean", "max", "last", "first", "nunique", "var"),
-        ("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
-    ]:
-        for method in group:
-            eval_general(
-                modin_resampler, pandas_resampler, lambda df: getattr(df, method)()
-            )
 
-    for method_arg in [
+@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("axis", ["index", "columns"])
+@pytest.mark.parametrize(
+    "method_arg",
+    [
         ("pipe", lambda x: x.max() - x.min()),
         ("transform", lambda x: (x - x.mean()) / x.std()),
         ("apply", ["sum", "mean", "max"]),
         ("aggregate", ["sum", "mean", "max"]),
-    ]:
-        method, arg = method_arg[0], method_arg[1]
-        eval_general(
-            modin_resampler, pandas_resampler, lambda df: getattr(df, method)(arg)
-        )
-
-    df_equals(
-        modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
-        pandas_resampler.get_group(name=list(pandas_resampler.groups)[0]),
+    ],
+)
+def test_resampler_functions_with_arg(rule, axis, method_arg):
+    data, index, = (
+        test_data_resample["data"],
+        test_data_resample["index"],
     )
+    modin_df = pd.DataFrame(data, index=index)
+    pandas_df = pandas.DataFrame(data, index=index)
 
-    assert pandas_resampler.indices == modin_resampler.indices
-    assert pandas_resampler.groups == modin_resampler.groups
+    method, arg = method_arg[0], method_arg[1]
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(arg),
+    )
 
 
 @pytest.mark.parametrize("rule", ["5T"])
