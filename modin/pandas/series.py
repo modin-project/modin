@@ -24,9 +24,9 @@ from pandas.core.dtypes.common import (
 import sys
 import warnings
 
+from modin.utils import _inherit_docstrings
 from .base import BasePandasDataset
 from .iterator import PartitionIterator
-from .utils import _inherit_docstrings
 from .utils import from_pandas, to_pandas, is_scalar
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
