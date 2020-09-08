@@ -107,7 +107,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
         engine: ["ray", "dask"]
-        part: ["reduction", "binary", "map_metadata", "udf", "default", "window", "indexing", "iter", "join_sort", 3]
+        part: ["DataFrame", 3]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -128,15 +128,39 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true
+          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
       - name: Conda environment
         shell: bash -l {0}
         run: |
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/dataframe/test_${{matrix.part}}.py
-        if: matrix.part != 3
+        run: pytest modin/pandas/test/dataframe/test_binary.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_default.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_indexing.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_iter.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_join_sort.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_reduction.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_udf.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_window.py
+        if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
