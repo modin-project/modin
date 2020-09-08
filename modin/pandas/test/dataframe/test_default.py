@@ -544,7 +544,7 @@ def test_replace():
 
 
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
     data, index, = (
         test_data_resample["data"],
@@ -581,10 +581,6 @@ def test_resampler_functions(rule, axis, method):
     )
     modin_df = pd.DataFrame(data, index=index)
     pandas_df = pandas.DataFrame(data, index=index)
-
-    if axis == "columns":
-        pandas_df = pandas_df.T
-        modin_df = modin_df.T
 
     eval_general(
         modin_df,
