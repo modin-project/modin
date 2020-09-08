@@ -1,0 +1,46 @@
+{% set version = environ.get('GIT_DESCRIBE_TAG', "0.dirty").replace('-', '.') %}
+
+package:
+  name: modin
+  version: "{{ version }}"
+
+source:
+  path: ../../
+
+build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  script: '{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv '
+  noarch: python
+
+requirements:
+  host:
+    - pip
+    - python
+  run:
+    - ray ==0.8.6
+    - omniscidbe4py
+    - python
+    - pandas ==1.0.5
+    - dask >=2.1.0
+    - distributed >=2.3.2
+
+test:
+  import:
+    - modin
+    - modin.experemental.pandas
+  commands:
+    - python run_test.py
+
+about:
+  home: https://github.com/modin-project/modin
+  license: Apache-2.0
+  license_family: Apache
+  license_file: ../../LICENSE
+  summary: Speed up your Pandas workflows by changing a single line of code
+  doc_url: https://modin.readthedocs.io/
+  dev_url: https://github.com/modin-project/modin
+
+extra:
+  recipe-maintainers:
+    - devin-petersohn
+    - h-vetinari
