@@ -485,7 +485,7 @@ class ExcelFile(pandas.ExcelFile):
                         A Modin DataFrame in place of a pandas DataFrame, or the same
                         return type as pandas.ExcelFile.
                     """
-                    from .utils import to_pandas
+                    from modin.utils import to_pandas
 
                     # We don't want to constantly be giving this error message for
                     # internal methods.
@@ -554,7 +554,7 @@ class HDFStore(pandas.HDFStore):
                         A Modin DataFrame in place of a pandas DataFrame, or the same
                         return type as pandas.HDFStore.
                     """
-                    from .utils import to_pandas
+                    from modin.utils import to_pandas
 
                     # We don't want to constantly be giving this error message for
                     # internal methods.

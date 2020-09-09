@@ -23,7 +23,7 @@ from pandas.core.base import DataError
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.pandas.utils import try_cast_to_pandas, wrap_udf_function
+from modin.utils import try_cast_to_pandas, wrap_udf_function
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,

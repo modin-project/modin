@@ -17,7 +17,7 @@ import pandas
 import os
 import matplotlib
 import modin.pandas as pd
-from modin.pandas.utils import to_pandas
+from modin.utils import to_pandas
 from numpy.testing import assert_array_equal
 import io
 

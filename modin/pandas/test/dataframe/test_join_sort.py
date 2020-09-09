@@ -16,7 +16,7 @@ import numpy as np
 import pandas
 import matplotlib
 import modin.pandas as pd
-from modin.pandas.utils import to_pandas
+from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
     random_state,

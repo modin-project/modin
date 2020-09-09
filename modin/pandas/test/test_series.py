@@ -20,7 +20,7 @@ import modin.pandas as pd
 from numpy.testing import assert_array_equal
 import sys
 
-from modin.pandas.utils import to_pandas
+from modin.utils import to_pandas
 from .utils import (
     random_state,
     RAND_LOW,
