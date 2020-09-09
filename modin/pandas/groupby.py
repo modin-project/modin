@@ -672,7 +672,7 @@ class DataFrameGroupBy(object):
 
         result = type(self._df)(
             query_compiler=qc_method(
-                query_compiler=groupby_qc,
+                groupby_qc,
                 by=self._by,
                 axis=self._axis,
                 groupby_args=self._kwargs,

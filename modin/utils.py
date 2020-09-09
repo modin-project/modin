@@ -86,6 +86,8 @@ def try_cast_to_pandas(obj):
     """
     if hasattr(obj, "_to_pandas"):
         return obj._to_pandas()
+    if hasattr(obj, "to_pandas"):
+        return obj.to_pandas()
     if isinstance(obj, (list, tuple)):
         return type(obj)([try_cast_to_pandas(o) for o in obj])
     if isinstance(obj, dict):
