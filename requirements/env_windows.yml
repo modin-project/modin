@@ -23,7 +23,7 @@ dependencies:
     - pathlib
     - tables
     - scipy
-    - s3fs
+    - s3fs>=0.4.2
     - pytest
     - coverage<5.0
     - pytest-cov
