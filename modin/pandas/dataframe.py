@@ -33,12 +33,10 @@ from typing import Tuple, Union
 import warnings
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, to_pandas, hashable
 from .utils import (
     from_pandas,
     from_non_pandas,
-    to_pandas,
-    hashable,
 )
 from .iterator import PartitionIterator
 from .series import Series

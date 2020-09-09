@@ -17,7 +17,7 @@ from modin.error_message import ErrorMessage
 from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .series import Series
-from .utils import to_pandas
+from modin.utils import to_pandas
 
 
 def isna(obj):

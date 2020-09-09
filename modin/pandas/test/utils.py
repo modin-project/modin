@@ -20,7 +20,7 @@ from pandas.util.testing import (
     assert_categorical_equal,
 )
 import modin.pandas as pd
-from modin.pandas.utils import to_pandas
+from modin.utils import to_pandas
 from io import BytesIO
 
 random_state = np.random.RandomState(seed=42)

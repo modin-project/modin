@@ -16,7 +16,8 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
-from modin.pandas.utils import to_pandas, from_arrow
+from modin.utils import to_pandas
+from modin.pandas.utils import from_arrow
 from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq

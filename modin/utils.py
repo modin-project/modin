@@ -49,6 +49,27 @@ def _inherit_docstrings(parent, excluded=[]):
     return decorator
 
 
+def to_pandas(modin_obj):
+    """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
+
+    Args:
+        obj {modin.DataFrame, modin.Series}: The Modin DataFrame/Series to convert.
+
+    Returns:
+        A new pandas DataFrame or Series.
+    """
+    return modin_obj._to_pandas()
+
+
+def hashable(obj):
+    """Return whether the object is hashable."""
+    try:
+        hash(obj)
+    except TypeError:
+        return False
+    return True
+
+
 def try_cast_to_pandas(obj):
     """
     Converts obj and all nested objects from modin to pandas if it is possible,

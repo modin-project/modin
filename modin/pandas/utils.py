@@ -56,27 +56,6 @@ def from_arrow(at):
     return DataFrame(query_compiler=EngineDispatcher.from_arrow(at))
 
 
-def to_pandas(modin_obj):
-    """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
-
-    Args:
-        obj {modin.DataFrame, modin.Series}: The Modin DataFrame/Series to convert.
-
-    Returns:
-        A new pandas DataFrame or Series.
-    """
-    return modin_obj._to_pandas()
-
-
-def hashable(obj):
-    """Return whether the object is hashable."""
-    try:
-        hash(obj)
-    except TypeError:
-        return False
-    return True
-
-
 def is_scalar(obj):
     """
     Return True if given object is scalar.

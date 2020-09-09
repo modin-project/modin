@@ -13,7 +13,7 @@
 
 from pandas import plotting as pdplot
 
-from .utils import to_pandas
+from modin.utils import to_pandas
 from .dataframe import DataFrame
 
 
