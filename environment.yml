@@ -23,9 +23,9 @@ dependencies:
   - pytables
   - msgpack-python
   - psutil
-  - pytest
-  - pytest-cov
-  - pytest-xdist
+  - pytest>=6.0.1
+  - pytest-cov>=2.10.1
+  - pytest-xdist>=2.1.0
   - coverage<5.0
   - pygithub==1.53
   - pip:
