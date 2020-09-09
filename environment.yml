@@ -27,6 +27,7 @@ dependencies:
   - pytest-cov
   - pytest-xdist
   - coverage<5.0
+  - pygithub==1.53
   - pip:
     - ray==0.8.7
     - rpyc
