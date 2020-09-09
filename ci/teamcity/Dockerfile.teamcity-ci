@@ -14,5 +14,4 @@ SHELL ["conda", "run", "-n", "modin", "/bin/bash", "-c"]
 
 RUN conda list
 
-RUN echo "source activate modin" > ~/.bashrc
 ENV PATH /opt/conda/envs/env/bin:$PATH
