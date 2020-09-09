@@ -18,8 +18,7 @@ from pandas.core.dtypes.common import is_list_like
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
-
-from .utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
 from .series import Series
 
 

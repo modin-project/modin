@@ -15,7 +15,8 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.pandas.utils import from_pandas, to_pandas, try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, to_pandas
+from modin.pandas.utils import from_pandas
 from .utils import (
     df_equals,
     check_df_columns_have_nans,
