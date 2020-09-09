@@ -456,16 +456,16 @@ def test_median_skew_transposed(axis, method):
         ),
     ],
 )
-@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank"])
-def test_median_skew_std_var_rank_specific(numeric_only, method):
+@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank", "sem"])
+def test_median_skew_std_var_rank_sem_specific(numeric_only, method):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, method)(numeric_only=numeric_only),
     )
 
 
-@pytest.mark.parametrize("method", ["median", "skew", "std", "var"])
-def test_median_skew_std_var_1953(method):
+@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "sem"])
+def test_median_skew_std_var_sem_1953(method):
     # See #1953 for details
     arrays = [["1", "1", "2", "2"], ["1", "2", "3", "4"]]
     data = [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
@@ -633,11 +633,31 @@ def test_rank_transposed(axis, na_option):
     )
 
 
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
+def test_sem_float_nan_only(skipna, ddof):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.sem(skipna=skipna, ddof=ddof),
+    )
+
+
+@pytest.mark.parametrize("axis", ["rows", "columns"])
+@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
+def test_sem_int_only(axis, ddof):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.sem(axis=axis, ddof=ddof),
+    )
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize("method", ["str", "var", "rank"])
+@pytest.mark.parametrize("method", ["std", "var", "rank"])
 def test_std_var_rank(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),

@@ -671,6 +671,18 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def sem(self, **kwargs):
+        """
+        Returns standard deviation of the mean over requested axis.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing the standard deviation of the mean over requested axis.
+        """
+        pass
+
+    @abc.abstractmethod
     def std(self, **kwargs):
         """Returns standard deviation of each column or row.
 
