@@ -2036,8 +2036,10 @@ def test_median(data, skipna):
     df_equals(modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna))
 
 
-@pytest.mark.parametrize("method", ["median", "skew", "std", "sum", "var", "prod"])
-def test_median_skew_std_sum_var_prod_1953(method):
+@pytest.mark.parametrize(
+    "method", ["median", "skew", "std", "sum", "var", "prod", "sem"]
+)
+def test_median_skew_std_sum_var_prod_sem_1953(method):
     # See #1953 for details
     data = [3, 3, 3, 3, 3, 3, 3, 3, 3]
     arrays = [
@@ -2736,11 +2738,23 @@ def test_searchsorted(
         assert case
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_sem(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.sem()
+@pytest.mark.parametrize(
+    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
+)
+@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
+def test_sem_float_nan_only(skipna, ddof):
+    eval_general(
+        *create_test_series(test_data["float_nan_data"]),
+        lambda df: df.sem(skipna=skipna, ddof=ddof),
+    )
+
+
+@pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
+def test_sem_int_only(ddof):
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df: df.sem(ddof=ddof),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

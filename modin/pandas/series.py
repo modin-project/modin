@@ -1092,6 +1092,59 @@ class Series(BasePandasDataset):
         """
         return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
+    def sem(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        """
+        Return unbiased standard error of the mean over requested axis.
+
+        Normalized by N-1 by default. This can be changed using the ddof argument
+
+        Parameters
+        ----------
+            axis : {index (0), columns (1)}
+            skipna : bool, default True
+                Exclude NA/null values. If an entire row/column is NA,
+                the result will be NA.
+            level : int or level name, default None
+                If the axis is a MultiIndex (hierarchical), count along a particular level,
+                collapsing into a Series.
+            ddof : int, default 1
+                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
+                where N represents the number of elements.
+            numeric_only : bool, default None
+                Include only float, int, boolean columns. If None, will attempt to use everything,
+                then use only numeric data. Not implemented for Series.
+
+        Returns
+        -------
+            Scalar or Series (if level specified)
+        """
+        axis = self._get_axis_number(axis)
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+        if level is not None:
+            return self.__constructor__(
+                query_compiler=self._query_compiler.sem(
+                    axis=axis,
+                    skipna=skipna,
+                    level=level,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return self._reduce_dimension(
+            self._query_compiler.sem(
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
     def slice_shift(self, periods=1, axis=0):
         """
         Equivalent to `shift` without copying data.

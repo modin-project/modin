@@ -740,6 +740,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
     skew = ReductionFunction.register(pandas.DataFrame.skew)
     kurt = ReductionFunction.register(pandas.DataFrame.kurt)
+    sem = ReductionFunction.register(pandas.DataFrame.sem)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
     sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)

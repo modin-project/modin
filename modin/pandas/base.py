@@ -2544,19 +2544,6 @@ class BasePandasDataset(object):
             query_compiler = self._query_compiler.getitem_row_array(samples)
             return self.__constructor__(query_compiler=query_compiler)
 
-    def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        return self._default_to_pandas(
-            "sem",
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            ddof=ddof,
-            numeric_only=numeric_only,
-            **kwargs,
-        )
-
     def set_axis(self, labels, axis=0, inplace=False):
         """Assign desired index to given axis.
 
