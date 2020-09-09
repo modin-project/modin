@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 from modin.data_management.functions.function import Function
-from modin.pandas.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas
 
 from pandas.core.dtypes.common import is_list_like
 import pandas

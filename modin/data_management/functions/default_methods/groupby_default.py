@@ -13,7 +13,7 @@
 
 from .default import DefaultMethod
 
-from modin.pandas.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas
 import re
 import pandas
 
