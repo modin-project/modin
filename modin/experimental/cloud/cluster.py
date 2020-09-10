@@ -208,7 +208,7 @@ def create(
     workers: int = 4,
     head_node: str = None,
     worker_node: str = None,
-    __spawner__: str = "rayscale",
+    cluster_type: str = "rayscale",
 ) -> BaseCluster:
     """
     Creates an instance of a cluster with desired characteristics in a cloud.
@@ -243,9 +243,9 @@ def create(
         What machine type to use for head node in the cluster.
     worker_node : str, optional
         What machine type to use for worker nodes in the cluster.
-    __spawner__ : str, optional, internal
+    cluster_type : str, optional
         How to spawn the cluster.
-        Currently only spawning by Ray autoscaler ("rayscale") is supported
+        Currently spawning by Ray autoscaler ("rayscale" for general and "omnisci" for Omnisci-based) is supported
 
     Returns
     -------
@@ -262,7 +262,7 @@ def create(
 
     Using SOCKS proxy requires Ray newer than 0.8.6, which might need to be installed manually.
     """
-    if not isinstance(provider, Provider) and __spawner__ != "local":
+    if not isinstance(provider, Provider) and cluster_type != "local":
         provider = Provider(
             name=provider,
             credentials_file=credentials,
@@ -276,12 +276,14 @@ def create(
                 "Ignoring credentials, region, zone and image parameters because provider is specified as Provider descriptor, not as name",
                 UserWarning,
             )
-    if __spawner__ == "rayscale":
+    if cluster_type == "rayscale":
         from .rayscale import RayCluster as Spawner
-    elif __spawner__ == "local":
+    elif cluster_type == "omnisci":
+        from .omnisci import RemoteOmnisci as Spawner
+    elif cluster_type == "local":
         from .local_cluster import LocalCluster as Spawner
     else:
-        raise ValueError(f"Unknown spawner: {__spawner__}")
+        raise ValueError(f"Unknown cluster type: {cluster_type}")
     instance = Spawner(
         provider,
         project_name,

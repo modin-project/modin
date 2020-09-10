@@ -75,7 +75,7 @@ def simulate_cloud(request):
     import pandas._testing
     import pandas._libs.testing as cyx_testing
 
-    with create_cluster("local", __spawner__="local"):
+    with create_cluster("local", cluster_type="local"):
         get_connection().teleport(set_experimental_env)(mode)
         with Patcher(
             get_connection(),
