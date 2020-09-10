@@ -7,7 +7,7 @@ ADD git-rev /modin/git-rev
 
 WORKDIR /modin
 
-RUN conda env create -f environment.yml
+RUN conda env create -f ${ENVIRONMENT}
 
 # Make RUN commands use the new environment:
 SHELL ["conda", "run", "-n", "modin", "/bin/bash", "-c"]
