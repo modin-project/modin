@@ -156,6 +156,10 @@ class RayCluster(BaseCluster):
                 restart_only=False,
                 yes=True,
                 override_cluster_name=None,
+                no_config_cache=False,
+                log_old_style=False,
+                log_color="auto",
+                verbose=1,
             )
             # need to re-load the config, as create_or_update_cluster() modifies it
             with open(self.config_file) as inp:
@@ -176,6 +180,9 @@ class RayCluster(BaseCluster):
                 workers_only=False,
                 override_cluster_name=None,
                 keep_min_workers=0,
+                log_old_style=False,
+                log_color="auto",
+                verbose=1,
             )
             self.ready = False
             self.config = None

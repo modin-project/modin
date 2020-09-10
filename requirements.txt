@@ -10,7 +10,7 @@ Jinja2
 pathlib
 tables
 scipy
-s3fs
+s3fs>=0.4.2
 pytest
 coverage<5.0
 pytest-cov
@@ -24,4 +24,4 @@ sqlalchemy
 msgpack
 pandas_gbq
 cloudpickle
-rpyc
+rpyc==4.1.5
