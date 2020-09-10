@@ -152,7 +152,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
-        self.data_cls = type(modin_frame)
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """Default to pandas behavior.

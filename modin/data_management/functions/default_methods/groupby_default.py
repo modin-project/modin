@@ -13,12 +13,17 @@
 
 from .default import DefaultMethod
 
-from modin.utils import try_cast_to_pandas
-import re
 import pandas
 
 
 class GroupBy:
+    agg_aliases = [
+        "agg",
+        "dict_agg",
+        pandas.core.groupby.DataFrameGroupBy.agg,
+        pandas.core.groupby.DataFrameGroupBy.aggregate,
+    ]
+
     @classmethod
     def validate_by(cls, by):
         def try_cast_series(df):
@@ -40,21 +45,10 @@ class GroupBy:
     def inplace_applyier_builder(cls, key, func=None):
         inplace_args = [] if func is None else [func]
 
-        if isinstance(key, str):
-            key = getattr(pandas.core.groupby.DataFrameGroupBy, key)
-
         def inplace_applyier(grp, **func_kwargs):
             return key(grp, *inplace_args, **func_kwargs)
 
         return inplace_applyier
-
-    @classmethod
-    def get_by_names(cls, by):
-        return [o.name if isinstance(o, pandas.Series) else o for o in by]
-
-    @classmethod
-    def materialize_by(cls, df, by):
-        return [df[o] for o in by if o in df]
 
     @classmethod
     def get_func(cls, grp, key, **kwargs):
@@ -87,7 +81,7 @@ class GroupBy:
         return fn
 
     @classmethod
-    def build_groupby_reduce_method(cls, key):
+    def build_groupby_reduce_method(cls, agg_func):
         def fn(
             df,
             by,
@@ -99,15 +93,13 @@ class GroupBy:
             **kwargs
         ):
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
-                grp = df.groupby(by=by, axis=axis, **groupby_args)
-                if callable(key):
-                    agg_func = key
-                else:
-                    agg_func = cls.get_func(grp, key, **kwargs)
-                return agg_func(grp, **map_args)
-            # breakpoint()
+                return agg_func(
+                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                )
+
             if numeric_only:
                 df = df.select_dtypes(include="number")
+
             by = by.squeeze(axis=1)
             if (
                 drop
@@ -125,10 +117,6 @@ class GroupBy:
             groupby_args["as_index"] = True
 
             grp = df.groupby(by, axis=axis, **groupby_args)
-            if callable(key):
-                agg_func = key
-            else:
-                agg_func = cls.get_func(grp, key, **kwargs)
             result = agg_func(grp, **map_args)
 
             if not as_index:
@@ -145,54 +133,18 @@ class GroupBy:
 
         return fn
 
-    def __getattr__(self, key):
-        if key == "aggregate":
-            return self.build_aggregate_method(key)
-        else:
-            return self.build_groupby_reduce_method(key)
+    @classmethod
+    def is_aggregate(cls, key):
+        return key in cls.agg_aliases
+
+    @classmethod
+    def build_groupby(cls, func):
+        if cls.is_aggregate(func):
+            return cls.build_aggregate_method(func)
+        return cls.build_groupby_reduce_method(func)
 
 
 class GroupByDefault(DefaultMethod):
-    methods_translator = {
-        "agg": "aggregate",
-        "dict_agg": "aggregate",
-        pandas.core.groupby.DataFrameGroupBy.agg: "aggregate",
-        pandas.core.groupby.DataFrameGroupBy.aggregate: "aggregate",
-    }
-
-    @classmethod
-    def is_aggregate(cls, key):
-        return key in cls.methods_translator
-
     @classmethod
     def register(cls, func, **kwargs):
-        if callable(func) and not cls.is_aggregate(func):
-            func = GroupBy.build_groupby_reduce_method(func)
-        elif isinstance(func, str):
-            func = re.findall(r"groupby_(.*)", func)[0]
-        func = cls.methods_translator.get(func, func)
-        return cls.call(func, obj_type=GroupBy(), **kwargs)
-
-    @classmethod
-    def build_wrapper(cls, fn, fn_name=None):
-        wrapper = cls.build_default_to_pandas(fn)
-
-        def args_cast(*args, **kwargs):
-            if len(args) > 0:
-                self = args[0]
-                args = args[1:]
-            else:
-                self = kwargs.pop("query_compiler")
-
-            args = try_cast_to_pandas(args)
-            kwargs = try_cast_to_pandas(kwargs)
-            return wrapper(self, *args, **kwargs)
-
-        if fn_name is None:
-            fn_name = fn.__name__
-        if not isinstance(fn_name, str):
-            fn_name = fn_name.__name__
-
-        # setting proper function name that will be printed in default to pandas warning
-        args_cast.__name__ = fn_name
-        return args_cast
+        return cls.call(GroupBy.build_groupby(func), **kwargs)
