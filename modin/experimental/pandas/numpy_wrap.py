@@ -27,6 +27,7 @@ else:
     import types
     import copyreg
     from modin import execution_engine
+    from modin.data_management import REMOTE_ENGINES
     import modin
     import pandas
     import os
@@ -78,7 +79,7 @@ else:
                 self.__has_to_warn = False
 
         def __update_engine(self, _):
-            if execution_engine.get() == "Cloudray":
+            if execution_engine.get() in REMOTE_ENGINES:
                 from modin.experimental.cloud import get_connection
 
                 self.__swap_numpy(get_connection().modules["numpy"])

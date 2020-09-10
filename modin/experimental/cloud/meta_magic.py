@@ -16,6 +16,7 @@ import inspect
 import types
 
 from modin import execution_engine
+from modin.data_management import REMOTE_ENGINES
 
 # the attributes that must be alwasy taken from a local part of dual-nature class,
 # never going to remote end
@@ -153,7 +154,7 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     _KNOWN_DUALS[local_cls] = result
 
     def update_class(_):
-        if execution_engine.get() == "Cloudray":
+        if execution_engine.get() in REMOTE_ENGINES:
             from . import rpyc_proxy
 
             result.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)(result)

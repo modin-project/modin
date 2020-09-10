@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import warnings
+import typing
+import re
 
 from modin import execution_engine
 from modin.engines.base.io import BaseIO
@@ -21,12 +23,41 @@ import pandas
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
 
+class FactoryInfo(typing.NamedTuple):
+    engine: str
+    partition: str
+    experimental: bool
+
+
+class NotRealFactory(Exception):
+    pass
+
+
 class BaseFactory(object):
     """
     Abstract factory which allows to override the io module easily.
     """
 
     io_cls: BaseIO = None  # The module where the I/O functionality exists.
+
+    @classmethod
+    def get_info(cls) -> FactoryInfo:
+        """
+        This gets the information about the factory: its execution engine,
+        partitioning format and whether it's experimental-only.
+
+        Note that it parses factory name, so it must be conformant with how
+        ExecutionEngine class constructs factory names.
+        """
+        try:
+            experimental, partition, engine = re.match(
+                r"^(Experimental)?(.*)On(.*)Factory$", cls.__name__
+            ).groups()
+        except AttributeError:
+            raise NotRealFactory()
+        return FactoryInfo(
+            engine=engine, partition=partition, experimental=bool(experimental)
+        )
 
     @classmethod
     def prepare(cls):
@@ -216,7 +247,9 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
         cls.io_cls = PyarrowOnRayIO
 
 
-class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
+class ExperimentalRemoteFactory(ExperimentalBaseFactory):
+    wrapped_factory = BaseFactory
+
     @classmethod
     def prepare(cls):
         # query_compiler import is needed so remote PandasQueryCompiler
@@ -231,11 +264,13 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
         import modin.experimental.pandas.numpy_wrap  # noqa: F401
 
         class WrappedIO:
-            def __init__(self, conn):
+            def __init__(self, conn, factory):
                 self.__conn = conn
-                self.__io_cls = conn.modules[
-                    "modin.engines.ray.pandas_on_ray.io"
-                ].PandasOnRayIO
+                remote_factory = getattr(
+                    conn.modules[factory.__module__], factory.__name__
+                )
+                remote_factory.prepare()
+                self.__io_cls = remote_factory.io_cls
                 self.__reads = {
                     name for name in BaseIO.__dict__ if name.startswith("read_")
                 }
@@ -256,4 +291,8 @@ class ExperimentalPandasOnCloudrayFactory(ExperimentalBaseFactory):
                     wrap = getattr(self.__io_cls, name)
                 return wrap
 
-        cls.io_cls = WrappedIO(get_connection())
+        cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
+
+
+class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
+    wrapped_factory = PandasOnRayFactory
