@@ -10,3 +10,20 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
+
+from . import factories
+
+
+def _get_remote_engines():
+    for name in dir(factories):
+        obj = getattr(factories, name)
+        if isinstance(obj, type) and issubclass(
+            obj, factories.ExperimentalRemoteFactory
+        ):
+            try:
+                yield obj.get_info().engine
+            except factories.NotRealFactory:
+                pass
+
+
+REMOTE_ENGINES = set(_get_remote_engines())

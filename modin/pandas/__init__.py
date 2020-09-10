@@ -134,9 +134,8 @@ def _update_engine(publisher: Publisher):
 
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
-        import rpyc
 
-        conn: rpyc.ClassicService = get_connection()
+        conn = get_connection()
         remote_ray = conn.modules["ray"]
         if _is_first_update.get("Cloudray", True):
 
@@ -159,7 +158,6 @@ def _update_engine(publisher: Publisher):
             import modin.data_management.dispatcher  # noqa: F401
 
         num_cpus = remote_ray.cluster_resources()["CPU"]
-
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
