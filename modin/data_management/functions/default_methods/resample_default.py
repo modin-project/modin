@@ -15,41 +15,22 @@ from .default import DefaultMethod
 
 
 class Resampler:
-    def __init__(self, obj_type):
-        self.obj_type = obj_type
-
-    def __getattr__(self, key):
+    @classmethod
+    def build_resample(cls, func, squeeze_self):
         def fn(df, resample_args, *args, **kwargs):
-            if self.obj_type == "ser":
+            if squeeze_self:
                 df = df.squeeze(axis=1)
-            prop = getattr(df.resample(*resample_args), key)
-            if callable(prop):
-                return prop(*args, **kwargs)
-            else:
-                return prop
+            resampler = df.resample(*resample_args)
+
+            if type(func) == property:
+                return func.fget(resampler)
+
+            return func(resampler, *args, **kwargs)
 
         return fn
 
 
 class ResampleDefault(DefaultMethod):
-    methods_translator = {
-        "app": "apply",
-        "agg": "aggregate",
-    }
-
     @classmethod
-    def register(cls, func, **kwargs):
-        splitted = func.split("_")[1:]
-        if splitted[-1] == "ser":
-            fn = "_".join(splitted[:-1])
-            obj_type = "ser"
-        elif splitted[-1] == "df":
-            fn = "_".join(splitted[:-1])
-            obj_type = "df"
-        else:
-            fn = "_".join(splitted)
-            obj_type = "df"
-
-        fn = cls.methods_translator.get(fn, fn)
-
-        return cls.call(fn, obj_type=Resampler(obj_type=obj_type), **kwargs)
+    def register(cls, func, squeeze_self=False, **kwargs):
+        return cls.call(Resampler.build_resample(func, squeeze_self), **kwargs)

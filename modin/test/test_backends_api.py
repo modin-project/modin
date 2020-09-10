@@ -19,6 +19,29 @@ BASE_BACKEND = BaseQueryCompiler
 BACKENDS = [PandasQueryCompiler, PyarrowQueryCompiler]
 
 
+def test_base_abstract_methods():
+    allowed_abstract_methods = [
+        "__init__",
+        "free",
+        "to_pandas",
+        "from_pandas",
+        "from_arrow",
+        "default_to_pandas",
+    ]
+
+    not_implemented_methods = BASE_BACKEND.__abstractmethods__.difference(
+        allowed_abstract_methods
+    )
+
+    # sorting for beauty output in error
+    not_implemented_methods = list(not_implemented_methods)
+    not_implemented_methods.sort()
+
+    assert (
+        len(not_implemented_methods) == 0
+    ), f"{BASE_BACKEND} has not implemented abstract methods: {not_implemented_methods}"
+
+
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_api_consistent(backend):
     base_methods = set(BASE_BACKEND.__dict__)

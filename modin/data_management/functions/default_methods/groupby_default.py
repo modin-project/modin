@@ -40,8 +40,11 @@ class GroupBy:
     def inplace_applyier_builder(cls, key, func=None):
         inplace_args = [] if func is None else [func]
 
+        if isinstance(key, str):
+            key = getattr(pandas.core.groupby.DataFrameGroupBy, key)
+
         def inplace_applyier(grp, **func_kwargs):
-            return getattr(grp, key)(*inplace_args, **func_kwargs)
+            return key(grp, *inplace_args, **func_kwargs)
 
         return inplace_applyier
 
@@ -66,7 +69,6 @@ class GroupBy:
     def build_aggregate_method(cls, key):
         def fn(df, by, groupby_args, agg_args, axis=0, drop=False, **kwargs):
             by = cls.validate_by(by)
-
             groupby_args = groupby_args.copy()
             as_index = groupby_args.pop("as_index", True)
             groupby_args["as_index"] = True
@@ -96,6 +98,14 @@ class GroupBy:
             drop=False,
             **kwargs
         ):
+            if not isinstance(by, (pandas.Series, pandas.DataFrame)):
+                grp = df.groupby(by=by, axis=axis, **groupby_args)
+                if callable(key):
+                    agg_func = key
+                else:
+                    agg_func = cls.get_func(grp, key, **kwargs)
+                return agg_func(grp, **map_args)
+            # breakpoint()
             if numeric_only:
                 df = df.select_dtypes(include="number")
             by = by.squeeze(axis=1)
@@ -115,7 +125,10 @@ class GroupBy:
             groupby_args["as_index"] = True
 
             grp = df.groupby(by, axis=axis, **groupby_args)
-            agg_func = cls.get_func(grp, key, **kwargs)
+            if callable(key):
+                agg_func = key
+            else:
+                agg_func = cls.get_func(grp, key, **kwargs)
             result = agg_func(grp, **map_args)
 
             if not as_index:
@@ -143,13 +156,22 @@ class GroupByDefault(DefaultMethod):
     methods_translator = {
         "agg": "aggregate",
         "dict_agg": "aggregate",
+        pandas.core.groupby.DataFrameGroupBy.agg: "aggregate",
+        pandas.core.groupby.DataFrameGroupBy.aggregate: "aggregate",
     }
 
     @classmethod
+    def is_aggregate(cls, key):
+        return key in cls.methods_translator
+
+    @classmethod
     def register(cls, func, **kwargs):
-        fn_name = re.findall(r"groupby_(.*)", func)[0]
-        fn_name = cls.methods_translator.get(fn_name, fn_name)
-        return cls.call(fn_name, obj_type=GroupBy(), **kwargs)
+        if callable(func) and not cls.is_aggregate(func):
+            func = GroupBy.build_groupby_reduce_method(func)
+        elif isinstance(func, str):
+            func = re.findall(r"groupby_(.*)", func)[0]
+        func = cls.methods_translator.get(func, func)
+        return cls.call(func, obj_type=GroupBy(), **kwargs)
 
     @classmethod
     def build_wrapper(cls, fn, fn_name=None):

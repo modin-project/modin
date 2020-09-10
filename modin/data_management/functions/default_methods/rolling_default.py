@@ -13,17 +13,17 @@
 
 from .default import DefaultMethod
 
-import re
-
 
 class Rolling:
-    def __getattr__(self, key):
+    @classmethod
+    def build_rolling(cls, func):
         def fn(df, rolling_args, *args, **kwargs):
-            prop = getattr(df.rolling(*rolling_args), key)
-            if callable(prop):
-                return prop(*args, **kwargs)
-            else:
-                return prop
+            roller = df.rolling(*rolling_args)
+
+            if type(func) == property:
+                return func.fget(roller)
+
+            return func(roller, *args, **kwargs)
 
         return fn
 
@@ -31,6 +31,4 @@ class Rolling:
 class RollingDefault(DefaultMethod):
     @classmethod
     def register(cls, func, **kwargs):
-        fn = re.findall(r"((rolling)|(window))_(.*)", func)[0][-1]
-
-        return cls.call(fn, obj_type=Rolling(), **kwargs)
+        return cls.call(Rolling.build_rolling(func), **kwargs)

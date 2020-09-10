@@ -19,9 +19,6 @@ import pandas
 
 
 class DefaultMethod(Function):
-
-    backend_spicific_params = set(["broadcast"])
-
     @classmethod
     def call(cls, func, **call_kwds):
         obj = call_kwds.get("obj_type", pandas.DataFrame)
@@ -33,7 +30,7 @@ class DefaultMethod(Function):
             fn = func
 
         if type(fn) == property:
-            fn = cls.build_property_wrapper(func)
+            fn = cls.build_property_wrapper(fn)
 
         def applyier(df, *args, **kwargs):
             df = cls.frame_wrapper(df)
@@ -43,6 +40,7 @@ class DefaultMethod(Function):
                 not isinstance(result, pandas.Series)
                 and not isinstance(result, pandas.DataFrame)
                 and func != "to_numpy"
+                and func != pandas.DataFrame.to_numpy
             ):
                 result = (
                     pandas.DataFrame(result)
@@ -77,16 +75,16 @@ class DefaultMethod(Function):
         if fn_name is None:
             fn_name = fn.__name__
         if not isinstance(fn_name, str):
-            fn_name = fn_name.__name__
+            fn_name = getattr(fn_name, "__name__", repr(fn_name))
 
         # setting proper function name that will be printed in default to pandas warning
         args_cast.__name__ = fn_name
         return args_cast
 
     @classmethod
-    def build_property_wrapper(cls, name):
+    def build_property_wrapper(cls, prop):
         def property_wrapper(df):
-            return getattr(df, name)
+            return prop.fget(df)
 
         return property_wrapper
 

@@ -13,16 +13,8 @@
 
 from .series_default import SeriesDefault
 
-import re
-import pandas
-
 
 class CatDefault(SeriesDefault):
-    @classmethod
-    def register(cls, func, **kwargs):
-        func = re.findall(r"cat_(.*)", func)[0]
-        return cls.call(func, obj_type=pandas.Series.cat, **kwargs)
-
     @classmethod
     def frame_wrapper(cls, df):
         return df.squeeze(axis=1).cat
