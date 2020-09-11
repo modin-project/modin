@@ -99,6 +99,7 @@ class BaseCluster:
 
     target_engine = None
     target_partition = None
+    wrap_cmd = None
     Connector = Connection
 
     def __init__(
@@ -142,7 +143,9 @@ class BaseCluster:
             # cluster is ready now
             if self.connection is None:
                 self.connection = self.Connector(
-                    self._get_connection_details(), self._get_main_python()
+                    self._get_connection_details(),
+                    self._get_main_python(),
+                    self.wrap_cmd,
                 )
 
     def destroy(self, wait=False):

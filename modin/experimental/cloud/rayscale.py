@@ -17,6 +17,7 @@ import traceback
 import sys
 from hashlib import sha1
 from typing import Callable
+import subprocess
 
 import yaml
 from ray.autoscaler.commands import (
@@ -235,3 +236,16 @@ class RayCluster(BaseCluster):
         Gets the path to 'main' interpreter (the one that houses created environment for running everything)
         """
         return "~/miniconda/envs/modin/bin/python"
+
+    def wrap_cmd(self, cmd: list):
+        """
+        Wraps command into required incantation for bash to read ~/.bashrc which is needed
+        to make "conda foo" commands work
+        """
+        return subprocess.list2cmdline(
+            [
+                "bash",
+                "-ic",
+                subprocess.list2cmdline(["conda", "run", "-n", "modin"] + cmd),
+            ]
+        )
