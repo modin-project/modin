@@ -113,9 +113,10 @@ def initialize_ray(
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
             plasma_directory = os.environ.get("MODIN_ON_RAY_PLASMA_DIR", None)
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
-                from tempfile import gettempdir
 
                 if plasma_directory is None:
+                    from tempfile import gettempdir
+
                     plasma_directory = gettempdir()
                 # We may have already set the memory from the environment variable, we don't
                 # want to overwrite that value if we have.
