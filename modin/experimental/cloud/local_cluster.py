@@ -50,6 +50,7 @@ class LocalConnection(Connection):
 
     @staticmethod
     def _run(sshcmd: list, cmd: list, capture_out: bool = True):
+        assert not sshcmd, "LocalConnection does not support running things via ssh"
         redirect = subprocess.PIPE if capture_out else subprocess.DEVNULL
         return subprocess.Popen(
             cmd,

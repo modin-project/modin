@@ -146,7 +146,8 @@ class Connection:
             Connection.__current = None
 
     def stop(self, sigint=signal.SIGINT if sys.platform != "win32" else signal.SIGTERM):
-        # capture signal.SIGINT in closure so it won't get removed before __del__ is called
+        # capture signal number in closure so it won't get removed before __del__ is called
+        # which might happen if connection is being destroyed during interpreter destruction
         self.deactivate()
         if self.proc and self.proc.poll() is None:
             self.proc.send_signal(sigint)
