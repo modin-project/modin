@@ -479,6 +479,98 @@ def test_pivot(data, index, columns, values):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "index",
+    [
+        lambda df: df.columns[0],
+        lambda df: [*df.columns[0:2], *df.columns[-7:-4]],
+        None,
+    ],
+)
+@pytest.mark.parametrize(
+    "columns",
+    [
+        lambda df: df.columns[len(df.columns) // 2],
+        lambda df: [
+            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+            df.columns[-7],
+        ],
+        None,
+    ],
+)
+@pytest.mark.parametrize(
+    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1]]
+)
+def test_pivot_table_data(data, index, columns, values):
+    eval_general(
+        *create_test_dfs(data),
+        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        index=index,
+        columns=columns,
+        values=values,
+        check_exception_type=None,
+    )
+
+
+@pytest.mark.parametrize("data", [test_data["int_data"]], ids=["int_data"])
+@pytest.mark.parametrize(
+    "index",
+    [
+        lambda df: df.columns[0],
+        lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
+    ],
+)
+@pytest.mark.parametrize(
+    "columns",
+    [
+        lambda df: df.columns[len(df.columns) // 2],
+        lambda df: [
+            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+            df.columns[-7],
+        ],
+    ],
+)
+@pytest.mark.parametrize(
+    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1]]
+)
+@pytest.mark.parametrize(
+    "aggfunc",
+    [["mean", "sum"], lambda df: {df.columns[5]: "mean", df.columns[-5]: "sum"}],
+)
+@pytest.mark.parametrize("margins_name", ["Custom name", None])
+def test_pivot_table_margins(
+    data,
+    index,
+    columns,
+    values,
+    aggfunc,
+    margins_name,
+):
+    eval_general(
+        *create_test_dfs(data),
+        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        index=index,
+        columns=columns,
+        values=values,
+        aggfunc=aggfunc,
+        margins=True,
+        margins_name=margins_name,
+    )
+
+
+@pytest.mark.parametrize("data", [test_data["int_data"]], ids=["int_data"])
+def test_pivot_table_dropna(data):
+    eval_general(
+        *create_test_dfs(data),
+        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        index=lambda df: df.columns[0],
+        columns=lambda df: df.columns[1],
+        values=lambda df: df.columns[-1],
+        dropna=False,
+    )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_plot(request, data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
