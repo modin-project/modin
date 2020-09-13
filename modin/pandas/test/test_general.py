@@ -253,11 +253,11 @@ def test_pivot_table():
             "E": [2, 4, 5, 5, 6, 6, 8, 9, 9],
         }
     )
-    with pytest.warns(UserWarning):
-        df = pd.pivot_table(
-            test_df, values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
-        )
-        assert isinstance(df, pd.DataFrame)
+
+    df = pd.pivot_table(
+        test_df, values="D", index=["A", "B"], columns=["C"], aggfunc=np.sum
+    )
+    assert isinstance(df, pd.DataFrame)
 
     with pytest.raises(ValueError):
         pd.pivot_table(
