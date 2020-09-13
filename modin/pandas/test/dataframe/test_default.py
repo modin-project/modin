@@ -82,15 +82,6 @@ def test_style():
         pd.DataFrame(data).style
 
 
-def test___setstate__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        try:
-            pd.DataFrame(data).__setstate__(None)
-        except TypeError:
-            pass
-
-
 def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
