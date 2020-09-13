@@ -63,7 +63,6 @@ matplotlib.use("Agg")
         ("pct_change", None),
         ("__getstate__", None),
         ("to_xarray", None),
-        ("pivot_table", lambda df: {"values": "int_col", "index": ["float_col"]}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
