@@ -963,8 +963,8 @@ class BasePandasFrame(object):
             A function to be shipped to the partitions to be executed.
         """
 
-        def _map_reduce_func(df):
-            series_result = func(df)
+        def _map_reduce_func(df, *args, **kwargs):
+            series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
                 # consistent with what we have done. In the case of a reduction, the
@@ -1230,35 +1230,13 @@ class BasePandasFrame(object):
         -----
         The data shape may change as a result of the function.
         """
-        new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis,
-            self._partitions,
-            self._build_mapreduce_func(axis, func),
-            keep_partitioning=True,
-        )
-        # Index objects for new object creation. This is shorter than if..else
-        if new_columns is None:
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        if new_index is None:
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
-        if dtypes == "copy":
-            dtypes = self._dtypes
-        elif dtypes is not None:
-            dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
-            )
-        return self.__constructor__(
-            new_partitions,
-            new_index,
-            new_columns,
-            None,
-            None,
-            dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
+        return self.broadcast_apply_full_axis(
+            axis=axis,
+            func=func,
+            new_index=new_index,
+            new_columns=new_columns,
+            dtypes=dtypes,
+            other=None,
         )
 
     def _apply_full_axis_select_indices(
@@ -1562,6 +1540,68 @@ class BasePandasFrame(object):
             )
         return self.__constructor__(new_partitions, new_index, new_columns)
 
+    def broadcast_apply_full_axis(
+        self,
+        axis,
+        func,
+        other,
+        new_index=None,
+        new_columns=None,
+        dtypes=None,
+    ):
+        """Broadcast partitions of other dataframe partitions and apply a function along full axis.
+
+        Args:
+            axis : 0 or 1
+                The axis to apply over (0 - rows, 1 - columns).
+            func : callable
+                The function to apply.
+            new_index : list-like (optional)
+                The index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns : list-like (optional)
+                The columns of the result. We may know this in
+                advance, and if not provided it must be computed.
+            dtypes : list-like (optional)
+                The data types of the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and allows us to avoid (re)computing it.
+
+        Returns:
+             A new Modin DataFrame
+        """
+        new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
+            axis=axis,
+            left=self._partitions,
+            right=other if other is None else other._partitions,
+            apply_func=self._build_mapreduce_func(axis, func),
+            keep_partitioning=True,
+        )
+        # Index objects for new object creation. This is shorter than if..else
+        if new_columns is None:
+            new_columns = self._frame_mgr_cls.get_indices(
+                1, new_partitions, lambda df: df.columns
+            )
+        if new_index is None:
+            new_index = self._frame_mgr_cls.get_indices(
+                0, new_partitions, lambda df: df.index
+            )
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
+            )
+        return self.__constructor__(
+            new_partitions,
+            new_index,
+            new_columns,
+            None,
+            None,
+            dtypes,
+            validate_axes="all" if new_partitions.size != 0 else False,
+        )
+
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two dataframes.
@@ -1813,10 +1853,11 @@ class BasePandasFrame(object):
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            ErrorMessage.catch_bugs_and_request_email(
-                not df.index.equals(self.index) or not df.columns.equals(self.columns),
-                "Internal and external indices do not match.",
-            )
+            for axis in [0, 1]:
+                ErrorMessage.catch_bugs_and_request_email(
+                    not df.axes[axis].equals(self.axes[axis]),
+                    f"Internal and external indices on axis {axis} do not match.",
+                )
             df.index = self.index
             df.columns = self.columns
 
