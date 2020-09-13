@@ -2537,6 +2537,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         margins_name,
         observed,
     ):
+        ErrorMessage.missmatch_with_pandas(
+            operation="pivot_table",
+            message="Order of columns could be different from pandas",
+        )
+
         from pandas.core.reshape.pivot import _convert_by
 
         def __convert_by(by):
@@ -2558,7 +2563,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def applyier(df, other):
             concated = pandas.concat([df, other], axis=1, copy=False)
-            return concated.pivot_table(
+            result = concated.pivot_table(
                 index=index,
                 values=values if len(values) > 0 else None,
                 columns=columns,
@@ -2570,18 +2575,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 observed=observed,
             )
 
+            # in that case Pandas transposes the result of `pivot_table`,
+            # transposing it back to be consistent with column axis values along
+            # different partitions
+            if len(index) == 0:
+                result = result.T
+
+            return result
+
         result = self.__constructor__(
             to_group._modin_frame.broadcast_apply_full_axis(
                 axis=0, func=applyier, other=keys_columns._modin_frame
             )
         )
 
+        # transposing the result again, to be consistent with Pandas result
+        if len(index) == 0:
+            result = result.transpose()
+
         if len(values) == 0:
             values = self.columns.drop(unique_keys)
         if len(values) == 1 and result.columns.nlevels > 1:
             result.columns = result.columns.droplevel(int(margins))
 
-        return result
+        return result.sort_index(axis=1)
 
     # Get_dummies
     def get_dummies(self, columns, **kwargs):

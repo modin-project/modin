@@ -477,7 +477,7 @@ def test_pivot(data, index, columns, values):
     )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data", [test_data["int_data"]], ids=["int_data"])
 @pytest.mark.parametrize(
     "index",
     [
@@ -498,12 +498,14 @@ def test_pivot(data, index, columns, values):
     ],
 )
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1]]
+    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1], None]
 )
 def test_pivot_table_data(data, index, columns, values):
     eval_general(
         *create_test_dfs(data),
-        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        operation=lambda df, *args, **kwargs: df.pivot_table(
+            *args, **kwargs
+        ).sort_index(axis=int(index is not None)),
         index=index,
         columns=columns,
         values=values,
