@@ -1904,7 +1904,6 @@ class DataFrame(BasePandasDataset):
             or result.index.equals(pandas.Index(["__reduced__"]))
         ):
             result = self._reduce_dimension(result._query_compiler)
-            # assert isinstance(result, (Series, type(self)))
             if getattr(result, "name", None) == 0:
                 result.name = None
 

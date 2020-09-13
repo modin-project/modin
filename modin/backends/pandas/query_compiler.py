@@ -2553,7 +2553,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to_group = self.getitem_column_array(unique_values)
         else:
             to_group = self.drop(columns=unique_keys)
-            values = self.columns.drop(unique_keys)
 
         keys_columns = self.getitem_column_array(unique_keys)
 
@@ -2561,7 +2560,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             concated = pandas.concat([df, other], axis=1, copy=False)
             return concated.pivot_table(
                 index=index,
-                values=values,
+                values=values if len(values) > 0 else None,
                 columns=columns,
                 aggfunc=aggfunc,
                 fill_value=fill_value,
@@ -2577,6 +2576,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
+        if len(values) == 0:
+            values = self.columns.drop(unique_keys)
         if len(values) == 1 and result.columns.nlevels > 1:
             result.columns = result.columns.droplevel(int(margins))
 

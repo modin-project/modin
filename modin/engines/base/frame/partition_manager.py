@@ -321,10 +321,10 @@ class BaseFrameManager(object):
         """
         return cls.broadcast_axis_partitions(
             axis=axis,
-            partitions=partitions,
-            map_func=map_func,
+            left=partitions,
+            apply_func=map_func,
             keep_partitioning=keep_partitioning,
-            other=None,
+            right=None,
         )
 
     @classmethod
