@@ -3121,8 +3121,12 @@ class DataFrame(BasePandasDataset):
     def __round__(self, decimals=0):
         return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
 
-    def __setstate__(self, state):
-        return self._default_to_pandas(pandas.DataFrame.__setstate__, state)
+    @classmethod
+    def __inflate__(self, pandas_df):
+        return from_pandas(pandas_df)
+
+    def __reduce__(self):
+        return self.__inflate__, (self._to_pandas(),)
 
     def __delitem__(self, key):
         """Delete a column by key. `del a[key]` for example.

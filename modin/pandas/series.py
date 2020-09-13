@@ -94,7 +94,6 @@ class Series(BasePandasDataset):
             )._query_compiler
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
-            self._query_compiler = self._query_compiler
             self.name = name
 
     def _get_name(self):
@@ -153,6 +152,22 @@ class Series(BasePandasDataset):
             return DataFrame(query_compiler=new_query_compiler)
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
+
+    @classmethod
+    def __inflate__(cls, pandas_df, name, parent, parent_axis):
+        modin_df = from_pandas(pandas_df)
+        result = cls(query_compiler=modin_df._query_compiler, name=name)
+        result._parent = parent
+        result._parent_axis = parent_axis
+        return result
+
+    def __reduce__(self):
+        return self.__inflate__, (
+            self._query_compiler.to_pandas(),
+            self.name,
+            self._parent,
+            self._parent_axis,
+        )
 
     def _prepare_inter_op(self, other):
         if isinstance(other, Series):

@@ -3257,9 +3257,6 @@ class BasePandasDataset(object):
             return self.copy()
         return self.iloc[key]
 
-    def __getstate__(self):
-        return self._default_to_pandas("__getstate__")
-
     def __gt__(self, right):
         return self.gt(right)
 
@@ -3351,6 +3348,8 @@ class BasePandasDataset(object):
         default_behaviors = [
             "__init__",
             "__class__",
+            "__reduce__",
+            "__inflate__",
             "_get_index",
             "_set_index",
             "empty",

@@ -62,7 +62,6 @@ matplotlib.use("Agg")
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        ("__getstate__", None),
         ("to_xarray", None),
         ("pivot_table", lambda df: {"values": "int_col", "index": ["float_col"]}),
     ],
