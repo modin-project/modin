@@ -185,7 +185,7 @@ class CSVReader(TextFileReader):
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids)
+        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
 
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
         # If parse_dates is present, the column names that we have might not be

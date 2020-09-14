@@ -1184,6 +1184,13 @@ def test_from_csv_newlines_in_quotes(nrows, skiprows):
     )
 
 
+def test_read_csv_incorrect_data():
+    name = "modin/pandas/test/data/test_categories.json"
+    pandas_df, modin_df = pandas.read_csv(name), pd.read_csv(name)
+
+    df_equals(pandas_df, modin_df)
+
+
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_to_clipboard():
     modin_df = create_test_modin_dataframe()
