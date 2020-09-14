@@ -1890,19 +1890,7 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-        if (
-            (
-                len(result.columns) == 1
-                and result.columns[0] == 0
-                and isinstance(result.columns, pandas.RangeIndex)
-            )
-            or (
-                len(result.index) == 1
-                and result.index[0] == 0
-                and isinstance(result.index, pandas.RangeIndex)
-            )
-            or result.index.equals(pandas.Index(["__reduced__"]))
-        ):
+        if result.columns.equals(pandas.Index(["__reduced__"])):
             result = self._reduce_dimension(result._query_compiler)
             if getattr(result, "name", None) == 0:
                 result.name = None

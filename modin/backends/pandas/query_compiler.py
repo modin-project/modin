@@ -2592,6 +2592,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # transposing the result again, to be consistent with Pandas result
         if len(index) == 0:
             result = result.transpose()
+            if len(columns) > 1:
+                result.columns = ["__reduced__"]
 
         if len(values) == 0:
             values = self.columns.drop(unique_keys)
