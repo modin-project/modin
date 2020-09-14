@@ -13,6 +13,7 @@
 
 import subprocess
 import sys
+import warnings
 
 from .base import ConnectionDetails
 from .cluster import BaseCluster
@@ -64,6 +65,9 @@ class LocalConnection(Connection):
         return LocalWrappingService
 
 
+_UNUSED = object()
+
+
 class LocalCluster(BaseCluster):
     target_engine = "Cloudpython"
     target_partition = "Pandas"
@@ -73,13 +77,28 @@ class LocalCluster(BaseCluster):
     def __init__(
         self,
         provider,
-        project_name,
-        cluster_name="modin-cluster",
-        worker_count=4,
-        head_node_type=None,
-        worker_node_type=None,
+        project_name=_UNUSED,
+        cluster_name=_UNUSED,
+        worker_count=_UNUSED,
+        head_node_type=_UNUSED,
+        worker_node_type=_UNUSED,
     ):
-        assert provider == "local"
+        assert (
+            provider == "local"
+        ), "Local cluster can only be spawned with 'local' provider"
+        if any(
+            arg is not _UNUSED
+            for arg in (
+                project_name,
+                cluster_name,
+                worker_count,
+                head_node_type,
+                worker_node_type,
+            )
+        ):
+            warnings.warn(
+                "All parameters except 'provider' are ignored for LocalCluster, do not pass them"
+            )
         super().__init__(provider, "test-project", "test-cluster", 1, "head", "worker")
 
     def _spawn(self, wait=False):
