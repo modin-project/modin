@@ -20,7 +20,7 @@ import modin.pandas as pd
 from numpy.testing import assert_array_equal
 import sys
 
-from modin.utils import to_pandas
+from modin.utils import to_pandas, get_current_backend
 from .utils import (
     random_state,
     RAND_LOW,
@@ -486,7 +486,18 @@ def test___pow__(data):
     "dt_index", [True, False], ids=["dt_index_true", "dt_index_false"]
 )
 @pytest.mark.parametrize(
-    "data", [*test_data_values, "empty"], ids=[*test_data_keys, "empty"]
+    "data",
+    [
+        *test_data_values,
+        pytest.param(
+            "empty",
+            marks=pytest.mark.xfail_backends(
+                ["BaseOnPython"],
+                reason="Empty Series has a missmatched from Pandas dtype.",
+            ),
+        ),
+    ],
+    ids=[*test_data_keys, "empty"],
 )
 def test___repr__(name, dt_index, data):
     if data == "empty":
@@ -1440,6 +1451,9 @@ def test_dropna_inplace(data):
     df_equals(modin_series, pandas_series)
 
 
+@pytest.mark.xfail_backends(
+    ["BaseOnPython"], reason="Empty Series has a missmatched from Pandas dtype."
+)
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
     assert modin_series.dtype == pandas_series.dtype
@@ -3277,23 +3291,35 @@ def test_value_counts(normalize, bins, dropna):
             else:
                 new_index[j] = result.index[j]
             i += 1
-        return pandas.Series(result, index=new_index)
+        return type(result)(result, index=new_index)
 
     # We sort indices for pandas result because of issue #1650
     modin_series, pandas_series = create_test_series(test_data_values[0])
     modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
+
+    if get_current_backend() == "BaseOnPython":
+        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
+
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
     modin_result = modin_series.value_counts(bins=bins, ascending=False)
+
+    if get_current_backend() == "BaseOnPython":
+        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
+
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
     modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
+
+    if get_current_backend() == "BaseOnPython":
+        modin_result = sort_index_for_equal_values(modin_result, ascending=True)
+
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(dropna=dropna, ascending=True), True
     )

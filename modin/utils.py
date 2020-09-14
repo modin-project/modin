@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import modin
 
 
 def _inherit_docstrings(parent, excluded=[]):
@@ -113,3 +114,7 @@ def wrap_udf_function(func):
 
     wrapper.__name__ = func.__name__
     return wrapper
+
+
+def get_current_backend():
+    return f"{modin.partition_format.get()}On{modin.execution_engine.get()}"

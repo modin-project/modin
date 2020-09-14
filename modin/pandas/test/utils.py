@@ -22,12 +22,20 @@ from pandas.util.testing import (
 import modin.pandas as pd
 from modin.utils import to_pandas
 from io import BytesIO
+import os
 
 random_state = np.random.RandomState(seed=42)
 
+DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "normal").lower()
+
+DATASET_SIZE_DICT = {
+    "small": (2 ** 2, 2 ** 3),
+    "normal": (2 ** 6, 2 ** 8),
+    "big": (2 ** 7, 2 ** 12),
+}
+
 # Size of test dataframes
-NCOLS = 2 ** 6
-NROWS = 2 ** 8
+NCOLS, NROWS = DATASET_SIZE_DICT.get(DATASET_SIZE, DATASET_SIZE_DICT["normal"])
 
 # Range for values for test data
 RAND_LOW = 0

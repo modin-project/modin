@@ -733,6 +733,10 @@ def test_stack(data, is_multi_idx, is_multi_col):
                     ["i", "j", "k", "l", "index"],
                 ]
             )
+        else:
+            index = pd.MultiIndex.from_tuples(
+                [(i, i * 2, i * 3) for i in range(len(pandas_df.index))]
+            )
     else:
         index = pandas_df.index
 
@@ -752,6 +756,10 @@ def test_stack(data, is_multi_idx, is_multi_col):
                     ["A", "B", "C", "D", "F"],
                     ["I", "J", "K", "L", "INDEX"],
                 ]
+            )
+        else:
+            columns = pd.MultiIndex.from_tuples(
+                [(i, i * 2, i * 3) for i in range(len(pandas_df.columns))]
             )
     else:
         columns = pandas_df.columns
