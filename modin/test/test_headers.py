@@ -21,7 +21,7 @@ exclude_files = ["_version.py"]
 
 
 def test_headers():
-    with open("{}{}".format(dirname(rootdir), "/LISCENSE_HEADER"), "r") as f:
+    with open("{}{}".format(dirname(rootdir), "/LICENSE_HEADER"), "r") as f:
         # Lines to check each line individually
         header_lines = f.readlines()
 
