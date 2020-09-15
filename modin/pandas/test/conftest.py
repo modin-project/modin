@@ -15,7 +15,7 @@ import modin
 
 from modin.backends import PandasQueryCompiler, BaseQueryCompiler
 from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
-from modin.data_management import factories
+from modin.data_management.factories import factories
 from modin.utils import get_current_backend
 
 import pytest

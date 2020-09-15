@@ -912,6 +912,24 @@ class BaseQueryCompiler(abc.ABC):
     # END Abstract map across rows/columns
 
     # Abstract __getitem__ methods
+    def getitem_array(self, key):
+        """
+        Get column or row data specified by key.
+        Parameters
+        ----------
+        key : BaseQueryCompiler, numpy.ndarray, pandas.Index or list
+            Target numeric indices or labels by which to retrieve data.
+        Returns
+        -------
+        BaseQueryCompiler
+            A new Query Compiler.
+        """
+
+        def getitem_array(df, key):
+            return df[key]
+
+        return DataFrameDefault.register(getitem_array)(self, key)
+
     def getitem_column_array(self, key, numeric=False):
         """Get column data for target labels.
 
