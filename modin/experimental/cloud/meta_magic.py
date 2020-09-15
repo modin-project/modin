@@ -16,7 +16,7 @@ import inspect
 import types
 
 from modin import execution_engine
-from modin.data_management import REMOTE_ENGINES
+from modin.data_management.factories import REMOTE_ENGINES
 
 # the attributes that must be alwasy taken from a local part of dual-nature class,
 # never going to remote end

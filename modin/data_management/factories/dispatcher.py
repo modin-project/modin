@@ -14,7 +14,7 @@
 import os
 
 from modin import execution_engine, partition_format
-from modin.data_management import factories
+from modin.data_management.factories import factories
 
 
 class FactoryNotFoundError(AttributeError):

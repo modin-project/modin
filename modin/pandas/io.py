@@ -35,7 +35,7 @@ def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
         engine: This argument doesn't do anything for now.
         kwargs: Pass into parquet's read_pandas function.
     """
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(
         query_compiler=EngineDispatcher.read_parquet(
@@ -122,7 +122,7 @@ def _read(**kwargs):
               We only support local files for now.
         kwargs: Keyword arguments in pandas.read_csv
     """
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     pd_obj = EngineDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
@@ -157,7 +157,7 @@ def read_json(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_json(**kwargs))
 
@@ -181,7 +181,7 @@ def read_gbq(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_gbq(**kwargs))
 
@@ -205,7 +205,7 @@ def read_html(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_html(**kwargs))
 
@@ -214,7 +214,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_clipboard(**kwargs))
 
@@ -250,7 +250,7 @@ def read_excel(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     intermediate = EngineDispatcher.read_excel(**kwargs)
     if isinstance(intermediate, (OrderedDict, dict)):
@@ -278,7 +278,7 @@ def read_hdf(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_hdf(**kwargs))
 
@@ -286,7 +286,7 @@ def read_hdf(
 def read_feather(path, columns=None, use_threads: bool = True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_feather(**kwargs))
 
@@ -305,7 +305,7 @@ def read_stata(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_stata(**kwargs))
 
@@ -320,7 +320,7 @@ def read_sas(
 ):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_sas(**kwargs))
 
@@ -330,7 +330,7 @@ def read_pickle(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_pickle(**kwargs))
 
@@ -374,7 +374,7 @@ def read_sql(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
@@ -392,7 +392,7 @@ def read_fwf(
     infer_nrows=100,
     **kwds,
 ):
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
@@ -419,7 +419,7 @@ def read_sql_table(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_sql_table(**kwargs))
 
@@ -435,7 +435,7 @@ def read_sql_query(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(query_compiler=EngineDispatcher.read_sql_query(**kwargs))
 
@@ -445,7 +445,7 @@ def read_spss(
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     return DataFrame(
         query_compiler=EngineDispatcher.read_spss(path, usecols, convert_categoricals)
@@ -458,7 +458,7 @@ def to_pickle(
     compression: Optional[str] = "infer",
     protocol: int = 4,
 ):
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler

@@ -3079,7 +3079,7 @@ class BasePandasDataset(object):
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
-        from modin.data_management.dispatcher import EngineDispatcher
+        from modin.data_management.factories.dispatcher import EngineDispatcher
 
         EngineDispatcher.to_sql(
             new_query_compiler,
