@@ -565,7 +565,7 @@ class BasePandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None, name=None):
         """Reorder the column and or rows in this DataFrame.
 
         Parameters
@@ -584,7 +584,7 @@ class BasePandasFrame(object):
         """
         if row_numeric_idx is not None:
             ordered_rows = self._frame_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_numeric_idx]
+                0, self._partitions, lambda df: df.iloc[row_numeric_idx], name="reorder"
             )
             row_idx = self.index[row_numeric_idx]
         else:
@@ -677,7 +677,7 @@ class BasePandasFrame(object):
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
-        new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
+        new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder, name="astype")
         return self.__constructor__(
             new_frame,
             self.index,
@@ -958,7 +958,7 @@ class BasePandasFrame(object):
             validate_axes="reduced",
         )
 
-    def _fold_reduce(self, axis, func):
+    def _fold_reduce(self, axis, func, name=None):
         """Applies map that reduce Manager to series but require knowledge of full axis.
 
         Args:
@@ -970,11 +970,11 @@ class BasePandasFrame(object):
         """
         func = self._build_mapreduce_func(axis, func)
         new_parts = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, name=name
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
+    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True, map_name=None, reduce_name=None):
         """
         Apply function that will reduce the data to a Pandas Series.
 
@@ -1006,9 +1006,9 @@ class BasePandasFrame(object):
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
-        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
+        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func, name=map_name)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
-            axis, map_parts, reduce_func
+            axis, map_parts, reduce_func, name=reduce_name
         )
         if preserve_index:
             return self._compute_map_reduce_metadata(axis, reduce_parts)
@@ -1027,7 +1027,7 @@ class BasePandasFrame(object):
                 reduce_parts, new_index, new_columns, validate_axes="reduced"
             )
 
-    def _map(self, func, dtypes=None, validate_index=False):
+    def _map(self, func, name=None, dtypes=None, validate_index=False):
         """Perform a function that maps across the entire dataset.
 
         Pamareters
@@ -1044,7 +1044,7 @@ class BasePandasFrame(object):
         -------
             A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
+        new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func, name)
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
@@ -1070,7 +1070,7 @@ class BasePandasFrame(object):
             dtypes=dtypes,
         )
 
-    def _fold(self, axis, func):
+    def _fold(self, axis, func, name=None):
         """Perform a function across an entire axis.
 
         Note: The data shape is not changed (length and width of the table).
@@ -1083,7 +1083,7 @@ class BasePandasFrame(object):
              A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, name=name
         )
         return self.__constructor__(
             new_partitions,
@@ -1093,7 +1093,7 @@ class BasePandasFrame(object):
             self._column_widths,
         )
 
-    def filter_full_axis(self, axis, func):
+    def filter_full_axis(self, axis, func, name=None):
         """Filter data based on the function provided along an entire axis.
 
         Args:
@@ -1105,7 +1105,7 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            axis, self._partitions, func, keep_partitioning=True, name=name
         )
         if axis == 0:
             new_index = self.index
@@ -1131,7 +1131,7 @@ class BasePandasFrame(object):
         )
 
     def _apply_full_axis(
-        self, axis, func, new_index=None, new_columns=None, dtypes=None,
+        self, axis, func, new_index=None, new_columns=None, dtypes=None, name=None
     ):
         """
         Perform a function across an entire axis.
@@ -1167,6 +1167,7 @@ class BasePandasFrame(object):
             self._partitions,
             self._build_mapreduce_func(axis, func),
             keep_partitioning=True,
+            name=name
         )
         # Index objects for new object creation. This is shorter than if..else
         if new_columns is None:
@@ -1202,6 +1203,7 @@ class BasePandasFrame(object):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
+        name=None
     ):
         """Apply a function across an entire axis for a subset of the data.
 
@@ -1228,7 +1230,7 @@ class BasePandasFrame(object):
         # being applied over)
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
         new_partitions = self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
-            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining
+            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining, name=name
         )
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
@@ -1402,7 +1404,7 @@ class BasePandasFrame(object):
         # Start with this and we'll repartition the first time, and then not again.
         if not left_old_idx.equals(joined_index) or force_repartition:
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
-                axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
+                axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis), name="join stage 1/2"
             )
         else:
             reindexed_self = self._partitions
@@ -1415,12 +1417,12 @@ class BasePandasFrame(object):
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    lambda df: df.reindex(joined_index, axis=axis),
+                    lambda df: df.reindex(joined_index, axis=axis), name="join stage 2/2"
                 )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
 
-    def _binary_op(self, op, right_frame, join_type="outer"):
+    def _binary_op(self, op, right_frame, join_type="outer", name=None):
         """
         Perform an operation that requires joining with another dataframe.
 
@@ -1444,7 +1446,7 @@ class BasePandasFrame(object):
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._frame_mgr_cls.binary_operation(
-            1, left_parts, lambda l, r: op(l, r), right_parts
+            1, left_parts, lambda l, r: op(l, r), right_parts, name=name
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, self.index, new_columns, None, None)

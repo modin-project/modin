@@ -49,6 +49,7 @@ class BinaryFunction(Function):
                             lambda x, y: func(x, y, *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
+                            name=func.__name__
                         )
                     )
             else:
@@ -59,10 +60,12 @@ class BinaryFunction(Function):
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=new_columns,
+                        name=func.__name__
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame._map(
-                        lambda df: func(df, other, *args, **kwargs)
+                        lambda df: func(df, other, *args, **kwargs),
+                        name=func.__name__
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 

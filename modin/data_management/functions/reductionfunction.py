@@ -24,6 +24,7 @@ class ReductionFunction(Function):
                     if "axis" in call_kwds
                     else kwargs.get("axis"),
                     lambda x: reduction_function(x, *args, **kwargs),
+                    name=reduction_function.__name__
                 )
             )
 

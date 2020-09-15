@@ -317,7 +317,7 @@ class BaseFrameManager(object):
             modin, "show-progress-bar"
         )
         if show_bar:
-            pbar = tqdm_notebook(total=update_count, desc="Building DataFrame")
+            pbar = tqdm_notebook(total=round(update_count), desc="Building DataFrame")
         else:
             pbar = None
         parts = [
