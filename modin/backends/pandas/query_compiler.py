@@ -13,6 +13,8 @@
 
 import numpy as np
 import pandas
+from pandas.core.common import is_bool_indexer
+from pandas.core.indexing import check_bool_indexer
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
@@ -20,6 +22,7 @@ from pandas.core.dtypes.common import (
     is_scalar,
 )
 from pandas.core.base import DataError
+import warnings
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
@@ -1918,6 +1921,56 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map across rows/columns
 
     # __getitem__ methods
+    def getitem_array(self, key):
+        """
+        Get column or row data specified by key.
+
+        Parameters
+        ----------
+        key : PandasQueryCompiler, numpy.ndarray, pandas.Index or list
+            Target numeric indices or labels by which to retrieve data.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new Query Compiler.
+        """
+        # TODO: dont convert to pandas for array indexing
+        if isinstance(key, type(self)):
+            key = key.to_pandas().squeeze(axis=1)
+        if is_bool_indexer(key):
+            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
+                warnings.warn(
+                    "Boolean Series key will be reindexed to match DataFrame index.",
+                    PendingDeprecationWarning,
+                    stacklevel=3,
+                )
+            elif len(key) != len(self.index):
+                raise ValueError(
+                    "Item wrong length {} instead of {}.".format(
+                        len(key), len(self.index)
+                    )
+                )
+            key = check_bool_indexer(self.index, key)
+            # We convert to a RangeIndex because getitem_row_array is expecting a list
+            # of indices, and RangeIndex will give us the exact indices of each boolean
+            # requested.
+            key = pandas.RangeIndex(len(self.index))[key]
+            if len(key):
+                return self.getitem_row_array(key)
+            else:
+                return self.from_pandas(
+                    pandas.DataFrame(columns=self.columns), type(self._modin_frame)
+                )
+        else:
+            if any(k not in self.columns for k in key):
+                raise KeyError(
+                    "{} not index".format(
+                        str([k for k in key if k not in self.columns]).replace(",", "")
+                    )
+                )
+            return self.getitem_column_array(key)
+
     def getitem_column_array(self, key, numeric=False):
         """Get column data for target labels.
 
