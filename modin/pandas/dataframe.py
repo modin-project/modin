@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
-from pandas.core.common import apply_if_callable, is_bool_indexer
+from pandas.core.common import apply_if_callable
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -20,7 +20,6 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.core.indexes.api import ensure_index_from_sequences
-from pandas.core.indexing import check_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 
@@ -2927,8 +2926,12 @@ class DataFrame(BasePandasDataset):
                 return self._getitem_column(key)
         except (KeyError, ValueError, TypeError):
             pass
-        if isinstance(key, (Series, np.ndarray, pandas.Index, list)):
-            return self._getitem_array(key)
+        if isinstance(key, Series):
+            return DataFrame(
+                query_compiler=self._query_compiler.getitem_array(key._query_compiler)
+            )
+        elif isinstance(key, (np.ndarray, pandas.Index, list)):
+            return DataFrame(query_compiler=self._query_compiler.getitem_array(key))
         elif isinstance(key, DataFrame):
             return self.where(key)
         elif is_mi_columns:
@@ -2947,45 +2950,6 @@ class DataFrame(BasePandasDataset):
             s._parent = self
             s._parent_axis = 1
         return s
-
-    def _getitem_array(self, key):
-        # TODO: dont convert to pandas for array indexing
-        if isinstance(key, Series):
-            key = key._to_pandas()
-        if is_bool_indexer(key):
-            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
-                warnings.warn(
-                    "Boolean Series key will be reindexed to match DataFrame index.",
-                    PendingDeprecationWarning,
-                    stacklevel=3,
-                )
-            elif len(key) != len(self.index):
-                raise ValueError(
-                    "Item wrong length {} instead of {}.".format(
-                        len(key), len(self.index)
-                    )
-                )
-            key = check_bool_indexer(self.index, key)
-            # We convert to a RangeIndex because getitem_row_array is expecting a list
-            # of indices, and RangeIndex will give us the exact indices of each boolean
-            # requested.
-            key = pandas.RangeIndex(len(self.index))[key]
-            if len(key):
-                return DataFrame(
-                    query_compiler=self._query_compiler.getitem_row_array(key)
-                )
-            else:
-                return DataFrame(columns=self.columns)
-        else:
-            if any(k not in self.columns for k in key):
-                raise KeyError(
-                    "{} not index".format(
-                        str([k for k in key if k not in self.columns]).replace(",", "")
-                    )
-                )
-            return DataFrame(
-                query_compiler=self._query_compiler.getitem_column_array(key)
-            )
 
     def __getattr__(self, key):
         """After regular attribute access, looks up the name in the columns
