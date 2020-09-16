@@ -19,7 +19,7 @@ from os.path import dirname, abspath
 rootdir = dirname(abspath(__file__))
 exclude_files = ["_version.py"]
 
-with open("{}{}".format(dirname(rootdir), "/LISCENSE_HEADER"), "r") as f:
+with open("{}{}".format(dirname(rootdir), "/LICENSE_HEADER"), "r") as f:
     # Lines to check each line individually
     header_lines = f.readlines()
 
