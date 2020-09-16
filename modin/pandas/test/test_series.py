@@ -3232,14 +3232,7 @@ def test_unique(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unstack(data):
     modin_series, pandas_series = create_test_series(data)
-    index = pd.MultiIndex.from_product(
-        [
-            ["a", "b", "c", "d"],
-            ["x", "y", "z", "last"],
-            ["i", "j", "k", "index"],
-            [1, 2, 3, 4],
-        ]
-    )
+    index = generate_multiindex(len(pandas_series), nlevels=4, is_tree_like=True)
 
     modin_series = pd.Series(data[next(iter(data.keys()))], index=index)
     pandas_series = pandas.Series(data[next(iter(data.keys()))], index=index)
