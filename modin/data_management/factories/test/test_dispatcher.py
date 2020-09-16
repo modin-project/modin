@@ -15,8 +15,11 @@ import pytest
 
 from modin import execution_engine, partition_format, set_backends
 
-from modin.data_management.dispatcher import EngineDispatcher, FactoryNotFoundError
-from modin.data_management import factories
+from modin.data_management.factories.dispatcher import (
+    EngineDispatcher,
+    FactoryNotFoundError,
+)
+from modin.data_management.factories import factories
 
 import modin.pandas as pd
 

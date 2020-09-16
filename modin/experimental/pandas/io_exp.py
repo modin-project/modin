@@ -15,7 +15,7 @@ import inspect
 import os
 
 from . import DataFrame
-from modin.data_management.dispatcher import EngineDispatcher
+from modin.data_management.factories.dispatcher import EngineDispatcher
 
 
 def read_sql(

@@ -13,7 +13,7 @@
 
 
 def from_non_pandas(df, index, columns, dtype):
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
     new_qc = EngineDispatcher.from_non_pandas(df, index, columns, dtype)
     if new_qc is not None:
@@ -31,7 +31,7 @@ def from_pandas(df):
     Returns:
         A new Modin DataFrame object.
     """
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=EngineDispatcher.from_pandas(df))
@@ -50,7 +50,7 @@ def from_arrow(at):
     DataFrame
         A new Modin DataFrame object.
     """
-    from modin.data_management.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import EngineDispatcher
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=EngineDispatcher.from_arrow(at))
