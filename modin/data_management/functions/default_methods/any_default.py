@@ -11,8 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+from .default import DefaultMethod
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+
+class ObjTypeDeterminer:
+    def __getattr__(self, key):
+        def func(df, *args, **kwargs):
+            prop = getattr(df, key)
+            if callable(prop):
+                return prop(*args, **kwargs)
+            else:
+                return prop
+
+        return func
+
+
+class AnyDefault(DefaultMethod):
+    @classmethod
+    def register(cls, func, obj_type=None, **kwargs):
+        if obj_type is None:
+            obj_type = ObjTypeDeterminer()
+
+        return cls.call(func, obj_type=obj_type, **kwargs)

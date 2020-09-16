@@ -13,6 +13,7 @@
 
 import pytest
 import numpy as np
+import math
 import pandas
 from pandas.util.testing import (
     assert_almost_equal,
@@ -22,12 +23,20 @@ from pandas.util.testing import (
 import modin.pandas as pd
 from modin.utils import to_pandas
 from io import BytesIO
+import os
 
 random_state = np.random.RandomState(seed=42)
 
+DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "normal").lower()
+
+DATASET_SIZE_DICT = {
+    "small": (2 ** 2, 2 ** 3),
+    "normal": (2 ** 6, 2 ** 8),
+    "big": (2 ** 7, 2 ** 12),
+}
+
 # Size of test dataframes
-NCOLS = 2 ** 6
-NROWS = 2 ** 8
+NCOLS, NROWS = DATASET_SIZE_DICT.get(DATASET_SIZE, DATASET_SIZE_DICT["normal"])
 
 # Range for values for test data
 RAND_LOW = 0
@@ -681,12 +690,42 @@ def generate_multiindex_dfs(axis=1):
     return df1, df2
 
 
-def generate_multiindex(elements_number):
-    arrays = [
-        random_state.choice(["bar", "baz", "foo", "qux"], elements_number),
-        random_state.choice(["one", "two"], elements_number),
-    ]
-    return pd.MultiIndex.from_tuples(list(zip(*arrays)), names=["first", "second"])
+def generate_multiindex(elements_number, nlevels=2, is_tree_like=False):
+    def generate_level(length, nlevel):
+        src = ["bar", "baz", "foo", "qux"]
+        return [src[i % len(src)] + f"-{nlevel}-{i}" for i in range(length)]
+
+    if is_tree_like:
+        for penalty_level in [0, 1]:
+            lvl_len_f, lvl_len_d = math.modf(
+                round(elements_number ** (1 / (nlevels - penalty_level)), 12)
+            )
+            if lvl_len_d >= 2 and lvl_len_f == 0:
+                break
+
+        if lvl_len_d < 2 or lvl_len_f != 0:
+            raise RuntimeError(
+                f"Can't generate Tree-like MultiIndex with lenght: {elements_number} and number of levels: {nlevels}"
+            )
+
+        lvl_len = int(lvl_len_d)
+        result = pd.MultiIndex.from_product(
+            [generate_level(lvl_len, i) for i in range(nlevels - penalty_level)]
+        )
+        if penalty_level:
+            result = pd.MultiIndex.from_tuples(
+                [("base_level", *ml_tuple) for ml_tuple in result]
+            )
+        return result.sort_values()
+    else:
+        base_level = ["first"] * (elements_number // 2) + ["second"] * (
+            elements_number // 2
+        )
+        primary_levels = [generate_level(elements_number, i) for i in range(1, nlevels)]
+        arrays = [base_level] + primary_levels
+        return pd.MultiIndex.from_tuples(
+            list(zip(*arrays)), names=[f"level-{i}" for i in range(nlevels)]
+        ).sort_values()
 
 
 def generate_none_dfs():

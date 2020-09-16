@@ -1619,7 +1619,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def nsort(self, n, columns=None, keep="first", sort_type="nsmallest"):
+    def _nsort(self, n, columns=None, keep="first", sort_type="nsmallest"):
         def map_func(df, n=n, keep=keep, columns=columns):
             if columns is None:
                 return pandas.DataFrame(
@@ -1642,10 +1642,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def nsmallest(self, *args, **kwargs):
-        return self.nsort(sort_type="nsmallest", *args, **kwargs)
+        return self._nsort(sort_type="nsmallest", *args, **kwargs)
 
     def nlargest(self, *args, **kwargs):
-        return self.nsort(sort_type="nlargest", *args, **kwargs)
+        return self._nsort(sort_type="nlargest", *args, **kwargs)
 
     def eval(self, expr, **kwargs):
         """Returns a new QueryCompiler with expr evaluated on columns.
@@ -2614,7 +2614,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             na_position=na_position,
         ).index
 
-        result = self.reset_index(drop=True).reindex(0, new_index2)
+        result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
         result.index = new_index1
         return result
 
@@ -2653,7 +2653,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             kind=kind,
             na_position=na_position,
         ).columns
-        return self.reindex(1, new_columns)
+        return self.reindex(axis=1, labels=new_columns)
 
     # Cat operations
     def cat_codes(self):

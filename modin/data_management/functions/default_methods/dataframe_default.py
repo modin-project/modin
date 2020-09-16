@@ -11,8 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+from .default import DefaultMethod
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+import pandas
+
+
+class DataFrameDefault(DefaultMethod):
+    @classmethod
+    def register(cls, func, obj_type=None, **kwargs):
+        if obj_type is None:
+            obj_type = pandas.DataFrame
+        return cls.call(func, obj_type=obj_type, **kwargs)

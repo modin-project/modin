@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import modin
 
 
 def _inherit_docstrings(parent, excluded=[]):
@@ -86,6 +87,8 @@ def try_cast_to_pandas(obj):
     """
     if hasattr(obj, "_to_pandas"):
         return obj._to_pandas()
+    if hasattr(obj, "to_pandas"):
+        return obj.to_pandas()
     if isinstance(obj, (list, tuple)):
         return type(obj)([try_cast_to_pandas(o) for o in obj])
     if isinstance(obj, dict):
@@ -111,3 +114,7 @@ def wrap_udf_function(func):
 
     wrapper.__name__ = func.__name__
     return wrapper
+
+
+def get_current_backend():
+    return f"{modin.partition_format.get()}On{modin.execution_engine.get()}"

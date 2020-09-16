@@ -158,12 +158,12 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         func = self._prepare_method(query_builder, **kwargs)
         new_data = self._map_across_full_axis(1, func)
         # Query removes rows, so we need to update the index
-        new_index = self.compute_index(0, new_data, False)
+        new_index = self._compute_index(0, new_data, False)
         return self.__constructor__(
             new_data, new_index, self.columns, self._dtype_cache
         )
 
-    def compute_index(self, axis, data_object, compute_diff=True):
+    def _compute_index(self, axis, data_object, compute_diff=True):
         def arrow_index_extraction(table, axis):
             if not axis:
                 return pandas.Index(table.column(table.num_columns - 1))

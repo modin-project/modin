@@ -11,8 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+from .default import DefaultMethod
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+
+class Rolling:
+    @classmethod
+    def build_rolling(cls, func):
+        def fn(df, rolling_args, *args, **kwargs):
+            roller = df.rolling(*rolling_args)
+
+            if type(func) == property:
+                return func.fget(roller)
+
+            return func(roller, *args, **kwargs)
+
+        return fn
+
+
+class RollingDefault(DefaultMethod):
+    @classmethod
+    def register(cls, func, **kwargs):
+        return cls.call(Rolling.build_rolling(func), **kwargs)

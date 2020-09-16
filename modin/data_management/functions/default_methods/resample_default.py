@@ -11,8 +11,26 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseQueryCompiler
-from .pandas import PandasQueryCompiler
-from .pyarrow import PyarrowQueryCompiler
+from .default import DefaultMethod
 
-__all__ = ["BaseQueryCompiler", "PandasQueryCompiler", "PyarrowQueryCompiler"]
+
+class Resampler:
+    @classmethod
+    def build_resample(cls, func, squeeze_self):
+        def fn(df, resample_args, *args, **kwargs):
+            if squeeze_self:
+                df = df.squeeze(axis=1)
+            resampler = df.resample(*resample_args)
+
+            if type(func) == property:
+                return func.fget(resampler)
+
+            return func(resampler, *args, **kwargs)
+
+        return fn
+
+
+class ResampleDefault(DefaultMethod):
+    @classmethod
+    def register(cls, func, squeeze_self=False, **kwargs):
+        return cls.call(Resampler.build_resample(func, squeeze_self), **kwargs)

@@ -106,6 +106,9 @@ jobs:
       - name: Api tests
         shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_api.py
+      - name: Backends Api tests
+        shell: bash -l {0}
+        run: python -m pytest modin/test/test_backends_api.py
 
   test-headers:
     needs: prepare-cache
@@ -164,6 +167,72 @@ jobs:
       - name: Internals tests
         shell: bash -l {0}
         run: python -m pytest modin/test/test_publisher.py modin/data_management/factories/test/test_dispatcher.py
+
+  test-defaults:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        backend: [BaseOnPython]
+    env:
+      MODIN_MEMORY: 1000000000
+      MODIN_TEST_DATASET_SIZE: "small"
+    name: Test ${{ matrix.backend }} backend, Python 3.6
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1.6.0
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
+        run: bash <(curl -s https://codecov.io/bash)
 
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]

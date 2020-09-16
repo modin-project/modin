@@ -733,6 +733,10 @@ def test_stack(data, is_multi_idx, is_multi_col):
                     ["i", "j", "k", "l", "index"],
                 ]
             )
+        else:
+            index = pd.MultiIndex.from_tuples(
+                [(i, i * 2, i * 3) for i in range(len(pandas_df.index))]
+            )
     else:
         index = pandas_df.index
 
@@ -752,6 +756,10 @@ def test_stack(data, is_multi_idx, is_multi_col):
                     ["A", "B", "C", "D", "F"],
                     ["I", "J", "K", "L", "INDEX"],
                 ]
+            )
+        else:
+            columns = pd.MultiIndex.from_tuples(
+                [(i, i * 2, i * 3) for i in range(len(pandas_df.columns))]
             )
     else:
         columns = pandas_df.columns
@@ -964,24 +972,13 @@ def test_unstack(data, is_multi_idx, is_multi_col):
     modin_df = pd.DataFrame(data)
 
     if is_multi_idx:
-        index = pd.MultiIndex.from_product(
-            [
-                ["a", "b", "c", "d"],
-                ["x", "y", "z", "last"],
-                ["i", "j", "k", "index"],
-                [1, 2, 3, 4],
-            ]
-        )
+        index = generate_multiindex(len(pandas_df), nlevels=4, is_tree_like=True)
     else:
         index = pandas_df.index
 
     if is_multi_col:
-        columns = pd.MultiIndex.from_product(
-            [
-                ["A", "B", "C", "D"],
-                ["xx", "yy", "zz", "LAST"],
-                [10, 20, 30, 40],
-            ]
+        columns = generate_multiindex(
+            len(pandas_df.columns), nlevels=3, is_tree_like=True
         )
     else:
         columns = pandas_df.columns
@@ -1003,7 +1000,24 @@ def test_unstack(data, is_multi_idx, is_multi_col):
         )
 
 
-@pytest.mark.parametrize("is_multi_col", [True, False], ids=["col_multi", "col_index"])
+@pytest.mark.parametrize(
+    "is_multi_col",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="Unstack fails in case of MultiIndex columns. See #1997 for more details."
+            ),
+        ),
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="Unstack loses indices names. See issue #2084 for more details."
+            ),
+        ),
+    ],
+    ids=["col_multi", "col_index"],
+)
 def test_unstack_not_unique(is_multi_col):
     MAX_NROWS = 34
     MAX_NCOLS = 36
@@ -1011,18 +1025,10 @@ def test_unstack_not_unique(is_multi_col):
     pandas_df = pandas.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
     modin_df = pd.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
 
-    l0 = ["a"] * 17 + ["b"] * 17
-    l1 = np.arange(34)
-    l2 = np.arange(100, 134)
-    index = pandas.MultiIndex.from_tuples([(i, j, k) for i, j, k in zip(l0, l1, l2)])
+    index = generate_multiindex(len(pandas_df), nlevels=3)
 
     if is_multi_col:
-        columns = pd.MultiIndex.from_product(
-            [
-                ["A", "B", "C", "D", "E", "F"],
-                ["qq", "ww", "xx", "yy", "zz", "LAST"],
-            ]
-        )
+        columns = generate_multiindex(len(pandas_df.columns), nlevels=2)
     else:
         columns = pandas_df.columns
 

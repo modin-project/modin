@@ -17,6 +17,7 @@ import pandas
 import pandas.util.testing as tm
 import matplotlib
 import modin.pandas as pd
+from modin.utils import get_current_backend
 
 from modin.pandas.test.utils import (
     random_state,
@@ -42,6 +43,7 @@ from modin.pandas.test.utils import (
     int_arg_keys,
     int_arg_values,
     eval_general,
+    create_test_dfs,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -279,10 +281,11 @@ def test_copy(data):
     new_modin_df = modin_df.copy()
 
     assert new_modin_df is not modin_df
-    assert np.array_equal(
-        new_modin_df._query_compiler._modin_frame._partitions,
-        modin_df._query_compiler._modin_frame._partitions,
-    )
+    if get_current_backend() != "BaseOnPython":
+        assert np.array_equal(
+            new_modin_df._query_compiler._modin_frame._partitions,
+            modin_df._query_compiler._modin_frame._partitions,
+        )
     assert new_modin_df is not modin_df
     df_equals(new_modin_df, modin_df)
 
@@ -401,9 +404,10 @@ def test_append(data):
         # now does the right thing, so for now manually sort to workaround
         # this. Once the Pandas bug is fixed and Modin upgrades to that
         # Pandas release, this sort will cause the test to fail, and the
-        # next two lines should be deleted.
-        assert list(modin_result.columns) == list(modin_df.columns) + [0]
-        modin_result = modin_result[[0] + sorted(modin_df.columns)]
+        # next three lines should be deleted.
+        if get_current_backend() != "BaseOnPython":
+            assert list(modin_result.columns) == list(modin_df.columns) + [0]
+            modin_result = modin_result[[0] + sorted(modin_df.columns)]
         df_equals(modin_result, pandas_result)
 
     verify_integrity_values = [True, False]
@@ -910,17 +914,9 @@ def test_dropna_subset(request, data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_dropna_subset_error(data):
-    modin_df = pd.DataFrame(data)
-
-    # pandas_df is unused so there won't be confusing list comprehension
-    # stuff in the pytest.mark.parametrize
-    with pytest.raises(KeyError):
-        modin_df.dropna(subset=list("EF"))
-
-    if len(modin_df.columns) < 5:
-        with pytest.raises(KeyError):
-            modin_df.dropna(axis=1, subset=[4, 5])
+@pytest.mark.parametrize("axis,subset", [(0, list("EF")), (1, [4, 5])])
+def test_dropna_subset_error(data, axis, subset):
+    eval_general(*create_test_dfs(data), lambda df: df.dropna(axis=axis, subset=subset))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

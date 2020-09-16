@@ -38,6 +38,8 @@ def create_test_series(vals):
 def test_dataframe(data, window, min_periods, win_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
+    if window > len(pandas_df):
+        window = len(pandas_df)
     pandas_rolled = pandas_df.rolling(
         window=window,
         min_periods=min_periods,
@@ -134,7 +136,8 @@ def test_dataframe_dt_index(axis, on, closed, window):
 @pytest.mark.parametrize("win_type", [None, "triang"])
 def test_series(data, window, min_periods, win_type):
     modin_series, pandas_series = create_test_series(data)
-
+    if window > len(pandas_series):
+        window = len(pandas_series)
     pandas_rolled = pandas_series.rolling(
         window=window,
         min_periods=min_periods,
