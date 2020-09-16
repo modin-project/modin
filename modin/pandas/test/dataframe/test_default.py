@@ -501,8 +501,15 @@ def test_pivot(data, index, columns, values):
     "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1], None]
 )
 def test_pivot_table_data(data, index, columns, values):
+    md_df, pd_df = create_test_dfs(data)
+
+    # when values is None the output will be huge-dimensional,
+    # so reducing dimension of testing data at that case
+    if values is None:
+        md_df, pd_df = md_df.iloc[:42, :42], pd_df.iloc[:42, :42]
     eval_general(
-        *create_test_dfs(data),
+        md_df,
+        pd_df,
         operation=lambda df, *args, **kwargs: df.pivot_table(
             *args, **kwargs
         ).sort_index(axis=int(index is not None)),
