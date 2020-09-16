@@ -964,43 +964,25 @@ def test_unstack(data, is_multi_idx, is_multi_col):
     modin_df = pd.DataFrame(data)
 
     if is_multi_idx:
-        if len(pandas_df.index) == 256:
-            index = pd.MultiIndex.from_product(
-                [
-                    ["a", "b", "c", "d"],
-                    ["x", "y", "z", "last"],
-                    ["i", "j", "k", "index"],
-                    [1, 2, 3, 4],
-                ]
-            )
-        elif len(pandas_df.index) == 100:
-            index = pd.MultiIndex.from_product(
-                [
-                    ["x", "y", "z", "last"],
-                    ["a", "b", "c", "d", "f"],
-                    ["i", "j", "k", "l", "index"],
-                ]
-            )
+        index = pd.MultiIndex.from_product(
+            [
+                ["a", "b", "c", "d"],
+                ["x", "y", "z", "last"],
+                ["i", "j", "k", "index"],
+                [1, 2, 3, 4],
+            ]
+        )
     else:
         index = pandas_df.index
 
     if is_multi_col:
-        if len(pandas_df.columns) == 64:
-            columns = pd.MultiIndex.from_product(
-                [
-                    ["A", "B", "C", "D"],
-                    ["xx", "yy", "zz", "LAST"],
-                    [10, 20, 30, 40],
-                ]
-            )
-        elif len(pandas_df.columns) == 100:
-            columns = pd.MultiIndex.from_product(
-                [
-                    ["xx", "yy", "zz", "LAST"],
-                    ["A", "B", "C", "D", "F"],
-                    ["I", "J", "K", "L", "INDEX"],
-                ]
-            )
+        columns = pd.MultiIndex.from_product(
+            [
+                ["A", "B", "C", "D"],
+                ["xx", "yy", "zz", "LAST"],
+                [10, 20, 30, 40],
+            ]
+        )
     else:
         columns = pandas_df.columns
 
@@ -1016,12 +998,44 @@ def test_unstack(data, is_multi_idx, is_multi_col):
         df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
         df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
         df_equals(modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2]))
+        df_equals(
+            modin_df.unstack(level=[0, 1, 2, 3]), pandas_df.unstack(level=[0, 1, 2, 3])
+        )
 
-        if len(pandas_df.index) == 256:
-            df_equals(
-                modin_df.unstack(level=[0, 1, 2, 3]),
-                pandas_df.unstack(level=[0, 1, 2, 3]),
-            )
+
+@pytest.mark.parametrize("is_multi_col", [True, False], ids=["col_multi", "col_index"])
+def test_unstack_not_unique(is_multi_col):
+    MAX_NROWS = 34
+    MAX_NCOLS = 36
+
+    pandas_df = pandas.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
+    modin_df = pd.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
+
+    l0 = ["a"] * 17 + ["b"] * 17
+    l1 = np.arange(34)
+    l2 = np.arange(100, 134)
+    index = pandas.MultiIndex.from_tuples([(i, j, k) for i, j, k in zip(l0, l1, l2)])
+
+    if is_multi_col:
+        columns = pd.MultiIndex.from_product(
+            [
+                ["A", "B", "C", "D", "E", "F"],
+                ["qq", "ww", "xx", "yy", "zz", "LAST"],
+            ]
+        )
+    else:
+        columns = pandas_df.columns
+
+    pandas_df.columns = columns
+    pandas_df.index = index
+
+    modin_df.columns = columns
+    modin_df.index = index
+
+    df_equals(modin_df.unstack(), pandas_df.unstack())
+    df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
+    df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
+    df_equals(modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
