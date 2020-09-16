@@ -16,12 +16,14 @@ import numpy as np
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
-import pandas._libs.lib as lib
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
 )
+from pandas._libs.lib import no_default
+from pandas._typing import IndexKeyFunc
 import sys
+from typing import Union, Optional
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas
@@ -596,6 +598,55 @@ class Series(BasePandasDataset):
             other, lambda s1, s2: s1.combine(s2, func, fill_value=fill_value)
         )
 
+    def compare(
+        self,
+        other: "Series",
+        align_axis: Union[str, int] = 1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+    ):
+        """
+        Compare to another Series and show the differences.
+
+        Parameters
+        ----------
+        other : Series
+            Object to compare with.
+
+        align_axis : {0 or 'index', 1 or 'columns'}, default 1
+            Determine which axis to align the comparison on.
+
+            * 0, or 'index' : Resulting differences are stacked vertically
+                with rows drawn alternately from self and other.
+            * 1, or 'columns' : Resulting differences are aligned horizontally
+                with columns drawn alternately from self and other.
+
+        keep_shape : bool, default False
+            If true, all rows and columns are kept.
+            Otherwise, only the ones with different values are kept.
+
+        keep_equal : bool, default False
+            If true, the result keeps values that are equal.
+            Otherwise, equal values are shown as NaNs.
+
+        Returns
+        -------
+        Series or DataFrame
+            If axis is 0 or 'index' the result will be a Series.
+            The resulting index will be a MultiIndex with 'self' and 'other'
+            stacked alternately at the inner level.
+
+            If axis is 1 or 'columns' the result will be a DataFrame.
+            It will have two columns namely 'self' and 'other'.
+        """
+        return self._default_to_pandas(
+            pandas.Series.compare,
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+        )
+
     def corr(self, other, method="pearson", min_periods=None):
         """
         Compute correlation with `other` Series, excluding missing values.
@@ -680,7 +731,7 @@ class Series(BasePandasDataset):
     def count(self, level=None):
         return super(Series, self).count(level=level)
 
-    def cov(self, other, min_periods=None):
+    def cov(self, other, min_periods=None, ddof: Optional[int] = 1):
         """
         Compute covariance with Series, excluding missing values.
 
@@ -690,6 +741,9 @@ class Series(BasePandasDataset):
             Series with which to compute the covariance.
         min_periods : int, optional
             Minimum number of observations needed to have a valid result.
+        ddof : int, default 1
+            Delta degrees of freedom. The divisor used in calculations is N - ddof,
+            where N represents the number of elements.
 
         Returns
         -------
@@ -728,13 +782,17 @@ class Series(BasePandasDataset):
         other -= other.mean()
 
         other = other.__constructor__(query_compiler=other._query_compiler.conj())
-        result = this * other / (len(this) - 1)
+        result = this * other / (len(this) - ddof)
         result = result.sum()
         return result
 
-    def describe(self, percentiles=None, include=None, exclude=None):
+    def describe(
+        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
+    ):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
-        return super(Series, self).describe(percentiles=percentiles)
+        return super(Series, self).describe(
+            percentiles=percentiles, datetime_is_numeric=datetime_is_numeric
+        )
 
     def diff(self, periods=1):
         return super(Series, self).diff(periods=periods, axis=0)
@@ -831,8 +889,8 @@ class Series(BasePandasDataset):
             and self.eq(other).all()
         )
 
-    def explode(self):
-        return self._default_to_pandas(pandas.Series.explode)
+    def explode(self, ignore_index: bool = False):
+        return self._default_to_pandas(pandas.Series.explode, ignore_index=ignore_index)
 
     def factorize(self, sort=False, na_sentinel=-1):
         return self._default_to_pandas(
@@ -857,9 +915,22 @@ class Series(BasePandasDataset):
         as_index=True,
         sort=True,
         group_keys=True,
-        squeeze=False,
+        squeeze: bool = no_default,
         observed=False,
+        dropna: bool = True,
     ):
+        if squeeze is not no_default:
+            warnings.warn(
+                (
+                    "The `squeeze` parameter is deprecated and "
+                    "will be removed in a future version."
+                ),
+                FutureWarning,
+                stacklevel=2,
+            )
+        else:
+            squeeze = False
+
         from .groupby import SeriesGroupBy
 
         if not as_index:
@@ -883,6 +954,7 @@ class Series(BasePandasDataset):
             idx_name=None,
             observed=observed,
             drop=False,
+            dropna=dropna,
         )
 
     def gt(self, other, level=None, fill_value=None, axis=0):
@@ -932,7 +1004,7 @@ class Series(BasePandasDataset):
         axis=0,
         limit=None,
         inplace=False,
-        limit_direction="forward",
+        limit_direction: Optional[str] = None,
         limit_area=None,
         downcast=None,
         **kwargs,
@@ -1709,6 +1781,7 @@ class Series(BasePandasDataset):
         kind="quicksort",
         na_position="last",
         ignore_index: bool = False,
+        key: Optional[IndexKeyFunc] = None,
     ):
         from .dataframe import DataFrame
 
@@ -1723,6 +1796,8 @@ class Series(BasePandasDataset):
                 inplace=False,
                 kind=kind,
                 na_position=na_position,
+                ignore_index=ignore_index,
+                key=key,
             )
             .squeeze(axis=1)
         )
@@ -1874,18 +1949,38 @@ class Series(BasePandasDataset):
     def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list)
 
-    def to_numpy(self, dtype=None, copy=False, na_value=lib.no_default, **kwargs):
-        """Convert the Series to a NumPy array.
+    def to_numpy(self, dtype=None, copy=False, na_value=no_default, **kwargs):
+        """
+        A NumPy ndarray representing the values in this Series or Index.
 
-        Args:
-            dtype: The dtype to pass to numpy.asarray()
-            copy: Whether to ensure that the returned value is a not a view on another
-                array.
+        Parameters
+        ----------
+            dtype : str or numpy.dtype, optional
+                The dtype to pass to numpy.asarray().
+            copy : bool, default False
+                Whether to ensure that the returned value is not a view on another array.
+                Note that copy=False does not ensure that to_numpy() is no-copy.
+                Rather, copy=True ensure that a copy is made, even if not strictly necessary.
+            na_value : Any, optional
+                The value to use for missing values.
+                The default value depends on dtype and the type of the array.
+            **kwargs
+                Additional keywords passed through to
+                the to_numpy method of the underlying array (for extension arrays).
 
-        Returns:
+        Returns
+        -------
             A NumPy array.
         """
-        return super(Series, self).to_numpy(dtype, copy).flatten()
+        return (
+            super(Series, self)
+            .to_numpy(
+                dtype=dtype,
+                copy=copy,
+                na_value=na_value,
+            )
+            .flatten()
+        )
 
     tolist = to_list
 

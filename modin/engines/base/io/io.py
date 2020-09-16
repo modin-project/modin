@@ -15,6 +15,7 @@ import pandas
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from typing import Optional
 
 
 class BaseIO(object):
@@ -197,6 +198,7 @@ class BaseIO(object):
         lines=False,
         chunksize=None,
         compression="infer",
+        nrows: Optional[int] = None,
     ):
         ErrorMessage.default_to_pandas("`read_json`")
         kwargs = {
@@ -214,6 +216,7 @@ class BaseIO(object):
             "lines": lines,
             "chunksize": chunksize,
             "compression": compression,
+            "nrows": nrows,
         }
         return cls.from_pandas(pandas.read_json(**kwargs))
 
@@ -234,6 +237,7 @@ class BaseIO(object):
         private_key=None,
         verbose=None,
         progress_bar_type=None,
+        max_results=None,
     ):
         ErrorMessage.default_to_pandas("`read_gbq`")
         return cls.from_pandas(
@@ -252,6 +256,7 @@ class BaseIO(object):
                 private_key=private_key,
                 verbose=verbose,
                 progress_bar_type=progress_bar_type,
+                max_results=max_results,
             )
         )
 
@@ -327,6 +332,7 @@ class BaseIO(object):
         skipfooter=0,
         convert_float=True,
         mangle_dupe_cols=True,
+        na_filter=True,
         **kwds,
     ):
         if skip_footer != 0:
@@ -357,6 +363,7 @@ class BaseIO(object):
             skipfooter=skipfooter,
             convert_float=convert_float,
             mangle_dupe_cols=mangle_dupe_cols,
+            na_filter=na_filter,
             **kwds,
         )
         if isinstance(intermediate, (OrderedDict, dict)):

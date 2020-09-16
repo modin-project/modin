@@ -283,13 +283,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Data Management Methods
 
     # To NumPy
-    def to_numpy(self):
-        """Converts Modin DataFrame to NumPy array.
+    def to_numpy(self, **kwargs):
+        """
+        Converts Modin DataFrame to NumPy array.
 
-        Returns:
+        Returns
+        -------
             NumPy array of the QueryCompiler.
         """
-        arr = self._modin_frame.to_numpy()
+        arr = self._modin_frame.to_numpy(**kwargs)
         ErrorMessage.catch_bugs_and_request_email(
             len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
         )
@@ -632,12 +634,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, **kwargs: df.apply(
             lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
             axis=kwargs.get("axis", 0),
-        ),
+            result_type="reduce",
+        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
         lambda df, **kwargs: df.apply(
             lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
             / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
             axis=kwargs.get("axis", 0),
-        ),
+        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
     )
 
     def value_counts(self, **kwargs):
@@ -1874,6 +1877,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         var_name=None,
         value_name="value",
         col_level=None,
+        ignore_index=True,
     ):
         ErrorMessage.missmatch_with_pandas(
             operation="melt", message="Order of rows could be different from pandas"
@@ -2283,14 +2287,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def _list_like_func(self, func, axis, *args, **kwargs):
-        """Apply list-like function across given axis.
+        """
+        Apply list-like function across given axis.
 
-        Args:
-            func: The function to apply.
-            axis: Target axis to apply the function along.
+        Parameters
+        ----------
+            func : list-like
+                The function to apply.
+            axis : 0 or 1 (0 - index, 1 - columns)
+                Target axis to apply the function along.
 
-        Returns:
-            A new PandasQueryCompiler.
+        Returns
+        -------
+        PandasQueryCompiler
+            A new QueryCompiler.
         """
         # When the function is list-like, the function names become the index/columns
         new_index = (
@@ -2357,7 +2367,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
     )
     groupby_size = GroupbyReduceFunction.register(
-        lambda df, **kwargs: pandas.DataFrame(df.size()), lambda df, **kwargs: df.sum()
+        lambda df, **kwargs: pandas.DataFrame(df.size()),
+        lambda df, **kwargs: df.sum(),
+        method="size",
     )
 
     def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):

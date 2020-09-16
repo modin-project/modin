@@ -27,7 +27,14 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
+from pandas._libs.lib import no_default
+from pandas._typing import (
+    TimedeltaConvertibleTypes,
+    TimestampConvertibleTypes,
+    IndexKeyFunc,
+)
 import re
+from typing import Optional, Union
 import warnings
 import pickle as pkl
 
@@ -359,7 +366,10 @@ class BasePandasDataset(object):
             "add", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def aggregate(self, func, axis=0, *args, **kwargs):
+    def aggregate(self, func=None, axis=0, *args, **kwargs):
+        warnings.warn(
+            "Modin index may not match pandas index due to pandas issue pandas-dev/pandas#36189."
+        )
         axis = self._get_axis_number(axis)
         result = None
 
@@ -579,6 +589,9 @@ class BasePandasDataset(object):
         Returns:
             Series or DataFrame, depending on func.
         """
+        warnings.warn(
+            "Modin index may not match pandas index due to pandas issue pandas-dev/pandas#36189."
+        )
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
@@ -675,7 +688,7 @@ class BasePandasDataset(object):
         return _LocIndexer(self)
 
     def at_time(self, time, asof=False, axis=None):
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if axis == 0:
             return self.iloc[self.index.indexer_at_time(time, asof=asof)]
         return self.iloc[:, self.columns.indexer_at_time(time, asof=asof)]
@@ -683,7 +696,7 @@ class BasePandasDataset(object):
     def between_time(
         self, start_time, end_time, include_start=True, include_end=True, axis=None
     ):
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
         indexer = idx.indexer_between_time(
             start_time, end_time, include_start=include_start, include_end=include_end
@@ -695,6 +708,8 @@ class BasePandasDataset(object):
         return self.fillna(
             method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
+
+    backfill = bfill
 
     def bool(self):
         """Return the bool of a single element PandasObject.
@@ -769,7 +784,7 @@ class BasePandasDataset(object):
         Returns:
             The count, in a Series (or DataFrame if level is specified).
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if numeric_only is not None and numeric_only:
             self._validate_dtypes(numeric_only=numeric_only)
 
@@ -796,7 +811,7 @@ class BasePandasDataset(object):
         Returns:
             The cumulative maximum of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -815,7 +830,7 @@ class BasePandasDataset(object):
         Returns:
             The cumulative minimum of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -834,7 +849,7 @@ class BasePandasDataset(object):
         Returns:
             The cumulative product of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             query_compiler=self._query_compiler.cumprod(
@@ -852,7 +867,7 @@ class BasePandasDataset(object):
         Returns:
             The cumulative sum of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             query_compiler=self._query_compiler.cumsum(
@@ -860,7 +875,9 @@ class BasePandasDataset(object):
             )
         )
 
-    def describe(self, percentiles=None, include=None, exclude=None):
+    def describe(
+        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
+    ):
         """
         Generates descriptive statistics that summarize the central tendency,
         dispersion and shape of a dataset's distribution, excluding NaN values.
@@ -870,6 +887,10 @@ class BasePandasDataset(object):
                 The percentiles to include in the output.
             include: White-list of data types to include in results
             exclude: Black-list of data types to exclude in results
+            datetime_is_numeric : bool, default False
+                Whether to treat datetime dtypes as numeric.
+                This affects statistics calculated for the column. For DataFrame input,
+                this also controls whether datetime columns are included by default.
 
         Returns: Series/DataFrame of summary statistics
         """
@@ -923,7 +944,10 @@ class BasePandasDataset(object):
             percentiles = np.array([0.25, 0.5, 0.75])
         return self.__constructor__(
             query_compiler=self._query_compiler.describe(
-                percentiles=percentiles, include=include, exclude=exclude
+                percentiles=percentiles,
+                include=include,
+                exclude=exclude,
+                datetime_is_numeric=datetime_is_numeric,
             )
         )
 
@@ -1154,6 +1178,7 @@ class BasePandasDataset(object):
         adjust=True,
         ignore_na=False,
         axis=0,
+        times=None,
     ):
         return self._default_to_pandas(
             "ewm",
@@ -1165,9 +1190,10 @@ class BasePandasDataset(object):
             adjust=adjust,
             ignore_na=ignore_na,
             axis=axis,
+            times=times,
         )
 
-    def expanding(self, min_periods=1, center=False, axis=0):
+    def expanding(self, min_periods=1, center=None, axis=0):
         return self._default_to_pandas(
             "expanding", min_periods=min_periods, center=center, axis=axis
         )
@@ -1177,6 +1203,8 @@ class BasePandasDataset(object):
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
+
+    pad = ffill
 
     def fillna(
         self,
@@ -1230,7 +1258,7 @@ class BasePandasDataset(object):
             )._query_compiler
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if isinstance(value, (list, tuple)):
             raise TypeError(
                 '"value" parameter must be a scalar or dict, but '
@@ -1428,7 +1456,7 @@ class BasePandasDataset(object):
         """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmin' not allowed for this dtype")
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.idxmin(axis=axis, skipna=skipna)
         )
@@ -1638,7 +1666,7 @@ class BasePandasDataset(object):
         Returns:
             The max of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
             data._query_compiler.max(
@@ -1660,7 +1688,7 @@ class BasePandasDataset(object):
         Returns:
             The mean of the DataFrame. (Pandas series)
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
@@ -1702,7 +1730,7 @@ class BasePandasDataset(object):
         Returns:
             The min of the DataFrame.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
             data._query_compiler.min(
@@ -1800,7 +1828,7 @@ class BasePandasDataset(object):
         Returns:
             nunique : Series
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.nunique(axis=axis, dropna=dropna)
         )
@@ -1881,7 +1909,7 @@ class BasePandasDataset(object):
                     index is the columns of self and the values
                     are the quantiles.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
 
         def check_dtype(t):
             return is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t)
@@ -1991,7 +2019,7 @@ class BasePandasDataset(object):
         limit=None,
         tolerance=None,
     ):
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if (
             level is not None
             or (
@@ -2139,9 +2167,11 @@ class BasePandasDataset(object):
         convention="start",
         kind=None,
         loffset=None,
-        base=0,
+        base: Optional[int] = None,
         on=None,
         level=None,
+        origin: Union[str, TimestampConvertibleTypes] = "start_day",
+        offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
         """
         Resample time-series data.
@@ -2149,6 +2179,7 @@ class BasePandasDataset(object):
         series. Object must have a datetime-like index (`DatetimeIndex`,
         `PeriodIndex`, or `TimedeltaIndex`), or pass datetime-like values
         to the `on` or `level` keyword.
+
         Parameters
         ----------
         rule : DateOffset, Timedelta or str
@@ -2184,6 +2215,17 @@ class BasePandasDataset(object):
         level : str or int, optional
             For a MultiIndex, level (name or number) to use for
             resampling. `level` must be datetime-like.
+        origin : {'epoch', 'start', 'start_day'}, Timestamp or str, default 'start_day'
+            The timestamp on which to adjust the grouping. The timezone of origin must match
+            the timezone of the index. If a timestamp is not used, these values are also supported:
+
+            - 'epoch': origin is 1970-01-01
+            - 'start': origin is the first value of the timeseries
+            - 'start_day': origin is the first day at midnight of the timeseries
+
+        offset : Timedelta or str, default is None
+            An offset timedelta added to the origin.
+
         Returns
         -------
         Resampler object
@@ -2200,6 +2242,8 @@ class BasePandasDataset(object):
             base=base,
             on=on,
             level=level,
+            origin=origin,
+            offset=offset,
         )
 
     def reset_index(
@@ -2432,7 +2476,7 @@ class BasePandasDataset(object):
         Returns:
             A new Dataframe
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if axis:
             axis_labels = self.columns
             axis_length = len(axis_labels)
@@ -2680,20 +2724,44 @@ class BasePandasDataset(object):
         na_position="last",
         sort_remaining=True,
         ignore_index: bool = False,
+        key: Optional[IndexKeyFunc] = None,
     ):
-        """Sort a DataFrame by one of the indices (columns or index).
+        """
+        Sort object by labels (along an axis).
 
-        Args:
-            axis: The axis to sort over.
-            level: The MultiIndex level to sort over.
-            ascending: Ascending or descending
-            inplace: Whether or not to update this DataFrame inplace.
-            kind: How to perform the sort.
-            na_position: Where to position NA on the sort.
-            sort_remaining: On Multilevel Index sort based on all levels.
-            by: (Deprecated) argument to pass to sort_values.
+        Parameters
+        ----------
+            axis : {0 or 'index', 1 or 'columns'}, default 0
+                The axis along which to sort.
+                The value 0 identifies the rows, and 1 identifies the columns.
+            level : int or level name or list of ints or list of level names
+                If not None, sort on values in specified index level(s).
+            ascending : bool or list of bools, default True
+                Sort ascending vs. descending. When the index is a MultiIndex
+                the sort direction can be controlled for each level individually.
+            inplace : bool, default False
+                If True, perform operation in-place.
+            kind : {'quicksort', 'mergesort', 'heapsort'}, default 'quicksort'
+                Choice of sorting algorithm. See also ndarray.np.sort for more information.
+                mergesort is the only stable algorithm. For DataFrames,
+                this option is only applied when sorting on a single column or label.
+            na_position : {'first', 'last'}, default 'last'
+                Puts NaNs at the beginning if first; last puts NaNs at the end.
+                Not implemented for MultiIndex.
+            sort_remaining : bool, default True
+                If True and sorting by level and index is multilevel,
+                sort by other levels too (in order) after sorting by specified level.
+            ignore_index : bool, default False
+                If True, the resulting axis will be labeled 0, 1, ..., n - 1.
+            key : callable, optional
+                If not None, apply the key function to the index values before sorting.
+                This is similar to the key argument in the builtin sorted() function,
+                with the notable difference that this key function should be vectorized.
+                It should expect an Index and return an Index of the same shape.
+                For MultiIndex inputs, the key is applied per level.
 
-        Returns:
+        Returns
+        -------
             A sorted DataFrame
         """
         axis = self._get_axis_number(axis)
@@ -2707,6 +2775,7 @@ class BasePandasDataset(object):
             na_position=na_position,
             sort_remaining=sort_remaining,
             ignore_index=ignore_index,
+            key=key,
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2719,18 +2788,43 @@ class BasePandasDataset(object):
         kind="quicksort",
         na_position="last",
         ignore_index: bool = False,
+        key: Optional[IndexKeyFunc] = None,
     ):
-        """Sorts by a column/row or list of columns/rows.
+        """
+        Sort by the values along either axis.
 
-        Args:
-            by: A list of labels for the axis to sort over.
-            axis: The axis to sort.
-            ascending: Sort in ascending or descending order.
-            inplace: If true, do the operation inplace.
-            kind: How to sort.
-            na_position: Where to put np.nan values.
+        Parameters
+        ----------
+            by : str or list of str
+                Name or list of names to sort by.
 
-        Returns:
+                - if axis is 0 or 'index' then by may contain index levels and/or column labels.
+                - if axis is 1 or 'columns' then by may contain column levels and/or index labels.
+
+            axis : {0 or 'index', 1 or 'columns'}, default 0
+                Axis to be sorted.
+            ascending : bool or list of bool, default True
+                Sort ascending vs. descending. Specify list for multiple sort orders.
+                If this is a list of bools, must match the length of the by.
+            inplace : bool, default False
+                If True, perform operation in-place.
+            kind : {'quicksort', 'mergesort', 'heapsort'}, default 'quicksort'
+                Choice of sorting algorithm. See also ndarray.np.sort for more information.
+                mergesort is the only stable algorithm. For DataFrames,
+                this option is only applied when sorting on a single column or label.
+            na_position : {'first', 'last'}, default 'last'
+                Puts NaNs at the beginning if first; last puts NaNs at the end.
+            ignore_index : bool, default False
+                If True, the resulting axis will be labeled 0, 1, ..., n - 1.
+            key : callable, optional
+                Apply the key function to the values before sorting.
+                This is similar to the key argument in the builtin sorted() function,
+                with the notable difference that this key function should be vectorized.
+                It should expect a Series and return a Series with the same shape as the input.
+                It will be applied to each column in by independently.
+
+        Returns
+        -------
              A sorted DataFrame.
         """
         axis = self._get_axis_number(axis)
@@ -2742,6 +2836,7 @@ class BasePandasDataset(object):
                 kind=kind,
                 na_position=na_position,
                 ignore_index=ignore_index,
+                key=key,
             )
         else:
             result = self._query_compiler.sort_columns_by_row_values(
@@ -2750,6 +2845,7 @@ class BasePandasDataset(object):
                 kind=kind,
                 na_position=na_position,
                 ignore_index=ignore_index,
+                key=key,
             )
         return self._create_or_update_from_compiler(result, inplace)
 
@@ -2832,6 +2928,7 @@ class BasePandasDataset(object):
         doublequote=True,
         escapechar=None,
         decimal=".",
+        errors: str = "strict",
     ):  # pragma: no cover
 
         kwargs = {
@@ -2854,6 +2951,7 @@ class BasePandasDataset(object):
             "doublequote": doublequote,
             "escapechar": escapechar,
             "decimal": decimal,
+            "errors": errors,
         }
         return self._default_to_pandas("to_csv", **kwargs)
 
@@ -2982,24 +3080,36 @@ class BasePandasDataset(object):
             label=None,
         )
 
-    def to_markdown(self, buf=None, mode=None, **kwargs):
-        return self._default_to_pandas("to_markdown", buf=buf, mode=mode, **kwargs)
+    def to_markdown(self, buf=None, mode=None, index: bool = True, **kwargs):
+        return self._default_to_pandas(
+            "to_markdown", buf=buf, mode=mode, index=index, **kwargs
+        )
 
-    def to_numpy(self, dtype=None, copy=False):
-        """Convert the DataFrame to a NumPy array.
+    def to_numpy(self, dtype=None, copy=False, na_value=no_default):
+        """
+        Convert the DataFrame to a NumPy array.
 
-        Args:
-            dtype: The dtype to pass to numpy.asarray()
-            copy: Whether to ensure that the returned value is a not a view on another
-                array.
+        Parameters
+        ----------
+            dtype : str or numpy.dtype, optional
+                The dtype to pass to numpy.asarray().
+            copy : bool, default False
+                Whether to ensure that the returned value is not a view on another array.
+                Note that copy=False does not ensure that to_numpy() is no-copy.
+                Rather, copy=True ensure that a copy is made, even if not strictly necessary.
+            na_value : Any, optional
+                The value to use for missing values.
+                The default value depends on dtype and the type of the array.
 
-        Returns:
+        Returns
+        -------
             A NumPy array.
         """
-        arr = self._query_compiler.to_numpy()
-        if dtype is not None:
-            return np.asarray(arr, dtype)
-        return arr
+        return self._query_compiler.to_numpy(
+            dtype=dtype,
+            copy=copy,
+            na_value=na_value,
+        )
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -3120,7 +3230,7 @@ class BasePandasDataset(object):
     div = divide = truediv
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         if (
             not self.axes[axis].is_monotonic_increasing
             and not self.axes[axis].is_monotonic_decreasing
@@ -3243,7 +3353,7 @@ class BasePandasDataset(object):
             and (not hasattr(self, "columns") or key not in self.columns)
         ):
             indexer = convert_to_index_sliceable(
-                getattr(pandas, type(self).__name__)(index=self.index), key
+                getattr(pandas, "DataFrame")(index=self.index), key
             )
         if indexer is not None:
             return self._getitem_slice(indexer)
@@ -3404,9 +3514,12 @@ class Resampler(object):
         base=0,
         on=None,
         level=None,
+        origin: Union[str, TimestampConvertibleTypes] = "start_day",
+        offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
+        axis = self._dataframe._get_axis_number(axis)
         self.resample_args = [
             rule,
             axis,
@@ -3418,13 +3531,27 @@ class Resampler(object):
             base,
             on,
             level,
+            origin,
+            offset,
         ]
         self.__groups = self.__get_groups(*self.resample_args)
 
     def __get_groups(
-        self, rule, axis, closed, label, convention, kind, loffset, base, on, level
+        self,
+        rule,
+        axis,
+        closed,
+        label,
+        convention,
+        kind,
+        loffset,
+        base,
+        on,
+        level,
+        origin,
+        offset,
     ):
-        if axis == 0 or axis == "index":
+        if axis == 0:
             df = self._dataframe
         else:
             df = self._dataframe.T
@@ -3438,6 +3565,8 @@ class Resampler(object):
                 loffset=loffset,
                 base=base,
                 level=level,
+                origin=origin,
+                offset=offset,
             )
         )
         return groups
@@ -3455,7 +3584,7 @@ class Resampler(object):
         )
 
     def get_group(self, name, obj=None):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+        if self.resample_args[1] == 0:
             result = self.__groups.get_group(name)
         else:
             result = self.__groups.get_group(name).T
@@ -3576,7 +3705,7 @@ class Resampler(object):
         axis=0,
         limit=None,
         inplace=False,
-        limit_direction="forward",
+        limit_direction: Optional[str] = None,
         limit_area=None,
         downcast=None,
         **kwargs,
@@ -3601,11 +3730,11 @@ class Resampler(object):
         )
 
     def nunique(self, _method="nunique", *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
-            result = self.__groups.nunique(*args, **kwargs)
-        else:
-            result = self.__groups.nunique(*args, **kwargs).T
-        return result
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_nunique(
+                self.resample_args, _method, *args, **kwargs
+            )
+        )
 
     def first(self, _method="first", *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -3638,18 +3767,24 @@ class Resampler(object):
         )
 
     def mean(self, _method="mean", *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
-            result = self.__groups.mean(*args, **kwargs)
-        else:
-            result = self.__groups.mean(*args, **kwargs).T
-        return result
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_mean(
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
+            )
+        )
 
     def median(self, _method="median", *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
-            result = self.__groups.median(*args, **kwargs)
-        else:
-            result = self.__groups.median(*args, **kwargs).T
-        return result
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_median(
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
+            )
+        )
 
     def min(self, _method="min", *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -3684,7 +3819,7 @@ class Resampler(object):
             )
 
     def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+        if self.resample_args[1] == 0:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
@@ -3708,25 +3843,25 @@ class Resampler(object):
         )
 
     def std(self, ddof=1, *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
-            result = self.__groups.std(ddof=ddof, *args, **kwargs)
-        else:
-            result = self.__groups.std(ddof=ddof, *args, **kwargs).T
-        return result
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_std(
+                self.resample_args, *args, ddof=ddof, **kwargs
+            )
+        )
 
     def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
+        if self.resample_args[1] == 0:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
         return result
 
     def var(self, ddof=1, *args, **kwargs):
-        if self.resample_args[1] == 0 or self.resample_args[1] == "index":
-            result = self.__groups.var(ddof=ddof, *args, **kwargs)
-        else:
-            result = self.__groups.var(ddof=ddof, *args, **kwargs).T
-        return result
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_var(
+                self.resample_args, *args, ddof=ddof, **kwargs
+            )
+        )
 
     def quantile(self, q=0.5, **kwargs):
         return self._dataframe.__constructor__(
@@ -3882,7 +4017,7 @@ class Rolling(object):
             )
         )
 
-    def cov(self, other=None, pairwise=None, ddof=1, **kwargs):
+    def cov(self, other=None, pairwise=None, ddof: Optional[int] = 1, **kwargs):
         from .dataframe import DataFrame
         from .series import Series
 

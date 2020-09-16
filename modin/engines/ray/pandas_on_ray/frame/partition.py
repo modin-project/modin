@@ -93,13 +93,15 @@ class PandasOnRayFramePartition(BaseFramePartition):
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
         return dataframe
 
-    def to_numpy(self):
-        """Convert the object stored in this parition to a NumPy array.
+    def to_numpy(self, **kwargs):
+        """
+        Convert the object stored in this parition to a NumPy array.
 
-        Returns:
+        Returns
+        -------
             A NumPy array.
         """
-        return self.apply(lambda df: df.values).get()
+        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     def mask(self, row_indices, col_indices):
         if (

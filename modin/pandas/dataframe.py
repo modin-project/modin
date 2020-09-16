@@ -22,13 +22,15 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
+from pandas._libs.lib import no_default
+from pandas._typing import Label
 
 import itertools
 import functools
 import numpy as np
 import sys
 import os
-from typing import Tuple, Union
+from typing import Optional, Sequence, Tuple, Union, Mapping
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -396,11 +398,15 @@ class DataFrame(BasePandasDataset):
         as_index=True,
         sort=True,
         group_keys=True,
-        squeeze=False,
+        squeeze: bool = no_default,
         observed=False,
+        dropna: bool = True,
     ):
-        """Apply a groupby to this DataFrame. See _groupby() remote task.
-        Args:
+        """
+        Apply a groupby to this DataFrame. See _groupby() remote task.
+
+        Parameters
+        ----------
             by: The value to groupby.
             axis: The axis to groupby.
             level: The level of the groupby.
@@ -408,9 +414,27 @@ class DataFrame(BasePandasDataset):
             sort: Whether or not to sort the result by the index.
             group_keys: Whether or not to group the keys.
             squeeze: Whether or not to squeeze.
-        Returns:
+            dropna : bool, default True
+                If True, and if group keys contain NA values,
+                NA values together with row/column will be dropped.
+                If False, NA values will also be treated as the key in groups
+
+        Returns
+        -------
             A new DataFrame resulting from the groupby.
         """
+        if squeeze is not no_default:
+            warnings.warn(
+                (
+                    "The `squeeze` parameter is deprecated and "
+                    "will be removed in a future version."
+                ),
+                FutureWarning,
+                stacklevel=2,
+            )
+        else:
+            squeeze = False
+
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -493,6 +517,7 @@ class DataFrame(BasePandasDataset):
             idx_name,
             observed=observed,
             drop=drop,
+            dropna=dropna,
         )
 
     def _reduce_dimension(self, query_compiler):
@@ -632,6 +657,53 @@ class DataFrame(BasePandasDataset):
             other, func, fill_value=fill_value, overwrite=overwrite
         )
 
+    def compare(
+        self,
+        other: "DataFrame",
+        align_axis: Union[str, int] = 1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+    ) -> "DataFrame":
+        """
+        Compare to another DataFrame and show the differences.
+
+        Parameters
+        ----------
+        other : DataFrame
+            Object to compare with.
+
+        align_axis : {0 or 'index', 1 or 'columns'}, default 1
+            Determine which axis to align the comparison on.
+
+            * 0, or 'index' : Resulting differences are stacked vertically
+                with rows drawn alternately from self and other.
+            * 1, or 'columns' : Resulting differences are aligned horizontally
+                with columns drawn alternately from self and other.
+
+        keep_shape : bool, default False
+            If true, all rows and columns are kept.
+            Otherwise, only the ones with different values are kept.
+
+        keep_equal : bool, default False
+            If true, the result keeps values that are equal.
+            Otherwise, equal values are shown as NaNs.
+
+        Returns
+        -------
+        DataFrame
+            DataFrame that shows the differences stacked side by side.
+
+            The resulting index will be a MultiIndex with 'self' and 'other'
+            stacked alternately at the inner level.
+        """
+        return self._default_to_pandas(
+            pandas.DataFrame.compare,
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+        )
+
     def corr(self, method="pearson", min_periods=1):
         return self._default_to_pandas(
             pandas.DataFrame.corr, method=method, min_periods=min_periods
@@ -644,7 +716,7 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.corrwith, other, axis=axis, drop=drop, method=method
         )
 
-    def cov(self, min_periods=None):
+    def cov(self, min_periods=None, ddof: Optional[int] = 1):
         """
         Compute pairwise covariance of columns, excluding NA/null values.
 
@@ -668,6 +740,9 @@ class DataFrame(BasePandasDataset):
         min_periods : int, optional
             Minimum number of observations required per pair of columns
             to have a valid result.
+        ddof : int, default 1
+            Delta degrees of freedom. The divisor used in calculations is N - ddof,
+            where N represents the number of elements.
 
         Returns
         -------
@@ -697,13 +772,13 @@ class DataFrame(BasePandasDataset):
                 return numeric_df.__constructor__(result)
             else:
                 numeric_df = numeric_df.astype(dtype="float64")
-                denom = 1.0 / (len(numeric_df) - 1.0)
+                denom = 1.0 / (len(numeric_df) - ddof)
                 means = numeric_df.mean(axis=0)
                 result = numeric_df - means
                 result = result.T._query_compiler.conj().dot(result._query_compiler)
         else:
             result = numeric_df._query_compiler.default_to_pandas(
-                pandas.DataFrame.cov, min_periods=min_periods
+                pandas.DataFrame.cov, min_periods=min_periods, ddof=ddof
             )
 
         result = numeric_df.__constructor__(
@@ -801,8 +876,10 @@ class DataFrame(BasePandasDataset):
             and self.eq(other).all().all()
         )
 
-    def explode(self, column: Union[str, Tuple]):
-        return self._default_to_pandas(pandas.DataFrame.explode, column)
+    def explode(self, column: Union[str, Tuple], ignore_index: bool = False):
+        return self._default_to_pandas(
+            pandas.DataFrame.explode, column, ignore_index=ignore_index
+        )
 
     def eval(self, expr, inplace=False, **kwargs):
         """Evaluate a Python expression as a string using various backends.
@@ -1181,7 +1258,7 @@ class DataFrame(BasePandasDataset):
         axis=0,
         limit=None,
         inplace=False,
-        limit_direction="forward",
+        limit_direction: Optional[str] = None,
         limit_area=None,
         downcast=None,
         **kwargs,
@@ -1426,6 +1503,7 @@ class DataFrame(BasePandasDataset):
         var_name=None,
         value_name="value",
         col_level=None,
+        ignore_index=True,
     ):
         """
         Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
@@ -1443,6 +1521,9 @@ class DataFrame(BasePandasDataset):
             Name to use for the 'value' column.
         col_level : int or str, optional
             If columns are a MultiIndex then use this level to melt.
+        ignore_index : bool, default True
+            If True, original index is ignored. If False, the original index is retained.
+            Index labels will be repeated as necessary.
 
         Returns
         -------
@@ -1456,6 +1537,7 @@ class DataFrame(BasePandasDataset):
                 var_name=var_name,
                 value_name=value_name,
                 col_level=col_level,
+                ignore_index=ignore_index,
             )
         )
 
@@ -2076,7 +2158,7 @@ class DataFrame(BasePandasDataset):
         Returns:
             Type of caller or None if inplace=True.
         """
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         renamed = self if inplace else self.copy()
         if axis == 0:
             renamed.index = renamed.index.set_names(name)
@@ -2571,8 +2653,8 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
-    def to_feather(self, path):  # pragma: no cover
-        return self._default_to_pandas(pandas.DataFrame.to_feather, path)
+    def to_feather(self, path, **kwargs):  # pragma: no cover
+        return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
     def to_gbq(
         self,
@@ -2695,6 +2777,7 @@ class DataFrame(BasePandasDataset):
         variable_labels=None,
         version=114,
         convert_strl=None,
+        compression: Union[str, Mapping[str, str], None] = "infer",
     ):  # pragma: no cover
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
@@ -2707,6 +2790,7 @@ class DataFrame(BasePandasDataset):
             variable_labels=variable_labels,
             version=version,
             convert_strl=convert_strl,
+            compression=compression,
         )
 
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
@@ -2838,6 +2922,39 @@ class DataFrame(BasePandasDataset):
             )
         )
 
+    def value_counts(
+        self,
+        subset: Optional[Sequence[Label]] = None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+    ):
+        """
+         Return a Series containing counts of unique rows in the DataFrame.
+
+        Parameters
+        ----------
+        subset : list-like, optional
+            Columns to use when counting unique combinations.
+        normalize : bool, default False
+            Return proportions rather than frequencies.
+        sort : bool, default True
+            Sort by frequencies.
+        ascending : bool, default False
+            Sort in ascending order.
+
+        Returns
+        -------
+        Series
+        """
+        return self._default_to_pandas(
+            "value_counts",
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+        )
+
     def where(
         self,
         cond,
@@ -2883,7 +3000,7 @@ class DataFrame(BasePandasDataset):
                 try_cast=try_cast,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
-        axis = self._get_axis_number(axis) if axis is not None else 0
+        axis = self._get_axis_number(axis)
         cond = cond(self) if callable(cond) else cond
 
         if not isinstance(cond, DataFrame):

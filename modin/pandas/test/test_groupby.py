@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.utils import try_cast_to_pandas, to_pandas
+from modin.utils import try_cast_to_pandas, to_pandas, get_current_backend
 from modin.pandas.utils import from_pandas
 from .utils import (
     df_equals,
@@ -64,9 +64,7 @@ def eval_aggregation(md_df, pd_df, operation=None, by=None, *args, **kwargs):
     return eval_general(
         md_df,
         pd_df,
-        operation=lambda df, *args, **kwargs: df.groupby(by=by).agg(
-            operation, *args, **kwargs
-        ),
+        lambda df, *args, **kwargs: df.groupby(by=by).agg(operation, *args, **kwargs),
         *args,
         **kwargs,
     )
@@ -366,7 +364,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_len(modin_groupby, pandas_groupby)
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
-    eval_nunique(modin_groupby, pandas_groupby)
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.nunique())
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
     eval_general(
@@ -401,9 +399,13 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    eval_general(
-        modin_groupby, pandas_groupby, lambda df: df.size(), check_exception_type=None
-    )
+    if get_current_backend() != "BaseOnPython":
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.size(),
+            check_exception_type=None,
+        )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)

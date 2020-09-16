@@ -266,12 +266,19 @@ agg_func = {
     "df sum": lambda df: df.sum(),
     "str": str,
     "sum mean": ["sum", "mean"],
-    "sum sum": ["sum", "sum"],
     "sum df sum": ["sum", lambda df: df.sum()],
     "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
 agg_func_values = list(agg_func.values())
+
+# For this sort of parameters pandas throws an exception.
+# See details in pandas issue 36036.
+agg_func_except = {
+    "sum sum": ["sum", "sum"],
+}
+agg_func_except_keys = list(agg_func_except.keys())
+agg_func_except_values = list(agg_func_except.values())
 
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 

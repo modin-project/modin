@@ -212,13 +212,16 @@ class BaseQueryCompiler(abc.ABC):
     # END From Arrow
 
     # To NumPy
-    def to_numpy(self):
-        """Converts Modin DataFrame to NumPy array.
 
-        Returns:
+    def to_numpy(self, **kwargs):
+        """
+        Converts Modin DataFrame to NumPy array.
+
+        Returns
+        -------
             NumPy array of the QueryCompiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.to_numpy)(self)
+        return DataFrameDefault.register(pandas.DataFrame.to_numpy)(self, **kwargs)
 
     # END To NumPy
 

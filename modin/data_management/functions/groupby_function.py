@@ -132,7 +132,11 @@ class GroupbyReduceFunction(MapReduceFunction):
                             ]
                             return new_result
                         else:
-                            return result.drop(columns=by_part)
+                            return (
+                                result.drop(columns=by_part)
+                                if call_kwds.get("method", None) != "size"
+                                else result
+                            )
                     return result
 
                 try:

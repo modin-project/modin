@@ -89,11 +89,11 @@ def test_top_level_api_equality():
             continue
         try:
             pandas_sig = dict(inspect.signature(getattr(pandas, m)).parameters)
-        except TypeError:
+        except (TypeError, ValueError):
             continue
         try:
             modin_sig = dict(inspect.signature(getattr(pd, m)).parameters)
-        except TypeError:
+        except (TypeError, ValueError):
             continue
 
         if not pandas_sig == modin_sig:
@@ -129,11 +129,11 @@ def test_top_level_api_equality():
             continue
         try:
             pandas_sig = dict(inspect.signature(getattr(pandas, m)).parameters)
-        except TypeError:
+        except (TypeError, ValueError):
             continue
         try:
             modin_sig = dict(inspect.signature(getattr(pd, m)).parameters)
-        except TypeError:
+        except (TypeError, ValueError):
             continue
         if not pandas_sig == modin_sig:
             try:

@@ -154,6 +154,7 @@ def read_json(
     lines=False,
     chunksize=None,
     compression="infer",
+    nrows: Optional[int] = None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -177,6 +178,7 @@ def read_gbq(
     private_key=None,
     verbose=None,
     progress_bar_type: Optional[str] = None,
+    max_results: Optional[int] = None,
 ) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -244,11 +246,9 @@ def read_excel(
     skipfooter=0,
     convert_float=True,
     mangle_dupe_cols=True,
-    **kwds,
+    na_filter=True,
 ):
-
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    kwargs.update(kwargs.pop("kwds", {}))
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 

@@ -459,34 +459,57 @@ class DataFrameGroupBy(object):
 
     def size(self):
         if self._axis == 0:
-            # Size always works in as_index=True mode so it is necessary to make a
-            #  copy of _kwargs and change as_index in it
-            kwargs = self._kwargs.copy()
-            kwargs["as_index"] = True
-            # Series objects in 'by' mean we couldn't handle the case and transform
-            # 'by' to a query compiler. In this case we replace column names with
-            # actual columns to be able to apply goupby to a Series.
+            # Series objects in 'by' mean we couldn't handle the case
+            # and transform 'by' to a query compiler.
+            # In this case we are just defaulting to pandas.
             if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
-                by = [self._df[o] if isinstance(o, str) else o for o in self._by]
-            else:
-                by = self._by
+                work_object = DataFrameGroupBy(
+                    self._df,
+                    self._by,
+                    self._axis,
+                    drop=False,
+                    idx_name=None,
+                    **self._kwargs,
+                )
+                result = work_object._wrap_aggregation(
+                    type(work_object._query_compiler).groupby_size,
+                    lambda df: df.size(),
+                    numeric_only=False,
+                )
+                result = result.__constructor__(
+                    query_compiler=result._query_compiler
+                ).squeeze(axis=1)
+                if isinstance(result, Series):
+                    # Pandas does not name size() output for Series
+                    result.name = None
+                return result
             work_object = SeriesGroupBy(
-                self._df[self._df.columns[0]],
-                by,
+                self._df[self._df.columns[0]]
+                if self._kwargs.get("as_index")
+                else self._df[self._df.columns[0]].to_frame(),
+                self._by,
                 self._axis,
                 drop=False,
                 idx_name=None,
-                **kwargs,
+                **self._kwargs,
             )
             result = work_object._wrap_aggregation(
                 type(work_object._query_compiler).groupby_size,
                 lambda df: df.size(),
                 numeric_only=False,
             )
-            series_result = Series(query_compiler=result._query_compiler)
-            # Pandas does not name size() output
-            series_result.name = None
-            return series_result.fillna(0)
+            result = result.__constructor__(query_compiler=result._query_compiler)
+            if not self._kwargs.get("as_index") and not isinstance(result, Series):
+                result = result.rename(columns={0: "size"})
+                result = (
+                    result.rename(columns={"__reduced__": "index"})
+                    if "__reduced__" in result.columns
+                    else result
+                )
+            else:
+                # Pandas does not name size() output for Series
+                result.name = None
+            return result.fillna(0)
         else:
             return DataFrameGroupBy(
                 self._df.T,
@@ -539,7 +562,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        return self._apply_agg_function(lambda df: df.nunique(dropna), drop=False)
+        return self._apply_agg_function(lambda df: df.nunique(dropna))
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
@@ -574,9 +597,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        result = self._apply_agg_function(
-            lambda df: df.fillna(**kwargs), drop=self._as_index
-        )
+        result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
         # pandas does not name the index on fillna
         result.index.name = None
         return result
@@ -617,15 +638,6 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, **kwargs):
-        import numpy as np
-
-        if self.ndim > 1:
-            if self._df.dtypes.map(lambda x: x == np.dtype("O")).any():
-                raise TypeError(
-                    "'quantile' cannot be performed against 'object' dtypes!"
-                )
-        elif self._df.dtypes == np.dtype("O"):
-            raise TypeError("'quantile' cannot be performed against 'object' dtypes!")
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
