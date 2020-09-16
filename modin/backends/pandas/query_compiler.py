@@ -1100,13 +1100,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def map_func(df):
             return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
 
-        is_correct_len = True
-        if isinstance(self.index, pandas.MultiIndex):
+        def is_tree_like_or_1d(calc_index, valid_index):
+            if not isinstance(calc_index, pandas.MultiIndex):
+                return True
             actual_len = 1
-            for lvl in self.index.levels:
+            for lvl in calc_index.levels:
                 actual_len *= len(lvl)
-            if len(self.index) * len(self.columns) != actual_len * len(self.columns):
-                is_correct_len = False
+            return len(self.index) * len(self.columns) == actual_len * len(valid_index)
+
+        is_tree_like_or_1d_index = is_tree_like_or_1d(self.index, self.columns)
+        is_tree_like_or_1d_cols = is_tree_like_or_1d(self.columns, self.index)
 
         is_all_multi_list = False
         if (
@@ -1114,7 +1117,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             and isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
             and len(level) == self.index.nlevels
-            and is_correct_len
+            and is_tree_like_or_1d_index
+            and is_tree_like_or_1d_cols
         ):
             is_all_multi_list = True
             real_cols_bkp = self.columns
@@ -1148,7 +1152,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             return pandas.MultiIndex.from_product([*new_columns, *new_index])
 
-        if is_all_multi_list and is_correct_len:
+        if is_all_multi_list and is_tree_like_or_1d_index and is_tree_like_or_1d_cols:
             result = result.sort_index()
             index_level_values = [lvl for lvl in obj.index.levels]
 
@@ -1158,7 +1162,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result
 
         if need_reindex:
-            if is_correct_len:
+            if is_tree_like_or_1d_index and is_tree_like_or_1d_cols:
                 is_recompute_index = isinstance(self.index, pandas.MultiIndex)
                 is_recompute_columns = not is_recompute_index and isinstance(
                     self.columns, pandas.MultiIndex
@@ -1166,18 +1170,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_index = compute_index(
                     self.index, self.columns, is_recompute_index, is_recompute_columns
                 )
-            else:
-                if isinstance(self.columns, pandas.MultiIndex):
-                    new_index = compute_index(self.index, self.columns)
+            elif is_tree_like_or_1d_index != is_tree_like_or_1d_cols:
+                if isinstance(self.columns, pandas.MultiIndex) or not isinstance(
+                    self.index, pandas.MultiIndex
+                ):
+                    return result
                 else:
+                    index = (
+                        self.index.sortlevel()[0]
+                        if is_tree_like_or_1d_index
+                        and not is_tree_like_or_1d_cols
+                        and isinstance(self.index, pandas.MultiIndex)
+                        else self.index
+                    )
                     index = pandas.MultiIndex.from_tuples(
-                        list(self.index) * len(self.columns)
+                        list(index) * len(self.columns)
                     )
                     columns = self.columns.repeat(len(self.index))
                     index_levels = [
                         index.get_level_values(i) for i in range(index.nlevels)
                     ]
-                    new_index = pandas.MultiIndex.from_arrays([columns] + index_levels)
+                    new_index = pandas.MultiIndex.from_arrays(
+                        [columns] + index_levels,
+                        names=self.columns.names + self.index.names,
+                    )
+            else:
+                return result
             result = result.reindex(0, new_index)
         return result
 

@@ -959,8 +959,7 @@ def test_tz_localize():
 @pytest.mark.parametrize("is_multi_col", [True, False], ids=["col_multi", "col_index"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unstack(data, is_multi_idx, is_multi_col):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
+    modin_df, pandas_df = create_test_dfs(data)
 
     if is_multi_idx:
         index = generate_multiindex(len(pandas_df), nlevels=4, is_tree_like=True)
@@ -974,16 +973,12 @@ def test_unstack(data, is_multi_idx, is_multi_col):
     else:
         columns = pandas_df.columns
 
-    pandas_df.columns = columns
-    pandas_df.index = index
-
-    modin_df.columns = columns
-    modin_df.index = index
+    pandas_df.columns = modin_df.columns = columns
+    pandas_df.index = modin_df.index = index
 
     df_equals(modin_df.unstack(), pandas_df.unstack())
-
+    df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
     if is_multi_idx:
-        df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
         df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
         df_equals(modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2]))
         df_equals(
@@ -992,47 +987,33 @@ def test_unstack(data, is_multi_idx, is_multi_col):
 
 
 @pytest.mark.parametrize(
-    "is_multi_col",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="Unstack fails in case of MultiIndex columns. See #1997 for more details."
-            ),
-        ),
-        pytest.param(
-            False,
-            marks=pytest.mark.xfail(
-                reason="Unstack loses indices names. See issue #2084 for more details."
-            ),
-        ),
-    ],
-    ids=["col_multi", "col_index"],
+    "multi_col", ["col_multi_tree", "col_multi_not_tree", "col_index"]
 )
-def test_unstack_not_unique(is_multi_col):
-    MAX_NROWS = 34
-    MAX_NCOLS = 36
+@pytest.mark.parametrize(
+    "multi_idx", ["idx_multi_tree", "idx_multi_not_tree", "idx_index"]
+)
+def test_unstack_multiindex_types(multi_col, multi_idx):
+    MAX_NROWS = MAX_NCOLS = 36
 
     pandas_df = pandas.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
     modin_df = pd.DataFrame(test_data["int_data"]).iloc[:MAX_NROWS, :MAX_NCOLS]
 
-    index = generate_multiindex(len(pandas_df), nlevels=3)
+    def get_new_index(index, cond):
+        if cond == "col_multi_tree" or cond == "idx_multi_tree":
+            return generate_multiindex(len(index), nlevels=3, is_tree_like=True)
+        elif cond == "col_multi_not_tree" or cond == "idx_multi_not_tree":
+            return generate_multiindex(len(index), nlevels=3)
+        else:
+            return index
 
-    if is_multi_col:
-        columns = generate_multiindex(len(pandas_df.columns), nlevels=2)
-    else:
-        columns = pandas_df.columns
-
-    pandas_df.columns = columns
-    pandas_df.index = index
-
-    modin_df.columns = columns
-    modin_df.index = index
+    pandas_df.columns = modin_df.columns = get_new_index(pandas_df.columns, multi_col)
+    pandas_df.index = modin_df.index = get_new_index(pandas_df.index, multi_idx)
 
     df_equals(modin_df.unstack(), pandas_df.unstack())
     df_equals(modin_df.unstack(level=1), pandas_df.unstack(level=1))
-    df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
-    df_equals(modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2]))
+    if multi_idx != "idx_index":
+        df_equals(modin_df.unstack(level=[0, 1]), pandas_df.unstack(level=[0, 1]))
+        df_equals(modin_df.unstack(level=[0, 1, 2]), pandas_df.unstack(level=[0, 1, 2]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
