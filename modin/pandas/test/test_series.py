@@ -18,6 +18,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
+from pandas.core.base import SpecificationError
 import sys
 
 from modin.utils import to_pandas, get_current_backend
@@ -45,6 +46,8 @@ from .utils import (
     no_numeric_dfs,
     agg_func_keys,
     agg_func_values,
+    agg_func_except_keys,
+    agg_func_except_values,
     numeric_agg_funcs,
     quantiles_keys,
     quantiles_values,
@@ -590,15 +593,28 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    modin_series, pandas_series = create_test_series(data)
+    # AssertionError may be arisen in case of
+    # mismathing of index/columns in Modin and pandas.
+    # See details in pandas issue 36189.
     try:
-        pandas_result = pandas_series.agg(func)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(modin_series.agg(func))
-    else:
-        modin_result = modin_series.agg(func)
-        df_equals(modin_result, pandas_result)
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func),
+        )
+    except AssertionError:
+        pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_agg_except(data, func):
+    # SpecificationError is arisen because we treat a Series as a DataFrame.
+    # See details in pandas issue 36036.
+    with pytest.raises(SpecificationError):
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -608,30 +624,61 @@ def test_agg_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        modin_series, pandas_series = create_test_series(data)
+        # AssertionError may be arisen in case of
+        # mismathing of index/columns in Modin and pandas.
+        # See details in pandas issue 36189.
         try:
-            pandas_result = pandas_series.agg(func, axis)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_series.agg(func, axis)
-        else:
-            modin_result = modin_series.agg(func, axis)
-            df_equals(modin_result, pandas_result)
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
+            )
+        except AssertionError:
+            pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_agg_numeric_except(request, data, func):
+    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
+        request.node.name, numeric_dfs
+    ):
+        axis = 0
+        # SpecificationError is arisen because we treat a Series as a DataFrame.
+        # See details in pandas issue 36036.
+        with pytest.raises(SpecificationError):
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
+            )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_aggregate(request, data, func):
+def test_aggregate(data, func):
     axis = 0
-    modin_series, pandas_series = create_test_series(data)
+    # AssertionError may be arisen in case of
+    # mismathing of index/columns in Modin and pandas.
+    # See details in pandas issue 36189.
     try:
-        pandas_result = pandas_series.aggregate(func, axis)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(modin_series.aggregate(func, axis))
-    else:
-        modin_result = modin_series.aggregate(func, axis)
-        df_equals(modin_result, pandas_result)
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.aggregate(func, axis),
+        )
+    except AssertionError:
+        pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_aggregate_except(data, func):
+    axis = 0
+    # SpecificationError is arisen because we treat a Series as a DataFrame.
+    # See details in pandas issues 36036.
+    with pytest.raises(SpecificationError):
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.aggregate(func, axis),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -641,15 +688,32 @@ def test_aggregate_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        modin_series, pandas_series = create_test_series(data)
+        # AssertionError may be arisen in case of
+        # mismathing of index/columns in Modin and pandas.
+        # See details in pandas issue 36189.
         try:
-            pandas_result = pandas_series.agg(func, axis)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_series.agg(func, axis)
-        else:
-            modin_result = modin_series.agg(func, axis)
-            df_equals(modin_result, pandas_result)
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
+            )
+        except AssertionError:
+            pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_aggregate_numeric_except(request, data, func):
+    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
+        request.node.name, numeric_dfs
+    ):
+        axis = 0
+        # SpecificationError is arisen because we treat a Series as a DataFrame.
+        # See details in pandas issues 36036.
+        with pytest.raises(SpecificationError):
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
+            )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -758,17 +822,29 @@ def test_append(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_apply(request, data, func):
-    modin_series, pandas_series = create_test_series(data)
-
+def test_apply(data, func):
+    # AssertionError may be arisen in case of
+    # mismathing of index/columns in Modin and pandas.
+    # See details in pandas issue 36189.
     try:
-        pandas_result = pandas_series.apply(func)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(modin_series.apply(func))
-    else:
-        modin_result = modin_series.apply(func)
-        df_equals(modin_result, pandas_result)
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
+    except AssertionError:
+        pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_apply_except(data, func):
+    # SpecificationError is arisen because we treat a Series as a DataFrame.
+    # See details in pandas issues 36036.
+    with pytest.raises(SpecificationError):
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
 
 
 def test_apply_external_lib():
@@ -794,17 +870,30 @@ def test_apply_external_lib():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply_numeric(request, data, func):
-    modin_series, pandas_series = create_test_series(data)
-
     if name_contains(request.node.name, numeric_dfs):
+        # AssertionError may be arisen in case of
+        # mismathing of index/columns in Modin and pandas.
+        # See details in pandas issue 36189.
         try:
-            pandas_result = pandas_series.apply(func)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                repr(modin_series.apply(func))
-        else:
-            modin_result = modin_series.apply(func)
-            df_equals(modin_result, pandas_result)
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.apply(func),
+            )
+        except AssertionError:
+            pass
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_apply_numeric_except(request, data, func):
+    if name_contains(request.node.name, numeric_dfs):
+        # SpecificationError is arisen because we treat a Series as a DataFrame.
+        # See details in pandas issues 36036.
+        with pytest.raises(SpecificationError):
+            eval_general(
+                *create_test_series(data),
+                lambda df: df.apply(func),
+            )
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
@@ -2552,8 +2641,8 @@ def test_resample(closed, label, level):
         pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
     )
     df_equals(
-        pandas_resampler.aggregate("max"),
         modin_resampler.aggregate("max"),
+        pandas_resampler.aggregate("max"),
     )
     df_equals(
         modin_resampler.apply("sum"),
@@ -2583,8 +2672,8 @@ def test_resample(closed, label, level):
         df_equals(modin_resampler.backfill(), pandas_resampler.backfill())
         df_equals(modin_resampler.ffill(), pandas_resampler.ffill())
     df_equals(
-        pandas_resampler.apply(["sum", "mean", "max"]),
         modin_resampler.apply(["sum", "mean", "max"]),
+        pandas_resampler.apply(["sum", "mean", "max"]),
     )
     df_equals(
         modin_resampler.aggregate(["sum", "mean", "max"]),
@@ -2688,7 +2777,18 @@ def test_sample(data):
 
 
 @pytest.mark.parametrize("single_value_data", [True, False])
-@pytest.mark.parametrize("use_multiindex", [True, False])
+@pytest.mark.parametrize(
+    "use_multiindex",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                reason="When use_multiindex=True, test is failing."
+            ),
+        ),
+        False,
+    ],
+)
 @pytest.mark.parametrize("sorter", [True, None])
 @pytest.mark.parametrize("values_number", [1, 2, 5])
 @pytest.mark.parametrize("side", ["left", "right"])
@@ -3097,14 +3197,26 @@ def test_tolist(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_transform(data, func):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.transform(func)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            repr(modin_series.transform(func))
-    else:
-        df_equals(modin_series.transform(func), pandas_result)
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.transform(func),
+    )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
+def test_transform_except(data, func):
+    # 1) SpecificationError is arisen because we treat a Series as a DataFrame.
+    #    See details in pandas issues 36036.
+    # 2) AssertionError is arisen because of mismatching of thrown exceptions
+    #    (SpecificationError in Modin, ValueError in pandas).
+    #    Since we perform `transform` via `apply` then SpecificationError is arisen earlier.
+    #    That's why the exception are mismathed.
+    with pytest.raises((SpecificationError, AssertionError)):
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.transform(func),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

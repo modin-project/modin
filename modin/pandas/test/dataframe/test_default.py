@@ -14,7 +14,6 @@
 import pytest
 import numpy as np
 import pandas
-import os
 import matplotlib
 import modin.pandas as pd
 from modin.utils import to_pandas
@@ -223,10 +222,6 @@ def test_cov():
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    os.name == "nt",
-    reason="AssertionError: numpy array are different",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
     modin_df = pd.DataFrame(data)
@@ -274,10 +269,6 @@ def test_dot(data):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    os.name == "nt",
-    reason="AssertionError: numpy array are different",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_matmul(data):
     modin_df = pd.DataFrame(data)

@@ -360,13 +360,17 @@ class BaseFrameManager(object):
             return cls.concatenate(df_rows)
 
     @classmethod
-    def to_numpy(cls, partitions):
-        """Convert this object into a NumPy array from the partitions.
+    def to_numpy(cls, partitions, **kwargs):
+        """
+        Convert this object into a NumPy array from the partitions.
 
-        Returns:
+        Returns
+        -------
             A NumPy array
         """
-        return np.block([[block.to_numpy() for block in row] for row in partitions])
+        return np.block(
+            [[block.to_numpy(**kwargs) for block in row] for row in partitions]
+        )
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):

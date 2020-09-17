@@ -15,6 +15,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
+from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
 from typing import Union
 
@@ -271,31 +272,34 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int,
-                Axis to validate indices along
-            force : bool,
+            axis : 0 or 1
+                Axis to validate indices along (0 - index, 1 - columns).
+            force : boolean, default False
                 Whether to update external indices with internal if their lengths
                 do not match or raise an exception in that case.
         """
         internal_axis = self._frame_mgr_cls.get_indices(
             axis, self._partitions, lambda df: df.axes[axis]
         )
-        is_equals = self.axes[axis].equals(internal_axis)
-        is_lenghts_matches = len(self.axes[axis]) == len(internal_axis)
+        self_axis = self.axes[axis]
+        is_equals = self_axis.equals(internal_axis)
+        if (
+            isinstance(self_axis, DatetimeIndex)
+            and isinstance(internal_axis, DatetimeIndex)
+            and is_equals
+        ):
+            if getattr(self_axis, "freq") != getattr(internal_axis, "freq"):
+                is_equals = False
+                force = True
+        is_lenghts_matches = len(self_axis) == len(internal_axis)
         if not is_equals:
-            if force:
-                if not is_lenghts_matches:
-                    if axis:
-                        self._column_widths_cache = None
-                    else:
-                        self._row_lengths_cache = None
-                new_axis = self.axes[axis] if is_lenghts_matches else internal_axis
-                self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
-            else:
-                self._set_axis(
-                    axis,
-                    self.axes[axis],
-                )
+            if not is_lenghts_matches:
+                if axis:
+                    self._column_widths_cache = None
+                else:
+                    self._row_lengths_cache = None
+            new_axis = self_axis if is_lenghts_matches and not force else internal_axis
+            self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
 
     def _validate_internal_indices(self, mode=None, **kwargs):
         """
@@ -316,7 +320,6 @@ class BasePandasFrame(object):
                 Whether to update external indices with internal if their lengths
                 do not match or raise an exception in that case.
         """
-
         if isinstance(mode, bool):
             is_force = mode
             mode = "all"
@@ -329,7 +332,7 @@ class BasePandasFrame(object):
             "reduced": {
                 "validate_index": self.index.equals(reduced_sample),
                 "validate_columns": self.columns.equals(reduced_sample),
-                "force": True,
+                "force": False,
             },
             "all": {
                 "validate_index": True,
@@ -560,6 +563,7 @@ class BasePandasFrame(object):
             new_row_lengths,
             new_col_widths,
             new_dtypes,
+            validate_axes="all" if new_partitions.size != 0 else False,
         )
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
@@ -1254,7 +1258,7 @@ class BasePandasFrame(object):
             None,
             None,
             dtypes,
-            validate_axes="reduced",
+            validate_axes="all" if new_partitions.size != 0 else False,
         )
 
     def _apply_full_axis_select_indices(
@@ -1818,13 +1822,15 @@ class BasePandasFrame(object):
 
         return df
 
-    def to_numpy(self):
-        """Converts Modin DataFrame to a 2D NumPy array.
+    def to_numpy(self, **kwargs):
+        """
+        Converts Modin DataFrame to a 2D NumPy array.
 
-        Returns:
+        Returns
+        -------
             NumPy array.
         """
-        return self._frame_mgr_cls.to_numpy(self._partitions)
+        return self._frame_mgr_cls.to_numpy(self._partitions, **kwargs)
 
     def transpose(self):
         """Transpose the index and columns of this dataframe.

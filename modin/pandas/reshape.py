@@ -86,6 +86,7 @@ def melt(
     var_name=None,
     value_name="value",
     col_level=None,
+    ignore_index: bool = True,
 ):
     return frame.melt(
         id_vars=id_vars,
@@ -93,6 +94,7 @@ def melt(
         var_name=var_name,
         value_name=value_name,
         col_level=col_level,
+        ignore_index=ignore_index,
     )
 
 

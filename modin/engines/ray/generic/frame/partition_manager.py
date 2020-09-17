@@ -22,15 +22,17 @@ class RayFrameManager(BaseFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
     @classmethod
-    def to_numpy(cls, partitions):
-        """Convert this object into a NumPy array from the partitions.
+    def to_numpy(cls, partitions, **kwargs):
+        """
+        Convert this object into a NumPy array from the partitions.
 
-        Returns:
+        Returns
+        -------
             A NumPy array
         """
         parts = ray.get(
             [
-                obj.apply(lambda df: df.to_numpy()).oid
+                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).oid
                 for row in partitions
                 for obj in row
             ]

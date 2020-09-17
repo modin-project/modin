@@ -111,13 +111,15 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         return dataframe
 
-    def to_numpy(self):
-        """Convert the object stored in this partition to a NumPy array.
+    def to_numpy(self, **kwargs):
+        """
+        Convert the object stored in this partition to a NumPy array.
 
-        Returns:
+        Returns
+        -------
             A NumPy array.
         """
-        return self.apply(lambda df: df.values).get()
+        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     @classmethod
     def put(cls, obj):
