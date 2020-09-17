@@ -1890,11 +1890,6 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-        if result.columns.equals(pandas.Index(["__reduced__"])):
-            result = self._reduce_dimension(result._query_compiler)
-            if getattr(result, "name", None) == 0:
-                result.name = None
-
         return result
 
     @property

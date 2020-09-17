@@ -2578,7 +2578,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
             # different partitions
-            if len(index) == 0:
+            if len(index) == 0 and len(columns) > 0:
                 result = result.T
 
             return result
@@ -2590,17 +2590,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
         # transposing the result again, to be consistent with Pandas result
-        if len(index) == 0:
+        if len(index) == 0 and len(columns) > 0:
             result = result.transpose()
-            if len(columns) > 1:
-                result.columns = ["__reduced__"]
 
         if len(values) == 0:
             values = self.columns.drop(unique_keys)
-        if len(values) == 1 and result.columns.nlevels > 1:
+
+        # if only one value is specified, removing level that maps
+        # columns from `values` to the actual values
+        if len(index) > 0 and len(values) == 1 and result.columns.nlevels > 1:
             result.columns = result.columns.droplevel(int(margins))
 
-        return result.sort_index(axis=1)
+        return result
 
     # Get_dummies
     def get_dummies(self, columns, **kwargs):
