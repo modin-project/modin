@@ -16,6 +16,8 @@ import signal
 import os
 import random
 import time
+import tempfile
+import sys
 
 from .base import ClusterError, ConnectionDetails, _get_ssh_proxy_command
 
@@ -41,8 +43,8 @@ class Connection:
         self.proc = None
 
         # find where rpyc_classic is located
-        locator = self.__run(
-            self.__build_sshcmd(details),
+        locator = self._run(
+            self._build_sshcmd(details),
             [
                 main_python,
                 "-c",
@@ -67,14 +69,14 @@ class Connection:
         cmd = [
             main_python,
             rpyc_classic,
-            "--port",
-            str(self.rpyc_port),
         ]
         if log_rpyc:
-            cmd.extend(["--logfile", "/tmp/rpyc.log"])
+            cmd.extend(["--logfile", f"{tempfile.gettempdir()}/rpyc.log"])
         for _ in range(self.tries):
-            proc = self.__run(
-                self.__build_sshcmd(details, forward_port=port), cmd, capture_out=False
+            proc = self._run(
+                self._build_sshcmd(details, forward_port=port),
+                cmd + ["--port", str(port)],
+                capture_out=False,
             )
             if self.__wait_noexc(proc, 1) is None:
                 # started successfully
@@ -101,9 +103,14 @@ class Connection:
 
         return cls.__current.__connection
 
+    @staticmethod
+    def _get_service():
+        from .rpyc_proxy import WrappingService
+
+        return WrappingService
+
     def __try_connect(self):
         import rpyc
-        from .rpyc_proxy import WrappingService
 
         try:
             stream = rpyc.SocketStream.connect(
@@ -111,7 +118,7 @@ class Connection:
             )
             self.__connection = rpyc.connect_stream(
                 stream,
-                WrappingService,
+                self._get_service(),
                 config={"sync_request_timeout": RPYC_REQUEST_TIMEOUT},
             )
         except (ConnectionRefusedError, EOFError):
@@ -138,8 +145,9 @@ class Connection:
         if Connection.__current is self:
             Connection.__current = None
 
-    def stop(self, sigint=signal.SIGINT):
-        # capture signal.SIGINT in closure so it won't get removed before __del__ is called
+    def stop(self, sigint=signal.SIGINT if sys.platform != "win32" else signal.SIGTERM):
+        # capture signal number in closure so it won't get removed before __del__ is called
+        # which might happen if connection is being destroyed during interpreter destruction
         self.deactivate()
         if self.proc and self.proc.poll() is None:
             self.proc.send_signal(sigint)
@@ -152,7 +160,7 @@ class Connection:
     def __del__(self):
         self.stop()
 
-    def __build_sshcmd(self, details: ConnectionDetails, forward_port: int = None):
+    def _build_sshcmd(self, details: ConnectionDetails, forward_port: int = None):
         opts = [
             ("ConnectTimeout", "{}s".format(self.connect_timeout)),
             ("StrictHostKeyChecking", "no"),
@@ -173,15 +181,13 @@ class Connection:
         for oname, ovalue in opts:
             cmdline.extend(["-o", f"{oname}={ovalue}"])
         if forward_port:
-            cmdline.extend(
-                ["-L", f"127.0.0.1:{forward_port}:127.0.0.1:{self.rpyc_port}"]
-            )
+            cmdline.extend(["-L", f"127.0.0.1:{forward_port}:127.0.0.1:{forward_port}"])
         cmdline.append(f"{details.user_name}@{details.address}")
 
         return cmdline
 
     @staticmethod
-    def __run(sshcmd: list, cmd: list, capture_out: bool = True):
+    def _run(sshcmd: list, cmd: list, capture_out: bool = True):
         redirect = subprocess.PIPE if capture_out else subprocess.DEVNULL
         return subprocess.Popen(
             sshcmd + [subprocess.list2cmdline(cmd)],
