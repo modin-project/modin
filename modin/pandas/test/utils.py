@@ -717,11 +717,13 @@ def generate_multiindex(elements_number, nlevels=2, is_tree_like=False):
 
         lvl_len = int(lvl_len_d)
         result = pd.MultiIndex.from_product(
-            [generate_level(lvl_len, i) for i in range(nlevels - penalty_level)]
+            [generate_level(lvl_len, i) for i in range(nlevels - penalty_level)],
+            names=[f"level-{i}" for i in range(nlevels - penalty_level)],
         )
         if penalty_level:
             result = pd.MultiIndex.from_tuples(
-                [("base_level", *ml_tuple) for ml_tuple in result]
+                [("base_level", *ml_tuple) for ml_tuple in result],
+                names=[f"level-{i}" for i in range(nlevels)],
             )
         return result.sort_values()
     else:
