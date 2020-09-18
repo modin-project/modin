@@ -196,24 +196,27 @@ class WrappingConnection(rpyc.Connection):
         """
         result = super()._netref_factory(id_pack)
         cls = type(result)
-        orig_getattribute = cls.__getattribute__
-        type.__setattr__(cls, "__readonly_cache__", {})
+        if not hasattr(cls, "__patched__"):
+            orig_getattribute = cls.__getattribute__
+            # import pdb;pdb.set_trace()
+            type.__setattr__(cls, "__readonly_cache__", {})
 
-        def __getattribute__(this, name):
-            if name in {"__bases__", "__base__", "__mro__"}:
-                cache = object.__getattribute__(this, "__readonly_cache__")
-                try:
-                    return cache[name]
-                except KeyError:
-                    res = cache[name] = orig_getattribute(this, name)
-                    return res
-            return orig_getattribute(this, name)
+            def __getattribute__(this, name):
+                if name in {"__bases__", "__base__", "__mro__"}:
+                    cache = object.__getattribute__(this, "__readonly_cache__")
+                    try:
+                        return cache[name]
+                    except KeyError:
+                        res = cache[name] = orig_getattribute(this, name)
+                        return res
+                return orig_getattribute(this, name)
 
-        def __array__(this):
-            return pickle.loads(self._remote_pickled_array(this))
+            def __array__(this):
+                return pickle.loads(self._remote_pickled_array(this))
 
-        cls.__getattribute__ = __getattribute__
-        cls.__array__ = __array__
+            cls.__getattribute__ = __getattribute__
+            cls.__array__ = __array__
+            cls.__patched__ = True
         return result
 
     def _netref_factory(self, id_pack):
