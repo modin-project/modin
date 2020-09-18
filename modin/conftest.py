@@ -32,7 +32,9 @@ def simulate_cloud(request):
         return
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
-    os.environ["MODIN_EXPERIMENTAL"] = "True"
+    assert (
+        os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True"
+    ), "Simulated cloud must be stared in experimental mode"
 
     from modin.experimental.cloud import create_cluster, get_connection
 
