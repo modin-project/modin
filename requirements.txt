@@ -12,6 +12,7 @@ tables
 scipy
 s3fs>=0.4.2
 pytest
+pytest-benchmark
 coverage<5.0
 pytest-cov
 pytest-xdist
