@@ -95,7 +95,9 @@ class WrappingConnection(rpyc.Connection):
                 remote = object.__getattribute__(remote, "__remote_end__")
             except AttributeError:
                 break
-        return pickle.loads(self._remote_dumps(remote))
+        if isinstance(remote, netref.BaseNetref) and remote.____conn__ is self:
+            return pickle.loads(self._remote_dumps(remote))
+        return remote
 
     def obtain_tuple(self, remote):
         while True:
