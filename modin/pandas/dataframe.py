@@ -2071,20 +2071,22 @@ class DataFrame(BasePandasDataset):
         if index is not None or (mapper is not None and axis == 0):
             new_index = pandas.DataFrame(index=self.index).rename(**kwargs).index
         else:
-            new_index = self.index
+            new_index = None
         if columns is not None or (mapper is not None and axis == 1):
             new_columns = (
                 pandas.DataFrame(columns=self.columns).rename(**kwargs).columns
             )
         else:
-            new_columns = self.columns
+            new_columns = None
 
         if inplace:
             obj = self
         else:
             obj = self.copy()
-        obj.index = new_index
-        obj.columns = new_columns
+        if new_index is not None:
+            obj.index = new_index
+        if new_columns is not None:
+            obj.columns = new_columns
 
         if not inplace:
             return obj
