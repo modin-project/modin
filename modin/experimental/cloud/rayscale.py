@@ -144,8 +144,7 @@ class RayCluster(BaseCluster):
     def _conda_requirements(cls):
         reqs = []
 
-        python_version = f"python=={cls._get_python_version()}"
-        reqs.append(python_version)
+        reqs.append(f"python=={cls._get_python_version()}")
 
         return reqs
 
