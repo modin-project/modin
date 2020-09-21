@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import sys
 import pytest
 from modin.experimental.cloud.rayscale import RayCluster
@@ -20,24 +19,16 @@ from modin.experimental.cloud.rayscale import RayCluster
 @pytest.mark.parametrize(
     "setup_commands_source",
     [
-        "# setup_commands section of ray_autoscaler.yml define from setup_commands.sh.in in runtime",
-        r"""# setup_commands section of ray_autoscaler.yml define from setup_commands.sh.in in runtime
-# FROM SETUP_COMMANDS.SH.IN with defined template variable
-python==2.7.9
-# FROM SETUP_COMMANDS.SH.IN with defined template variable
-""",
+        r"""conda create --clone base --name modin --yes
+        conda activate modin
+        conda install {{PYTHON_VERSION}}
+
+        pip install modin "ray==0.8.7" cloudpickle
+        """
     ],
 )
 def test_sync_python(setup_commands_source):
-    template_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), "../setup_commands.sh.in"
-    )
-    setup_commands_result = RayCluster._sync_python(
-        setup_commands_source, template_path
-    )
-
-    # first line is header; should be unchanged
-    assert setup_commands_result.split("\n")[0] == setup_commands_source.split("\n")[0]
+    setup_commands_result = RayCluster._sync_python(setup_commands_source)
 
     major = sys.version_info.major
     minor = sys.version_info.minor
