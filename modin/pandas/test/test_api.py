@@ -57,6 +57,7 @@ def test_top_level_api_equality():
         "datetimes",
         "reshape",
         "execution_engine",
+        "partition_format",
         "Publisher",
         "types",
         "sys",
