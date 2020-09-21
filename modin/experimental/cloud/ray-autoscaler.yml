@@ -119,9 +119,9 @@ setup_commands:
         bash ~/miniconda.sh -b -p ~/miniconda -f -u
         $HOME/miniconda/bin/conda init bash
         source ~/.bashrc
-        conda create --clone base --name modin --yes
+        conda create --name modin --yes
         conda activate modin
-        conda install python==3.7.6
+        conda install --yes {{CONDA_PACKAGES}}
 
         pip install modin "ray==0.8.7" cloudpickle
         # ray now executes "ray stop" which expects "ray" to be in $PATH

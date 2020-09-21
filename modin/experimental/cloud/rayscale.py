@@ -133,7 +133,33 @@ class RayCluster(BaseCluster):
         config["worker_nodes"][instance_key] = self.worker_node_type
         config["worker_nodes"][image_key] = self.provider.image
 
+        # NOTE: setup_commands may be list with several sets of shell commands
+        # this change only first set defining the remote environment
+        res = self._update_conda_requirements(config["setup_commands"][0])
+        config["setup_commands"][0] = res
+
         return _bootstrap_config(config)
+
+    @classmethod
+    def _conda_requirements(cls):
+        reqs = []
+
+        reqs.append(f"python=={cls._get_python_version()}")
+
+        return reqs
+
+    @classmethod
+    def _update_conda_requirements(cls, setup_commands: str):
+        return setup_commands.replace(
+            "{{CONDA_PACKAGES}}", " ".join(cls._conda_requirements())
+        )
+
+    @staticmethod
+    def _get_python_version():
+        major = sys.version_info.major
+        minor = sys.version_info.minor
+        micro = sys.version_info.micro
+        return f"{major}.{minor}.{micro}"
 
     @staticmethod
     def __save_config(config):
