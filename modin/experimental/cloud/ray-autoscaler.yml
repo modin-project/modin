@@ -114,25 +114,7 @@ initialization_commands: []
 # List of shell commands to run to set up nodes.
 setup_commands:
     - |
-        # need to install python 3.7.6
-        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
-        bash ~/miniconda.sh -b -p ~/miniconda -f -u
-        $HOME/miniconda/bin/conda init bash
-        source ~/.bashrc
-        conda create --clone base --name modin --yes
-        conda activate modin
-        conda install python==3.7.6
-
-        pip install modin "ray==0.8.7" cloudpickle
-        # ray now executes "ray stop" which expects "ray" to be in $PATH
-        # so place a symlink to current "ray" binary to /usr/local/bin
-        sudo ln -s `which ray` /usr/local/bin/ray
-        echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
-
-    # Consider uncommenting these if you also want to run apt-get commands during setup
-    # - sudo pkill -9 apt-get || true
-    # - sudo pkill -9 dpkg || true
-    # - sudo dpkg --configure -a
+        # setup_commands section of ray_autoscaler.yml define from setup_commands.sh.in in runtime
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands:

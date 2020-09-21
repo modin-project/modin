@@ -133,7 +133,31 @@ class RayCluster(BaseCluster):
         config["worker_nodes"][instance_key] = self.worker_node_type
         config["worker_nodes"][image_key] = self.provider.image
 
+        # NOTE: setup_commands may be list with several sets of shell commands
+        # this change only first set defining the remote environment
+        config["setup_commands"][0] = self._sync_python(
+            config["setup_commands"][0],
+            os.path.join(os.path.dirname(self.__base_config), "setup_commands.sh.in"),
+        )
+
         return _bootstrap_config(config)
+
+    @staticmethod
+    def _sync_python(setup_commands_source: str, setup_commands_template_path: str):
+        # unchanging part
+        header = setup_commands_source.split("\n")[0]
+
+        with open(setup_commands_template_path) as inp:
+            setup_commands = inp.read()
+
+        major = sys.version_info.major
+        minor = sys.version_info.minor
+        micro = sys.version_info.micro
+        python_version = f"{major}.{minor}.{micro}"
+
+        return (
+            header + "\n" + setup_commands.replace("{{PYTHON_VERSION}}", python_version)
+        )
 
     @staticmethod
     def __save_config(config):
