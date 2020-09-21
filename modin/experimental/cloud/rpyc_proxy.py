@@ -618,7 +618,17 @@ def make_dataframe_wrapper(DataFrame):
 
     DeliveringDataFrame = _deliveringWrapper(
         DataFrame,
-        ["groupby", "agg", "aggregate", "__getitem__", "astype", "drop", "merge"],
+        [
+            "groupby",
+            "agg",
+            "aggregate",
+            "__getitem__",
+            "astype",
+            "drop",
+            "merge",
+            "apply",
+            "applymap",
+        ],
         DataFrameOverrides,
         "DataFrame",
     )
@@ -659,4 +669,4 @@ def make_series_wrapper(Series):
     are overridded here, so what it mostly does is it produces a wrapper class
     inherited from normal Series but wrapping all access to remote end transparently.
     """
-    return _deliveringWrapper(Series, target_name="Series")
+    return _deliveringWrapper(Series, ["apply"], target_name="Series")
