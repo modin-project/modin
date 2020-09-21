@@ -219,7 +219,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         Parameters
         ----------
-        by : PandasQueryCompiler
+        by : DFAlgQueryCompiler
             The column to group by
         func_dict : dict of str, callable/string
             The dictionary mapping of column to function
@@ -232,7 +232,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        PandasQueryCompiler
+        DFAlgQueryCompiler
             The result of the per-column aggregations on the grouped dataframe.
         """
         # TODO: handle drop arg
@@ -342,7 +342,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
-            raise NotImplementedError(f"{op_name} doesn't support levels")
+            getattr(super(), op_name)(other=other, op_name=op_name, **kwargs)
 
         if isinstance(other, DFAlgQueryCompiler):
             shape_hint = (
@@ -391,7 +391,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
-            raise NotImplementedError("reset_index doesn't support level arg yet")
+            return super().reset_index(**kwargs)
 
         drop = kwargs.get("drop", False)
         shape_hint = self._shape_hint if drop else None
@@ -424,11 +424,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
-        if axis == 1:
-            raise NotImplementedError("setitem doesn't support axis 1")
-
-        if not isinstance(value, type(self)):
-            raise NotImplementedError("unsupported value for setitem")
+        if axis == 1 or not isinstance(value, type(self)):
+            super().setitem(axis=axis, key=key, value=value)
 
         return self._setitem(axis, key, value)
 
@@ -443,12 +440,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             value: Dtype object values to insert.
 
         Returns:
-            A new PandasQueryCompiler with new data inserted.
+            A new DFAlgQueryCompiler with new data inserted.
         """
         if is_list_like(value):
-            raise NotImplementedError(
-                "non-scalar values are not supported by insert yet"
-            )
+            super().insert(loc=loc, column=column, value=value)
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
@@ -464,7 +459,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        PandasQueryCompiler
+        DFAlgQueryCompiler
             A new query compiler that contains result of the sort
         """
         ignore_index = kwargs.get("ignore_index", False)
@@ -472,25 +467,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.sort_rows(columns, ascending, ignore_index, na_position),
             self._shape_hint,
-        )
-
-    def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
-        """Reorder the columns based on the lexicographic order of the given rows.
-
-        Parameters
-        ----------
-        rows : scalar or list of scalar
-            The row or rows to sort by
-        ascending : bool
-            Sort in ascending order (True) or descending order (False)
-
-        Returns
-        -------
-        PandasQueryCompiler
-            A new query compiler that contains result of the sort
-        """
-        raise NotImplementedError(
-            "column sorting is not yet suported in DFAlgQueryCompiler"
         )
 
     def columnarize(self):
