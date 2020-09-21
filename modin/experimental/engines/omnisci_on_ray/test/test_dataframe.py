@@ -409,8 +409,8 @@ class TestConcat:
             df.insert(0, "qc_column", df["new_int"])
             return df
 
-        # setting `force_laze=False`, because `to_pandas` is not supported
-        # in lazy frame mode
+        # setting `force_lazy=False`, because we're expecting to fallback
+        # to pandas in that case, which is not supported in lazy mode
         run_and_compare(applier, data=self.data, force_lazy=False)
 
     def test_concat_many(self):
@@ -952,6 +952,8 @@ class TestBinaryOp:
             df2.index = generate_multiindex(len(df2))
             return df1.add(df2, level=1)
 
+        # setting `force_lazy=False`, because we're expecting to fallback
+        # to pandas in that case, which is not supported in lazy mode
         run_and_compare(applier, data=self.data, data2=self.data, force_lazy=False)
 
     def test_add_cst(self):
@@ -1227,7 +1229,7 @@ class TestSort:
             ignore_index=ignore_index,
             index_cols=index_cols,
             ascending=ascending,
-            # we're excecting to fallback to pandas in that case,
+            # we're expecting to fallback to pandas in that case,
             # which is not supported in lazy mode
             force_lazy=(index_cols is None),
         )
