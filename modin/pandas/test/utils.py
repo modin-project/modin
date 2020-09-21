@@ -727,9 +727,9 @@ def generate_multiindex(elements_number, nlevels=2, is_tree_like=False):
             )
         return result.sort_values()
     else:
-        base_level = ["first"] * (elements_number // 2) + ["second"] * (
-            elements_number // 2
-        )
+        base_level = ["first"] * (elements_number // 2 + elements_number % 2) + [
+            "second"
+        ] * (elements_number // 2)
         primary_levels = [generate_level(elements_number, i) for i in range(1, nlevels)]
         arrays = [base_level] + primary_levels
         return pd.MultiIndex.from_tuples(

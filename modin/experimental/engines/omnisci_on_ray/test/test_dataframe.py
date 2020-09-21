@@ -27,6 +27,7 @@ from modin.pandas.test.utils import (
     to_pandas,
     test_data_values,
     test_data_keys,
+    generate_multiindex,
 )
 
 
@@ -387,8 +388,8 @@ class TestConcat:
 
         run_and_compare(concat, data=self.data)
 
-    def test_insert(self):
-        def insert(df, **kwargs):
+    def test_setitem(self):
+        def applier(df, **kwargs):
             df["new_int8"] = np.int8(10)
             df["new_int16"] = np.int16(10)
             df["new_int32"] = np.int32(10)
@@ -398,7 +399,19 @@ class TestConcat:
             df["new_float64"] = np.float64(10.1)
             return df
 
-        run_and_compare(insert, data=self.data)
+        run_and_compare(applier, data=self.data)
+
+    def test_insert(self):
+        def applier(df, **kwargs):
+            df.insert(0, "new_int", 10)
+            df.insert(0, "new_float", 5.5)
+            df.insert(0, "new_list_like", np.arange(len(df)))
+            df.insert(0, "qc_column", df["new_int"])
+            return df
+
+        # setting `force_laze=False`, because `to_pandas` is not supported
+        # in lazy frame mode
+        run_and_compare(applier, data=self.data, force_lazy=False)
 
     def test_concat_many(self):
         def concat(df1, df2, lib, **kwargs):
@@ -934,6 +947,13 @@ class TestBinaryOp:
     }
     fill_values = [None, 1]
 
+    def test_binary_level(self):
+        def applier(df1, df2, **kwargs):
+            df2.index = generate_multiindex(len(df2))
+            return df1.add(df2, level=1)
+
+        run_and_compare(applier, data=self.data, data2=self.data, force_lazy=False)
+
     def test_add_cst(self):
         def add(lib, df):
             return df + 1
@@ -1185,9 +1205,7 @@ class TestSort:
         "c": [None, 4, 2, None, 1, 1, 4, 5, 6],
     }
     cols_values = ["a", ["a", "b"], ["b", "a"], ["c", "a", "b"]]
-    # Issue #1766 - support set_index for OmniSci backend
-    # index_cols_values = [None, "a", ["a", "b"]]
-    index_cols_values = [None]
+    index_cols_values = [None, "a", ["a", "b"]]
     ascending_values = [True, False]
     ascending_list_values = [[True, False], [False, True]]
     na_position_values = ["first", "last"]
@@ -1209,6 +1227,9 @@ class TestSort:
             ignore_index=ignore_index,
             index_cols=index_cols,
             ascending=ascending,
+            # we're excecting to fallback to pandas in that case,
+            # which is not supported in lazy mode
+            force_lazy=(index_cols is None),
         )
 
     @pytest.mark.parametrize("ascending", ascending_list_values)

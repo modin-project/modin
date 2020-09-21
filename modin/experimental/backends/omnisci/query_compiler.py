@@ -11,7 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.backends.base.query_compiler import (
+    BaseQueryCompiler,
+    _set_axis as default_axis_setter,
+)
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 
 import pandas
@@ -248,7 +251,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.index
 
     def _set_index(self, index):
-        self._modin_frame.index = index
+        default_axis_setter(0)(self, index)
+        # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
+        # self._modin_frame.index = index
 
     def _get_columns(self):
         return self._modin_frame.columns
@@ -342,7 +347,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
-            getattr(super(), op_name)(other=other, op_name=op_name, **kwargs)
+            return getattr(super(), op_name)(other=other, op_name=op_name, **kwargs)
 
         if isinstance(other, DFAlgQueryCompiler):
             shape_hint = (
@@ -425,7 +430,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
              A new QueryCompiler
         """
         if axis == 1 or not isinstance(value, type(self)):
-            super().setitem(axis=axis, key=key, value=value)
+            return super().setitem(axis=axis, key=key, value=value)
 
         return self._setitem(axis, key, value)
 
@@ -443,7 +448,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             A new DFAlgQueryCompiler with new data inserted.
         """
         if is_list_like(value):
-            super().insert(loc=loc, column=column, value=value)
+            return super().insert(loc=loc, column=column, value=value)
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
