@@ -121,7 +121,7 @@ setup_commands:
         source ~/.bashrc
         conda create --name modin --yes
         conda activate modin
-        conda install --yes {{PYTHON_VERSION}}
+        conda install --yes {{CONDA_PACKAGES}}
 
         pip install modin "ray==0.8.7" cloudpickle
         # ray now executes "ray stop" which expects "ray" to be in $PATH

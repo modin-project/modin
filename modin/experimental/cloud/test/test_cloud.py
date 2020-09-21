@@ -21,19 +21,19 @@ from modin.experimental.cloud.rayscale import RayCluster
     [
         r"""conda create --clone base --name modin --yes
         conda activate modin
-        conda install {{PYTHON_VERSION}}
+        conda install --yes {{CONDA_PACKAGES}}
 
         pip install modin "ray==0.8.7" cloudpickle
         """
     ],
 )
-def test_sync_python(setup_commands_source):
-    setup_commands_result = RayCluster._sync_python(setup_commands_source)
-
+def test_update_conda_requirements(setup_commands_source):
     major = sys.version_info.major
     minor = sys.version_info.minor
     micro = sys.version_info.micro
     python_version = f"python=={major}.{minor}.{micro}"
 
+    setup_commands_result = RayCluster._update_conda_requirements(setup_commands_source)
+
     assert python_version in setup_commands_result
-    assert "{{PYTHON_VERSION}}" not in setup_commands_result
+    assert "{{CONDA_PACKAGES}}" not in setup_commands_result
