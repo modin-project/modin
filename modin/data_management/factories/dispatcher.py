@@ -25,12 +25,10 @@ class StubIoEngine(object):
     def __init__(self, factory_name=""):
         self.factory_name = factory_name or "Unknown"
 
-    def __getattribute__(self, name):
-        factory_name = self.factory_name  # for closure to bind the value
-
+    def __getattr__(self, name):
         def stub(*args, **kw):
             raise NotImplementedError(
-                "Method {}.{} is not implemented".format(factory_name, name)
+                f"Method {self.factory_name}.{name} is not implemented"
             )
 
         return stub
