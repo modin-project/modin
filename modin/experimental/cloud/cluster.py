@@ -109,6 +109,7 @@ class BaseCluster:
         worker_count: int = 4,
         head_node_type: str = None,
         worker_node_type: str = None,
+        conda_environment: list = None,
     ):
         """
         Prepare the cluster manager. It needs to know a few things:
@@ -125,6 +126,7 @@ class BaseCluster:
         self.worker_count = worker_count
         self.head_node_type = head_node_type or provider.default_head_type
         self.worker_node_type = worker_node_type or provider.default_worker_type
+        self.conda_environment = conda_environment
 
         self.old_backends = None
         self.connection: Connection = None
@@ -208,6 +210,7 @@ def create(
     workers: int = 4,
     head_node: str = None,
     worker_node: str = None,
+    conda_environment: list = None,
     __spawner__: str = "rayscale",
 ) -> BaseCluster:
     """
@@ -289,6 +292,7 @@ def create(
         worker_count=workers,
         head_node_type=head_node,
         worker_node_type=worker_node,
+        conda_environment=conda_environment,
     )
     instance.spawn(wait=False)
     return instance

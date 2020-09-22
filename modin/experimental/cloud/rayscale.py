@@ -135,23 +135,30 @@ class RayCluster(BaseCluster):
 
         # NOTE: setup_commands may be list with several sets of shell commands
         # this change only first set defining the remote environment
-        res = self._update_conda_requirements(config["setup_commands"][0])
+        res = self._update_conda_requirements(
+            config["setup_commands"][0], self.conda_environment
+        )
         config["setup_commands"][0] = res
 
         return _bootstrap_config(config)
 
     @classmethod
-    def _conda_requirements(cls):
+    def _conda_requirements(cls, conda_environment: list = None):
         reqs = []
 
         reqs.append(f"python=={cls._get_python_version()}")
 
+        if conda_environment:
+            reqs.extend(conda_environment)
+
         return reqs
 
     @classmethod
-    def _update_conda_requirements(cls, setup_commands: str):
+    def _update_conda_requirements(
+        cls, setup_commands: str, conda_environment: list = None
+    ):
         return setup_commands.replace(
-            "{{CONDA_PACKAGES}}", " ".join(cls._conda_requirements())
+            "{{CONDA_PACKAGES}}", " ".join(cls._conda_requirements(conda_environment))
         )
 
     @staticmethod
