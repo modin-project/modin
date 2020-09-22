@@ -109,7 +109,7 @@ class BaseCluster:
         worker_count: int = 4,
         head_node_type: str = None,
         worker_node_type: str = None,
-        conda_environment: list = None,
+        add_conda_packages: list = None,
     ):
         """
         Prepare the cluster manager. It needs to know a few things:
@@ -118,6 +118,7 @@ class BaseCluster:
             * cluster name
             * worker count
             * head and worker node instance types (can be omitted to default to provider-defined)
+            * custom conda packages for remote environment
         """
 
         self.provider = provider
@@ -126,7 +127,7 @@ class BaseCluster:
         self.worker_count = worker_count
         self.head_node_type = head_node_type or provider.default_head_type
         self.worker_node_type = worker_node_type or provider.default_worker_type
-        self.conda_environment = conda_environment
+        self.add_conda_packages = add_conda_packages
 
         self.old_backends = None
         self.connection: Connection = None
@@ -210,7 +211,7 @@ def create(
     workers: int = 4,
     head_node: str = None,
     worker_node: str = None,
-    conda_environment: list = None,
+    add_conda_packages: list = None,
     __spawner__: str = "rayscale",
 ) -> BaseCluster:
     """
@@ -246,6 +247,8 @@ def create(
         What machine type to use for head node in the cluster.
     worker_node : str, optional
         What machine type to use for worker nodes in the cluster.
+    add_conda_packages : list, optional
+        Custom conda packages for remote environments.
     __spawner__ : str, optional, internal
         How to spawn the cluster.
         Currently only spawning by Ray autoscaler ("rayscale") is supported
@@ -292,7 +295,7 @@ def create(
         worker_count=workers,
         head_node_type=head_node,
         worker_node_type=worker_node,
-        conda_environment=conda_environment,
+        add_conda_packages=add_conda_packages,
     )
     instance.spawn(wait=False)
     return instance
