@@ -21,18 +21,29 @@ class ParquetReader(ColumnStoreReader):
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a Modin DataFrame.
-           Modin only supports pyarrow engine for now.
 
-        Args:
-            path: The filepath of the parquet file.
-                  We only support local files for now.
-            engine: Modin only supports pyarrow reader.
-                    This argument doesn't do anything for now.
-            kwargs: Pass into parquet's read_pandas function.
+        Modin only supports pyarrow engine for now.
 
-        Notes:
-            ParquetFile API is used. Please refer to the documentation here
-            https://arrow.apache.org/docs/python/parquet.html
+        Parameters
+        ----------
+        path: str
+            The filepath of the parquet file in local filesystem or hdfs.
+        engine: 'pyarrow'
+            Parquet library to use
+        columns: list or None
+            If not None, only these columns will be read from the file.
+        kwargs: dict
+            Keyword arguments.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new Query Compiler.
+
+        Notes
+        -----
+        ParquetFile API is used. Please refer to the documentation here
+        https://arrow.apache.org/docs/python/parquet.html
         """
         from pyarrow.parquet import ParquetFile, ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
@@ -64,6 +75,13 @@ class ParquetReader(ColumnStoreReader):
             if directory:
                 # Path of the sample file that we will read to get the remaining columns
                 pd = ParquetDataset(path)
+                meta = pd.metadata
+                column_names = pd.schema.names
+            elif isinstance(path, str) and path.startswith("hdfs://"):
+                import fsspec.core
+
+                fs, path = fsspec.core.url_to_fs(path)
+                pd = ParquetDataset(path, filesystem=fs)
                 meta = pd.metadata
                 column_names = pd.schema.names
             else:
