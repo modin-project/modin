@@ -1551,11 +1551,13 @@ class BasePandasFrame(object):
     ):
         """Broadcast partitions of other dataframe partitions and apply a function along full axis.
 
-        Args:
+        Parameters
+        ----------
             axis : 0 or 1
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
+            other : other Modin frame to broadcast
             new_index : list-like (optional)
                 The index of the result. We may know this in advance,
                 and if not provided it must be computed.
@@ -1567,7 +1569,8 @@ class BasePandasFrame(object):
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
 
-        Returns:
+        Returns
+        -------
              A new Modin DataFrame
         """
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(

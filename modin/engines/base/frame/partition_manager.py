@@ -215,14 +215,15 @@ class BaseFrameManager(object):
         right,
         keep_partitioning=False,
     ):
-        """Broadcast the right partitions to left and apply a function alogn full axis.
+        """
+        Broadcast the right partitions to left and apply a function along full axis.
 
         Parameters
         ----------
-            axis: The axis to apply and broadcast over.
-            apply_func: The function to apply.
-            left: The left partitions.
-            right: The right partitions.
+            axis : The axis to apply and broadcast over.
+            apply_func : The function to apply.
+            left : The left partitions.
+            right : The right partitions.
             keep_partitioning : boolean. Default is False
                 The flag to keep partitions for Modin Frame.
 
