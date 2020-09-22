@@ -198,9 +198,8 @@ class WrappingConnection(rpyc.Connection):
         """
         result = super()._netref_factory(id_pack)
         cls = type(result)
-        if not hasattr(cls, "__patched__"):
+        if not hasattr(cls, "__readonly_cache__"):
             orig_getattribute = cls.__getattribute__
-            # import pdb;pdb.set_trace()
             type.__setattr__(cls, "__readonly_cache__", {})
 
             def __getattribute__(this, name):
@@ -218,7 +217,6 @@ class WrappingConnection(rpyc.Connection):
 
             cls.__getattribute__ = __getattribute__
             cls.__array__ = __array__
-            cls.__patched__ = True
         return result
 
     def _netref_factory(self, id_pack):
