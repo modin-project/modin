@@ -24,6 +24,7 @@ dependencies:
   - msgpack-python
   - psutil
   - pytest>=6.0.1
+  - pytest-benchmark
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
   - coverage<5.0
