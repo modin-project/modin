@@ -100,18 +100,19 @@ class TextFileReader(FileReader):
 
         outside_quotes = True
 
-        chunk = f.read(chunk_size_bytes)
-        line = f.readline()  # Ensure we read up to a newline
-        # We need to ensure that one row isn't being split across different partitions
-
         if is_quoting:
+            chunk = f.read(chunk_size_bytes)
+            line = f.readline()  # Ensure we read up to a newline
+            # We need to ensure that one row isn't split across different partitions
             outside_quotes = not ((chunk.count(quotechar) + line.count(quotechar)) % 2)
             while not outside_quotes:
                 line = f.readline()
                 outside_quotes = line.count(quotechar) % 2
                 if not line:
                     break
-
+        else:
+            f.seek(chunk_size_bytes, os.SEEK_CUR)
+            f.readline()
         return outside_quotes
 
     @classmethod
