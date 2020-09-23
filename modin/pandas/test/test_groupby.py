@@ -87,11 +87,20 @@ def test_mixed_dtypes_groupby(as_index):
         ("col1",),
         (lambda x: x % 2,),
         (modin_df["col0"].copy(), pandas_df["col0"].copy()),
+        ("col3",),
     ]
 
     for by in by_values:
-        modin_groupby = modin_df.groupby(by=by[0], as_index=as_index)
-        pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
+        if by_values[0] == "col3":
+            modin_groupby = modin_df.set_index(by[0]).groupby(
+                by=by[0], as_index=as_index
+            )
+            pandas_groupby = pandas_df.set_index(by[0]).groupby(
+                by=by[-1], as_index=as_index
+            )
+        else:
+            modin_groupby = modin_df.groupby(by=by[0], as_index=as_index)
+            pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
 
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
