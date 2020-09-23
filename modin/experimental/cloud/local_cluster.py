@@ -83,6 +83,7 @@ class LocalCluster(BaseCluster):
         worker_count=_UNUSED,
         head_node_type=_UNUSED,
         worker_node_type=_UNUSED,
+        add_conda_packages=_UNUSED,
     ):
         assert (
             provider == "local"
@@ -95,6 +96,7 @@ class LocalCluster(BaseCluster):
                 worker_count,
                 head_node_type,
                 worker_node_type,
+                add_conda_packages,
             )
         ):
             warnings.warn(
