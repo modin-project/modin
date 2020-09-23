@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import sys
+import unittest.mock as mock
 import pytest
 from modin.experimental.cloud.rayscale import RayCluster
 from modin.experimental.cloud.cluster import Provider
@@ -34,9 +35,12 @@ def test_update_conda_requirements(setup_commands_source):
     micro = sys.version_info.micro
     python_version = f"python=={major}.{minor}.{micro}"
 
-    ray_cluster = RayCluster(
-        Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
-    )
+    with mock.patch(
+        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
+    ):
+        ray_cluster = RayCluster(
+            Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
+        )
 
     setup_commands_result = ray_cluster._update_conda_requirements(
         setup_commands_source
