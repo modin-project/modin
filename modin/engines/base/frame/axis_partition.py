@@ -268,18 +268,15 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         rt_parts = partitions[len_of_left:]
 
         # reshaping flattened `rt_parts` array into with shape `other_shape`
-        combined_axes = [
+        combined_axis = [
             pandas.concat(
-                [
-                    rt_parts[other_shape[axis] * j + i]
-                    for j in range(other_shape[axis ^ 1])
-                ],
-                axis=axis ^ 1,
+                [rt_parts[other_shape[axis] * i + j] for j in range(other_shape[axis])],
+                axis=axis,
                 copy=False,
             )
-            for i in range(other_shape[axis])
+            for i in range(other_shape[axis ^ 1])
         ]
-        rt_frame = pandas.concat(combined_axes, axis=axis, copy=False)
+        rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
 
         result = func(lt_frame, rt_frame, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
