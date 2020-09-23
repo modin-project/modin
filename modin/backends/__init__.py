@@ -16,7 +16,7 @@ from .pandas import PandasQueryCompiler
 
 __all__ = ["BaseQueryCompiler", "PandasQueryCompiler"]
 try:
-    from .pyarrow import PyarrowQueryCompiler
+    from .pyarrow import PyarrowQueryCompiler  # noqa: F401
 except ImportError:
     pass
 else:
