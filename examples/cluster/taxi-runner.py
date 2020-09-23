@@ -16,6 +16,10 @@
 
 # NOTE: expects https://github.com/intel-go/omniscripts/ checked out and in PYTHONPATH
 
+import sys
+
+USE_OMNISCI = "--omnisci" in sys.argv
+
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
 import modin.experimental.pandas as pd  # noqa: F401
@@ -23,6 +27,9 @@ from modin.experimental.cloud import create_cluster
 
 from taxi import run_benchmark as run_benchmark
 
+cluster_params = {}
+if USE_OMNISCI:
+    cluster_params["cluster_type"] = "omnisci"
 test_cluster = create_cluster(
     "aws",
     "aws_credentials",
@@ -30,16 +37,33 @@ test_cluster = create_cluster(
     region="eu-north-1",
     zone="eu-north-1b",
     image="ami-00e1e82d7d4ca80d3",
+    **cluster_params,
 )
 with test_cluster:
+    data_file = "https://modin-datasets.s3.amazonaws.com/trips_data.csv"
+    if USE_OMNISCI:
+        # Workaround for GH#2099
+        from modin.experimental.cloud import get_connection
+
+        data_file, remote_data_file = "/tmp/trips_data.csv", data_file
+        get_connection().modules["subprocess"].check_call(
+            ["wget", remote_data_file, "-O", data_file]
+        )
+
+        # Omniscripts check for files being present when given local file paths,
+        # so replace "glob" there with a remote one
+        import utils.utils
+
+        utils.utils.glob = get_connection().modules["glob"]
+
     parameters = {
-        "data_file": "https://modin-datasets.s3.amazonaws.com/trips_data.csv",
+        "data_file": data_file,
         # "data_file": "s3://modin-datasets/trips_data.csv",
         "dfiles_num": 1,
         "validation": False,
         "no_ibis": True,
         "no_pandas": False,
-        "pandas_mode": "Modin_on_ray",
+        "pandas_mode": "Modin_on_omnisci" if USE_OMNISCI else "Modin_on_ray",
         "ray_tmpdir": "/tmp",
         "ray_memory": 1024 * 1024 * 1024,
     }

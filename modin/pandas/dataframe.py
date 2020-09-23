@@ -41,7 +41,7 @@ from .utils import (
 )
 from .iterator import PartitionIterator
 from .series import Series
-from .base import BasePandasDataset
+from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 
 
@@ -3084,7 +3084,7 @@ class DataFrame(BasePandasDataset):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
-            if key in self.columns:
+            if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]
             raise e
 

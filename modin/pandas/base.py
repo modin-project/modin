@@ -46,6 +46,10 @@ from modin.pandas.utils import is_scalar
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
 
+# Do not lookup certain attributes in columns or index, as they're used for some
+# special purposes, like serving remote context
+_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__"}
+
 
 class BasePandasDataset(object):
     """This object is the base for most of the common code that exists in
@@ -3456,7 +3460,7 @@ class BasePandasDataset(object):
         return self.to_numpy()
 
     def __getattribute__(self, item):
-        default_behaviors = [
+        default_behaviors = {
             "__init__",
             "__class__",
             "_get_index",
@@ -3478,7 +3482,7 @@ class BasePandasDataset(object):
             "__len__",
             "_create_or_update_from_compiler",
             "_update_inplace",
-        ]
+        } | _ATTRS_NO_LOOKUP
         if item not in default_behaviors and not self._query_compiler.lazy_execution:
             method = object.__getattribute__(self, item)
             is_callable = callable(method)

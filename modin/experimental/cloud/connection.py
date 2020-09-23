@@ -37,13 +37,16 @@ class Connection:
         except subprocess.TimeoutExpired:
             return None
 
-    def __init__(self, details: ConnectionDetails, main_python: str, log_rpyc=None):
+    def __init__(
+        self, details: ConnectionDetails, main_python: str, wrap_cmd=None, log_rpyc=None
+    ):
         self.log_rpyc = (
             log_rpyc
             if log_rpyc is not None
             else os.environ.get("MODIN_LOG_RPYC", "").title() == "True"
         )
         self.proc = None
+        self.wrap_cmd = wrap_cmd or subprocess.list2cmdline
 
         # find where rpyc_classic is located
         locator = self._run(
@@ -199,7 +202,7 @@ class Connection:
     def _run(self, sshcmd: list, cmd: list, capture_out: bool = True):
         redirect = self._redirect(capture_out)
         return subprocess.Popen(
-            sshcmd + [subprocess.list2cmdline(cmd)],
+            sshcmd + [self.wrap_cmd(cmd)],
             stdin=subprocess.DEVNULL,
             stdout=redirect,
             stderr=redirect,

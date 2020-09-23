@@ -311,3 +311,7 @@ class ExperimentalOmnisciOnRayFactory(BaseFactory):
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
         cls.io_cls = OmnisciOnRayIO
+
+
+class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
+    wrapped_factory = ExperimentalOmnisciOnRayFactory
