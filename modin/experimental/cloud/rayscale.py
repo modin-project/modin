@@ -136,30 +136,28 @@ class RayCluster(BaseCluster):
 
         # NOTE: setup_commands may be list with several sets of shell commands
         # this change only first set defining the remote environment
-        res = self._update_conda_requirements(
-            config["setup_commands"][0], self.add_conda_packages
-        )
+        res = self._update_conda_requirements(config["setup_commands"][0])
         config["setup_commands"][0] = res
 
         return _bootstrap_config(config)
 
-    @classmethod
-    def _conda_requirements(cls, add_conda_packages: list = None):
+    def _conda_requirements(self):
         reqs = []
 
-        reqs.append(f"python=={cls._get_python_version()}")
+        reqs.append(f"python=={self._get_python_version()}")
 
-        if add_conda_packages:
-            reqs.extend(add_conda_packages)
+        if self.add_conda_packages:
+            reqs.extend(self.add_conda_packages)
 
-        return reqs
+        # this is needed, for example, for dependencies that
+        # looks like: "scikit-learn>=0.23"
+        reqs_with_quotes = [f'"{req}"' for req in reqs]
 
-    @classmethod
-    def _update_conda_requirements(
-        cls, setup_commands: str, add_conda_packages: list = None
-    ):
+        return reqs_with_quotes
+
+    def _update_conda_requirements(self, setup_commands: str):
         return setup_commands.replace(
-            "{{CONDA_PACKAGES}}", " ".join(cls._conda_requirements(add_conda_packages))
+            "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
         )
 
     @staticmethod

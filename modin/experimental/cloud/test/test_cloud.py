@@ -14,6 +14,7 @@
 import sys
 import pytest
 from modin.experimental.cloud.rayscale import RayCluster
+from modin.experimental.cloud.cluster import Provider
 
 
 @pytest.mark.parametrize(
@@ -31,9 +32,16 @@ def test_update_conda_requirements(setup_commands_source):
     major = sys.version_info.major
     minor = sys.version_info.minor
     micro = sys.version_info.micro
-    python_version = f"python=={major}.{minor}.{micro}"
+    python_version = f'"python=={major}.{minor}.{micro}"'
 
-    setup_commands_result = RayCluster._update_conda_requirements(setup_commands_source)
+    ray_cluster = RayCluster(
+        Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
+    )
+
+    setup_commands_result = ray_cluster._update_conda_requirements(
+        setup_commands_source
+    )
 
     assert python_version in setup_commands_result
+    assert '"scikit-learn>=0.23"' in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result
