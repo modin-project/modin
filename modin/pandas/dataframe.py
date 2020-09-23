@@ -459,6 +459,8 @@ class DataFrame(BasePandasDataset):
             if (
                 self._query_compiler.has_multiindex(axis=axis)
                 and by in self.axes[axis].names
+                or hasattr(self.axes[axis], "name")
+                and self.axes[axis].name == by
             ):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.

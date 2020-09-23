@@ -30,7 +30,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             numeric_only=True,
             drop=False,
         ):
-            if not isinstance(by, type(query_compiler)):
+            if not isinstance(by, (type(query_compiler), str)):
                 by = try_cast_to_pandas(by)
                 return query_compiler.default_to_pandas(
                     lambda df: map_func(
@@ -53,38 +53,22 @@ class GroupbyReduceFunction(MapReduceFunction):
             as_index = groupby_args.get("as_index", True)
             observed = groupby_args.get("observed", False)
 
-            def _map(df, other):
-                def compute_map(df, other):
-                    # Set `as_index` to True to track the metadata of the grouping object
-                    # It is used to make sure that between phases we are constructing the
-                    # right index and placing columns in the correct order.
+            if isinstance(by, str):
+
+                def _map(df):
+                    # Set `as_index` to True to track the metadata of the grouping
+                    # object It is used to make sure that between phases we are
+                    # constructing the right index and placing columns in the correct
+                    # order.
                     groupby_args["as_index"] = True
                     groupby_args["observed"] = True
-                    other = other.squeeze(axis=axis ^ 1)
-                    if isinstance(other, pandas.DataFrame):
-                        df = pandas.concat(
-                            [df] + [other[[o for o in other if o not in df]]], axis=1
-                        )
-                        other = list(other.columns)
+
                     result = map_func(
-                        df.groupby(by=other, axis=axis, **groupby_args), **map_args
+                        df.groupby(by=by, axis=axis, **groupby_args), **map_args
                     )
-                    # if `other` has category dtype, then pandas will drop that
-                    # column after groupby, inserting it back to correctly process
-                    # reduce phase
-                    if (
-                        drop
-                        and not as_index
-                        and isinstance(other, pandas.Series)
-                        and isinstance(other.dtype, pandas.CategoricalDtype)
-                        and result.index.name is not None
-                        and result.index.name not in result.columns
-                    ):
-                        result.insert(
-                            loc=0, column=result.index.name, value=result.index
-                        )
-                    # The _modin_groupby_ prefix indicates that this is the first partition,
-                    # and since we may need to insert the grouping data in the reduce phase
+                    # The _modin_groupby_ prefix indicates that this is the first
+                    # partition, and since we may need to insert the grouping data in
+                    # the reduce phase
                     if (
                         not isinstance(result.index, pandas.MultiIndex)
                         and result.index.name is not None
@@ -95,12 +79,58 @@ class GroupbyReduceFunction(MapReduceFunction):
                         )
                     return result
 
-                try:
-                    return compute_map(df, other)
-                # This will happen with Arrow buffer read-only errors. We don't want to copy
-                # all the time, so this will try to fast-path the code first.
-                except ValueError:
-                    return compute_map(df.copy(), other.copy())
+            else:
+
+                def _map(df, other):
+                    def compute_map(df, other):
+                        # Set `as_index` to True to track the metadata of the grouping object
+                        # It is used to make sure that between phases we are constructing the
+                        # right index and placing columns in the correct order.
+                        groupby_args["as_index"] = True
+                        groupby_args["observed"] = True
+
+                        other = other.squeeze(axis=axis ^ 1)
+                        if isinstance(other, pandas.DataFrame):
+                            df = pandas.concat(
+                                [df] + [other[[o for o in other if o not in df]]],
+                                axis=1,
+                            )
+                            other = list(other.columns)
+                        result = map_func(
+                            df.groupby(by=other, axis=axis, **groupby_args), **map_args
+                        )
+                        # if `other` has category dtype, then pandas will drop that
+                        # column after groupby, inserting it back to correctly process
+                        # reduce phase
+                        if (
+                            drop
+                            and not as_index
+                            and isinstance(other, pandas.Series)
+                            and isinstance(other.dtype, pandas.CategoricalDtype)
+                            and result.index.name is not None
+                            and result.index.name not in result.columns
+                        ):
+                            result.insert(
+                                loc=0, column=result.index.name, value=result.index
+                            )
+                        # The _modin_groupby_ prefix indicates that this is the first partition,
+                        # and since we may need to insert the grouping data in the reduce phase
+                        if (
+                            not isinstance(result.index, pandas.MultiIndex)
+                            and result.index.name is not None
+                            and result.index.name in result.columns
+                        ):
+                            result.index.name = "{}{}".format(
+                                "_modin_groupby_", result.index.name
+                            )
+                        return result
+
+                    try:
+                        return compute_map(df, other)
+                    # This will happen with Arrow buffer read-only errors. We don't want to copy
+                    # all the time, so this will try to fast-path the code first.
+                    except ValueError:
+                        return compute_map(df.copy(), other.copy())
 
             def _reduce(df):
                 def compute_reduce(df):
@@ -147,9 +177,14 @@ class GroupbyReduceFunction(MapReduceFunction):
                     return compute_reduce(df.copy())
 
             # TODO: try to precompute `new_index` and `new_columns`
-            new_modin_frame = qc._modin_frame.groupby_reduce(
-                axis, by._modin_frame, _map, _reduce
-            )
+            if isinstance(by, str):
+                new_modin_frame = qc._modin_frame._map_reduce(
+                    axis, _map, reduce_func=_reduce, preserve_index=False
+                )
+            else:
+                new_modin_frame = qc._modin_frame.groupby_reduce(
+                    axis, by._modin_frame, _map, _reduce
+                )
             result = query_compiler.__constructor__(new_modin_frame)
             if result.index.name == "__reduced__":
                 result.index.name = None
