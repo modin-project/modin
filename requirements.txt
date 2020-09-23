@@ -26,4 +26,3 @@ msgpack
 pandas_gbq
 cloudpickle
 rpyc==4.1.5
-boto3==1.4.8

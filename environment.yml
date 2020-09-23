@@ -32,4 +32,3 @@ dependencies:
   - pip:
     - ray==0.8.7
     - rpyc==4.1.5
-    - boto3==1.4.8
