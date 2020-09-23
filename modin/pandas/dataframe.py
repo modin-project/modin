@@ -41,7 +41,7 @@ from .utils import (
 )
 from .iterator import PartitionIterator
 from .series import Series
-from .base import BasePandasDataset
+from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 
 
@@ -459,6 +459,8 @@ class DataFrame(BasePandasDataset):
             if (
                 self._query_compiler.has_multiindex(axis=axis)
                 and by in self.axes[axis].names
+                or hasattr(self.axes[axis], "name")
+                and self.axes[axis].name == by
             ):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
@@ -3082,7 +3084,7 @@ class DataFrame(BasePandasDataset):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
-            if key in self.columns:
+            if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]
             raise e
 

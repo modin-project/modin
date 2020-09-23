@@ -34,6 +34,10 @@ def _tuplize(arg):
     return tuple(arg)
 
 
+def _pickled_array(obj):
+    return pickle.dumps(obj.__array__())
+
+
 _TRACE_RPYC = os.environ.get("MODIN_TRACE_RPYC", "").title() == "True"
 
 
@@ -45,6 +49,7 @@ class WrappingConnection(rpyc.Connection):
         self._static_cache = collections.defaultdict(dict)
         self._remote_dumps = None
         self._remote_tuplize = None
+        self._remote_pickled_array = None
 
     def __wrap(self, local_obj):
         while True:
@@ -90,7 +95,9 @@ class WrappingConnection(rpyc.Connection):
                 remote = object.__getattribute__(remote, "__remote_end__")
             except AttributeError:
                 break
-        return pickle.loads(self._remote_dumps(remote))
+        if isinstance(remote, netref.BaseNetref) and remote.____conn__ is self:
+            return pickle.loads(self._remote_dumps(remote))
+        return remote
 
     def obtain_tuple(self, remote):
         while True:
@@ -185,23 +192,31 @@ class WrappingConnection(rpyc.Connection):
 
         So we're patching RPyC netref __getattribute__ to keep a reference
         for certain read-only properties to better emulate local objects.
+
+        Also __array__() implementation works only for numpy arrays, but not other types,
+        like scalars (which should become arrays)
         """
         result = super()._netref_factory(id_pack)
         cls = type(result)
-        orig_getattribute = cls.__getattribute__
-        type.__setattr__(cls, "__readonly_cache__", {})
+        if not hasattr(cls, "__readonly_cache__"):
+            orig_getattribute = cls.__getattribute__
+            type.__setattr__(cls, "__readonly_cache__", {})
 
-        def __getattribute__(this, name):
-            if name in {"__bases__", "__base__", "__mro__"}:
-                cache = object.__getattribute__(this, "__readonly_cache__")
-                try:
-                    return cache[name]
-                except KeyError:
-                    res = cache[name] = orig_getattribute(this, name)
-                    return res
-            return orig_getattribute(this, name)
+            def __getattribute__(this, name):
+                if name in {"__bases__", "__base__", "__mro__"}:
+                    cache = object.__getattribute__(this, "__readonly_cache__")
+                    try:
+                        return cache[name]
+                    except KeyError:
+                        res = cache[name] = orig_getattribute(this, name)
+                        return res
+                return orig_getattribute(this, name)
 
-        cls.__getattribute__ = __getattribute__
+            def __array__(this):
+                return pickle.loads(self._remote_pickled_array(this))
+
+            cls.__getattribute__ = __getattribute__
+            cls.__array__ = __array__
         return result
 
     def _netref_factory(self, id_pack):
@@ -256,13 +271,11 @@ class WrappingConnection(rpyc.Connection):
         return super()._box(obj)
 
     def _init_deliver(self):
-        self._remote_batch_loads = self.modules[
-            "modin.experimental.cloud.rpyc_proxy"
-        ]._batch_loads
+        remote_proxy = self.modules["modin.experimental.cloud.rpyc_proxy"]
+        self._remote_batch_loads = remote_proxy._batch_loads
         self._remote_dumps = self.modules["rpyc.lib.compat"].pickle.dumps
-        self._remote_tuplize = self.modules[
-            "modin.experimental.cloud.rpyc_proxy"
-        ]._tuplize
+        self._remote_tuplize = remote_proxy._tuplize
+        self._remote_pickled_array = remote_proxy._pickled_array
 
 
 class WrappingService(rpyc.ClassicService):

@@ -27,7 +27,7 @@ from typing import Union, Optional
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas
-from .base import BasePandasDataset
+from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
 
@@ -270,7 +270,7 @@ class Series(BasePandasDataset):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
-            if key in self.index:
+            if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]
             raise e
 

@@ -1,0 +1,16 @@
+name: modin_on_omnisci
+channels:
+  - intel/label/validation
+  - conda-forge
+dependencies:
+  - pandas==1.1.2
+  - numpy
+  - pip
+  - pytest>=6.0.1
+  - pytest-cov>=2.10.1
+  - pytest-xdist>=2.1.0
+  - coverage<5.0
+  - pygithub==1.53
+  - omniscidbe4py
+  - pip:
+    - ray==0.8.7
