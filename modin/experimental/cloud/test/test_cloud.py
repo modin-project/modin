@@ -32,7 +32,7 @@ def test_update_conda_requirements(setup_commands_source):
     major = sys.version_info.major
     minor = sys.version_info.minor
     micro = sys.version_info.micro
-    python_version = f'"python=={major}.{minor}.{micro}"'
+    python_version = f"python=={major}.{minor}.{micro}"
 
     ray_cluster = RayCluster(
         Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
@@ -43,5 +43,5 @@ def test_update_conda_requirements(setup_commands_source):
     )
 
     assert python_version in setup_commands_result
-    assert '"scikit-learn>=0.23"' in setup_commands_result
+    assert "scikit-learn>=0.23" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result

@@ -142,6 +142,8 @@ class RayCluster(BaseCluster):
         return _bootstrap_config(config)
 
     def _conda_requirements(self):
+        import shlex
+
         reqs = []
 
         reqs.append(f"python=={self._get_python_version()}")
@@ -151,7 +153,7 @@ class RayCluster(BaseCluster):
 
         # this is needed, for example, for dependencies that
         # looks like: "scikit-learn>=0.23"
-        reqs_with_quotes = [f'"{req}"' for req in reqs]
+        reqs_with_quotes = [shlex.quote(req) for req in reqs]
 
         return reqs_with_quotes
 
