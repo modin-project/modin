@@ -163,8 +163,16 @@ class OmnisciOnRayIO(RayIO):
                         "read_csv with 'arrow' engine without 'names' parameter provided supports only 0 and 'infer' header values"
                     )
 
+            if delimiter is None:
+                delimiter = sep
+
+            if delim_whitespace and delimiter != ",":
+                raise ValueError(
+                    "Specified a delimiter and delim_whitespace=True; you can only specify one."
+                )
+
             po = ParseOptions(
-                delimiter=sep if sep else "\\s+" if delim_whitespace else delimiter,
+                delimiter="\\s+" if delim_whitespace else delimiter,
                 quote_char=quotechar,
                 double_quote=doublequote,
                 escape_char=escapechar,
