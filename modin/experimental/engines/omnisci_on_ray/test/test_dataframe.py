@@ -731,6 +731,23 @@ class TestGroupby:
 
         run_and_compare(std, data=self.std_data, force_lazy=False)
 
+    skew_data = {
+        "a": [1, 2, 1, 1, 1, 2, 2, 2, 1, 2, 3, 4, 4],
+        "b": [4, 3, 1, 6, 9, 8, 0, 9, 5, 13, 12, 44, 6],
+        "c": [12.8, 45.6, 23.5, 12.4, 11.2, None, 56.4, 12.5, 1, 55, 4.5, 7.8, 9.4],
+    }
+
+    def test_agg_skew(self):
+        def std(df, **kwargs):
+            df = df.groupby("a").agg({"b": "skew", "c": "skew"})
+            if not isinstance(df, pandas.DataFrame):
+                df = to_pandas(df)
+            df["b"] = df["b"].apply(lambda x: round(x, 10))
+            df["c"] = df["c"].apply(lambda x: round(x, 10))
+            return df
+
+        run_and_compare(std, data=self.skew_data, force_lazy=False)
+
 
 class TestMerge:
     data = {

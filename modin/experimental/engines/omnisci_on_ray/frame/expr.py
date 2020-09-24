@@ -37,7 +37,7 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
 _aggs_with_int_result = {"count", "size"}
-_aggs_with_float_result = {"mean", "std"}
+_aggs_with_float_result = {"mean", "std", "skew"}
 
 
 def _agg_dtype(agg, dtype):
@@ -81,6 +81,12 @@ class BaseExpr(abc.ABC):
         if not isinstance(other, BaseExpr):
             other = LiteralExpr(other)
         new_expr = OpExpr("=", [self, other], _get_dtype(bool))
+        return new_expr
+
+    def le(self, other):
+        if not isinstance(other, BaseExpr):
+            other = LiteralExpr(other)
+        new_expr = OpExpr("<=", [self, other], _get_dtype(bool))
         return new_expr
 
     def cast(self, res_type):
