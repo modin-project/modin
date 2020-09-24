@@ -264,19 +264,12 @@ class TestCSV:
 
         df_equals(modin_df, pandas_df)
 
-    def test_sep(self):
+    @pytest.mark.parametrize("kwargs", [{"sep": "|"}, {"delimiter": "|"}])
+    def test_sep_delimiter(self, kwargs):
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_delim.csv")
 
-        pandas_df = pandas.read_csv(csv_file, sep="|")
-        modin_df = pd.read_csv(csv_file, sep="|")
-
-        df_equals(modin_df, pandas_df)
-
-    def test_delimiter(self):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_delim.csv")
-
-        pandas_df = pandas.read_csv(csv_file, delimiter="|")
-        modin_df = pd.read_csv(csv_file, delimiter="|")
+        pandas_df = pandas.read_csv(csv_file, **kwargs)
+        modin_df = pd.read_csv(csv_file, **kwargs)
 
         df_equals(modin_df, pandas_df)
 
