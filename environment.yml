@@ -30,7 +30,7 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - rpyc==4.1.5
-  - cloudpickle
+  - cloudpickle==1.4.1
   - boto3
   - pip:
     - ray==0.8.7
