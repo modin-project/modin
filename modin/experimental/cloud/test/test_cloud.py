@@ -33,7 +33,8 @@ def test_update_conda_requirements(setup_commands_source):
     major = sys.version_info.major
     minor = sys.version_info.minor
     micro = sys.version_info.micro
-    python_version = f"python=={major}.{minor}.{micro}"
+    python_version_lower = f"python>{major}.{minor}"
+    python_version_higher = f"python<={major}.{minor}.{micro}"
 
     with mock.patch(
         "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
@@ -46,6 +47,7 @@ def test_update_conda_requirements(setup_commands_source):
         setup_commands_source
     )
 
-    assert python_version in setup_commands_result
+    assert python_version_lower in setup_commands_result
+    assert python_version_higher in setup_commands_result
     assert "scikit-learn>=0.23" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result
