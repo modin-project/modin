@@ -548,6 +548,27 @@ def df_equals(df1, df2):
             np.testing.assert_almost_equal(df1, df2)
 
 
+def modin_df_almost_equals_pandas(modin_df, pandas_df):
+    df_categories_equals(modin_df._to_pandas(), pandas_df)
+
+    modin_df = to_pandas(modin_df)
+
+    if hasattr(modin_df, "select_dtypes"):
+        modin_df = modin_df.select_dtypes(exclude=["category"])
+    if hasattr(pandas_df, "select_dtypes"):
+        pandas_df = pandas_df.select_dtypes(exclude=["category"])
+
+    difference = modin_df - pandas_df
+    diff_max = difference.max()
+    if isinstance(diff_max, pandas.Series):
+        diff_max = diff_max.max()
+    assert (
+        modin_df.equals(pandas_df)
+        or diff_max < 0.0001
+        or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
+    )
+
+
 def df_is_empty(df):
     """Tests if df is empty.
 

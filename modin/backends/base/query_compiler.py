@@ -270,6 +270,12 @@ class BaseQueryCompiler(abc.ABC):
     def mul(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
 
+    def corr(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
+
+    def cov(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.cov)(self, **kwargs)
+
     def dot(self, other, **kwargs):
         if kwargs.get("squeeze_self", False):
             applyier = pandas.Series.dot
