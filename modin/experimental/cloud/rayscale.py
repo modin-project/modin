@@ -141,18 +141,25 @@ class RayCluster(BaseCluster):
 
         return _bootstrap_config(config)
 
-    @classmethod
-    def _conda_requirements(cls):
+    def _conda_requirements(self):
+        import shlex
+
         reqs = []
 
-        reqs.append(f"python=={cls._get_python_version()}")
+        reqs.append(f"python=={self._get_python_version()}")
 
-        return reqs
+        if self.add_conda_packages:
+            reqs.extend(self.add_conda_packages)
 
-    @classmethod
-    def _update_conda_requirements(cls, setup_commands: str):
+        # this is needed, for example, for dependencies that
+        # looks like: "scikit-learn>=0.23"
+        reqs_with_quotes = [shlex.quote(req) for req in reqs]
+
+        return reqs_with_quotes
+
+    def _update_conda_requirements(self, setup_commands: str):
         return setup_commands.replace(
-            "{{CONDA_PACKAGES}}", " ".join(cls._conda_requirements())
+            "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
         )
 
     @staticmethod
