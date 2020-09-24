@@ -1876,17 +1876,21 @@ class DataFrame(BasePandasDataset):
         margins_name="All",
         observed=False,
     ):
-        return self._default_to_pandas(
-            pandas.DataFrame.pivot_table,
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggfunc,
-            fill_value=fill_value,
-            margins=margins,
-            dropna=dropna,
-            margins_name=margins_name,
+        result = DataFrame(
+            query_compiler=self._query_compiler.pivot_table(
+                index=index,
+                values=values,
+                columns=columns,
+                aggfunc=aggfunc,
+                fill_value=fill_value,
+                margins=margins,
+                dropna=dropna,
+                margins_name=margins_name,
+                observed=observed,
+            )
         )
+
+        return result
 
     @property
     def plot(

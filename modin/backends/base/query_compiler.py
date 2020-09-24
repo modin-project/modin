@@ -1421,6 +1421,31 @@ class BaseQueryCompiler(abc.ABC):
             self, index=index, columns=columns, values=values
         )
 
+    def pivot_table(
+        self,
+        index,
+        values,
+        columns,
+        aggfunc,
+        fill_value,
+        margins,
+        dropna,
+        margins_name,
+        observed,
+    ):
+        return DataFrameDefault.register(pandas.DataFrame.pivot_table)(
+            self,
+            index=index,
+            values=values,
+            columns=columns,
+            aggfunc=aggfunc,
+            fill_value=fill_value,
+            margins=margins,
+            dropna=dropna,
+            margins_name=margins_name,
+            observed=observed,
+        )
+
     def get_dummies(self, columns, **kwargs):
         """Convert categorical variables to dummy variables for certain columns.
 
