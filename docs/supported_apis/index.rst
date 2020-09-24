@@ -20,7 +20,7 @@ The remaining unimplemented methods default to pandas. This allows users to cont
 using Modin even though their workloads contain functions not yet implemented in Modin.
 Here is a diagram of how we convert to pandas and perform the operation:
 
-.. image:: img/convert_to_pandas.png
+.. image:: /img/convert_to_pandas.png
    :align: center
 
 We first convert to a pandas DataFrame, then perform the operation. There is a
