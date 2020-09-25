@@ -30,9 +30,6 @@ from modin.experimental.cloud.cluster import Provider
     ],
 )
 def test_update_conda_requirements(setup_commands_source):
-    major, minor, micro = 7, 12, 45
-    version_info = {"major": major, "minor": minor, "micro": micro}
-
     with mock.patch(
         "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
     ):
@@ -40,14 +37,16 @@ def test_update_conda_requirements(setup_commands_source):
             Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
         )
 
-    with mock.patch(
-        "sys.version_info", namedtuple("mock", version_info.keys())(**version_info)
-    ):
+    fake_version = namedtuple("FakeVersion", "major minor micro")(7, 12, 45)
+    with mock.patch("sys.version_info", fake_version):
         setup_commands_result = ray_cluster._update_conda_requirements(
             setup_commands_source
         )
 
-    assert f"python>={major}.{minor}" in setup_commands_result
-    assert f"python<={major}.{minor}.{micro}" in setup_commands_result
+    assert f"python>={fake_version.major}.{fake_version.minor}" in setup_commands_result
+    assert (
+        f"python<={fake_version.major}.{fake_version.minor}.{fake_version.micro}"
+        in setup_commands_result
+    )
     assert "scikit-learn>=0.23" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result
