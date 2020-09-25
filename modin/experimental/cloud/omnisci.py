@@ -29,11 +29,18 @@ class RemoteOmnisci(RayCluster):
         worker_count: int = 0,
         head_node_type: str = None,
         worker_node_type: str = None,
+        add_conda_packages: list = None,
     ):
         if worker_count != 0:
             warnings.warn(
                 "Current Omnisci on cloud does not support multi-node setups, not requesting worker nodes"
             )
         super().__init__(
-            provider, project_name, cluster_name, 0, head_node_type, worker_node_type
+            provider,
+            project_name,
+            cluster_name,
+            0,
+            head_node_type,
+            worker_node_type,
+            add_conda_packages,
         )
