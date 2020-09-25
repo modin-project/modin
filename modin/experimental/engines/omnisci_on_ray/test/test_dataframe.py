@@ -757,6 +757,12 @@ class TestGroupby:
 
         run_and_compare(std, data=self.skew_data, force_lazy=False)
 
+    def test_multilevel(self):
+        def groupby(df, **kwargs):
+            return df.groupby("a").agg({"b": "min", "c": ["min", "max", "sum", "skew"]})
+
+        run_and_compare(groupby, data=self.data)
+
 
 class TestMerge:
     data = {

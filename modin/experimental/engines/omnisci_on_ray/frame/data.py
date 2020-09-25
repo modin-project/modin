@@ -93,7 +93,20 @@ class OmnisciOnRayFrame(BasePandasFrame):
             self._table_cols
         ), f"unaligned dtypes ({dtypes}) and table columns ({self._table_cols})"
         if isinstance(dtypes, list):
-            self._dtypes = pd.Series(dtypes, index=self._table_cols)
+            if self._index_cols is not None:
+                # Table stores both index and data columns but those are accessed
+                # differently if we have a MultiIndex for columns. To unify access
+                # to dtype we extend index column names to tuples to have a MultiIndex
+                # of dtypes.
+                if isinstance(columns, MultiIndex):
+                    tail = [""] * (columns.nlevels - 1)
+                    index_tuples = [(col, *tail) for col in self._index_cols]
+                    dtype_index = MultiIndex.from_tuples(index_tuples).append(columns)
+                    self._dtypes = pd.Series(dtypes, index=dtype_index)
+                else:
+                    self._dtypes = pd.Series(dtypes, index=self._table_cols)
+            else:
+                self._dtypes = pd.Series(dtypes, index=columns)
         else:
             self._dtypes = dtypes
 
@@ -126,10 +139,17 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def id_str(self):
         return f"frame${self.id}"
 
+    def _get_dtype(self, col):
+        # If we search for an index column type in a MultiIndex then we need to
+        # extend index column names to tuples.
+        if isinstance(self._dtypes, MultiIndex) and not isinstance(col, tuple):
+            return self._dtypes[(col, *([""] * (self._dtypes.nlevels - 1)))]
+        return self._dtypes[col]
+
     def ref(self, col):
         if col == "__rowid__":
             return InputRefExpr(self, col, _get_dtype(int))
-        return InputRefExpr(self, col, self._dtypes[col])
+        return InputRefExpr(self, col, self._get_dtype(col))
 
     def mask(
         self,
@@ -180,6 +200,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def _dtypes_for_cols(self, new_index, new_columns):
         if new_index is not None:
+            if isinstance(self._dtypes, MultiIndex):
+                new_index = [
+                    (col, *([""] * (self._dtypes.nlevels - 1))) for col in new_index
+                ]
             res = self._dtypes[
                 new_index
                 + (
@@ -267,16 +291,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 agg_exprs[col] = AggregateExpr(agg, base.ref(col))
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
+            multiindex = any(isinstance(v, list) for v in agg.values())
             for k, v in agg.items():
                 if isinstance(v, list):
-                    # TODO: support levels
                     for item in v:
-                        agg_exprs[k + " " + item] = AggregateExpr(item, base.ref(k))
+                        agg_exprs[(k, item)] = AggregateExpr(item, base.ref(k))
                 else:
-                    if k in groupby_cols:
-                        agg_exprs[k + " " + v] = AggregateExpr(v, base.ref(k))
-                    else:
-                        agg_exprs[k] = AggregateExpr(v, base.ref(k))
+                    col_name = (k, v) if multiindex else k
+                    agg_exprs[col_name] = AggregateExpr(v, base.ref(k))
         new_columns.extend(agg_exprs.keys())
         new_dtypes.extend((x._dtype for x in agg_exprs.values()))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
