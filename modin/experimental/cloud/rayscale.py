@@ -167,7 +167,7 @@ class RayCluster(BaseCluster):
         major = sys.version_info.major
         minor = sys.version_info.minor
         micro = sys.version_info.micro
-        return [f"python>{major}.{minor}", f"python<={major}.{minor}.{micro}"]
+        return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
 
     @staticmethod
     def __save_config(config):
