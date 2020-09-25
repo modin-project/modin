@@ -158,8 +158,12 @@ class RayCluster(BaseCluster):
         return reqs_with_quotes
 
     def _update_conda_requirements(self, setup_commands: str):
-        return setup_commands.replace(
+        setup_commands = setup_commands.replace(
             "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
+        )
+
+        return setup_commands.replace(
+            "{{INSTALL_MODIN_COMMAND}}", self._get_modin_install_command()
         )
 
     @staticmethod
@@ -168,6 +172,28 @@ class RayCluster(BaseCluster):
         minor = sys.version_info.minor
         micro = sys.version_info.micro
         return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
+
+    @staticmethod
+    def _get_modin_install_command():
+        from modin import __version__
+
+        if len(__version__.split("+")) == 1:
+            # version: 0.8.0
+            return f"conda install --yes --override-channels -c intel/label/validation -c conda-forge modin=={__version__}"
+        else:
+            # version: 0.8.0+103.gfe0afed.dirty
+            # currently install only from last commit in master branch
+            modin_install_from_master_branch = r"""
+        sudo apt-get update -y
+        sudo apt-get install -y build-essential
+
+        rm -Rf modin
+        git clone --single-branch --depth 1 --branch master https://github.com/modin-project/modin.git
+        (cd modin && pip install -e .[ray] --use-feature=2020-resolver)
+        (cd modin && pip install -e .[remote] --use-feature=2020-resolver)
+        (cd modin && pip install -e . --use-feature=2020-resolver)"""
+
+        return modin_install_from_master_branch
 
     @staticmethod
     def __save_config(config):
