@@ -1226,6 +1226,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     invert = MapFunction.register(pandas.DataFrame.__invert__)
     isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
     isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)
+    _isfinite = MapFunction.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
+    )
     negative = MapFunction.register(pandas.DataFrame.__neg__)
     notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
     round = MapFunction.register(pandas.DataFrame.round)
@@ -1588,6 +1591,91 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
+
+    def corr(self, method="pearson", min_periods=1):
+        if method == "pearson":
+            numeric_self = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
+            return numeric_self._nancorr(min_periods=min_periods)
+        else:
+            return super().corr(method=method, min_periods=min_periods)
+
+    def cov(self, min_periods=None):
+        return self._nancorr(min_periods=min_periods, cov=True)
+
+    def _nancorr(self, min_periods=1, cov=False):
+        """
+        Compute either pairwise covariance or pairwise correlation of columns,
+        considering NA/null values the same like pandas does.
+
+        Parameters
+        ----------
+        min_periods : int, default 1
+            Minimum number of observations required per pair of columns
+            to have a valid result.
+        cov : boolean, default False
+            Either covariance or correlation should be computed.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The covariance or correlation matrix of the series of the DataFrame.
+        """
+        other = self.to_numpy()
+        other_mask = self._isfinite().to_numpy()
+        n_cols = other.shape[1]
+
+        if min_periods is None:
+            min_periods = 1
+
+        def map_func(df):
+            df = df.to_numpy()
+            n_rows = df.shape[0]
+            df_mask = np.isfinite(df)
+
+            result = np.empty((n_rows, n_cols), dtype=np.float64)
+
+            for i in range(n_rows):
+                df_ith_row = df[i]
+                df_ith_mask = df_mask[i]
+
+                for j in range(n_cols):
+                    other_jth_col = other[:, j]
+
+                    valid = df_ith_mask & other_mask[:, j]
+
+                    vx = df_ith_row[valid]
+                    vy = other_jth_col[valid]
+
+                    nobs = len(vx)
+
+                    if nobs < min_periods:
+                        result[i, j] = np.nan
+                    else:
+                        vx = vx - vx.mean()
+                        vy = vy - vy.mean()
+                        sumxy = (vx * vy).sum()
+                        sumxx = (vx * vx).sum()
+                        sumyy = (vy * vy).sum()
+
+                        denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
+                        if denom != 0:
+                            result[i, j] = sumxy / denom
+                        else:
+                            result[i, j] = np.nan
+
+            return pandas.DataFrame(result)
+
+        columns = self.columns
+        index = columns.copy()
+        transponed_self = self.transpose()
+        new_modin_frame = transponed_self._modin_frame._apply_full_axis(
+            1, map_func, new_index=index, new_columns=columns
+        )
+        return transponed_self.__constructor__(new_modin_frame)
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
         """

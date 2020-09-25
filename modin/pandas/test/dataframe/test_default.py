@@ -36,6 +36,7 @@ from modin.pandas.test.utils import (
     test_data_resample,
     test_data,
     test_data_diff_dtype,
+    modin_df_almost_equals_pandas,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -48,7 +49,6 @@ matplotlib.use("Agg")
     "op, make_args",
     [
         ("align", lambda df: {"other": df}),
-        ("corr", None),
         ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
         ("explode", lambda df: {"column": df.columns[0]}),
@@ -214,11 +214,35 @@ def test_combine_first():
     df_equals(modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2))
 
 
-def test_cov():
-    data = test_data_values[0]
-    modin_result = pd.DataFrame(data).cov()
-    pandas_result = pandas.DataFrame(data).cov()
-    df_equals(modin_result, pandas_result)
+@pytest.mark.parametrize("min_periods", [1, 3, 5])
+def test_corr(min_periods):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.corr(min_periods=min_periods),
+    )
+    # Modin result may slightly differ from pandas result
+    # due to floating pointing arithmetic.
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.corr(min_periods=min_periods),
+        comparator=modin_df_almost_equals_pandas,
+    )
+
+
+@pytest.mark.parametrize("min_periods", [1, 3, 5])
+@pytest.mark.parametrize("ddof", [1, 2, 4])
+def test_cov(min_periods, ddof):
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.cov(min_periods=min_periods, ddof=ddof),
+    )
+    # Modin result may slightly differ from pandas result
+    # due to floating pointing arithmetic.
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.cov(min_periods=min_periods),
+        comparator=modin_df_almost_equals_pandas,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
