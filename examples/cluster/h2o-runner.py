@@ -12,9 +12,10 @@
 # governing permissions and limitations under the License.
 
 
-# pip install git+https://github.com/intel-go/ibis.git@develop
+# pip install git+https://github.com/intel-ai/ibis.git@develop
+# pip install braceexpand
 
-# NOTE: expects https://github.com/intel-go/omniscripts/ checked out and in PYTHONPATH
+# NOTE: expects https://github.com/intel-ai/omniscripts checked out and in PYTHONPATH
 
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
