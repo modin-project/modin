@@ -47,13 +47,17 @@ def run_and_compare(
     force_lazy=True,
     force_arrow_execute=False,
     allow_subqueries=False,
+    constructor_kwargs=None,
     **kwargs
 ):
+    if constructor_kwargs is None:
+        constructor_kwargs = {}
+
     def run_modin(
         fn, data, data2, force_lazy, force_arrow_execute, allow_subqueries, **kwargs
     ):
-        kwargs["df1"] = pd.DataFrame(data)
-        kwargs["df2"] = pd.DataFrame(data2)
+        kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
 
         if force_lazy:
@@ -73,8 +77,8 @@ def run_and_compare(
         return exp_res
 
     try:
-        kwargs["df1"] = pandas.DataFrame(data)
-        kwargs["df2"] = pandas.DataFrame(data2)
+        kwargs["df1"] = pandas.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
         ref_res = fn(lib=pandas, **kwargs)
     except Exception as e:
@@ -1312,6 +1316,19 @@ class TestSort:
     #        ascending=ascending,
     #        na_position=na_position,
     #    )
+
+
+class TestCommon:
+    data = TestBinaryOp.data
+
+    def test_mi_construction(self):
+        def applier(df, **kwargs):
+            return df
+
+        index = generate_multiindex(
+            len(self.data[list(self.data.keys())[0]]), add_names=False
+        )
+        run_and_compare(applier, data=self.data, constructor_kwargs={"index": index})
 
 
 if __name__ == "__main__":

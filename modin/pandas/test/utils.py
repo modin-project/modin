@@ -697,7 +697,7 @@ def generate_multiindex_dfs(axis=1):
     return df1, df2
 
 
-def generate_multiindex(elements_number, nlevels=2, is_tree_like=False):
+def generate_multiindex(elements_number, nlevels=2, is_tree_like=False, add_names=True):
     def generate_level(length, nlevel):
         src = ["bar", "baz", "foo", "qux"]
         return [src[i % len(src)] + f"-{nlevel}-{i}" for i in range(length)]
@@ -717,24 +717,23 @@ def generate_multiindex(elements_number, nlevels=2, is_tree_like=False):
 
         lvl_len = int(lvl_len_d)
         result = pd.MultiIndex.from_product(
-            [generate_level(lvl_len, i) for i in range(nlevels - penalty_level)],
-            names=[f"level-{i}" for i in range(nlevels - penalty_level)],
+            [generate_level(lvl_len, i) for i in range(nlevels - penalty_level)]
         )
         if penalty_level:
             result = pd.MultiIndex.from_tuples(
-                [("base_level", *ml_tuple) for ml_tuple in result],
-                names=[f"level-{i}" for i in range(nlevels)],
+                [("base_level", *ml_tuple) for ml_tuple in result]
             )
-        return result.sort_values()
     else:
         base_level = ["first"] * (elements_number // 2 + elements_number % 2) + [
             "second"
         ] * (elements_number // 2)
         primary_levels = [generate_level(elements_number, i) for i in range(1, nlevels)]
         arrays = [base_level] + primary_levels
-        return pd.MultiIndex.from_tuples(
-            list(zip(*arrays)), names=[f"level-{i}" for i in range(nlevels)]
-        ).sort_values()
+        result = pd.MultiIndex.from_tuples(list(zip(*arrays)))
+
+    if add_names:
+        result.names = [f"level-{i}" for i in range(nlevels)]
+    return result.sort_values()
 
 
 def generate_none_dfs():
