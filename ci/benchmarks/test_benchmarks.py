@@ -211,3 +211,61 @@ def test_groupby_sum(benchmark, impl, data_type, data_size, index_col, func):
         warmup_rounds=2,
     )
     return result
+
+################ DataFrame == 0 ################
+
+def benchmark_generate_mask(df):
+    s = df == 0
+    return s
+
+
+@pytest.mark.parametrize("impl", ["modin", "pandas"])
+@pytest.mark.parametrize("data_type", ["int"])
+@pytest.mark.parametrize(
+    "data_size",
+    [(10_000, 10_000), (10, 10_000_000), (10_000_000, 10)],
+    ids=lambda t: "{}x{}".format(t[0], t[1]),
+)
+@pytest.mark.parametrize(
+    "index_col", [None, "col1"], ids=["no_indexing", "with_indexing"]
+)
+def test_mask(benchmark, impl, data_type, data_size, index_col):
+    df1 = generate_dataframe(
+        impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
+    )
+    if index_col is not None:
+        df2 = df1[index_col]
+    else:
+        df2 = df1
+
+    result = benchmark.pedantic(
+        benchmark_generate_mask,
+        kwargs={"df": df2}
+    )
+    return result
+
+################ DataFrame[mask] ################
+
+def benchmark_mask_index(df, mask):
+    s = df[mask]
+    return s
+
+
+@pytest.mark.parametrize("impl", ["modin", "pandas"])
+@pytest.mark.parametrize("data_type", ["int"])
+@pytest.mark.parametrize(
+    "data_size",
+    [(10_000, 10_000), (10, 10_000_000), (1_000_000, 10)],
+    ids=lambda t: "{}x{}".format(t[0], t[1]),
+)
+def test_mask_index(benchmark, impl, data_type, data_size):
+    df = generate_dataframe(
+        impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
+    )
+    mask = df[df.columns[0]] == 0
+
+    result = benchmark.pedantic(
+        benchmark_mask_index,
+        kwargs={"df": df, "mask": mask}
+    )
+    return result
