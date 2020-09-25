@@ -28,6 +28,7 @@ from modin.pandas.test.utils import (
     test_data_values,
     test_data_keys,
     generate_multiindex,
+    eval_general,
 )
 
 
@@ -336,6 +337,43 @@ class TestMasks:
             return df
 
         run_and_compare(filter, data=self.data)
+
+
+class TestMultiIndex:
+    data = {"a": np.arange(24), "b": np.arange(24)}
+
+    @pytest.mark.parametrize("names", [None, ["", ""], ["name", "name"]])
+    def test_dup_names(self, names):
+        index = pandas.MultiIndex.from_tuples(
+            [(i, j) for i in range(3) for j in range(8)], names=names
+        )
+
+        pandas_df = pandas.DataFrame(self.data, index=index) + 1
+        modin_df = pd.DataFrame(self.data, index=index) + 1
+
+        df_equals(pandas_df, modin_df)
+
+    @pytest.mark.parametrize(
+        "names",
+        [
+            None,
+            [None, "s", None],
+            ["i1", "i2", "i3"],
+            ["i1", "i1", "i3"],
+            ["i1", "i2", "a"],
+        ],
+    )
+    def test_reset_index(self, names):
+        index = pandas.MultiIndex.from_tuples(
+            [(i, j, k) for i in range(2) for j in range(3) for k in range(4)],
+            names=names,
+        )
+
+        def applier(lib):
+            df = lib.DataFrame(self.data, index=index) + 1
+            return df.reset_index()
+
+        eval_general(pd, pandas, applier)
 
 
 class TestFillna:

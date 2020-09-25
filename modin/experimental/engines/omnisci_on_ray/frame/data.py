@@ -45,6 +45,7 @@ from collections import OrderedDict
 
 import numpy as np
 import pyarrow
+import re
 
 
 class OmnisciOnRayFrame(BasePandasFrame):
@@ -694,10 +695,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         if not isinstance(columns, list):
             columns = [columns]
-
-        for col in columns:
-            if col not in self._table_cols:
-                raise ValueError(f"Unknown column '{col}'")
+        columns = [self._find_index_or_col(col) for col in columns]
 
         if isinstance(ascending, list):
             if len(ascending) != len(columns):
@@ -1055,11 +1053,24 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 raise NotImplementedError(
                     "default index reset with no drop is not supported"
                 )
-            new_columns = Index.__new__(Index, data=self._table_cols, dtype="O")
+            # Need to demangle index names.
+            exprs = OrderedDict()
+            for i, c in enumerate(self._index_cols):
+                name = self._index_name(c)
+                if name is None:
+                    name = f"level_{i}"
+                if name in exprs:
+                    raise ValueError(f"cannot insert {name}, already exists")
+                exprs[name] = self.ref(c)
+            for c in self.columns:
+                if c in exprs:
+                    raise ValueError(f"cannot insert {c}, already exists")
+                exprs[c] = self.ref(c)
+            new_columns = Index.__new__(Index, data=exprs.keys(), dtype="O")
             return self.__constructor__(
                 columns=new_columns,
-                dtypes=self._dtypes_for_cols(None, new_columns),
-                op=self._op,
+                dtypes=self._dtypes_for_exprs(exprs),
+                op=TransformNode(self, exprs),
                 index_cols=None,
                 force_execution_mode=self._force_execution_mode,
             )
@@ -1118,9 +1129,29 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return [self._index_name(n) for n in cols]
 
     def _index_name(self, col):
-        if col.startswith("__index__"):
+        if col == "__index__":
             return None
+
+        match = re.search("__index__\\d+_(.*)", col)
+        if match:
+            name = match.group(1)
+            if name == "__None__":
+                return None
+            return name
+
         return col
+
+    def _find_index_or_col(self, col):
+        """For given column or index name return a column name"""
+        if col in self.columns:
+            return col
+
+        if self._index_cols is not None:
+            for idx_col in self._index_cols:
+                if re.match(f"__index__\\d+_{col}", idx_col):
+                    return idx_col
+
+        raise ValueError(f"Unknown column '{col}'")
 
     @classmethod
     def from_pandas(cls, df):
@@ -1137,7 +1168,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
             orig_index_names = df.index.names
             orig_df = df
 
-            index_cols = ["__index__" if n is None else n for n in df.index.names]
+            index_cols = [
+                f"__index__{i}_{'__None__' if n is None else n}"
+                for i, n in enumerate(df.index.names)
+            ]
             df.index.names = index_cols
             df = df.reset_index()
 
