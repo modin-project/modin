@@ -118,7 +118,6 @@ class ExcelReader(TextFileReader):
             kwargs["fname"] = io
             # Skiprows will be used to inform a partition how many rows come before it.
             kwargs["skiprows"] = 0
-
             row_count = 0
             data_ids = []
             index_ids = []
