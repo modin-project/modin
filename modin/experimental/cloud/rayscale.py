@@ -146,7 +146,7 @@ class RayCluster(BaseCluster):
 
         reqs = []
 
-        reqs.append(f"python=={self._get_python_version()}")
+        reqs.extend(self._get_python_version())
 
         if self.add_conda_packages:
             reqs.extend(self.add_conda_packages)
@@ -167,7 +167,7 @@ class RayCluster(BaseCluster):
         major = sys.version_info.major
         minor = sys.version_info.minor
         micro = sys.version_info.micro
-        return f"{major}.{minor}.{micro}"
+        return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
 
     @staticmethod
     def __save_config(config):
