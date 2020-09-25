@@ -300,7 +300,7 @@ class PandasExcelParser(PandasParser):
             **kwargs
         )
 
-        pandas_df = parser.read()
+        pandas_df = parser.read().dropna(how="all")
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.

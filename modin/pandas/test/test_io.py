@@ -635,6 +635,17 @@ def test_from_excel_all_sheets():
     teardown_excel_file()
 
 
+@pytest.mark.parametrize(
+    "sheet_name",
+    ["Sheet1", "AnotherSpecialName", "SpecialName", "SecondSpecialName", 0, 1, 2, 3],
+)
+def test_from_excel_sheet_name(sheet_name):
+    fname = "modin/pandas/test/data/modin_error_book.xlsx"
+    modin_df = pd.read_excel(fname, sheet_name=sheet_name)
+    pandas_df = pandas.read_excel(fname, sheet_name=sheet_name)
+    df_equals(modin_df, pandas_df)
+
+
 # @pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
 def test_from_feather():
     setup_feather_file(SMALL_ROW_SIZE)
