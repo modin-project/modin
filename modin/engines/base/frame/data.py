@@ -1632,7 +1632,12 @@ class BasePandasFrame(object):
         """
         if isinstance(other, type(self)):
             other = [other]
-
+        if all(o.axes[axis].equals(self.axes[axis]) for o in other):
+            return (
+                self._partitions,
+                [self._simple_shuffle(axis, o) for o in other],
+                self.axes[axis].copy(),
+            )
         index_other_obj = [o.axes[axis] for o in other]
         joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
@@ -1660,6 +1665,38 @@ class BasePandasFrame(object):
                 )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
+
+    def _simple_shuffle(self, axis, other):
+        """
+        Shuffle other rows or columns to match partitioning of self.
+
+        Notes
+        -----
+        This should only be called when `other.axes[axis]` and `self.axes[axis]`
+            are identical.
+
+        Parameters
+        ----------
+            axis: 0 or 1
+                The axis to shuffle over
+            other: BasePandasFrame
+                The BasePandasFrame to match to self object's partitioning
+
+        Returns
+        -------
+        BasePandasFrame
+            Shuffled version of `other`.
+        """
+        assert self.axes[axis].equals(
+            other.axes[axis]
+        ), "`_simple_shuffle` should only be used if axis is identical"
+        if axis == 0:
+            lengths = self._row_lengths
+        else:
+            lengths = self._column_widths
+        return other._frame_mgr_cls.simple_shuffle(
+            axis, other._partitions, lambda x: x, lengths
+        )
 
     def _binary_op(self, op, right_frame, join_type="outer"):
         """
