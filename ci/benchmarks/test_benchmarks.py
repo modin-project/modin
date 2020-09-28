@@ -269,3 +269,33 @@ def test_mask_index(benchmark, impl, data_type, data_size):
         kwargs={"df": df, "mask": mask}
     )
     return result
+
+################ DataFrame.merge ################
+
+def benchmark_merge(df1, df2, how, sort):
+    s = df1.merge(df2, on=df1.columns[0], how=how, sort=sort)
+    return s
+
+
+@pytest.mark.parametrize("impl", ["modin", "pandas"])
+@pytest.mark.parametrize("data_type", ["int"])
+@pytest.mark.parametrize(
+    "data_size",
+    [(5000, 5000, 5000, 5000), (10, 1_000_000, 10, 1_000_000), (1_000_000, 10, 1_000_000, 10)],
+    ids=lambda t: "{}x{} and {}x{}".format(t[0], t[1], t[2], t[3]),
+)
+@pytest.mark.parametrize("how", ["left", "right", "outer", "inner"])
+@pytest.mark.parametrize("sort", [False, True])
+def test_merge(benchmark, impl, data_type, data_size, how, sort):
+    df1 = generate_dataframe(
+        impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
+    )
+    df2 = generate_dataframe(
+        impl, data_type, data_size[2], data_size[3], RAND_LOW, RAND_HIGH
+    )
+
+    result = benchmark(
+        benchmark_merge,
+        df1=df1, df2=df2, how=how, sort=sort
+    )
+    return result
