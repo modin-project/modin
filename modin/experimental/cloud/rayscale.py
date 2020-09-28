@@ -180,20 +180,25 @@ class RayCluster(BaseCluster):
         """
         Suppose git in PATH.
         """
-        git_log = subprocess.check_output(["git", "log", "-1"]).strip("\n")
-        git_branch_vv = subprocess.check_output(["git", "branch", "-vv"]).strip("\n")
-        git_remote_v = subprocess.check_output(["git", "remote", "-v"]).strip("\n")
+        import modin
 
-        # commit HASH (HEAD -> LOCAL_BRANCH)
-        # or
-        # commit HASH (HEAD -> LOCAL_BRANCH, REPO_ALIAS/REMOTE_BRANCH)
-        log_header = re.split(r"\s+", re.split(r"\n+", git_log)[0])
-        # remove "," or ")"
-        local_branch = log_header[4][:-1]
+        cwd = os.path.dirname(modin.__file__)
+        git_branch_vv = subprocess.check_output(
+            ["git", "branch", "-vv"], cwd=cwd, encoding="utf-8"
+        ).strip("\n")
+        git_remote_v = subprocess.check_output(
+            ["git", "remote", "-v"], cwd=cwd, encoding="utf-8"
+        ).strip("\n")
 
+        local_branch = None
+        remote_branch = None
         for line in re.split(r"\n+", git_branch_vv):
             # * LOCAL_BRANCH HASH [REPO_ALIAS/REMOTE_BRANCH[: STATUS]] [Commit message]
-            if line.startswith("*") and re.split(r"\s+", line)[1] == local_branch:
+            if line.startswith("*"):
+                local_branch = re.split(r"\s+", line)[1]
+                if local_branch == "HEAD":
+                    # example case: (HEAD detached at modin/sync-modin-between-contexts)
+                    raise ValueError("You are in 'detached HEAD' state")
                 if "[" not in line:
                     raise ValueError(
                         f"local branch: [{local_branch}] does not track remote"
@@ -241,7 +246,7 @@ class RayCluster(BaseCluster):
             except Exception as er:
                 print(er)
                 warnings.warn(
-                    "Warning: failed get git repo and branch; installing latest release of modin"
+                    "failed get git repo and branch; installing latest release of modin"
                 )
                 return f"conda install --yes --override-channels -c intel/label/validation -c conda-forge modin"
 
