@@ -244,11 +244,11 @@ class RayCluster(BaseCluster):
             try:
                 repo, branch = RayCluster._git_state()
             except Exception as er:
-                print(er)
+                warnings.warn(str(er))
                 warnings.warn(
                     "failed get git repo and branch; installing latest release of modin"
                 )
-                return f"conda install --yes --override-channels -c intel/label/validation -c conda-forge modin"
+                return "conda install --yes --override-channels -c intel/label/validation -c conda-forge modin"
 
             modin_install = f"""
         sudo apt-get update -y
