@@ -13,11 +13,13 @@
 
 import threading
 import os
+import re
 import traceback
 import sys
 from hashlib import sha1
 from typing import Callable
 import subprocess
+import warnings
 
 import yaml
 from ray.autoscaler.commands import (
@@ -174,26 +176,86 @@ class RayCluster(BaseCluster):
         return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
 
     @staticmethod
+    def _git_state():
+        """
+        Suppose git in PATH.
+        """
+        git_log = subprocess.check_output(["git", "log", "-1"]).strip("\n")
+        git_branch_vv = subprocess.check_output(["git", "branch", "-vv"]).strip("\n")
+        git_remote_v = subprocess.check_output(["git", "remote", "-v"]).strip("\n")
+
+        # commit HASH (HEAD -> LOCAL_BRANCH)
+        # or
+        # commit HASH (HEAD -> LOCAL_BRANCH, REPO_ALIAS/REMOTE_BRANCH)
+        log_header = re.split(r"\s+", re.split(r"\n+", git_log)[0])
+        # remove "," or ")"
+        local_branch = log_header[4][:-1]
+
+        for line in re.split(r"\n+", git_branch_vv):
+            # * LOCAL_BRANCH HASH [REPO_ALIAS/REMOTE_BRANCH[: STATUS]] [Commit message]
+            if line.startswith("*") and re.split(r"\s+", line)[1] == local_branch:
+                if "[" not in line:
+                    raise ValueError(
+                        f"local branch: [{local_branch}] does not track remote"
+                    )
+                dirty_remote_branch = re.split(r"\s+", line)[3]
+                # remove "(" and ":" or ")"
+                remote_branch = dirty_remote_branch[1:][:-1]
+                break
+
+        try:
+            repo_alias, remote_branch = remote_branch.split("/", maxsplit=1)
+        except ValueError:
+            raise ValueError(
+                f"The remote branch: [{remote_branch}] obtained from \
+                git: [{git_branch_vv}] for local_branch: [{local_branch}] is not valid"
+            )
+
+        repo_name = None
+        for line in re.split(r"\n+", git_remote_v):
+            # repo_alias repo_name (fetch/push)
+            if line.startswith(repo_alias):
+                repo_name = re.split(r"\s+", line)[1]
+                break
+
+        if repo_name is None:
+            raise ValueError(
+                f"git remote -v: [{git_remote_v}] doesn't include info for repo alias: [{repo_alias}]"
+            )
+
+        return repo_name, remote_branch
+
+    @staticmethod
     def _get_modin_install_command():
         from modin import __version__
 
         if len(__version__.split("+")) == 1:
-            # version: 0.8.0
-            return f"conda install --yes --override-channels -c intel/label/validation -c conda-forge modin=={__version__}"
+            # example version: 0.8.0
+            return f"conda install --yes --override-channels -c intel/label/validation \
+                -c conda-forge modin=={__version__}"
         else:
-            # version: 0.8.0+103.gfe0afed.dirty
-            # currently install only from last commit in master branch
-            modin_install_from_master_branch = r"""
+            # example version: 0.8.0+103.gfe0afed.dirty
+            # currently install only from last commit in any branch
+            try:
+                repo, branch = RayCluster._git_state()
+            except Exception as er:
+                print(er)
+                warnings.warn(
+                    "Warning: failed get git repo and branch; installing latest release of modin"
+                )
+                return f"conda install --yes --override-channels -c intel/label/validation -c conda-forge modin"
+
+            modin_install = f"""
         sudo apt-get update -y
         sudo apt-get install -y build-essential
 
         rm -Rf modin
-        git clone --single-branch --depth 1 --branch master https://github.com/modin-project/modin.git
+        git clone --single-branch --depth 1 --branch {branch} {repo}
         (cd modin && pip install -e .[ray] --use-feature=2020-resolver)
         (cd modin && pip install -e .[remote] --use-feature=2020-resolver)
         (cd modin && pip install -e . --use-feature=2020-resolver)"""
 
-        return modin_install_from_master_branch
+        return modin_install
 
     @staticmethod
     def __save_config(config):
