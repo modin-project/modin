@@ -65,9 +65,14 @@ class ExcelReader(TextFileReader):
         ex.read_manifest()
         ex.read_strings()
         ws = Worksheet(wb)
-        # Convert string name 0 to string
-        if sheet_name == 0:
-            sheet_name = wb.sheetnames[sheet_name]
+        # Convert index to sheet name in file
+        if isinstance(sheet_name, int):
+            sheet_name = "sheet{}".format(sheet_name + 1)
+        else:
+            sheet_name = "sheet{}".format(wb.sheetnames.index(sheet_name) + 1)
+        # Pass this value to the workers
+        kwargs["sheet_name"] = sheet_name
+
         with ZipFile(io) as z:
             from io import BytesIO
 
@@ -201,4 +206,7 @@ class ExcelReader(TextFileReader):
             column_widths,
             dtypes=dtypes,
         )
-        return cls.query_compiler_cls(new_frame)
+        new_query_compiler = cls.query_compiler_cls(new_frame)
+        if index_col is None:
+            new_query_compiler._modin_frame._apply_index_objs(axis=0)
+        return new_query_compiler
