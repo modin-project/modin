@@ -236,7 +236,7 @@ class RayCluster(BaseCluster):
 
         if len(__version__.split("+")) == 1:
             # example version: 0.8.0
-            return f"conda install --yes --override-channels -c intel/label/validation \
+            return f"conda install --yes -c intel/label/validation \
                 -c conda-forge modin=={__version__}"
         else:
             # example version: 0.8.0+103.gfe0afed.dirty
@@ -248,7 +248,7 @@ class RayCluster(BaseCluster):
                 warnings.warn(
                     "failed get git repo and branch; installing latest release of modin"
                 )
-                return "conda install --yes --override-channels -c intel/label/validation -c conda-forge modin"
+                return "conda install --yes -c intel/label/validation -c conda-forge modin"
 
             modin_install = f"""
         sudo apt-get update -y

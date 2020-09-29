@@ -120,7 +120,7 @@ setup_commands:
         source ~/.bashrc
         conda create --name modin --yes
         conda activate modin
-        conda install --yes --override-channels -c intel/label/validation -c conda-forge {{CONDA_PACKAGES}}
+        conda install --yes -c intel/label/validation -c conda-forge {{CONDA_PACKAGES}}
         {{INSTALL_MODIN_COMMAND}}
 
         pip install colorful cloudpickle
