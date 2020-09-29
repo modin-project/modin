@@ -562,6 +562,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def _concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
+        if not other_modin_frames:
+            return self
+
         if axis == 0:
             return self._union_all(axis, other_modin_frames, join, sort, ignore_index)
 
