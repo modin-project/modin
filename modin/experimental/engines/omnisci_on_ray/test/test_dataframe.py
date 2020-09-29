@@ -480,6 +480,31 @@ class TestConcat:
 
         run_and_compare(concat, data=self.data, data2=self.data2, allow_subqueries=True)
 
+    @pytest.mark.parametrize("join", ["inner", "outer"])
+    @pytest.mark.parametrize("sort", bool_arg_values)
+    @pytest.mark.parametrize("ignore_index", bool_arg_values)
+    def test_concat_single(self, join, sort, ignore_index):
+        def concat(lib, df, join, sort, ignore_index):
+            return lib.concat([df], join=join, sort=sort, ignore_index=ignore_index)
+
+        run_and_compare(
+            concat,
+            data=self.data,
+            join=join,
+            sort=sort,
+            ignore_index=ignore_index,
+        )
+
+    def test_groupby_concat_single(self):
+        def concat(lib, df):
+            df = lib.concat([df])
+            return df.groupby("a").agg({"b": "min"})
+
+        run_and_compare(
+            concat,
+            data=self.data,
+        )
+
 
 class TestGroupby:
     data = {
