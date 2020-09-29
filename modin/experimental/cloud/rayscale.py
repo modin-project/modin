@@ -148,6 +148,8 @@ class RayCluster(BaseCluster):
 
         reqs.extend(self._get_python_version())
 
+        reqs.append(self._get_modin_version())
+
         if self.add_conda_packages:
             reqs.extend(self.add_conda_packages)
 
@@ -168,6 +170,13 @@ class RayCluster(BaseCluster):
         minor = sys.version_info.minor
         micro = sys.version_info.micro
         return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
+
+    @staticmethod
+    def _get_modin_version():
+        from modin import __version__
+
+        # for example: 0.8.0+116.g5e50eef.dirty
+        return f"modin=={__version__.split('+')[0]}"
 
     @staticmethod
     def __save_config(config):
