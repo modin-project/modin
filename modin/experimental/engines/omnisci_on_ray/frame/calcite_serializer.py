@@ -41,6 +41,7 @@ class CalciteSerializer:
         "int32": "INTEGER",
         "int64": "BIGINT",
         "bool": "BOOLEAN",
+        "float32": "FLOAT",
         "float64": "DOUBLE",
     }
 

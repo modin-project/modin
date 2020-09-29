@@ -275,6 +275,20 @@ class TestCSV:
 
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/2174")
+    def test_float32(self):
+        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        kwargs = {
+            "dtype": {"a": "float32", "b": "float32"},
+        }
+
+        pandas_df = pandas.read_csv(csv_file, **kwargs)
+        pandas_df["a"] = pandas_df["a"] + pandas_df["b"]
+        modin_df = pd.read_csv(csv_file, **kwargs, engine="arrow")
+        modin_df["a"] = modin_df["a"] + modin_df["b"]
+
+        df_equals(modin_df, pandas_df)
+
 
 class TestMasks:
     data = {
