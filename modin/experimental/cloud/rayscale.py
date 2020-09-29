@@ -13,13 +13,11 @@
 
 import threading
 import os
-import re
 import traceback
 import sys
 from hashlib import sha1
 from typing import Callable
 import subprocess
-import warnings
 
 import yaml
 from ray.autoscaler.commands import (
@@ -150,6 +148,8 @@ class RayCluster(BaseCluster):
 
         reqs.extend(self._get_python_version())
 
+        reqs.append(self._get_modin_version())
+
         if self.add_conda_packages:
             reqs.extend(self.add_conda_packages)
 
@@ -160,12 +160,8 @@ class RayCluster(BaseCluster):
         return reqs_with_quotes
 
     def _update_conda_requirements(self, setup_commands: str):
-        setup_commands = setup_commands.replace(
-            "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
-        )
-
         return setup_commands.replace(
-            "{{INSTALL_MODIN_COMMAND}}", self._get_modin_install_command()
+            "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
         )
 
     @staticmethod
@@ -176,91 +172,11 @@ class RayCluster(BaseCluster):
         return [f"python>={major}.{minor}", f"python<={major}.{minor}.{micro}"]
 
     @staticmethod
-    def _git_state():
-        """
-        Suppose git in PATH.
-        """
-        import modin
-
-        cwd = os.path.dirname(modin.__file__)
-        git_branch_vv = subprocess.check_output(
-            ["git", "branch", "-vv"], cwd=cwd, encoding="utf-8"
-        ).strip("\n")
-        git_remote_v = subprocess.check_output(
-            ["git", "remote", "-v"], cwd=cwd, encoding="utf-8"
-        ).strip("\n")
-
-        local_branch = None
-        remote_branch = None
-        for line in re.split(r"\n+", git_branch_vv):
-            # * LOCAL_BRANCH HASH [REPO_ALIAS/REMOTE_BRANCH[: STATUS]] [Commit message]
-            if line.startswith("*"):
-                local_branch = re.split(r"\s+", line)[1]
-                if local_branch == "HEAD":
-                    # example case: (HEAD detached at modin/sync-modin-between-contexts)
-                    raise ValueError("You are in 'detached HEAD' state")
-                if "[" not in line:
-                    raise ValueError(
-                        f"local branch: [{local_branch}] does not track remote"
-                    )
-                dirty_remote_branch = re.split(r"\s+", line)[3]
-                # remove "(" and ":" or ")"
-                remote_branch = dirty_remote_branch[1:][:-1]
-                break
-
-        try:
-            repo_alias, remote_branch = remote_branch.split("/", maxsplit=1)
-        except ValueError:
-            raise ValueError(
-                f"The remote branch: [{remote_branch}] obtained from \
-                git: [{git_branch_vv}] for local_branch: [{local_branch}] is not valid"
-            )
-
-        repo_name = None
-        for line in re.split(r"\n+", git_remote_v):
-            # repo_alias repo_name (fetch/push)
-            if line.startswith(repo_alias):
-                repo_name = re.split(r"\s+", line)[1]
-                break
-
-        if repo_name is None:
-            raise ValueError(
-                f"git remote -v: [{git_remote_v}] doesn't include info for repo alias: [{repo_alias}]"
-            )
-
-        return repo_name, remote_branch
-
-    @staticmethod
-    def _get_modin_install_command():
+    def _get_modin_version():
         from modin import __version__
 
-        if len(__version__.split("+")) == 1:
-            # example version: 0.8.0
-            return f"conda install --yes -c intel/label/validation \
-                -c conda-forge modin=={__version__}"
-        else:
-            # example version: 0.8.0+103.gfe0afed.dirty
-            # currently install only from last commit in any branch
-            try:
-                repo, branch = RayCluster._git_state()
-            except Exception as er:
-                warnings.warn(str(er))
-                warnings.warn(
-                    "failed get git repo and branch; installing latest release of modin"
-                )
-                return "conda install --yes -c intel/label/validation -c conda-forge modin"
-
-            modin_install = f"""
-        sudo apt-get update -y
-        sudo apt-get install -y build-essential
-
-        rm -Rf modin
-        git clone --single-branch --depth 1 --branch {branch} {repo}
-        (cd modin && pip install -e .[ray] --use-feature=2020-resolver)
-        (cd modin && pip install -e .[remote] --use-feature=2020-resolver)
-        (cd modin && pip install -e . --use-feature=2020-resolver)"""
-
-        return modin_install
+        # for example: 0.8.0+116.g5e50eef.dirty
+        return f"modin=={__version__.split('+')[0]}"
 
     @staticmethod
     def __save_config(config):

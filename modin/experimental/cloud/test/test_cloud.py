@@ -50,31 +50,3 @@ def test_update_conda_requirements(setup_commands_source):
     )
     assert "scikit-learn>=0.23" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result
-
-
-@pytest.mark.parametrize(
-    "git_output",
-    [
-        {
-            "remote": """
-modin   https://github.com/modin-project/modin.git (fetch)
-modin   https://github.com/modin-project/modin.git (push)
-origin  https://github.com/username/modin.git (fetch)
-origin  https://github.com/username/modin.git (push)""",
-            "branch": """
-* sync-modin-between-contexts 8503e3b [origin/sync-modin-between-contexts: ahead 1] FEAT-#2138: sync modin from custom branch
-  taxi-runner                 f9bc050 [origin/taxi-runner: gone] DOCS-#1835: add runner of taxi benchmark as example
-  teamcity-coverage           3ad1674 [origin/teamcity-coverage] FIX-#9999: remove env_windows.yml
-  test-autoscaler             7d0e006 [origin/test-autoscaler: gone] add missing ray
-  update-docstrings           985adb0 Mad function implementation (#1430)""",
-        }
-    ],
-)
-def test__git_state(git_output):
-    with mock.patch(
-        "subprocess.check_output", lambda *args, **kwargs: git_output[args[0][1]]
-    ):
-        repo, branch = RayCluster._git_state()
-
-    assert repo == "https://github.com/username/modin.git"
-    assert branch == "sync-modin-between-contexts"
