@@ -33,4 +33,4 @@ dependencies:
   - cloudpickle==1.4.1
   - boto3
   - pip:
-    - ray>1.0.0
+    - ray>=1.0.0

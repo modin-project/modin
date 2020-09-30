@@ -13,4 +13,4 @@ dependencies:
   - pygithub==1.53
   - omniscidbe4py
   - pip:
-    - ray>1.0.0
+    - ray>=1.0.0
