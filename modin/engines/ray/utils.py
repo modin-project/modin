@@ -105,7 +105,7 @@ def initialize_ray(
                 address=redis_address or "auto",
                 include_dashboard=False,
                 ignore_reinit_error=True,
-                redis_password=redis_password,
+                _redis_password=redis_password,
                 logging_level=100,
             )
         elif cluster == "":

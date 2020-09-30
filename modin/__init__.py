@@ -53,7 +53,7 @@ def get_execution_engine():
             except ImportError:
                 pass
             else:
-                if version.parse(ray.__version__) != version.parse("0.8.7"):
+                if version.parse(ray.__version__) < version.parse("1.0.0"):
                     raise ImportError(
                         "Please `pip install modin[ray]` to install compatible Ray version."
                     )

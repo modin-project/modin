@@ -22,9 +22,7 @@ def deploy_ray_func(func, args):  # pragma: no cover
 class RayTask:
     @classmethod
     def deploy(cls, func, num_returns, kwargs):
-        return deploy_ray_func._remote(
-            args=(func, kwargs), num_returns=num_returns
-        )
+        return deploy_ray_func._remote(args=(func, kwargs), num_returns=num_returns)
 
     @classmethod
     def materialize(cls, obj_id):
