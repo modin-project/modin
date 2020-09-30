@@ -212,26 +212,49 @@ def merge_asof(
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
-    ErrorMessage.default_to_pandas("`merge_asof`")
-    if isinstance(right, DataFrame):
-        right = to_pandas(right)
-    return DataFrame(
-        pandas.merge_asof(
-            to_pandas(left),
-            right,
-            on=on,
-            left_on=left_on,
-            right_on=right_on,
-            left_index=left_index,
-            right_index=right_index,
-            by=by,
-            left_by=left_by,
-            right_by=right_by,
-            suffixes=suffixes,
-            tolerance=tolerance,
-            allow_exact_matches=allow_exact_matches,
-            direction=direction,
-        )
+
+    # Working sketch of the new proposed algorithm. Currently just supports
+    # "on".
+    # TODO support left_on/right_on/left_index/right_index
+    # TODO support suffixes
+    # TODO what does "by" do?
+
+    # 1. Construct Pandas DataFrames with just the on column, and the index as
+    # another column.
+    left_column = left[on]
+    right_column = right[on]
+    left_pandas_limited = pandas.DataFrame(
+        {"on": to_pandas(left_column)}, index=left.index
+    )
+    right_pandas_limited = pandas.DataFrame(
+        {"on": to_pandas(right_column), "right_labels": right.index}
+    )
+
+    # 2. Use Pandas' merge_asof to figure out how to map labels on left to
+    # labels on the right.
+    merged = pandas.merge_asof(
+        left_pandas_limited,
+        right_pandas_limited,
+        on="on",
+        direction=direction,
+        allow_exact_matches=allow_exact_matches,
+        tolerance=tolerance,
+    )
+    # Now merged["right_labels"] shows which labels from right map to left's index.
+
+    # 3. Re-index right using the merged["right_labels"]; at this point right
+    # should be same length and (semantically) same order as left:
+    right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
+    right_subset.drop(columns=[on], inplace=True)
+    right_subset.index = left.index
+
+    # 4. Merge left and the new shrunken right:
+    return merge(
+        left,
+        right_subset,
+        left_index=True,
+        right_index=True,
+        how="left",
     )
 
 
