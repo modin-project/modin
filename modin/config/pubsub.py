@@ -88,7 +88,7 @@ class Publisher(object, metaclass=_ValueMeta):
         """
         raise NotImplementedError()
 
-    def __init_subclass__(cls, type=None, default=None, **kw):
+    def __init_subclass__(cls, type=None, **kw):
         assert type in _CASTERS, f"Unsupported variable type: {type}"
         cls.type = type
         cls._value = None
