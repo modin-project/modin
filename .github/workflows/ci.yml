@@ -166,7 +166,9 @@ jobs:
           conda list
       - name: Internals tests
         shell: bash -l {0}
-        run: python -m pytest modin/test/test_publisher.py modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/config/test
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
