@@ -13,7 +13,7 @@
 
 import pytest
 
-from modin.config import Engine
+from modin.config import Engine, Backend
 from modin import set_backends
 
 from modin.data_management.factories.dispatcher import (
@@ -84,10 +84,10 @@ def test_engine_switch():
     assert EngineDispatcher.get_engine().io_cls == "Foo"
     Engine.put("Python")  # revert engine to default
 
-    Engine.put("Test")
+    Backend.put("Test")
     assert EngineDispatcher.get_engine() == TestOnPythonFactory
     assert EngineDispatcher.get_engine().io_cls == "Bar"
-    Engine.put("Pandas")  # revert engine to default
+    Backend.put("Pandas")  # revert engine to default
 
 
 def test_engine_wrong_factory():
