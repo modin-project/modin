@@ -29,12 +29,12 @@ import itertools
 import functools
 import numpy as np
 import sys
-import os
 from typing import Optional, Sequence, Tuple, Union, Mapping
 import warnings
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
+from modin.config import IsExperimental
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -3410,7 +3410,7 @@ class DataFrame(BasePandasDataset):
         return self._query_compiler.to_pandas()
 
 
-if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
     make_wrapped_class(DataFrame, "make_dataframe_wrapper")

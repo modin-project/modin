@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import numpy as np
 import pandas
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -27,6 +26,7 @@ from typing import Union, Optional
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas
+from modin.config import IsExperimental
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
@@ -2308,7 +2308,7 @@ class Series(BasePandasDataset):
         return series
 
 
-if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
     make_wrapped_class(Series, "make_series_wrapper")

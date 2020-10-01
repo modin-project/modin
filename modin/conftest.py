@@ -12,7 +12,8 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import os
+
+from modin.config import IsExperimental
 
 
 def pytest_addoption(parser):
@@ -53,9 +54,9 @@ class Patcher:
 
 
 def set_experimental_env(mode):
-    import os
+    from modin.config import IsExperimental
 
-    os.environ["MODIN_EXPERIMENTAL"] = "True" if mode == "experimental" else "False"
+    IsExperimental.put(mode == "experimental")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -67,9 +68,7 @@ def simulate_cloud(request):
 
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
-    assert (
-        os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True"
-    ), "Simulated cloud must be started in experimental mode"
+    assert IsExperimental.get(), "Simulated cloud must be started in experimental mode"
 
     from modin.experimental.cloud import create_cluster, get_connection
     import pandas._testing

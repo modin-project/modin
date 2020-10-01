@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import numpy as np
 from numpy import nan
 import pandas
@@ -41,6 +40,7 @@ import pickle as pkl
 from modin.utils import try_cast_to_pandas
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
+from modin.config import IsExperimental
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -3498,7 +3498,7 @@ class BasePandasDataset(object):
         return object.__getattribute__(self, item)
 
 
-if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
     make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
