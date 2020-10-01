@@ -1,7 +1,7 @@
 from . import *
 
 
-def get_help():
+def print_config_help():
     for obj in globals().values():
         if (
             isinstance(obj, type)
@@ -13,4 +13,4 @@ def get_help():
 
 
 if __name__ == "__main__":
-    get_help()
+    print_config_help()

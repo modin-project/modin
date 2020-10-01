@@ -216,3 +216,9 @@ def _check_vars():
 
 
 _check_vars()
+
+__all__ = [
+    name
+    for name, obj in globals().items()
+    if isinstance(obj, type) and issubclass(obj, EnvironmentVariable)
+]
