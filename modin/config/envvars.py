@@ -127,6 +127,12 @@ class CpuCount(EnvironmentVariable, type=int):
 
     varname = "MODIN_CPUS"
 
+    @classmethod
+    def _get_default(cls):
+        import multiprocessing
+
+        return multiprocessing.cpu_count()
+
 
 class Memory(EnvironmentVariable, type=int):
     """

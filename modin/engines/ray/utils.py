@@ -15,9 +15,8 @@ import builtins
 import threading
 import os
 import sys
-import multiprocessing
 
-from modin.config import IsRayCluster, RayRedisAddress
+from modin.config import IsRayCluster, RayRedisAddress, CpuCount
 
 
 def handle_ray_task_error(e):
@@ -105,7 +104,6 @@ def initialize_ray(
                 logging_level=100,
             )
         else:
-            num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
             object_store_memory = os.environ.get("MODIN_MEMORY", None)
             plasma_directory = os.environ.get("MODIN_ON_RAY_PLASMA_DIR", None)
             if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
@@ -133,7 +131,7 @@ def initialize_ray(
             else:
                 object_store_memory = int(object_store_memory)
             ray.init(
-                num_cpus=int(num_cpus),
+                num_cpus=CpuCount.get(),
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _plasma_directory=plasma_directory,

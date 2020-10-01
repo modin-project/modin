@@ -87,7 +87,7 @@ import threading
 import os
 import multiprocessing
 
-from modin.config import Engine, Backend, Parameter
+from modin.config import Engine, Backend, Parameter, CpuCount
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -112,7 +112,7 @@ def _update_engine(publisher: Parameter):
         # With OmniSci backend there is only a single worker per node
         # and we allow it to work on all cores.
         if Backend.get() == "Omnisci":
-            os.environ["MODIN_CPUS"] = "1"
+            CpuCount.put(1)
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
@@ -132,10 +132,7 @@ def _update_engine(publisher: Parameter):
             except ValueError:
                 from distributed import Client
 
-                num_cpus = (
-                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-                )
-                dask_client = Client(n_workers=int(num_cpus))
+                dask_client = Client(n_workers=CpuCount.get())
 
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
