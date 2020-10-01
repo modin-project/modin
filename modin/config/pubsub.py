@@ -15,54 +15,34 @@ import collections
 import typing
 
 
-class Caster(typing.NamedTuple):
+class TypeDescriptor(typing.NamedTuple):
     decode: typing.Callable[[str], object]
-    normalize: typing.Callable[[object], object] = lambda x: x
-    encode: typing.Callable[[object], str] = str
+    normalize: typing.Callable[[object], object]
+    help: str
 
 
-_CASTERS = {
-    str: Caster(
+_TYPE_PARAMS = {
+    str: TypeDescriptor(
         decode=lambda value: value.strip().title(),
         normalize=lambda value: value.strip().title(),
+        help="string",
     ),
-    bool: Caster(
+    bool: TypeDescriptor(
         decode=lambda value: value.strip().lower() in {"true", "yes", "1"},
         normalize=bool,
+        help="boolean flag (any of 'true', 'yes' or '1' in case insensitive manner is considered positive)",
     ),
-    int: Caster(decode=lambda value: int(value.strip()), normalize=int),
+    int: TypeDescriptor(
+        decode=lambda value: int(value.strip()), normalize=int, help="integer value"
+    ),
 }
 
-_TYPE_HELP = {
-    str: "string",
-    bool: "boolean flag (any of 'true', 'yes' or '1' in case insensitive manner is considered positive)",
-    int: "integer value",
-}
+# special marker to distinguish unset value from None value
+# as someone may want to use None as a real value for a parameter
+_UNSET = object()
 
 
-class _ValueMeta(type):
-    """
-    Metaclass is needed to make classmethod property
-    """
-
-    @property
-    def value(cls):
-        if cls._value is None:
-            # get the value from env
-            try:
-                raw = cls._get_raw_from_config()
-            except KeyError:
-                cls._value = cls.default
-            else:
-                cls._value = _CASTERS[cls.type].decode(raw)
-        return cls._value
-
-    @value.setter
-    def value(cls, value):
-        cls._check_callbacks(cls._put_nocallback(value))
-
-
-class Publisher(object, metaclass=_ValueMeta):
+class Publisher(object):
     """
     Base class describing interface for configuration entities
     """
@@ -82,16 +62,16 @@ class Publisher(object, metaclass=_ValueMeta):
         raise NotImplementedError()
 
     @classmethod
-    def _get_help(cls) -> str:
+    def get_help(cls) -> str:
         """
         Generate user-presentable help for the option
         """
         raise NotImplementedError()
 
-    def __init_subclass__(cls, type=None, **kw):
-        assert type in _CASTERS, f"Unsupported variable type: {type}"
+    def __init_subclass__(cls, type, **kw):
+        assert type in _TYPE_PARAMS, f"Unsupported variable type: {type}"
         cls.type = type
-        cls._value = None
+        cls._value = _UNSET
         cls._subs = []
         cls._once = collections.defaultdict(list)
         super().__init_subclass__(**kw)
@@ -102,24 +82,40 @@ class Publisher(object, metaclass=_ValueMeta):
         callback(cls)
 
     @classmethod
+    def get(cls):
+        if cls._value is _UNSET:
+            # get the value from env
+            try:
+                raw = cls._get_raw_from_config()
+            except KeyError:
+                cls._value = cls.default
+            else:
+                cls._value = _TYPE_PARAMS[cls.type].decode(raw)
+        return cls._value
+
+    @classmethod
+    def put(cls, value):
+        cls._check_callbacks(cls._put_nocallback(value))
+
+    @classmethod
     def once(cls, onvalue, callback):
-        onvalue = _CASTERS[cls.type].normalize(onvalue)
-        if onvalue == cls.value:
+        onvalue = _TYPE_PARAMS[cls.type].normalize(onvalue)
+        if onvalue == cls.get():
             callback(cls)
         else:
             cls._once[onvalue].append(callback)
 
     @classmethod
     def _put_nocallback(cls, value):
-        value = _CASTERS[cls.type].normalize(value.title)
-        oldvalue, cls.value = cls.value, value
+        value = _TYPE_PARAMS[cls.type].normalize(value.title)
+        oldvalue, cls._value = cls.get(), value
         return oldvalue
 
     @classmethod
     def _check_callbacks(cls, oldvalue):
-        if oldvalue == cls.value:
+        if oldvalue == cls.get():
             return
         for callback in cls._subs:
             callback(cls)
-        for callback in cls._once.pop(cls.value, ()):
+        for callback in cls._once.pop(cls.get(), ()):
             callback(cls)

@@ -15,7 +15,7 @@ import os
 from textwrap import dedent
 import warnings
 
-from .pubsub import Publisher, _TYPE_HELP
+from .pubsub import Publisher, _TYPE_PARAMS
 
 
 class EnvironmentVariable(Publisher, type=str):
@@ -30,8 +30,8 @@ class EnvironmentVariable(Publisher, type=str):
         return os.environ[cls.varname]
 
     @classmethod
-    def _get_help(cls) -> str:
-        help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide a {_TYPE_HELP[cls.type]}"
+    def get_help(cls) -> str:
+        help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide a {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
             help += f" (valid examples are: {', '.join(cls.choices)})"
         return help

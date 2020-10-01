@@ -9,7 +9,7 @@ def get_help():
             and obj is not EnvironmentVariable
             and obj is not Publisher
         ):
-            print(f"{obj._get_help()}\nvalue={obj.value}")
+            print(f"{obj.get_help()}\nvalue={obj.get()}")
 
 
 if __name__ == "__main__":
