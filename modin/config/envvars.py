@@ -176,7 +176,9 @@ def _check_vars():
     unknown = found_names - valid_names
     if unknown:
         warnings.warn(
-            f"Found unknown environment variables, please check their spelling: {', '.join(sorted(unknown))}"
+            f"Found unknown environment variable{'s' if len(unknown) > 1 else ''},"
+            f" please check {'their' if len(unknown) > 1 else 'its'} spelling: "
+            + ", ".join(sorted(unknown))
         )
 
 
