@@ -19,7 +19,7 @@ from packaging import version
 from .pubsub import Parameter, _TYPE_PARAMS
 
 
-class EnvironmentVariable(Parameter, type=str):
+class EnvironmentVariable(Parameter, type=str, abstract=True):
     """
     Base class for environment variables-based configuration
     """
@@ -201,9 +201,9 @@ def _check_vars():
     valid_names = {
         obj.varname
         for obj in globals().values()
-        if obj is not EnvironmentVariable
-        and isinstance(obj, type)
+        if isinstance(obj, type)
         and issubclass(obj, EnvironmentVariable)
+        and not obj.is_abstract
     }
     found_names = {name for name in os.environ.keys() if name.startswith("MODIN_")}
     unknown = found_names - valid_names

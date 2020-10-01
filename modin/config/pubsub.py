@@ -61,6 +61,7 @@ class Parameter(object):
     choices: typing.Sequence[str] = None
     type = str
     default = None
+    is_abstract = True
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -79,9 +80,10 @@ class Parameter(object):
         """
         raise NotImplementedError()
 
-    def __init_subclass__(cls, type, **kw):
+    def __init_subclass__(cls, type, abstract=False, **kw):
         assert type in _TYPE_PARAMS, f"Unsupported variable type: {type}"
         cls.type = type
+        cls.is_abstract = abstract
         cls._value = _UNSET
         cls._subs = []
         cls._once = collections.defaultdict(list)
