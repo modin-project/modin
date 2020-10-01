@@ -32,7 +32,7 @@ class EnvironmentVariable(Parameter, type=str):
 
     @classmethod
     def get_help(cls) -> str:
-        help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide a {_TYPE_PARAMS[cls.type].help}"
+        help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
             help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
         return help
@@ -64,7 +64,7 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) != version.parse("0.8.7"):
+            if version.parse(ray.__version__) < version.parse("1.0.0"):
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray version."
                 )
@@ -216,9 +216,3 @@ def _check_vars():
 
 
 _check_vars()
-
-__all__ = [
-    name
-    for name, obj in globals().items()
-    if isinstance(obj, type) and issubclass(obj, EnvironmentVariable)
-]

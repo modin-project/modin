@@ -26,7 +26,7 @@ except ImportError:
 else:
     import types
     import copyreg
-    from modin import execution_engine
+    from modin.config import Engine
     from modin.data_management.factories import REMOTE_ENGINES
     import modin
     import pandas
@@ -62,7 +62,7 @@ else:
 
         def __init__(self):
             self.__own_attrs__ = set(type(self).__dict__.keys())
-            execution_engine.subscribe(self.__update_engine)
+            Engine.subscribe(self.__update_engine)
 
         def __swap_numpy(self, other_numpy=None):
             self.__current_numpy, self.__prev_numpy = (
@@ -79,7 +79,7 @@ else:
                 self.__has_to_warn = False
 
         def __update_engine(self, _):
-            if execution_engine.get() in REMOTE_ENGINES:
+            if Engine.get() in REMOTE_ENGINES:
                 from modin.experimental.cloud import get_connection
 
                 self.__swap_numpy(get_connection().modules["numpy"])

@@ -27,7 +27,7 @@ _TYPE_PARAMS = {
         decode=lambda value: value.strip().title(),
         normalize=lambda value: value.strip().title(),
         verify=lambda value: True,
-        help="string",
+        help="a string",
     ),
     bool: TypeDescriptor(
         decode=lambda value: value.strip().lower() in {"true", "yes", "1"},
@@ -37,14 +37,14 @@ _TYPE_PARAMS = {
             isinstance(value, str)
             and value.strip().lower() in {"true", "yes", "1", "false", "no", "0"}
         ),
-        help="boolean flag (any of 'true', 'yes' or '1' in case insensitive manner is considered positive)",
+        help="a boolean flag (any of 'true', 'yes' or '1' in case insensitive manner is considered positive)",
     ),
     int: TypeDescriptor(
         decode=lambda value: int(value.strip()),
         normalize=int,
         verify=lambda value: isinstance(value, int)
         or (isinstance(value, str) and value.strip().isdigit()),
-        help="integer value",
+        help="an integer value",
     ),
 }
 

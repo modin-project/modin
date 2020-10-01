@@ -15,7 +15,7 @@ import sys
 import inspect
 import types
 
-from modin import execution_engine
+from modin.config import Engine
 from modin.data_management.factories import REMOTE_ENGINES
 
 # the attributes that must be alwasy taken from a local part of dual-nature class,
@@ -154,11 +154,11 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     _KNOWN_DUALS[local_cls] = result
 
     def update_class(_):
-        if execution_engine.get() in REMOTE_ENGINES:
+        if Engine.get() in REMOTE_ENGINES:
             from . import rpyc_proxy
 
             result.__real_cls__ = getattr(rpyc_proxy, rpyc_wrapper_name)(result)
         else:
             result.__real_cls__ = result
 
-    execution_engine.subscribe(update_class)
+    Engine.subscribe(update_class)
