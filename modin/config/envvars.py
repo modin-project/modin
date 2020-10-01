@@ -14,6 +14,7 @@
 import os
 from textwrap import dedent
 import warnings
+from packaging import version
 
 from .pubsub import Parameter, _TYPE_PARAMS
 
@@ -37,6 +38,14 @@ class EnvironmentVariable(Parameter, type=str):
         return help
 
 
+class IsDebug(EnvironmentVariable, type=bool):
+    """
+    Forces Modin engine to be "Python" unless specified by $MODIN_ENGINE
+    """
+
+    varname = "MODIN_DEBUG"
+
+
 class Engine(EnvironmentVariable, type=str):
     """
     Distribution engine to run queries by
@@ -45,6 +54,39 @@ class Engine(EnvironmentVariable, type=str):
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python")
 
+    def __compute_default():
+        if IsDebug.get():
+            return "Python"
+        try:
+            import ray
+
+        except ImportError:
+            pass
+        else:
+            if version.parse(ray.__version__) != version.parse("0.8.7"):
+                raise ImportError(
+                    "Please `pip install modin[ray]` to install compatible Ray version."
+                )
+            return "Ray"
+        try:
+            import dask
+            import distributed
+
+        except ImportError:
+            raise ImportError(
+                "Please `pip install modin[ray]` or `modin[dask]` to install an engine"
+            )
+        if version.parse(dask.__version__) < version.parse("2.1.0") or version.parse(
+            distributed.__version__
+        ) < version.parse("2.3.2"):
+            raise ImportError(
+                "Please `pip install modin[dask]` to install compatible Dask version."
+            )
+        return "Dask"
+
+    default = __compute_default()
+    del __compute_default
+
 
 class Backend(EnvironmentVariable, type=str):
     """
@@ -52,15 +94,8 @@ class Backend(EnvironmentVariable, type=str):
     """
 
     varname = "MODIN_BACKEND"
+    default = "Pandas"
     choices = ("Pandas", "OmniSci", "Pyarrow")
-
-
-class IsDebug(EnvironmentVariable, type=bool):
-    """
-    Forces Modin engine to be "Python" unless specified by $MODIN_ENGINE
-    """
-
-    varname = "MODIN_DEBUG"
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
