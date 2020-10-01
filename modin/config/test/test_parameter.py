@@ -12,42 +12,51 @@
 # governing permissions and limitations under the License.
 
 from collections import defaultdict
+import pytest
 
-from modin import Publisher
-
-
-def test_equals():
-    pub = Publisher("name", "value1")
-    assert pub.get() == "Value1"
-
-    pub.put("value2")
-    assert pub.get() == "Value2"
+from modin.config.pubsub import Parameter
 
 
-def test_triggers():
+@pytest.fixture
+def prefilled_parameter():
+    class Prefilled(Parameter, type=str):
+        @classmethod
+        def _get_raw_from_config(cls):
+            return "init"
+
+    return Prefilled
+
+
+def test_equals(prefilled_parameter):
+    assert prefilled_parameter.get() == "Init"
+
+    prefilled_parameter.put("value2")
+    assert prefilled_parameter.get() == "Value2"
+
+
+def test_triggers(prefilled_parameter):
     results = defaultdict(int)
     callbacks = []
 
     def make_callback(name, res=results):
-        def callback(p: Publisher):
+        def callback(p: Parameter):
             res[name] += 1
 
         # keep reference to callbacks so they won't be removed by GC
         callbacks.append(callback)
         return callback
 
-    pub = Publisher("name", "init")
-    pub.once("init", make_callback("init"))
+    prefilled_parameter.once("init", make_callback("init"))
     assert results["init"] == 1
 
-    pub.once("never", make_callback("never"))
-    pub.once("once", make_callback("once"))
-    pub.subscribe(make_callback("subscribe"))
+    prefilled_parameter.once("never", make_callback("never"))
+    prefilled_parameter.once("once", make_callback("once"))
+    prefilled_parameter.subscribe(make_callback("subscribe"))
 
-    pub.put("multi")
-    pub.put("once")
-    pub.put("multi")
-    pub.put("once")
+    prefilled_parameter.put("multi")
+    prefilled_parameter.put("once")
+    prefilled_parameter.put("multi")
+    prefilled_parameter.put("once")
 
     expected = [("init", 1), ("never", 0), ("once", 1), ("subscribe", 5)]
     for name, val in expected:

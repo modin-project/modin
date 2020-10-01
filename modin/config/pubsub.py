@@ -111,7 +111,7 @@ class Parameter(object):
 
     @classmethod
     def _put_nocallback(cls, value):
-        value = _TYPE_PARAMS[cls.type].normalize(value.title)
+        value = _TYPE_PARAMS[cls.type].normalize(value)
         oldvalue, cls._value = cls.get(), value
         return oldvalue
 
