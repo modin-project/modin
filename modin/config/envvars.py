@@ -34,7 +34,7 @@ class EnvironmentVariable(Parameter, type=str):
     def get_help(cls) -> str:
         help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide a {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
-            help += f" (valid examples are: {', '.join(cls.choices)})"
+            help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
         return help
 
 

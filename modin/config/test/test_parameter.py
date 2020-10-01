@@ -82,6 +82,7 @@ def test_validation(parameter, good, bad):
         with pytest.raises(ValueError):
             parameter.put(inval)
 
+
 @pytest.mark.parametrize("vartype", [bool, int])
 def test_init_validation(vartype):
     parameter = make_prefilled(vartype, "bad value")
