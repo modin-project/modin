@@ -16,7 +16,14 @@ import threading
 import os
 import sys
 
-from modin.config import IsRayCluster, RayRedisAddress, CpuCount
+from modin.config import (
+    IsRayCluster,
+    RayRedisAddress,
+    CpuCount,
+    Memory,
+    RayPlasmaDir,
+    IsOutOfCore,
+)
 
 
 def handle_ray_task_error(e):
@@ -104,10 +111,9 @@ def initialize_ray(
                 logging_level=100,
             )
         else:
-            object_store_memory = os.environ.get("MODIN_MEMORY", None)
-            plasma_directory = os.environ.get("MODIN_ON_RAY_PLASMA_DIR", None)
-            if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
-
+            object_store_memory = Memory.get()
+            plasma_directory = RayPlasmaDir.get()
+            if IsOutOfCore.get():
                 if plasma_directory is None:
                     from tempfile import gettempdir
 
