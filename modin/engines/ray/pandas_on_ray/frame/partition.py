@@ -197,12 +197,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote(num_return_vals=2)
+@ray.remote(num_returns=2)
 def get_index_and_columns(df):
     return len(df.index), len(df.columns)
 
 
-@ray.remote(num_return_vals=3)
+@ray.remote(num_returns=3)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):

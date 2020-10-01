@@ -105,7 +105,7 @@ def initialize_ray(
                 address=redis_address or "auto",
                 include_dashboard=False,
                 ignore_reinit_error=True,
-                redis_password=redis_password,
+                _redis_password=redis_password,
                 logging_level=100,
             )
         elif cluster == "":
@@ -140,13 +140,13 @@ def initialize_ray(
                 num_cpus=int(num_cpus),
                 include_dashboard=False,
                 ignore_reinit_error=True,
-                plasma_directory=plasma_directory,
+                _plasma_directory=plasma_directory,
                 object_store_memory=object_store_memory,
                 address=redis_address,
-                redis_password=redis_password,
+                _redis_password=redis_password,
                 logging_level=100,
-                memory=object_store_memory,
-                lru_evict=True,
+                _memory=object_store_memory,
+                _lru_evict=True,
             )
         else:
             raise ValueError(
