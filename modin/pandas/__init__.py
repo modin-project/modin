@@ -87,7 +87,7 @@ import threading
 import os
 import multiprocessing
 
-from modin.config import Engine, Backend, Parameter, CpuCount
+from modin.config import Engine, Parameter
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -104,6 +104,7 @@ _NOINIT_ENGINES = {
 
 def _update_engine(publisher: Parameter):
     global DEFAULT_NPARTITIONS, dask_client, num_cpus
+    from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
         import ray
@@ -330,4 +331,4 @@ __all__ = [
     "DEFAULT_NPARTITIONS",
 ]
 
-del pandas
+del pandas, Engine, Parameter
