@@ -18,6 +18,7 @@ import typing
 class TypeDescriptor(typing.NamedTuple):
     decode: typing.Callable[[str], object]
     normalize: typing.Callable[[object], object]
+    verify: typing.Callable[[object], bool]
     help: str
 
 
@@ -25,15 +26,25 @@ _TYPE_PARAMS = {
     str: TypeDescriptor(
         decode=lambda value: value.strip().title(),
         normalize=lambda value: value.strip().title(),
+        verify=lambda value: True,
         help="string",
     ),
     bool: TypeDescriptor(
         decode=lambda value: value.strip().lower() in {"true", "yes", "1"},
         normalize=bool,
+        verify=lambda value: isinstance(value, bool)
+        or (
+            isinstance(value, str)
+            and value.strip().lower() in {"true", "yes", "1", "false", "no", "0"}
+        ),
         help="boolean flag (any of 'true', 'yes' or '1' in case insensitive manner is considered positive)",
     ),
     int: TypeDescriptor(
-        decode=lambda value: int(value.strip()), normalize=int, help="integer value"
+        decode=lambda value: int(value.strip()),
+        normalize=int,
+        verify=lambda value: isinstance(value, int)
+        or (isinstance(value, str) and value.strip().isdigit()),
+        help="integer value",
     ),
 }
 
@@ -94,6 +105,8 @@ class Parameter(object):
             except KeyError:
                 cls._value = cls._get_default()
             else:
+                if not _TYPE_PARAMS[cls.type].verify(raw):
+                    raise ValueError(f"Unsupported raw value: {raw}")
                 cls._value = _TYPE_PARAMS[cls.type].decode(raw)
         return cls._value
 
@@ -111,6 +124,8 @@ class Parameter(object):
 
     @classmethod
     def _put_nocallback(cls, value):
+        if not _TYPE_PARAMS[cls.type].verify(value):
+            raise ValueError(f"Unsupported value: {value}")
         value = _TYPE_PARAMS[cls.type].normalize(value)
         oldvalue, cls._value = cls.get(), value
         return oldvalue

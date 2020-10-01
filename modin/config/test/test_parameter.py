@@ -17,14 +17,18 @@ import pytest
 from modin.config.pubsub import Parameter
 
 
-@pytest.fixture
-def prefilled_parameter():
-    class Prefilled(Parameter, type=str):
+def make_prefilled(vartype, varinit):
+    class Prefilled(Parameter, type=vartype):
         @classmethod
         def _get_raw_from_config(cls):
-            return "init"
+            return varinit
 
     return Prefilled
+
+
+@pytest.fixture
+def prefilled_parameter():
+    return make_prefilled(str, "init")
 
 
 def test_equals(prefilled_parameter):
@@ -61,3 +65,25 @@ def test_triggers(prefilled_parameter):
     expected = [("init", 1), ("never", 0), ("once", 1), ("subscribe", 5)]
     for name, val in expected:
         assert results[name] == val, "{} has wrong count".format(name)
+
+
+@pytest.mark.parametrize(
+    "parameter,good,bad",
+    [
+        (make_prefilled(bool, "false"), {"1": True, False: False}, ["nope", 2]),
+        (make_prefilled(int, "10"), {" 15\t": 15, 25: 25}, ["-10", 1.0, "foo"]),
+    ],
+)
+def test_validation(parameter, good, bad):
+    for inval, outval in good.items():
+        parameter.put(inval)
+        assert parameter.get() == outval
+    for inval in bad:
+        with pytest.raises(ValueError):
+            parameter.put(inval)
+
+@pytest.mark.parametrize("vartype", [bool, int])
+def test_init_validation(vartype):
+    parameter = make_prefilled(vartype, "bad value")
+    with pytest.raises(ValueError):
+        parameter.get()

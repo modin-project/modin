@@ -9,7 +9,7 @@ def get_help():
             and obj is not EnvironmentVariable
             and obj is not Parameter
         ):
-            print(f"{obj.get_help()}\nvalue={obj.get()}")
+            print(f"{obj.get_help()}\nCurrent value={obj.get()}")
 
 
 if __name__ == "__main__":
