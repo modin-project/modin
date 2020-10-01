@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import pandas
-import modin
 from modin.config import Engine, Backend, IsExperimental
 
 
