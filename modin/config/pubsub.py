@@ -82,13 +82,17 @@ class Parameter(object):
         callback(cls)
 
     @classmethod
+    def _get_default(cls):
+        return cls.default
+
+    @classmethod
     def get(cls):
         if cls._value is _UNSET:
             # get the value from env
             try:
                 raw = cls._get_raw_from_config()
             except KeyError:
-                cls._value = cls.default
+                cls._value = cls._get_default()
             else:
                 cls._value = _TYPE_PARAMS[cls.type].decode(raw)
         return cls._value

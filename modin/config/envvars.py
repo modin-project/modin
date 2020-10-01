@@ -54,7 +54,8 @@ class Engine(EnvironmentVariable, type=str):
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python")
 
-    def __compute_default():
+    @classmethod
+    def _get_default(cls):
         if IsDebug.get():
             return "Python"
         try:
@@ -83,9 +84,6 @@ class Engine(EnvironmentVariable, type=str):
                 "Please `pip install modin[dask]` to install compatible Dask version."
             )
         return "Dask"
-
-    default = __compute_default()
-    del __compute_default
 
 
 class Backend(EnvironmentVariable, type=str):
