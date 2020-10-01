@@ -11,5 +11,5 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .pubsub import Publisher
+from .pubsub import Parameter
 from .envvars import *

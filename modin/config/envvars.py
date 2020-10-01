@@ -15,10 +15,10 @@ import os
 from textwrap import dedent
 import warnings
 
-from .pubsub import Publisher, _TYPE_PARAMS
+from .pubsub import Parameter, _TYPE_PARAMS
 
 
-class EnvironmentVariable(Publisher, type=str):
+class EnvironmentVariable(Parameter, type=str):
     """
     Base class for environment variables-based configuration
     """

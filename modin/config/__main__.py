@@ -5,9 +5,9 @@ def get_help():
     for obj in globals().values():
         if (
             isinstance(obj, type)
-            and issubclass(obj, Publisher)
+            and issubclass(obj, Parameter)
             and obj is not EnvironmentVariable
-            and obj is not Publisher
+            and obj is not Parameter
         ):
             print(f"{obj.get_help()}\nvalue={obj.get()}")
 

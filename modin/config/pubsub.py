@@ -42,7 +42,7 @@ _TYPE_PARAMS = {
 _UNSET = object()
 
 
-class Publisher(object):
+class Parameter(object):
     """
     Base class describing interface for configuration entities
     """
