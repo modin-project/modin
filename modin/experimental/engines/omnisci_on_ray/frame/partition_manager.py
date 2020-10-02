@@ -58,6 +58,8 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 nrows = len(df)
             return df.iloc[nrows, cols]
 
+        # picking first rows from cols with `dtype="object"` to check its actual type,
+        # in case of homogen columns that saves us unnecessary convertion to arrow table
         type_samples = fast_select_dtypes(df, dtype="object", nrows=0)
         result = None
 
@@ -86,8 +88,13 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 ]
 
         if len(unsupported_cols) == 0:
+            # Since we already have arrow table, putting it into partitions instead
+            # of pandas frame, to skip that phase when we will be putting our frame to OmniSci
             result = cls.from_arrow(at, return_dims)
         elif result is None:
+            # Putting pandas frame into partitions instead of arrow table, because we know
+            # that all of operations with this frame will be default to pandas and don't want
+            # unnecessaries conversion pandas->arrow->pandas
             result = super().from_pandas(df, return_dims)
 
         return result, unsupported_cols

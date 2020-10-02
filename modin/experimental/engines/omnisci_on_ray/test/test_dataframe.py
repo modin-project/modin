@@ -1415,7 +1415,7 @@ class TestBadData:
 
     def test_methods(self):
         def applier(df, *args, **kwargs):
-            return df
+            return df.T.drop(columns=[0])
 
         run_and_compare(applier, data=self.data, force_lazy=False)
 
