@@ -1399,5 +1399,32 @@ class TestSort:
     #    )
 
 
+class TestBadData:
+    data = {
+        "a": ["a", [[1, 2], [3]], [3, 4]],
+        "b": [[1, 2], [3, 4], [5, 6]],
+        "c": ["1", "2", 3],
+    }
+    data2 = {"d": np.arange(3), "e": np.arange(3), "f": np.arange(3)}
+
+    def test_construct(self):
+        def applier(df, *args, **kwargs):
+            return repr(df)
+
+        run_and_compare(applier, data=self.data, force_lazy=False)
+
+    def test_methods(self):
+        def applier(df, *args, **kwargs):
+            return df
+
+        run_and_compare(applier, data=self.data, force_lazy=False)
+
+    def test_with_normal_frame(self):
+        def applier(df1, df2, *args, **kwargs):
+            return df2.join(df1)
+
+        run_and_compare(applier, data=self.data, data2=self.data2, force_lazy=False)
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

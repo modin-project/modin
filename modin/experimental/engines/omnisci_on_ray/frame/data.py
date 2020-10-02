@@ -17,6 +17,7 @@ from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import _get_dtype, is_list_like, is_bool_dtype
+from modin.error_message import ErrorMessage
 import pandas as pd
 
 from .df_algebra import (
@@ -67,6 +68,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         index_cols=None,
         uses_rowid=False,
         force_execution_mode=None,
+        is_default_frame=False,
     ):
         assert dtypes is not None
 
@@ -83,6 +85,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         self._columns_cache = columns
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
+        self._is_default_frame = is_default_frame
         if self._op is None:
             self._op = FrameNode(self)
 
@@ -1203,7 +1206,16 @@ class OmnisciOnRayFrame(BasePandasFrame):
             orig_df.index.names = orig_index_names
         new_dtypes = df.dtypes
         df = df.add_prefix("F_")
-        new_parts, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
+
+        partitions, unsupported_cols = cls._frame_mgr_cls.from_pandas(df, True)
+        new_parts, new_lengths, new_widths = partitions
+
+        if len(unsupported_cols) > 0:
+            ErrorMessage.single_warning(
+                f"Frame contain columns with unsupported data-types: {unsupported_cols}. "
+                "All operations with this frame will be default to pandas!"
+            )
+
         return cls(
             new_parts,
             new_index,
@@ -1212,6 +1224,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_widths,
             dtypes=new_dtypes,
             index_cols=index_cols,
+            is_default_frame=len(unsupported_cols) > 0,
         )
 
     @classmethod

@@ -14,6 +14,7 @@
 from modin.backends.base.query_compiler import (
     BaseQueryCompiler,
     _set_axis as default_axis_setter,
+    _get_axis as default_axis_getter,
 )
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 
@@ -23,6 +24,59 @@ from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 
 
+def is_default_frame(value):
+    if isinstance(value, (tuple, list)):
+        result = False
+        for val in value:
+            result = result or is_default_frame(val)
+        return result
+    elif isinstance(value, dict):
+        return is_default_frame(list(value.values()))
+    else:
+        value = getattr(value, "_query_compiler", value)
+        if hasattr(value, "_modin_frame"):
+            return value._modin_frame._is_default_frame
+    return False
+
+
+def build_method_wrapper(name, method):
+    def method_wrapper(self, *args, **kwargs):
+        if is_default_frame([self, args, kwargs]):
+            return getattr(BaseQueryCompiler, name)(self, *args, **kwargs)
+        return method(self, *args, **kwargs)
+
+    return method_wrapper
+
+
+def bind_wrappers(cls):
+    exclude = set(
+        [
+            "__init__",
+            "to_pandas",
+            "from_pandas",
+            "from_arrow",
+            "default_to_pandas",
+            "_get_index",
+            "_set_index",
+            "_get_columns",
+            "_set_columns",
+        ]
+    )
+    for name, method in cls.__dict__.items():
+        if name in exclude:
+            continue
+
+        if callable(method):
+            setattr(
+                cls,
+                name,
+                build_method_wrapper(name, method),
+            )
+
+    return cls
+
+
+@bind_wrappers
 class DFAlgQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
     with a lazy DataFrame Algebra based backend."""
@@ -248,17 +302,25 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return new_qc
 
     def _get_index(self):
+        if self._modin_frame._is_default_frame:
+            return default_axis_getter(0)(self)
         return self._modin_frame.index
 
     def _set_index(self, index):
+        if self._modin_frame._is_default_frame:
+            return default_axis_setter(0)(self, index)
         default_axis_setter(0)(self, index)
         # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
         # self._modin_frame.index = index
 
     def _get_columns(self):
+        if self._modin_frame._is_default_frame:
+            return default_axis_getter(1)(self)
         return self._modin_frame.columns
 
     def _set_columns(self, columns):
+        if self._modin_frame._is_default_frame:
+            return default_axis_setter(1)(self, columns)
         self._modin_frame = self._modin_frame._set_columns(columns)
 
     def fillna(

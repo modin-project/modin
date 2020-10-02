@@ -26,6 +26,7 @@ from modin.config import DoUseCalcite
 
 import pyarrow
 import pandas
+import re
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
@@ -45,6 +46,51 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         :return:
         """
         return 1
+
+    @classmethod
+    def from_pandas(cls, df, return_dims=False):
+        if df.empty:
+            return super().from_pandas(df, return_dims), []
+
+        def fast_select_dtypes(df, dtype, nrows=None):
+            cols = [i for i, col in enumerate(df.dtypes.items()) if col[1] == dtype]
+            if nrows is None:
+                nrows = len(df)
+            return df.iloc[nrows, cols]
+
+        type_samples = fast_select_dtypes(df, dtype="object", nrows=0)
+        result = None
+
+        unsupported_cols = [
+            name for name, col in type_samples.items() if not isinstance(col, str)
+        ]
+
+        if len(unsupported_cols) > 0:
+            result = super().from_pandas(df, return_dims)
+        else:
+            try:
+                at = pyarrow.Table.from_pandas(df)
+            except pyarrow.lib.ArrowTypeError as e:
+                regex = r"Conversion failed for column ([^\W]*)"
+                unsupported_cols = []
+                for msg in e.args:
+                    match = re.findall(regex, msg)
+                    unsupported_cols.extend(match)
+            else:
+                unsupported_cols = [
+                    field.name
+                    for field in at.schema
+                    if not isinstance(field.type, pyarrow.DictionaryType)
+                    and field.type.to_pandas_dtype() == np.dtype("O")
+                    and field.type != "string"
+                ]
+
+        if len(unsupported_cols) == 0:
+            result = cls.from_arrow(at, return_dims)
+        elif result is None:
+            result = super().from_pandas(df, return_dims)
+
+        return result, unsupported_cols
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
