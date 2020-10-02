@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install ray==0.8.7
+      - run: pip install "ray>=1.0.0"
 
   test-defaults:
     needs: prepare-cache
