@@ -27,6 +27,7 @@ from modin.pandas.test.test_io import (  # noqa: F401
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if Engine.get() == "Ray":
+        pytest.xfail("Distributed read_sql is broken, see GH#2194")
         filename = "test_from_sql_distributed.db"
         table = "test_from_sql_distributed"
         conn = make_sql_connection(filename, table)
