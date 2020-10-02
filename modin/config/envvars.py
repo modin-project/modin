@@ -151,6 +151,10 @@ class RayPlasmaDir(EnvironmentVariable, type=str):
 
 
 class IsOutOfCore(EnvironmentVariable, type=bool):
+    """
+    Changes primary location of the DataFrame to disk, allowing one to exceed total system memory
+    """
+
     varname = "MODIN_OUT_OF_CORE"
 
 
@@ -204,6 +208,10 @@ class TestDatasetSize(EnvironmentVariable, type=str):
 
 
 def _check_vars():
+    """
+    Look out for any environment variables that start with "MODIN_" prefix
+    that are unknown - they might be a typo, so warn a user
+    """
     valid_names = {
         obj.varname
         for obj in globals().values()
