@@ -109,7 +109,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_size(
-        query_compiler,
+        self,
         by,
         axis,
         groupby_args,
@@ -139,10 +139,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         -------
         BaseQueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by,
             axis,
-            {query_compiler._modin_frame.columns[0]: "size"},
+            {self._modin_frame.columns[0]: "size"},
             groupby_args,
             **kwargs,
         )
@@ -152,12 +152,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
-        new_qc = query_compiler.__constructor__(new_frame, shape_hint=shape_hint)
+        new_qc = self.__constructor__(new_frame, shape_hint=shape_hint)
         if groupby_args["squeeze"]:
             new_qc = new_qc.squeeze()
         return new_qc
 
-    def groupby_sum(query_compiler, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
 
         Parameters
@@ -177,15 +177,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         QueryCompiler
             A new QueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
         )
-        new_qc = query_compiler.__constructor__(new_frame)
+        new_qc = self.__constructor__(new_frame)
         if groupby_args["squeeze"]:
             new_qc = new_qc.squeeze()
         return new_qc
 
-    def groupby_count(query_compiler, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
         """Perform a groupby count.
 
         Parameters
@@ -209,10 +209,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         -------
         QueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by, axis, "count", groupby_args, **kwargs
         )
-        new_qc = query_compiler.__constructor__(new_frame)
+        new_qc = self.__constructor__(new_frame)
         if groupby_args["squeeze"]:
             new_qc = new_qc.squeeze()
         return new_qc
