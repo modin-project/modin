@@ -14,6 +14,7 @@
 import os
 import pandas
 import numpy as np
+import pyarrow
 import pytest
 
 from modin.config import IsExperimental, Engine, Backend
@@ -1400,30 +1401,51 @@ class TestSort:
 
 
 class TestBadData:
-    data = {
+    bad_for_arrow = {
         "a": ["a", [[1, 2], [3]], [3, 4]],
         "b": [[1, 2], [3, 4], [5, 6]],
         "c": ["1", "2", 3],
     }
-    data2 = {"d": np.arange(3), "e": np.arange(3), "f": np.arange(3)}
+    bad_for_omnisci = {
+        "b": [[1, 2], [3, 4], [5, 6]],
+        "c": ["1", "2", "3"],
+    }
+    ok_data = {"d": np.arange(3), "e": np.arange(3), "f": np.arange(3)}
 
-    def test_construct(self):
+    def _get_pyarrow_table(self, obj):
+        if not isinstance(obj, (pandas.DataFrame, pandas.Series)):
+            obj = pandas.DataFrame(obj)
+
+        return pyarrow.Table.from_pandas(obj)
+
+    @pytest.mark.parametrize("data", [bad_for_arrow, bad_for_omnisci])
+    def test_construct(self, data):
         def applier(df, *args, **kwargs):
             return repr(df)
 
-        run_and_compare(applier, data=self.data, force_lazy=False)
+        run_and_compare(applier, data=data, force_lazy=False)
 
-    def test_methods(self):
+    def test_from_arrow(self):
+        at = self._get_pyarrow_table(self.bad_for_omnisci)
+        md_df, pd_df = pd.utils.from_arrow(at), pandas.DataFrame(self.bad_for_omnisci)
+        # force materialization
+        repr(md_df)
+        df_equals(md_df, pd_df)
+
+    @pytest.mark.parametrize("data", [bad_for_arrow, bad_for_omnisci])
+    def test_methods(self, data):
         def applier(df, *args, **kwargs):
             return df.T.drop(columns=[0])
 
-        run_and_compare(applier, data=self.data, force_lazy=False)
+        run_and_compare(applier, data=data, force_lazy=False)
 
     def test_with_normal_frame(self):
         def applier(df1, df2, *args, **kwargs):
             return df2.join(df1)
 
-        run_and_compare(applier, data=self.data, data2=self.data2, force_lazy=False)
+        run_and_compare(
+            applier, data=self.bad_for_omnisci, data2=self.ok_data, force_lazy=False
+        )
 
 
 if __name__ == "__main__":

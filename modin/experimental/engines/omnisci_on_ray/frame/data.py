@@ -1228,6 +1228,28 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
     @classmethod
+    def from_arrow(cls, at):
+        partitions, unsupported_cols = cls._frame_mgr_cls.from_arrow(
+            at, return_dims=True
+        )
+        new_frame, new_lengths, new_widths = partitions
+        new_columns = pd.Index(data=at.column_names, dtype="O")
+        new_index = pd.RangeIndex(at.num_rows)
+        new_dtypes = pd.Series(
+            [cls._arrow_type_to_dtype(col.type) for col in at.columns],
+            index=new_columns,
+        )
+        return cls(
+            partitions=new_frame,
+            index=new_index,
+            columns=new_columns,
+            row_lengths=new_lengths,
+            column_widths=new_widths,
+            dtypes=new_dtypes,
+            is_default_frame=len(unsupported_cols) > 0,
+        )
+
+    @classmethod
     def _is_trivial_index(cls, index):
         """Return true if index is a range [0..N]"""
         if isinstance(index, pd.RangeIndex):
