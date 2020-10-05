@@ -1233,12 +1233,20 @@ class OmnisciOnRayFrame(BasePandasFrame):
             at, return_dims=True
         )
         new_frame, new_lengths, new_widths = partitions
+
         new_columns = pd.Index(data=at.column_names, dtype="O")
         new_index = pd.RangeIndex(at.num_rows)
         new_dtypes = pd.Series(
             [cls._arrow_type_to_dtype(col.type) for col in at.columns],
             index=new_columns,
         )
+
+        if len(unsupported_cols) > 0:
+            ErrorMessage.single_warning(
+                f"Frame contain columns with unsupported data-types: {unsupported_cols}. "
+                "All operations with this frame will be default to pandas!"
+            )
+
         return cls(
             partitions=new_frame,
             index=new_index,
