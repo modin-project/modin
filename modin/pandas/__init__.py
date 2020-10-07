@@ -204,7 +204,6 @@ from .io import (
     json_normalize,
     read_orc,
 )
-from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
 from .series import Series
 from .general import (
     concat,
@@ -221,6 +220,11 @@ from .general import (
     to_datetime,
     unique,
     value_counts,
+    get_dummies,
+    melt,
+    crosstab,
+    lreshape,
+    wide_to_long,
 )
 from .plotting import Plotting as plotting
 
