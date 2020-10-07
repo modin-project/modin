@@ -179,7 +179,6 @@ Engine.subscribe(_update_engine)
 
 from .. import __version__
 from .dataframe import DataFrame
-from .datetimes import to_datetime
 from .io import (
     read_csv,
     read_parquet,
@@ -219,6 +218,7 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    to_datetime,
     unique,
     value_counts,
 )
