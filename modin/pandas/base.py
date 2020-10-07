@@ -2712,7 +2712,7 @@ class BasePandasDataset(object):
                     return new_frame
             else:
                 res_columns = self.columns
-                from .concat import concat
+                from .general import concat
 
                 if periods > 0:
                     dropped_df = self.drop(self.columns[-periods:], axis="columns")

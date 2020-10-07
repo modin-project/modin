@@ -178,7 +178,6 @@ def _update_engine(publisher: Parameter):
 Engine.subscribe(_update_engine)
 
 from .. import __version__
-from .concat import concat
 from .dataframe import DataFrame
 from .datetimes import to_datetime
 from .io import (
@@ -209,6 +208,7 @@ from .io import (
 from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
 from .series import Series
 from .general import (
+    concat,
     isna,
     isnull,
     merge,
