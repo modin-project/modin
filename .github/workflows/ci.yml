@@ -47,6 +47,7 @@ jobs:
           architecture: "x64"
       - run: pip install pydocstyle
       - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py
+      - run: pydocstyle --convention=numpy --add-ignore=D101,D103,D105 modin/pandas/io.py
 
   lint-flake8:
     name: lint (flake8)

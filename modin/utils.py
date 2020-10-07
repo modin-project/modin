@@ -15,6 +15,16 @@ import pandas
 from modin.config import Engine, Backend, IsExperimental
 
 
+def _inherit_func_docstring(source_func):
+    """Define `func` docstring from `source_func`."""
+
+    def decorator(func):
+        func.__doc__ = source_func.__doc__
+        return func
+
+    return decorator
+
+
 def _inherit_docstrings(parent, excluded=[]):
     """Creates a decorator which overwrites a decorated class' __doc__
     attribute with parent's __doc__ attribute. Also overwrites __doc__ of
