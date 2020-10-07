@@ -11,6 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement Pandas general API.
+
+Almost all docstrings for public functions should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D103: missing docstring in public function
+Manually add documentation for private methods only.
+"""
+
 import pandas
 import numpy as np
 
@@ -24,17 +33,11 @@ from .dataframe import DataFrame
 from .series import Series
 from modin.utils import to_pandas
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.utils import _inherit_docstrings
 
 
+@_inherit_docstrings(pandas.isna)
 def isna(obj):
-    """
-    Detect missing values for an array-like object.
-    Args:
-        obj: Object to check for null or missing values.
-
-    Returns:
-        bool or array-like of bool
-    """
     if isinstance(obj, BasePandasDataset):
         return obj.isna()
     else:
@@ -44,6 +47,7 @@ def isna(obj):
 isnull = isna
 
 
+@_inherit_docstrings(pandas.notna)
 def notna(obj):
     if isinstance(obj, BasePandasDataset):
         return obj.notna()
@@ -54,6 +58,7 @@ def notna(obj):
 notnull = notna
 
 
+@_inherit_docstrings(pandas.merge)
 def merge(
     left,
     right,
@@ -69,73 +74,6 @@ def merge(
     indicator: bool = False,
     validate=None,
 ):
-    """
-    Merge DataFrame or named Series objects with a database-style join.
-
-    The join is done on columns or indexes. If joining columns on columns,
-    the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
-    indexes on a column or columns, the index will be passed on.
-
-    Parameters
-    ----------
-    right : DataFrame or named Series
-        Object to merge with.
-    how : {'left', 'right', 'outer', 'inner'}, default 'inner'
-        Type of merge to be performed.
-        - left: use only keys from left frame,
-            similar to a SQL left outer join; preserve key order.
-        - right: use only keys from right frame,
-            similar to a SQL right outer join; preserve key order.
-        - outer: use union of keys from both frames,
-            similar to a SQL full outer join; sort keys lexicographically.
-        - inner: use intersection of keys from both frames,
-            similar to a SQL inner join; preserve the order of the left keys.
-    on : label or list
-        Column or index level names to join on.
-        These must be found in both DataFrames. If on is None and not merging on indexes
-        then this defaults to the intersection of the columns in both DataFrames.
-    left_on : label or list, or array-like
-        Column or index level names to join on in the left DataFrame.
-        Can also be an array or list of arrays of the length of the left DataFrame.
-        These arrays are treated as if they are columns.
-    right_on : label or list, or array-like
-        Column or index level names to join on in the right DataFrame.
-        Can also be an array or list of arrays of the length of the right DataFrame.
-        These arrays are treated as if they are columns.
-    left_index : bool, default False
-        Use the index from the left DataFrame as the join key(s).
-        If it is a MultiIndex, the number of keys in the other DataFrame
-        (either the index or a number of columns) must match the number of levels.
-    right_index : bool, default False
-        Use the index from the right DataFrame as the join key. Same caveats as left_index.
-    sort : bool, default False
-        Sort the join keys lexicographically in the result DataFrame.
-        If False, the order of the join keys depends on the join type (how keyword).
-    suffixes : tuple of (str, str), default ('_x', '_y')
-        Suffix to apply to overlapping column names in the left and right side, respectively.
-        To raise an exception on overlapping columns use (False, False).
-    copy : bool, default True
-        If False, avoid copy if possible.
-    indicator : bool or str, default False
-        If True, adds a column to output DataFrame called "_merge" with information
-        on the source of each row. If string, column with information on source of each row
-        will be added to output DataFrame, and column will be named value of string.
-        Information column is Categorical-type and takes on a value of "left_only"
-        for observations whose merge key only appears in 'left' DataFrame,
-        "right_only" for observations whose merge key only appears in 'right' DataFrame,
-        and "both" if the observation’s merge key is found in both.
-    validate : str, optional
-        If specified, checks if merge is of specified type.
-        - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
-        - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
-        - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
-        - 'many_to_many' or 'm:m': allowed, but does not result in checks.
-
-    Returns
-    -------
-    DataFrame
-        A DataFrame of the two merged objects.
-    """
     if isinstance(left, Series):
         if left.name is None:
             raise ValueError("Cannot merge a Series without a name")
@@ -163,6 +101,7 @@ def merge(
     )
 
 
+@_inherit_docstrings(pandas.merge_ordered)
 def merge_ordered(
     left,
     right,
@@ -198,6 +137,7 @@ def merge_ordered(
     )
 
 
+@_inherit_docstrings(pandas.merge_asof)
 def merge_asof(
     left,
     right,
@@ -241,6 +181,7 @@ def merge_asof(
     )
 
 
+@_inherit_docstrings(pandas.pivot_table)
 def pivot_table(
     data,
     values=None,
@@ -270,113 +211,30 @@ def pivot_table(
     )
 
 
+@_inherit_docstrings(pandas.pivot)
 def pivot(data, index=None, columns=None, values=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
 
 
+@_inherit_docstrings(pandas.to_numeric)
 def to_numeric(arg, errors="raise", downcast=None):
-    """
-    Convert argument to a numeric type.
-
-    The default return dtype is `float64` or `int64`
-    depending on the data supplied. Use the `downcast` parameter
-    to obtain other dtypes.
-
-    Please note that precision loss may occur if really large numbers
-    are passed in. Due to the internal limitations of `ndarray`, if
-    numbers smaller than `-9223372036854775808` (np.iinfo(np.int64).min)
-    or larger than `18446744073709551615` (np.iinfo(np.uint64).max) are
-    passed in, it is very likely they will be converted to float so that
-    they can stored in an `ndarray`. These warnings apply similarly to
-    `Series` since it internally leverages `ndarray`.
-
-    Parameters
-    ----------
-    arg : scalar, list, tuple, 1-d array, or Series
-        Argument to be converted.
-    errors : {'ignore', 'raise', 'coerce'}, default 'raise'
-        - If 'raise', then invalid parsing will raise an exception.
-        - If 'coerce', then invalid parsing will be set as NaN.
-        - If 'ignore', then invalid parsing will return the input.
-    downcast : {'int', 'signed', 'unsigned', 'float'}, default None
-        If not None, and if the data has been successfully cast to a
-        numerical dtype (or if the data was numeric to begin with),
-        downcast that resulting data to the smallest numerical dtype
-        possible according to the following rules:
-
-        - 'int' or 'signed': smallest signed int dtype (min.: np.int8)
-        - 'unsigned': smallest unsigned int dtype (min.: np.uint8)
-        - 'float': smallest float dtype (min.: np.float32)
-
-        As this behaviour is separate from the core conversion to
-        numeric values, any errors raised during the downcasting
-        will be surfaced regardless of the value of the 'errors' input.
-
-        In addition, downcasting will only occur if the size
-        of the resulting data's dtype is strictly larger than
-        the dtype it is to be cast to, so if none of the dtypes
-        checked satisfy that specification, no downcasting will be
-        performed on the data.
-
-    Returns
-    -------
-    ret
-        Numeric if parsing succeeded.
-        Return type depends on input.  Series if Series, otherwise ndarray.
-    """
     if not isinstance(arg, Series):
         return pandas.to_numeric(arg, errors=errors, downcast=downcast)
     return arg._to_numeric(errors=errors, downcast=downcast)
 
 
+@_inherit_docstrings(pandas.unique)
 def unique(values):
-    """
-    Return unique values of input data.
-
-    Uniques are returned in order of appearance. Hash table-based unique,
-    therefore does NOT sort.
-
-    Returns
-    -------
-    ndarray
-        The unique values returned as a NumPy array.
-    """
     return Series(values).unique()
 
 
+@_inherit_docstrings(pandas.value_counts)
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
-    """
-    Compute a histogram of the counts of non-null values.
-
-    Parameters
-    ----------
-    values : ndarray (1-d)
-    sort : bool, default True
-        Sort by values
-    ascending : bool, default False
-        Sort in ascending order
-    normalize: bool, default False
-        If True then compute a relative histogram
-    bins : integer, optional
-        Rather than count values, group them into half-open bins,
-        convenience for pd.cut, only works with numeric data
-    dropna : bool, default True
-        Don't include counts of NaN
-
-    Returns
-    -------
-    Series
-
-    Notes
-    -----
-    The indices of resulting object will be in descending
-    (ascending, if ascending=True) order for equal values.
-    It slightly differ from pandas where indices are located in random order.
-    """
+    # It slightly differ from pandas where indices are located in random order.
     return Series(values).value_counts(
         sort=sort,
         ascending=ascending,
@@ -386,6 +244,7 @@ def value_counts(
     )
 
 
+@_inherit_docstrings(pandas.concat)
 def concat(
     objs: Union[
         Iterable[FrameOrSeriesUnion], Mapping[Optional[Hashable], FrameOrSeriesUnion]
@@ -523,38 +382,7 @@ def concat(
     return result_df
 
 
-def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
-    """
-    Determine names of index after concatenation along passed axis
-
-    Parameters
-    ----------
-    objs : iterable of QueryCompilers
-        objects to concatenate
-
-    axis : int or str
-        the axis to concatenate along
-
-    Returns
-    -------
-        `list` with single element - computed index name, `None` if it could not
-        be determined
-    """
-    axis = pandas.DataFrame()._get_axis_number(axis)
-
-    def get_names(obj):
-        return obj.columns.names if axis else obj.index.names
-
-    names = np.array([get_names(obj) for obj in objs])
-
-    # saving old name, only if index names of all objs are the same
-    if np.all(names == names[0]):
-        # we must do this check to avoid this calls `list(str_like_name)`
-        return list(names[0]) if is_list_like(names[0]) else [names[0]]
-    else:
-        return None
-
-
+@_inherit_docstrings(pandas.to_datetime)
 def to_datetime(
     arg,
     errors="raise",
@@ -568,88 +396,6 @@ def to_datetime(
     origin="unix",
     cache=True,
 ):
-    """
-    Convert argument to datetime.
-
-    Parameters
-    ----------
-    arg : int, float, str, datetime, list, tuple, 1-d array, Series, DataFrame/dict-like
-        The object to convert to a datetime.
-    errors : {'ignore', 'raise', 'coerce'}, default 'raise'
-        - If 'raise', then invalid parsing will raise an exception.
-        - If 'coerce', then invalid parsing will be set as NaT.
-        - If 'ignore', then invalid parsing will return the input.
-    dayfirst : bool, default False
-        Specify a date parse order if `arg` is str or its list-likes.
-        If True, parses dates with the day first, eg 10/11/12 is parsed as
-        2012-11-10.
-        Warning: dayfirst=True is not strict, but will prefer to parse
-        with day first (this is a known bug, based on dateutil behavior).
-    yearfirst : bool, default False
-        Specify a date parse order if `arg` is str or its list-likes.
-
-        - If True parses dates with the year first, eg 10/11/12 is parsed as
-          2010-11-12.
-        - If both dayfirst and yearfirst are True, yearfirst is preceded (same
-          as dateutil).
-
-        Warning: yearfirst=True is not strict, but will prefer to parse
-        with year first (this is a known bug, based on dateutil behavior).
-    utc : bool, default None
-        Return UTC DatetimeIndex if True (converting any tz-aware
-        datetime.datetime objects as well).
-    format : str, default None
-        The strftime to parse time, eg "%d/%m/%Y", note that "%f" will parse
-        all the way up to nanoseconds.
-        See strftime documentation for more information on choices:
-        https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior.
-    exact : bool, True by default
-        Behaves as:
-        - If True, require an exact format match.
-        - If False, allow the format to match anywhere in the target string.
-
-    unit : str, default 'ns'
-        The unit of the arg (D,s,ms,us,ns) denote the unit, which is an
-        integer or float number. This will be based off the origin.
-        Example, with unit='ms' and origin='unix' (the default), this
-        would calculate the number of milliseconds to the unix epoch start.
-    infer_datetime_format : bool, default False
-        If True and no `format` is given, attempt to infer the format of the
-        datetime strings based on the first non-NaN element,
-        and if it can be inferred, switch to a faster method of parsing them.
-        In some cases this can increase the parsing speed by ~5-10x.
-    origin : scalar, default 'unix'
-        Define the reference date. The numeric values would be parsed as number
-        of units (defined by `unit`) since this reference date.
-
-        - If 'unix' (or POSIX) time; origin is set to 1970-01-01.
-        - If 'julian', unit must be 'D', and origin is set to beginning of
-          Julian Calendar. Julian day number 0 is assigned to the day starting
-          at noon on January 1, 4713 BC.
-        - If Timestamp convertible, origin is set to Timestamp identified by
-          origin.
-    cache : bool, default True
-        If True, use a cache of unique, converted dates to apply the datetime
-        conversion. May produce significant speed-up when parsing duplicate
-        date strings, especially ones with timezone offsets. The cache is only
-        used when there are at least 50 values. The presence of out-of-bounds
-        values will render the cache unusable and may slow down parsing.
-
-    Returns
-    -------
-    datetime
-        If parsing succeeded.
-        Return type depends on input:
-
-        - list-like: DatetimeIndex
-        - Series: Series of datetime64 dtype
-        - scalar: Timestamp
-
-        In case when it is not possible to return designated types (e.g. when
-        any element of input is before Timestamp.min or after Timestamp.max)
-        return will have datetime.datetime type (or corresponding
-        array/Series).
-    """
     if not isinstance(arg, (DataFrame, Series)):
         return pandas.to_datetime(
             arg,
@@ -678,6 +424,7 @@ def to_datetime(
     )
 
 
+@_inherit_docstrings(pandas.get_dummies)
 def get_dummies(
     data,
     prefix=None,
@@ -688,22 +435,6 @@ def get_dummies(
     drop_first=False,
     dtype=None,
 ):
-    """Convert categorical variable into indicator variables.
-
-    Args:
-        data (array-like, Series, or DataFrame): data to encode.
-        prefix (string, [string]): Prefix to apply to each encoded column
-                                   label.
-        prefix_sep (string, [string]): Separator between prefix and value.
-        dummy_na (bool): Add a column to indicate NaNs.
-        columns: Which columns to encode.
-        sparse (bool): Not Implemented: If True, returns SparseDataFrame.
-        drop_first (bool): Whether to remove the first level of encoded data.
-        dtype: The dtype for the get_dummies call.
-
-    Returns:
-        DataFrame or one-hot encoded data.
-    """
     if sparse:
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
@@ -738,6 +469,7 @@ def get_dummies(
         return DataFrame(query_compiler=new_manager)
 
 
+@_inherit_docstrings(pandas.melt)
 def melt(
     frame,
     id_vars=None,
@@ -757,6 +489,7 @@ def melt(
     )
 
 
+@_inherit_docstrings(pandas.crosstab)
 def crosstab(
     index,
     columns,
@@ -785,6 +518,7 @@ def crosstab(
     return DataFrame(pandas_crosstab)
 
 
+@_inherit_docstrings(pandas.lreshape)
 def lreshape(data: DataFrame, groups, dropna=True, label=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
@@ -794,6 +528,7 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
     )
 
 
+@_inherit_docstrings(pandas.wide_to_long)
 def wide_to_long(
     df: DataFrame, stubnames, i, j, sep: str = "", suffix: str = r"\d+"
 ) -> DataFrame:
@@ -805,3 +540,33 @@ def wide_to_long(
     return DataFrame(
         pandas.wide_to_long(to_pandas(df), stubnames, i, j, sep=sep, suffix=suffix)
     )
+
+
+def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
+    """
+    Determine names of index after concatenation along passed axis.
+
+    Parameters
+    ----------
+    objs : iterable of QueryCompilers
+        objects to concatenate
+    axis : int or str
+        the axis to concatenate along
+    Returns
+    -------
+    `list` with single element - computed index name, `None` if it could not
+    be determined
+    """
+    axis = pandas.DataFrame()._get_axis_number(axis)
+
+    def get_names(obj):
+        return obj.columns.names if axis else obj.index.names
+
+    names = np.array([get_names(obj) for obj in objs])
+
+    # saving old name, only if index names of all objs are the same
+    if np.all(names == names[0]):
+        # we must do this check to avoid this calls `list(str_like_name)`
+        return list(names[0]) if is_list_like(names[0]) else [names[0]]
+    else:
+        return None
