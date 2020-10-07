@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Implement Pandas plotting API."""
+
 from pandas import plotting as pdplot
 
 from modin.utils import to_pandas
@@ -18,30 +20,31 @@ from .dataframe import DataFrame
 
 
 def instancer(cls):
-    """This will create a dummy instance each time this is imported.
+    """
+    Create a dummy instance each time this is imported.
 
-    This serves the purpose of allowing us to use all of pandas plotting methods without
-        aliasing and writing each of them ourselves.
+    This serves the purpose of allowing us to use all of pandas plotting methods
+    without aliasing and writing each of them ourselves.
     """
     return cls()
 
 
 @instancer
 class Plotting(object):
+    """Wrapper of Pandas plotting module."""
+
     def __dir__(self):
-        """This allows tab completion of plotting library"""
+        """Enable tab completion of plotting library."""
         return dir(pdplot)
 
     def __getattribute__(self, item):
-        """This method will override the parameters passed and convert any Modin
-        DataFrames to pandas so that they can be plotted normally
-        """
+        """Convert any Modin DataFrames in parameters to pandas so that they can be plotted normally."""
         if hasattr(pdplot, item):
             func = getattr(pdplot, item)
             if callable(func):
 
                 def wrap_func(*args, **kwargs):
-                    """Convert Modin DataFrames to pandas then call the function"""
+                    """Convert Modin DataFrames to pandas then call the function."""
                     args = tuple(
                         arg if not isinstance(arg, DataFrame) else to_pandas(arg)
                         for arg in args
