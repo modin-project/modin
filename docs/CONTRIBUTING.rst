@@ -113,9 +113,9 @@ dependencies for running the tests and formatting the code:
 
 .. code-block:: bash
 
+  conda env create --file environment.yml
+  # or
   pip install -r requirements.txt
-
-For developments under Windows, dependencies can be found in 'env_windows.yml' file. 
 
 Code Formatting and Lint
 ------------------------
@@ -128,13 +128,13 @@ that you run the following from the project root:
   black modin/
 
 We also use flake8_ to check linting errors. Running the following from the project root
-will ensure that it passes the lint checks on Travis:
+will ensure that it passes the lint checks on Github Actions:
 
 .. code-block:: bash
 
   flake8 .
 
-We test that this has been run on our `Travis CI`_ test suite. If you do this and find
+We test that this has been run on our `Github Actions`_ test suite. If you do this and find
 that the tests are still failing, try updating your version of black and flake8.
 
 Adding a test
@@ -181,6 +181,6 @@ More docs on this coming soon...
 .. _internal methods:
 .. _black: https://github.com/ambv/black
 .. _flake8: http://flake8.pycqa.org/en/latest/
-.. _Travis CI: https://travis-ci.org/
+.. _Github Actions: https://github.com/features/actions
 .. _testing:
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
