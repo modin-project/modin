@@ -140,7 +140,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 .. toctree::
    :caption: Developer Documentation
 
-   developer/contributing
+   contributing
    developer/architecture
 
 .. toctree::
