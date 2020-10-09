@@ -11,17 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import numpy as np
-import pandas
-from pandas.api.types import is_list_like, is_bool
-from pandas.core.dtypes.common import is_integer
-from pandas.core.indexing import IndexingError
-
-from .dataframe import DataFrame
-from .series import Series
-from .utils import is_scalar
-
-"""Indexing Helper Class works as follows:
+"""
+Details about how Indexing Helper Class works.
 
 _LocationIndexerBase provide methods framework for __getitem__
   and __setitem__ that work with Modin DataFrame's internal index. Base
@@ -37,24 +28,119 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+import numpy as np
+import pandas
+from pandas.api.types import is_list_like, is_bool
+from pandas.core.dtypes.common import is_integer
+from pandas.core.indexing import IndexingError
+
+from .dataframe import DataFrame
+from .series import Series
+from .utils import is_scalar
+
 
 def is_slice(x):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     return isinstance(x, slice)
 
 
 def is_2d(x):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     return is_list_like(x) or is_slice(x)
 
 
 def is_tuple(x):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     return isinstance(x, tuple)
 
 
 def is_boolean_array(x):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     return is_list_like(x) and all(map(is_bool, x))
 
 
 def is_integer_slice(x):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     if not is_slice(x):
         return False
     for pos in [x.start, x.stop, x.step]:
@@ -75,11 +161,23 @@ This will be fixed in future releases.
 
 
 def _parse_tuple(tup):
-    """Unpack the user input for getitem and setitem and compute ndim
+    """
+    Unpack the user input for getitem and setitem and compute ndim.
+
+    TODO: Add more details for this docstring template.
 
     loc[a] -> ([a], :), 1D
     loc[[a,b],] -> ([a,b], :),
     loc[a,b] -> ([a], [b]), 0D
+
+    Parameters
+    ----------
+    tup: tuple
+        [Descsription]
+
+    Returns
+    -------
+    What this returns (if anything)
     """
     row_loc, col_loc = slice(None), slice(None)
 
@@ -102,7 +200,23 @@ def _parse_tuple(tup):
 
 
 def _compute_ndim(row_loc, col_loc):
-    """Compute the ndim of result from locators"""
+    """
+    Compute the ndim of result from locators.
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
     col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
 
@@ -117,15 +231,49 @@ def _compute_ndim(row_loc, col_loc):
 
 
 class _LocationIndexerBase(object):
-    """Base class for location indexer like loc and iloc"""
+    """Base class for location indexer like loc and iloc."""
 
     def __init__(self, modin_df):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         self.df = modin_df
         self.qc = modin_df._query_compiler
         self.row_scaler = False
         self.col_scaler = False
 
     def __getitem__(self, row_lookup, col_lookup, ndim):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
@@ -147,11 +295,19 @@ class _LocationIndexerBase(object):
 
     def __setitem__(self, row_lookup, col_lookup, item):
         """
-        Args:
-            row_lookup: the global row index to write item to
-            col_lookup: the global col index to write item to
-            item: The new item needs to be set. It can be any shape that's
-                broadcast-able to the product of the lookup tables.
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        row_lookup:
+            the global row index to write item to
+        col_lookup:
+            the global col index to write item to
+        item:
+            The new item needs to be set. It can be any shape that's
+            broadcast-able to the product of the lookup tables.
         """
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
@@ -189,10 +345,26 @@ class _LocationIndexerBase(object):
             self._write_items(row_lookup, col_lookup, item)
 
     def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
-        """Use numpy to broadcast or reshape item.
+        """
+        Use numpy to broadcast or reshape item.
 
-        Notes:
-            - Numpy is memory efficient, there shouldn't be performance issue.
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+
+        Notes
+        -----
+        Numpy is memory efficient, there shouldn't be performance issue.
         """
         # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
         # the target the user is trying to overwrite. This
@@ -225,15 +397,48 @@ class _LocationIndexerBase(object):
             )
 
     def _write_items(self, row_lookup, col_lookup, item):
-        """Perform remote write and replace blocks."""
+        """
+        Perform remote write and replace blocks.
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
 
 
 class _LocIndexer(_LocationIndexerBase):
-    """An indexer for modin_df.loc[] functionality"""
+    """An indexer for modin_df.loc[] functionality."""
 
     def __getitem__(self, key):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         if callable(key):
             return self.__getitem__(key(self.df))
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
@@ -281,6 +486,23 @@ class _LocIndexer(_LocationIndexerBase):
         return result
 
     def __setitem__(self, key, item):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         row_loc, col_loc, _, __, ___ = _parse_tuple(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
@@ -302,10 +524,15 @@ class _LocIndexer(_LocationIndexerBase):
             super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_enlarge_labels(self, locator, base_index):
-        """Helper for _enlarge_axis, compute common labels and extra labels.
+        """
+        Help to _enlarge_axis, compute common labels and extra labels.
 
-        Returns:
-             nan_labels: The labels needs to be added
+        TODO: add types.
+
+        Returns
+        -------
+        nan_labels:
+            The labels needs to be added
         """
         # base_index_type can be pd.Index or pd.DatetimeIndex
         # depending on user input and pandas behavior
@@ -325,6 +552,23 @@ class _LocIndexer(_LocationIndexerBase):
         return nan_labels
 
     def _compute_lookup(self, row_loc, col_loc):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         if is_list_like(row_loc) and len(row_loc) == 1:
             if (
                 isinstance(self.qc.index.values[0], np.datetime64)
@@ -364,9 +608,26 @@ class _LocIndexer(_LocationIndexerBase):
 
 
 class _iLocIndexer(_LocationIndexerBase):
-    """An indexer for modin_df.iloc[] functionality"""
+    """An indexer for modin_df.iloc[] functionality."""
 
     def __getitem__(self, key):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         if callable(key):
             return self.__getitem__(key(self.df))
         row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
@@ -381,6 +642,23 @@ class _iLocIndexer(_LocationIndexerBase):
         return result
 
     def __setitem__(self, key, item):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         row_loc, col_loc, _, __, ___ = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
@@ -389,6 +667,23 @@ class _iLocIndexer(_LocationIndexerBase):
         super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
 
     def _compute_lookup(self, row_loc, col_loc):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         if (
             not isinstance(row_loc, slice)
             or isinstance(row_loc, slice)
@@ -412,6 +707,23 @@ class _iLocIndexer(_LocationIndexerBase):
         return row_lookup, col_lookup
 
     def _check_dtypes(self, locator):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         is_int = is_integer(locator)
         is_int_slice = is_integer_slice(locator)
         is_int_list = is_list_like(locator) and all(map(is_integer, locator))

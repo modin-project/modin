@@ -54,10 +54,7 @@ class PartitionIterator(Iterator):
         return self
 
     def __next__(self):
-<<<<<<< HEAD
-=======
         """Implement iterator interface."""
->>>>>>> FEAT-#2223: add pydocstyle check for iterator.py
         key = next(self.index_iter)
         df = self.df.iloc[key]
         return self.func(df)
