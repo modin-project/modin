@@ -43,9 +43,6 @@ class PartitionIterator(Iterator):
         return self
 
     def __next__(self):
-        return self.next()
-
-    def next(self):
         key = next(self.index_iter)
         df = self.df.iloc[key]
         return self.func(df)
