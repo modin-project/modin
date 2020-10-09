@@ -46,7 +46,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install pydocstyle
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py
+      - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py modin/pandas/groupby.py
       - run: pydocstyle --convention=numpy --add-ignore=D101,D103,D105 modin/pandas/io.py
       - run: pydocstyle --convention=numpy --add-ignore=D103 modin/pandas/general.py
       - run: pydocstyle --convention=numpy modin/pandas/plotting.py
