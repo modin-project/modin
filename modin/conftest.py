@@ -11,8 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
+import sys
 import pytest
 
+import modin
+import modin.config
 from modin.config import IsExperimental
 
 
@@ -82,3 +86,63 @@ def simulate_cloud(request):
             (cyx_testing, "assert_almost_equal"),
         ):
             yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def enforce_config():
+    """
+    A fixture that ensures that all checks for MODIN_* variables
+    are done using modin.config to prevent leakage
+    """
+    orig_env = os.environ
+    modin_start = os.path.dirname(modin.__file__)
+    modin_exclude = [os.path.dirname(modin.config.__file__)]
+
+    class PatchedEnv:
+        @staticmethod
+        def __check_var(name):
+            if name.upper().startswith("MODIN_"):
+                frame = sys._getframe()
+                try:
+                    # get the path to module where caller of caller is defined;
+                    # caller of this function is inside PatchedEnv, and we're
+                    # interested in whomever called a method on PatchedEnv
+                    caller_file = frame.f_back.f_back.f_code.co_filename
+                finally:
+                    del frame
+                pkg_name = os.path.dirname(caller_file)
+                if pkg_name.startswith(modin_start):
+                    assert any(
+                        pkg_name.startswith(excl) for excl in modin_exclude
+                    ), "Do not access MODIN_ environment variable bypassing modin.config"
+
+        def __getitem__(self, name):
+            self.__check_var(name)
+            return orig_env[name]
+
+        def __setitem__(self, name, value):
+            self.__check_var(name)
+            orig_env[name] = value
+
+        def __delitem__(self, name):
+            self.__check_var(name)
+            del orig_env[name]
+
+        def pop(self, name):
+            self.__check_var(name)
+            return orig_env.pop(name)
+
+        def get(self, name, defvalue=None):
+            self.__check_var(name)
+            return orig_env.get(name, defvalue)
+
+        def __contains__(self, name):
+            self.__check_var(name)
+            return name in orig_env
+
+        def __getattr__(self, name):
+            return getattr(orig_env, name)
+
+    os.environ = PatchedEnv()
+    yield
+    os.environ = orig_env
