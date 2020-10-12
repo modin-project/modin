@@ -19,7 +19,7 @@ for better maintability. So some codes are ignored in pydocstyle check:
     - D101: missing docstring in class
     - D102: missing docstring in public method
     - D105: missing docstring in magic method
-Manually add documentation for private methods only.
+Manually add documentation for methods which are not presented in pandas.
 """
 
 import pandas
@@ -334,7 +334,6 @@ class DataFrame(BasePandasDataset):
         observed=False,
         dropna: bool = True,
     ):
-        # Apply a groupby to this DataFrame. See _groupby() remote task.
         if squeeze is not no_default:
             warnings.warn(
                 (
@@ -564,11 +563,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(self, method="pearson", min_periods=1):
-        # Notes
-        # -----
-        # Correlation floating point precision may slightly differ from pandas.
-        #
-        # For now pearson method is available only. For other methods defaults to pandas.
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
@@ -584,12 +578,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(self, min_periods=None, ddof: Optional[int] = 1):
-        # Notes
-        # -----
-        # Covariance floating point precision may slightly differ from pandas.
-        #
-        # If DataFrame contains at least one NA/null value, then defaults to pandas.
-
         numeric_df = self.drop(
             columns=[
                 i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])

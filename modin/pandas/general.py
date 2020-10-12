@@ -17,7 +17,7 @@ Implement Pandas general API.
 Almost all docstrings for public functions should be inherited from Pandas
 for better maintability. So some codes are ignored in pydocstyle check:
     - D103: missing docstring in public function
-Manually add documentation for private methods only.
+Manually add documentation for methods which are not presented in pandas.
 """
 
 import pandas
@@ -234,7 +234,6 @@ def unique(values):
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
-    # It slightly differ from pandas where indices are located in random order.
     return Series(values).value_counts(
         sort=sort,
         ascending=ascending,

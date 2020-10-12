@@ -19,7 +19,7 @@ for better maintability. So some codes are ignored in pydocstyle check:
     - D101: missing docstring in class
     - D102: missing docstring in public method
     - D105: missing docstring in magic method
-Manually add documentation for private methods only.
+Manually add documentation for methods which are not presented in pandas.
 """
 
 import pandas

@@ -19,7 +19,7 @@ for better maintability. So some codes are ignored in pydocstyle check:
     - D101: missing docstring in class
     - D102: missing docstring in public method
     - D105: missing docstring in magic method
-Manually add documentation for private methods only.
+Manually add documentation for methods which are not presented in pandas.
 """
 
 import numpy as np
@@ -488,7 +488,6 @@ class Series(BasePandasDataset):
         )
 
     def corr(self, other, method="pearson", min_periods=None):
-        # For now pearson method is available only. For other methods defaults to pandas.
         if method == "pearson":
             this, other = self.align(other, join="inner", copy=False)
             this = self.__constructor__(this)
@@ -544,7 +543,6 @@ class Series(BasePandasDataset):
         return super(Series, self).count(level=level)
 
     def cov(self, other, min_periods=None, ddof: Optional[int] = 1):
-        # Covariance floating point precision may slightly differ from pandas.
         this, other = self.align(other, join="inner", copy=False)
         this = self.__constructor__(this)
         other = self.__constructor__(other)
@@ -1463,7 +1461,6 @@ class Series(BasePandasDataset):
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
     ):
-        # It slightly differ from pandas where indices are located in random order.
         return self.__constructor__(
             query_compiler=self._query_compiler.value_counts(
                 normalize=normalize,
