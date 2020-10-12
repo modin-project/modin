@@ -45,8 +45,13 @@ def test_get_head_node_ip():
         sig_get_head_node_ip.bind(*args, **kwargs)
         return "127.0.0.1"
 
+    def bootstrap_mock(config):
+        config["auth"]["ssh_user"] = "modin"
+        config["auth"]["ssh_private_key"] = "X" * 20
+        return config
+
     with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
+        "modin.experimental.cloud.rayscale._bootstrap_config", bootstrap_mock
     ):
         ray_cluster = RayCluster(Provider(name="aws"))
 
@@ -105,9 +110,12 @@ def test_create_or_update_cluster():
     ],
 )
 def test_update_conda_requirements(setup_commands_source):
-    ray_cluster = RayCluster(
-        Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
-    )
+    with mock.patch(
+        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
+    ):
+        ray_cluster = RayCluster(
+            Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
+        )
 
     fake_version = namedtuple("FakeVersion", "major minor micro")(7, 12, 45)
     with mock.patch("sys.version_info", fake_version):
