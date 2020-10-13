@@ -101,14 +101,7 @@ def test_count(data, axis):
     )
 
 
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(True, marks=pytest.mark.xfail(reason="See #1965 for details")),
-        False,
-        None,
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [True, False, None])
 def test_count_specific(numeric_only):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),

@@ -777,30 +777,39 @@ class BasePandasDataset(object):
         return new_obj
 
     def count(self, axis=0, level=None, numeric_only=False):
-        """Get the count of non-null objects in the DataFrame.
+        """
+        Get the count of non-NA cells for each column or row in the DataFrame.
 
-        Arguments:
-            axis: 0 or 'index' for row-wise, 1 or 'columns' for column-wise.
-            level: If the axis is a MultiIndex (hierarchical), count along a
-                particular level, collapsing into a DataFrame.
-            numeric_only: Include only float, int, boolean data
+        Parameters
+        ----------
+            axis : {0 or 'index', 1 or 'columns'}, default 0
+                If 0 or 'index' counts are generated for each column.
+                If 1 or 'columns' counts are generated for each row.
+            level : int or str, optional
+                If the axis is a `MultiIndex` (hierarchical), count along a
+                particular `level`, collapsing into a `DataFrame`.
+                A `str` specifies the level name.
+            numeric_only : bool, default False
+                Include only `float`, `int` or `boolean` data.
 
-        Returns:
-            The count, in a Series (or DataFrame if level is specified).
+        Returns
+        -------
+            Series or DataFrame
+            For each column/row the number of non-NA entries.
+            If `level` is specified returns a `DataFrame`.
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is not None and numeric_only:
-            self._validate_dtypes(numeric_only=numeric_only)
+        frame = self.select_dtypes([np.number, np.bool]) if numeric_only else self
 
         if level is not None:
-            if not self._query_compiler.has_multiindex(axis=axis):
+            if not frame._query_compiler.has_multiindex(axis=axis):
                 # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
 
             return self._handle_level_agg(axis=axis, level=level, op="count", sort=True)
 
-        return self._reduce_dimension(
-            self._query_compiler.count(
+        return frame._reduce_dimension(
+            frame._query_compiler.count(
                 axis=axis, level=level, numeric_only=numeric_only
             )
         )
