@@ -15,7 +15,7 @@ import warnings
 import typing
 import re
 
-from modin import execution_engine
+from modin.config import Engine
 from modin.engines.base.io import BaseIO
 
 import pandas
@@ -191,7 +191,7 @@ class PandasOnDaskFactory(BaseFactory):
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     def _read_sql(cls, **kwargs):
-        if execution_engine.get() != "Ray":
+        if Engine.get() != "Ray":
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(

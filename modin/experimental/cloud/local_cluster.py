@@ -18,12 +18,13 @@ import warnings
 from .base import ConnectionDetails
 from .cluster import BaseCluster
 from .connection import Connection
-from .rpyc_proxy import WrappingConnection, WrappingService, _TRACE_RPYC
+from .rpyc_proxy import WrappingConnection, WrappingService
 from .tracing.tracing_connection import TracingWrappingConnection
+from modin.config import DoTraceRpyc
 
 
 class LocalWrappingConnection(
-    TracingWrappingConnection if _TRACE_RPYC else WrappingConnection
+    TracingWrappingConnection if DoTraceRpyc.get() else WrappingConnection
 ):
     def _init_deliver(self):
         def ensure_modin(modin_init):

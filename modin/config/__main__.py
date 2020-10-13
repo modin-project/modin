@@ -11,20 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.config import IsExperimental
-
-IsExperimental.put(True)
-
-# import numpy_wrap as early as possible to intercept all "import numpy" statements
-# in the user code
-from .numpy_wrap import _CAUGHT_NUMPY  # noqa F401
-from modin.pandas import *  # noqa F401, F403
-from .io_exp import read_sql  # noqa F401
-import warnings
+from . import *  # noqa: F403, F401
+from .pubsub import Parameter
 
 
-warnings.warn(
-    "Thank you for using the Modin Experimental pandas API."
-    "\nPlease note that some of these APIs deviate from pandas in order to "
-    "provide improved performance."
-)
+def print_config_help():
+    for objname in sorted(globals()):
+        obj = globals()[objname]
+        if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
+            print(f"{obj.get_help()}\n\tCurrent value: {obj.get()}")  # noqa: T001
+
+
+if __name__ == "__main__":
+    print_config_help()

@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
@@ -19,6 +18,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.config import IsExperimental
 from .series import Series
 
 
@@ -771,7 +771,7 @@ class DataFrameGroupBy(object):
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
-if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
+if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
     make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")

@@ -35,9 +35,9 @@ from .utils import (
     eval_general,
 )
 
-from modin import execution_engine
+from modin.config import Engine, Backend
 
-if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
+if Backend.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
@@ -1033,9 +1033,7 @@ def test_from_csv_with_usecols(usecols):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skipif(
-    execution_engine.get().lower() == "python", reason="Using pandas implementation"
-)
+@pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
 def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
     pandas_df = pandas.read_csv(dataset_url)

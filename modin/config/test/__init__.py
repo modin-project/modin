@@ -10,21 +10,3 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-
-from modin.config import IsExperimental
-
-IsExperimental.put(True)
-
-# import numpy_wrap as early as possible to intercept all "import numpy" statements
-# in the user code
-from .numpy_wrap import _CAUGHT_NUMPY  # noqa F401
-from modin.pandas import *  # noqa F401, F403
-from .io_exp import read_sql  # noqa F401
-import warnings
-
-
-warnings.warn(
-    "Thank you for using the Modin Experimental pandas API."
-    "\nPlease note that some of these APIs deviate from pandas in order to "
-    "provide improved performance."
-)

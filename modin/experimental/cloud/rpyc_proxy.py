@@ -13,7 +13,6 @@
 
 import types
 import collections
-import os
 
 import rpyc
 import cloudpickle as pickle
@@ -23,6 +22,7 @@ from rpyc.core import netref, AsyncResult, consts
 
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
+from modin.config import DoTraceRpyc
 
 
 def _batch_loads(items):
@@ -36,9 +36,6 @@ def _tuplize(arg):
 
 def _pickled_array(obj):
     return pickle.dumps(obj.__array__())
-
-
-_TRACE_RPYC = os.environ.get("MODIN_TRACE_RPYC", "").title() == "True"
 
 
 class WrappingConnection(rpyc.Connection):
@@ -279,7 +276,7 @@ class WrappingConnection(rpyc.Connection):
 
 
 class WrappingService(rpyc.ClassicService):
-    if _TRACE_RPYC:
+    if DoTraceRpyc.get():
         from .tracing.tracing_connection import TracingWrappingConnection as _protocol
     else:
         _protocol = WrappingConnection

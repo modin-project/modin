@@ -15,7 +15,15 @@ import builtins
 import threading
 import os
 import sys
-import multiprocessing
+
+from modin.config import (
+    IsRayCluster,
+    RayRedisAddress,
+    CpuCount,
+    Memory,
+    RayPlasmaDir,
+    IsOutOfCore,
+)
 
 
 def handle_ray_task_error(e):
@@ -89,17 +97,11 @@ def initialize_ray(
     if threading.current_thread().name == "MainThread" or override_is_cluster:
         import secrets
 
-        cluster = (
-            "True"
-            if override_is_cluster
-            else os.environ.get("MODIN_RAY_CLUSTER", "").title()
-        )
-        redis_address = override_redis_address or os.environ.get(
-            "MODIN_REDIS_ADDRESS", None
-        )
+        cluster = override_is_cluster or IsRayCluster.get()
+        redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = override_redis_password or secrets.token_hex(16)
 
-        if cluster == "True":
+        if cluster:
             # We only start ray in a cluster setting for the head node.
             ray.init(
                 address=redis_address or "auto",
@@ -108,12 +110,10 @@ def initialize_ray(
                 _redis_password=redis_password,
                 logging_level=100,
             )
-        elif cluster == "":
-            num_cpus = os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-            object_store_memory = os.environ.get("MODIN_MEMORY", None)
-            plasma_directory = os.environ.get("MODIN_ON_RAY_PLASMA_DIR", None)
-            if os.environ.get("MODIN_OUT_OF_CORE", "False").title() == "True":
-
+        else:
+            object_store_memory = Memory.get()
+            plasma_directory = RayPlasmaDir.get()
+            if IsOutOfCore.get():
                 if plasma_directory is None:
                     from tempfile import gettempdir
 
@@ -137,7 +137,7 @@ def initialize_ray(
             else:
                 object_store_memory = int(object_store_memory)
             ray.init(
-                num_cpus=int(num_cpus),
+                num_cpus=CpuCount.get(),
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _plasma_directory=plasma_directory,
@@ -147,11 +147,6 @@ def initialize_ray(
                 logging_level=100,
                 _memory=object_store_memory,
                 _lru_evict=True,
-            )
-        else:
-            raise ValueError(
-                '"MODIN_RAY_CLUSTER" env variable not correctly set! \
-                Did you mean `os.environ["MODIN_RAY_CLUSTER"] = "True"`?'
             )
 
         _move_stdlib_ahead_of_site_packages()

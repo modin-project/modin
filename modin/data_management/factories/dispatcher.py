@@ -11,10 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
-
-from modin import execution_engine, partition_format
+from modin.config import Engine, Backend, IsExperimental
 from modin.data_management.factories import factories
+from modin.utils import get_current_backend
 
 
 class FactoryNotFoundError(AttributeError):
@@ -62,17 +61,11 @@ class EngineDispatcher(object):
 
     @classmethod
     def _update_engine(cls, _):
-        if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
-            factory_fmt, experimental = "Experimental{}On{}Factory", True
-        else:
-            factory_fmt, experimental = "{}On{}Factory", False
-        factory_name = factory_fmt.format(
-            partition_format.get(), execution_engine.get()
-        )
+        factory_name = get_current_backend() + "Factory"
         try:
             cls.__engine = getattr(factories, factory_name)
         except AttributeError:
-            if not experimental:
+            if not IsExperimental.get():
                 # allow missing factories in experimenal mode only
                 if hasattr(factories, "Experimental" + factory_name):
                     msg = (
@@ -83,11 +76,9 @@ class EngineDispatcher(object):
                     msg = (
                         "Cannot find a factory for partition '{}' and execution engine '{}'. "
                         "Potential reason might be incorrect environment variable value for "
-                        "MODIN_BACKEND or MODIN_ENGINE"
+                        f"{Backend.varname} or {Engine.varname}"
                     )
-                raise FactoryNotFoundError(
-                    msg.format(partition_format.get(), execution_engine.get())
-                )
+                raise FactoryNotFoundError(msg.format(Backend.get(), Engine.get()))
             cls.__engine = StubFactory.set_failing_name(factory_name)
         else:
             cls.__engine.prepare()
@@ -181,5 +172,5 @@ class EngineDispatcher(object):
         return cls.__engine._to_pickle(*args, **kwargs)
 
 
-execution_engine.subscribe(EngineDispatcher._update_engine)
-partition_format.subscribe(EngineDispatcher._update_engine)
+Engine.subscribe(EngineDispatcher._update_engine)
+Backend.subscribe(EngineDispatcher._update_engine)

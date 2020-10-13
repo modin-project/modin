@@ -22,10 +22,10 @@ from .partition import OmnisciOnRayFramePartition
 from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
+from modin.config import DoUseCalcite
 
 import pyarrow
 import pandas
-import os
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
@@ -88,10 +88,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         cmd_prefix = "execute relalg "
 
-        use_calcite_env = os.environ.get("MODIN_USE_CALCITE")
-        use_calcite = use_calcite_env is not None and use_calcite_env.lower() == "true"
-
-        if use_calcite:
+        if DoUseCalcite.get():
             cmd_prefix = "execute calcite "
 
         curs = omniSession.executeRA(cmd_prefix + calcite_json)
@@ -102,7 +99,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
-        if use_calcite:
+        if DoUseCalcite.get():
             at = at.rename_columns(["F_" + str(c) for c in columns])
         res[0][0] = cls._partition_class.put_arrow(at)
 

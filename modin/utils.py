@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
-import modin
+from modin.config import Engine, Backend, IsExperimental
 
 
 def _inherit_docstrings(parent, excluded=[]):
@@ -117,4 +117,4 @@ def wrap_udf_function(func):
 
 
 def get_current_backend():
-    return f"{modin.partition_format.get()}On{modin.execution_engine.get()}"
+    return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
