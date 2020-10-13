@@ -123,7 +123,7 @@ def _dt_func_map(func_name):
     return dt_op_builder
 
 
-def copy_df_for_func(func):
+def copy_df_for_func(func, display_name: str = None):
     """
     Create a function that copies the dataframe, likely because `func` is inplace.
 
@@ -131,6 +131,8 @@ def copy_df_for_func(func):
     ----------
     func : callable
         The function, usually updates a dataframe inplace.
+    display_name : str, optional
+        The function's name, which is displayed by progress bar.
 
     Returns
     -------
@@ -143,6 +145,8 @@ def copy_df_for_func(func):
         func(df, *args, **kwargs)
         return df
 
+    if display_name is not None:
+        caller.__name__ = display_name
     return caller
 
 
@@ -332,11 +336,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
     __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
     df_update = BinaryFunction.register(
-        copy_df_for_func(pandas.DataFrame.update), join_type="left"
+        copy_df_for_func(pandas.DataFrame.update, display_name="update"),
+        join_type="left",
     )
     series_update = BinaryFunction.register(
         copy_df_for_func(
-            lambda x, y: pandas.Series.update(x.squeeze(axis=1), y.squeeze(axis=1))
+            lambda x, y: pandas.Series.update(x.squeeze(axis=1), y.squeeze(axis=1)),
+            display_name="update",
         ),
         join_type="left",
     )
