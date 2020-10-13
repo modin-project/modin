@@ -11,6 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement DataFrame/Series public API as Pandas does.
+
+Almost all docstrings for public and magic methods should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D101: missing docstring in class
+    - D102: missing docstring in public method
+    - D105: missing docstring in magic method
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import numpy as np
 from numpy import nan
 import pandas
@@ -24,6 +35,8 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
 )
+import pandas.core.window.rolling
+import pandas.core.resample
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
 from pandas._libs.lib import no_default
@@ -37,7 +50,7 @@ from typing import Optional, Union
 import warnings
 import pickle as pkl
 
-from modin.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
@@ -52,10 +65,12 @@ _ATTRS_NO_LOOKUP = {"____id_pack__", "__name__"}
 
 
 class BasePandasDataset(object):
-    """This object is the base for most of the common code that exists in
-    DataFrame/Series. Since both objects share the same underlying representation,
-    and the algorithms are the same, we use this object to define the general
-    behavior of those objects and then use those objects to define the output type.
+    """
+    Implement most of the common code that exists in DataFrame/Series.
+
+    Since both objects share the same underlying representation, and the algorithms
+    are the same, we use this object to define the general behavior of those objects
+    and then use those objects to define the output type.
     """
 
     # Siblings are other objects that share the same query compiler. We use this list
@@ -63,12 +78,46 @@ class BasePandasDataset(object):
     _siblings = []
 
     def _add_sibling(self, sibling):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         sibling._siblings = self._siblings + [self]
         self._siblings += [sibling]
         for sib in self._siblings:
             sib._siblings += [sibling]
 
     def _build_repr_df(self, num_rows, num_cols):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
             hasattr(self, "columns") and len(self.columns) == 0
@@ -119,10 +168,13 @@ class BasePandasDataset(object):
         return self.iloc[indexer]._query_compiler.to_pandas()
 
     def _update_inplace(self, new_query_compiler):
-        """Updates the current DataFrame inplace.
+        """
+        Update the current DataFrame inplace.
 
-        Args:
-            new_query_compiler: The new QueryCompiler to use to manage the data
+        Parameters
+        ----------
+        new_query_compiler: query_compiler
+            The new QueryCompiler to use to manage the data
         """
         old_query_compiler = self._query_compiler
         self._query_compiler = new_query_compiler
@@ -131,11 +183,19 @@ class BasePandasDataset(object):
         old_query_compiler.free()
 
     def _handle_level_agg(self, axis, level, op, sort=False, **kwargs):
-        """Helper method to perform error checking for aggregation functions with a level parameter.
-        Args:
-            axis: The axis to apply the operation on
-            level: The level of the axis to apply the operation on
-            op: String representation of the operation to be performed on the level
+        """
+        Help to perform error checking for aggregation functions with a level parameter.
+
+        TODO: add types.
+
+        Parameters
+        ----------
+        axis:
+            The axis to apply the operation on
+        level:
+            The level of the axis to apply the operation on
+        op:
+            String representation of the operation to be performed on the level
         """
         return getattr(self.groupby(level=level, axis=axis, sort=sort), op)(**kwargs)
 
@@ -148,7 +208,23 @@ class BasePandasDataset(object):
         numeric_or_object_only=False,
         comparison_dtypes_only=False,
     ):
-        """Helper method to check validity of other in inter-df operations"""
+        """
+        Help to check validity of other in inter-df operations.
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         # We skip dtype checking if the other is a scalar.
         if is_scalar(other):
             return other
@@ -226,6 +302,23 @@ class BasePandasDataset(object):
         return result
 
     def _binary_op(self, op, other, **kwargs):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         # _axis indicates the operator will use the default axis
         if kwargs.pop("_axis", None) is None:
             if kwargs.get("axis", None) is not None:
@@ -245,7 +338,23 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler)
 
     def _default_to_pandas(self, op, *args, **kwargs):
-        """Helper method to use default pandas function"""
+        """
+        Help to use default pandas function.
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         empty_self_str = "" if not self.empty else " for empty DataFrame"
         ErrorMessage.default_to_pandas(
             "`{}.{}`{}".format(
@@ -317,6 +426,23 @@ class BasePandasDataset(object):
                 return result
 
     def _get_axis_number(self, axis):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         return (
             getattr(pandas, type(self).__name__)()._get_axis_number(axis)
             if axis is not None
@@ -324,48 +450,39 @@ class BasePandasDataset(object):
         )
 
     def __constructor__(self, *args, **kwargs):
+        """Construct DataFrame or Series object depending on self type."""
         return type(self)(*args, **kwargs)
 
     def abs(self):
-        """Apply an absolute value function to all numeric columns.
-
-        Returns:
-            A new DataFrame with the applied absolute value.
-        """
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())
 
     def _set_index(self, new_index):
-        """Set the index for this DataFrame.
+        """
+        Set the index for this DataFrame.
 
-        Args:
-            new_index: The new index to set this
+        TODO: add types.
+
+        Parameters
+        ----------
+        new_index:
+            The new index to set this.
         """
         self._query_compiler.index = new_index
 
     def _get_index(self):
-        """Get the index for this DataFrame.
+        """
+        Get the index for this DataFrame.
 
-        Returns:
-            The union of all indexes across the partitions.
+        Returns
+        -------
+        The union of all indexes across the partitions.
         """
         return self._query_compiler.index
 
     index = property(_get_index, _set_index)
 
     def add(self, other, axis="columns", level=None, fill_value=None):
-        """Add this DataFrame to another or a scalar/list.
-
-        Args:
-            other: What to add this this DataFrame.
-            axis: The axis to apply addition over. Only applicable to Series
-                or list 'other'.
-            level: A level in the multilevel axis to add over.
-            fill_value: The value to fill NaN.
-
-        Returns:
-            A new DataFrame with the applied addition.
-        """
         return self._binary_op(
             "add", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -456,12 +573,6 @@ class BasePandasDataset(object):
         )
 
     def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
-        """Return whether all elements are True over requested axis
-
-        Note:
-            If axis=None or axis=0, this call applies df.all(axis=1)
-                to the transpose of df.
-        """
         if axis is not None:
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
@@ -513,12 +624,6 @@ class BasePandasDataset(object):
             return result
 
     def any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
-        """Return whether any elements are True over requested axis
-
-        Note:
-            If axis=None or axis=0, this call applies on the column partitions,
-                otherwise operates on row partitions
-        """
         if axis is not None:
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
@@ -581,18 +686,6 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
-        """Apply a function along input axis of DataFrame.
-
-        Args:
-            func: The function to apply
-            axis: The axis over which to apply the func.
-            broadcast: Whether or not to broadcast.
-            raw: Whether or not to convert to a Series.
-            reduce: Whether or not to try to apply reduction procedures.
-
-        Returns:
-            Series or DataFrame, depending on func.
-        """
         warnings.warn(
             "Modin index may not match pandas index due to pandas issue pandas-dev/pandas#36189."
         )
@@ -708,7 +801,6 @@ class BasePandasDataset(object):
         return self.iloc[indexer] if axis == 0 else self.iloc[:, indexer]
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
-        """Synonym for DataFrame.fillna(method='bfill')"""
         return self.fillna(
             method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -716,12 +808,6 @@ class BasePandasDataset(object):
     backfill = bfill
 
     def bool(self):
-        """Return the bool of a single element PandasObject.
-
-        This must be a boolean scalar value, either True or False.  Raise a
-        ValueError if the PandasObject does not have exactly 1 element, or that
-        element is not boolean
-        """
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
             raise ValueError(
@@ -765,11 +851,6 @@ class BasePandasDataset(object):
         return self._binary_op("combine_first", other, _axis=0)
 
     def copy(self, deep=True):
-        """Creates a shallow copy of the DataFrame.
-
-        Returns:
-            A new DataFrame pointing to the same partitions as this one.
-        """
         if deep:
             return self.__constructor__(query_compiler=self._query_compiler.copy())
         new_obj = self.__constructor__(query_compiler=self._query_compiler)
@@ -777,27 +858,6 @@ class BasePandasDataset(object):
         return new_obj
 
     def count(self, axis=0, level=None, numeric_only=False):
-        """
-        Get the count of non-NA cells for each column or row in the DataFrame.
-
-        Parameters
-        ----------
-            axis : {0 or 'index', 1 or 'columns'}, default 0
-                If 0 or 'index' counts are generated for each column.
-                If 1 or 'columns' counts are generated for each row.
-            level : int or str, optional
-                If the axis is a `MultiIndex` (hierarchical), count along a
-                particular `level`, collapsing into a `DataFrame`.
-                A `str` specifies the level name.
-            numeric_only : bool, default False
-                Include only `float`, `int` or `boolean` data.
-
-        Returns
-        -------
-            Series or DataFrame
-            For each column/row the number of non-NA entries.
-            If `level` is specified returns a `DataFrame`.
-        """
         axis = self._get_axis_number(axis)
         frame = self.select_dtypes([np.number, np.bool]) if numeric_only else self
 
@@ -815,15 +875,6 @@ class BasePandasDataset(object):
         )
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
-        """Perform a cumulative maximum across the DataFrame.
-
-        Args:
-            axis (int): The axis to take maximum on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The cumulative maximum of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
@@ -834,15 +885,6 @@ class BasePandasDataset(object):
         )
 
     def cummin(self, axis=None, skipna=True, *args, **kwargs):
-        """Perform a cumulative minimum across the DataFrame.
-
-        Args:
-            axis (int): The axis to cummin on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The cumulative minimum of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
@@ -853,15 +895,6 @@ class BasePandasDataset(object):
         )
 
     def cumprod(self, axis=None, skipna=True, *args, **kwargs):
-        """Perform a cumulative product across the DataFrame.
-
-        Args:
-            axis (int): The axis to take product on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The cumulative product of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -871,15 +904,6 @@ class BasePandasDataset(object):
         )
 
     def cumsum(self, axis=None, skipna=True, *args, **kwargs):
-        """Perform a cumulative sum across the DataFrame.
-
-        Args:
-            axis (int): The axis to take sum on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The cumulative sum of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -891,22 +915,6 @@ class BasePandasDataset(object):
     def describe(
         self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
     ):
-        """
-        Generates descriptive statistics that summarize the central tendency,
-        dispersion and shape of a dataset's distribution, excluding NaN values.
-
-        Args:
-            percentiles (list-like of numbers, optional):
-                The percentiles to include in the output.
-            include: White-list of data types to include in results
-            exclude: Black-list of data types to exclude in results
-            datetime_is_numeric : bool, default False
-                Whether to treat datetime dtypes as numeric.
-                This affects statistics calculated for the column. For DataFrame input,
-                this also controls whether datetime columns are included by default.
-
-        Returns: Series/DataFrame of summary statistics
-        """
         if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
@@ -965,15 +973,6 @@ class BasePandasDataset(object):
         )
 
     def diff(self, periods=1, axis=0):
-        """Finds the difference between elements on the axis requested
-
-        Args:
-            periods: Periods to shift for forming difference
-            axis: Take difference over rows or columns
-
-        Returns:
-            DataFrame with the diff applied
-        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
@@ -989,20 +988,6 @@ class BasePandasDataset(object):
         inplace=False,
         errors="raise",
     ):
-        """Return new object with labels in requested axis removed.
-        Args:
-            labels: Index or column labels to drop.
-            axis: Whether to drop labels from the index (0 / 'index') or
-                columns (1 / 'columns').
-            index, columns: Alternative to specifying axis (labels, axis=1 is
-                equivalent to columns=labels).
-            level: For MultiIndex
-            inplace: If True, do operation inplace and return None.
-            errors: If 'ignore', suppress error and existing labels are
-                dropped.
-        Returns:
-            dropped : type of caller
-        """
         # TODO implement level
         if level is not None:
             return self._default_to_pandas(
@@ -1076,23 +1061,6 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def dropna(self, axis=0, how="any", thresh=None, subset=None, inplace=False):
-        """Create a new DataFrame from the removed NA values from this one.
-
-        Args:
-            axis (int, tuple, or list): The axis to apply the drop.
-            how (str): How to drop the NA values.
-                'all': drop the label if all values are NA.
-                'any': drop the label if any values are NA.
-            thresh (int): The minimum number of NAs to require.
-            subset ([label]): Labels to consider from other axis.
-            inplace (bool): Change this DataFrame or return a new DataFrame.
-                True: Modify the data for this DataFrame, return None.
-                False: Create a new DataFrame and return it.
-
-        Returns:
-            If inplace is set to True, returns None, otherwise returns a new
-            DataFrame with the dropna applied.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
 
         if is_list_like(axis):
@@ -1120,14 +1088,6 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def droplevel(self, level, axis=0):
-        """Return index with requested level(s) removed.
-
-        Args:
-            level: The level to drop
-
-        Returns:
-            Index or MultiIndex
-        """
         axis = self._get_axis_number(axis)
         new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
@@ -1138,22 +1098,6 @@ class BasePandasDataset(object):
         return result
 
     def drop_duplicates(self, keep="first", inplace=False, **kwargs):
-        """Return DataFrame with duplicate rows removed, optionally only considering certain columns
-
-        Args:
-            subset : column label or sequence of labels, optional
-                Only consider certain columns for identifying duplicates, by
-                default use all of the columns
-            keep : {'first', 'last', False}, default 'first'
-                - ``first`` : Drop duplicates except for the first occurrence.
-                - ``last`` : Drop duplicates except for the last occurrence.
-                - False : Drop all duplicates.
-            inplace : boolean, default False
-                Whether to drop duplicates in place or to return a copy
-
-        Returns:
-            deduplicated : DataFrame
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
         if subset is not None:
@@ -1169,16 +1113,6 @@ class BasePandasDataset(object):
         return self.drop(index=self.index[indices], inplace=inplace)
 
     def eq(self, other, axis="columns", level=None):
-        """Checks element-wise that this is equal to other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the eq over.
-            level: The Multilevel index level to apply eq over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("eq", other, axis=axis, level=level)
 
     def ewm(
@@ -1212,7 +1146,6 @@ class BasePandasDataset(object):
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
-        """Synonym for fillna(method='ffill')"""
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -1228,36 +1161,6 @@ class BasePandasDataset(object):
         limit=None,
         downcast=None,
     ):
-        """Fill NA/NaN values using the specified method.
-
-        Args:
-            value: Value to use to fill holes. This value cannot be a list.
-
-            method: Method to use for filling holes in reindexed Series pad.
-                ffill: propagate last valid observation forward to next valid
-                backfill.
-                bfill: use NEXT valid observation to fill gap.
-
-            axis: 0 or 'index', 1 or 'columns'.
-
-            inplace: If True, fill in place. Note: this will modify any other
-                views on this object.
-
-            limit: If method is specified, this is the maximum number of
-                consecutive NaN values to forward/backward fill. In other
-                words, if there is a gap with more than this number of
-                consecutive NaNs, it will only be partially filled. If method
-                is not specified, this is the maximum number of entries along
-                the entire axis where NaNs will be filled. Must be greater
-                than 0 if not None.
-
-            downcast: A dict of item->dtype of what to downcast if possible,
-                or the string 'infer' which will try to downcast to an
-                appropriate equal type.
-
-        Returns:
-            filled: DataFrame
-        """
         # TODO implement value passed as DataFrame/Series
         if isinstance(value, BasePandasDataset):
             new_query_compiler = self._default_to_pandas(
@@ -1304,17 +1207,6 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def filter(self, items=None, like=None, regex=None, axis=None):
-        """Subset rows or columns based on their labels
-
-        Args:
-            items (list): list of labels to subset
-            like (string): retain labels where `arg in label == True`
-            regex (string): retain labels matching regex input
-            axis: axis to filter on
-
-        Returns:
-            A new DataFrame with the filter applied.
-        """
         nkw = count_not_none(items, like, regex)
         if nkw > 1:
             raise TypeError(
@@ -1351,85 +1243,26 @@ class BasePandasDataset(object):
         return self.loc[pandas.Series(index=self.index).first(offset).index]
 
     def first_valid_index(self):
-        """Return index for first non-NA/null value.
-
-        Returns:
-            scalar: type of index
-        """
         return self._query_compiler.first_valid_index()
 
     def floordiv(self, other, axis="columns", level=None, fill_value=None):
-        """Divides this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the divide against this.
-            axis: The axis to divide over.
-            level: The Multilevel index level to apply divide over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Divide applied.
-        """
         return self._binary_op(
             "floordiv", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def ge(self, other, axis="columns", level=None):
-        """Checks element-wise that this is greater than or equal to other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the gt over.
-            level: The Multilevel index level to apply gt over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("ge", other, axis=axis, level=level)
 
     def get(self, key, default=None):
-        """Get item from object for given key (DataFrame column, Panel
-        slice, etc.). Returns default value if not found.
-
-        Args:
-            key (DataFrame column, Panel slice) : the key for which value
-            to get
-
-        Returns:
-            value (type of items contained in object) : A value that is
-            stored at the key
-        """
         if key in self.keys():
             return self.__getitem__(key)
         else:
             return default
 
     def gt(self, other, axis="columns", level=None):
-        """Checks element-wise that this is greater than other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the gt over.
-            level: The Multilevel index level to apply gt over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("gt", other, axis=axis, level=level)
 
     def head(self, n=5):
-        """Get the first n rows of the DataFrame or Series.
-
-        Parameters
-        ----------
-        n : int
-            The number of rows to return.
-
-        Returns
-        -------
-        DataFrame or Series
-            A new DataFrame or Series with the first n rows of the DataFrame or Series.
-        """
         return self.iloc[:n]
 
     @property
@@ -1439,16 +1272,6 @@ class BasePandasDataset(object):
         return _iLocIndexer(self)
 
     def idxmax(self, axis=0, skipna=True):
-        """Get the index of the first occurrence of the max value of the axis.
-
-        Args:
-            axis (int): Identify the max over the rows (1) or columns (0).
-            skipna (bool): Whether or not to skip NA values.
-
-        Returns:
-            A Series with the index for each maximum value for the axis
-                specified.
-        """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
@@ -1457,16 +1280,6 @@ class BasePandasDataset(object):
         )
 
     def idxmin(self, axis=0, skipna=True):
-        """Get the index of the first occurrence of the min value of the axis.
-
-        Args:
-            axis (int): Identify the min over the rows (1) or columns (0).
-            skipna (bool): Whether or not to skip NA values.
-
-        Returns:
-            A Series with the index for each minimum value for the axis
-                specified.
-        """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduction operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
@@ -1493,60 +1306,22 @@ class BasePandasDataset(object):
         )
 
     def isin(self, values):
-        """Fill a DataFrame with booleans for cells contained in values.
-
-        Args:
-            values (iterable, DataFrame, Series, or dict): The values to find.
-
-        Returns:
-            A new DataFrame with booleans representing whether or not a cell
-            is in values.
-            True: cell is contained in values.
-            False: otherwise
-        """
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(values=values)
         )
 
     def isna(self):
-        """Fill a DataFrame with booleans for cells containing NA.
-
-        Returns:
-            A new DataFrame with booleans representing whether or not a cell
-            is NA.
-            True: cell contains NA.
-            False: otherwise.
-        """
         return self.__constructor__(query_compiler=self._query_compiler.isna())
 
     isnull = isna
 
     @property
     def iloc(self):
-        """Purely integer-location based indexing for selection by position.
-
-        We currently support: single label, list array, slice object
-        We do not support: boolean array, callable
-        """
         from .indexing import _iLocIndexer
 
         return _iLocIndexer(self)
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Return unbiased kurtosis over requested axis. Normalized by N-1
-
-        Kurtosis obtained using Fisher’s definition of kurtosis (kurtosis of normal == 0.0).
-
-        Args:
-            axis : {index (0), columns (1)}
-            skipna : boolean, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-            numeric_only : boolean, default None
-
-        Returns:
-            kurtosis : Series or DataFrame (if level specified)
-        """
         axis = self._get_axis_number(axis)
         if level is not None:
             func_kwargs = {
@@ -1577,66 +1352,21 @@ class BasePandasDataset(object):
         return self.loc[pandas.Series(index=self.index).last(offset).index]
 
     def last_valid_index(self):
-        """Return index for last non-NA/null value.
-
-        Returns:
-            scalar: type of index
-        """
         return self._query_compiler.last_valid_index()
 
     def le(self, other, axis="columns", level=None):
-        """Checks element-wise that this is less than or equal to other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the le over.
-            level: The Multilevel index level to apply le over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("le", other, axis=axis, level=level)
 
     def lt(self, other, axis="columns", level=None):
-        """Checks element-wise that this is less than other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the lt over.
-            level: The Multilevel index level to apply lt over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("lt", other, axis=axis, level=level)
 
     @property
     def loc(self):
-        """Purely label-location based indexer for selection by label.
-
-        We currently support: single label, list array, slice object
-        We do not support: boolean array, callable
-        """
         from .indexing import _LocIndexer
 
         return _LocIndexer(self)
 
     def mad(self, axis=None, skipna=None, level=None):
-        """
-        Return the mean absolute deviation of the values for the requested axis.
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-            skipna : bool, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-
-        Returns
-        -------
-            Series or DataFrame (if level specified)
-
-        """
         axis = self._get_axis_number(axis)
 
         if level is not None:
@@ -1670,15 +1400,6 @@ class BasePandasDataset(object):
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Perform max across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the max on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The max of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1692,15 +1413,6 @@ class BasePandasDataset(object):
         )
 
     def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Computes mean across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the mean on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The mean of the DataFrame. (Pandas series)
-        """
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
@@ -1716,33 +1428,11 @@ class BasePandasDataset(object):
         )
 
     def memory_usage(self, index=True, deep=False):
-        """Returns the memory usage of each column in bytes
-
-        Args:
-            index (bool): Whether to include the memory usage of the DataFrame's
-                index in returned Series. Defaults to True
-            deep (bool): If True, introspect the data deeply by interrogating
-            objects dtypes for system-level memory consumption. Defaults to False
-
-        Returns:
-            A Series where the index are the column names and the values are
-            the memory usage of each of the columns in bytes. If `index=true`,
-            then the first value of the Series will be 'Index' with its memory usage.
-        """
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
 
     def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """Perform min across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the min on.
-            skipna (bool): True to skip NA values, false otherwise.
-
-        Returns:
-            The min of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1756,31 +1446,11 @@ class BasePandasDataset(object):
         )
 
     def mod(self, other, axis="columns", level=None, fill_value=None):
-        """Mods this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the mod against this.
-            axis: The axis to mod over.
-            level: The Multilevel index level to apply mod over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Mod applied.
-        """
         return self._binary_op(
             "mod", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def mode(self, axis=0, numeric_only=False, dropna=True):
-        """Perform mode across the DataFrame.
-
-        Args:
-            axis (int): The axis to take the mode on.
-            numeric_only (bool): if True, only apply to numeric columns.
-
-        Returns:
-            DataFrame: The mode of the DataFrame.
-        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.mode(
@@ -1789,17 +1459,6 @@ class BasePandasDataset(object):
         )
 
     def mul(self, other, axis="columns", level=None, fill_value=None):
-        """Multiplies this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the multiply against this.
-            axis: The axis to multiply over.
-            level: The Multilevel index level to apply multiply over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Multiply applied.
-        """
         return self._binary_op(
             "mul", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1807,40 +1466,14 @@ class BasePandasDataset(object):
     multiply = mul
 
     def ne(self, other, axis="columns", level=None):
-        """Checks element-wise that this is not equal to other.
-
-        Args:
-            other: A DataFrame or Series or scalar to compare to.
-            axis: The axis to perform the ne over.
-            level: The Multilevel index level to apply ne over.
-
-        Returns:
-            A new DataFrame filled with Booleans.
-        """
         return self._binary_op("ne", other, axis=axis, level=level)
 
     def notna(self):
-        """Perform notna across the DataFrame.
-
-        Returns:
-            Boolean DataFrame where value is False if corresponding
-            value is NaN, True otherwise
-        """
         return self.__constructor__(query_compiler=self._query_compiler.notna())
 
     notnull = notna
 
     def nunique(self, axis=0, dropna=True):
-        """Return Series with number of distinct
-           observations over requested axis.
-
-        Args:
-            axis : {0 or 'index', 1 or 'columns'}, default 0
-            dropna : boolean, default True
-
-        Returns:
-            nunique : Series
-        """
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.nunique(axis=axis, dropna=dropna)
@@ -1857,44 +1490,14 @@ class BasePandasDataset(object):
         )
 
     def pipe(self, func, *args, **kwargs):
-        """Apply func(self, *args, **kwargs)
-
-        Args:
-            func: function to apply to the df.
-            args: positional arguments passed into ``func``.
-            kwargs: a dictionary of keyword arguments passed into ``func``.
-
-        Returns:
-            object: the return type of ``func``.
-        """
         return pipe(self, func, *args, **kwargs)
 
     def pop(self, item):
-        """Pops an item from this DataFrame and returns it.
-
-        Args:
-            item (str): Column label to be popped
-
-        Returns:
-            A Series containing the popped values. Also modifies this
-            DataFrame.
-        """
         result = self[item]
         del self[item]
         return result
 
     def pow(self, other, axis="columns", level=None, fill_value=None):
-        """Pow this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the pow against this.
-            axis: The axis to pow over.
-            level: The Multilevel index level to apply pow over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Pow applied.
-        """
         return self._binary_op(
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1902,26 +1505,6 @@ class BasePandasDataset(object):
     radd = add
 
     def quantile(self, q=0.5, axis=0, numeric_only=True, interpolation="linear"):
-        """Return values at the given quantile over requested axis,
-            a la numpy.percentile.
-
-        Args:
-            q (float): 0 <= q <= 1, the quantile(s) to compute
-            axis (int): 0 or 'index' for row-wise,
-                        1 or 'columns' for column-wise
-            interpolation: {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
-                Specifies which interpolation method to use
-
-        Returns:
-            quantiles : Series or DataFrame
-                    If q is an array, a DataFrame will be returned where the
-                    index is q, the columns are the columns of self, and the
-                    values are the quantiles.
-
-                    If q is a float, a Series will be returned where the
-                    index is the columns of self and the values
-                    are the quantiles.
-        """
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
@@ -1986,27 +1569,6 @@ class BasePandasDataset(object):
         ascending=True,
         pct=False,
     ):
-        """
-        Compute numerical data ranks (1 through n) along axis.
-        Equal values are assigned a rank that is the [method] of
-        the ranks of those values.
-
-        Args:
-            axis (int): 0 or 'index' for row-wise,
-                        1 or 'columns' for column-wise
-            method: {'average', 'min', 'max', 'first', 'dense'}
-                Specifies which method to use for equal vals
-            numeric_only (boolean)
-                Include only float, int, boolean data.
-            na_option: {'keep', 'top', 'bottom'}
-                Specifies how to handle NA options
-            ascending (boolean):
-                Decedes ranking order
-            pct (boolean):
-                Computes percentage ranking of data
-        Returns:
-            A new DataFrame
-        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(
@@ -2186,63 +1748,6 @@ class BasePandasDataset(object):
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
-        """
-        Resample time-series data.
-        Convenience method for frequency conversion and resampling of time
-        series. Object must have a datetime-like index (`DatetimeIndex`,
-        `PeriodIndex`, or `TimedeltaIndex`), or pass datetime-like values
-        to the `on` or `level` keyword.
-
-        Parameters
-        ----------
-        rule : DateOffset, Timedelta or str
-            The offset string or object representing target conversion.
-        axis : {0 or 'index', 1 or 'columns'}, default 0
-            Which axis to use for up- or down-sampling. For `Series` this
-            will default to 0, i.e. along the rows. Must be
-            `DatetimeIndex`, `TimedeltaIndex` or `PeriodIndex`.
-        closed : {'right', 'left'}, default None
-            Which side of bin interval is closed. The default is 'left'
-            for all frequency offsets except for 'M', 'A', 'Q', 'BM',
-            'BA', 'BQ', and 'W' which all have a default of 'right'.
-        label : {'right', 'left'}, default None
-            Which bin edge label to label bucket with. The default is 'left'
-            for all frequency offsets except for 'M', 'A', 'Q', 'BM',
-            'BA', 'BQ', and 'W' which all have a default of 'right'.
-        convention : {'start', 'end', 's', 'e'}, default 'start'
-            For `PeriodIndex` only, controls whether to use the start or
-            end of `rule`.
-        kind : {'timestamp', 'period'}, optional, default None
-            Pass 'timestamp' to convert the resulting index to a
-            `DateTimeIndex` or 'period' to convert it to a `PeriodIndex`.
-            By default the input representation is retained.
-        loffset : timedelta, default None
-            Adjust the resampled time labels.
-        base : int, default 0
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for '5min' frequency, base could
-            range from 0 through 4. Defaults to 0.
-        on : str, optional
-            For a DataFrame, column to use instead of index for resampling.
-            Column must be datetime-like.
-        level : str or int, optional
-            For a MultiIndex, level (name or number) to use for
-            resampling. `level` must be datetime-like.
-        origin : {'epoch', 'start', 'start_day'}, Timestamp or str, default 'start_day'
-            The timestamp on which to adjust the grouping. The timezone of origin must match
-            the timezone of the index. If a timestamp is not used, these values are also supported:
-
-            - 'epoch': origin is 1970-01-01
-            - 'start': origin is the first value of the timeseries
-            - 'start_day': origin is the first day at midnight of the timeseries
-
-        offset : Timedelta or str, default is None
-            An offset timedelta added to the origin.
-
-        Returns
-        -------
-        Resampler object
-        """
         return Resampler(
             self,
             rule=rule,
@@ -2262,24 +1767,6 @@ class BasePandasDataset(object):
     def reset_index(
         self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
     ):
-        """Reset this index to default and create column from current index.
-
-        Args:
-            level: Only remove the given levels from the index. Removes all
-                levels by default
-            drop: Do not try to insert index into DataFrame columns. This
-                resets the index to the default integer index.
-            inplace: Modify the DataFrame in place (do not create a new object)
-            col_level : If the columns have multiple levels, determines which
-                level the labels are inserted into. By default it is inserted
-                into the first level.
-            col_fill: If the columns have multiple levels, determines how the
-                other levels are named. If None then the index name is
-                repeated.
-
-        Returns:
-            A new DataFrame if inplace is False, None otherwise.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Error checking for matching Pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
@@ -2302,17 +1789,6 @@ class BasePandasDataset(object):
         )
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
-        """Mod this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the div against this.
-            axis: The axis to div over.
-            level: The Multilevel index level to apply div over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the rdiv applied.
-        """
         return self._binary_op(
             "rmod", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2329,47 +1805,6 @@ class BasePandasDataset(object):
         axis=0,
         closed=None,
     ):
-        """
-        Provide rolling window calculations.
-
-        Parameters
-        ----------
-        window : int, offset, or BaseIndexer subclass
-            Size of the moving window. This is the number of observations used for
-            calculating the statistic. Each window will be a fixed size.
-            If its an offset then this will be the time period of each window. Each
-            window will be a variable sized based on the observations included in
-            the time-period. This is only valid for datetimelike indexes.
-            If a BaseIndexer subclass is passed, calculates the window boundaries
-            based on the defined ``get_window_bounds`` method. Additional rolling
-            keyword arguments, namely `min_periods`, `center`, and
-            `closed` will be passed to `get_window_bounds`.
-        min_periods : int, default None
-            Minimum number of observations in window required to have a value
-            (otherwise result is NA). For a window that is specified by an offset,
-            `min_periods` will default to 1. Otherwise, `min_periods` will default
-            to the size of the window.
-        center : bool, default False
-            Set the labels at the center of the window.
-        win_type : str, default None
-            Provide a window type. If ``None``, all points are evenly weighted.
-            See the notes below for further information.
-        on : str, optional
-            For a DataFrame, a datetime-like column or MultiIndex level on which
-            to calculate the rolling window, rather than the DataFrame's index.
-            Provided integer column is ignored and excluded from result since
-            an integer index is not used to calculate the rolling window.
-        axis : int or str, default 0
-        closed : str, default None
-            Make the interval closed on the 'right', 'left', 'both' or
-            'neither' endpoints.
-            For offset-based windows, it defaults to 'right'.
-            For fixed windows, defaults to 'both'. Remaining cases not implemented
-            for fixed windows.
-        Returns
-        -------
-        a Window or Rolling sub-classed for the particular operation
-        """
         if win_type is not None:
             return Window(
                 self,
@@ -2394,62 +1829,21 @@ class BasePandasDataset(object):
         )
 
     def round(self, decimals=0, *args, **kwargs):
-        """Round each element in the DataFrame.
-
-        Args:
-            decimals: The number of decimals to round to.
-
-        Returns:
-             A new DataFrame.
-        """
         return self.__constructor__(
             query_compiler=self._query_compiler.round(decimals=decimals, **kwargs)
         )
 
     def rpow(self, other, axis="columns", level=None, fill_value=None):
-        """Pow this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the pow against this.
-            axis: The axis to pow over.
-            level: The Multilevel index level to apply pow over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Pow applied.
-        """
         return self._binary_op(
             "rpow", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rsub(self, other, axis="columns", level=None, fill_value=None):
-        """Subtract a DataFrame/Series/scalar from this DataFrame.
-
-        Args:
-            other: The object to use to apply the subtraction to this.
-            axis: The axis to apply the subtraction over.
-            level: Mutlilevel index level to subtract over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-             A new DataFrame with the subtraciont applied.
-        """
         return self._binary_op(
             "rsub", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rtruediv(self, other, axis="columns", level=None, fill_value=None):
-        """Div this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the div against this.
-            axis: The axis to div over.
-            level: The Multilevel index level to apply div over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the rdiv applied.
-        """
         return self._binary_op(
             "rtruediv", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2465,30 +1859,6 @@ class BasePandasDataset(object):
         random_state=None,
         axis=None,
     ):
-        """Returns a random sample of items from an axis of object.
-
-        Args:
-            n: Number of items from axis to return. Cannot be used with frac.
-                Default = 1 if frac = None.
-            frac: Fraction of axis items to return. Cannot be used with n.
-            replace: Sample with or without replacement. Default = False.
-            weights: Default 'None' results in equal probability weighting.
-                If passed a Series, will align with target object on index.
-                Index values in weights not found in sampled object will be
-                ignored and index values in sampled object not in weights will
-                be assigned weights of zero. If called on a DataFrame, will
-                accept the name of a column when axis = 0. Unless weights are
-                a Series, weights must be same length as axis being sampled.
-                If weights do not sum to 1, they will be normalized to sum
-                to 1. Missing values in the weights column will be treated as
-                zero. inf and -inf values not allowed.
-            random_state: Seed for the random number generator (if int), or
-                numpy RandomState object.
-            axis: Axis to sample. Accepts axis number or name.
-
-        Returns:
-            A new Dataframe
-        """
         axis = self._get_axis_number(axis)
         if axis:
             axis_labels = self.columns
@@ -2601,16 +1971,6 @@ class BasePandasDataset(object):
             return self.__constructor__(query_compiler=query_compiler)
 
     def set_axis(self, labels, axis=0, inplace=False):
-        """Assign desired index to given axis.
-
-        Args:
-            labels (pandas.Index or list-like): The Index to assign.
-            axis (string or int): The axis to reassign.
-            inplace (bool): Whether to make these modifications inplace.
-
-        Returns:
-            If inplace is False, returns a new DataFrame, otherwise None.
-        """
         if is_scalar(labels):
             warnings.warn(
                 'set_axis now takes "labels" as first argument, and '
@@ -2629,34 +1989,6 @@ class BasePandasDataset(object):
             return obj
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
-        """
-        Shift index by desired number of periods with an optional time `freq`.
-        When `freq` is not passed, shift the index without realigning the data.
-        If `freq` is passed (in this case, the index must be date or datetime,
-        or it will raise a `NotImplementedError`), the index will be
-        increased using the periods and the `freq`.
-        Parameters
-        ----------
-        periods : int
-            Number of periods to shift. Can be positive or negative.
-        freq : DateOffset, tseries.offsets, timedelta, or str, optional
-            Offset to use from the tseries module or time rule (e.g. 'EOM').
-            If `freq` is specified then the index values are shifted but the
-            data is not realigned. That is, use `freq` if you would like to
-            extend the index when shifting and preserve the original data.
-        axis : {{0 or 'index', 1 or 'columns', None}}, default None
-            Shift direction.
-        fill_value : object, optional
-            The scalar value to use for newly introduced missing values.
-            the default depends on the dtype of `self`.
-            For numeric data, ``np.nan`` is used.
-            For datetime, timedelta, or period data, etc. :attr:`NaT` is used.
-            For extension dtypes, ``self.dtype.na_value`` is used.
-        Returns
-        -------
-            Copy of input object, shifted.
-        """
-
         if periods == 0:
             # Check obvious case first
             return self.copy()
@@ -2739,44 +2071,6 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
-        """
-        Sort object by labels (along an axis).
-
-        Parameters
-        ----------
-            axis : {0 or 'index', 1 or 'columns'}, default 0
-                The axis along which to sort.
-                The value 0 identifies the rows, and 1 identifies the columns.
-            level : int or level name or list of ints or list of level names
-                If not None, sort on values in specified index level(s).
-            ascending : bool or list of bools, default True
-                Sort ascending vs. descending. When the index is a MultiIndex
-                the sort direction can be controlled for each level individually.
-            inplace : bool, default False
-                If True, perform operation in-place.
-            kind : {'quicksort', 'mergesort', 'heapsort'}, default 'quicksort'
-                Choice of sorting algorithm. See also ndarray.np.sort for more information.
-                mergesort is the only stable algorithm. For DataFrames,
-                this option is only applied when sorting on a single column or label.
-            na_position : {'first', 'last'}, default 'last'
-                Puts NaNs at the beginning if first; last puts NaNs at the end.
-                Not implemented for MultiIndex.
-            sort_remaining : bool, default True
-                If True and sorting by level and index is multilevel,
-                sort by other levels too (in order) after sorting by specified level.
-            ignore_index : bool, default False
-                If True, the resulting axis will be labeled 0, 1, ..., n - 1.
-            key : callable, optional
-                If not None, apply the key function to the index values before sorting.
-                This is similar to the key argument in the builtin sorted() function,
-                with the notable difference that this key function should be vectorized.
-                It should expect an Index and return an Index of the same shape.
-                For MultiIndex inputs, the key is applied per level.
-
-        Returns
-        -------
-            A sorted DataFrame
-        """
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.sort_index(
@@ -2803,43 +2097,6 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
-        """
-        Sort by the values along either axis.
-
-        Parameters
-        ----------
-            by : str or list of str
-                Name or list of names to sort by.
-
-                - if axis is 0 or 'index' then by may contain index levels and/or column labels.
-                - if axis is 1 or 'columns' then by may contain column levels and/or index labels.
-
-            axis : {0 or 'index', 1 or 'columns'}, default 0
-                Axis to be sorted.
-            ascending : bool or list of bool, default True
-                Sort ascending vs. descending. Specify list for multiple sort orders.
-                If this is a list of bools, must match the length of the by.
-            inplace : bool, default False
-                If True, perform operation in-place.
-            kind : {'quicksort', 'mergesort', 'heapsort'}, default 'quicksort'
-                Choice of sorting algorithm. See also ndarray.np.sort for more information.
-                mergesort is the only stable algorithm. For DataFrames,
-                this option is only applied when sorting on a single column or label.
-            na_position : {'first', 'last'}, default 'last'
-                Puts NaNs at the beginning if first; last puts NaNs at the end.
-            ignore_index : bool, default False
-                If True, the resulting axis will be labeled 0, 1, ..., n - 1.
-            key : callable, optional
-                Apply the key function to the values before sorting.
-                This is similar to the key argument in the builtin sorted() function,
-                with the notable difference that this key function should be vectorized.
-                It should expect a Series and return a Series with the same shape as the input.
-                It will be applied to each column in by independently.
-
-        Returns
-        -------
-             A sorted DataFrame.
-        """
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         if axis == 0:
@@ -2863,17 +2120,6 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(result, inplace)
 
     def sub(self, other, axis="columns", level=None, fill_value=None):
-        """Subtract a DataFrame/Series/scalar from this DataFrame.
-
-        Args:
-            other: The object to use to apply the subtraction to this.
-            axis: The axis to apply the subtraction over.
-            level: Mutlilevel index level to subtract over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-             A new DataFrame with the subtraciont applied.
-        """
         return self._binary_op(
             "sub", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2895,18 +2141,6 @@ class BasePandasDataset(object):
         return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
 
     def tail(self, n=5):
-        """Get the last n rows of the DataFrame or Series.
-
-        Parameters
-        ----------
-        n : int
-            The number of rows to return.
-
-        Returns
-        -------
-        DataFrame or Series
-            A new DataFrame or Series with the last n rows of this DataFrame or Series.
-        """
         if n != 0:
             return self.iloc[-n:]
         return self.iloc[len(self.index) :]
@@ -3099,25 +2333,6 @@ class BasePandasDataset(object):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=no_default):
-        """
-        Convert the DataFrame to a NumPy array.
-
-        Parameters
-        ----------
-            dtype : str or numpy.dtype, optional
-                The dtype to pass to numpy.asarray().
-            copy : bool, default False
-                Whether to ensure that the returned value is not a view on another array.
-                Note that copy=False does not ensure that to_numpy() is no-copy.
-                Rather, copy=True ensure that a copy is made, even if not strictly necessary.
-            na_value : Any, optional
-                The value to use for missing values.
-                The default value depends on dtype and the type of the array.
-
-        Returns
-        -------
-            A NumPy array.
-        """
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
@@ -3225,17 +2440,6 @@ class BasePandasDataset(object):
         return self._default_to_pandas("to_xarray")
 
     def truediv(self, other, axis="columns", level=None, fill_value=None):
-        """Divides this DataFrame against another DataFrame/Series/scalar.
-
-        Args:
-            other: The object to use to apply the divide against this.
-            axis: The axis to divide over.
-            level: The Multilevel index level to apply divide over.
-            fill_value: The value to fill NaNs with.
-
-        Returns:
-            A new DataFrame with the Divide applied.
-        """
         return self._binary_op(
             "truediv", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -3297,11 +2501,6 @@ class BasePandasDataset(object):
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
     def __abs__(self):
-        """Creates a modified DataFrame by taking the absolute value.
-
-        Returns:
-            A modified DataFrame
-        """
         return self.abs()
 
     def __and__(self, other):
@@ -3315,35 +2514,15 @@ class BasePandasDataset(object):
         return arr
 
     def __array_wrap__(self, result, context=None):
-        """TODO: This is very inefficient. __array__ and as_matrix have been
-        changed to call the more efficient to_numpy, but this has been left
-        unchanged since we are not sure of its purpose.
-        """
+        # TODO: This is very inefficient. __array__ and as_matrix have been
+        # changed to call the more efficient to_numpy, but this has been left
+        # unchanged since we are not sure of its purpose.
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def __copy__(self, deep=True):
-        """Make a copy of this object.
-
-        Args:
-            deep: Boolean, deep copy or not.
-                  Currently we do not support deep copy.
-
-        Returns:
-            A Modin Series/DataFrame object.
-        """
         return self.copy(deep=deep)
 
     def __deepcopy__(self, memo=None):
-        """Make a -deep- copy of this object.
-
-        Note: This is equivalent to copy(deep=True).
-
-        Args:
-            memo: No effect. Just to comply with Pandas API.
-
-        Returns:
-            A Modin Series/DataFrame object.
-        """
         return self.copy(deep=True)
 
     def __eq__(self, other):
@@ -3397,11 +2576,6 @@ class BasePandasDataset(object):
         return self.le(right)
 
     def __len__(self):
-        """Gets the length of the DataFrame.
-
-        Returns:
-            Returns an integer length of the DataFrame object.
-        """
         return len(self.index)
 
     def __lt__(self, right):
@@ -3414,11 +2588,6 @@ class BasePandasDataset(object):
         return self.ne(other)
 
     def __neg__(self):
-        """Computes an element wise negative DataFrame
-
-        Returns:
-            A modified DataFrame where every element is the negation of before
-        """
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.negative())
 
@@ -3452,20 +2621,10 @@ class BasePandasDataset(object):
 
     @property
     def size(self):
-        """Get the number of elements in the DataFrame.
-
-        Returns:
-            The number of elements in the DataFrame.
-        """
         return len(self._query_compiler.index) * len(self._query_compiler.columns)
 
     @property
     def values(self):
-        """Create a NumPy array with the values from this object.
-
-        Returns:
-            The numpy representation of this object.
-        """
         return self.to_numpy()
 
     def __getattribute__(self, item):
@@ -3513,6 +2672,12 @@ if IsExperimental.get():
     make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
 
 
+@_inherit_docstrings(
+    pandas.core.resample.Resampler,
+    excluded=[
+        pandas.core.resample.Resampler.__init__,
+    ],
+)
 class Resampler(object):
     def __init__(
         self,
@@ -3884,6 +3049,12 @@ class Resampler(object):
         )
 
 
+@_inherit_docstrings(
+    pandas.core.window.rolling.Window,
+    excluded=[
+        pandas.core.window.rolling.Window.__init__,
+    ],
+)
 class Window(object):
     def __init__(
         self,
@@ -3937,6 +3108,12 @@ class Window(object):
         )
 
 
+@_inherit_docstrings(
+    pandas.core.window.rolling.Rolling,
+    excluded=[
+        pandas.core.window.rolling.Rolling.__init__,
+    ],
+)
 class Rolling(object):
     def __init__(
         self,
