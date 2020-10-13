@@ -182,7 +182,11 @@ class CSVReader(TextFileReader):
             new_index = pandas.RangeIndex(sum(row_lengths))
             # pandas has a really weird edge case here.
             # The edge case is as follows:
-            # 1.) If skiprows and names are specified, pandas assigns a row number based
+            # If skiprows and names are specified, pandas assigns a row number based
+            # on the number of dtypes that match above.
+            # This number is not easy for us to compute and ensure matching behavior
+            # with pandas, so we will just read 1 line with pandas and grab the start
+            # value from that.
             if skiprows > 1 and kwargs.get("names", None) is not None:
                 start = pandas.read_csv(
                     filepath_or_buffer, skiprows=skiprows, nrows=1, names=names
