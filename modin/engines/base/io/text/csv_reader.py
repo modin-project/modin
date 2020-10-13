@@ -181,10 +181,13 @@ class CSVReader(TextFileReader):
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
             # pandas has a really weird edge case here.
-            if kwargs.get("names", None) is not None and skiprows > 1:
-                new_index = pandas.RangeIndex(
-                    skiprows - 1, new_index.stop + skiprows - 1
-                )
+            # The edge case is as follows:
+            # 1.) If skiprows and names are specified, pandas assigns a row number based
+            if skiprows > 1 and kwargs.get("names", None) is not None:
+                start = pandas.read_csv(
+                    filepath_or_buffer, skiprows=skiprows, nrows=1, names=names
+                ).index[0]
+                new_index = pandas.RangeIndex(start, start + new_index.stop)
         else:
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
