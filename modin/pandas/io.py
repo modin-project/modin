@@ -11,6 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement I/O public API as Pandas does.
+
+Almost all docstrings for public and magic methods should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D101: missing docstring in class
+    - D103: missing docstring in public function
+    - D105: missing docstring in magic method
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import inspect
 import pandas
 import pathlib
@@ -21,38 +32,24 @@ from pandas._typing import FilePathOrBuffer
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
+from modin.utils import _inherit_func_docstring, _inherit_docstrings
 
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
-# Parquet
-def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
-    """Load a parquet object from the file path, returning a DataFrame.
-
-    Args:
-        path: The filepath of the parquet file.
-              We only support local files for now.
-        engine: This argument doesn't do anything for now.
-        kwargs: Pass into parquet's read_pandas function.
-    """
-    from modin.data_management.factories.dispatcher import EngineDispatcher
-
-    return DataFrame(
-        query_compiler=EngineDispatcher.read_parquet(
-            path=path, columns=columns, engine=engine, **kwargs
-        )
-    )
-
-
 # CSV and table
 def _make_parser_func(sep):
-    """Creates a parser function from the given sep.
+    """
+    Create a parser function from the given sep.
 
-    Args:
-        sep: The separator default to use for the parser.
+    Parameters
+    ----------
+    sep: str
+        The separator default to use for the parser.
 
-    Returns:
-        A function object.
+    Returns
+    -------
+    A function object.
     """
 
     def parser_func(
@@ -115,12 +112,15 @@ def _make_parser_func(sep):
 
 
 def _read(**kwargs):
-    """Read csv file from local disk.
-    Args:
-        filepath_or_buffer:
-              The filepath of the csv file.
-              We only support local files for now.
-        kwargs: Keyword arguments in pandas.read_csv
+    """
+    Read csv file from local disk.
+
+    Parameters
+    ----------
+    filepath_or_buffer:
+        The filepath of the csv file.
+        We only support local files for now.
+    kwargs: Keyword arguments in pandas.read_csv
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
@@ -135,10 +135,22 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-read_table = _make_parser_func(sep="\t")
-read_csv = _make_parser_func(sep=",")
+read_table = _inherit_func_docstring(pandas.read_table)(_make_parser_func(sep="\t"))
+read_csv = _inherit_func_docstring(pandas.read_csv)(_make_parser_func(sep=","))
 
 
+@_inherit_func_docstring(pandas.read_parquet)
+def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
+    from modin.data_management.factories.dispatcher import EngineDispatcher
+
+    return DataFrame(
+        query_compiler=EngineDispatcher.read_parquet(
+            path=path, columns=columns, engine=engine, **kwargs
+        )
+    )
+
+
+@_inherit_func_docstring(pandas.read_json)
 def read_json(
     path_or_buf=None,
     orient=None,
@@ -163,6 +175,7 @@ def read_json(
     return DataFrame(query_compiler=EngineDispatcher.read_json(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_gbq)
 def read_gbq(
     query: str,
     project_id: Optional[str] = None,
@@ -188,6 +201,7 @@ def read_gbq(
     return DataFrame(query_compiler=EngineDispatcher.read_gbq(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_html)
 def read_html(
     io,
     match=".+",
@@ -212,6 +226,7 @@ def read_html(
     return DataFrame(query_compiler=EngineDispatcher.read_html(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_clipboard)
 def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -221,6 +236,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     return DataFrame(query_compiler=EngineDispatcher.read_clipboard(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_excel)
 def read_excel(
     io,
     sheet_name=0,
@@ -262,6 +278,7 @@ def read_excel(
         return DataFrame(query_compiler=intermediate)
 
 
+@_inherit_func_docstring(pandas.read_hdf)
 def read_hdf(
     path_or_buf,
     key=None,
@@ -283,6 +300,7 @@ def read_hdf(
     return DataFrame(query_compiler=EngineDispatcher.read_hdf(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_feather)
 def read_feather(path, columns=None, use_threads: bool = True):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -291,6 +309,7 @@ def read_feather(path, columns=None, use_threads: bool = True):
     return DataFrame(query_compiler=EngineDispatcher.read_feather(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_stata)
 def read_stata(
     filepath_or_buffer,
     convert_dates=True,
@@ -310,6 +329,7 @@ def read_stata(
     return DataFrame(query_compiler=EngineDispatcher.read_stata(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_sas)
 def read_sas(
     filepath_or_buffer,
     format=None,
@@ -325,6 +345,7 @@ def read_sas(
     return DataFrame(query_compiler=EngineDispatcher.read_sas(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_pickle)
 def read_pickle(
     filepath_or_buffer: FilePathOrBuffer, compression: Optional[str] = "infer"
 ):
@@ -335,6 +356,7 @@ def read_pickle(
     return DataFrame(query_compiler=EngineDispatcher.read_pickle(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_sql)
 def read_sql(
     sql,
     con,
@@ -345,33 +367,6 @@ def read_sql(
     columns=None,
     chunksize=None,
 ):
-    """Read SQL query or database table into a DataFrame.
-
-    Args:
-        sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
-        con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
-        index_col: Column(s) to set as index(MultiIndex).
-        coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
-                      floating point, useful for SQL result sets.
-        params: List of parameters to pass to execute method. The syntax used
-                to pass parameters is database driver dependent. Check your
-                database driver documentation for which of the five syntax styles,
-                described in PEP 249's paramstyle, is supported.
-        parse_dates:
-                     - List of column names to parse as dates.
-                     - Dict of ``{column_name: format string}`` where format string is
-                       strftime compatible in case of parsing string times, or is one of
-                       (D, s, ns, ms, us) in case of parsing integer timestamps.
-                     - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
-                       to the keyword arguments of :func:`pandas.to_datetime`
-                       Especially useful with databases without native Datetime support,
-                       such as SQLite.
-        columns: List of column names to select from SQL table (only used when reading a table).
-        chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
-
-    Returns:
-        Modin Dataframe
-    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -385,6 +380,7 @@ def read_sql(
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_fwf)
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     colspecs="infer",
@@ -407,6 +403,7 @@ def read_fwf(
     return DataFrame(query_compiler=pd_obj)
 
 
+@_inherit_func_docstring(pandas.read_sql_table)
 def read_sql_table(
     table_name,
     con,
@@ -424,6 +421,7 @@ def read_sql_table(
     return DataFrame(query_compiler=EngineDispatcher.read_sql_table(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_sql_query)
 def read_sql_query(
     sql,
     con,
@@ -440,6 +438,7 @@ def read_sql_query(
     return DataFrame(query_compiler=EngineDispatcher.read_sql_query(**kwargs))
 
 
+@_inherit_func_docstring(pandas.read_spss)
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
@@ -452,6 +451,7 @@ def read_spss(
     )
 
 
+@_inherit_func_docstring(pandas.to_pickle)
 def to_pickle(
     obj: Any,
     filepath_or_buffer: Union[str, pathlib.Path],
@@ -467,48 +467,7 @@ def to_pickle(
     )
 
 
-class ExcelFile(pandas.ExcelFile):
-    def __getattribute__(self, item):
-        default_behaviors = ["__init__", "__class__"]
-        method = super(ExcelFile, self).__getattribute__(item)
-        if item not in default_behaviors:
-            if callable(method):
-
-                def return_handler(*args, **kwargs):
-                    """Replaces the default behavior of methods with inplace kwarg.
-
-                    Note: This function will replace all of the arguments passed to
-                        methods of ExcelFile with the pandas equivalent. It will convert
-                        Modin DataFrame to pandas DataFrame, etc.
-
-                    Returns:
-                        A Modin DataFrame in place of a pandas DataFrame, or the same
-                        return type as pandas.ExcelFile.
-                    """
-                    from modin.utils import to_pandas
-
-                    # We don't want to constantly be giving this error message for
-                    # internal methods.
-                    if item[0] != "_":
-                        ErrorMessage.default_to_pandas("`{}`".format(item))
-                    args = [
-                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
-                        for arg in args
-                    ]
-                    kwargs = {
-                        k: to_pandas(v) if isinstance(v, DataFrame) else v
-                        for k, v in kwargs.items()
-                    }
-                    obj = super(ExcelFile, self).__getattribute__(item)(*args, **kwargs)
-                    if isinstance(obj, pandas.DataFrame):
-                        return DataFrame(obj)
-                    return obj
-
-                # We replace the method with `return_handler` for inplace operations
-                method = return_handler
-        return method
-
-
+@_inherit_func_docstring(pandas.json_normalize)
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
@@ -527,6 +486,7 @@ def json_normalize(
     )
 
 
+@_inherit_func_docstring(pandas.read_orc)
 def read_orc(
     path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
 ) -> DataFrame:
@@ -534,6 +494,7 @@ def read_orc(
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 
+@_inherit_docstrings(pandas.HDFStore)
 class HDFStore(pandas.HDFStore):
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
@@ -542,17 +503,21 @@ class HDFStore(pandas.HDFStore):
             if callable(method):
 
                 def return_handler(*args, **kwargs):
-                    """Replaces the default behavior of methods with inplace kwarg.
+                    """
+                    Replace the default behavior of methods with inplace kwarg.
 
-                    Note: This function will replace all of the arguments passed to
-                        methods of HDFStore with the pandas equivalent. It will convert
-                        Modin DataFrame to pandas DataFrame, etc. Currently, pytables
-                        does not accept Modin DataFrame objects, so we must convert to
-                        pandas.
+                    Returns
+                    -------
+                    A Modin DataFrame in place of a pandas DataFrame, or the same
+                    return type as pandas.HDFStore.
 
-                    Returns:
-                        A Modin DataFrame in place of a pandas DataFrame, or the same
-                        return type as pandas.HDFStore.
+                    Notes
+                    -----
+                    This function will replace all of the arguments passed to
+                    methods of HDFStore with the pandas equivalent. It will convert
+                    Modin DataFrame to pandas DataFrame, etc. Currently, pytables
+                    does not accept Modin DataFrame objects, so we must convert to
+                    pandas.
                     """
                     from modin.utils import to_pandas
 
@@ -569,6 +534,53 @@ class HDFStore(pandas.HDFStore):
                         for k, v in kwargs.items()
                     }
                     obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
+                    if isinstance(obj, pandas.DataFrame):
+                        return DataFrame(obj)
+                    return obj
+
+                # We replace the method with `return_handler` for inplace operations
+                method = return_handler
+        return method
+
+
+@_inherit_docstrings(pandas.ExcelFile)
+class ExcelFile(pandas.ExcelFile):
+    def __getattribute__(self, item):
+        default_behaviors = ["__init__", "__class__"]
+        method = super(ExcelFile, self).__getattribute__(item)
+        if item not in default_behaviors:
+            if callable(method):
+
+                def return_handler(*args, **kwargs):
+                    """
+                    Replace the default behavior of methods with inplace kwarg.
+
+                    Returns
+                    -------
+                    A Modin DataFrame in place of a pandas DataFrame, or the same
+                    return type as pandas.ExcelFile.
+
+                    Notes
+                    -----
+                    This function will replace all of the arguments passed to
+                    methods of ExcelFile with the pandas equivalent. It will convert
+                    Modin DataFrame to pandas DataFrame, etc.
+                    """
+                    from modin.utils import to_pandas
+
+                    # We don't want to constantly be giving this error message for
+                    # internal methods.
+                    if item[0] != "_":
+                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                    args = [
+                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        for arg in args
+                    ]
+                    kwargs = {
+                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        for k, v in kwargs.items()
+                    }
+                    obj = super(ExcelFile, self).__getattribute__(item)(*args, **kwargs)
                     if isinstance(obj, pandas.DataFrame):
                         return DataFrame(obj)
                     return obj

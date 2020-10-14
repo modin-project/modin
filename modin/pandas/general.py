@@ -11,24 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement Pandas general API.
+
+Almost all docstrings for public functions should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D103: missing docstring in public function
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import pandas
+import numpy as np
+
+from typing import Hashable, Iterable, Mapping, Optional, Union
+from pandas._typing import FrameOrSeriesUnion
+from pandas.core.dtypes.common import is_list_like
 
 from modin.error_message import ErrorMessage
 from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .series import Series
 from modin.utils import to_pandas
+from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.utils import _inherit_docstrings
 
 
+@_inherit_docstrings(pandas.isna)
 def isna(obj):
-    """
-    Detect missing values for an array-like object.
-    Args:
-        obj: Object to check for null or missing values.
-
-    Returns:
-        bool or array-like of bool
-    """
     if isinstance(obj, BasePandasDataset):
         return obj.isna()
     else:
@@ -38,6 +47,7 @@ def isna(obj):
 isnull = isna
 
 
+@_inherit_docstrings(pandas.notna)
 def notna(obj):
     if isinstance(obj, BasePandasDataset):
         return obj.notna()
@@ -48,6 +58,7 @@ def notna(obj):
 notnull = notna
 
 
+@_inherit_docstrings(pandas.merge)
 def merge(
     left,
     right,
@@ -63,73 +74,6 @@ def merge(
     indicator: bool = False,
     validate=None,
 ):
-    """
-    Merge DataFrame or named Series objects with a database-style join.
-
-    The join is done on columns or indexes. If joining columns on columns,
-    the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
-    indexes on a column or columns, the index will be passed on.
-
-    Parameters
-    ----------
-    right : DataFrame or named Series
-        Object to merge with.
-    how : {'left', 'right', 'outer', 'inner'}, default 'inner'
-        Type of merge to be performed.
-        - left: use only keys from left frame,
-            similar to a SQL left outer join; preserve key order.
-        - right: use only keys from right frame,
-            similar to a SQL right outer join; preserve key order.
-        - outer: use union of keys from both frames,
-            similar to a SQL full outer join; sort keys lexicographically.
-        - inner: use intersection of keys from both frames,
-            similar to a SQL inner join; preserve the order of the left keys.
-    on : label or list
-        Column or index level names to join on.
-        These must be found in both DataFrames. If on is None and not merging on indexes
-        then this defaults to the intersection of the columns in both DataFrames.
-    left_on : label or list, or array-like
-        Column or index level names to join on in the left DataFrame.
-        Can also be an array or list of arrays of the length of the left DataFrame.
-        These arrays are treated as if they are columns.
-    right_on : label or list, or array-like
-        Column or index level names to join on in the right DataFrame.
-        Can also be an array or list of arrays of the length of the right DataFrame.
-        These arrays are treated as if they are columns.
-    left_index : bool, default False
-        Use the index from the left DataFrame as the join key(s).
-        If it is a MultiIndex, the number of keys in the other DataFrame
-        (either the index or a number of columns) must match the number of levels.
-    right_index : bool, default False
-        Use the index from the right DataFrame as the join key. Same caveats as left_index.
-    sort : bool, default False
-        Sort the join keys lexicographically in the result DataFrame.
-        If False, the order of the join keys depends on the join type (how keyword).
-    suffixes : tuple of (str, str), default ('_x', '_y')
-        Suffix to apply to overlapping column names in the left and right side, respectively.
-        To raise an exception on overlapping columns use (False, False).
-    copy : bool, default True
-        If False, avoid copy if possible.
-    indicator : bool or str, default False
-        If True, adds a column to output DataFrame called "_merge" with information
-        on the source of each row. If string, column with information on source of each row
-        will be added to output DataFrame, and column will be named value of string.
-        Information column is Categorical-type and takes on a value of "left_only"
-        for observations whose merge key only appears in 'left' DataFrame,
-        "right_only" for observations whose merge key only appears in 'right' DataFrame,
-        and "both" if the observation’s merge key is found in both.
-    validate : str, optional
-        If specified, checks if merge is of specified type.
-        - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
-        - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
-        - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
-        - 'many_to_many' or 'm:m': allowed, but does not result in checks.
-
-    Returns
-    -------
-    DataFrame
-        A DataFrame of the two merged objects.
-    """
     if isinstance(left, Series):
         if left.name is None:
             raise ValueError("Cannot merge a Series without a name")
@@ -157,6 +101,7 @@ def merge(
     )
 
 
+@_inherit_docstrings(pandas.merge_ordered)
 def merge_ordered(
     left,
     right,
@@ -192,6 +137,7 @@ def merge_ordered(
     )
 
 
+@_inherit_docstrings(pandas.merge_asof)
 def merge_asof(
     left,
     right,
@@ -235,6 +181,7 @@ def merge_asof(
     )
 
 
+@_inherit_docstrings(pandas.pivot_table)
 def pivot_table(
     data,
     values=None,
@@ -264,113 +211,29 @@ def pivot_table(
     )
 
 
+@_inherit_docstrings(pandas.pivot)
 def pivot(data, index=None, columns=None, values=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
 
 
+@_inherit_docstrings(pandas.to_numeric)
 def to_numeric(arg, errors="raise", downcast=None):
-    """
-    Convert argument to a numeric type.
-
-    The default return dtype is `float64` or `int64`
-    depending on the data supplied. Use the `downcast` parameter
-    to obtain other dtypes.
-
-    Please note that precision loss may occur if really large numbers
-    are passed in. Due to the internal limitations of `ndarray`, if
-    numbers smaller than `-9223372036854775808` (np.iinfo(np.int64).min)
-    or larger than `18446744073709551615` (np.iinfo(np.uint64).max) are
-    passed in, it is very likely they will be converted to float so that
-    they can stored in an `ndarray`. These warnings apply similarly to
-    `Series` since it internally leverages `ndarray`.
-
-    Parameters
-    ----------
-    arg : scalar, list, tuple, 1-d array, or Series
-        Argument to be converted.
-    errors : {'ignore', 'raise', 'coerce'}, default 'raise'
-        - If 'raise', then invalid parsing will raise an exception.
-        - If 'coerce', then invalid parsing will be set as NaN.
-        - If 'ignore', then invalid parsing will return the input.
-    downcast : {'int', 'signed', 'unsigned', 'float'}, default None
-        If not None, and if the data has been successfully cast to a
-        numerical dtype (or if the data was numeric to begin with),
-        downcast that resulting data to the smallest numerical dtype
-        possible according to the following rules:
-
-        - 'int' or 'signed': smallest signed int dtype (min.: np.int8)
-        - 'unsigned': smallest unsigned int dtype (min.: np.uint8)
-        - 'float': smallest float dtype (min.: np.float32)
-
-        As this behaviour is separate from the core conversion to
-        numeric values, any errors raised during the downcasting
-        will be surfaced regardless of the value of the 'errors' input.
-
-        In addition, downcasting will only occur if the size
-        of the resulting data's dtype is strictly larger than
-        the dtype it is to be cast to, so if none of the dtypes
-        checked satisfy that specification, no downcasting will be
-        performed on the data.
-
-    Returns
-    -------
-    ret
-        Numeric if parsing succeeded.
-        Return type depends on input.  Series if Series, otherwise ndarray.
-    """
     if not isinstance(arg, Series):
         return pandas.to_numeric(arg, errors=errors, downcast=downcast)
     return arg._to_numeric(errors=errors, downcast=downcast)
 
 
+@_inherit_docstrings(pandas.unique)
 def unique(values):
-    """
-    Return unique values of input data.
-
-    Uniques are returned in order of appearance. Hash table-based unique,
-    therefore does NOT sort.
-
-    Returns
-    -------
-    ndarray
-        The unique values returned as a NumPy array.
-    """
     return Series(values).unique()
 
 
+@_inherit_docstrings(pandas.value_counts)
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
-    """
-    Compute a histogram of the counts of non-null values.
-
-    Parameters
-    ----------
-    values : ndarray (1-d)
-    sort : bool, default True
-        Sort by values
-    ascending : bool, default False
-        Sort in ascending order
-    normalize: bool, default False
-        If True then compute a relative histogram
-    bins : integer, optional
-        Rather than count values, group them into half-open bins,
-        convenience for pd.cut, only works with numeric data
-    dropna : bool, default True
-        Don't include counts of NaN
-
-    Returns
-    -------
-    Series
-
-    Notes
-    -----
-    The indices of resulting object will be in descending
-    (ascending, if ascending=True) order for equal values.
-    It slightly differ from pandas where indices are located in random order.
-    """
     return Series(values).value_counts(
         sort=sort,
         ascending=ascending,
@@ -378,3 +241,331 @@ def value_counts(
         bins=bins,
         dropna=dropna,
     )
+
+
+@_inherit_docstrings(pandas.concat)
+def concat(
+    objs: Union[
+        Iterable[FrameOrSeriesUnion], Mapping[Optional[Hashable], FrameOrSeriesUnion]
+    ],
+    axis=0,
+    join="outer",
+    ignore_index: bool = False,
+    keys=None,
+    levels=None,
+    names=None,
+    verify_integrity: bool = False,
+    sort: bool = False,
+    copy: bool = True,
+) -> FrameOrSeriesUnion:
+    if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
+        raise TypeError(
+            "first argument must be an iterable of pandas "
+            "objects, you passed an object of type "
+            '"{name}"'.format(name=type(objs).__name__)
+        )
+    axis = pandas.DataFrame()._get_axis_number(axis)
+    if isinstance(objs, dict):
+        list_of_objs = list(objs.values())
+    else:
+        list_of_objs = list(objs)
+    if len(list_of_objs) == 0:
+        raise ValueError("No objects to concatenate")
+
+    list_of_objs = [obj for obj in list_of_objs if obj is not None]
+
+    if len(list_of_objs) == 0:
+        raise ValueError("All objects passed were None")
+    try:
+        type_check = next(
+            obj
+            for obj in list_of_objs
+            if not isinstance(obj, (pandas.Series, Series, pandas.DataFrame, DataFrame))
+        )
+    except StopIteration:
+        type_check = None
+    if type_check is not None:
+        raise ValueError(
+            'cannot concatenate object of type "{0}"; only '
+            "modin.pandas.Series "
+            "and modin.pandas.DataFrame objs are "
+            "valid",
+            type(type_check),
+        )
+    all_series = all(isinstance(obj, Series) for obj in list_of_objs)
+    if all_series and axis == 0:
+        return Series(
+            query_compiler=list_of_objs[0]._query_compiler.concat(
+                axis,
+                [o._query_compiler for o in list_of_objs[1:]],
+                join=join,
+                join_axes=None,
+                ignore_index=ignore_index,
+                keys=None,
+                levels=None,
+                names=None,
+                verify_integrity=False,
+                copy=True,
+                sort=sort,
+            )
+        )
+    if join not in ["inner", "outer"]:
+        raise ValueError(
+            "Only can inner (intersect) or outer (union) join the other axis"
+        )
+    # We have the weird Series and axis check because, when concatenating a
+    # dataframe to a series on axis=0, pandas ignores the name of the series,
+    # and this check aims to mirror that (possibly buggy) functionality
+    list_of_objs = [
+        obj
+        if isinstance(obj, DataFrame)
+        else DataFrame(obj.rename())
+        if isinstance(obj, (pandas.Series, Series)) and axis == 0
+        else DataFrame(obj)
+        for obj in list_of_objs
+    ]
+    list_of_objs = [
+        obj._query_compiler
+        for obj in list_of_objs
+        if (not obj._query_compiler.lazy_execution and len(obj.index))
+        or len(obj.columns)
+    ]
+    if keys is not None:
+        if all_series:
+            new_idx = keys
+        else:
+            list_of_objs = [
+                list_of_objs[i] for i in range(min(len(list_of_objs), len(keys)))
+            ]
+            new_idx_labels = {
+                k: v.index if axis == 0 else v.columns
+                for k, v in zip(keys, list_of_objs)
+            }
+            tuples = [
+                (k, *o) if isinstance(o, tuple) else (k, o)
+                for k, obj in new_idx_labels.items()
+                for o in obj
+            ]
+            new_idx = pandas.MultiIndex.from_tuples(tuples)
+            if names is not None:
+                new_idx.names = names
+            else:
+                old_name = _determine_name(list_of_objs, axis)
+                if old_name is not None:
+                    new_idx.names = [None] + old_name
+    elif isinstance(objs, dict):
+        new_idx = pandas.concat(
+            {k: pandas.Series(index=obj.axes[axis]) for k, obj in objs.items()}
+        ).index
+    else:
+        new_idx = None
+    new_query_compiler = list_of_objs[0].concat(
+        axis,
+        list_of_objs[1:],
+        join=join,
+        join_axes=None,
+        ignore_index=ignore_index,
+        keys=None,
+        levels=None,
+        names=None,
+        verify_integrity=False,
+        copy=True,
+        sort=sort,
+    )
+    result_df = DataFrame(query_compiler=new_query_compiler)
+    if new_idx is not None:
+        if axis == 0:
+            result_df.index = new_idx
+        else:
+            result_df.columns = new_idx
+    return result_df
+
+
+@_inherit_docstrings(pandas.to_datetime)
+def to_datetime(
+    arg,
+    errors="raise",
+    dayfirst=False,
+    yearfirst=False,
+    utc=None,
+    format=None,
+    exact=True,
+    unit=None,
+    infer_datetime_format=False,
+    origin="unix",
+    cache=True,
+):
+    if not isinstance(arg, (DataFrame, Series)):
+        return pandas.to_datetime(
+            arg,
+            errors=errors,
+            dayfirst=dayfirst,
+            yearfirst=yearfirst,
+            utc=utc,
+            format=format,
+            exact=exact,
+            unit=unit,
+            infer_datetime_format=infer_datetime_format,
+            origin=origin,
+            cache=cache,
+        )
+    return arg._to_datetime(
+        errors=errors,
+        dayfirst=dayfirst,
+        yearfirst=yearfirst,
+        utc=utc,
+        format=format,
+        exact=exact,
+        unit=unit,
+        infer_datetime_format=infer_datetime_format,
+        origin=origin,
+        cache=cache,
+    )
+
+
+@_inherit_docstrings(pandas.get_dummies)
+def get_dummies(
+    data,
+    prefix=None,
+    prefix_sep="_",
+    dummy_na=False,
+    columns=None,
+    sparse=False,
+    drop_first=False,
+    dtype=None,
+):
+    if sparse:
+        raise NotImplementedError(
+            "SparseDataFrame is not implemented. "
+            "To contribute to Modin, please visit "
+            "github.com/modin-project/modin."
+        )
+    if not isinstance(data, DataFrame):
+        ErrorMessage.default_to_pandas("`get_dummies` on non-DataFrame")
+        if isinstance(data, Series):
+            data = data._to_pandas()
+        return DataFrame(
+            pandas.get_dummies(
+                data,
+                prefix=prefix,
+                prefix_sep=prefix_sep,
+                dummy_na=dummy_na,
+                columns=columns,
+                sparse=sparse,
+                drop_first=drop_first,
+                dtype=dtype,
+            )
+        )
+    else:
+        new_manager = data._query_compiler.get_dummies(
+            columns,
+            prefix=prefix,
+            prefix_sep=prefix_sep,
+            dummy_na=dummy_na,
+            drop_first=drop_first,
+            dtype=dtype,
+        )
+        return DataFrame(query_compiler=new_manager)
+
+
+@_inherit_docstrings(pandas.melt)
+def melt(
+    frame,
+    id_vars=None,
+    value_vars=None,
+    var_name=None,
+    value_name="value",
+    col_level=None,
+    ignore_index: bool = True,
+):
+    return frame.melt(
+        id_vars=id_vars,
+        value_vars=value_vars,
+        var_name=var_name,
+        value_name=value_name,
+        col_level=col_level,
+        ignore_index=ignore_index,
+    )
+
+
+@_inherit_docstrings(pandas.crosstab)
+def crosstab(
+    index,
+    columns,
+    values=None,
+    rownames=None,
+    colnames=None,
+    aggfunc=None,
+    margins=False,
+    margins_name: str = "All",
+    dropna: bool = True,
+    normalize=False,
+) -> DataFrame:
+    ErrorMessage.default_to_pandas("`crosstab`")
+    pandas_crosstab = pandas.crosstab(
+        index,
+        columns,
+        values,
+        rownames,
+        colnames,
+        aggfunc,
+        margins,
+        margins_name,
+        dropna,
+        normalize,
+    )
+    return DataFrame(pandas_crosstab)
+
+
+@_inherit_docstrings(pandas.lreshape)
+def lreshape(data: DataFrame, groups, dropna=True, label=None):
+    if not isinstance(data, DataFrame):
+        raise ValueError("can not lreshape with instance of type {}".format(type(data)))
+    ErrorMessage.default_to_pandas("`lreshape`")
+    return DataFrame(
+        pandas.lreshape(to_pandas(data), groups, dropna=dropna, label=label)
+    )
+
+
+@_inherit_docstrings(pandas.wide_to_long)
+def wide_to_long(
+    df: DataFrame, stubnames, i, j, sep: str = "", suffix: str = r"\d+"
+) -> DataFrame:
+    if not isinstance(df, DataFrame):
+        raise ValueError(
+            "can not wide_to_long with instance of type {}".format(type(df))
+        )
+    ErrorMessage.default_to_pandas("`wide_to_long`")
+    return DataFrame(
+        pandas.wide_to_long(to_pandas(df), stubnames, i, j, sep=sep, suffix=suffix)
+    )
+
+
+def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
+    """
+    Determine names of index after concatenation along passed axis.
+
+    Parameters
+    ----------
+    objs : iterable of QueryCompilers
+        objects to concatenate
+    axis : int or str
+        the axis to concatenate along
+    Returns
+    -------
+    `list` with single element - computed index name, `None` if it could not
+    be determined
+    """
+    axis = pandas.DataFrame()._get_axis_number(axis)
+
+    def get_names(obj):
+        return obj.columns.names if axis else obj.index.names
+
+    names = np.array([get_names(obj) for obj in objs])
+
+    # saving old name, only if index names of all objs are the same
+    if np.all(names == names[0]):
+        # we must do this check to avoid this calls `list(str_like_name)`
+        return list(names[0]) if is_list_like(names[0]) else [names[0]]
+    else:
+        return None

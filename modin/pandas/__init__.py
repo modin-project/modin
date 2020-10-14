@@ -178,9 +178,7 @@ def _update_engine(publisher: Parameter):
 Engine.subscribe(_update_engine)
 
 from .. import __version__
-from .concat import concat
 from .dataframe import DataFrame
-from .datetimes import to_datetime
 from .io import (
     read_csv,
     read_parquet,
@@ -206,9 +204,9 @@ from .io import (
     json_normalize,
     read_orc,
 )
-from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
 from .series import Series
 from .general import (
+    concat,
     isna,
     isnull,
     merge,
@@ -219,8 +217,14 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    to_datetime,
     unique,
     value_counts,
+    get_dummies,
+    melt,
+    crosstab,
+    lreshape,
+    wide_to_long,
 )
 from .plotting import Plotting as plotting
 

@@ -11,6 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement DataFrame public API as Pandas does.
+
+Almost all docstrings for public and magic methods should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D101: missing docstring in class
+    - D102: missing docstring in public method
+    - D105: missing docstring in magic method
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import pandas
 from pandas.core.common import apply_if_callable
 from pandas.core.dtypes.common import (
@@ -45,9 +56,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 
 
-@_inherit_docstrings(
-    pandas.DataFrame, excluded=[pandas.DataFrame, pandas.DataFrame.__init__]
-)
+@_inherit_docstrings(pandas.DataFrame, excluded=[pandas.DataFrame.__init__])
 class DataFrame(BasePandasDataset):
     def __init__(
         self,
@@ -58,21 +67,24 @@ class DataFrame(BasePandasDataset):
         copy=False,
         query_compiler=None,
     ):
-        """Distributed DataFrame object backed by Pandas dataframes.
+        """
+        Distributed DataFrame object backed by Pandas dataframes.
 
-        Args:
-            data (NumPy ndarray (structured or homogeneous) or dict):
-                Dict can contain Series, arrays, constants, or list-like
-                objects.
-            index (pandas.Index, list, ObjectID): The row index for this
-                DataFrame.
-            columns (pandas.Index): The column names for this DataFrame, in
-                pandas Index object.
-            dtype: Data type to force. Only a single dtype is allowed.
-                If None, infer
-            copy (boolean): Copy data from inputs.
-                Only affects DataFrame / 2d ndarray input.
-            query_compiler: A query compiler object to manage distributed computation.
+        Parameters
+        ----------
+        data: NumPy ndarray (structured or homogeneous) or dict:
+            Dict can contain Series, arrays, constants, or list-like
+            objects.
+        index: pandas.Index, list, ObjectID
+            The row index for this DataFrame.
+        columns: pandas.Index
+            The column names for this DataFrame, in pandas Index object.
+        dtype: Data type to force.
+            Only a single dtype is allowed. If None, infer
+        copy: bool
+            Copy data from inputs. Only affects DataFrame / 2d ndarray input.
+        query_compiler: query_compiler
+            A query compiler object to manage distributed computation.
         """
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
@@ -177,12 +189,6 @@ class DataFrame(BasePandasDataset):
             return result
 
     def _repr_html_(self):  # pragma: no cover
-        """repr function for rendering in Jupyter Notebooks like Pandas
-        Dataframes.
-
-        Returns:
-            The HTML representation of a Dataframe.
-        """
         num_rows = pandas.get_option("max_rows") or 60
         num_cols = pandas.get_option("max_columns") or 20
 
@@ -200,49 +206,29 @@ class DataFrame(BasePandasDataset):
             return result
 
     def _get_columns(self):
-        """Get the columns for this DataFrame.
+        """
+        Get the columns for this DataFrame.
 
-        Returns:
-            The union of all indexes across the partitions.
+        Returns
+        -------
+        The union of all indexes across the partitions.
         """
         return self._query_compiler.columns
 
     def _set_columns(self, new_columns):
-        """Set the columns for this DataFrame.
+        """
+        Set the columns for this DataFrame.
 
-        Args:
-            new_columns: The new index to set this
+        Parameters
+        ----------
+        new_columns: The new index to set this
         """
         self._query_compiler.columns = new_columns
 
     columns = property(_get_columns, _set_columns)
 
-    def _validate_eval_query(self, expr, **kwargs):
-        """Helper function to check the arguments to eval() and query()
-
-        Args:
-            expr: The expression to evaluate. This string cannot contain any
-                Python statements, only Python expressions.
-        """
-        if isinstance(expr, str) and expr == "":
-            raise ValueError("expr cannot be an empty string")
-
-        if isinstance(expr, str) and "@" in expr:
-            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
-
-        if isinstance(expr, str) and "not" in expr:
-            if "parser" in kwargs and kwargs["parser"] == "python":
-                ErrorMessage.not_implemented(
-                    "'Not' nodes are not implemented."
-                )  # pragma: no cover
-
     @property
     def ndim(self):
-        """Get the number of dimensions for this DataFrame.
-
-        Returns:
-            The number of dimensions for this DataFrame.
-        """
         # DataFrames have an invariant that requires they be 2 dimensions.
         return 2
 
@@ -255,32 +241,9 @@ class DataFrame(BasePandasDataset):
 
     @property
     def dtypes(self):
-        """Get the dtypes for this DataFrame.
-
-        Returns:
-            The dtypes for this DataFrame.
-        """
         return self._query_compiler.dtypes
 
     def duplicated(self, subset=None, keep="first"):
-        """
-        Return boolean Series denoting duplicate rows, optionally only
-        considering certain columns.
-
-        Args:
-            subset : column label or sequence of labels, optional
-                Only consider certain columns for identifying duplicates, by
-                default use all of the columns
-            keep : {'first', 'last', False}, default 'first'
-                - ``first`` : Mark duplicates as ``True`` except for the
-                  first occurrence.
-                - ``last`` : Mark duplicates as ``True`` except for the
-                  last occurrence.
-                - False : Mark all duplicates as ``True``.
-
-        Returns:
-            Series
-        """
         import hashlib
 
         df = self[subset] if subset is not None else self
@@ -299,54 +262,23 @@ class DataFrame(BasePandasDataset):
 
     @property
     def empty(self):
-        """Determines if the DataFrame is empty.
-
-        Returns:
-            True if the DataFrame is empty.
-            False otherwise.
-        """
         return len(self.columns) == 0 or len(self.index) == 0
 
     @property
     def axes(self):
-        """Get the axes for the DataFrame.
-
-        Returns:
-            The axes for the DataFrame.
-        """
         return [self.index, self.columns]
 
     @property
     def shape(self):
-        """Get the size of each of the dimensions in the DataFrame.
-
-        Returns:
-            A tuple with the size of each dimension as they appear in axes().
-        """
         return len(self.index), len(self.columns)
 
     def add_prefix(self, prefix):
-        """Add a prefix to each of the column names.
-
-        Returns:
-            A new DataFrame containing the new column names.
-        """
         return DataFrame(query_compiler=self._query_compiler.add_prefix(prefix))
 
     def add_suffix(self, suffix):
-        """Add a suffix to each of the column names.
-
-        Returns:
-            A new DataFrame containing the new column names.
-        """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
     def applymap(self, func):
-        """Apply a function to a DataFrame elementwise.
-
-        Args:
-            func (callable): The function to apply.
-        """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         ErrorMessage.non_verified_udf()
@@ -402,27 +334,6 @@ class DataFrame(BasePandasDataset):
         observed=False,
         dropna: bool = True,
     ):
-        """
-        Apply a groupby to this DataFrame. See _groupby() remote task.
-
-        Parameters
-        ----------
-            by: The value to groupby.
-            axis: The axis to groupby.
-            level: The level of the groupby.
-            as_index: Whether or not to store result as index.
-            sort: Whether or not to sort the result by the index.
-            group_keys: Whether or not to group the keys.
-            squeeze: Whether or not to squeeze.
-            dropna : bool, default True
-                If True, and if group keys contain NA values,
-                NA values together with row/column will be dropped.
-                If False, NA values will also be treated as the key in groups
-
-        Returns
-        -------
-            A new DataFrame resulting from the groupby.
-        """
         if squeeze is not no_default:
             warnings.warn(
                 (
@@ -522,23 +433,10 @@ class DataFrame(BasePandasDataset):
             dropna=dropna,
         )
 
-    def _reduce_dimension(self, query_compiler):
-        return Series(query_compiler=query_compiler)
-
     def keys(self):
-        """Get the info axis for the DataFrame.
-
-        Returns:
-            A pandas Index for this DataFrame.
-        """
         return self.columns
 
     def transpose(self, copy=False, *args):
-        """Transpose columns and rows for the DataFrame.
-
-        Returns:
-            A new DataFrame transposed from this DataFrame.
-        """
         return DataFrame(query_compiler=self._query_compiler.transpose(*args))
 
     T = property(transpose)
@@ -554,16 +452,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def append(self, other, ignore_index=False, verify_integrity=False, sort=False):
-        """Append another DataFrame/list/Series to this one.
-
-        Args:
-            other: The object to append to this.
-            ignore_index: Ignore the index on appending.
-            verify_integrity: Verify the integrity of the index on completion.
-
-        Returns:
-            A new DataFrame containing the concatenated values.
-        """
         if sort is False:
             warnings.warn(
                 "Due to https://github.com/pandas-dev/pandas/issues/35092, "
@@ -666,38 +554,6 @@ class DataFrame(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
     ) -> "DataFrame":
-        """
-        Compare to another DataFrame and show the differences.
-
-        Parameters
-        ----------
-        other : DataFrame
-            Object to compare with.
-
-        align_axis : {0 or 'index', 1 or 'columns'}, default 1
-            Determine which axis to align the comparison on.
-
-            * 0, or 'index' : Resulting differences are stacked vertically
-                with rows drawn alternately from self and other.
-            * 1, or 'columns' : Resulting differences are aligned horizontally
-                with columns drawn alternately from self and other.
-
-        keep_shape : bool, default False
-            If true, all rows and columns are kept.
-            Otherwise, only the ones with different values are kept.
-
-        keep_equal : bool, default False
-            If true, the result keeps values that are equal.
-            Otherwise, equal values are shown as NaNs.
-
-        Returns
-        -------
-        DataFrame
-            DataFrame that shows the differences stacked side by side.
-
-            The resulting index will be a MultiIndex with 'self' and 'other'
-            stacked alternately at the inner level.
-        """
         return self._default_to_pandas(
             pandas.DataFrame.compare,
             other=other,
@@ -707,38 +563,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(self, method="pearson", min_periods=1):
-        """
-        Compute pairwise correlation of columns, excluding NA/null values.
-
-        Parameters
-        ----------
-        method : {'pearson', 'kendall', 'spearman'} or callable
-            Method of correlation:
-
-            * pearson : standard correlation coefficient
-            * kendall : Kendall Tau correlation coefficient
-            * spearman : Spearman rank correlation
-            * callable: callable with input two 1d ndarrays
-                and returning a float. Note that the returned matrix from corr
-                will have 1 along the diagonals and will be symmetric
-                regardless of the callable's behavior.
-
-        min_periods : int, optional
-            Minimum number of observations required per pair of columns
-            to have a valid result. Currently only available for Pearson
-            and Spearman correlation.
-
-        Returns
-        -------
-        DataFrame
-            Correlation matrix.
-
-        Notes
-        -----
-        Correlation floating point precision may slightly differ from pandas.
-
-        For now pearson method is available only. For other methods defaults to pandas.
-        """
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
@@ -754,44 +578,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(self, min_periods=None, ddof: Optional[int] = 1):
-        """
-        Compute pairwise covariance of columns, excluding NA/null values.
-
-        Compute the pairwise covariance among the series of a DataFrame.
-        The returned data frame is the `covariance matrix
-        <https://en.wikipedia.org/wiki/Covariance_matrix>`__ of the columns
-        of the DataFrame.
-
-        Both NA and null values are automatically excluded from the
-        calculation. (See the note below about bias from missing values.)
-        A threshold can be set for the minimum number of
-        observations for each value created. Comparisons with observations
-        below this threshold will be returned as ``NaN``.
-
-        This method is generally used for the analysis of time series data to
-        understand the relationship between different measures
-        across time.
-
-        Parameters
-        ----------
-        min_periods : int, optional
-            Minimum number of observations required per pair of columns
-            to have a valid result.
-        ddof : int, default 1
-            Delta degrees of freedom. The divisor used in calculations is N - ddof,
-            where N represents the number of elements.
-
-        Returns
-        -------
-        DataFrame
-            The covariance matrix of the series of the DataFrame.
-
-        Notes
-        -----
-        Covariance floating point precision may slightly differ from pandas.
-
-        If DataFrame contains at least one NA/null value, then defaults to pandas.
-        """
         numeric_df = self.drop(
             columns=[
                 i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
@@ -827,40 +613,6 @@ class DataFrame(BasePandasDataset):
         return result
 
     def dot(self, other):
-        """
-        Compute the matrix multiplication between the DataFrame and other.
-
-        This method computes the matrix product between the DataFrame and the
-        values of an other Series, DataFrame or a numpy array.
-
-        It can also be called using ``self @ other`` in Python >= 3.5.
-
-        Parameters
-        ----------
-        other : Series, DataFrame or array-like
-            The other object to compute the matrix product with.
-
-        Returns
-        -------
-        Series or DataFrame
-            If other is a Series, return the matrix product between self and
-            other as a Series. If other is a DataFrame or a numpy.array, return
-            the matrix product of self and other in a DataFrame of a np.array.
-
-        See Also
-        --------
-        Series.dot: Similar method for Series.
-
-        Notes
-        -----
-        The dimensions of DataFrame and other must be compatible in order to
-        compute the matrix multiplication. In addition, the column names of
-        DataFrame and the index of other must contain the same values, as they
-        will be aligned prior to the multiplication.
-
-        The dot method for Series computes the inner product, instead of the
-        matrix product here.
-        """
         if isinstance(other, BasePandasDataset):
             common = self.columns.union(other.index)
             if len(common) > len(self.columns) or len(common) > len(other.index):
@@ -901,12 +653,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def equals(self, other):
-        """
-        Checks if other DataFrame is elementwise equal to the current one
-
-        Returns:
-            Boolean: True if equal, otherwise False
-        """
         if isinstance(other, pandas.DataFrame):
             # Copy into a Modin DataFrame to simplify logic below
             other = DataFrame(other)
@@ -922,50 +668,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def eval(self, expr, inplace=False, **kwargs):
-        """Evaluate a Python expression as a string using various backends.
-        Args:
-            expr: The expression to evaluate. This string cannot contain any
-                Python statements, only Python expressions.
-
-            parser: The parser to use to construct the syntax tree from the
-                expression. The default of 'pandas' parses code slightly
-                different than standard Python. Alternatively, you can parse
-                an expression using the 'python' parser to retain strict
-                Python semantics. See the enhancing performance documentation
-                for more details.
-
-            engine: The engine used to evaluate the expression.
-
-            truediv: Whether to use true division, like in Python >= 3
-
-            local_dict: A dictionary of local variables, taken from locals()
-                by default.
-
-            global_dict: A dictionary of global variables, taken from
-                globals() by default.
-
-            resolvers: A list of objects implementing the __getitem__ special
-                method that you can use to inject an additional collection
-                of namespaces to use for variable lookup. For example, this is
-                used in the query() method to inject the index and columns
-                variables that refer to their respective DataFrame instance
-                attributes.
-
-            level: The number of prior stack frames to traverse and add to
-                the current scope. Most users will not need to change this
-                parameter.
-
-            target: This is the target object for assignment. It is used when
-                there is variable assignment in the expression. If so, then
-                target must support item assignment with string keys, and if a
-                copy is being returned, it must also support .copy().
-
-            inplace: If target is provided, and the expression mutates target,
-                whether to modify target inplace. Otherwise, return a copy of
-                target with the mutation.
-        Returns:
-            ndarray, numeric scalar, DataFrame, Series
-        """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
@@ -1074,41 +776,6 @@ class DataFrame(BasePandasDataset):
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
     ):
-        """
-        Print a concise summary of a DataFrame, which includes the index
-        dtype and column dtypes, non-null values and memory usage.
-
-        Parameters
-        ----------
-            verbose (bool, optional): Whether to print the full summary. Defaults
-                to true
-
-            buf (writable buffer): Where to send output. Defaults to sys.stdout
-
-            max_cols (int, optional): When to switch from verbose to truncated
-                output. By defualt, this is 100.
-
-            memory_usage (bool, str, optional): Specifies whether the total memory
-                usage of the DataFrame elements (including index) should be displayed.
-                True always show memory usage. False never shows memory usage. A value
-                of 'deep' is equivalent to "True with deep introspection". Memory usage
-                is shown in human-readable units (base-2 representation). Without deep
-                introspection a memory estimation is made based in column dtype and
-                number of rows assuming values consume the same memory amount for
-                corresponding dtypes. With deep memory introspection, a real memory
-                usage calculation is performed at the cost of computational resources.
-                Defaults to True.
-
-            null_counts (bool, optional): Whetehr to show the non-null counts. By
-                default, this is shown only when the frame is smaller than 100 columns
-                and 1690785 rows. A value of True always shows the counts and False
-                never shows the counts.
-
-        Returns
-        -------
-            Prints the summary of a DataFrame and returns None.
-        """
-
         def put_str(src, output_len=None, spaces=2):
             src = str(src)
             return src.ljust(output_len if output_len else len(src)) + " " * spaces
@@ -1237,13 +904,6 @@ class DataFrame(BasePandasDataset):
         buf.write("\n".join(output))
 
     def insert(self, loc, column, value, allow_duplicates=False):
-        """Insert column into DataFrame at specified location.
-        Args:
-            loc (int): Insertion index. Must verify 0 <= loc <= len(columns).
-            column (hashable object): Label of the inserted column.
-            value (int, Series, or array-like): The values to insert.
-            allow_duplicates (bool): Whether to allow duplicate column names.
-        """
         if isinstance(value, (DataFrame, pandas.DataFrame)):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
@@ -1316,17 +976,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def iterrows(self):
-        """Iterate over DataFrame rows as (index, Series) pairs.
-
-        Note:
-            Generators can't be pickled so from the remote function
-            we expand the generator into a list before getting it.
-            This is not that ideal.
-
-        Returns:
-            A generator that iterates over the rows of the frame.
-        """
-
         def iterrow_builder(s):
             return s.name, s
 
@@ -1335,17 +984,6 @@ class DataFrame(BasePandasDataset):
             yield v
 
     def items(self):
-        """Iterator over (column name, Series) pairs.
-
-        Note:
-            Generators can't be pickled so from the remote function
-            we expand the generator into a list before getting it.
-            This is not that ideal.
-
-        Returns:
-            A generator that iterates over the columns of the frame.
-        """
-
         def items_builder(s):
             return s.name, s
 
@@ -1354,33 +992,9 @@ class DataFrame(BasePandasDataset):
             yield v
 
     def iteritems(self):
-        """Iterator over (column name, Series) pairs.
-
-        Note:
-            Returns the same thing as .items()
-
-        Returns:
-            A generator that iterates over the columns of the frame.
-        """
         return self.items()
 
     def itertuples(self, index=True, name="Pandas"):
-        """Iterate over DataFrame rows as namedtuples.
-
-        Args:
-            index (boolean, default True): If True, return the index as the
-                first element of the tuple.
-            name (string, default "Pandas"): The name of the returned
-            namedtuples or None to return regular tuples.
-        Note:
-            Generators can't be pickled so from the remote function
-            we expand the generator into a list before getting it.
-            This is not that ideal.
-
-        Returns:
-            A tuple representing row data. See args for varying tuples.
-        """
-
         def itertuples_builder(s):
             return next(s._to_pandas().to_frame().T.itertuples(index=index, name=name))
 
@@ -1389,41 +1003,6 @@ class DataFrame(BasePandasDataset):
             yield v
 
     def join(self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False):
-        """
-        Join two or more DataFrames, or a DataFrame with a collection.
-
-        Parameters
-        ----------
-            other : DataFrame, Series, or list of DataFrame
-                Index should be similar to one of the columns in this one.
-                If a Series is passed, its name attribute must be set,
-                and that will be used as the column name in the resulting joined DataFrame.
-            on : str, list of str, or array-like, optional
-                Column or index level name(s) in the caller to join on the index in other,
-                otherwise joins index-on-index. If multiple values given,
-                the other DataFrame must have a MultiIndex. Can pass an array as the join key
-                if it is not already contained in the calling DataFrame.
-            how : {'left', 'right', 'outer', 'inner'}, Default is 'left'
-                How to handle the operation of the two objects.
-                - left: use calling frame's index (or column if on is specified)
-                - right: use other's index.
-                - outer: form union of calling frame's index (or column if on is specified)
-                with other's index, and sort it lexicographically.
-                - inner: form intersection of calling frame's index (or column if on is specified)
-                with other's index, preserving the order of the calling’s one.
-            lsuffix : str, default ''
-                Suffix to use from left frame's overlapping columns.
-            rsuffix : str, default ''
-                Suffix to use from right frame's overlapping columns.
-            sort : boolean. Default is False
-                Order result DataFrame lexicographically by the join key.
-                If False, the order of the join key depends on the join type (how keyword).
-
-        Returns
-        -------
-        DataFrame
-            A dataframe containing columns from both the caller and other.
-        """
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
@@ -1490,29 +1069,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """
-        Return the median of the values for the requested axis.
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                Axis for the function to be applied on.
-            skipna : bool, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            The median of the values for the requested axis
-        """
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -1545,31 +1101,6 @@ class DataFrame(BasePandasDataset):
         col_level=None,
         ignore_index=True,
     ):
-        """
-        Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
-
-        Parameters
-        ----------
-        id_vars : tuple, list, or ndarray, optional
-            Column(s) to use as identifier variables.
-        value_vars : tuple, list, or ndarray, optional
-            Column(s) to unpivot. If not specified, uses all columns that
-            are not set as `id_vars`.
-        var_name : scalar
-            Name to use for the 'variable' column.
-        value_name : scalar, default 'value'
-            Name to use for the 'value' column.
-        col_level : int or str, optional
-            If columns are a MultiIndex then use this level to melt.
-        ignore_index : bool, default True
-            If True, original index is ignored. If False, the original index is retained.
-            Index labels will be repeated as necessary.
-
-        Returns
-        -------
-        DataFrame
-            Unpivoted DataFrame.
-        """
         return self.__constructor__(
             query_compiler=self._query_compiler.melt(
                 id_vars=id_vars,
@@ -1582,19 +1113,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def memory_usage(self, index=True, deep=False):
-        """Returns the memory usage of each column in bytes
-
-        Args:
-            index (bool): Whether to include the memory usage of the DataFrame's
-                index in returned Series. Defaults to True
-            deep (bool): If True, introspect the data deeply by interrogating
-            objects dtypes for system-level memory consumption. Defaults to False
-
-        Returns:
-            A Series where the index are the column names and the values are
-            the memory usage of each of the columns in bytes. If `index=true`,
-            then the first value of the Series will be 'Index' with its memory usage.
-        """
         if index:
             result = self._reduce_dimension(
                 self._query_compiler.memory_usage(index=False, deep=deep)
@@ -1618,73 +1136,6 @@ class DataFrame(BasePandasDataset):
         indicator=False,
         validate=None,
     ):
-        """
-        Merge DataFrame or named Series objects with a database-style join.
-
-        The join is done on columns or indexes. If joining columns on columns,
-        the DataFrame indexes will be ignored. Otherwise if joining indexes on indexes or
-        indexes on a column or columns, the index will be passed on.
-
-        Parameters
-        ----------
-        right : DataFrame or named Series
-            Object to merge with.
-        how : {'left', 'right', 'outer', 'inner'}, default 'inner'
-            Type of merge to be performed.
-            - left: use only keys from left frame,
-              similar to a SQL left outer join; preserve key order.
-            - right: use only keys from right frame,
-              similar to a SQL right outer join; preserve key order.
-            - outer: use union of keys from both frames,
-              similar to a SQL full outer join; sort keys lexicographically.
-            - inner: use intersection of keys from both frames,
-              similar to a SQL inner join; preserve the order of the left keys.
-        on : label or list
-            Column or index level names to join on.
-            These must be found in both DataFrames. If on is None and not merging on indexes
-            then this defaults to the intersection of the columns in both DataFrames.
-        left_on : label or list, or array-like
-            Column or index level names to join on in the left DataFrame.
-            Can also be an array or list of arrays of the length of the left DataFrame.
-            These arrays are treated as if they are columns.
-        right_on : label or list, or array-like
-            Column or index level names to join on in the right DataFrame.
-            Can also be an array or list of arrays of the length of the right DataFrame.
-            These arrays are treated as if they are columns.
-        left_index : bool, default False
-            Use the index from the left DataFrame as the join key(s).
-            If it is a MultiIndex, the number of keys in the other DataFrame
-            (either the index or a number of columns) must match the number of levels.
-        right_index : bool, default False
-            Use the index from the right DataFrame as the join key. Same caveats as left_index.
-        sort : bool, default False
-            Sort the join keys lexicographically in the result DataFrame.
-            If False, the order of the join keys depends on the join type (how keyword).
-        suffixes : tuple of (str, str), default ('_x', '_y')
-            Suffix to apply to overlapping column names in the left and right side, respectively.
-            To raise an exception on overlapping columns use (False, False).
-        copy : bool, default True
-            If False, avoid copy if possible.
-        indicator : bool or str, default False
-            If True, adds a column to output DataFrame called "_merge" with information
-            on the source of each row. If string, column with information on source of each row
-            will be added to output DataFrame, and column will be named value of string.
-            Information column is Categorical-type and takes on a value of "left_only"
-            for observations whose merge key only appears in 'left' DataFrame,
-            "right_only" for observations whose merge key only appears in 'right' DataFrame,
-            and "both" if the observation’s merge key is found in both.
-        validate : str, optional
-            If specified, checks if merge is of specified type.
-            - 'one_to_one' or '1:1': check if merge keys are unique in both left and right datasets.
-            - 'one_to_many' or '1:m': check if merge keys are unique in left dataset.
-            - 'many_to_one' or 'm:1': check if merge keys are unique in right dataset.
-            - 'many_to_many' or 'm:m': allowed, but does not result in checks.
-
-        Returns
-        -------
-        DataFrame
-             A DataFrame of the two merged objects.
-        """
         if isinstance(right, Series):
             if right.name is None:
                 raise ValueError("Cannot merge a Series without a name")
@@ -1745,55 +1196,9 @@ class DataFrame(BasePandasDataset):
         )
 
     def nlargest(self, n, columns, keep="first"):
-        """
-        Return the first `n` rows ordered by `columns` in descending order.
-        Return the first `n` rows with the largest values in `columns`, in
-        descending order. The columns that are not specified are returned as
-        well, but not used for ordering.
-        This method is equivalent to
-        ``df.sort_values(columns, ascending=False).head(n)``, but more
-        performant.
-        Parameters
-        ----------
-        n : int
-            Number of rows to return.
-        columns : label or list of labels
-            Column label(s) to order by.
-        keep : {'first', 'last', 'all'}, default 'first'
-            Where there are duplicate values:
-            - `first` : prioritize the first occurrence(s)
-            - `last` : prioritize the last occurrence(s)
-            - ``all`` : do not drop any duplicates, even it means
-                        selecting more than `n` items.
-            .. versionadded:: 0.24.0
-        """
         return DataFrame(query_compiler=self._query_compiler.nlargest(n, columns, keep))
 
     def nsmallest(self, n, columns, keep="first"):
-        """
-        Return the first `n` rows ordered by `columns` in ascending order.
-        Return the first `n` rows with the smallest values in `columns`, in
-        ascending order. The columns that are not specified are returned as
-        well, but not used for ordering.
-        This method is equivalent to
-        ``df.sort_values(columns, ascending=True).head(n)``, but more
-        performant.
-        Parameters
-        ----------
-        n : int
-            Number of items to retrieve.
-        columns : list or str
-            Column name or names to order by.
-        keep : {'first', 'last', 'all'}, default 'first'
-            Where there are duplicate values:
-            - ``first`` : take the first occurrence.
-            - ``last`` : take the last occurrence.
-            - ``all`` : do not drop any duplicates, even it means
-              selecting more than `n` items.
-        Returns
-        -------
-        DataFrame
-        """
         return DataFrame(
             query_compiler=self._query_compiler.nsmallest(
                 n=n, columns=columns, keep=keep
@@ -1801,20 +1206,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def slice_shift(self, periods=1, axis=0):
-        """
-        Equivalent to `shift` without copying data.
-        The shifted data will not include the dropped periods and the
-        shifted axis will be smaller than the original.
-        Parameters
-        ----------
-        periods : int
-            Number of periods to move, can be positive or negative.
-        axis : int or str
-            Shift direction.
-        Returns
-        -------
-        shifted : same type as caller
-        """
         if periods == 0:
             return self.copy()
 
@@ -1846,25 +1237,6 @@ class DataFrame(BasePandasDataset):
                 return new_df
 
     def unstack(self, level=-1, fill_value=None):
-        """
-        Pivot a level of the (necessarily hierarchical) index labels.
-        Returns a DataFrame having a new level of column labels whose inner-most level
-        consists of the pivoted index labels.
-        If the index is not a MultiIndex, the output will be a Series
-        (the analogue of stack when the columns are not a MultiIndex).
-        The level involved will automatically get sorted.
-
-        Parameters
-        ----------
-        level : int, str, or list of these, default -1 (last level)
-            Level(s) of index to unstack, can pass level name.
-        fill_value : int, str or dict
-            Replace NaN with this value if the unstack produces missing values.
-
-        Returns
-        -------
-        Series or DataFrame
-        """
         if not isinstance(self.index, pandas.MultiIndex) or (
             isinstance(self.index, pandas.MultiIndex)
             and is_list_like(level)
@@ -1879,23 +1251,6 @@ class DataFrame(BasePandasDataset):
             )
 
     def pivot(self, index=None, columns=None, values=None):
-        """
-        Return reshaped DataFrame organized by given index / column values.
-        Reshape data (produce a "pivot" table) based on column values. Uses
-        unique values from specified `index` / `columns` to form axes of the
-        resulting DataFrame.
-        Parameters
-        ----------
-        index : str or object, optional
-            Column to use to make new frame's index. If None, uses
-            existing index.
-        columns : str or object
-            Column to use to make new frame's columns.
-        values : str, object or a list of the previous, optional
-            Column(s) to use for populating new frame's values. If not
-            specified, all remaining columns will be used and the result will
-            have hierarchically indexed columns.
-        """
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
@@ -1989,32 +1344,6 @@ class DataFrame(BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
-        """
-        Return the product of the values for the requested axis.
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                Axis for the function to be applied on.
-            skipna : bool, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            min_count : int, default 0
-                The required number of valid values to perform the operation.
-                If fewer than min_count non-NA values are present the result will be NA.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            The product of the values for the requested axis.
-        """
         axis = self._get_axis_number(axis)
         axis_to_apply = self.columns if axis else self.index
         if (
@@ -2065,11 +1394,6 @@ class DataFrame(BasePandasDataset):
     radd = add
 
     def query(self, expr, inplace=False, **kwargs):
-        """Queries the Dataframe with a boolean expression
-
-        Returns:
-            A new DataFrame if inplace=False
-        """
         ErrorMessage.non_verified_udf()
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
@@ -2087,19 +1411,6 @@ class DataFrame(BasePandasDataset):
         level=None,
         errors="ignore",
     ):
-        """Alters axes labels.
-
-        Args:
-            mapper, index, columns: Transformations to apply to the axis's
-                values.
-            axis: Axis to target with mapper.
-            copy: Also copy underlying data.
-            inplace: Whether to return a new DataFrame.
-            level: Only rename a specific level of a MultiIndex.
-
-        Returns:
-            If inplace is False, a new DataFrame with the updated axes.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if mapper is None and index is None and columns is None:
             raise TypeError("must pass an index to rename")
@@ -2144,44 +1455,6 @@ class DataFrame(BasePandasDataset):
         regex=False,
         method="pad",
     ):
-        """
-        Replace values given in `to_replace` with `value`.
-
-        Values of the DaraFrame are replaced with other values dynamically.
-        This differs from updating with .loc or .iloc, which require
-        you to specify a location to update with some value.
-
-        Parameters
-        ----------
-        to_replace : str, regex, list, dict, Series, int, float, or None
-            How to find the values that will be replaced.
-        value : scalar, dict, list, str, regex, default None
-            Value to replace any values matching `to_replace` with.
-            For a DataFrame a dict of values can be used to specify which
-            value to use for each column (columns not in the dict will not be
-            filled). Regular expressions, strings and lists or dicts of such
-            objects are also allowed.
-        inplace : bool, default False
-            If True, in place. Note: this will modify any
-            other views on this object (e.g. a column from a DataFrame).
-            Returns the caller if this is True.
-        limit : int, default None
-            Maximum size gap to forward or backward fill.
-        regex : bool or same types as `to_replace`, default False
-            Whether to interpret `to_replace` and/or `value` as regular
-            expressions. If this is ``True`` then `to_replace` *must* be a
-            string. Alternatively, this could be a regular expression or a
-            list, dict, or array of regular expressions in which case
-            `to_replace` must be ``None``.
-        method : {{'pad', 'ffill', 'bfill', `None`}}
-            The method to use when for replacement, when `to_replace` is a
-            scalar, list or tuple and `value` is ``None``.
-
-        Returns
-        -------
-        DataFrame
-            Object after replacement.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.replace(
             to_replace=to_replace,
@@ -2192,26 +1465,6 @@ class DataFrame(BasePandasDataset):
             method=method,
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
-
-    def _set_axis_name(self, name, axis=0, inplace=False):
-        """Alter the name or names of the axis.
-
-        Args:
-            name: Name for the Index, or list of names for the MultiIndex
-            axis: 0 or 'index' for the index; 1 or 'columns' for the columns
-            inplace: Whether to modify `self` directly or return a copy
-
-        Returns:
-            Type of caller or None if inplace=True.
-        """
-        axis = self._get_axis_number(axis)
-        renamed = self if inplace else self.copy()
-        if axis == 0:
-            renamed.index = renamed.index.set_names(name)
-        else:
-            renamed.columns = renamed.columns.set_names(name)
-        if not inplace:
-            return renamed
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(
@@ -2308,31 +1561,6 @@ class DataFrame(BasePandasDataset):
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        """
-        Return unbiased standard error of the mean over requested axis.
-
-        Normalized by N-1 by default. This can be changed using the ddof argument
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-            skipna : bool, default True
-                Exclude NA/null values. If an entire row/column is NA,
-                the result will be NA.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            ddof : int, default 1
-                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
-                where N represents the number of elements.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-
-        Returns
-        -------
-            Series or DataFrame (if level specified)
-        """
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -2361,20 +1589,6 @@ class DataFrame(BasePandasDataset):
     def set_index(
         self, keys, drop=True, append=False, inplace=False, verify_integrity=False
     ):
-        """Set the DataFrame index using one or more existing columns.
-
-        Args:
-            keys: column label or list of column labels / arrays.
-            drop (boolean): Delete columns to be used as the new index.
-            append (boolean): Whether to append columns to existing index.
-            inplace (boolean): Modify the DataFrame in place.
-            verify_integrity (boolean): Check the new index for duplicates.
-                Otherwise defer the check until necessary. Setting to False
-                will improve the performance of this method
-
-        Returns:
-            If inplace is set to false returns a new DataFrame, otherwise None.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if not isinstance(keys, list):
             keys = [keys]
@@ -2433,29 +1647,6 @@ class DataFrame(BasePandasDataset):
             return frame
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        """
-        Return unbiased skew over requested axis. Normalized by N-1
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                Axis for the function to be applied on.
-            skipna : boolean, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical),
-                count along a particular level, collapsing into a Series.
-            numeric_only : boolean, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            Unbiased skew over requested axis.
-        """
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -2497,34 +1688,6 @@ class DataFrame(BasePandasDataset):
     def std(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        """
-        Return sample standard deviation over requested axis.
-
-        Normalized by N-1 by default. This can be changed using the ddof argument.
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                The axis to take the std on.
-            skipna : bool, default True
-                Exclude NA/null values. If an entire row/column is NA, the result will be NA.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            ddof : int, default 1
-                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
-                where N represents the number of elements.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            The sample standard deviation.
-        """
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -2551,35 +1714,6 @@ class DataFrame(BasePandasDataset):
         )
 
     def stack(self, level=-1, dropna=True):
-        """
-        Stack the prescribed level(s) from columns to index.
-        Return a reshaped DataFrame or Series having a multi-level
-        index with one or more new inner-most levels compared to the current
-        DataFrame. The new inner-most levels are created by pivoting the
-        columns of the current dataframe:
-          - if the columns have a single level, the output is a Series;
-          - if the columns have multiple levels, the new index
-            level(s) is (are) taken from the prescribed level(s) and
-            the output is a DataFrame.
-
-        Parameters
-        ----------
-        level : int, str, list, default -1
-            Level(s) to stack from the column axis onto the index
-            axis, defined as one index or label, or a list of indices
-            or labels.
-        dropna : bool, default True
-            Whether to drop rows in the resulting Frame/Series with
-            missing values. Stacking a column level onto the index
-            axis can create combinations of index and column values
-            that are missing from the original dataframe. See Examples
-            section.
-
-        Returns
-        -------
-        DataFrame or Series
-            Stacked dataframe or series.
-        """
         if not isinstance(self.columns, pandas.MultiIndex) or (
             isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
@@ -2612,32 +1746,6 @@ class DataFrame(BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
-        """
-        Return the sum of the values for the requested axis.
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                Axis for the function to be applied on.
-            skipna : bool, default True
-                Exclude NA/null values when computing the result.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            min_count : int, default 0
-                The required number of valid values to perform the operation.
-                If fewer than min_count non-NA values are present the result will be NA.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            The sum of the values for the requested axis
-        """
         axis = self._get_axis_number(axis)
         axis_to_apply = self.columns if axis else self.index
         if (
@@ -2684,19 +1792,6 @@ class DataFrame(BasePandasDataset):
                 min_count=min_count,
                 **kwargs,
             )
-        )
-
-    def _to_datetime(self, **kwargs):
-        """
-        Convert `self` to datetime.
-
-        Returns
-        -------
-        datetime
-            Series: Series of datetime64 dtype
-        """
-        return self._reduce_dimension(
-            query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
     def to_feather(self, path, **kwargs):  # pragma: no cover
@@ -2859,48 +1954,6 @@ class DataFrame(BasePandasDataset):
     def update(
         self, other, join="left", overwrite=True, filter_func=None, errors="ignore"
     ):
-        """
-        Modify in place using non-NA values from another DataFrame.
-
-        Aligns on indices. There is no return value.
-
-        Parameters
-        ----------
-        other : DataFrame, or object coercible into a DataFrame
-            Should have at least one matching index/column label
-            with the original DataFrame. If a Series is passed,
-            its name attribute must be set, and that will be
-            used as the column name to align with the original DataFrame.
-        join : {'left'}, default 'left'
-            Only left join is implemented, keeping the index and columns of the
-            original object.
-        overwrite : bool, default True
-            How to handle non-NA values for overlapping keys:
-
-            * True: overwrite original DataFrame's values
-              with values from `other`.
-            * False: only update values that are NA in
-              the original DataFrame.
-
-        filter_func : callable(1d-array) -> bool 1d-array, optional
-            Can choose to replace values other than NA. Return True for values
-            that should be updated.
-        errors : {'raise', 'ignore'}, default 'ignore'
-            If 'raise', will raise a ValueError if the DataFrame and `other`
-            both contain non-NA data in the same place.
-
-        Returns
-        -------
-        None : method directly changes calling object
-
-        Raises
-        ------
-        ValueError
-            * When `errors='raise'` and there's overlapping non-NA data.
-            * When `errors` is not either `'ignore'` or `'raise'`
-        NotImplementedError
-            * If `join != 'left'`
-        """
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
         query_compiler = self._query_compiler.df_update(
@@ -2915,34 +1968,6 @@ class DataFrame(BasePandasDataset):
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        """
-        Return unbiased variance over requested axis.
-
-        Normalized by N-1 by default. This can be changed using the ddof argument
-
-        Parameters
-        ----------
-            axis : {index (0), columns (1)}
-                The axis to take the variance on.
-            skipna : bool, default True
-                Exclude NA/null values. If an entire row/column is NA, the result will be NA.
-            level : int or level name, default None
-                If the axis is a MultiIndex (hierarchical), count along a particular level,
-                collapsing into a Series.
-            ddof : int, default 1
-                Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
-                where N represents the number of elements.
-            numeric_only : bool, default None
-                Include only float, int, boolean columns. If None, will attempt to use everything,
-                then use only numeric data. Not implemented for Series.
-            **kwargs
-                Additional keyword arguments to be passed to the function.
-
-        Returns
-        -------
-        Series or DataFrame (if level specified)
-            The unbiased variance.
-        """
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -2975,24 +2000,6 @@ class DataFrame(BasePandasDataset):
         sort: bool = True,
         ascending: bool = False,
     ):
-        """
-         Return a Series containing counts of unique rows in the DataFrame.
-
-        Parameters
-        ----------
-        subset : list-like, optional
-            Columns to use when counting unique combinations.
-        normalize : bool, default False
-            Return proportions rather than frequencies.
-        sort : bool, default True
-            Sort by frequencies.
-        ascending : bool, default False
-            Sort in ascending order.
-
-        Returns
-        -------
-        Series
-        """
         return self._default_to_pandas(
             "value_counts",
             subset=subset,
@@ -3011,22 +2018,6 @@ class DataFrame(BasePandasDataset):
         errors="raise",
         try_cast=False,
     ):
-        """Replaces values not meeting condition with values in other.
-
-        Args:
-            cond: A condition to be met, can be callable, array-like or a
-                DataFrame.
-            other: A value or DataFrame of values to use for setting this.
-            inplace: Whether or not to operate inplace.
-            axis: The axis to apply over. Only valid when a Series is passed
-                as other.
-            level: The MultiLevel index level to apply over.
-            errors: Whether or not to raise errors. Does nothing in Pandas.
-            try_cast: Try to cast the result back to the input type.
-
-        Returns:
-            A new DataFrame with the replaced values.
-        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if isinstance(other, pandas.Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
@@ -3072,37 +2063,6 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
-    def _getitem(self, key):
-        """Get the column specified by key for this DataFrame.
-
-        Args:
-            key : The column name.
-
-        Returns:
-            A Pandas Series representing the value for the column.
-        """
-        key = apply_if_callable(key, self)
-        # Shortcut if key is an actual column
-        is_mi_columns = self._query_compiler.has_multiindex(axis=1)
-        try:
-            if key in self.columns and not is_mi_columns:
-                return self._getitem_column(key)
-        except (KeyError, ValueError, TypeError):
-            pass
-        if isinstance(key, Series):
-            return DataFrame(
-                query_compiler=self._query_compiler.getitem_array(key._query_compiler)
-            )
-        elif isinstance(key, (np.ndarray, pandas.Index, list)):
-            return DataFrame(query_compiler=self._query_compiler.getitem_array(key))
-        elif isinstance(key, DataFrame):
-            return self.where(key)
-        elif is_mi_columns:
-            return self._default_to_pandas(pandas.DataFrame.__getitem__, key)
-            # return self._getitem_multilevel(key)
-        else:
-            return self._getitem_column(key)
-
     def _getitem_column(self, key):
         if key not in self.keys():
             raise KeyError("{}".format(key))
@@ -3115,14 +2075,6 @@ class DataFrame(BasePandasDataset):
         return s
 
     def __getattr__(self, key):
-        """After regular attribute access, looks up the name in the columns
-
-        Args:
-            key (str): Attribute name.
-
-        Returns:
-            The value of the attribute.
-        """
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
@@ -3227,22 +2179,9 @@ class DataFrame(BasePandasDataset):
         return self._default_to_pandas(pandas.DataFrame.__hash__)
 
     def __iter__(self):
-        """Iterate over the columns
-
-        Returns:
-            An Iterator over the columns of the DataFrame.
-        """
         return iter(self.columns)
 
     def __contains__(self, key):
-        """Searches columns for specific key
-
-        Args:
-            key : The column name
-
-        Returns:
-            Returns a boolean if the specified key exists as a column name
-        """
         return self.columns.__contains__(key)
 
     def __round__(self, decimals=0):
@@ -3252,14 +2191,6 @@ class DataFrame(BasePandasDataset):
         return self._default_to_pandas(pandas.DataFrame.__setstate__, state)
 
     def __delitem__(self, key):
-        """Delete a column by key. `del a[key]` for example.
-           Operation happens in place.
-
-           Notes: This operation happen on row and column partition
-                  simultaneously. No rebuild.
-        Args:
-            key: key to delete
-        """
         if key not in self:
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
@@ -3298,7 +2229,7 @@ class DataFrame(BasePandasDataset):
     @property
     def __doc__(self):  # pragma: no cover
         def __doc__(df):
-            """Defined because properties do not have a __name__"""
+            """Define __name__ attr because properties do not have it."""
             return df.__doc__
 
         return self._default_to_pandas(__doc__)
@@ -3306,13 +2237,26 @@ class DataFrame(BasePandasDataset):
     @property
     def style(self):
         def style(df):
-            """Defined because properties do not have a __name__"""
+            """Define __name__ attr because properties do not have it."""
             return df.style
 
         return self._default_to_pandas(style)
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
-        """Returns or updates a DataFrame given new query_compiler"""
+        """
+        Return or update a DataFrame given new query_compiler.
+
+        TODO: add description for parameters.
+
+        Parameters
+        ----------
+        new_query_compiler: query_compiler
+        inplace: bool
+
+        Returns
+        -------
+        dataframe
+        """
         assert (
             isinstance(new_query_compiler, type(self._query_compiler))
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
@@ -3323,7 +2267,15 @@ class DataFrame(BasePandasDataset):
             self._update_inplace(new_query_compiler=new_query_compiler)
 
     def _validate_dtypes(self, numeric_only=False):
-        """Helper method to check that all the dtypes are the same"""
+        """
+        Help to check that all the dtypes are the same.
+
+        TODO: add description for parameters.
+
+        Parameters
+        ----------
+        numeric_only: bool
+        """
         dtype = self.dtypes[0]
         for t in self.dtypes:
             if numeric_only and not is_numeric_dtype(t):
@@ -3365,7 +2317,23 @@ class DataFrame(BasePandasDataset):
             return self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
-        """Raises TypeErrors for sum, prod, and mean where necessary"""
+        """
+        Raise TypeErrors for sum, prod, and mean where necessary.
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         # We cannot add datetime types, so if we are summing a column with
         # dtype datetime64 and cannot ignore non-numeric types, we must throw a
         # TypeError.
@@ -3408,6 +2376,123 @@ class DataFrame(BasePandasDataset):
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()
+
+    def _validate_eval_query(self, expr, **kwargs):
+        """
+        Help to check the arguments to eval() and query().
+
+        Parameters
+        ----------
+        expr: The expression to evaluate. This string cannot contain any
+            Python statements, only Python expressions.
+        **kwargs
+        """
+        if isinstance(expr, str) and expr == "":
+            raise ValueError("expr cannot be an empty string")
+
+        if isinstance(expr, str) and "@" in expr:
+            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
+
+        if isinstance(expr, str) and "not" in expr:
+            if "parser" in kwargs and kwargs["parser"] == "python":
+                ErrorMessage.not_implemented(
+                    "'Not' nodes are not implemented."
+                )  # pragma: no cover
+
+    def _reduce_dimension(self, query_compiler):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        return Series(query_compiler=query_compiler)
+
+    def _set_axis_name(self, name, axis=0, inplace=False):
+        """
+        Alter the name or names of the axis.
+
+        TODO: add types.
+
+        Parameters
+        ----------
+        name:
+            Name for the Index, or list of names for the MultiIndex
+        axis:
+            0 or 'index' for the index; 1 or 'columns' for the columns
+        inplace:
+            Whether to modify `self` directly or return a copy
+
+        Returns
+        -------
+        Type of caller or None if inplace=True.
+        """
+        axis = self._get_axis_number(axis)
+        renamed = self if inplace else self.copy()
+        if axis == 0:
+            renamed.index = renamed.index.set_names(name)
+        else:
+            renamed.columns = renamed.columns.set_names(name)
+        if not inplace:
+            return renamed
+
+    def _to_datetime(self, **kwargs):
+        """
+        Convert `self` to datetime.
+
+        Returns
+        -------
+        datetime
+            Series: Series of datetime64 dtype
+        """
+        return self._reduce_dimension(
+            query_compiler=self._query_compiler.to_datetime(**kwargs)
+        )
+
+    def _getitem(self, key):
+        """
+        Get the column specified by key for this DataFrame.
+
+        Parameters
+        ----------
+        key: the column name.
+
+        Returns
+        -------
+        A Pandas Series representing the value for the column.
+        """
+        key = apply_if_callable(key, self)
+        # Shortcut if key is an actual column
+        is_mi_columns = self._query_compiler.has_multiindex(axis=1)
+        try:
+            if key in self.columns and not is_mi_columns:
+                return self._getitem_column(key)
+        except (KeyError, ValueError, TypeError):
+            pass
+        if isinstance(key, Series):
+            return DataFrame(
+                query_compiler=self._query_compiler.getitem_array(key._query_compiler)
+            )
+        elif isinstance(key, (np.ndarray, pandas.Index, list)):
+            return DataFrame(query_compiler=self._query_compiler.getitem_array(key))
+        elif isinstance(key, DataFrame):
+            return self.where(key)
+        elif is_mi_columns:
+            return self._default_to_pandas(pandas.DataFrame.__getitem__, key)
+            # return self._getitem_multilevel(key)
+        else:
+            return self._getitem_column(key)
 
 
 if IsExperimental.get():
