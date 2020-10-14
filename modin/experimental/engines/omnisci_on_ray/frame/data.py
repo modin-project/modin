@@ -68,7 +68,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         index_cols=None,
         uses_rowid=False,
         force_execution_mode=None,
-        is_default_frame=False,
+        has_unsupported_data=False,
     ):
         assert dtypes is not None
 
@@ -85,7 +85,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         self._columns_cache = columns
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
-        self._is_default_frame = is_default_frame
+        self._has_unsupported_data = has_unsupported_data
         if self._op is None:
             self._op = FrameNode(self)
 
@@ -1207,8 +1207,12 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_dtypes = df.dtypes
         df = df.add_prefix("F_")
 
-        partitions, unsupported_cols = cls._frame_mgr_cls.from_pandas(df, True)
-        new_parts, new_lengths, new_widths = partitions
+        (
+            new_parts,
+            new_lengths,
+            new_widths,
+            unsupported_cols,
+        ) = cls._frame_mgr_cls.from_pandas(df, True)
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
@@ -1224,15 +1228,17 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_widths,
             dtypes=new_dtypes,
             index_cols=index_cols,
-            is_default_frame=len(unsupported_cols) > 0,
+            has_unsupported_data=len(unsupported_cols) > 0,
         )
 
     @classmethod
     def from_arrow(cls, at):
-        partitions, unsupported_cols = cls._frame_mgr_cls.from_arrow(
-            at, return_dims=True
-        )
-        new_frame, new_lengths, new_widths = partitions
+        (
+            new_frame,
+            new_lengths,
+            new_widths,
+            unsupported_cols,
+        ) = cls._frame_mgr_cls.from_arrow(at, return_dims=True)
 
         new_columns = pd.Index(data=at.column_names, dtype="O")
         new_index = pd.RangeIndex(at.num_rows)
@@ -1254,7 +1260,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
-            is_default_frame=len(unsupported_cols) > 0,
+            has_unsupported_data=len(unsupported_cols) > 0,
         )
 
     @classmethod

@@ -1427,7 +1427,9 @@ class TestBadData:
 
     def test_from_arrow(self):
         at = self._get_pyarrow_table(self.bad_for_omnisci)
-        md_df, pd_df = pd.utils.from_arrow(at), pandas.DataFrame(self.bad_for_omnisci)
+        pd_df = pandas.DataFrame(self.bad_for_omnisci)
+        md_df = pd.utils.from_arrow(at)
+
         # force materialization
         repr(md_df)
         df_equals(md_df, pd_df)

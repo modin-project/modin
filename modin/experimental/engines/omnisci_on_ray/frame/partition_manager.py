@@ -48,20 +48,25 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         return 1
 
     @classmethod
-    def from_pandas(cls, df, return_dims=False, unsupported_cols=None):
-        if df.empty:
-            return super().from_pandas(df, return_dims), []
+    def from_pandas(cls, df, return_dims=False):
+        def tuple_wrapper(obj):
+            if not isinstance(obj, tuple):
+                obj = (obj,)
+            return obj
 
-        if unsupported_cols is None:
-            at, unsupported_cols = cls._get_unsupported_cols(df)
-        else:
-            return super().from_pandas(df, return_dims), unsupported_cols
+        if df.empty:
+            return (*tuple_wrapper(super().from_pandas(df, return_dims)), [])
+
+        at, unsupported_cols = cls._get_unsupported_cols(df)
 
         if len(unsupported_cols) > 0:
             # Putting pandas frame into partitions instead of arrow table, because we know
             # that all of operations with this frame will be default to pandas and don't want
             # unnecessaries conversion pandas->arrow->pandas
-            return super().from_pandas(df, return_dims), unsupported_cols
+            return (
+                *tuple_wrapper(super().from_pandas(df, return_dims)),
+                unsupported_cols,
+            )
         else:
             # Since we already have arrow table, putting it into partitions instead
             # of pandas frame, to skip that phase when we will be putting our frame to OmniSci
@@ -76,13 +81,11 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             _, unsupported_cols = cls._get_unsupported_cols(at)
 
         if not return_dims:
-            result = np.array(parts)
+            return np.array(parts), unsupported_cols
         else:
             row_lengths = [at.num_rows]
             col_widths = [at.num_columns]
-            result = np.array(parts), row_lengths, col_widths
-
-        return result, unsupported_cols
+            return np.array(parts), row_lengths, col_widths, unsupported_cols
 
     @classmethod
     def _get_unsupported_cols(cls, obj):
@@ -100,16 +103,11 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             a list of unsupported columns.
         """
         if isinstance(obj, (pandas.Series, pandas.DataFrame)):
-
-            def fast_select_dtypes(df, dtype, nrows=None):
-                cols = [i for i, col in enumerate(df.dtypes.items()) if col[1] == dtype]
-                if nrows is None:
-                    nrows = len(df)
-                return df.iloc[nrows, cols]
-
             # picking first rows from cols with `dtype="object"` to check its actual type,
             # in case of homogen columns that saves us unnecessary convertion to arrow table
-            type_samples = fast_select_dtypes(obj, dtype="object", nrows=0)
+            cols = [name for name, col in obj.dtypes.items() if col == "object"]
+            type_samples = obj.iloc[0][cols]
+
             unsupported_cols = [
                 name for name, col in type_samples.items() if not isinstance(col, str)
             ]
@@ -118,14 +116,19 @@ class OmnisciOnRayFrameManager(RayFrameManager):
                 return None, unsupported_cols
 
             try:
-                obj = pyarrow.Table.from_pandas(obj)
+                at = pyarrow.Table.from_pandas(obj)
             except pyarrow.lib.ArrowTypeError as e:
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
                 for msg in e.args:
                     match = re.findall(regex, msg)
                     unsupported_cols.extend(match)
+
+                if len(unsupported_cols) == 0:
+                    unsupported_cols = obj.columns
                 return None, unsupported_cols
+            else:
+                obj = at
 
         return (
             obj,
