@@ -25,75 +25,98 @@ from ray.autoscaler.commands import (
 )
 
 
-def test__bootstrap_config():
+@pytest.fixture
+def make_bootstrap_config_mock():
     sig_bootstrap_config = signature(_bootstrap_config)
 
-    def _bootstrap_config_mock(*args, **kwargs):
+    def bootstrap_config_mock(*args, **kwargs):
         sig_bootstrap_config.bind(*args, **kwargs)
-        return {"empty": "config"}
+        config = args[0]
+        config["auth"]["ssh_user"] = "modin"
+        config["auth"]["ssh_private_key"] = "X" * 20
+        return config
 
-    with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", _bootstrap_config_mock
-    ):
-        RayCluster(Provider(name="aws"))
+    return bootstrap_config_mock
 
 
-def test_get_head_node_ip():
+@pytest.fixture
+def make_get_head_node_ip_mock():
     sig_get_head_node_ip = signature(get_head_node_ip)
 
     def get_head_node_ip_mock(*args, **kwargs):
         sig_get_head_node_ip.bind(*args, **kwargs)
         return "127.0.0.1"
 
-    def bootstrap_mock(config):
-        config["auth"]["ssh_user"] = "modin"
-        config["auth"]["ssh_private_key"] = "X" * 20
-        return config
-
-    with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", bootstrap_mock
-    ):
-        ray_cluster = RayCluster(Provider(name="aws"))
-
-    with mock.patch(
-        "modin.experimental.cloud.rayscale.get_head_node_ip", get_head_node_ip_mock
-    ):
-        ray_cluster.ready = True
-        ray_cluster._get_connection_details()
-        ray_cluster.ready = False
+    return get_head_node_ip_mock
 
 
-def test_teardown_cluster():
+@pytest.fixture
+def make_teardown_cluster_mock():
     sig_teardown_cluster = signature(teardown_cluster)
 
     def teardown_cluster_mock(*args, **kwargs):
         sig_teardown_cluster.bind(*args, **kwargs)
 
-    with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
-    ):
-        ray_cluster = RayCluster(Provider(name="aws"))
-
-    with mock.patch(
-        "modin.experimental.cloud.rayscale.teardown_cluster", teardown_cluster_mock
-    ):
-        ray_cluster._destroy(wait=True)
+    return teardown_cluster_mock
 
 
-def test_create_or_update_cluster():
+@pytest.fixture
+def make_create_or_update_cluster_mock():
     sig_create_or_update_cluster = signature(create_or_update_cluster)
 
     def create_or_update_cluster_mock(*args, **kwargs):
         sig_create_or_update_cluster.bind(*args, **kwargs)
 
+    return create_or_update_cluster_mock
+
+
+def test__bootstrap_config(make_bootstrap_config_mock):
     with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
+        "modin.experimental.cloud.rayscale._bootstrap_config",
+        make_bootstrap_config_mock,
+    ):
+        RayCluster(Provider(name="aws"))
+
+
+def test_get_head_node_ip(make_bootstrap_config_mock, make_get_head_node_ip_mock):
+    with mock.patch(
+        "modin.experimental.cloud.rayscale._bootstrap_config",
+        make_bootstrap_config_mock,
+    ):
+        ray_cluster = RayCluster(Provider(name="aws"))
+
+    with mock.patch(
+        "modin.experimental.cloud.rayscale.get_head_node_ip", make_get_head_node_ip_mock
+    ):
+        ray_cluster.ready = True
+        ray_cluster._get_connection_details()
+
+
+def test_teardown_cluster(make_bootstrap_config_mock, make_teardown_cluster_mock):
+    with mock.patch(
+        "modin.experimental.cloud.rayscale._bootstrap_config",
+        make_bootstrap_config_mock,
+    ):
+        ray_cluster = RayCluster(Provider(name="aws"))
+
+    with mock.patch(
+        "modin.experimental.cloud.rayscale.teardown_cluster", make_teardown_cluster_mock
+    ):
+        ray_cluster._destroy(wait=True)
+
+
+def test_create_or_update_cluster(
+    make_bootstrap_config_mock, make_create_or_update_cluster_mock
+):
+    with mock.patch(
+        "modin.experimental.cloud.rayscale._bootstrap_config",
+        make_bootstrap_config_mock,
     ):
         ray_cluster = RayCluster(Provider(name="aws"))
 
     with mock.patch(
         "modin.experimental.cloud.rayscale.create_or_update_cluster",
-        create_or_update_cluster_mock,
+        make_create_or_update_cluster_mock,
     ):
         ray_cluster._spawn(wait=True)
 
@@ -109,9 +132,10 @@ def test_create_or_update_cluster():
         """
     ],
 )
-def test_update_conda_requirements(setup_commands_source):
+def test_update_conda_requirements(setup_commands_source, make_bootstrap_config_mock):
     with mock.patch(
-        "modin.experimental.cloud.rayscale._bootstrap_config", lambda config: config
+        "modin.experimental.cloud.rayscale._bootstrap_config",
+        make_bootstrap_config_mock,
     ):
         ray_cluster = RayCluster(
             Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
