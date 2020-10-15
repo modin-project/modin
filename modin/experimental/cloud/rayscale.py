@@ -13,6 +13,7 @@
 
 import threading
 import os
+import re
 import traceback
 import sys
 from hashlib import sha1
@@ -148,7 +149,9 @@ class RayCluster(BaseCluster):
 
         reqs.extend(self._get_python_version())
 
-        if not any(map(lambda pkg: pkg.startswith("modin"), self.add_conda_packages)):
+        if not any(
+            map(lambda pkg: re.match(r"modin(\W|$)", pkg), self.add_conda_packages)
+        ):
             # user didn't define modin release;
             # use automatically detected modin release from local context
             reqs.append(self._get_modin_version())
