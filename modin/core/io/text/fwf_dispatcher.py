@@ -19,6 +19,7 @@ import pandas._libs.lib as lib
 import pandas
 from csv import QUOTE_NONE
 import sys
+import io
 
 from modin.config import NPartitions
 
@@ -160,6 +161,10 @@ class FWFDispatcher(TextFileDispatcher):
                 **partition_kwargs,
             }
 
+            old_pos = f.tell()
+            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
+            newline = cls.compute_newline(fio, encoding)
+            f.seek(old_pos)
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
@@ -167,6 +172,8 @@ class FWFDispatcher(TextFileDispatcher):
                 skiprows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
             )
             for start, end in splits:
                 args.update({"start": start, "end": end})

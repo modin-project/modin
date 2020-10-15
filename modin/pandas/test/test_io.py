@@ -524,7 +524,19 @@ class TestCsv:
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
     @pytest.mark.parametrize(
         "encoding",
-        [None, "latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"],
+        [
+            None,
+            "latin8",
+            "ISO-8859-1",
+            "latin1",
+            "iso-8859-1",
+            "cp1252",
+            "utf8",
+            "unicode_escape",
+            "raw_unicode_escape",
+            "utf16",
+            "utf32",
+        ],
     )
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
