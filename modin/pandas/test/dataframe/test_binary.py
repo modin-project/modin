@@ -150,16 +150,13 @@ def test_comparison(data, op, other):
     reason="Test is failing because of mismathing of thrown exceptions. See pandas issue #36377",
 )
 @pytest.mark.parametrize("other", ["a"])
-@pytest.mark.parametrize("op", ["ge", "gt", "le", "lt"])
+@pytest.mark.parametrize("op", ["ge", "gt", "le", "lt", "eq", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison_except(data, op, other):
-    # So far `eq` and `ne` are excluded from testing because
-    # pandas throws an exception but Modin doesn't throw it.
-    with pytest.raises(AssertionError):
-        eval_general(
-            *create_test_dfs(data),
-            lambda df: getattr(df, op)(other),
-        )
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: getattr(df, op)(other),
+    )
 
 
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])

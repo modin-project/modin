@@ -3,7 +3,7 @@ channels:
   - intel/label/modin
   - conda-forge
 dependencies:
-  - pandas==1.1.2
+  - pandas==1.1.3
   - numpy
   - pip
   - pytest>=6.0.1
