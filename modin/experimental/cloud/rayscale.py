@@ -148,7 +148,10 @@ class RayCluster(BaseCluster):
 
         reqs.extend(self._get_python_version())
 
-        reqs.append(self._get_modin_version())
+        if not any(map(lambda pkg: pkg.startswith("modin"), self.add_conda_packages)):
+            # user didn't define modin release;
+            # use automatically detected modin release from local context
+            reqs.append(self._get_modin_version())
 
         if self.add_conda_packages:
             reqs.extend(self.add_conda_packages)
