@@ -1707,3 +1707,19 @@ def test_from_arrow():
     pandas_df = create_test_pandas_dataframe()
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"names": [5, 1, 3, 4, 2, 6]},
+        {"names": [0]},
+        {"names": None, "usecols": [1, 0, 2]},
+        {"names": [3, 1, 2, 5], "usecols": [4, 1, 3, 2]},
+    ],
+)
+def test_csv_names_neq_num_cols(kwargs):
+    file_name = "modin/pandas/test/data/issue_2074.csv"
+    pandas_df = pandas.read_csv(file_name, **kwargs)
+    modin_df = pd.read_csv(file_name, **kwargs)
+    df_equals(modin_df, pandas_df)
