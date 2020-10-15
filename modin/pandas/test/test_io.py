@@ -1125,7 +1125,16 @@ def test_from_csv_skiprows(make_csv_file, nrows):
 
 
 @pytest.mark.parametrize(
-    "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
+    "encoding",
+    [
+        "latin8",
+        "ISO-8859-1",
+        "latin1",
+        "iso-8859-1",
+        "cp1252",
+        "utf8",
+        "unicode_escape",
+    ],
 )
 def test_from_csv_encoding(make_csv_file, encoding):
     make_csv_file(encoding=encoding)
