@@ -67,7 +67,7 @@ def from_arrow(at):
 
     Parameters
     ----------
-    at : Arrow Table
+    at: Arrow Table
         The Arrow Table to convert from.
 
     Returns

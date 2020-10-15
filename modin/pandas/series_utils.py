@@ -11,9 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement Series's accessors public API as Pandas does.
+
+Accessors: `Series.cat`, `Series.str`, `Series.dt`
+
+Almost all docstrings for public and magic methods should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D101: missing docstring in class
+    - D102: missing docstring in public method
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import sys
 import numpy as np
 import pandas
+from modin.utils import _inherit_docstrings
 from .series import Series
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
@@ -24,19 +37,13 @@ else:
     from re import _pattern_type
 
 
+@_inherit_docstrings(
+    pandas.core.arrays.categorical.CategoricalAccessor,
+    excluded=[
+        pandas.core.arrays.categorical.CategoricalAccessor.__init__,
+    ],
+)
 class CategoryMethods(object):
-    """
-    Accessor object for categorical properties of the Series values.
-
-    Be aware that assigning to categories is a inplace operation, while all
-    methods return new categorical data per default (but can be called with
-    inplace=True).
-
-    Parameters
-    ----------
-        dataSeries or CategoricalIndex
-    """
-
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
@@ -109,6 +116,12 @@ class CategoryMethods(object):
         )
 
 
+@_inherit_docstrings(
+    pandas.core.strings.StringMethods,
+    excluded=[
+        pandas.core.strings.StringMethods.__init__,
+    ],
+)
 class StringMethods(object):
     def __init__(self, series):
         # Check if dtypes is objects
@@ -422,6 +435,12 @@ class StringMethods(object):
         )
 
 
+@_inherit_docstrings(
+    pandas.core.indexes.accessors.CombinedDatetimelikeProperties,
+    excluded=[
+        pandas.core.indexes.accessors.CombinedDatetimelikeProperties.__init__,
+    ],
+)
 class DatetimeProperties(object):
     def __init__(self, series):
         self._series = series
