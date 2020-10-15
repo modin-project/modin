@@ -390,6 +390,9 @@ def test_loc_multi_index():
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"], ["row1"]])
 @pytest.mark.parametrize("columns", [["col1", "col2"], ["col1"]])
 def test_loc_assignment(index, columns):
+    if len(index) == 1 and len(columns) == 1:
+        pytest.skip("See Modin issue #2253 for details")
+
     md_df, pd_df = create_test_dfs(index=index, columns=columns)
     for i, ind in enumerate(index):
         for j, col in enumerate(columns):
