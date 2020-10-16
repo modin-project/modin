@@ -183,7 +183,7 @@ def test_equals():
     modin_df1 = pd.DataFrame(frame_data)
     modin_df2 = pd.DataFrame(frame_data)
 
-    assert modin_df1.equals(modin_df2)
+    assert not modin_df1.equals(modin_df2)
 
     df_equals(modin_df1, modin_df2)
     df_equals(modin_df1, pd.DataFrame(modin_df1))
